@@ -44,7 +44,7 @@ internal static class DropletSelectionLockTests
             Check(baseline.ContentEquals(ui.View.Document), "Coordinate readout changed slider content.");
             if (kind == CatchObjectKind.TinyDroplet) CheckTinyReadout();
             ui.ClickMap(target.TimeMs, target.X);
-            Check(ui.View.XCoordinateFieldBounds is not null, "Unlocked droplet could not be selected.");
+            Check((ui.View.XCoordinateFieldBounds is not null) == !imported, "Unlocked droplet editability does not match its slider representation.");
             if (kind == CatchObjectKind.TinyDroplet) CheckTinyReadout();
 
             void CheckTinyReadout()
@@ -78,7 +78,7 @@ internal static class DropletSelectionLockTests
             Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Droplet lock changed content/history.");
             Toggle(ui);
             ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X);
-            Check(ui.View.XCoordinateFieldBounds is not null, "Unlocking did not restore droplet selection.");
+            Check((ui.View.XCoordinateFieldBounds is not null) == !imported, "Unlocking changed the slider representation's read-only boundary.");
         }
     }
 

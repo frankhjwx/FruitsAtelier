@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text.Json;
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
@@ -926,6 +926,11 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--osu-canvas-render-check"))
+        {
+            OsuCanvasRenderCheck.Run(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--conversion-docks-render-check"))
         {
             canvas.Resize(1440, 900, 96);

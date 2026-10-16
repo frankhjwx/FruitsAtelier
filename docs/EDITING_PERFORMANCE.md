@@ -49,6 +49,15 @@ the winning offset; pointer updates do not rebuild DS references from moved cont
 
 ## Full-map work and cache ownership
 
+Legacy droplet effects run on a detached candidate at the content commit boundary.
+The active transaction retains its baseline until validation completes. Rendering
+and playback reuse the prior committed conversion; save/export and content edits
+wait for validation. Only the matching history transaction, content, compensation
+and language may publish the prepared geometry, timing and warmed export cache.
+Failure or cancellation restores the baseline. Worker caches are never shared
+with the UI. Baseline fitting data preserves idempotent strength/seed changes and
+is retimed when authored timing changes.
+
 Placement movement overlays project break reconciliation from cached parent
 intervals and the candidate interval. They share the transaction's break algorithm
 without cloning a document or exporting the map. The interval cache follows the

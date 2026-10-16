@@ -40,6 +40,11 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     private IDWriteFactory? textFactory;
     private IWICImagingFactory? imagingFactory;
     private ID2D1SolidColorBrush? solidBrush;
+    private ID2D1StrokeStyle? roundPathStroke;
+    private readonly Dictionary<IReadOnlyList<Vector2>, ID2D1PathGeometry> pathGeometries = new(ReferenceEqualityComparer.Instance);
+    private readonly Queue<IReadOnlyList<Vector2>> pathGeometryOrder = new();
+    private readonly Dictionary<(IReadOnlyList<Vector2> Points, float Diameter), (ID2D1PathGeometry Ring, DRect Bounds)> sliderBorders = [];
+    private readonly Queue<(IReadOnlyList<Vector2> Points, float Diameter)> sliderBorderOrder = new();
     private readonly Dictionary<(float, bool), IDWriteTextFormat> formats = [];
     private readonly Queue<(float, bool)> formatOrder = new();
     internal int CachedTextFormatCount => formats.Count;
@@ -260,6 +265,80 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     }
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
         => context!.DrawLine(new Vector2(x1, y1), new Vector2(x2, y2), Brush(color, opacity), width);
+
+    public void Polyline(IReadOnlyList<Vector2> points, float x, float y, float scale, uint color, float width, float opacity)
+    {
+        if (points.Count < 2 || scale <= 0 || opacity <= 0) return;
+        var geometry = PolylineGeometry(points);
+        var previous = context!.Transform;
+        try
+        {
+            context.Transform = Matrix3x2.CreateScale(scale) * Matrix3x2.CreateTranslation(x, y) * previous;
+            context.DrawGeometry(geometry, Brush(color, opacity), width / scale, roundPathStroke);
+        }
+        finally { context.Transform = previous; }
+    }
+    private ID2D1PathGeometry PolylineGeometry(IReadOnlyList<Vector2> points)
+    {
+        if (!pathGeometries.TryGetValue(points, out var geometry))
+        {
+            if (pathGeometries.Count >= 128)
+            {
+                var oldest = pathGeometryOrder.Dequeue(); pathGeometries[oldest].Dispose(); pathGeometries.Remove(oldest);
+            }
+            geometry = factory!.CreatePathGeometry();
+            using (var sink = geometry.Open())
+            {
+                sink.BeginFigure(points[0], FigureBegin.Hollow);
+                for (int i = 1; i < points.Count; i++) sink.AddLine(points[i]);
+                sink.EndFigure(FigureEnd.Open); sink.Close();
+            }
+            pathGeometries.Add(points, geometry); pathGeometryOrder.Enqueue(points);
+        }
+        roundPathStroke ??= factory!.CreateStrokeStyle(new StrokeStyleProperties
+        { StartCap = CapStyle.Round, EndCap = CapStyle.Round, LineJoin = LineJoin.Round });
+        return geometry;
+    }
+    public void SliderBody(IReadOnlyList<Vector2> points, float x, float y, float scale,
+        float diameter, uint border, uint accent, float opacity)
+    {
+        if (points.Count < 2 || diameter <= 0 || scale <= 0 || opacity <= 0) return;
+        var geometry = PolylineGeometry(points);
+        var key = (points, diameter);
+        if (!sliderBorders.TryGetValue(key, out var cached))
+        {
+            if (sliderBorders.Count >= 128)
+            {
+                var oldest = sliderBorderOrder.Dequeue(); sliderBorders[oldest].Ring.Dispose(); sliderBorders.Remove(oldest);
+            }
+            using var outer = factory!.CreatePathGeometry();
+            using (var sink = outer.Open()) { geometry.Widen(diameter * .921875f, roundPathStroke!, .1f, sink); sink.Close(); }
+            using var inner = factory.CreatePathGeometry();
+            using (var sink = inner.Open()) { geometry.Widen(diameter * .8125f, roundPathStroke!, .1f, sink); sink.Close(); }
+            var ring = factory.CreatePathGeometry();
+            using (var sink = ring.Open()) { outer.CombineWithGeometry(inner, CombineMode.Exclude, sink); sink.Close(); }
+            float minX = points[0].X, maxX = minX, minY = points[0].Y, maxY = minY;
+            for (int i = 1; i < points.Count; i++) { minX = Math.Min(minX, points[i].X); maxX = Math.Max(maxX, points[i].X); minY = Math.Min(minY, points[i].Y); maxY = Math.Max(maxY, points[i].Y); }
+            cached = (ring, new DRect(minX - diameter, minY - diameter, maxX - minX + diameter * 2, maxY - minY + diameter * 2));
+            sliderBorders.Add(key, cached); sliderBorderOrder.Enqueue(key);
+        }
+        var previous = context!.Transform;
+        try
+        {
+            context.Transform = Matrix3x2.CreateScale(scale) * Matrix3x2.CreateTranslation(x, y) * previous;
+            context.FillGeometry(cached.Ring, Brush(border, opacity));
+            context.PushLayer(new LayerParameters1 { ContentBounds = cached.Bounds, MaskTransform = Matrix3x2.Identity,
+                MaskAntialiasMode = AntialiasMode.PerPrimitive, Opacity = opacity * .7f, LayerOptions = LayerOptions1.None }, null!);
+            try
+            {
+                for (int i = 0; i < SliderTrackGradient.Steps; i++)
+                    context.DrawGeometry(geometry, Brush(SliderTrackGradient.Colour(accent, i)),
+                        diameter * .8125f * (1 - i / (float)SliderTrackGradient.Steps), roundPathStroke);
+            }
+            finally { context.PopLayer(); }
+        }
+        finally { context.Transform = previous; }
+    }
     public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1, float opacity = 1)
     {
         var ellipse = new Ellipse(new Vector2(x, y), radius, radius);
@@ -524,6 +603,11 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
         foreach (var format in formats.Values) format.Dispose(); formats.Clear();
         formatOrder.Clear();
         solidBrush?.Dispose(); solidBrush = null;
+        foreach (var geometry in pathGeometries.Values) geometry.Dispose();
+        pathGeometries.Clear(); pathGeometryOrder.Clear();
+        roundPathStroke?.Dispose(); roundPathStroke = null;
+        foreach (var border in sliderBorders.Values) border.Ring.Dispose();
+        sliderBorders.Clear(); sliderBorderOrder.Clear();
         if (context is not null) context.Target = null;
         target?.Dispose(); target = null;
         context?.Dispose(); context = null;

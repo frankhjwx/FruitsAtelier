@@ -70,7 +70,10 @@ internal static class ProjectTests
                 }
             }
             var project = BeatmapArchive.OpenProject(archive, Path.Combine(folder, "cache"));
-            Check(project.Difficulties.Count == 2 && project.Difficulties.Select(d => d.Name).Distinct().Count() == 2, "all Catch difficulties imported");
+            Check(project.Difficulties.Count == 3 && project.Difficulties.Select(d => d.Name).Distinct().Count() == 3, "all standard and Catch difficulties imported");
+            Check(project.Difficulties.Count(d => OsuBeatmapReader.Setting(d.Document, "General", "Mode") == "0") == 1
+                && project.Difficulties.Count(d => OsuBeatmapReader.Setting(d.Document, "General", "Mode") == "2") == 2,
+                "archive preserves each difficulty's source mode");
             var view = new EditorView();
             view.LoadProject(project);
             var canvas = new RecordingCanvas();

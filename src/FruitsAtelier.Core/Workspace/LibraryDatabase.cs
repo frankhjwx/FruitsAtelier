@@ -182,6 +182,7 @@ public sealed class LibraryDatabase
 {
     private readonly string workspace, songs;
     private long revision;
+    private (string Path, long Stamp, long Size)[]? projectIndexFiles;
     public long Revision => Interlocked.Read(ref revision);
     public LibraryDatabase(string workspace, string songs)
     {
@@ -193,10 +194,10 @@ public sealed class LibraryDatabase
         command.CommandText = "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS external_sources(path TEXT PRIMARY KEY, archive TEXT); CREATE TABLE IF NOT EXISTS project_sources(project TEXT NOT NULL, source TEXT NOT NULL, PRIMARY KEY(project,source));";
         command.ExecuteNonQuery();
         command.CommandText = "PRAGMA user_version";
-        if (Convert.ToInt64(command.ExecuteScalar()) < 3)
+        if (Convert.ToInt64(command.ExecuteScalar()) < 4)
         {
             // Older catalogs may contain other rulesets; missing Mode predates mixed-mode indexing.
-            command.CommandText = "DELETE FROM maps WHERE COALESCE(json_extract(data,'$.Mode'),2) <> 2; PRAGMA user_version=3;";
+            command.CommandText = "DELETE FROM maps WHERE COALESCE(json_extract(data,'$.Mode'),2) NOT IN (0,2); PRAGMA user_version=4;";
             command.ExecuteNonQuery();
         }
         command.CommandText = "CREATE INDEX IF NOT EXISTS maps_root ON maps(root); CREATE INDEX IF NOT EXISTS maps_directory_nocase ON maps(json_extract(data,'$.Directory') COLLATE NOCASE); CREATE INDEX IF NOT EXISTS project_sources_source ON project_sources(source,project);";
@@ -251,6 +252,10 @@ public sealed class LibraryDatabase
     }
     public static string Normalize(string value) => value.Normalize(NormalizationForm.FormKC).ToUpperInvariant();
     public LibraryScan Scan(CancellationToken cancellation = default, Action<LibraryScanProgress>? progress = null)
+        => ScanDirectories(null, cancellation, progress);
+
+    public LibraryScan ScanDirectories(IEnumerable<string>? changedDirectories, CancellationToken cancellation = default,
+        Action<LibraryScanProgress>? progress = null)
     {
         int files = 0, indexed = 0, failures = 0;
         void Report(bool accepted, bool failed)
@@ -261,16 +266,22 @@ public sealed class LibraryDatabase
         progress?.Invoke(new(0, 0, 0));
         var roots = SourceDirectories().ToList();
         if (songs.Length > 0) roots.Add(songs);
+        string[]? changed = changedDirectories?.Select(Path.GetFullPath).Distinct(WorkspaceSynchronization.Paths).ToArray();
         int count = 0; var errors = new List<string>();
         foreach (string root in roots.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             cancellation.ThrowIfCancellationRequested();
             if (!Directory.Exists(root)) { errors.Add(L.Get("library.sourceMissing", root)); continue; }
-            var result = ScanRoot(root, cancellation, Report); count += result.Count; errors.AddRange(result.Errors);
+            string[] scopes = changed is null ? [root] : changed.Where(p => WorkspaceProject.Within(root, p))
+                .Where(p => !changed.Any(parent => !WorkspaceSynchronization.Paths.Equals(p, parent) && WorkspaceProject.Within(parent, p))).ToArray();
+            foreach (string scope in scopes)
+            {
+                var result = ScanRoot(root, cancellation, Report, scope); count += result.Count; errors.AddRange(result.Errors);
+            }
         }
         ReindexProjects(); return new(count, errors);
     }
-    private LibraryScan ScanRoot(string root, CancellationToken cancellation, Action<bool, bool> report)
+    private LibraryScan ScanRoot(string root, CancellationToken cancellation, Action<bool, bool> report, string scope)
     {
         using var db = Open();
         int count = 0;
@@ -280,42 +291,69 @@ public sealed class LibraryDatabase
         using (var command = db.CreateCommand())
         {
             command.CommandText = "SELECT path,stamp,size FROM maps WHERE root=$root"; command.Parameters.AddWithValue("$root", root);
+            if (!WorkspaceSynchronization.Paths.Equals(root, scope))
+            {
+                command.CommandText += " AND (json_extract(data,'$.Directory') COLLATE NOCASE=$scope OR substr(json_extract(data,'$.Directory'),1,length($prefix)) COLLATE NOCASE=$prefix)";
+                command.Parameters.AddWithValue("$scope", scope);
+                command.Parameters.AddWithValue("$prefix", Path.TrimEndingDirectorySeparator(scope) + Path.DirectorySeparatorChar);
+            }
             using var reader = command.ExecuteReader(); while (reader.Read()) cached[reader.GetString(0)] = (reader.GetInt64(1), reader.GetInt64(2));
         }
-        var directories = new Stack<string>(); directories.Push(root);
+        var pending = new List<(string Path, long Stamp, long Size, LibraryMap? Map)>();
+        void Flush()
+        {
+            if (pending.Count == 0) return;
+            using var transaction = db.BeginTransaction();
+            using var write = db.CreateCommand(); write.Transaction = transaction;
+            write.CommandText = "INSERT OR REPLACE INTO maps VALUES($p,$r,$t,$s,$d,$q)";
+            foreach (string name in new[] { "$p", "$r", "$t", "$s", "$d", "$q" }) write.Parameters.AddWithValue(name, "");
+            using var delete = db.CreateCommand(); delete.Transaction = transaction;
+            delete.CommandText = "DELETE FROM maps WHERE path=$p"; delete.Parameters.AddWithValue("$p", "");
+            foreach (var item in pending)
+            {
+                if (item.Map is not { } map)
+                { delete.Parameters["$p"].Value = item.Path; delete.ExecuteNonQuery(); continue; }
+                write.Parameters["$p"].Value = item.Path; write.Parameters["$r"].Value = root;
+                write.Parameters["$t"].Value = item.Stamp; write.Parameters["$s"].Value = item.Size;
+                write.Parameters["$d"].Value = JsonSerializer.Serialize(map);
+                write.Parameters["$q"].Value = Normalize(string.Join(" ", map.Title, map.TitleUnicode, map.Artist, map.ArtistUnicode, map.Creator, map.Difficulty, map.Tags, map.Source));
+                write.ExecuteNonQuery();
+            }
+            transaction.Commit(); Interlocked.Add(ref revision, pending.Count); pending.Clear();
+        }
+        var directories = new Stack<string>();
+        if (Directory.Exists(scope)) directories.Push(scope);
+        else scannedDirectories.Add(scope);
         while (directories.TryPop(out string? directory))
         {
             cancellation.ThrowIfCancellationRequested();
-            string[] files;
+            FileInfo[] files;
             try
             {
                 WorkspaceProject.RejectLinks(directory);
-                foreach (var child in System.IO.Directory.EnumerateDirectories(directory))
-                    if ((File.GetAttributes(child) & FileAttributes.ReparsePoint) == 0) directories.Push(child);
-                files = System.IO.Directory.GetFiles(directory).Where(p => Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase)).ToArray();
+                var folder = new DirectoryInfo(directory);
+                foreach (var child in folder.EnumerateDirectories())
+                    if ((child.Attributes & FileAttributes.ReparsePoint) == 0) directories.Push(child.FullName);
+                files = folder.EnumerateFiles().Where(p => p.Extension.Equals(".osu", StringComparison.OrdinalIgnoreCase)).ToArray();
                 scannedDirectories.Add(directory);
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { errors.Add(directory + ": " + e.Message); continue; }
-            foreach (var file in files)
+            foreach (var info in files)
             {
+                string file = info.FullName;
                 cancellation.ThrowIfCancellationRequested();
                 bool accepted = false, failed = false;
                 try
                 {
-                    WorkspaceProject.RejectLinks(file);
-                    var info = new FileInfo(file); var stamp = info.LastWriteTimeUtc.Ticks;
+                    // Enumeration supplies size, timestamp and attributes without one stat per field.
+                    if ((info.Attributes & FileAttributes.ReparsePoint) != 0) throw new IOException(L.Get("resource.link", file));
+                    var stamp = info.LastWriteTimeUtc.Ticks;
                     if (cached.TryGetValue(file, out var old) && old == (stamp, info.Length)) { seen.Add(file); accepted = true; continue; }
                     var map = ReadMetadata(file);
                     if (map is null) continue;
                     seen.Add(file);
-                    using var command = db.CreateCommand();
-                    command.CommandText = "INSERT OR REPLACE INTO maps VALUES($p,$r,$t,$s,$d,$q)";
-                    command.Parameters.AddWithValue("$p", file); command.Parameters.AddWithValue("$r", root);
-                    command.Parameters.AddWithValue("$t", stamp); command.Parameters.AddWithValue("$s", info.Length);
-                    command.Parameters.AddWithValue("$d", JsonSerializer.Serialize(map));
-                    command.Parameters.AddWithValue("$q", Normalize(string.Join(" ", map.Title, map.TitleUnicode, map.Artist, map.ArtistUnicode, map.Creator, map.Difficulty, map.Tags, map.Source)));
-                    command.ExecuteNonQuery();
-                    Interlocked.Increment(ref revision);
+                    pending.Add((file, stamp, info.Length, map));
+                    if (count == 0 || pending.Count >= 128) Flush();
                     accepted = true;
                 }
                 catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException) { seen.Add(file); failed = true; errors.Add(file + ": " + e.Message); }
@@ -326,10 +364,10 @@ public sealed class LibraryDatabase
         foreach (var path in cached.Keys.Where(p => !seen.Contains(p)))
             if (errors.Count == 0 || scannedDirectories.Contains(Path.GetDirectoryName(path)!))
             {
-                using var command = db.CreateCommand();
-                command.CommandText = "DELETE FROM maps WHERE path=$p"; command.Parameters.AddWithValue("$p", path); command.ExecuteNonQuery();
-                Interlocked.Increment(ref revision);
+                pending.Add((path, 0, 0, null));
+                if (pending.Count >= 128) Flush();
             }
+        Flush();
         return new(count, errors);
     }
 
@@ -337,11 +375,24 @@ public sealed class LibraryDatabase
     private void ReindexProjectsLocked()
     {
         foreach (var previous in Directory.EnumerateDirectories(workspace, "*.previous")) WorkspaceProject.Recover(previous[..^9]);
-        using var db = Open(); using var transaction = db.BeginTransaction();
-        using (var clear = db.CreateCommand()) { clear.Transaction = transaction; clear.CommandText = "DELETE FROM projects; DELETE FROM project_sources"; clear.ExecuteNonQuery(); }
-        foreach (string folder in Directory.EnumerateDirectories(workspace))
+        var manifests = Directory.EnumerateDirectories(workspace)
+            .Where(folder => !folder.EndsWith(".saving") && !folder.EndsWith(".previous"))
+            .Select(folder => new FileInfo(Path.Combine(folder, WorkspaceProject.ManifestName))).Where(file => file.Exists)
+            .Select(file => (Path: file.FullName, Stamp: file.LastWriteTimeUtc.Ticks, Size: file.Length)).OrderBy(file => file.Path, WorkspaceSynchronization.Paths).ToArray();
+        if (projectIndexFiles is not null && projectIndexFiles.SequenceEqual(manifests)) return;
+        using var db = Open();
+        if (manifests.Length == 0)
         {
-            if (!File.Exists(Path.Combine(folder, WorkspaceProject.ManifestName)) || folder.EndsWith(".saving") || folder.EndsWith(".previous")) continue;
+            using var existing = db.CreateCommand();
+            existing.CommandText = "SELECT EXISTS(SELECT 1 FROM projects) OR EXISTS(SELECT 1 FROM project_sources)";
+            if (Convert.ToInt64(existing.ExecuteScalar()) == 0) { projectIndexFiles = manifests; return; }
+        }
+        using var transaction = db.BeginTransaction();
+        bool projectsReadable = true;
+        using (var clear = db.CreateCommand()) { clear.Transaction = transaction; clear.CommandText = "DELETE FROM projects; DELETE FROM project_sources"; clear.ExecuteNonQuery(); }
+        foreach (var file in manifests)
+        {
+            string folder = Path.GetDirectoryName(file.Path)!;
             try
             {
                 var manifest = WorkspaceProject.ReadManifest(folder, includeSync: false);
@@ -361,9 +412,10 @@ public sealed class LibraryDatabase
                     link.Parameters.AddWithValue("$p", folder); link.Parameters.AddWithValue("$s", Path.GetFullPath(source)); link.ExecuteNonQuery();
                 }
             }
-            catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { /* A damaged project stays on disk; explicit open reports the error. */ }
+            catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { projectsReadable = false; }
         }
         transaction.Commit();
+        projectIndexFiles = projectsReadable ? manifests : null;
     }
 
     public IReadOnlyList<LibraryMap> Search(string query, bool projectsOnly = false)
@@ -409,7 +461,7 @@ public sealed class LibraryDatabase
         }
         string Get(string key) => values.GetValueOrDefault(key, "");
         int mode = int.TryParse(Get("Mode"), out int parsedMode) ? parsedMode : 0;
-        if (mode != 2) return null;
+        if (mode is not (0 or 2)) return null;
         string Resolve(string resource) => resource.Length == 0 ? "" : OsuBeatmapReader.ResolveResource(path, resource.Replace('\\', '/'));
         return new(path, Path.GetDirectoryName(path)!, Get("Title"), Get("TitleUnicode"), Get("Artist"), Get("ArtistUnicode"), Get("Creator"), Get("Version"), Get("Tags"), Get("Source"), Resolve(Get("AudioFilename")), Resolve(background), Mode: mode);
     }

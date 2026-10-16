@@ -3,6 +3,7 @@ using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 
 if (args.Contains("--benchmark-sv-edits")) return WriteCacheTests.BenchmarkMultiplierEdits();
+if (args.Contains("--osu-model-check")) { OsuCanvasModelTests.Run(); Console.WriteLine("PASS osu canvas model and slider conversions"); return 0; }
 if (args.Contains("--legacy-v7-check")) { LegacyV7Tests.Run(); Console.WriteLine("PASS v7 tick rules, persistence, editing and export"); return 0; }
 if (args.Contains("--generated-slider-path-check")) { GeneratedSliderPathTests.Run(); Console.WriteLine("PASS Generated slider paths"); return 0; }
 
@@ -79,7 +80,7 @@ var tests = new (string Name, Action Run)[]
     ("Project JSON retains curves, IDs, paths, original sections and NaN timing", ProjectRoundTrip),
     ("Project resources are relative on disk and resolve on reload", ProjectResourcePaths),
     ("Project rejects missing or unknown schema, duplicate IDs and invalid numbers", InvalidProjects),
-    ("Reader rejects non-Catch, unsupported format and unknown objects", InvalidBeatmaps),
+    ("Reader rejects unsupported modes, formats and unknown objects", InvalidBeatmaps),
     ("Saving refuses original osu and failed serialization leaves target untouched", SafeWrites),
     ("Beatmap audio paths stay local and changed audio exports its new name", AudioReferences),
     ("Supplied real maps preserve original objects and timing on export", RealMaps),
@@ -660,7 +661,7 @@ static void InvalidProjects()
 
 static void InvalidBeatmaps()
 {
-    Throws(() => OsuBeatmapReader.Read(Fixture().Replace("Mode: 2", "Mode: 0")), "non-Catch input");
+    Throws(() => OsuBeatmapReader.Read(Fixture().Replace("Mode: 2", "Mode: 1")), "unsupported mode input");
     foreach (string version in new[] { "v6", "v15", "v127", "v129", "v7x", "v8x", "v08", "v12x", "v128x" })
         Throws(() => OsuBeatmapReader.Read(Fixture().Replace("format v14", "format " + version)), "unsupported version");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("250,21,8", "250,128,8")), "unknown object");

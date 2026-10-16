@@ -16,7 +16,7 @@ public static class BeatmapArchive
         foreach (string map in Import(path, cacheRoot, completeArchive))
         {
             // Mixed-mode beatmap sets may contain unsupported rulesets. Only inspect General/Mode here;
-            // malformed Catch maps still fail the entire open operation before replacing the editor.
+            // Malformed supported maps fail the entire open before replacing the editor.
             bool general = false;
             string? mode = null;
             foreach (string line in File.ReadLines(map))
@@ -25,7 +25,7 @@ public static class BeatmapArchive
                 if (value.StartsWith('[')) general = value == "[General]";
                 else if (general && value.Split(':', 2) is [var key, var setting] && key.Trim() == "Mode") mode = setting.Trim();
             }
-            if (mode != "2") continue;
+            if (mode is not (null or "0" or "2")) continue;
             documents.Add(FruitsAtelier.Core.OsuBeatmapReader.ReadFile(map));
         }
         if (documents.Count == 0) throw new InvalidDataException(L.Get("project.noCatch"));

@@ -37,6 +37,7 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        CancelLegacyDropletRefresh();
         if (libraryOpenTask is { } retiredOpen)
             _ = retiredOpen.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
         libraryOpenTask = null; libraryOpenCompleted = null;
@@ -224,6 +225,8 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
+        PumpLegacyDropletRefresh();
+        if (LegacyDropletRefreshBusy) return false;
         if (AcknowledgementsVisible) return false;
         if (previousSaveRestore is not null) return false;
         if (LibraryOpening || AudioProjectCreating) return false;
@@ -249,6 +252,7 @@ public sealed partial class EditorView
     public void UpdateTransport(double positionMs, double durationMs, bool ready, bool playing, bool loading,
         string? error, string? filename, double? sampledAtMs = null, double outputBufferAheadMs = 0)
     {
+        PumpLegacyDropletRefresh();
         if (initializeTransport)
         {
             // A retiring audio session must not repaint the new difficulty's initial frame.

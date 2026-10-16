@@ -170,6 +170,7 @@ internal static class ObjectTimelineTests
                 }
             }
             var ui = new Ui(false); ui.LoadDocument(map);
+            if (imported) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
             ui.View.UpdateTransport(1500, 10000, false, false, false, null, null); ui.Paint();
             var r = ui.View.ObjectTimelineBounds;
             float X(double t) => r.X + (float)((t - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
@@ -226,7 +227,7 @@ internal static class ObjectTimelineTests
         float X(double time) => r.X + (float)((time - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
         void CheckOrder()
         {
-            var labels = ui.Canvas.Texts.Where(t => t.Y == r.Y + 19 && t.Value is "1" or "2").ToArray();
+            var labels = ui.Canvas.Texts.Where(t => Math.Abs(t.Y + t.Size * .6f - (r.Y + 27)) < .01 && t.Value is "1" or "2").ToArray();
             if (!labels.Select(t => t.Value).SequenceEqual(new[] { "2", "1" })) throw new Exception("Earlier timeline numbers do not cover later objects.");
             var bodies = ui.Canvas.Circles.Where(c => c.Y == r.Y + 27 && c.Radius == 19 && c.Filled).ToArray();
             if (bodies.Length != 2 || bodies[0].X <= bodies[1].X) throw new Exception("Earlier circle is not painted last.");
@@ -316,6 +317,13 @@ internal static class ObjectTimelineTests
             if (ui.View.PlayheadMs != 1500 || ui.View.SelectedObjectIds.Count != 0)
                 throw new Exception("Empty timeline click must clear selection without seeking");
         }
+        var readOnly = ui.View.Document.DeepClone();
+        ui.Click(X(2000), y);
+        ui.View.PointerDown(X(2000), y, 0, false, false);
+        ui.View.PointerMove(X(2250), y, false, false);
+        ui.View.PointerUp(X(2250), y, 0); ui.Paint();
+        if (!readOnly.ContentEquals(ui.View.Document)) throw new Exception("Catch timeline changed a read-only Legacy slider.");
+        ui.View.ToggleOsuCanvas(); ui.Paint();
         ui.View.UpdateTransport(1500, 10000, true, false, false, null, null); ui.Paint();
         ui.Click(X(1000), y);
         ui.View.PointerDown(X(2000), y, 0, false, true); ui.View.PointerUp(X(2000), y, 0); ui.Paint();
@@ -381,6 +389,7 @@ internal static class ObjectTimelineTests
             track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 200 }]);
             if (imported) map.ImportedSliders.Add(slider); else map.Tracks.Add(track);
             var ui = new Ui(false); ui.LoadDocument(map);
+            if (imported) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
             ui.View.UpdateTransport(1750, 10000, true, false, false, null, null); ui.Paint();
             var r = ui.View.ObjectTimelineBounds;
             float X(double t) => r.X + (float)((t - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
@@ -425,6 +434,7 @@ internal static class ObjectTimelineTests
                 map.Tracks.Add(track);
             }
             var ui = new Ui(false); ui.LoadDocument(map);
+            if (imported) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
             ui.View.UpdateTransport(1500, 10000, true, false, false, null, null); ui.Paint();
             int Spans() => imported ? ui.View.Document.ImportedSliders.Single().SpanCount : ui.View.Document.Tracks.Single().SpanCount;
             var before = ui.View.Document.DeepClone();
@@ -587,6 +597,7 @@ internal static class ObjectTimelineTests
                 map.Tracks.Add(track); id=track.Id;
             }
             var ui=new Ui(); ui.LoadDocument(map);
+            if (imported) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
             ui.View.UpdateTransport(1750,10000,false,false,false,null,null); ui.Paint();
             var r=ui.View.ObjectTimelineBounds;
             float X(double time)=>r.X+(float)((time-ui.View.ObjectTimelineStartMs)*ui.View.ObjectTimelinePixelsPerMs);

@@ -227,7 +227,7 @@ internal static class ObjectSnapTests
         bounded.Fruits.AddRange([left, right, new() { TimeMs = 2250, X = 294 }]);
         var boundsUi = new Ui(); LoadWithObjectSnap(boundsUi, bounded); boundsUi.Key('1');
         boundsUi.ClickFruit(left.Id); boundsUi.ClickMap(right.TimeMs, right.X, ctrl: true);
-        boundsUi.DownMap(2000, 300); boundsUi.MoveMap(2000, 292);
+        boundsUi.DownMap(2000, 300); boundsUi.MoveMap(2000, 280);
         Near(0, boundsUi.Fruit(left.Id).X); Near(295, boundsUi.Fruit(right.Id).X);
         Check(boundsUi.View.ObjectSnapTargetPoint is null, "Snap moved the other end beyond the playfield.");
         boundsUi.View.CancelInteraction(); boundsUi.Paint();
@@ -253,6 +253,8 @@ internal static class ObjectSnapTests
             var reference = new Fruit { TimeMs = 1000 + repeats * 500 + 250, X = finalX + 85.4 };
             map.Fruits.Add(reference);
             var ui = new Ui(); LoadWithObjectSnap(ui, map); ui.Key('1'); ui.ClickMap(1000, 100);
+            if (imported) { ui.View.ConvertSelectedSliderRepresentation(sourceId); ui.Paint(); }
+            var editableBaseline = ui.View.Document.DeepClone();
             var box = ui.View.SelectionTransformBounds;
             float x = box.X + 20, y = box.Y + box.Height / 2;
             float dx = 82 * ui.View.PlayfieldBounds.Width / 512;
@@ -267,7 +269,8 @@ internal static class ObjectSnapTests
             Near(1000, fruits[0].TimeMs); Near(1000 + repeats * 500, fruits[^1].TimeMs);
             ui.View.PointerUp(x + dx, y, 0); ui.Paint();
             Check(OsuBeatmapWriter.Serialize(ui.View.Document).ObjectSequenceMatches, "Snapped slider failed export validation.");
-            ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Slider snap failed to restore its source on undo.");
+            ui.Key('Z', ctrl: true); Check(editableBaseline.ContentEquals(ui.View.Document), "Slider snap failed to restore its editable source on undo.");
+            if (imported) { ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Explicit slider conversion did not undo independently."); }
         }
     }
 }

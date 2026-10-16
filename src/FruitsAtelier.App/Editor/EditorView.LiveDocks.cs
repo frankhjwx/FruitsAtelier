@@ -90,7 +90,7 @@ public sealed partial class EditorView
             if (!livePatternConvert && livePatternSnap == StreamSnapDivisor && livePatternStack == stackMode
                 && (!stackMode || StackEnvelope.Equal(liveStackBaseline, stackDraft))) return;
             if (stackMode && !stackDraft.IsValid) return;
-            if (!Edit(L.Get("conversion.editTitle"), () =>
+            if (!EditSliderRepresentation(L.Get("conversion.editTitle"), () =>
             {
                 foreach (var id in patternDockTargets)
                 {
@@ -98,7 +98,7 @@ public sealed partial class EditorView
                     track.StreamSnapDivisor = StreamSnapDivisor;
                     track.Stack = stackMode ? stackDraft.DeepClone() : null;
                 }
-            })) { streamError = StatusMessage; return; }
+            }, conversion: livePatternConvert)) { streamError = StatusMessage; return; }
             livePatternSnap = StreamSnapDivisor; livePatternStack = stackMode; liveStackBaseline = stackDraft.DeepClone(); streamError = "";
         }
         livePatternConvert = false; patternDockExisting = true;

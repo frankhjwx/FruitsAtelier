@@ -232,9 +232,10 @@ public sealed partial class EditorView
         if (noteHoldTarget is { } note)
         {
             noteHoldTarget = null;
-            if (!note.IsStandalone)
+            if (!note.IsStandalone && !IsReadOnlySlider(note.SourceId))
             {
-                history.Commit(); drag = DragKind.None;
+                CommitContentHistory(); drag = DragKind.None;
+                if (LegacyDropletRefreshBusy) { sliderHoldId = Guid.Empty; return; }
                 tool = Tool.Select;
                 if (objectSelection.Count <= 1)
                 {
@@ -249,7 +250,8 @@ public sealed partial class EditorView
         double progress = Math.Clamp((elapsed - 300) / 700, 0, 1);
         if (progress >= 1)
         {
-            history.Commit(); drag = DragKind.None;
+            CommitContentHistory(); drag = DragKind.None;
+            if (LegacyDropletRefreshBusy) { sliderHoldId = Guid.Empty; return; }
             OpenSliderActions(sliderHoldId);
             sliderHoldId = Guid.Empty; sliderHoldConsumed = true;
             return;

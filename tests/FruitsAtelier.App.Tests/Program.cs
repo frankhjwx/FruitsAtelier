@@ -2,6 +2,23 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--legacy-droplet-worker-check"))
+{
+    LegacyDropletWorkerTests.Run(); Console.WriteLine("PASS Background Legacy droplet validation"); return 0;
+}
+
+if (args.Contains("--osu-canvas-check"))
+{
+    OsuCanvasRenderTests.Run(); OsuCanvasInputTests.Run(); CanvasOverscanTests.Run();
+    Console.WriteLine("PASS osu canvas rendering, native editing and mode boundaries"); return 0;
+}
+if (args.Contains("--library-incremental-check"))
+{
+    LibraryIncrementalTests.Run(); LibraryScanProgressTests.Run(); LibraryResponsivenessTests.Run();
+    Console.WriteLine("PASS Library incremental indexing and background interaction"); return 0;
+}
+if (args.Contains("--benchmark-library-loading")) return LibraryIncrementalTests.Benchmark();
+
 if (args.Length == 2 && args[0] == "--movement-placement-performance") return EditorPerformance.RunFruitPlacement(args[1], movement: true);
 
 if (args.Contains("--break-preview-check"))
@@ -190,6 +207,11 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("osu canvas renders standard objects and retains source identities", OsuCanvasRenderTests.Run),
+    ("osu canvas edits native geometry and enforces slider representations", OsuCanvasInputTests.Run),
+    ("Both canvases render beneath tool palettes without changing logical coordinates", CanvasOverscanTests.Run),
+    ("Legacy droplet validation stays responsive and rejects stale or failed results", LegacyDropletWorkerTests.Run),
+    ("Library updates affected directories while cached cards remain usable", LibraryIncrementalTests.Run),
     ("Lazer editing mode preserves settings and explicit lighting policy", LazerSettingsTests.Run),
     ("Lazer shortcuts retain independent mapping behavior", LazerInputTests.NavigationAndBindings),
     ("Lazer seeks and divisor families follow the editor clock", LazerInputTests.SeekAndDivisorFamilies),
@@ -248,7 +270,7 @@ var tests = new (string Name, Action Run)[]
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
     ("UI scale defaults, steps, draft cancellation and persistence preserve content", UiScaleTests.Run),
     ("Fullscreen settings and Alt Enter preserve drafts, content and testplay", FullscreenSettingsTests.Run),
-    ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
+    ("Legacy sliders stay read-only in Catch until explicit undoable conversion", LegacyReadOnlyEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
     ("Release audio diagnostic settings persist, scroll and export without blocking", AudioDiagnosticSettingsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
@@ -561,7 +583,7 @@ var tests = new (string Name, Action Run)[]
     ("Legacy repeat insertion uses an approximate FSlider and preserves duration", SliderInteractionTests.RepeatInsertion),
     ("Moving a draft tail preserves its handles beyond both playfield edges", SliderInteractionTests.DraftTailHandleTranslation),
     ("Mixed clipboard batches preserve relative time and independent source order", ClipboardMultiTests.MixedBatchPreservesSnapshotAndOrder),
-    ("Cutting a mixed batch is one reversible transaction", ClipboardMultiTests.MixedCutIsOneTransaction),
+    ("Clipboard cuts preserve read-only sliders and editable batch undo", ClipboardMultiTests.MixedCutIsOneTransaction),
     ("A later overflowing pasted object rolls back the entire batch", ClipboardMultiTests.OverflowPasteRollsBackBatch),
     ("Invalid batch members cannot partially copy or cut", ClipboardMultiTests.InvalidMemberRejectsWholeCopyAndCut),
     ("Object and anchor Ctrl selections respect the active mode", MultiSelectionTests.ModesAndCtrlSelection),
@@ -1148,7 +1170,7 @@ static void MainCurveSelectionOpacity()
 
 static IEnumerable<RecordingCanvas.Operation> ViewCommands(Ui ui, bool preview)
 {
-    Rect canvasPlot = ui.View.CanvasPlotBounds;
+    Rect canvasPlot = ui.View.CanvasRenderBounds;
     return ui.Canvas.Operations.Where(c => c.Clip is { } clip && (preview ? clip == ui.View.PreviewViewport : clip == canvasPlot));
 }
 
@@ -1253,7 +1275,17 @@ sealed class Ui
     public Fruit Fruit(Guid id) => View.Document.Fruits.Single(f => f.Id == id);
     public Anchor Anchor(Guid id) => View.Document.Tracks.SelectMany(t => t.Nodes).Single(n => n.Id == id);
     public void OpenPreview() { if (!View.CatchPreviewVisible) { var r = View.PreviewToggleBounds; Click(r.X + 10, r.Y + 10); } }
-    public void Paint() { Canvas.Clear(); View.Render(Canvas, width, height); }
+    public void Paint()
+    {
+        var deadline = System.Diagnostics.Stopwatch.StartNew();
+        do
+        {
+            Canvas.Clear(); View.Render(Canvas, width, height);
+            if (!View.LegacyDropletRefreshBusy) return;
+            if (deadline.Elapsed.TotalSeconds > 15) throw new Exception("Legacy droplet validation did not settle.");
+            Thread.Sleep(1);
+        } while (true);
+    }
     public void Resize(float width, float height) { this.width = width; this.height = height; Paint(); }
     public void SetAr(string value) { View.Document.ApproachRate = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture); Paint(); }
     public void SetCs(string value) { View.Document.CircleSize = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture); Paint(); }

@@ -14,7 +14,7 @@ public sealed partial class EditorView
     private int sliderErrorPage;
     private readonly List<HitArea> sliderDialogHits = [];
     public bool SliderImportPromptVisible => sliderImportTargets.Length > 0;
-    public bool SliderConversionBusy => sliderBatchTask is not null;
+    public bool SliderConversionBusy => sliderBatchTask is not null || LegacyDropletRefreshBusy;
     private bool SliderDialogVisible => SliderImportPromptVisible || SliderConversionBusy || sliderBatchErrors.Length > 0;
 
     public void OfferSliderConversion(bool allDifficulties)
@@ -37,7 +37,11 @@ public sealed partial class EditorView
         if (!PrepareFileOperation()) return;
         OfferSliderConversion(false);
     }
-    public void CancelSliderConversion() => sliderBatchCancellation?.Cancel();
+    public void CancelSliderConversion()
+    {
+        sliderBatchCancellation?.Cancel();
+        CancelLegacyDropletRefresh();
+    }
     private void StartSliderBatch(int[] targets, bool derandomizeDroplets)
     {
         if (notesLocked) { StatusMessage = L.Get("assist.locked"); return; }
@@ -89,7 +93,7 @@ public sealed partial class EditorView
         var rect = new Rect((width - Math.Min(700, width - 40)) / 2, (height - 300) / 2, Math.Min(700, width - 40), 300);
         c.Fill(new(rect.X - 4, rect.Y - 4, rect.Width + 8, rect.Height + 8), Background, 10);
         c.Fill(rect, Panel, 8); c.Stroke(rect, Accent, 1, 8);
-        c.Text(L.Get("sliderBatch.title"), rect.X + 22, rect.Y + 20, 18, Foreground, rect.Width - 44, true);
+        c.Text(L.Get(LegacyDropletRefreshBusy ? "osu.updatingDroplets" : "sliderBatch.title"), rect.X + 22, rect.Y + 20, 18, Foreground, rect.Width - 44, true);
         if (SliderImportPromptVisible)
         {
             int count = sliderImportTargets.Sum(i => difficulties[i].History.Document.ImportedSliders.Count);
@@ -105,7 +109,7 @@ public sealed partial class EditorView
         else if (SliderConversionBusy)
         {
             DrawRatingSpinner(c, rect.X + 30, rect.Y + 80);
-            c.Text(L.Get("sliderBatch.working"), rect.X + 48, rect.Y + 72, 14, Foreground, rect.Width - 70);
+            c.Text(L.Get(LegacyDropletRefreshBusy ? "osu.updatingDroplets" : "sliderBatch.working"), rect.X + 48, rect.Y + 72, 14, Foreground, rect.Width - 70);
             Button(c, new(rect.Right - 174, rect.Bottom - 58, 152, 36), L.Get("sliderBatch.cancel"), CancelSliderConversion);
         }
         else

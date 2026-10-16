@@ -1,12 +1,14 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Platform;
 using FruitsAtelier.App.Skinning;
 
 var tests = new (string Name, Action<string> Run)[]
 {
     ("Root and nested skin packages extract editor skin assets and reuse completed hashes", ImportAndReuse),
+    ("Previous skin caches upgrade standard resources without weakening current cache validation", UpgradeStandardResources),
     ("Lazer legacy exports preserve nested font resources", NestedFonts),
     ("All archive paths reject traversal, absolute paths and Windows aliases", MaliciousPaths),
     ("Case-insensitive duplicates and multiple skin roots are rejected", AmbiguousEntries),
@@ -86,7 +88,7 @@ static void ImportAndReuse(string root)
         foreach (string file in new[] { "play-skip-12@2x.png", "pause-continue@2x.png", "pause-overlay.jpg", "pause-back-click.wav", "cursor@2x.png", "cursortrail.png", "cursormiddle.png", "arrow-pause.png", "arrow-warning.png", "play-warningarrow.png", "pause-loop.wav", "menuback.mp3" })
             True(File.Exists(Path.Combine(folder, file)), "Testplay skin resource was not extracted: " + file);
         string key = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).ToLowerInvariant();
-        True(folder == Path.Combine(cache, "v11-" + key), "Cache is not keyed by extraction version and archive contents.");
+        True(folder == Path.Combine(cache, "v13-" + key), "Cache is not keyed by extraction version and archive contents.");
         True(CatchSkin.TryLoad(folder, out var skin, out _) && skin!.Name == "Import fixture", "Extracted skin cannot be loaded.");
         True(!File.Exists(Path.Combine(folder, "ignored.exe")), "Unselected package content was extracted.");
         True(Directory.GetFiles(folder).Length == 21 && File.Exists(Path.Combine(folder, "custom-0@2x.png")), "Combo glyphs were not extracted.");
@@ -97,6 +99,46 @@ static void ImportAndReuse(string root)
         True(SkinArchive.Import(archive, cache) == folder, "Identical package did not reuse its cache.");
         True(File.GetLastWriteTimeUtc(Path.Combine(folder, ".complete")) == completed, "Cache reuse rewrote the completion marker.");
     }
+}
+
+static void UpgradeStandardResources(string root)
+{
+    byte[] config = "[General]\nName: Upgrade fixture"u8.ToArray();
+    byte[] png = Png();
+    string archive = MakeZip(root, [("skin.ini", config), ("fruit-pear.png", png),
+        ("approachcircle.png", png), ("sliderb.png", png), ("sliderb0.png", png), ("spinner-top.png", png)]);
+    string key = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).ToLowerInvariant();
+    string workspace = Path.Combine(root, "workspace");
+    string cache = Path.Combine(workspace, "Skins", "Imported");
+    string previous = Path.Combine(cache, "v11-" + key);
+    Directory.CreateDirectory(previous);
+    File.WriteAllBytes(Path.Combine(previous, "skin.ini"), config);
+    File.WriteAllBytes(Path.Combine(previous, "fruit-pear.png"), png);
+    File.WriteAllText(Path.Combine(previous, ".complete"), key);
+    string archives = Path.Combine(workspace, "Skins", "Archives");
+    Directory.CreateDirectory(archives);
+    File.Copy(archive, Path.Combine(archives, "v11-" + key + ".osk"));
+    var editor = new EditorView(false);
+    editor.LibrarySettings.Workspace = workspace;
+    editor.LibrarySettings.DefaultSkin = null;
+    editor.LibrarySettings.SelectedSkin = previous;
+    editor.InitializeSkin();
+    True(editor.SkinName == "Upgrade fixture" && Directory.Exists(Path.Combine(cache, "v13-" + key)),
+        "Loading a previously selected skin did not rebuild it from its retained archive.");
+    string upgraded = SkinArchive.Import(archive, cache);
+    True(upgraded == Path.Combine(cache, "v13-" + key), "Previous extraction was validated against the new resource set instead of upgrading.");
+    True(Directory.GetFiles(previous).Length == 3 && File.ReadAllText(Path.Combine(previous, ".complete")) == key,
+        "Upgrade changed the retained previous cache.");
+    foreach (string name in new[] { "approachcircle.png", "sliderb.png", "sliderb0.png", "spinner-top.png" })
+        True(File.ReadAllBytes(Path.Combine(upgraded, name)).SequenceEqual(png), "Upgrade omitted standard resource: " + name);
+    True(CatchSkin.TryLoad(upgraded, out var skin, out _) && skin!.TextureCount == 5, "Upgraded resources cannot be loaded.");
+    True(SkinArchive.Import(archive, cache) == upgraded, "Completed upgraded cache was not reused.");
+    File.WriteAllText(Path.Combine(upgraded, "unexpected.txt"), "modified");
+    Reject(() => SkinArchive.Import(archive, cache));
+    File.Delete(Path.Combine(upgraded, "unexpected.txt"));
+    File.Delete(Path.Combine(upgraded, "approachcircle.png"));
+    Reject(() => SkinArchive.Import(archive, cache));
+    True(Directory.GetFiles(previous).Length == 3, "Rejected current-cache tampering altered the previous cache.");
 }
 
 static void MaliciousPaths(string root)
@@ -156,7 +198,7 @@ static void IncompleteCache(string root)
     string archive = MakeZip(root, [("fruit-pear.png", Png()), ("fruit-apple.png", Png())]);
     string cache = Path.Combine(root, "cache");
     string key = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).ToLowerInvariant();
-    string partial = Path.Combine(cache, "v11-" + key);
+    string partial = Path.Combine(cache, "v13-" + key);
     Directory.CreateDirectory(partial);
     File.WriteAllText(Path.Combine(partial, "sentinel.txt"), "preserve");
     Reject(() => SkinArchive.Import(archive, cache));

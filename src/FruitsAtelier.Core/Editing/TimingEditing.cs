@@ -112,7 +112,7 @@ public static class TimingEditing
             .Concat(map.BananaShowers.Select(s => s.EndTimeMs)).DefaultIfEmpty(0).Max());
     }
 
-    private static void TransformTrack(CurveTrack track, double origin, double target, double scale)
+    internal static void TransformTrack(CurveTrack track, double origin, double target, double scale)
     {
         for (int i = 0; i < track.StreamNewComboOffsets.Count; i++) track.StreamNewComboOffsets[i] *= scale;
         foreach (var node in track.Nodes)

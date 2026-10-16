@@ -28,16 +28,20 @@ internal static class LegacyAlignmentTests
         Check(!ui.View.CanPasteSelection, "Reopening a map does not reuse another session's clipboard");
 
         ui.LoadDocument(new MapDocument { DurationMs = 10000 });
-        ui.View.OpenDistanceSnapDialog(); ui.Paint();
-        var objectSnap = ui.View.ObjectSnapToggleBounds;
-        ui.Click(objectSnap.X + 8, objectSnap.Y + 8);
-        ui.ClickText(L.Get("library.apply"));
+        if (ui.View.ObjectSnapSettings.Enabled)
+        {
+            ui.View.OpenDistanceSnapDialog(); ui.Paint();
+            var objectSnap = ui.View.ObjectSnapToggleBounds;
+            ui.Click(objectSnap.X + 8, objectSnap.Y + 8);
+            ui.ClickText(L.Get("library.apply"));
+        }
         ui.Key('T'); ui.Key('F');
         foreach (int spacing in new[] { 4, 8, 16, 32 })
         {
             ui.ClickMap(1000 + spacing * 125, 139);
             var fruit = ui.View.Document.Fruits[^1];
-            Check(fruit.X == Math.Round(139d / spacing, MidpointRounding.AwayFromZero) * spacing, "Grid uses osu pixel spacing");
+            Check(fruit.X == Math.Round(139d / spacing, MidpointRounding.AwayFromZero) * spacing,
+                $"Grid uses osu pixel spacing: spacing={spacing}, actual={fruit.X}, expected={Math.Round(139d / spacing, MidpointRounding.AwayFromZero) * spacing}");
             Check(fruit.TimeMs == 1000 + spacing * 125, "Horizontal grid leaves beat snap independent");
             ui.Key('G');
         }

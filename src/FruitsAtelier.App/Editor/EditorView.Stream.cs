@@ -112,7 +112,7 @@ public sealed partial class EditorView
     {
         if (stackMode && !CommitStackNumeric()) return;
         Guid[] selected = streamTargets;
-        if (Edit(L.Get(stackMode ? "stack.title" : changingStreamSnap ? "stream.changeSnap" : "stream.title"), () =>
+        if (EditSliderRepresentation(L.Get(stackMode ? "stack.title" : changingStreamSnap ? "stream.changeSnap" : "stream.title"), () =>
         {
             foreach (Guid id in streamTargets)
             {
@@ -124,7 +124,7 @@ public sealed partial class EditorView
             if (StreamBreakIntoFruits) selected = ObjectStructureEditing.BreakStreams(Document, streamTargets);
             var converted = CatchStreamConverter.Convert(Document);
             if (!converted.Success) throw new InvalidOperationException(string.Join(L.Get("editor.diagnostics.separator"), converted.Diagnostics));
-        }))
+        }, conversion: !changingStreamSnap))
         {
             StreamDialogVisible = false;
             streamSnapDragging = false;

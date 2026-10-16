@@ -17,7 +17,7 @@ public sealed partial class EditorView
     {
         get
         {
-            if (drag != DragKind.Marquee || !dragMoved) return 0;
+            if (drag != DragKind.Marquee || !dragMoved || osuMarquee) return 0;
             var area = boxTimeline ? objectTimeline : plot;
             double position = boxTimeline ? mouseX : mouseY;
             double start = boxTimeline ? area.X : area.Y, end = boxTimeline ? area.Right : area.Bottom;

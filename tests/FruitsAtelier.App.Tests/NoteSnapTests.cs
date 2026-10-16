@@ -83,6 +83,7 @@ internal static class NoteSnapTests
                 var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 100 };
                 slider.ControlPoints.AddRange([new(120, 192), new(220, 192)]);
                 map.ImportedSliders.Add(slider);
+                ImportedSliderEditing.ConvertToTrack(map, slider.Id);
             }
             else
             {
@@ -104,7 +105,7 @@ internal static class NoteSnapTests
                 $"Selected slider edge did not move only its snapped X: imported={imported}, tail={tail}, mode={mode}.");
             Check(fixedEdge.X == other.X && fixedEdge.TimeMs == other.TimeMs, "Dragging an edge translated the whole slider.");
             ui.Key('Z', ctrl: true);
-            Check(map.ContentEquals(ui.View.Document), "Edge drag did not undo including any Legacy conversion.");
+            Check(map.ContentEquals(ui.View.Document), "Edge drag did not restore the editable source on undo.");
         }
 
         foreach (var kind in new[] { CatchObjectKind.Droplet, CatchObjectKind.TinyDroplet })
@@ -140,7 +141,7 @@ internal static class NoteSnapTests
             var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 100 };
             slider.ControlPoints.AddRange([new(120, 192), new(120, 292)]);
             map.ImportedSliders.Add(slider);
-            if (!imported) ImportedSliderEditing.ConvertToTrack(map, slider.Id);
+            ImportedSliderEditing.ConvertToTrack(map, slider.Id);
             map.Fruits.Add(new Fruit { TimeMs = 7000, X = 100 });
             var other = new CurveTrack { Kind = CurveKind.Linear };
             other.Nodes.AddRange([new Anchor { TimeMs = 8000, X = 100 }, new Anchor { TimeMs = 9000, X = 150 }]);
@@ -200,6 +201,7 @@ internal static class NoteSnapTests
                 var slider = new ImportedSlider { TimeMs = 1167, X = 120, Y = 192, PathType = 'L', PixelLength = 100, SpanCount = 2 };
                 slider.ControlPoints.AddRange([new(120, 192), new(220, 192)]);
                 map.ImportedSliders.Add(slider);
+                ImportedSliderEditing.ConvertToTrack(map, slider.Id);
             }
             else
             {

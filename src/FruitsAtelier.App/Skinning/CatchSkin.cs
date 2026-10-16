@@ -32,6 +32,10 @@ public sealed class CatchSkin
     public bool CursorExpand { get; private set; } = true;
     public bool CursorTrailRotate { get; private set; } = true;
     private readonly List<SkinTexture> skipFrames = [];
+    private readonly List<SkinTexture> sliderBallFrames = [];
+    private bool? allowSliderBallTint;
+    private uint? sliderBallColour;
+    private uint? spinnerBackgroundColour;
     private readonly Dictionary<string, string> menuSounds = new(StringComparer.OrdinalIgnoreCase);
     private string hitCirclePrefix = "default";
     private float hitCircleOverlap;
@@ -81,6 +85,14 @@ public sealed class CatchSkin
                 LoadTexture($"fruit-{name}-overlay");
             }
             LoadTexture("reversearrow");
+            foreach (string component in new[] { "approachcircle", "sliderb", "sliderfollowcircle", "sliderscorepoint", "spinner-background", "spinner-circle", "spinner-bottom", "spinner-top", "spinner-middle", "spinner-middle2", "spinner-approachcircle" }) LoadTexture(component);
+            for (int frame = 0; frame < 4096; frame++)
+            {
+                string component = $"sliderb{frame}";
+                LoadTexture(component);
+                if (!candidate.textures.TryGetValue(component, out var texture)) break;
+                candidate.sliderBallFrames.Add(texture);
+            }
             foreach (string component in new[] { "hitcircle", "hitcircleoverlay", "sliderstartcircle", "sliderstartcircleoverlay", "sliderendcircle", "sliderendcircleoverlay" }) LoadTexture(component);
             LoadTexture("fruit-catcher-idle");
             LoadTexture("fruit-catcher-idle-0");
@@ -153,6 +165,79 @@ public sealed class CatchSkin
         }
         return fallback?.MenuSound(name);
     }
+
+    public bool DrawOsuTexture(ICanvas canvas, string name, float x, float y, float width,
+        uint tint = 0xFFFFFF, float opacity = 1, float rotation = 0)
+    {
+        for (CatchSkin? provider = this; provider is not null; provider = provider.fallback)
+        {
+            if (!provider.textures.TryGetValue(name, out var texture)) continue;
+            float height = width * texture.PixelHeight / texture.PixelWidth;
+            if (canvas.SpriteImage(texture.FilePath, new(x - width / 2, y - height / 2, width, height),
+                tint, new(0, 0, texture.PixelWidth, texture.PixelHeight), opacity, rotation, false)) return true;
+        }
+        return false;
+    }
+    public bool DrawSliderBall(ICanvas canvas, float x, float y, float diameter, uint accent,
+        double elapsed, double velocity, float opacity, float rotation)
+    {
+        // Resolve static and animated variants in one provider before considering the fallback skin.
+        for (CatchSkin? provider = this; provider is not null; provider = provider.fallback)
+        {
+            SkinTexture? texture;
+            if (provider.sliderBallFrames.Count > 0)
+            {
+                double delay = Math.Max(.15 / Math.Max(.000001, velocity) * (1000d / 60), 1000d / 60);
+                int frame = (int)(Math.Floor(Math.Max(0, elapsed) / delay) % provider.sliderBallFrames.Count);
+                texture = provider.sliderBallFrames[frame];
+            }
+            else texture = provider.textures.GetValueOrDefault("sliderb");
+            if (texture is null) continue;
+            float scale = Math.Min(diameter / (128 * texture.Density), diameter * 2 / Math.Max(texture.PixelWidth, texture.PixelHeight));
+            float width = texture.PixelWidth * scale, height = texture.PixelHeight * scale;
+            uint tint = (provider.allowSliderBallTint ?? false) ? accent : provider.sliderBallColour ?? 0xFFFFFF;
+            if (canvas.SpriteImage(texture.FilePath, new(x - width / 2, y - height / 2, width, height), tint,
+                new(0, 0, texture.PixelWidth, texture.PixelHeight), opacity, rotation, false)) return true;
+        }
+        return false;
+    }
+    public bool DrawSpinner(ICanvas canvas, float x, float y, float scale, double elapsed, double duration, float opacity)
+    {
+        for (CatchSkin? provider = this; provider is not null; provider = provider.fallback)
+        {
+            bool oldStyle = provider.textures.ContainsKey("spinner-background");
+            if (!oldStyle && !provider.textures.ContainsKey("spinner-top")) continue;
+            double progress = Math.Clamp(elapsed / Math.Max(1, duration), 0, 1);
+            if (oldStyle)
+            {
+                SpinnerTexture(canvas, provider, "spinner-background", x, y, scale * .625f, provider.spinnerBackgroundColour ?? 0x646464, opacity);
+                SpinnerTexture(canvas, provider, "spinner-circle", x, y, scale * .625f, 0xFFFFFF, opacity);
+            }
+            else
+            {
+                // Editor preview has no gameplay rotations or completion progress; the fixed middle still follows map time.
+                float bodyScale = scale * .625f * .8f;
+                SpinnerTexture(canvas, provider, "spinner-bottom", x, y, bodyScale, 0xFFFFFF, opacity);
+                SpinnerTexture(canvas, provider, "spinner-top", x, y, bodyScale, 0xFFFFFF, opacity);
+                SpinnerTexture(canvas, provider, "spinner-middle2", x, y, bodyScale, 0xFFFFFF, opacity);
+                uint channel = (uint)Math.Clamp(Math.Round(255 * (1 - progress)), 0, 255);
+                SpinnerTexture(canvas, provider, "spinner-middle", x, y, bodyScale, 0xFF0000 | channel << 8 | channel, opacity);
+            }
+            float approachScale = scale * (float)(1.1625 - 1.1 * progress);
+            if (!SpinnerTexture(canvas, provider, "spinner-approachcircle", x, y, approachScale, 0xFFFFFF, opacity))
+                canvas.Circle(x, y, 195 * approachScale, 0xFFFFFF, false, 2 * scale, opacity);
+            return true;
+        }
+        return false;
+    }
+    private static bool SpinnerTexture(ICanvas canvas, CatchSkin provider, string name, float x, float y, float scale, uint tint, float opacity)
+    {
+        if (!provider.textures.TryGetValue(name, out var texture)) return false;
+        float width = texture.PixelWidth / (float)texture.Density * scale;
+        float height = texture.PixelHeight / (float)texture.Density * scale;
+        return canvas.SpriteImage(texture.FilePath, new(x - width / 2, y - height / 2, width, height), tint,
+            new(0, 0, texture.PixelWidth, texture.PixelHeight), opacity, 0, false);
+    }
     public bool DrawCatcher(ICanvas canvas, float centerX, float catchY, float fieldWidth, double circleSize, uint tint = 0xFFFFFF, float opacity = 1, bool additive = false, bool flipHorizontal = false)
     {
         foreach (var texture in Candidates("fruit-catcher-idle-0", "fruit-catcher-idle"))
@@ -213,15 +298,16 @@ public sealed class CatchSkin
         }
         bool above = skin?.OverlayAboveNumber ?? true;
         if (!above) Texture(prefix + "overlay", 0xFFFFFF);
-        if (number is int value && !(skin?.DrawHitCircleNumber(canvas, value, x, y, circleScale * .8f) ?? false))
+        if (number is int value && !(skin?.DrawHitCircleNumber(canvas, value, x, y, circleScale * .8f, opacity) ?? false))
         {
             string label = value.ToString(CultureInfo.InvariantCulture);
-            canvas.Text(label, x - canvas.MeasureText(label, 13) / 2, y - 8, 13, 0xFFFFFF, diameter);
+            float size = 13 * diameter / 38;
+            canvas.TextOpacity(label, x - canvas.MeasureText(label, size) / 2, y - size * .6f, size, 0xFFFFFF, diameter, false, opacity);
         }
         if (above) Texture(prefix + "overlay", 0xFFFFFF);
     }
 
-    private bool DrawHitCircleNumber(ICanvas canvas, int number, float x, float y, float scale)
+    private bool DrawHitCircleNumber(ICanvas canvas, int number, float x, float y, float scale, float opacity)
     {
         var owner = this;
         string text = number.ToString(CultureInfo.InvariantCulture);
@@ -235,7 +321,7 @@ public sealed class CatchSkin
                 foreach (var glyph in glyphs)
                 {
                     float w = glyph!.PixelWidth / (float)glyph.Density * scale, h = glyph.PixelHeight / (float)glyph.Density * scale;
-                    if (!canvas.Image(glyph.FilePath, new(left, y - h / 2, w, h))) return false;
+                    if (!canvas.Image(glyph.FilePath, new(left, y - h / 2, w, h), opacity: opacity)) return false;
                     left += w - owner.hitCircleOverlap * scale;
                 }
                 return true;
@@ -360,6 +446,7 @@ public sealed class CatchSkin
                 if (key.Equals("CursorRotate", StringComparison.OrdinalIgnoreCase)) CursorRotate = value != "0";
                 if (key.Equals("CursorExpand", StringComparison.OrdinalIgnoreCase)) CursorExpand = value != "0";
                 if (key.Equals("CursorTrailRotate", StringComparison.OrdinalIgnoreCase)) CursorTrailRotate = value != "0";
+                if (key.Equals("AllowSliderBallTint", StringComparison.OrdinalIgnoreCase)) allowSliderBallTint = value != "0";
             }
             if (section.Equals("Fonts", StringComparison.OrdinalIgnoreCase))
             {
@@ -384,6 +471,8 @@ public sealed class CatchSkin
             {
                 if (key.Equals("SliderBorder", StringComparison.OrdinalIgnoreCase)) sliderBorderColour = colour;
                 if (key.Equals("SliderTrackOverride", StringComparison.OrdinalIgnoreCase)) sliderTrackColour = colour;
+                if (key.Equals("SliderBall", StringComparison.OrdinalIgnoreCase)) sliderBallColour = colour;
+                if (key.Equals("SpinnerBackground", StringComparison.OrdinalIgnoreCase)) spinnerBackgroundColour = colour;
             }
             if (section.Equals("CatchTheBeat", StringComparison.OrdinalIgnoreCase))
             {

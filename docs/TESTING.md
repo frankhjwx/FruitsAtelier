@@ -49,6 +49,35 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --osu-canvas-check` verifies standard geometry, source-identity picking,
+stacking, approach/disappearance, native editing, slider representation boundaries,
+stable grid and anchor gestures, horizontal canvas overscan, independent DS,
+undo and navigation. It also reports warm rendering and pointer
+CPU/allocation measurements on a 10,000-circle fixture; its recording canvas
+excludes native GPU rendering. `Formats.Tests --osu-model-check` verifies Mode=0
+import/Catch export, coordinates and project compatibility, both slider conversion
+directions, Legacy droplet effects, timing changes, failure atomicity and undo.
+
+`App.Tests --legacy-droplet-worker-check` verifies responsive submission, prepared
+export publication, failure rollback, save blocking, cancellation, undo/redo and
+rejection of stale content or history transactions.
+
+`FruitsAtelier.App.exe --render-check --osu-canvas-render-check` exercises the
+native Direct2D renderer in English/Chinese at two sizes and three DPI values,
+using skin and geometric fallback rendering. Captures are written to
+`artifacts/tests/osu-canvas-native`.
+Add `--osu-configured-skin` to inspect the configured selected/default skin paths
+without changing saved preferences.
+Use `--osu-skin-folder=/path/to/skin` and `--osu-default-skin=/path/to/default.osk`
+to keep those fixtures independent of concurrent preference changes.
+
+`App.Tests --library-incremental-check` verifies scoped source scans, cached cards
+remaining openable during refresh, standard-source protection and background
+database locks. `App.Tests --benchmark-library-loading` creates 10,000 synthetic
+standard/Catch difficulties in 1,000 sets under `artifacts/`, then measures cold and
+warm scans, cached startup, query construction and a single-directory update.
+Its report excludes native rendering, media and real library filesystem variance.
+
 `Core.Tests --aimod-check` and `App.Tests --aimod-check` cover AiMod rules,
 resource checks, read-only navigation, localization, Ctrl+Shift+A, table column
 resizing/reordering, selection/copy and dock attachment.
@@ -700,7 +729,8 @@ exercises resizing and speed selection at every UI-scale step in English and
 Chinese at two client resolutions. Captures, including minimum heights, are
 stored under `artifacts/tests/timeline-layout-native`.
 
-`App.Tests --ui-scale-check` checks the 150% default, supported 25% steps,
+`App.Tests --ui-scale-check` checks scale shortcuts with slider selections and persistence, selection-colour draft cancellation and HEX input on both canvases,
+the 150% default, supported 25% steps,
 settings normalization, draft cancellation, persistence, layout and content isolation.
 `FruitsAtelier.App.exe --render-check --ui-scale-render-check` exercises every
 UI-scale step in English and Chinese at two client resolutions, including native

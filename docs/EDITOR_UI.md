@@ -1,5 +1,46 @@
 # Editing Controls
 
+## osu! canvas
+
+Tab switches the Compose canvas between Catch's time–X view and an
+osu!standard 512×384 geometric view. Text fields, dialogs, Ctrl+Tab difficulty
+navigation and Testplay retain their own key handling. Switching views does not
+convert objects or create a content edit. Catch preview continues to show the
+exported fruits in either view.
+
+The osu! canvas draws circles, approach circles, Legacy Slider paths, repeats,
+slider balls and spinners. Circle size, approach rate, combo ordering and stacking
+use standard geometry. Past circles turn white and fade over 700 ms. Seeking and
+pausing use the same map-time presentation. Skin elements are used when available.
+Slider bodies retain a white border and a brighter centre with darker edges.
+Static `sliderb.png` and numbered slider-ball animations use the owning skin's
+resources and tint settings. Retained skin archives upgrade older extraction
+caches when the supported resource set changes.
+Spinners use the owning skin's old or modern composition and native texture
+dimensions, with the fixed centre's tint following the spinner's elapsed time.
+
+Catch edits FSliders; osu! edits Legacy Sliders. The other representation remains
+visible and read-only. Use the explicit conversion action before editing it.
+Conversion is undoable, validates playback and preserves the original object on
+failure. Global droplet settings can rebuild Legacy paths to match their exported
+fruit targets; this can change their two-dimensional shape.
+
+In osu! view the Fruit and Banana tools place circles and spinners. The Slider
+tool places Legacy controls: click creates a grey square anchor, double-click
+creates a red segment boundary, and right-click finishes at the pointer. Thin
+white lines connect the controls. Selected controls can be dragged; Ctrl+click
+turns an interior control into a red boundary and right-click removes it.
+The Context Menu key opens path type, repeats and length actions. Grid Snap uses
+the selected 4/8/16/32 px level on both axes; holding Shift temporarily inverts it.
+Alt+wheel zooms and middle drag pans the geometric view.
+The upper-right osu! DS slider has its own 0.1–3.2 multiplier; Shift uses 0.01
+steps instead of 0.1. Changing it does not change Catch DS.
+
+Both canvases draw into the side areas beneath the tool palettes. Logical
+playfield coordinates and zoom stay unchanged; tool buttons remain above the
+content and receive clicks first. Side docks, the toolbar and transport retain
+their own drawing regions.
+
 ## Interface size
 
 **Settings → Appearance → UI scale** adjusts the whole interface from 50% to
@@ -689,7 +730,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Ctrl+Up / Down | Increase / decrease playback speed by 25 percentage points, within 10%–150% |
 | Ctrl+Shift+Up / Down | Increase / decrease playback speed by 5 percentage points |
 | Ctrl+Shift+F | Open and focus the Stream/Stack dock |
-| Ctrl+= / Ctrl+− | Add / remove one reverse |
+| Ctrl+= / Ctrl+− | Increase / decrease UI scale |
 | Ctrl+J | Extend the selected FSlider to the pointer |
 | Esc | Cancel an active drag, box selection, draft, or text input |
 
@@ -843,15 +884,15 @@ In **pen tool mode**, press B or 3 to clear selection and start drawing. Click t
 
 Select an FSlider and click its controls, or double-click its track, to edit anchors in **Select**. Clicking an interior control on an already selected complete track also enters editing; visible slider fruits use the selection rules below. Drag anchors and handles directly on the canvas. Interior anchor dragging is free by default. Enable **View → Snap interior anchors** to snap interior anchor times to the selected beat subdivision. Head and tail anchors follow beat Snap. Invalid snapped endpoint moves keep their previous time rather than clamping between grid lines. Handles remain free, and the option does not change placement or whole-object snapping. Anchor times remain increasing; anchors and handles may extend beyond the playfield. Moving a pen draft anchor preserves its handle vectors, and the whole draft remains one undo step. Curve handles may extend before the start or after the end; the curve must define an unambiguous forward branch inside the slider time interval. Generated events still undergo normal conversion validation.
 
-In Select mode, the first click selects the whole slider; the second click on a head, tail or repeat selects that fruit with an individual outer ring. Dragging that selected fruit inside the selection box edits the fruit instead of moving the whole slider. Horizontal dragging changes its X while preserving its time. Dragging a selected FSlider fruit at a base-path endpoint vertically edits that red anchor in time and X, with endpoint beat snapping and a single undo step. This works in both editing modes, including paths with only two red anchors; the opposite endpoint stays fixed. Other slider events keep their time during dragging; repeated traversals share the same endpoint geometry. Legacy endpoint edits convert the owning slider to an FSlider inside the same undo step. Clicking outside a selected child returns to whole-slider selection; a subsequent outside click clears it. Dragging the body selects and moves the whole slider. In anchor edit mode, dragging an anchor changes that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+Shift+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
+In Select mode, the first click selects the whole slider; the second click on a head, tail or repeat selects that fruit with an individual outer ring. Dragging that selected fruit inside the selection box edits the fruit instead of moving the whole slider. Horizontal dragging changes its X while preserving its time. Dragging a selected FSlider fruit at a base-path endpoint vertically edits that red anchor in time and X, with endpoint beat snapping and a single undo step. This works in both editing modes, including paths with only two red anchors; the opposite endpoint stays fixed. Other slider events keep their time during dragging; repeated traversals share the same endpoint geometry. Legacy Sliders remain read-only in the Catch canvas until explicitly converted to FSliders. Clicking outside a selected child returns to whole-slider selection; a subsequent outside click clears it. Dragging the body selects and moves the whole slider. In anchor edit mode, dragging an anchor changes that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+Shift+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
 
-Editing a selected Legacy Slider automatically converts that parent when inserting a control point or reshaping a child. Vertical head and first-span tail drags continue as FSlider anchor drags; Ctrl-click inserts at the pointer time and X, including away from the visible curve. Conversion and the edit share one undo step; Escape or lost capture restores the Legacy Slider. Selecting without moving preserves the imported representation. Double-clicking a slider also converts without confirmation. B / 3 selects the new-slider tool and does not convert the selected imported slider.
+Selecting or double-clicking a Legacy Slider in Catch preserves its representation. Editing requires the explicit Convert to FSlider action; the conversion and subsequent edits have separate undo steps. Legacy geometry can instead be edited directly in the osu! canvas. B / 3 selects the current canvas's slider tool.
 
 Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Hold the left mouse button stationary on a Legacy Slider to open its conversion actions beside the pointer. Holding a slider fruit first identifies its beat at 300 ms. Continuing to hold stationary opens conversion actions at 1000 ms; a small progress ring fills during the final 700 ms. Moving at least 2 DIP or releasing before completion cancels the hold; ordinary selection and dragging remain available. The buttons stay open until an action, another click, a key, or focus loss dismisses them. Conversion preserves start time, total duration, and span count. It first fits a small set of straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete the conversion. Exact nested-object positions and sequences are not required to match. Invalid or unrepresentable input retains its original object with a reason.
 
 The first workspace import from Songs, an external folder, `.osu`, or `.osz` asks whether to convert sliders in all newly imported difficulties if they contain Legacy Sliders. The prompt offers **Derandomize droplets**. With it off, conversion builds an editable path through the actual legacy fruit and droplet positions, including randomized TinyDroplets. Generated geometry compensates the RNG so objects stay on that path. Conversion preserves their times and positions; incompatible shared repeat targets remain Legacy with a reason. The selected policy is saved per difficulty after a successful conversion and reused for later conversions. Keeping Legacy preserves that representation. Reopening an existing project does not prompt again. Importing one difficulty into a project prompts only for that difficulty.
 
-**Edit → Convert all sliders to FSliders** opens the droplet choice for the current difficulty and is disabled when it has no Legacy Sliders. Single-slider editing and explicit conversion proceed without a prompt, using the saved difficulty policy or the global conversion default in Droplet Settings. Batch conversion runs in the background with a cancellable prompt and blocks content editing. Cancellation applies no partial results. Conversions per difficulty can be undone together; valid sliders that previously failed strict alignment now convert approximately. Invalid input and reasons appear in paginated results. Saving persists conversion in the workspace without modifying original Songs/external files; Export is still required to write `.osu`.
+**Edit → Convert all sliders to FSliders** opens the droplet choice for the current difficulty and is disabled when it has no Legacy Sliders. Explicit single-slider conversion proceeds without a prompt, using the saved difficulty policy or the global conversion default in Droplet Settings. Batch conversion runs in the background with a cancellable prompt and blocks content editing. Cancellation applies no partial results. Conversions per difficulty can be undone together; valid sliders that previously failed strict alignment now convert approximately. Invalid input and reasons appear in paginated results. Saving persists conversion in the workspace without modifying original Songs/external files; Export is still required to write `.osu`.
 
 With Distance Snap disabled, dragging a selected slider fruit, droplet or tiny droplet follows horizontal Grid Snap, including the existing Shift override. Unreachable positions stop at an accepted grid point, or retain the original X when no grid point is reachable. With Distance Snap enabled, the strict event snapping rules above apply; rejected candidates do not leave partial geometry.
 
@@ -891,7 +932,7 @@ slider retains the complete selection for the batch operation.
 
 ### Reverses and direction
 
-Both modes use **Ctrl+= / Ctrl+−** to change reverses. Dragging a base-path endpoint instead edits the path and therefore changes the duration of every traversal.
+In both modes, drag the slider tail in the object timeline to change reverses. Dragging a base-path endpoint instead edits the path and therefore changes the duration of every traversal.
 
 **Ctrl+G / Edit → Reverse selection** reflects selected parent intervals within the complete selection time range and reverses each slider’s first-span path, retaining its repeat count. A single FSlider keeps its original interval. Imported sliders become editable FSliders in the same undo step. Banana showers exchange their relative start/end interval positions; standalone fruit X coordinates stay unchanged. Lock Notes blocks the operation. **Edit → Reverse path direction** applies only to the active FSlider and preserves its time range. It is distinct from adding a reverse. All repeated spans derive from the same controls; changing the base path updates every traversal.
 
@@ -1027,7 +1068,7 @@ A new project's blank difficulty starts unmodified, so directly opening or impor
 
 The bottom status bar shows current action feedback, such as save results or operation limits. During background synchronization checks or application of changes, synchronization status takes priority; otherwise conversion errors take priority. It is not a log viewer. Platform details, internal zoom percentages, and duplicate dirty indicators are omitted.
 
-For FSliders, 0 reverses plays the path once, 1 returns once, and higher counts continue alternating. Use **Ctrl+= / Ctrl+−** to add/remove a reverse. With a completed FSlider selected, move the pointer to empty canvas at a time after its final end and press **Ctrl+J**. A new anchor is placed at the pointer position using the placement snap setting, with a straight segment from the base path endpoint. Existing segments remain unchanged. Extending a repeated slider lengthens its base path for every span; it does not append after the repeats. Each operation is undoable.
+For FSliders, 0 reverses plays the path once, 1 returns once, and higher counts continue alternating. Drag the slider tail in the object timeline to add or remove reverses. With a completed FSlider selected, move the pointer to empty canvas at a time after its final end and press **Ctrl+J**. A new anchor is placed at the pointer position using the placement snap setting, with a straight segment from the base path endpoint. Existing segments remain unchanged. Extending a repeated slider lengthens its base path for every span; it does not append after the repeats. Each operation is undoable.
 
 In the object timeline, a slider tail displays a horizontal resize cursor. Drag it right to add reverses or left to remove them, down to one traversal. Each step equals one unchanged base-span duration. This works for FSliders and imported Legacy Sliders; release commits one undo step and Esc cancels.
 

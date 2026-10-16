@@ -147,6 +147,7 @@ internal static class DistanceEditingTests
             {
                 var slider = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 280, SpanCount = 1 };
                 slider.ControlPoints.AddRange([new(100, 192), new(380, 192)]); map.ImportedSliders.Add(slider); source = slider.Id;
+                ImportedSliderEditing.ConvertToTrack(map, slider.Id);
             }
             else
             {

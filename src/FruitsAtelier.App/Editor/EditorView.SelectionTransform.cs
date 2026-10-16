@@ -135,6 +135,7 @@ public sealed partial class EditorView
         if (side == 0 && TryBeginSelectedSliderObjectDrag(x, y, requireSelectedFruit: true)) return true;
         if (HitSelectedSliderControl(x, y)) return false;
         if (side == 0 && !bounds.Contains(x, y)) return false;
+        if (RejectReadOnlySelection()) return true;
         if (side != 0 && selectionMapBounds is { } map && map.Right - map.Left < .001) return true;
         BeginObjectDrag(x, y, scaleSelection: side != 0);
         selectionScaleSide = side;

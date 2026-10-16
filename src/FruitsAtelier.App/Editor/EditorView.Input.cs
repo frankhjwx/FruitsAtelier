@@ -138,6 +138,7 @@ public sealed partial class EditorView
         if (menu < 0 && contextItems.Count == 0 && DistancePointerDown(x, y, button, shift)) return;
         if (button == 2 && DockTabContext(x, y)) return;
         if (button == 2 && DifficultyTabContext(x, y)) return;
+        if (OsuPointerDown(x, y, button, shift, ctrl)) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
         if (IsLazerEditing && HandleLazerPointerDown(x, y, button, shift, ctrl)) return;
         if (button == 2)
@@ -250,6 +251,12 @@ public sealed partial class EditorView
             return;
         }
         if (!plot.Contains(x, y)) return;
+        if (!IsOsuCanvas && HitCatchObject(x, y) is { } readOnlyHit && IsReadOnlySlider(readOnlyHit.SourceId))
+        {
+            PickObject(readOnlyHit.SourceId, ctrl);
+            clickedCoordinate = readOnlyHit.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet ? readOnlyHit : null;
+            BeginSliderHold(x, y, ctrl || shift); StatusMessage = L.Get("osu.readOnlySlider"); return;
+        }
         timelineFruit = null;
         if (!ctrl && tool == Tool.Select && objectSelection.Count == 1 && SelectedDistanceObject() is { IsStandalone: false } selectedChild
             && !SelectionTransformBounds.Contains(x, y)
@@ -482,6 +489,7 @@ public sealed partial class EditorView
         if (librarySettingsOpen || ExportVisible || languageMenuOpen) return;
         if (LibraryVisible) { MoveLibraryPointer(y); return; }
         if (tabPointer) { MoveTabPointer(x); return; }
+        if (OsuPointerMove(x, y, shift)) return;
         if (drag == DragKind.TimelinePanelResize) { MoveTimelinePanelResize(y); return; }
         if (drag == DragKind.PreviewResize)
         {
@@ -648,6 +656,7 @@ public sealed partial class EditorView
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
         if (librarySettingsOpen || ExportVisible) return;
+        if (OsuPointerUp(x, y, button, shift)) return;
         if (IsLazerEditing && lazerMiddleMarquee && button == 1 && drag == DragKind.Marquee)
         { lazerMiddleMarquee = false; PointerMove(x, y, shiftHeld, false); FinishBox(x, y); return; }
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
@@ -674,9 +683,20 @@ public sealed partial class EditorView
         if (drag == DragKind.CanvasZoom) { canvasScaleAxis = -1; SaveCanvasScale(); }
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
         {
+            var readOnlyIds = IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id);
+            if (history.TransactionChangesObjects(readOnlyIds))
+            { history.Cancel(); drag = DragKind.None; StatusMessage = L.Get("osu.readOnlySlider"); return; }
+            try
+            {
+                if (drag == DragKind.TimelineTail && tailImportedBefore is { } beforeTail
+                    && Document.ImportedSliders.FirstOrDefault(s => s.Id == beforeTail.Id) is { } afterTail)
+                    RemapOsuRepeatOverrides(beforeTail, afterTail);
+            }
+            catch (InvalidOperationException error)
+            { history.Cancel(); drag = DragKind.None; StatusMessage = error.Message; return; }
             if (Document.DerandomizeDroplets is null && Document.Tracks.Any(track => pendingImplicitSliderConversions.Contains(track.Id)))
                 Document.DerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
-            history.Commit();
+            CommitContentHistory();
         }
         pendingImplicitSliderConversions.Clear();
         if (drag == DragKind.SliderObject)
@@ -779,6 +799,11 @@ public sealed partial class EditorView
             }
             return;
         }
+        if (IsOsuCanvas && plot.Contains(x, y))
+        {
+            OsuDoubleClick(x, y, shift);
+            return;
+        }
         if (ctrl || tool == Tool.Fruit) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (!LegacyMode && draftTrack != Guid.Empty && SelectedTrack is { } draft && Near(Point(draft.Nodes[^1]), x, y, 8))
         { draft.Nodes[^1].HandleOut = default; draftStraight = true; return; }
@@ -795,7 +820,7 @@ public sealed partial class EditorView
         if (Document.ImportedSliders.Any(slider => slider.Id == sourceId))
         {
             SelectObjects([sourceId], sourceId);
-            EditImportedSlider();
+            StatusMessage = L.Get("osu.readOnlySlider");
             return;
         }
         if (Document.Tracks.FirstOrDefault(track => track.Id == sourceId) is not { } track) return;
@@ -987,6 +1012,8 @@ public sealed partial class EditorView
         bool onTimeline = objectTimeline.Contains(x, y);
         bool onCanvas = canvas.Contains(x, y);
         bool onOverview = overview.Contains(x, y);
+        if (IsOsuCanvas && onCanvas && alt && !ctrl && !shift)
+        { ZoomOsuCanvasAt(x, y, Math.Pow(1.16, delta / 120)); return; }
         if (IsLazerEditing && HandleLazerWheel(x, y, delta, ctrl, shift, alt, onTimeline, onCanvas, onOverview)) return;
         if ((onTimeline || onCanvas) && ctrl && alt && !shift)
         {
@@ -1258,6 +1285,7 @@ public sealed partial class EditorView
             return;
         }
         if (librarySettingsOpen || LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
+        if (editField < 0 && OsuToggleKey(virtualKey, ctrl, shift)) return;
         if (TimingKey(virtualKey, ctrl, shift)) return;
         if (virtualKey == 117 && !ctrl && !shift && !altHeld) { OpenTimingSetup(); return; }
         if (virtualKey == 114 && !ctrl && !shift && !altHeld) { ShowTimingPage(true); return; }
@@ -1277,7 +1305,7 @@ public sealed partial class EditorView
         {
             if (!dragMoved && draftTrack == Guid.Empty && draftBanana == Guid.Empty
                 && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.LegacyControl)
-            { history.Commit(); drag = DragKind.None; sliderHoldConsumed = false; }
+            { CommitContentHistory(); drag = DragKind.None; sliderHoldConsumed = false; }
             if (editField >= 0 && !CommitField()) return;
             if (virtualKey == 77) ShowMergeInspector();
             else ShowPatternDock();
@@ -1298,6 +1326,7 @@ public sealed partial class EditorView
             replaceText = false;
             return;
         }
+        if (OsuEditingKey(virtualKey, ctrl, shift)) return;
         if (virtualKey == 27)
         {
             if (VolumePopoverVisible) { CloseVolumePopover(); return; }
@@ -1447,6 +1476,9 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        CancelLegacyDropletRefresh();
+        CancelOsuInteraction();
+        tailImportedBefore = null;
         FinishTimelinePanelResize(cancel: true);
         EndTimelineScrub();
         notesSelecting = false; CancelAimodGesture(); aimodFocused = false;
@@ -1613,7 +1645,7 @@ public sealed partial class EditorView
         }
         shower.EndTimeMs = end;
         Document.DurationMs = Math.Max(Document.DurationMs, end);
-        history.Commit();
+        CommitContentHistory();
         draftBanana = Guid.Empty;
         SelectObjects([shower.Id], shower.Id);
         StatusMessage = L.Get("editor.status.bananaFinished", Time(shower.TimeMs), Time(end));
@@ -1690,8 +1722,11 @@ public sealed partial class EditorView
         history.Begin(L.Get("editor.command.changeField", field.Label));
         try
         {
+            var readOnlyIds = (IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id)).ToArray();
             field.Apply(value);
-            history.Commit();
+            if (history.TransactionChangesObjects(readOnlyIds))
+            { history.Cancel(); fieldError = StatusMessage = L.Get("osu.readOnlySlider"); return false; }
+            CommitContentHistory();
             editField = -1;
             fieldError = "";
             StatusMessage = L.Get("editor.status.fieldChanged", field.Label);

@@ -70,7 +70,7 @@ public static class OsuBeatmapReader
             { throw new InvalidDataException(L.Get("core.reader.lineError", lineNumber, ex.Message), ex); }
         }
         if (!header) throw new InvalidDataException(L.Get("core.reader.header"));
-        if (Setting(document, "General", "Mode") != "2") throw new InvalidDataException(L.Get("core.reader.mode"));
+        if (Setting(document, "General", "Mode") is not (null or "0" or "2")) throw new InvalidDataException(L.Get("core.reader.mode"));
         string? unicodeTitle = Setting(document, "Metadata", "TitleUnicode");
         document.Name = !string.IsNullOrWhiteSpace(unicodeTitle) ? unicodeTitle : Setting(document, "Metadata", "Title") ?? L.Get("core.names.untitled");
         document.ApproachRate = Difficulty("ApproachRate", Difficulty("OverallDifficulty", 5));
@@ -149,7 +149,7 @@ public static class OsuBeatmapReader
         _ = Integer(p[4]);
         int kind = type & (1 | 2 | 8 | 128);
         if (kind == 1)
-            document.Fruits.Add(new Fruit { X = x, TimeMs = time, SourceOrder = order, OriginalLine = line });
+            document.Fruits.Add(new Fruit { X = x, Y = y, TimeMs = time, SourceOrder = order, OriginalLine = line });
         else if (kind == 2)
         {
             if (p.Length < 8) throw new InvalidDataException(L.Get("core.reader.sliderFields"));
@@ -194,6 +194,8 @@ public static class OsuBeatmapReader
             throw new InvalidDataException(L.Get("core.distanceSnap.range"));
         if (!double.IsFinite(document.DistanceSpacing) || document.DistanceSpacing is < .1 or > 6)
             throw new InvalidDataException(L.Get("core.distanceSpacing.range"));
+        if (!double.IsFinite(document.OsuDistanceSpacing) || document.OsuDistanceSpacing is < .1 or > 3.2)
+            throw new InvalidDataException(L.Get("core.distanceSpacing.range"));
         if (!double.IsFinite(document.DurationMs) || document.DurationMs <= 0 || document.DurationMs > int.MaxValue)
             throw new InvalidDataException(L.Get("core.reader.projectDuration"));
         if (!double.IsFinite(document.BeatLengthMs) || document.BeatLengthMs <= 0 || !double.IsFinite(document.TimingOffsetMs))
@@ -219,7 +221,7 @@ public static class OsuBeatmapReader
         if (document.HitsoundOverrides.Select(o => (o.SourceId, o.EventIndex)).Distinct().Count() != document.HitsoundOverrides.Count)
             throw new InvalidDataException(L.Get("copier.invalidSamples"));
         var ids = new HashSet<Guid>();
-        foreach (var fruit in document.Fruits) { Id(fruit.Id); Time(fruit.TimeMs); X(fruit.X); }
+        foreach (var fruit in document.Fruits) { Id(fruit.Id); Time(fruit.TimeMs); X(fruit.X); if (!double.IsFinite(fruit.Y) || Math.Abs(fruit.Y) > int.MaxValue) throw new InvalidDataException(L.Get("core.reader.coordinates")); }
         foreach (var track in document.Tracks)
         {
             Id(track.Id);
@@ -234,6 +236,24 @@ public static class OsuBeatmapReader
         }
         foreach (var slider in document.ImportedSliders)
         {
+            if (slider.RandomizationBaseVelocity is { } velocity && (!double.IsFinite(velocity) || velocity is < .1 or > 10))
+                throw new InvalidDataException(L.Get("core.reader.importedParameters"));
+            if (slider.RandomizationSource is { } source)
+            {
+                if (source.RandomizationSource is not null || source.RandomizationTrack is not null || source.Id != slider.Id)
+                    throw new InvalidDataException(L.Get("core.reader.importedParameters"));
+                var baseline = new MapDocument();
+                baseline.ImportedSliders.Add(source);
+                Validate(baseline);
+            }
+            if (slider.RandomizationTrack is { } sourceTrack)
+            {
+                if (sourceTrack.Id != slider.Id || slider.RandomizationSource is null)
+                    throw new InvalidDataException(L.Get("core.reader.importedParameters"));
+                var baseline = new MapDocument();
+                baseline.Tracks.Add(sourceTrack);
+                Validate(baseline);
+            }
             Id(slider.Id); Time(slider.TimeMs); X(slider.X);
             if (!double.IsFinite(slider.Y) || !double.IsFinite(slider.PixelLength) || slider.PixelLength < 0
                 || slider.SpanCount is < 1 or > 10000 || !"LBCP".Contains(slider.PathType)

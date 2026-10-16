@@ -21,6 +21,8 @@ public sealed partial class EditorView
     private LibraryDatabase? libraryDatabase;
     private Task<(LibraryDatabase Database, LibraryScan Scan)>? scanTask;
     private bool libraryRescanRequested;
+    private readonly HashSet<string> libraryPendingDirectories = new(WorkspaceSynchronization.Paths);
+    private string indexedWorkspace = "", indexedSongs = "";
     private bool libraryProjectsNeedReindex;
     private LibraryScanProgress? libraryScanProgress;
     private Task<LibraryBrowser>? searchTask;
@@ -45,7 +47,7 @@ public sealed partial class EditorView
     private string exportName = "";
     private int exportMode;
     private string draftWorkspace = "", draftOsuRoot = "", draftDefaultSkin = "";
-    private DateTime searchAfter, nextLibraryScan = DateTime.MinValue, nextResourceCheck;
+    private DateTime searchAfter, nextResourceCheck;
     private IReadOnlyList<string> resourceErrors = [];
 
     public void InitializeLibrary(bool show, LibrarySettings? settings = null, bool forceFirstRunSetup = false,
@@ -133,7 +135,11 @@ public sealed partial class EditorView
         LibraryVisible = true; exportPage = resourcePage = false; libraryField = -1;
         librarySettingsOpen = false; updatesPage = false;
         if (libraryDatabase is null) StartLibraryScan();
-        else { QueueLibrarySearch(); if (DateTime.UtcNow >= nextLibraryScan) StartLibraryScan(); }
+        else
+        {
+            if (libraryProjectsNeedReindex) QueueLibrarySearch();
+            PumpPendingLibraryScan();
+        }
     }
     public void ShowWorkspaceExport()
     {
@@ -285,33 +291,49 @@ public sealed partial class EditorView
             difficulty.History.RebaseSharedMetadata(document => document.SourcePath = plan.Target);
             difficulty.History.MarkSaved();
         }
-        CheckWorkspaceResources(); StartLibraryScan(); CloseLibrary();
+        CheckWorkspaceResources();
+        libraryPendingDirectories.Add(Path.GetDirectoryName(plan.Target)!);
+        libraryProjectsNeedReindex = true; QueueLibrarySearch(); CloseLibrary();
     }
     public void RefreshLibrary() { librarySettingsOpen = false; updatesPage = false; libraryRescanRequested = scanTask is { IsCompleted: false }; StartLibraryScan(); }
     private LibraryDatabase? scanningDatabase;
     private DateTime nextScanRefresh;
     private long searchedLibraryRevision = -1;
-    private void StartLibraryScan()
+    private void PumpPendingLibraryScan()
     {
-        if (scanTask is { IsCompleted: false }) { libraryRescanRequested = true; return; }
+        if (!LibraryVisible || scanTask is not null) return;
+        if (libraryRescanRequested) StartLibraryScan();
+        else if (libraryPendingDirectories.Count > 0) StartLibraryScan(libraryPendingDirectories.ToArray());
+    }
+    private void StartLibraryScan(string[]? directories = null)
+    {
+        if (scanTask is not null)
+        {
+            if (directories is null) libraryRescanRequested = true;
+            else libraryPendingDirectories.UnionWith(directories);
+            return;
+        }
         try
         {
             InvalidateLibraryRatings();
             libraryRescanRequested = false;
+            libraryPendingDirectories.Clear();
             string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
+            var existing = indexedWorkspace == workspace && indexedSongs == songs ? libraryDatabase : null;
             Volatile.Write(ref scanningDatabase, null);
             searchedLibraryRevision = -1;
             Volatile.Write(ref libraryScanProgress, new(0, 0, 0));
             // Schema initialization can wait on another scan's SQLite write lock as well.
             scanTask = Task.Run(() =>
             {
-                var db = new LibraryDatabase(workspace, songs);
+                var db = existing ?? new LibraryDatabase(workspace, songs);
                 Volatile.Write(ref scanningDatabase, db);
-                return (db, db.Scan(progress: p => Volatile.Write(ref libraryScanProgress, p)));
+                return (db, db.ScanDirectories(directories, progress: p => Volatile.Write(ref libraryScanProgress, p)));
             });
+            indexedWorkspace = workspace; indexedSongs = songs;
             libraryNotice = L.Get("library.scanning");
             libraryError = "";
-            QueueLibrarySearch(); nextLibraryScan = DateTime.UtcNow.AddMinutes(1);
+            if (libraryBrowser is null) QueueLibrarySearch();
         }
         catch (Exception e) { libraryError = e.Message; }
     }
@@ -340,7 +362,7 @@ public sealed partial class EditorView
             try { var (db, result) = scanTask.GetAwaiter().GetResult(); libraryDatabase = db; libraryNotice = L.Get("library.indexed", result.Count); libraryError = ""; QueueLibrarySearch(); }
             catch (Exception e) { libraryError = e.Message; QueueLibrarySearch(); }
             scanTask = null;
-            if (libraryRescanRequested) StartLibraryScan();
+            PumpPendingLibraryScan();
         }
         if (searchTask is { IsCompleted: true })
         {
@@ -356,13 +378,13 @@ public sealed partial class EditorView
                 libraryBrowserQuery = runningSearchQuery;
                 if (result.TopIndex >= 0 && !libraryPointerActive) libraryScroll = result.TopIndex + fraction;
                 if (selectedLibraryGroup is null || scanTask is not { IsCompleted: false }) selectedLibraryGroup = result.Selected?.Key;
-                libraryResultsReady = scanTask is not { IsCompleted: false };
+                libraryResultsReady = true;
                 if (libraryResultsReady) RememberLibraryPosition();
             }
             catch (Exception e) { libraryError = e.Message; }
             searchTask = null;
         }
-        if (searchTask is null && libraryDatabase is not null && DateTime.UtcNow >= searchAfter && searchTaskQuery != LibrarySearchKey)
+        if (LibraryVisible && searchTask is null && libraryDatabase is not null && DateTime.UtcNow >= searchAfter && searchTaskQuery != LibrarySearchKey)
         {
             var db = libraryDatabase; string query = libraryQuery; bool projects = libraryProjectsOnly;
             runningSearchQuery = query; runningSearchProjects = projects;
@@ -390,7 +412,7 @@ public sealed partial class EditorView
                 }
             ratingTask = null;
         }
-        if (LibraryVisible && !librarySettingsOpen && !exportPage && libraryDatabase is not null && DateTime.UtcNow >= nextLibraryScan) StartLibraryScan();
+        if (!librarySettingsOpen && !exportPage) PumpPendingLibraryScan();
         PumpWorkspaceResources();
     }
     private void OpenLibraryCard(float x, float y)

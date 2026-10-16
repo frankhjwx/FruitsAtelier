@@ -20,7 +20,7 @@ internal static class AssistToolsTests
                 && t.Y >= 88 && t.Y < 117);
             ui.Click(movementLabel.X + 4, movementLabel.Y + 5);
             RecordingCanvas.Segment[] Connections() => ui.Canvas.Operations
-                .Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Width: 4, Opacity: .65f })
+                .Where(o => o.Clip == ui.View.CanvasRenderBounds && o.Segment is { Width: 4, Opacity: .65f })
                 .Select(o => o.Segment!.Value).ToArray();
             var normal = Connections();
             Toggle();
@@ -111,8 +111,8 @@ internal static class AssistToolsTests
             "Movement connection or DS label disappeared outside kiai.");
         ui = new Ui(); ui.LoadDocument(DemoMap.Create());
         ui.ClickText(Strings.Get("movement.analysis"));
-        var curves = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Color: 0xAB9DF2 }).ToArray();
-        var connections = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Width: 4, Opacity: .65f }).ToArray();
+        var curves = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasRenderBounds && o.Segment is { Color: 0xAB9DF2 }).ToArray();
+        var connections = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasRenderBounds && o.Segment is { Width: 4, Opacity: .65f }).ToArray();
         Check(curves.Length > 0 && connections.Length > 0 && curves.Min(o => o.Order) < connections.Min(o => o.Order),
             "Movement connections must draw above curves");
         foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
@@ -120,7 +120,7 @@ internal static class AssistToolsTests
             ui.View.SetSliderEditingMode(mode);
             var track = ui.View.Document.Tracks.First();
             ui.EditTrack(track.Id); ui.Paint();
-            var commands = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasPlotBounds).ToArray();
+            var commands = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasRenderBounds).ToArray();
             int lastConnection = commands.Where(o => o.Segment is { Width: 4, Opacity: .65f }).Max(o => o.Order);
             var point = ui.ScreenAt(track.Nodes[0].TimeMs, track.Nodes[0].X);
             var controls = commands.Where(o => mode == FruitsAtelier.App.Editor.SliderEditingMode.PenTool
@@ -341,21 +341,25 @@ internal static class AssistToolsTests
     {
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,2,0,L|240:192,2,140,2|4|8,1:2|2:3|3:1,2:3:7:60:\n");
         var ui = new Ui(); ui.LoadDocument(map); var id = map.ImportedSliders.Single().Id;
-        ui.ClickMap(1000, 100); ui.ClickMap(1000, 100); ui.Key('R');
+        ui.View.ToggleOsuCanvas(); ui.Paint();
+        var timeline = ui.View.ObjectTimelineBounds;
+        float head = timeline.X + (float)((1000 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+        ui.Click(head, timeline.Y + 27); ui.Key('R');
         Check(ObjectFlags.Sounds(ui.View.Document, id).SequenceEqual(new[] { 10, 4, 8 }), "Head click changed other edges");
         Check(ui.View.Document.ImportedSliders.Single().OriginalLine!.EndsWith("1:2|2:3|3:1,2:3:7:60:"), "Sample banks were overwritten");
         var output = OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack;
         Check(ObjectFlags.Sounds(output, output.ImportedSliders.Single().Id).SequenceEqual(new[] { 10, 4, 8 }), "Edge export failed");
         ui.Key('Z', ctrl: true);
         ui.View.SetModifiers(false, false);
-        var timeline = ui.View.ObjectTimelineBounds;
+        timeline = ui.View.ObjectTimelineBounds;
         float x = timeline.X + (float)((1250 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
         ui.Click(x, timeline.Y + 20); ui.Key('W');
         Check(ObjectFlags.Sounds(ui.View.Document, id).SequenceEqual(new[] { 2, 6, 10 }), "Whole-slider toggle failed");
         ui.Key('L'); var before = ui.View.Document.DeepClone(); ui.Key(187, ctrl: true);
         Check(before.ContentEquals(ui.View.Document), "Lock allowed reverse edit");
         ui.View.ConvertAllSliders(); Check(!ui.View.SliderConversionBusy, "Lock allowed batch geometry conversion");
-        ui.Key('L'); ui.MoveMap(1000, 100); ui.HoldMap(1000, 100); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
+        ui.Key('L'); ui.View.ToggleOsuCanvas(); ui.Paint();
+        ui.MoveMap(1000, 100); ui.HoldMap(1000, 100); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
         Check(!ui.View.SliderImportPromptVisible, "Single-slider editing must convert without a prompt.");
         Check(ui.View.Document.Tracks.Count == 1, "Cannot convert sound-edited slider");
         var fs = OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack;

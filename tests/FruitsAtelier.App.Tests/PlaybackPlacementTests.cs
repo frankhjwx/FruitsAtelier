@@ -166,6 +166,7 @@ internal static class PlaybackPlacementTests
                 var imported = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 140 };
                 imported.ControlPoints.AddRange([new(100, 192), new(240, 192)]);
                 map.ImportedSliders.Add(imported);
+                ImportedSliderEditing.ConvertToTrack(map, imported.Id);
             }
             else map.Tracks.Add(track);
             var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);

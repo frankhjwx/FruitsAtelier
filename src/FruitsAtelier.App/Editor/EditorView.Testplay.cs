@@ -240,6 +240,7 @@ public sealed partial class EditorView
 
     public void KeyUp(int virtualKey)
     {
+        osuToggleKeys.Remove(virtualKey);
         if (virtualKey == 123) screenshotHeld = false;
         if (virtualKey == 119) audioDiagnosticMarkerHeld = false;
         if (virtualKey == 13) fullscreenShortcutHeld = false;

@@ -146,6 +146,8 @@ public sealed partial class EditorView
     {
         var actions = new List<(string Label, System.Action Action, bool Enabled, int Kind)>();
         bool enabled = ClipboardInteractionReady && !notesLocked;
+        if (inspectorTargets.Length == 1 && Document.Tracks.Any(s => s.Id == inspectorTargets[0] && s.StreamSnapDivisor is null))
+            actions.Add((L.Get("osu.convertLegacy"), () => ConvertSelectedSliderRepresentation(inspectorTargets[0]), enabled, 0));
         if (inspectorTargets.Length == 1 && Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0]))
             actions.Add((L.Get("preview.convertSlider"), () => EditImportedSlider(inspectorTargets[0]), enabled, 1));
         if (inspectorHasSliders)

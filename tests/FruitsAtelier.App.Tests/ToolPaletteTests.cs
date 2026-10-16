@@ -29,7 +29,8 @@ internal static class ToolPaletteTests
         Near(450, fruit.X);
         Check(ui.View.Document.Fruits.Where(f => f.Id != fruit.Id).All(f => Math.Abs(f.TimeMs - 1250) > 2), "A conflicting fruit survived.");
         Check(ui.View.Document.Tracks.Single().Id == spanning.Id, "Replacement must compare parent starts, not slider tails.");
-        Check(ui.View.Document.ImportedSliders.Count == 0 && ui.View.Document.BananaShowers.Count == 0, "Same-start parents survived replacement.");
+        Check(ui.View.Document.ImportedSliders.Single().Id == imported.Id && ui.View.Document.BananaShowers.Count == 0,
+            "Placement must retain read-only Legacy Sliders while replacing editable same-start parents.");
         var after = ui.View.Document.DeepClone();
         ui.Key('Z', ctrl: true);
         Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Replacement did not undo in one step.");

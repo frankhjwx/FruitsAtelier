@@ -24,6 +24,8 @@ public static partial class ProjectSerializer
         MaxDepth = 64,
         TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { info =>
         {
+            if (info.Type == typeof(Fruit))
+                info.Properties.First(p => p.Name == nameof(Fruit.Y)).ShouldSerialize = (owner, _) => HasFruitY((Fruit)owner);
             if (info.Type == typeof(BeatmapProject))
                 info.Properties.First(p => p.Name == nameof(BeatmapProject.Notes)).ShouldSerialize = (_, value) => ((string)value!).Length > 0;
             if (info.Type == typeof(CurveTrack))
@@ -34,6 +36,7 @@ public static partial class ProjectSerializer
                 if (property.Name == nameof(MapDocument.HitsoundOverrides)) property.ShouldSerialize = (_, value) => ((List<EventHitsound>)value!).Count > 0;
                 if (property.Name == nameof(MapDocument.RandomizeDropletStrength)) property.ShouldSerialize = (_, value) => (double)value! != 20;
                 if (property.Name == nameof(MapDocument.RandomizeDropletSeed)) property.ShouldSerialize = (_, value) => (int)value! != 1337;
+                if (property.Name == nameof(MapDocument.OsuDistanceSpacing)) property.ShouldSerialize = (_, value) => (double)value! != 1;
             }
         } } }
     };
@@ -50,7 +53,7 @@ public static partial class ProjectSerializer
             if (copy.AudioPath is not null && Path.IsPathFullyQualified(copy.AudioPath)) copy.AudioPath = Path.GetRelativePath(directory, copy.AudioPath);
             if (copy.SourcePath is not null && Path.IsPathFullyQualified(copy.SourcePath)) copy.SourcePath = Path.GetRelativePath(directory, copy.SourcePath);
         }
-        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasDropletModes(copy) ? 25 : HasBananaPatterns(copy) ? 21 : copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, options);
+        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasOsuCanvasData(copy) ? 27 : HasDropletModes(copy) ? 25 : HasBananaPatterns(copy) ? 21 : copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, options);
         if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.writeLimit"));
         return text;
@@ -62,7 +65,7 @@ public static partial class ProjectSerializer
         ProjectFile? file;
         try { file = JsonSerializer.Deserialize<ProjectFile>(text, options); }
         catch (JsonException error) { throw new InvalidDataException(L.Get("core.project.invalidJson"), error); }
-        if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17 or 19 or 21 or 25) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
+        if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17 or 19 or 21 or 25 or 27) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
         var document = file.Document;
         NormalizeRandomizationStrength(document);
         NormalizeBaseDistance(document);
@@ -104,6 +107,10 @@ public static partial class ProjectSerializer
         AtomicFile.Write(path, Serialize(document, path));
     }
 
+    private static bool HasFruitY(Fruit fruit) => fruit.Y != 192
+        || fruit.OriginalLine?.Split(',') is { Length: >= 2 } fields && OsuBeatmapReader.LegacyCoordinate(fields[1]) != fruit.Y;
+    private static bool HasOsuCanvasData(MapDocument document) => document.OsuDistanceSpacing != 1 || document.Fruits.Any(HasFruitY)
+        || document.ImportedSliders.Any(s => s.RandomizationSource is not null || s.RandomizationTrack is not null || s.RandomizationBaseVelocity is not null);
     private static bool HasDropletModes(MapDocument document) => document.Tracks.Any(t => t.DropletMode is not null);
     private static bool HasControlCurves(MapDocument document) => document.Tracks.Any(t => t.Nodes.Any(n => n.OutgoingCurve is not null));
     private static bool HasStacks(MapDocument document) => document.Tracks.Any(t => t.Stack is not null);

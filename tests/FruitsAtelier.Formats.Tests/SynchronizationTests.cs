@@ -925,7 +925,7 @@ internal static class SynchronizationTests
             string recovered = WorkspaceSynchronization.LocalAudioVersion(reopened.Manifest.Difficulties[0], local, reopened.Directory)!;
             Check(File.ReadAllText(recovered) == "original audio", "authoring hash is independent of external baseline");
         }));
-        yield return ("Sync: library and synchronization only accept Catch difficulties", () => Run(f =>
+        yield return ("Sync: library accepts standard and Catch and excludes other rulesets", () => Run(f =>
         {
             var db = new LibraryDatabase(f.Workspace, f.Songs);
             foreach (int mode in new[] { 0, 1, 3 })
@@ -935,11 +935,11 @@ internal static class SynchronizationTests
                 string other = Path.Combine(directory, $"mode-{mode}.osu");
                 File.WriteAllText(other, Fixture().Replace("Mode:2", $"Mode:{mode}"));
             }
-            Check(db.Scan().Count == 1 && db.Scan().Count == 1, "fresh and cached scans only count Catch");
-            Check(db.Search("").All(m => m.Mode == 2), "only Catch indexed");
+            Check(db.Scan().Count == 2 && db.Scan().Count == 2, "fresh and cached scans count standard and Catch");
+            Check(db.Search("").All(m => m.Mode is 0 or 2), "only standard and Catch indexed");
             using (var snapshot = db.SearchSnapshot(""))
                 Check(snapshot.Count == 1, "non-Catch sets excluded from paged library");
-            Check(f.Scan().Additions.Count == 0, "not imported as Catch");
+            Check(f.Scan().Additions.Count == 1, "standard difficulty is available for import");
 
             using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
                 { DataSource = Path.Combine(f.Workspace, "library.db"), Pooling = false }.ToString()))
@@ -950,10 +950,10 @@ internal static class SynchronizationTests
                 command.ExecuteNonQuery();
             }
             db = new LibraryDatabase(f.Workspace, f.Songs);
-            Check(db.Search("").Count == 1, "reopening removes cached non-Catch entries before scanning");
+            Check(db.Search("").Count == 2, "reopening removes unsupported rulesets before scanning");
             using (var snapshot = db.SearchSnapshot(""))
                 Check(snapshot.Page(0).Count == 1, "paged library excludes migrated entries");
-            Check(db.Scan().Count == 1, "rescanning preserves Catch-only catalog");
+            Check(db.Scan().Count == 2, "rescanning preserves standard and Catch catalog");
         }));
         yield return ("Sync: metadata, file and folder rename retain authoring identities", () => Run(f =>
         {

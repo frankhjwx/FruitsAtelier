@@ -252,7 +252,11 @@ public sealed partial class EditorView
         var hit = SliderControlEditing.Vertices(track).FirstOrDefault(v => Near(v.Point, x, y, 8));
         if (hit is null || draftTrack != Guid.Empty) return false;
         tool = Tool.Select;
-        if (drag == DragKind.LegacyControl) { history.Commit(); drag = DragKind.None; }
+        if (drag == DragKind.LegacyControl)
+        {
+            CommitContentHistory(); drag = DragKind.None;
+            if (LegacyDropletRefreshBusy) return true;
+        }
         if (Edit(L.Get("editor.command.toggleBoundary"), () => SliderControlEditing.ToggleBoundary(track, hit.Id))) SelectAnchors(track, [hit.Id]);
         return true;
     }

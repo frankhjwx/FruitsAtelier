@@ -128,6 +128,7 @@ public static class OsuBeatmapWriter
             string[] p = fruit.OriginalLine?.Split(',') ?? ["0", "192", "0", "1", "0", "0:0:0:0:"];
             // Preserve all original flags, sample columns and untouched numeric spelling.
             if (fruit.OriginalLine is null || OsuBeatmapReader.LegacyCoordinate(p[0]) != fruit.X) p[0] = Coordinate(fruit.X);
+            if (fruit.OriginalLine is null || OsuBeatmapReader.LegacyCoordinate(p[1]) != fruit.Y) p[1] = Coordinate(fruit.Y);
             if (fruit.OriginalLine is null || OsuBeatmapReader.Number(p[2]) != fruit.TimeMs) p[2] = Time(fruit.TimeMs);
             lines.Add((fruit.TimeMs, fruit.SourceOrder, fruit.Id, string.Join(',', p)));
         }
@@ -140,6 +141,9 @@ public static class OsuBeatmapWriter
                 else cache.ParsedSliders.Parse(original, slider.OriginalLine, slider.SourceOrder);
                 if (original.ImportedSliders.Count != 1) throw new InvalidDataException(L.Get("core.writer.importedText"));
                 original.ImportedSliders[0].Id = slider.Id;
+                original.ImportedSliders[0].RandomizationSource = slider.RandomizationSource;
+                original.ImportedSliders[0].RandomizationTrack = slider.RandomizationTrack;
+                original.ImportedSliders[0].RandomizationBaseVelocity = slider.RandomizationBaseVelocity;
                 if (!slider.ContentEquals(original.ImportedSliders[0])) throw new InvalidDataException(L.Get("core.writer.importedChanged"));
                 lines.Add((slider.TimeMs, slider.SourceOrder, slider.Id, slider.OriginalLine));
             }

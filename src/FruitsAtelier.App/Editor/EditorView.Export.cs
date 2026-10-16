@@ -8,6 +8,7 @@ public sealed partial class EditorView
 {
     private string? ExportOverwriteTarget => WorkspaceSession?.Manifest.Difficulties
         .Where(d => d.Id == difficulties[activeDifficulty].Id)
+        .Where(d => d.ExportTarget is not null || OsuBeatmapReader.Setting(Document, "General", "Mode") == "2")
         .Select(d => d.ExportTarget ?? d.Source).FirstOrDefault();
 
     private bool CanSubmitExport => exportMode == 2 ? !string.IsNullOrWhiteSpace(exportName)

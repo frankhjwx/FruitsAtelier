@@ -16,6 +16,8 @@ var tests = new List<(string Name, Action Run)>
     ("Testplay menu textures preserve density, animation and per-component fallback", TestplayMenu),
     ("Reverse arrows use skin density and fall back for missing or undecodable images", ReverseArrows),
     ("Timeline standard circles use hit-circle fonts, overlays and slider overrides", TimelineCircles),
+    ("Slider balls resolve static custom artwork before fallback animation and preserve tint settings", SliderBalls),
+    ("Spinner style, layers, tint and raw sizing stay within one skin provider", SpinnerComposition),
     ("Oversized artwork is centre cropped without distorting the other axis", CentreCrop),
     ("Base tint and independently sized white overlay compose at one centre", Overlay),
     ("Hyper fruit draws only its base as a rotated additive underlay", HyperGlow),
@@ -66,6 +68,60 @@ void TestplayMenu()
     Equal(1366, skin.MenuTexture("pause-overlay")!.PixelWidth);
     Equal(768, skin.MenuTexture("pause-overlay")!.PixelHeight);
     True(skin.MenuSound("pause-continue-click") == Path.Combine(custom, "pause-continue-click.wav"));
+}
+
+void SpinnerComposition()
+{
+    string defaults = Fixture("spinner-default"), custom = Fixture("spinner-modern"), old = Fixture("spinner-old");
+    Header(defaults, "spinner-background.png", 640, 480); Header(defaults, "spinner-circle.png", 512, 512);
+    Header(defaults, "spinner-middle2.png", 128, 128);
+    Header(custom, "spinner-top.png", 667, 667); Header(custom, "spinner-bottom.png", 667, 667);
+    Header(custom, "spinner-middle@2x.png", 1378, 1378); Header(custom, "spinner-approachcircle.png", 390, 390);
+    True(CatchSkin.TryLoad(custom, out var skin, out _, Load(defaults)));
+    var canvas = new RecordingCanvas();
+    True(skin!.DrawSpinner(canvas, 100, 200, 2, 1000, 1000, .75f));
+    True(canvas.Sprites.Count == 4 && canvas.Sprites.All(s => s.Path.StartsWith(custom, StringComparison.Ordinal)));
+    True(canvas.Sprites.All(s => !s.Path.EndsWith("spinner-middle2.png", StringComparison.Ordinal)));
+    var middle = canvas.Sprites.Single(s => s.Path.EndsWith("spinner-middle@2x.png", StringComparison.Ordinal));
+    Equal(689, middle.Destination.Width); Equal(0xFF0000, middle.Tint); Equal(0, middle.Rotation); Equal(.75, middle.Opacity);
+    var approach = canvas.Sprites.Last(); Equal(390 * .0625 * 2, approach.Destination.Width);
+    Header(old, "spinner-background.png", 640, 480); Header(old, "spinner-circle.png", 512, 512);
+    Header(old, "spinner-top.png", 667, 667);
+    File.WriteAllText(Path.Combine(old, "skin.ini"), "[Colours]\nSpinnerBackground: 1,2,3\n");
+    var oldSkin = Load(old); canvas.Sprites.Clear(); canvas.Calls.Clear();
+    True(oldSkin.DrawSpinner(canvas, 100, 200, 1, 500, 1000, 1));
+    True(canvas.Sprites.Count == 2 && canvas.Sprites.All(s => !s.Path.EndsWith("spinner-top.png", StringComparison.Ordinal)));
+    Equal(400, canvas.Sprites[0].Destination.Width); Equal(0x010203, canvas.Sprites[0].Tint);
+    Equal(320, canvas.Sprites[1].Destination.Width);
+}
+
+void SliderBalls()
+{
+    string defaults = Fixture("ball-defaults"), custom = Fixture("ball-static"), animated = Fixture("ball-animated");
+    Header(defaults, "sliderb0.png", 128, 128);
+    Header(defaults, "sliderb1.png", 128, 128);
+    File.WriteAllText(Path.Combine(defaults, "skin.ini"), "[General]\nAllowSliderBallTint: 1\n[Colours]\nSliderBall: 2,170,255\n");
+    Header(custom, "sliderb@2x.png", 256, 256);
+    var baseline = Load(defaults);
+    True(CatchSkin.TryLoad(custom, out var skin, out _, baseline));
+    var canvas = new RecordingCanvas();
+    True(skin!.DrawSliderBall(canvas, 100, 200, 64, 0xFF0000, 100, .28, .75f, 45));
+    True(canvas.Sprites.Single().Path == Path.Combine(custom, "sliderb@2x.png"));
+    Equal(0xFFFFFF, canvas.Sprites.Single().Tint);
+    Equal(64, canvas.Sprites.Single().Destination.Width); Equal(.75, canvas.Sprites.Single().Opacity);
+    Equal(45, canvas.Sprites.Single().Rotation);
+    Header(animated, "sliderb.png", 128, 128);
+    Header(animated, "sliderb0.png", 128, 128);
+    Header(animated, "sliderb1@2x.png", 256, 256);
+    File.WriteAllText(Path.Combine(animated, "skin.ini"), "[General]\nAllowSliderBallTint: 0\n[Colours]\nSliderBall: 1,2,3\n");
+    var animation = Load(animated); canvas.Sprites.Clear(); canvas.Calls.Clear();
+    True(animation.DrawSliderBall(canvas, 100, 200, 64, 0xFF0000, 20, .28, 1, 0));
+    True(canvas.Sprites.Single().Path.EndsWith("sliderb1@2x.png", StringComparison.Ordinal));
+    Equal(0x010203, canvas.Sprites.Single().Tint);
+    File.WriteAllText(Path.Combine(animated, "skin.ini"), "[General]\nAllowSliderBallTint: 1\n");
+    animation = Load(animated); canvas.Sprites.Clear(); canvas.Calls.Clear();
+    True(animation.DrawSliderBall(canvas, 100, 200, 64, 0xFF0000, 20, .28, 1, 0));
+    Equal(0xFF0000, canvas.Sprites.Single().Tint);
 }
 
 void PerImageFallback()

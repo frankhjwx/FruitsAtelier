@@ -5,6 +5,14 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private bool EditSliderRepresentation(string label, Action change, bool conversion = true)
+    {
+        bool previous = osuAllowSliderConversion;
+        osuAllowSliderConversion |= conversion;
+        try { return Edit(label, change); }
+        finally { osuAllowSliderConversion = previous; }
+    }
+
     private readonly HashSet<Guid> pendingImplicitSliderConversions = [];
     private void ChangeReverseCount(Guid id, int change)
     {
@@ -47,6 +55,7 @@ public sealed partial class EditorView
 
     private ImportedSliderEditResult ConvertImportedSlider(Guid id, CatchConversionCache? cache = null)
     {
+        if (!osuAllowSliderConversion) throw new InvalidOperationException(L.Get("osu.readOnlySlider"));
         bool derandomize = Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets;
         var result = ImportedSliderEditing.ConvertToTrack(Document, id, cache ?? editorConversionCache, derandomize);
         if (drag != DragKind.None && Document.DerandomizeDroplets is null) pendingImplicitSliderConversions.Add(id);
@@ -56,13 +65,20 @@ public sealed partial class EditorView
     private void ConvertSelectedImportedSlider(Guid id, bool derandomizeDroplets)
     {
         string notice = "";
-        if (!Edit(L.Get("editor.command.editImportedSlider"), () =>
+        osuAllowSliderConversion = true;
+        try
         {
-            var result = ImportedSliderEditing.ConvertToTrack(Document, id, editorConversionCache, derandomizeDroplets);
-            Document.DerandomizeDroplets = derandomizeDroplets;
-            notice = string.Join(L.Get("editor.diagnostics.separator"), result.Diagnostics);
-        })) return;
-        SelectAnchors(Document.Tracks.Single(track => track.Id == id), []);
-        StatusMessage = notice.Length == 0 ? L.Get("editor.status.importedSliderEditable") : notice;
+            if (!Edit(L.Get("editor.command.editImportedSlider"), () =>
+            {
+                var result = SliderRepresentationEditing.ConvertToTrack(Document, id, derandomizeDroplets);
+                if (!result.Success) throw new InvalidOperationException(string.Join(L.Get("editor.diagnostics.separator"), result.Diagnostics));
+                Document.DerandomizeDroplets = derandomizeDroplets;
+                notice = string.Join(L.Get("editor.diagnostics.separator"), result.Diagnostics);
+            })) return;
+            if (IsOsuCanvas) SelectObjects([id], id);
+            else SelectAnchors(Document.Tracks.Single(track => track.Id == id), []);
+            StatusMessage = notice.Length == 0 ? L.Get("editor.status.importedSliderEditable") : notice;
+        }
+        finally { osuAllowSliderConversion = false; }
     }
 }

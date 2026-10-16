@@ -3,6 +3,9 @@ namespace FruitsAtelier.Core;
 
 public static class ImportedSliderConverter
 {
+    public static IReadOnlyList<SliderPathPoint> Path(ImportedSlider slider)
+        => new ImportedSliderGeometry(slider).AbsolutePoints(slider);
+
     public static double DurationMs(MapDocument document, ImportedSlider slider)
     {
         var path = new ImportedSliderGeometry(slider);

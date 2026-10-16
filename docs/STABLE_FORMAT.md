@@ -4,7 +4,7 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 
 ## Input and output
 
-- Accept v7 through v14 and stable-compatible lazer v128 / Mode=2. Export retains v7 tick semantics for imported v7 maps; other maps export as v14. The reader rejects other format versions and unsupported object types.
+- Accept v7 through v14 and stable-compatible lazer v128, in osu!standard Mode=0 or Catch Mode=2. Export retains v7 tick semantics for imported v7 maps; other maps export as v14 with Catch Mode=2. The reader rejects other rulesets, format versions and unsupported object types.
 - Preserve General, Editor, Metadata, Difficulty, Events, TimingPoints, Colours, HitObjects, and audio/sample references.
 - Import/export `[Editor] DistanceSpacing` as the per-difficulty spacing multiplier.
 - Synchronization accepts osu!'s `Editor/TimelineZoom` without a conflict; it is
@@ -47,7 +47,7 @@ Versions 8–14 share the Catch timing and slider tick rules used here. Version 
 
 | Item | Representation |
 | --- | --- |
-| Standalone fruit | Hit circle preserving X, time, type flags, and samples |
+| Standalone fruit | Hit circle preserving X, geometric Y, time, type flags, and samples |
 | Ordinary slider | Slider with curve type/points, span count, path length, and edge samples; the stream is derived |
 | Slider-managed fruit stream | Hit circles sampled at the saved StreamSnapDivisor; no slider or SV override |
 | Banana shower | Spinner start/end times; individual banana X positions are not serialized |

@@ -183,6 +183,7 @@ public sealed partial class EditorView
     private double objectDragFollowTime;
     private void BeginObjectDrag(float x, float y, bool timeline = false, bool scaleSelection = false)
     {
+        if (RejectReadOnlySelection()) return;
         if (notesLocked) return;
         if (objectSelection.Count == 0) return;
         EnsureConversion();
