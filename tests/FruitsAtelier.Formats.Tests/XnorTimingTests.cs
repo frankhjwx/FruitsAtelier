@@ -39,13 +39,53 @@ internal static class XnorTimingTests
             catch (InvalidDataException) { continue; }
             throw new Exception($"Nonfinite red timing {raw} must be rejected.");
         }
-        foreach (var (raw, expected) in new[] { (0d, 6d), (3d, 6d), (120000d, 60000d) })
+        foreach (var (raw, expected) in new[] { (0d, 6d), (3d, 3d), (120000d, 120000d) })
         {
             var point = new TimingPoint { TimeMs = 0, BeatLengthMs = raw };
             var boundary = new MapDocument(); boundary.TimingPoints.Add(point);
-            Check(TimingMap.At(boundary, 0).BeatLengthMs == expected, "Red playback bounds differ from legacy decoding.");
+            Check(TimingMap.At(boundary, 0).BeatLengthMs == expected, "Positive red beat lengths must retain their source duration.");
         }
+        SubMillisecondSliders();
         ImportedPathBoundaries();
+    }
+
+    private static void SubMillisecondSliders()
+    {
+        const string source = """
+            osu file format v14
+            [General]
+            Mode:0
+            [Difficulty]
+            SliderMultiplier:1.6
+            SliderTickRate:1
+            [TimingPoints]
+            0,500,4,1,0,100,1,0
+            360405,0.865377304725,4,3,2,5,1,8
+            360405,NaN,4,3,2,5,0,8
+            360406,333.333333333333,4,3,2,5,1,8
+            360406,-51.9216300964551,4,3,2,5,0,8
+            377738,0.280552367018,4,2,0,5,1,0
+            377738,NaN,4,2,0,5,0,8
+            [HitObjects]
+            256,192,360405,38,0,L|300:192,1,3174014.36923
+            256,384,377738,102,0,L|300:384,1,9790400.37765
+            """;
+        var map = OsuBeatmapReader.Read(source);
+        var baseline = map.DeepClone();
+        var converted = CatchStreamConverter.Convert(map, false);
+        foreach (var slider in map.ImportedSliders)
+        {
+            double end = slider.TimeMs + 17167;
+            Check(Math.Abs(ImportedSliderConverter.EndTimeMs(map, slider) - end) < .000001,
+                "Sub-millisecond red timing prolonged a Legacy Slider.");
+            Check(Math.Abs(converted.Sliders.Single(s => s.SourceId == slider.Id).DurationMs - 17167) < .000001,
+                "Catch conversion changed the source slider lifetime or followed a later red point.");
+        }
+        var output = OsuBeatmapWriter.Serialize(ProjectSerializer.Read(ProjectSerializer.Serialize(map)));
+        Check(output.ObjectSequenceMatches && map.ContentEquals(baseline), "Timing evaluation changed authored content.");
+        foreach (var slider in output.ReadBack.ImportedSliders)
+            Check(Math.Abs(ImportedSliderConverter.DurationMs(output.ReadBack, slider) - 17167) < .000001,
+                "Catch export or project round trip changed sub-millisecond slider timing.");
     }
 
     private static void ImportedPathBoundaries()

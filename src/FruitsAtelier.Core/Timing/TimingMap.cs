@@ -5,8 +5,9 @@ public readonly record struct BeatGridLine(double TimeMs, bool IsBeat, bool IsTi
 
 public static class TimingMap
 {
-    // Legacy decoding clamps playback timing while retained source values remain exportable.
-    public static double EffectiveBeatLength(double beatLength) => Math.Clamp(beatLength, 6, 60000);
+    // Stable slider durations use positive source beat lengths, including sub-millisecond timing.
+    public static double EffectiveBeatLength(double beatLength) => beatLength > 0 && double.IsFinite(beatLength)
+        ? beatLength : Math.Clamp(beatLength, 6, 60000);
 
     public static TimingState At(MapDocument document, double time) => new Lookup(document).At(time);
 

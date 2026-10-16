@@ -11,6 +11,7 @@ internal static class OsuCanvasInputTests
         StackedMarqueeUsesVisibleCenters();
         NativePlacementUsesGlobalDropletSettings();
         NativeRepeatSamples();
+        SubMillisecondSliderLifetime();
         ReadOnlyBoundaries();
         DistanceSliderAndNavigation();
         OsuDistanceSpacingCacheTests.Run();
@@ -31,6 +32,24 @@ internal static class OsuCanvasInputTests
         ui.View.KeyUp(9);
         ui.Key(9, ctrl: true);
         Check(!ui.View.IsOsuCanvas, "Ctrl+Tab toggled the canvas.");
+    }
+
+    private static void SubMillisecondSliderLifetime()
+    {
+        foreach (var (start, beat, length) in new[] { (360405, "0.865377304725", "3174014.36923"), (377738, "0.280552367018", "9790400.37765") })
+        {
+            var map = OsuBeatmapReader.Read($"osu file format v14\n[General]\nMode:0\n[Difficulty]\nSliderMultiplier:1.6\n[TimingPoints]\n0,500,4,1,0,100,1,0\n{start},{beat},4,1,0,100,1,0\n{start},NaN,4,1,0,100,0,0\n{start + 1},500,4,1,0,100,1,0\n[HitObjects]\n256,192,{start},2,0,L|300:192,1,{length}\n");
+            var ui = NewUi(); ui.LoadDocument(map); ui.View.ToggleOsuCanvas(); ui.Paint();
+            double end = start + 17167;
+            var head = ui.View.OsuCanvasScreen(256, 192);
+            ui.View.UpdateTransport(end - 1, end + 1000, true, false, false, null, "fixture.wav"); ui.Paint();
+            Check(ui.View.OsuCanvasHit(head.X, head.Y) == map.ImportedSliders.Single().Id,
+                "A sub-millisecond slider disappeared before its stable end time.");
+            ui.View.UpdateTransport(end + 701, end + 1000, true, false, false, null, "fixture.wav"); ui.Paint();
+            Check(ui.View.OsuCanvasHit(head.X, head.Y) is null,
+                "The osu canvas retained a slider after its stable end and fade period.");
+            Check(!ui.View.IsDirty, "Evaluating slider lifetime changed authored timing.");
+        }
     }
 
     private static void NativeCircleAndLegacySlider()

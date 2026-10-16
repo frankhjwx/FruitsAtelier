@@ -19,7 +19,7 @@ Adapted portions retain the upstream MIT licence in `LICENCE.osu.txt`.
 | `osu.Game/Rulesets/Objects/SliderPath.cs` | Arc-length lookup of the resulting linear path |
 | `osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs` | v7–v14 duplicate-point segmentation, collinear perfect curves, float-to-integer coordinates |
 | `osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs` | Red/green timing precedence, inherited SV and NaN tick metadata |
-| `osu.Game/Beatmaps/ControlPoints/TimingControlPoint.cs` | Effective red beat-length bounds of 6–60,000 ms; raw imported values remain retained separately |
+| [Official stable slider format](https://osu.ppy.sh/wiki/en/Client/File_formats/osu_(file_format)#sliders) | Positive source beat lengths determine slider duration, including values below lazer's 6 ms timing-control-point minimum |
 | `osu.Game.Rulesets.Catch/Objects/BananaShower.cs` | Integer shower endpoints, float halving/accumulation and inclusive banana creation |
 | `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapConverter.cs` | Imported path/repeat conversion and Catch-specific tick rules |
 

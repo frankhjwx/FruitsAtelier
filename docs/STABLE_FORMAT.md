@@ -42,7 +42,7 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 
 ## Object and timing rules
 
-Finite red-line beat lengths retain their source values, including zero and negative values. Playback, beat grids and timing edits use beat lengths clamped to 6–60,000 ms, following the pinned legacy decoder and `TimingControlPoint` bounds. Negative red values also supply inherited SV independently (for example, `-50` gives SV 2 with a 6 ms beat). Project saves and unedited exports preserve the raw timing line; nonfinite red values are rejected.
+Finite red-line beat lengths retain their source values, including zero and negative values. Playback, beat grids and timing edits retain positive source beat lengths, including sub-millisecond values, so imported slider durations follow the stable file-format formula. Zero and negative red values use a 6 ms fallback beat. Negative red values also supply inherited SV independently (for example, `-50` gives SV 2 with a 6 ms beat). Project saves and unedited exports preserve the raw timing line; nonfinite red values are rejected.
 
 Imported sliders retain their full actual path length and duration. Legacy tick generation caps its distance at 100,000 px and computes tick progress against that cap, while repeat and tail times retain the full span duration. Authored paths retain their 100,000 px limit. A collapsed imported path has zero duration and coincident head, repeat and tail fruits, even when its retained expected length is positive; duplicate final path points prevent extension as in the pinned upstream implementation.
 

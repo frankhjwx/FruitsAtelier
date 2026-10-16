@@ -13,7 +13,7 @@ if (args.Length == 2 && args[0] == "--import-set-roundtrip")
     return 0;
 }
 
-if (args.Contains("--xnor-timing-check")) { XnorTimingTests.Run(); Console.WriteLine("PASS Legacy red timing bounds and source preservation"); return 0; }
+if (args.Contains("--xnor-timing-check")) { XnorTimingTests.Run(); Console.WriteLine("PASS Legacy red timing, sub-millisecond slider lifetime and source preservation"); return 0; }
 if (args.Contains("--benchmark-sv-edits")) return WriteCacheTests.BenchmarkMultiplierEdits();
 if (args.Contains("--osu-model-check")) { OsuCanvasModelTests.Run(); Console.WriteLine("PASS osu canvas model and slider conversions"); return 0; }
 if (args.Contains("--legacy-v7-check")) { LegacyV7Tests.Run(); Console.WriteLine("PASS v7 tick rules, persistence, editing and export"); return 0; }
@@ -36,7 +36,7 @@ if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console
 var tests = new (string Name, Action Run)[]
 {
     ("Large imported paths preserve compact project data and capacity limits", LargeImportedPathTests.Run),
-    ("Legacy red timing clamps playback and preserves raw source values", XnorTimingTests.Run),
+    ("Legacy red timing preserves positive beat lengths, slider lifetime and raw source values", XnorTimingTests.Run),
     ("Generated sliders start upwards and export Bezier red anchors with equivalent NM/HR playback", GeneratedSliderPathTests.Run),
     ("Current base SV governs slider editing, cached conversion, export and reload", UnifiedSliderMultiplierTests.Run),
     ("Version history preserves saved, unsaved and deleted authoring by project identity", VersionHistoryTests.Run),
