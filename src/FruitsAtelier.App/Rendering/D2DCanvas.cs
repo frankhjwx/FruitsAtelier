@@ -149,6 +149,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
         context.Clear(new Color4(0.07f, 0.085f, 0.11f, 1));
         clipDepth = 0;
         imageVersions.Clear();
+        BeginSliderRasterFrame();
     }
 
     public bool WaitForFrameOrInput()

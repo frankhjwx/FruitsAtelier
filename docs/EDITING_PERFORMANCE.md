@@ -65,7 +65,11 @@ Visible dense bodies share that budget; their per-texture resolution is bounded 
 the simultaneous body count so cached bodies do not repeatedly evict one another.
 During playback, new bodies use small preview textures while one background CPU
 worker builds their detailed pixels. Only the rendering thread uploads native
-bitmaps. Stopping playback permits synchronous detail generation.
+bitmaps. Ready textures replace the previous image through a short premultiplied
+cross-fade, preserving one application of object opacity. Budget reductions retain
+the displayed texture until its replacement is ready. Both images count toward
+the 32 MiB cache limit. Paused windows repaint until pending replacements finish.
+Stopping playback permits synchronous detail generation.
 Huge path bounds use a padded viewport window instead of allocating an unbounded
 texture. Ordinary paths retain vector rendering.
 

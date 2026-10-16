@@ -234,7 +234,18 @@ internal static class OsuCanvasRenderCheck
             throw new InvalidOperationException("An oversized slider exceeded the bounded raster cache.");
         foreach (int simultaneous in new[] { 8, 16, 9, 4 })
         {
-            DrawSimultaneous();
+            var warmClock = System.Diagnostics.Stopwatch.StartNew();
+            int stableFrames = 0, lastBuilds = -1;
+            while (stableFrames < 3)
+            {
+                DrawSimultaneous();
+                stableFrames = canvas.SliderRasterBuildCount == lastBuilds && !canvas.PendingSliderRasterBuild
+                    && canvas.CachedSliderRasterTransitionCount == 0 ? stableFrames + 1 : 0;
+                lastBuilds = canvas.SliderRasterBuildCount;
+                if (warmClock.Elapsed.TotalSeconds > 15)
+                    throw new InvalidOperationException("Simultaneous slider caches did not settle after a budget change.");
+                Thread.Sleep(1);
+            }
             int warmBuilds = canvas.SliderRasterBuildCount;
             for (int frame = 0; frame < 3; frame++) DrawSimultaneous();
             if (canvas.SliderRasterBuildCount != warmBuilds)
@@ -270,6 +281,113 @@ internal static class OsuCanvasRenderCheck
         if (canvas.SliderRasterBuildCount != upgradedBuilds)
             throw new InvalidOperationException("Completed background slider textures were rebuilt.");
         canvas.PrepareSliderBodies(0);
+        VerifyRasterWorkingSetGrowth(canvas, dense);
+        VerifyRasterTransitions(canvas, dense);
         AppLog.Write("Native vector/raster slider gradient, transform reuse, oversized clipping, bounded cache, and background upgrade checks passed.");
+    }
+
+    private static void VerifyRasterTransitions(D2DCanvas canvas, System.Numerics.Vector2[] source)
+    {
+        double now = System.Diagnostics.Stopwatch.GetTimestamp() * 1000d / System.Diagnostics.Stopwatch.Frequency + 1000;
+        canvas.SliderRasterTimeOverride = () => now;
+        try
+        {
+            foreach (int dpi in new[] { 96, 168 })
+            {
+                canvas.Resize(512 * dpi / 96, 256 * dpi / 96, dpi);
+                foreach (bool reducingBudget in new[] { false, true })
+                {
+                    var path = (System.Numerics.Vector2[])source.Clone();
+                    int bodies = 4;
+                    bool deferred = !reducingBudget;
+                    byte[] before = Paint();
+                    deferred = true;
+                    if (reducingBudget) bodies = 16;
+                    var deadline = System.Diagnostics.Stopwatch.StartNew();
+                    while (canvas.CachedSliderRasterTransitionCount == 0)
+                    {
+                        Paint(); Thread.Sleep(1);
+                        if (deadline.Elapsed.TotalSeconds > 10)
+                            throw new InvalidOperationException("Slider raster replacement did not enter a smooth transition.");
+                    }
+                    byte[] beginning = Paint();
+                    var samples = new List<(double Weight, byte[] Pixels)>();
+                    for (int step = 1; step <= 3; step++)
+                    {
+                        now += 30;
+                        samples.Add((step / 4d, Paint()));
+                    }
+                    now += 40;
+                    byte[] after = Paint();
+                    if (canvas.CachedSliderRasterTransitionCount != 0)
+                        throw new InvalidOperationException("Finished slider transitions retained their old native textures.");
+                    for (int pixel = 0; pixel < before.Length; pixel++)
+                    {
+                        if (Math.Abs(beginning[pixel] - before[pixel]) > 3)
+                            throw new InvalidOperationException($"Replacing a slider texture changed its pixels before the transition began: reducing={reducingBudget}, byte={pixel}, old={before[pixel]}, start={beginning[pixel]}, new={after[pixel]}.");
+                        foreach (var sample in samples)
+                        {
+                            double expected = before[pixel] * (1 - sample.Weight) + after[pixel] * sample.Weight;
+                            if (Math.Abs(sample.Pixels[pixel] - expected) > 4)
+                                throw new InvalidOperationException("Slider texture replacement changed opacity or position during the transition.");
+                        }
+                    }
+                    byte[] Paint()
+                    {
+                        byte[] pixels = [];
+                        canvas.Begin(); canvas.Fill(new(0, 0, 512, 256), 0x203040);
+                        canvas.PrepareSliderBodies(bodies, deferred);
+                        canvas.SliderBody(path, 0, 0, 1, 128, 0xFFFFFF, 0xCC2020, .45f);
+                        canvas.End(capture: () => pixels = canvas.CapturePixels().Pixels);
+                        if (canvas.CachedSliderRasterBytes > 32L * 1024 * 1024)
+                            throw new InvalidOperationException("A transitioning slider exceeded the native raster memory budget.");
+                        return pixels;
+                    }
+                }
+            }
+        }
+        finally { canvas.SliderRasterTimeOverride = null; }
+        AppLog.Write("Native slider texture upgrade and budget reduction preserve premultiplied opacity and position throughout the transition.");
+    }
+
+    private static void VerifyRasterWorkingSetGrowth(D2DCanvas canvas, System.Numerics.Vector2[] source)
+    {
+        var path = (System.Numerics.Vector2[])source.Clone();
+        foreach (int count in new[] { 8, 16 })
+        {
+            var deadline = System.Diagnostics.Stopwatch.StartNew();
+            int stable = 0, lastBuilds = -1;
+            while (stable < 3)
+            {
+                canvas.Begin(); canvas.PrepareSliderBodies(count, deferred: true);
+                for (int i = count - 1; i >= 0; i--)
+                    canvas.SliderBody(path, 0, 0, 1, 128, 0xFFFFFF, (uint)(0x810000 + i * 1024), 1);
+                canvas.End();
+                stable = lastBuilds == canvas.SliderRasterBuildCount && !canvas.PendingSliderRasterBuild
+                    && canvas.CachedSliderRasterPreviewCount == 0 && canvas.CachedSliderRasterTransitionCount == 0 ? stable + 1 : 0;
+                lastBuilds = canvas.SliderRasterBuildCount;
+                if (canvas.CachedSliderRasterBytes > 32L * 1024 * 1024 || deadline.Elapsed.TotalSeconds > 15)
+                    throw new InvalidOperationException("Visible slider textures did not converge within the bounded cache after new bodies entered first.");
+                Thread.Sleep(1);
+            }
+        }
+        var prior = (System.Numerics.Vector2[])source.Clone();
+        var next = (System.Numerics.Vector2[])source.Clone();
+        canvas.Begin(); canvas.PrepareSliderBodies(4);
+        canvas.SliderBody(prior, 0, 0, 1, 128, 0xFFFFFF, 0x789ABC, 1); canvas.End();
+        canvas.Begin(); canvas.PrepareSliderBodies(32, deferred: true);
+        canvas.SliderBody(next, 0, 0, 1, 128, 0xFFFFFF, 0x789ABC, 1); canvas.End();
+        if (!canvas.SliderRasterNeedsRedraw)
+            throw new InvalidOperationException("A preview awaiting release of a previous visible body did not request another paused frame.");
+        var abandoned = (System.Numerics.Vector2[])source.Clone();
+        canvas.Begin(); canvas.PrepareSliderBodies(4, deferred: true);
+        canvas.SliderBody(abandoned, 0, 0, 1, 128, 0xFFFFFF, 0x456789, 1); canvas.End();
+        var idleClock = System.Diagnostics.Stopwatch.StartNew();
+        while (canvas.SliderRasterNeedsRedraw)
+        {
+            canvas.Begin(); canvas.End(); Thread.Sleep(1);
+            if (idleClock.Elapsed.TotalSeconds > 5)
+                throw new InvalidOperationException("Leaving the osu canvas retained a raster task or permanent redraw request.");
+        }
     }
 }
