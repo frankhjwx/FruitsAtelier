@@ -16,11 +16,11 @@ public sealed partial class D2DCanvas
     private const double sliderRasterTransitionMs = 120;
     // Render snapshots are immutable; pan, zoom, and fade remain outside the cached pixels.
     private readonly record struct SliderRasterKey(IReadOnlyList<Vector2> Points, float Diameter, uint Border, uint Accent, Rect Bounds);
-    private sealed record SliderRaster(ID2D1Bitmap1 Bitmap, int Width, int Height, AffineTransform2D Transform, bool Preview = false) : IDisposable
+    private sealed record SliderRaster(ID2D1Bitmap1 Bitmap, int Width, int Height, DpiCompensation Dpi, AffineTransform2D Transform, bool Preview = false) : IDisposable
     {
         public long Used, Frame;
         public long Bytes => (long)Width * Height * 4;
-        public void Dispose() { Transform.Dispose(); Bitmap.Dispose(); }
+        public void Dispose() { Transform.Dispose(); Dpi.Dispose(); Bitmap.Dispose(); }
     }
     private sealed record SliderRasterTransition(SliderRaster Previous, CrossFade Blend, double Started) : IDisposable
     {
@@ -223,14 +223,21 @@ public sealed partial class D2DCanvas
             bitmap = context!.CreateBitmap(new SizeI(pixels.Width, pixels.Height), (nint)source,
                 (uint)(pixels.Width * 4), properties);
         AffineTransform2D? transform = null;
+        DpiCompensation? compensation = null;
         try
         {
+            // Effect graphs need explicit compensation for cached 96-DPI bitmap inputs.
+            compensation = new(context!) { BorderMode = BorderMode.Hard,
+                InterpolationMode = DpiCompensationInterpolationMode.Linear };
+            // The native property is VECTOR2; the pinned wrapper's scalar setter is incompatible.
+            compensation.SetValue((uint)DpiCompensationProperties.InputDpi, new Vector2(96, 96));
+            compensation.SetInput(0, bitmap, true);
             transform = new(context!) { TransformMatrix = Matrix3x2.CreateScale(bounds.Width / pixels.Width, bounds.Height / pixels.Height),
                 InterPolationMode = AffineTransform2DInterpolationMode.Linear };
-            transform.SetInput(0, bitmap, true);
-            return new(bitmap, pixels.Width, pixels.Height, transform, preview);
+            transform.SetInputEffect(0, compensation);
+            return new(bitmap, pixels.Width, pixels.Height, compensation, transform, preview);
         }
-        catch { transform?.Dispose(); bitmap.Dispose(); throw; }
+        catch { transform?.Dispose(); compensation?.Dispose(); bitmap.Dispose(); throw; }
     }
 
     private void FinishSliderRasterPending()

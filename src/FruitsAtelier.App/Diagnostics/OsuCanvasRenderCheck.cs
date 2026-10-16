@@ -173,6 +173,7 @@ internal static class OsuCanvasRenderCheck
 
     private static void VerifyGradient(D2DCanvas canvas, string folder)
     {
+        VerifyRasterPlacement(canvas);
         canvas.Resize(512, 256, 96);
         var dense = new System.Numerics.Vector2[8193];
         for (int i = 0; i < dense.Length; i++)
@@ -284,6 +285,41 @@ internal static class OsuCanvasRenderCheck
         VerifyRasterWorkingSetGrowth(canvas, dense);
         VerifyRasterTransitions(canvas, dense);
         AppLog.Write("Native vector/raster slider gradient, transform reuse, oversized clipping, bounded cache, and background upgrade checks passed.");
+    }
+
+    private static void VerifyRasterPlacement(D2DCanvas canvas)
+    {
+        var path = new System.Numerics.Vector2[8193];
+        for (int i = 0; i < path.Length; i++) path[i] = new(76 + 187f * i / (path.Length - 1), 192);
+        foreach (int dpi in new[] { 96, 144, 168, 192, 240, 96 })
+        foreach (var (x, y, scale) in new[] { (35f, 25f, 1.2f), (-40f, -80f, 1.5f) })
+        {
+            canvas.Resize(512 * dpi / 96, 384 * dpi / 96, dpi);
+            canvas.Begin(); canvas.Fill(new(0, 0, 512, 384), 0x101010);
+            canvas.PrepareSliderBodies(4);
+            canvas.SliderBody(path, x, y, scale, 50, 0xFFFFFF, 0x80B040, 1);
+            canvas.End(capture: () =>
+            {
+                var frame = canvas.CapturePixels();
+                int left = frame.Width, top = frame.Height, right = -1, bottom = -1;
+                for (int row = 0; row < frame.Height; row++)
+                for (int column = 0; column < frame.Width; column++)
+                {
+                    int index = (row * frame.Width + column) * 4;
+                    if (frame.Pixels[index] <= 32 && frame.Pixels[index + 1] <= 32 && frame.Pixels[index + 2] <= 32) continue;
+                    left = Math.Min(left, column); right = Math.Max(right, column);
+                    top = Math.Min(top, row); bottom = Math.Max(bottom, row);
+                }
+                float radius = 50 * .921875f * scale / 2;
+                double factor = 96d / dpi;
+                if (Math.Abs(left * factor - (x + 76 * scale - radius)) > 2
+                    || Math.Abs((right + 1) * factor - (x + 263 * scale + radius)) > 2
+                    || Math.Abs(top * factor - (y + 192 * scale - radius)) > 2
+                    || Math.Abs((bottom + 1) * factor - (y + 192 * scale + radius)) > 2)
+                    throw new InvalidOperationException($"Slider body does not cover its authored path at DPI {dpi}, scale {scale}: pixels=({left},{top})-({right},{bottom}).");
+            });
+        }
+        AppLog.Write("Native raster bodies align with authored path positions and radii across DPI changes, pan and zoom.");
     }
 
     private static void VerifyRasterTransitions(D2DCanvas canvas, System.Numerics.Vector2[] source)
