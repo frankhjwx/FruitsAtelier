@@ -26,6 +26,8 @@ internal static class DenseMapPerformanceCheck
         double loadMs = clock.Elapsed.TotalMilliseconds;
         var slider = map.ImportedSliders.MaxBy(s => s.ControlPoints.Count);
         double time = slider?.TimeMs ?? map.Fruits.FirstOrDefault()?.TimeMs ?? 0;
+        var requestedTime = Environment.GetCommandLineArgs().FirstOrDefault(a => a.StartsWith("--osu-performance-time=", StringComparison.Ordinal));
+        if (requestedTime is not null) time = double.Parse(requestedTime.Split('=', 2)[1], System.Globalization.CultureInfo.InvariantCulture);
         view.UpdateTransport(time, map.DurationMs, true, false, false, null, map.AudioPath);
         view.UpdateTransport(time, map.DurationMs, true, false, false, null, map.AudioPath);
         canvas.Resize(2520, 1575, 168);
@@ -47,9 +49,12 @@ internal static class DenseMapPerformanceCheck
             {
                 view.UpdateTransport(time, map.DurationMs, true, false, false, null, map.AudioPath);
                 var cpu = new List<double>(); var frames = new List<double>();
-                for (int i = 0; i < 120; i++)
+                var slowFrames = new List<object>();
+                int frameCount = gesture == "playback" ? 1200 : 120;
+                for (int i = 0; i < frameCount; i++)
                 {
                     clock.Restart();
+                    int rasterBuilds = canvas.SliderRasterBuildCount;
                     var plot = view.CanvasPlotBounds;
                     if (gesture == "pointer") view.PointerMove(plot.X + plot.Width * (.25f + i % 30 / 60f), plot.Y + plot.Height / 2, false, false);
                     else if (gesture == "seek") view.UpdateTransport(time + i % 60, map.DurationMs, true, false, false, null, map.AudioPath);
@@ -59,16 +64,22 @@ internal static class DenseMapPerformanceCheck
                     canvas.Begin(); view.Render(canvas, 1440, 900);
                     double render = clock.Elapsed.TotalMilliseconds;
                     canvas.End(lowLatency: true);
-                    if (i >= 20) { cpu.Add(render); frames.Add(clock.Elapsed.TotalMilliseconds); }
+                    if (i >= 20)
+                    {
+                        double frameMs = clock.Elapsed.TotalMilliseconds;
+                        cpu.Add(render); frames.Add(frameMs);
+                        if (frameMs >= 16.667) slowFrames.Add(new { frame = i, frameMs, rasterBuilds = canvas.SliderRasterBuildCount - rasterBuilds });
+                    }
                 }
                 cpu.Sort(); frames.Sort();
-                phases.Add(new { mode = standard ? "osu" : "catch", gesture, cpuMedianMs = cpu[50], cpuP95Ms = cpu[95], frameMedianMs = frames[50], frameP95Ms = frames[95] });
-                AppLog.Write($"Dense map {(standard ? "osu" : "catch")} {gesture}: CPU p95={cpu[95]:F2} ms; native frame p95={frames[95]:F2} ms.");
+                int median = cpu.Count / 2, p95 = (int)(cpu.Count * .95);
+                phases.Add(new { mode = standard ? "osu" : "catch", gesture, cpuMedianMs = cpu[median], cpuP95Ms = cpu[p95], frameMedianMs = frames[median], frameP95Ms = frames[p95], frameMaxMs = frames[^1], slowFrames });
+                AppLog.Write($"Dense map {(standard ? "osu" : "catch")} {gesture}: CPU p95={cpu[p95]:F2} ms; native frame p95={frames[p95]:F2} ms; max={frames[^1]:F2} ms.");
             }
         }
         if (view.IsDirty) throw new InvalidOperationException("Dense map interaction check changed content.");
         using var process = Process.GetCurrentProcess(); process.Refresh();
-        var report = new { path, readMs, loadMs, backgroundReadyMs, dpi = 168, skin = view.SkinName, workingMiB = process.WorkingSet64 / 1048576d,
+        var report = new { path, timeMs = time, readMs, loadMs, backgroundReadyMs, dpi = 168, skin = view.SkinName, workingMiB = process.WorkingSet64 / 1048576d,
             peakWorkingMiB = process.PeakWorkingSet64 / 1048576d, privateMiB = process.PrivateMemorySize64 / 1048576d,
             managedMiB = GC.GetTotalMemory(false) / 1048576d, allocatedMiB = (GC.GetTotalAllocatedBytes() - allocated) / 1048576d, phases };
         string output = Path.GetFullPath("artifacts/tests/dense-map-performance.json");

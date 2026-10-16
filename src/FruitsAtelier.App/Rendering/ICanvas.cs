@@ -23,6 +23,7 @@ public interface ICanvas
             Line(x + points[i - 1].X * scale, y + points[i - 1].Y * scale,
                 x + points[i].X * scale, y + points[i].Y * scale, color, width, opacity);
     }
+    void PrepareSliderBodies(int denseBodyCount, bool deferred = false) { }
     void SliderBody(IReadOnlyList<System.Numerics.Vector2> points, float x, float y, float scale,
         float diameter, uint border, uint accent, float opacity)
     {

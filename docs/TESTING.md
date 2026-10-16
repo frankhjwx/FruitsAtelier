@@ -85,6 +85,9 @@ pointer movement, seeking, zoom and continuous playback in both canvases at
 168 DPI. It reports CPU and submission frame percentiles, process working-set
 peak, private memory, managed memory and cumulative allocations in
 `artifacts/tests/dense-map-performance.json`. Skin arguments apply to this check.
+Use `--osu-performance-time=50836` to select a specific millisecond position;
+otherwise the check starts at the slider with the most control points. Continuous
+playback covers twenty seconds and reports the maximum as well as percentiles.
 Audio samples are not sent to a hardware device. Cumulative allocations are not
 simultaneous memory usage. The check waits for background star ratings before
 sampling interactive frames. `App.Tests --map-performance` additionally reports

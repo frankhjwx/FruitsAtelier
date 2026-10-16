@@ -61,6 +61,11 @@ the visible span interval. Screen polylines are reused while the viewport is
 unchanged; subpixel screen samples do not change authoring or exported geometry.
 Dense standard slider bodies use a bounded Direct2D raster cache with a 32 MiB
 budget, retaining the border and gradient. Pan, zoom and fade reuse cached pixels.
+Visible dense bodies share that budget; their per-texture resolution is bounded by
+the simultaneous body count so cached bodies do not repeatedly evict one another.
+During playback, new bodies use small preview textures while one background CPU
+worker builds their detailed pixels. Only the rendering thread uploads native
+bitmaps. Stopping playback permits synchronous detail generation.
 Huge path bounds use a padded viewport window instead of allocating an unbounded
 texture. Ordinary paths retain vector rendering.
 

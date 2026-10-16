@@ -13,7 +13,7 @@ public sealed partial class D2DCanvas
     private const int sliderRasterMaximumPixels = 2 * 1024 * 1024;
     // Render snapshots are immutable; pan, zoom, and fade remain outside the cached pixels.
     private readonly record struct SliderRasterKey(IReadOnlyList<Vector2> Points, float Diameter, uint Border, uint Accent, Rect Bounds);
-    private sealed record SliderRaster(ID2D1Bitmap1 Bitmap, int Width, int Height)
+    private sealed record SliderRaster(ID2D1Bitmap1 Bitmap, int Width, int Height, bool Preview = false)
     {
         public long Used;
         public long Bytes => (long)Width * Height * 4;
@@ -24,6 +24,34 @@ public sealed partial class D2DCanvas
     private long sliderRasterBytes, sliderRasterClock;
     internal long CachedSliderRasterBytes => sliderRasterBytes;
     internal int SliderRasterBuildCount { get; private set; }
+    private int sliderRasterPixelBudget = sliderRasterMaximumPixels;
+
+    private bool sliderRasterDeferred;
+    private int sliderRasterResizesRemaining;
+    private Task<SliderRasterPixels>? sliderRasterPending;
+    private SliderRasterKey sliderRasterPendingKey;
+    private bool sliderRasterPendingDiscarded;
+    internal bool PendingSliderRasterBuild => sliderRasterPending is not null;
+    internal int CachedSliderRasterPreviewCount => sliderRasters.Values.Count(raster => raster.Preview);
+    private CancellationTokenSource? sliderRasterCancellation;
+    private sealed class SliderRasterPixels(int width, int height, byte[] pixels) : IDisposable
+    {
+        public int Width { get; } = width;
+        public int Height { get; } = height;
+        public byte[] Pixels { get; } = pixels;
+        public void Dispose() => ArrayPool<byte>.Shared.Return(Pixels);
+    }
+
+    public void PrepareSliderBodies(int denseBodyCount, bool deferred = false)
+    {
+        // Active bodies must coexist: evicting another visible body would rebuild it every frame.
+        int slots = 4;
+        while (slots < denseBodyCount && slots < 1 << 20) slots *= 2;
+        sliderRasterPixelBudget = (int)Math.Max(1, sliderRasterLimit / (4 * slots));
+        sliderRasterDeferred = deferred;
+        sliderRasterResizesRemaining = 1;
+        CompleteSliderRaster();
+    }
 
     private bool TryDrawSliderRaster(IReadOnlyList<Vector2> points, float x, float y, float scale,
         float diameter, uint border, uint accent, float opacity)
@@ -57,15 +85,38 @@ public sealed partial class D2DCanvas
         right = MathF.Ceiling(right / 64) * 64; bottom = MathF.Ceiling(bottom / 64) * 64;
         var bounds = new Rect(left, top, right - left, bottom - top);
         var key = new SliderRasterKey(points, diameter, border, accent, bounds);
+        if (sliderRasters.TryGetValue(key, out var oversized)
+            && ((long)oversized.Width * oversized.Height > sliderRasterPixelBudget || !sliderRasterDeferred && oversized.Preview)
+            && (!sliderRasterDeferred || sliderRasterResizesRemaining > 0))
+        {
+            // Spread working-set changes over frames instead of rebuilding every visible body at once.
+            sliderRasterResizesRemaining--;
+            sliderRasterBytes -= oversized.Bytes; oversized.Bitmap.Dispose(); sliderRasters.Remove(key);
+        }
         if (!sliderRasters.TryGetValue(key, out var raster))
         {
-            raster = CreateSliderRaster(points, bounds, diameter, border, accent);
+            int budget = sliderRasterDeferred ? Math.Min(32768, sliderRasterPixelBudget) : sliderRasterPixelBudget;
+            using var pixels = CreateSliderPixels(key, budget, CancellationToken.None);
+            var desired = SliderRasterSize(bounds, sliderRasterPixelBudget);
+            raster = UploadSliderRaster(pixels, preview: pixels.Width < desired.Width || pixels.Height < desired.Height);
             while (sliderRasters.Count > 0 && (sliderRasterBytes + raster.Bytes > sliderRasterLimit || sliderRasters.Count >= 128))
             {
                 var oldest = sliderRasters.MinBy(pair => pair.Value.Used);
                 sliderRasterBytes -= oldest.Value.Bytes; oldest.Value.Bitmap.Dispose(); sliderRasters.Remove(oldest.Key);
             }
             sliderRasters.Add(key, raster); sliderRasterBytes += raster.Bytes; SliderRasterBuildCount++;
+        }
+        if (sliderRasterDeferred && sliderRasterPending is null)
+        {
+            var desired = SliderRasterSize(bounds, sliderRasterPixelBudget);
+            if (desired.Width > raster.Width || desired.Height > raster.Height)
+            {
+                sliderRasterPendingKey = key;
+                var cancellation = new CancellationTokenSource();
+                sliderRasterCancellation = cancellation;
+                int budget = sliderRasterPixelBudget;
+                sliderRasterPending = Task.Run(() => CreateSliderPixels(key, budget, cancellation.Token));
+            }
         }
         raster.Used = ++sliderRasterClock;
         context!.DrawBitmap(raster.Bitmap, Convert(new Rect(x + bounds.X * scale, y + bounds.Y * scale,
@@ -74,23 +125,69 @@ public sealed partial class D2DCanvas
         return true;
     }
 
-    private unsafe SliderRaster CreateSliderRaster(IReadOnlyList<Vector2> points, Rect bounds, float diameter, uint border, uint accent)
+    private static (int Width, int Height, double Density) SliderRasterSize(Rect bounds, int pixelBudget)
     {
         double density = Math.Min(4, Math.Min(2048d / Math.Max(bounds.Width, bounds.Height),
-            Math.Sqrt(sliderRasterMaximumPixels / ((double)bounds.Width * bounds.Height))));
-        int rasterWidth = Math.Max(1, (int)Math.Floor(bounds.Width * density));
-        int rasterHeight = Math.Max(1, (int)Math.Floor(bounds.Height * density));
+            Math.Sqrt(pixelBudget / ((double)bounds.Width * bounds.Height))));
+        return (Math.Max(1, (int)Math.Floor(bounds.Width * density)),
+            Math.Max(1, (int)Math.Floor(bounds.Height * density)), density);
+    }
+
+    private unsafe SliderRaster UploadSliderRaster(SliderRasterPixels pixels, bool preview = false)
+    {
+        var properties = new BitmapProperties1(new PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied), 96, 96, BitmapOptions.None);
+        fixed (byte* source = pixels.Pixels)
+            return new(context!.CreateBitmap(new SizeI(pixels.Width, pixels.Height), (nint)source,
+                (uint)(pixels.Width * 4), properties), pixels.Width, pixels.Height, preview);
+    }
+
+    private void CompleteSliderRaster()
+    {
+        if (sliderRasterPending is not { IsCompleted: true } pending) return;
+        var key = sliderRasterPendingKey;
+        sliderRasterPending = null;
+        if (sliderRasterPendingDiscarded) { sliderRasterPendingDiscarded = false; return; }
+        sliderRasterCancellation!.Dispose(); sliderRasterCancellation = null;
+        SliderRasterPixels result;
+        try { result = pending.GetAwaiter().GetResult(); }
+        catch (OperationCanceledException) { return; }
+        catch (Exception exception) { AppLog.Write(exception.ToString()); return; }
+        using (result)
+        {
+            if (!sliderRasters.TryGetValue(key, out var previous)
+                || (long)result.Width * result.Height > sliderRasterPixelBudget
+                || result.Width <= previous.Width && result.Height <= previous.Height) return;
+            var replacement = UploadSliderRaster(result);
+            sliderRasterBytes -= previous.Bytes; previous.Bitmap.Dispose(); sliderRasters.Remove(key);
+            while (sliderRasters.Count > 0 && sliderRasterBytes + replacement.Bytes > sliderRasterLimit)
+            {
+                var oldest = sliderRasters.MinBy(pair => pair.Value.Used);
+                sliderRasterBytes -= oldest.Value.Bytes; oldest.Value.Bitmap.Dispose(); sliderRasters.Remove(oldest.Key);
+            }
+            replacement.Used = previous.Used;
+            sliderRasters.Add(key, replacement); sliderRasterBytes += replacement.Bytes; SliderRasterBuildCount++;
+        }
+    }
+
+    private static SliderRasterPixels CreateSliderPixels(SliderRasterKey key, int pixelBudget, CancellationToken cancellation)
+    {
+        cancellation.ThrowIfCancellationRequested();
+        var (rasterWidth, rasterHeight, density) = SliderRasterSize(key.Bounds, pixelBudget);
+        var points = key.Points; var bounds = key.Bounds;
+        float diameter = key.Diameter; uint border = key.Border, accent = key.Accent;
         int count = checked(rasterWidth * rasterHeight);
         float[] distances = ArrayPool<float>.Shared.Rent(count);
         byte[] pixels = ArrayPool<byte>.Shared.Rent(checked(count * 4));
+        bool transferred = false;
         try
         {
             Array.Fill(distances, float.PositiveInfinity, 0, count);
-            RasterizeSliderCentreline(points, bounds, density, rasterWidth, rasterHeight, distances);
-            SliderDistanceTransform(distances, rasterWidth, rasterHeight);
+            RasterizeSliderCentreline(points, bounds, density, rasterWidth, rasterHeight, distances, cancellation);
+            SliderDistanceTransform(distances, rasterWidth, rasterHeight, cancellation);
             float inverseDensity = (float)(1 / density), radius = diameter / 2, innerRadius = radius * .8125f, outerRadius = radius * .921875f;
             for (int i = 0; i < count; i++)
             {
+                if ((i & 16383) == 0) cancellation.ThrowIfCancellationRequested();
                 float distance = MathF.Sqrt(distances[i]) * inverseDensity;
                 float coverage = Math.Clamp((outerRadius - distance) * (float)density + .5f, 0, 1);
                 float borderWeight = Math.Clamp((distance - innerRadius) * (float)density + .5f, 0, 1);
@@ -109,18 +206,22 @@ public sealed partial class D2DCanvas
                 }
                 pixels[offset + 3] = (byte)Math.Clamp(MathF.Round(alpha * 255), 0, 255);
             }
-            var properties = new BitmapProperties1(new PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied), 96, 96, BitmapOptions.None);
-            fixed (byte* source = pixels)
-                return new(context!.CreateBitmap(new SizeI(rasterWidth, rasterHeight), (nint)source, (uint)(rasterWidth * 4), properties), rasterWidth, rasterHeight);
+            transferred = true;
+            return new(rasterWidth, rasterHeight, pixels);
         }
-        finally { ArrayPool<float>.Shared.Return(distances); ArrayPool<byte>.Shared.Return(pixels); }
+        finally
+        {
+            ArrayPool<float>.Shared.Return(distances);
+            if (!transferred) ArrayPool<byte>.Shared.Return(pixels);
+        }
     }
 
-    private static void RasterizeSliderCentreline(IReadOnlyList<Vector2> points, Rect bounds, double density, int width, int height, float[] distances)
+    private static void RasterizeSliderCentreline(IReadOnlyList<Vector2> points, Rect bounds, double density, int width, int height, float[] distances, CancellationToken cancellation)
     {
         var segments = new HashSet<ulong>();
         for (int i = 1; i < points.Count; i++)
         {
+            if ((i & 1023) == 0) cancellation.ThrowIfCancellationRequested();
             double x0 = (points[i - 1].X - bounds.X) * density - .5, y0 = (points[i - 1].Y - bounds.Y) * density - .5;
             double x1 = (points[i].X - bounds.X) * density - .5, y1 = (points[i].Y - bounds.Y) * density - .5;
             if (!ClipSliderSegment(ref x0, ref y0, ref x1, ref y1, width - 1, height - 1)) continue;
@@ -160,10 +261,11 @@ public sealed partial class D2DCanvas
         return false;
     }
 
-    private static void SliderDistanceTransform(float[] distances, int width, int height)
+    private static void SliderDistanceTransform(float[] distances, int width, int height, CancellationToken cancellation)
     {
         for (int y = 0; y < height; y++)
         {
+            if ((y & 31) == 0) cancellation.ThrowIfCancellationRequested();
             int row = y * width, nearest = -width;
             for (int x = 0; x < width; x++)
             {
@@ -184,6 +286,7 @@ public sealed partial class D2DCanvas
         {
             for (int x = 0; x < width; x++)
             {
+                if ((x & 31) == 0) cancellation.ThrowIfCancellationRequested();
                 for (int y = 0; y < height; y++) costs[y] = distances[y * width + x];
                 int last = -1;
                 for (int q = 0; q < height; q++)
@@ -213,6 +316,19 @@ public sealed partial class D2DCanvas
 
     private void ClearSliderRasters()
     {
+        if (sliderRasterPending is { } pending && !sliderRasterPendingDiscarded)
+        {
+            // Keep the cancelled task registered until it stops, so Clear cannot overlap workers.
+            var cancellation = sliderRasterCancellation!;
+            sliderRasterPendingDiscarded = true; sliderRasterCancellation = null;
+            cancellation.Cancel();
+            _ = pending.ContinueWith(completed =>
+            {
+                if (completed.Status == TaskStatus.RanToCompletion) completed.Result.Dispose();
+                else _ = completed.Exception;
+                cancellation.Dispose();
+            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        }
         foreach (var raster in sliderRasters.Values) raster.Bitmap.Dispose();
         sliderRasters.Clear(); sliderRasterBytes = 0;
         sliderRasterExtents.Clear(); sliderRasterExtentOrder.Clear();

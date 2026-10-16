@@ -210,6 +210,11 @@ public sealed partial class EditorView
         DrawOsuCanvasGrid(c);
         c.Stroke(field, 0xFFFFFF, 1);
         double now = LazerPresentationTime;
+        int denseBodies = 0;
+        foreach (int index in osuCanvasVisible)
+            if (osuCanvasObjects[index] is { StrokePath.Length: > 2048 } body && body.End + 240 > now)
+                denseBodies++;
+        c.PrepareSliderBodies(denseBodies, AudioPlaying);
         for (int n = osuCanvasVisible.Count - 1; n >= 0; n--)
         {
             var o = osuCanvasObjects[osuCanvasVisible[n]];

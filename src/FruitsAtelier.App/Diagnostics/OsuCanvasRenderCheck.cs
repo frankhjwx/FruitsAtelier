@@ -232,6 +232,44 @@ internal static class OsuCanvasRenderCheck
         });
         if (canvas.CachedSliderRasterBytes > 32L * 1024 * 1024)
             throw new InvalidOperationException("An oversized slider exceeded the bounded raster cache.");
-        AppLog.Write("Native vector/raster slider gradient, transform reuse, oversized clipping, and bounded cache checks passed.");
+        foreach (int simultaneous in new[] { 8, 16, 9, 4 })
+        {
+            DrawSimultaneous();
+            int warmBuilds = canvas.SliderRasterBuildCount;
+            for (int frame = 0; frame < 3; frame++) DrawSimultaneous();
+            if (canvas.SliderRasterBuildCount != warmBuilds)
+                throw new InvalidOperationException("Simultaneously visible slider bodies evicted each other from the raster cache.");
+            if (canvas.CachedSliderRasterBytes > 32L * 1024 * 1024)
+                throw new InvalidOperationException("Simultaneous slider bodies exceeded the raster cache budget.");
+            void DrawSimultaneous()
+            {
+                canvas.Begin(); canvas.PrepareSliderBodies(simultaneous);
+                for (uint body = 1; body <= simultaneous; body++)
+                    canvas.SliderBody(dense, 0, 0, 1, 128, 0xFFFFFF, body * 12345, 1);
+                canvas.End();
+            }
+        }
+        var upgradeClock = System.Diagnostics.Stopwatch.StartNew();
+        do
+        {
+            canvas.Begin(); canvas.PrepareSliderBodies(8, deferred: true);
+            for (uint body = 1; body <= 8; body++)
+                canvas.SliderBody(dense, 0, 0, 1, 128, 0xFFFFFF, body * 54321, 1);
+            canvas.End();
+            if (canvas.CachedSliderRasterBytes > 32L * 1024 * 1024)
+                throw new InvalidOperationException("Background slider uploads exceeded the raster cache budget.");
+            if (upgradeClock.Elapsed.TotalSeconds > 15)
+                throw new InvalidOperationException("Deferred slider previews did not finish upgrading.");
+            Thread.Sleep(1);
+        } while (canvas.PendingSliderRasterBuild || canvas.CachedSliderRasterPreviewCount > 0);
+        int upgradedBuilds = canvas.SliderRasterBuildCount;
+        canvas.Begin(); canvas.PrepareSliderBodies(8, deferred: true);
+        for (uint body = 1; body <= 8; body++)
+            canvas.SliderBody(dense, 0, 0, 1, 128, 0xFFFFFF, body * 54321, 1);
+        canvas.End();
+        if (canvas.SliderRasterBuildCount != upgradedBuilds)
+            throw new InvalidOperationException("Completed background slider textures were rebuilt.");
+        canvas.PrepareSliderBodies(0);
+        AppLog.Write("Native vector/raster slider gradient, transform reuse, oversized clipping, bounded cache, and background upgrade checks passed.");
     }
 }
