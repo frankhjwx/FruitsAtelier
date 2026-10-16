@@ -146,8 +146,8 @@ public sealed partial class EditorView
         draftOsuRoot != LibrarySettings.OsuRoot ||
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
-        draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
-        draftDerandomizeNewProjects != LibrarySettings.DerandomizeNewProjects ||
+        FirstRunSetupVisible && (draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
+            draftDerandomizeNewProjects != LibrarySettings.DerandomizeNewProjects) ||
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
         draftUiScalePercent != LibrarySettings.UiScalePercent ||
         draftFullscreen != LibrarySettings.Fullscreen ||
@@ -245,17 +245,14 @@ public sealed partial class EditorView
                         () => draftFullscreen = !draftFullscreen, draftFullscreen);
                     c.Text(L.Get("settings.fullscreenShortcut"), SettingsContentX, fullscreenTop + 72, SettingsHintSize, Muted, SettingsContentWidth);
                 }
-                float scrollTop = fullscreenTop + (SupportsFullscreen ? 108 : 0);
-                float scrollWidth = SettingsContentWidth;
-                c.Line(SettingsContentX, scrollTop, SettingsContentX + scrollWidth, scrollTop, Grid);
-                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, scrollTop + 12, SettingsSectionSize, Foreground,
-                    SettingsContentWidth, true);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 46, SettingsContentWidth, 32),
-                    L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
-                    () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 94, SettingsContentWidth, 32),
-                    L.Get(draftDerandomizeNewProjects ? "settings.newProjectDerandomizeOn" : "settings.newProjectDerandomizeOff"),
-                    () => draftDerandomizeNewProjects = !draftDerandomizeNewProjects, draftDerandomizeNewProjects);
+                float dropletsTop = fullscreenTop + (SupportsFullscreen ? 108 : 0);
+                c.Line(SettingsContentX, dropletsTop, SettingsContentX + SettingsContentWidth, dropletsTop, Grid);
+                c.Text(L.Get("randomize.title"), SettingsContentX, dropletsTop + 12, SettingsSectionSize, Foreground, SettingsContentWidth, true);
+                var dropletHint = WrapSyncText(c, L.Get("settings.dropletManagementHint"), SettingsContentWidth);
+                for (int i = 0; i < dropletHint.Length; i++)
+                    c.Text(dropletHint[i].Text, SettingsContentX, dropletsTop + 40 + i * 18, SettingsHintSize, Muted, SettingsContentWidth);
+                SettingsButton(c, new(SettingsContentX, dropletsTop + 46 + dropletHint.Length * 18, SettingsContentWidth, SettingsControlHeight),
+                    L.Get("settings.openDropletSettings"), OpenDropletSettingsFromGeneral);
                 c.Unclip();
                 ClipSettingsHits(generalFirstHit);
                 DrawSettingsScrollbar(c, GeneralContentHeight);
@@ -350,8 +347,8 @@ public sealed partial class EditorView
             settings.CanvasGridOpacity = draftCanvasGridOpacity;
             settings.ForceBackgroundDim = draftForceBackgroundDim;
             settings.RomanisedMetadata = draftRomanisedMetadata;
-            settings.DerandomizeDroplets = draftDerandomizeDroplets;
-            settings.DerandomizeNewProjects = draftDerandomizeNewProjects;
+            settings.DerandomizeDroplets = FirstRunSetupVisible ? draftDerandomizeDroplets : LibrarySettings.DerandomizeDroplets;
+            settings.DerandomizeNewProjects = FirstRunSetupVisible ? draftDerandomizeNewProjects : LibrarySettings.DerandomizeNewProjects;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
             settings.UiScalePercent = draftUiScalePercent;
             settings.Fullscreen = draftFullscreen;

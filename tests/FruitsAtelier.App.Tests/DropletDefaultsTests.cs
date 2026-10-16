@@ -29,31 +29,48 @@ internal static class DropletDefaultsTests
                 ui.View.LibrarySettings.OsuRoot = ""; ui.View.LibrarySettings.SelectedSkin = ui.View.LibrarySettings.DefaultSkin = null;
                 ui.View.LibrarySettings.DerandomizeDroplets = ui.View.LibrarySettings.DerandomizeNewProjects = true;
                 var before = ui.View.Document.DeepClone();
+                string path = Path.Combine(root, locale + ".json");
+                int saves = 0;
+                ui.View.RequestViewPreference = () => { saves++; ui.View.LibrarySettings.Save(path); };
                 foreach (var size in new[] { (1440, 900), (980, 620), (760, 580) })
                 {
-                    ui.Resize(size.Item1, size.Item2); ui.View.SupportsDisplayMode = true; OpenSettings(ui);
-                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.dropletDefaults")), "General has a separate droplet section");
-                    var heading = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.dropletDefaults"));
-                    Check(ui.Canvas.Lines.Any(l => l.Y1 == heading.Y - 12 && l.Y2 == l.Y1 && l.X2 > l.X1),
-                        "droplet section has a separator above its heading");
-                    ui.ClickText(L.Get("settings.newProjectDerandomizeOn")); ui.Key(27);
-                    Check(ui.View.LibrarySettings.DerandomizeNewProjects, "cancel discards the new-project preference draft");
+                    ui.Resize(size.Item1, size.Item2); OpenSettings(ui);
+                    Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.dropletDefaults")), "General omits droplet defaults");
+                    string pendingWorkspace = Path.Combine(root, locale, size.Item1.ToString());
+                    ui.View.SetLibraryFolder(true, pendingWorkspace);
+                    ui.ClickText(L.Get("settings.openDropletSettings"));
+                    Check(ui.View.SongSetupVisible, "General link opens Droplet Settings");
+                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.currentDifficulty"))
+                        && ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.globalDefaults")), "map and global scopes are labelled separately");
+                    ui.ClickText(L.Get("randomize.defaultProjects"));
+                    Check(!LibrarySettings.Load(path).DerandomizeNewProjects && LibrarySettings.Load(path).DerandomizeDroplets,
+                        "new-project preference saves independently");
+                    ui.ClickText(L.Get("randomize.defaultConversion"));
+                    Check(!LibrarySettings.Load(path).DerandomizeDroplets && saves > 0, "conversion preference saves immediately");
+                    ui.Key(27); ui.View.ApplySettings(path); ui.Paint();
+                    Check(LibrarySettings.Load(path).Workspace == pendingWorkspace, "General draft survives the Droplet Settings round trip");
+                    ui.Key(27);
+                    Check(ui.View.Document.ContentEquals(before) && !ui.View.IsDirty, "global defaults leave current map and history unchanged");
+                    OpenSettings(ui); ui.View.ApplySettings(path, force: true); ui.Key(27);
+                    Check(!ui.View.LibrarySettings.DerandomizeDroplets && !ui.View.LibrarySettings.DerandomizeNewProjects,
+                        "General Apply retains droplet preferences");
+                    ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("randomize.title"));
+                    ui.ClickText(L.Get("randomize.defaultProjects")); ui.ClickText(L.Get("randomize.defaultConversion")); ui.Key(27);
                 }
-                OpenSettings(ui);
-                ui.ClickText(L.Get("settings.newProjectDerandomizeOn"));
-                string path = Path.Combine(root, locale + ".json"); ui.View.ApplySettings(path); ui.Paint();
-                Check(LibrarySettings.Load(path).DerandomizeDroplets && !LibrarySettings.Load(path).DerandomizeNewProjects,
-                    "new-project setting persists independently of Legacy conversion");
-                ui.ClickText(L.Get("settings.derandomizeOn")); ui.View.ApplySettings(path); ui.Paint();
-                Check(!LibrarySettings.Load(path).DerandomizeDroplets && !LibrarySettings.Load(path).DerandomizeNewProjects,
-                    "Legacy conversion setting changes independently");
-                ui.Key(27); Check(ui.View.Document.ContentEquals(before), "changing defaults preserves existing beatmap content");
+                ui.View.ShowRandomDock(); ui.Paint();
+                var bounds = ui.View.RandomDockViewport;
+                ui.View.Wheel(bounds.X + 10, bounds.Y + 40, -12000, false, false); ui.Paint();
+                ui.ClickText(L.Get("randomize.defaultProjects"));
+                Check(!ui.View.LibrarySettings.DerandomizeNewProjects && ui.View.Document.ContentEquals(before),
+                    "dock global toggle persists without changing the map");
+                ui.View.RequestViewPreference = null;
+                ui.LoadDocument(before);
                 foreach (bool derandomize in new[] { true, false })
                 foreach (var mode in Enum.GetValues<SliderEditingMode>())
                 {
                     ui.View.LibrarySettings.DerandomizeNewProjects = derandomize;
                     ui.View.NewProject(); ui.Paint();
-                    Check(ui.View.Document.RandomizeNewSliders == !derandomize
+                    Check(ui.View.Document.DerandomizeFSliderDroplets == derandomize && ui.View.Document.RandomizeNewSliders == !derandomize
                         && ui.View.Document.RandomizeDropletStrength == 20 && ui.View.Document.RandomizeDropletSeed == 1337,
                         "new catchproject captures its own droplet defaults");
                     var saved = ProjectSerializer.ReadProject(ProjectSerializer.Serialize(ui.View.CaptureProject()));
@@ -76,9 +93,55 @@ internal static class DropletDefaultsTests
                 ui.Key('B'); ui.ClickMap(1000, 256); ui.ClickMap(3000, 256, ctrl: true); ui.Key(13); Wait(ui);
                 Check(ui.View.Document.Tracks.Single().DropletRandomization is null, "existing projects retain their drawing default");
             }
+            var libraryUi = new Ui(false);
+            libraryUi.View.LibrarySettings.Workspace = Path.Combine(root, "library-only");
+            libraryUi.View.LibrarySettings.DerandomizeNewProjects = true;
+            libraryUi.View.RequestViewPreference = () => libraryUi.View.LibrarySettings.Save(Path.Combine(root, "library-only.json"));
+            libraryUi.View.ShowLibrary(); libraryUi.Paint();
+            OpenSettings(libraryUi); libraryUi.ClickText(L.Get("settings.openDropletSettings"));
+            Check(!libraryUi.View.HasEditorProject && libraryUi.View.SongSetupVisible, "General opens global Droplet Settings without creating a project");
+            libraryUi.ClickText(L.Get("randomize.defaultProjects")); libraryUi.Key(13);
+            Check(!libraryUi.View.SongSetupVisible && !libraryUi.View.HasEditorProject
+                && !libraryUi.View.LibrarySettings.DerandomizeNewProjects, "global dialog returns to General and preserves its saved choice");
+            libraryUi.Paint(); Check(libraryUi.Canvas.Texts.Any(t => t.Value == L.Get("settings.openDropletSettings")), "dialog returns to General");
+            RandomizationRoundTrip();
         }
         finally { L.SetLanguage(language); }
     }
+    private static void RandomizationRoundTrip()
+    {
+        L.SetLanguage("en");
+        foreach (bool derandomize in new[] { true, false })
+        foreach (double strength in new[] { 20d, 37d })
+        {
+            var map = new MapDocument { IsDemo = false, DurationMs = 8000,
+                DerandomizeFSliderDroplets = derandomize, RandomizeDropletStrength = strength };
+            var track = new CurveTrack { Kind = CurveKind.Linear, DropletMode = SliderDropletMode.FollowMap };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 256 }, new() { TimeMs = 3000, X = 256 }]); map.Tracks.Add(track);
+            var ui = new Ui(); ui.LoadDocument(map);
+            ui.View.LibrarySettings.DerandomizeNewProjects = !derandomize;
+            ui.SelectTrack(track.Id); ui.View.ShowSliderInspector(); ui.Paint();
+            var current = SliderDropletMode.FollowMap;
+            foreach (var next in new[] { SliderDropletMode.Randomize, SliderDropletMode.Derandomize, SliderDropletMode.FollowMap, SliderDropletMode.Randomize })
+            {
+                var bounds = ui.View.SliderInspectorViewport;
+                ui.View.Wheel(bounds.X + 10, bounds.Y + 40, -12000, false, false); ui.Paint();
+                string modeLabel = L.Get("inspector.dropletMode", L.Get("droplet.mode." + current));
+                var modeButton = ui.Canvas.Texts.Single(t => t.Value == modeLabel && t.Y < ui.Height - 28);
+                ui.Click(modeButton.X + 4, modeButton.Y + 5);
+                var choice = ui.Canvas.Texts.Last(t => t.Value == L.Get("droplet.mode." + next));
+                ui.Click(choice.X + 4, choice.Y + 4); Wait(ui);
+                var expected = map.DeepClone(); expected.Tracks[0].DropletMode = next;
+                double[] Tiny(MapDocument document) => OsuBeatmapWriter.Serialize(document).PlayableObjects
+                    .Where(o => o.Kind == CatchObjectKind.TinyDroplet).Select(o => o.X).ToArray();
+                Check(Tiny(expected).SequenceEqual(Tiny(ui.View.Document)), "Inspector mode round trips restore exported tiny-droplet positions");
+                Check(ui.View.Document.Tracks[0].Nodes.Count == 2 && ui.View.Document.DerandomizeFSliderDroplets == derandomize,
+                    "Inspector overrides preserve authored geometry and map defaults");
+                current = next;
+            }
+        }
+    }
+
     private static void OpenSettings(Ui ui)
     {
         ui.View.OpenSettings(); ui.Paint();

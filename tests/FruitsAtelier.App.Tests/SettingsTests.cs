@@ -33,27 +33,14 @@ static class SettingsTests
                     Check(apply.Size == 13 && !apply.Bold, "actions keep a regular body weight");
                     if (category == "settings.general")
                     {
-                        var heading = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.dropletDefaults"));
-                        Check(heading.Size == 16 && heading.Bold, "section headings use the shared size");
+                        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.dropletDefaults")), "General omits droplet defaults");
                         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.reverseCanvasScrollOff")), "Canvas scrolling belongs to Mapping Canvas.");
-                        foreach (string key in new[] { "settings.derandomizeOn", "settings.newProjectDerandomizeOn" })
-                        {
-                            var label = ui.Canvas.Texts.Single(t => t.Value == L.Get(key));
-                            Check(label.Size == 13 && label.X == page.X + 12, "droplet controls share body type and padding");
-                            Check(ui.Canvas.Fills.Any(f => f.Bounds.Contains(label.X, label.Y) && f.Bounds.Height == 32
-                                && f.Bounds.Right == ui.View.SettingsBounds.Right - 32), "droplet controls align to the content column");
-                        }
                     }
                     if (category == "settings.general" && size.Item1 == 760)
                     {
                         float applyY = apply.Y;
                         ui.View.Wheel(page.X + 100, ui.View.SettingsBounds.Y + 200, -1200, false); ui.Paint();
-                        var droplets = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.newProjectDerandomizeOn"));
-                        Check(droplets.Y >= ui.View.SettingsBounds.Y + 116 && droplets.Y < ui.View.SettingsBounds.Bottom - 86,
-                            "General scrolling makes the bottom preference reachable");
                         Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("library.apply")).Y == applyY, "Apply stays fixed while General scrolls");
-                        ui.Click(droplets.X + 2, droplets.Y + 2);
-                        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.newProjectDerandomizeOff")), "scrolled preference retains its hit target");
                     }
                     if (category == "settings.testplay")
                     {
@@ -238,11 +225,6 @@ static class SettingsTests
                 Check(LibrarySettings.Load(path).PlaybackLineFromBottom == .6, "Apply preserves playback line height");
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.romanisedOff")) &&
                     ApplyColor() == disabled, "Apply stays in category and resets dirty state");
-                ui.ClickText(L.Get("settings.derandomizeOn"));
-                Check(ApplyColor() != disabled, "Droplet default change did not enable Apply");
-                ui.View.ApplySettings(path); ui.Paint();
-                Check(!LibrarySettings.Load(path).DerandomizeDroplets && ApplyColor() == disabled,
-                    "General droplet default did not persist");
                 ui.ClickText(L.Get("settings.testplay"));
                 ui.ClickText("Shift"); ui.Key(65);
                 Check(ApplyColor() != disabled, "Binding change enables Apply");

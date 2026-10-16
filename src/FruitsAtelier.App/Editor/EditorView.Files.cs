@@ -278,7 +278,7 @@ public sealed partial class EditorView
             playhead = Math.Clamp(positionMs, 0, TimelineDurationMs);
         double previousViewStart = viewStart;
         if (playing || ready && !wasReady) FollowPlayhead();
-        if (playing && !IsLazerEditing) ContinueDragAfterNavigation(previousViewStart, previousPlayhead, shiftHeld, placementCtrl);
+        if (playing && !IsLazerEditing) ContinueDragAfterNavigation(previousViewStart, previousPlayhead, shiftHeld, placementCtrl, requireStarted: true);
         if (testplay is not null && testplayWithAudio)
         {
             if (testplayDriver is null)

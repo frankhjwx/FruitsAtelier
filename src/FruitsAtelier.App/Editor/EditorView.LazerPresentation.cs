@@ -64,7 +64,7 @@ public sealed partial class EditorView
         lastLazerViewStart = start;
         lazerPresentationInitialized = true;
         if (advance)
-            ContinueDragAfterNavigation(viewStart - (start - previousStart), playhead - (time - previousTime), shiftHeld, placementCtrl);
+            ContinueDragAfterNavigation(viewStart - (start - previousStart), playhead - (time - previousTime), shiftHeld, placementCtrl, requireStarted: true);
     }
 
     private void SeekLazerSmoothlyTo(double time)

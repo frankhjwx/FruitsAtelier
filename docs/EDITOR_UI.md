@@ -197,14 +197,16 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 ## Droplet randomization
 
 **Droplet Settings** is an independent dock tab opened from Layout or Edit.
-It contains only current-difficulty settings: the default droplet mode
+Its current-difficulty section contains the default droplet mode
 (Derandomize or Randomize), Strength (0–100 playfield pixels), a signed 32-bit
 Seed, and the NM/HR compensation target. Valid edits apply immediately with undo;
 invalid numeric input leaves the last valid value intact. Strength has a numeric
 field and slider, plus Reset strength to restore 20.
 
-New projects default to derandomization, configurable in General settings. Newly
-drawn FSliders use **Follow map**. In **Slider Inspector**, **Droplet mode** selects
+The separate **Global Derandomize** section controls derandomization for new projects
+and Legacy-to-FSlider conversion. These preferences save immediately and do not
+change the current difficulty or its undo history. New projects default to
+derandomization. Newly drawn FSliders use **Follow map**. In **Slider Inspector**, **Droplet mode** selects
 Follow map, Derandomize or Randomize for the selected ordinary FSliders without
 switching tabs. Explicit modes take precedence over the difficulty default.
 Multiple differing modes display Mixed; choosing a mode applies it to all eligible
@@ -474,19 +476,20 @@ saved fullscreen preference. Fullscreen does not change beatmap content or histo
 Settings Workspace, Audio and embedded Updates show their controls without the
 workspace-path, skin-sound, automatic-save or restart explanatory paragraphs.
 
-**General → Droplet Derandomize Settings** is the last section of General,
-following the scroll-direction setting and a separator. It contains two independent
-preferences. **Enable Derandomization for Legacy slider to FSlider Conversion** sets the initial conversion
-choice in maps without a saved choice. **Enable Derandomization for new catchprojects**
-controls projects created from scratch or from audio. Both start On. With the
-new-project option Off, the new difficulty saves a default that enables
-randomization on newly drawn FSliders, with Strength 20 and Seed 1337. With it On,
-the map starts with Derandomize droplets On and newly drawn FSliders start without the effect. This default survives project
-reopening and is inherited by additional blank difficulties. Imported
-difficulties retain their own defaults. Settings Apply saves both preferences
-across launches; changing them does not modify existing beatmap content or a
-map's saved Legacy conversion choice. Batch randomization actions affect current
-FSliders without changing the default for future ones.
+**Droplet Settings → Global Derandomize** contains two independently saved preferences.
+First-time setup also offers both preferences as part of its draft, saved on Finish.
+General retains a link and a notice directing randomization and derandomization to
+Droplet Settings. The link preserves unapplied General preferences and returns there
+when the dialog closes. With no open project, it shows only global preferences.
+**Legacy → FSlider** sets the initial conversion choice in maps
+without a saved choice. **New projects** controls projects created
+from scratch or from audio. Both start On. With the new-project option Off,
+new FSliders using Follow map randomize with Strength 20 and Seed 1337; with it
+On, they derandomize. The map default survives reopening and is inherited by
+additional blank difficulties. Imported difficulties retain their own settings.
+Global defaults save immediately, including when the current difficulty is locked;
+Cancel in Song Setup discards map drafts while retaining these global preferences.
+Changing them does not modify existing maps or a saved Legacy conversion choice.
 
 Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same logical dimensions apply on both desktop platforms and follow their interface scaling. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
@@ -802,7 +805,9 @@ shows the previous/next object indicators without a separate slider speed badge.
 
 For a clicked or selected tiny droplet, Prev and Next display movement classifications and DS ratios to its immediate neighbours, including other tiny droplets. A missing neighbour or zero time interval displays a dash. These tiny-droplet distance values are read-only.
 
-With droplet selection unlocked, clicking a droplet or tiny droplet displays its X coordinate, including when the click selects its parent slider. Clicking that child again selects the specific event and shows a bright outer ring above curves and movement lines. The coordinate readout alone does not change selection, dragging or the parent geometry. Lock droplet selection blocks droplet selection and coordinate inspection. In Select mode, a click closer to the droplet than nearby controls selects the droplet; an already selected droplet remains draggable after its curve gains an anchor. Horizontal dragging changes the selected event's X and recalculates the curve. Droplets of the same kind that share that path sample on repeated traversals move together; other events remain fixed, and all event times are preserved. The curve between the adjacent event samples becomes linear, replacing any intervening anchors and handles while retaining the curve outside that interval. TinyDroplet sampling follows the slider's compensation policy. Unreachable positions clamp to the last valid X. One drag is one undoable edit. Dragging a selected Legacy Slider droplet or tiny droplet converts its parent to an FSlider automatically within the same undo step. The ring follows live edits and is visible with Movement Analysis on or off.
+With droplet selection unlocked, clicking a droplet or tiny droplet displays its X coordinate, including when the click selects its parent slider. Clicking that child again selects the specific event and shows a bright outer ring above curves and movement lines. The coordinate readout alone does not change selection, dragging or the parent geometry. Lock droplet selection blocks droplet selection and coordinate inspection. In Select mode, a click closer to the droplet than nearby controls selects the droplet; an already selected droplet remains draggable after its curve gains an anchor. Horizontal dragging changes the selected event's X and recalculates the curve. Droplets of the same kind that share that path sample on repeated traversals move together; other events remain fixed, and all event times are preserved. The curve between the adjacent event samples becomes linear, replacing any intervening anchors and handles while retaining the curve outside that interval. TinyDroplet sampling follows the slider's compensation policy. Unreachable positions clamp to the last valid X. Content dragging starts after at least 6 DIP of pointer movement on either axis.
+Playback alone does not start a drag; an already started drag follows playback.
+One drag is one undoable edit. Dragging a selected Legacy Slider droplet or tiny droplet converts its parent to an FSlider automatically within the same undo step. The ring follows live edits and is visible with Movement Analysis on or off.
 
 For selected slider children, DS editing inserts or reuses an anchor at the child's first-span time and reshapes the curve locally. A reference in the same slider is anchored too so its position remains fixed. Editing an imported Legacy Slider child converts its parent to an FSlider within the same transaction. Repeated spans share the edited first-span geometry. Conversion must retain the selected child's time and achieve the requested position; unsupported or unreachable changes show an error and roll back.
 
@@ -846,7 +851,7 @@ Span count applies to the entire FSlider; later traversals reuse the first span'
 
 The first workspace import from Songs, an external folder, `.osu`, or `.osz` asks whether to convert sliders in all newly imported difficulties if they contain Legacy Sliders. The prompt offers **Derandomize droplets**. With it off, conversion builds an editable path through the actual legacy fruit and droplet positions, including randomized TinyDroplets. Generated geometry compensates the RNG so objects stay on that path. Conversion preserves their times and positions; incompatible shared repeat targets remain Legacy with a reason. The selected policy is saved per difficulty after a successful conversion and reused for later conversions. Keeping Legacy preserves that representation. Reopening an existing project does not prompt again. Importing one difficulty into a project prompts only for that difficulty.
 
-**Edit → Convert all sliders to FSliders** opens the droplet choice for the current difficulty and is disabled when it has no Legacy Sliders. Single-slider editing and explicit conversion proceed without a prompt, using the saved difficulty policy or the General settings default. Batch conversion runs in the background with a cancellable prompt and blocks content editing. Cancellation applies no partial results. Conversions per difficulty can be undone together; valid sliders that previously failed strict alignment now convert approximately. Invalid input and reasons appear in paginated results. Saving persists conversion in the workspace without modifying original Songs/external files; Export is still required to write `.osu`.
+**Edit → Convert all sliders to FSliders** opens the droplet choice for the current difficulty and is disabled when it has no Legacy Sliders. Single-slider editing and explicit conversion proceed without a prompt, using the saved difficulty policy or the global conversion default in Droplet Settings. Batch conversion runs in the background with a cancellable prompt and blocks content editing. Cancellation applies no partial results. Conversions per difficulty can be undone together; valid sliders that previously failed strict alignment now convert approximately. Invalid input and reasons appear in paginated results. Saving persists conversion in the workspace without modifying original Songs/external files; Export is still required to write `.osu`.
 
 With Distance Snap disabled, dragging a selected slider fruit, droplet or tiny droplet follows horizontal Grid Snap, including the existing Shift override. Unreachable positions stop at an accepted grid point, or retain the original X when no grid point is reachable. With Distance Snap enabled, the strict event snapping rules above apply; rejected candidates do not leave partial geometry.
 

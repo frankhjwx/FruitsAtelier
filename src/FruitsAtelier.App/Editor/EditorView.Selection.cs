@@ -134,7 +134,7 @@ public sealed partial class EditorView
     {
         var area = boxTimeline ? objectTimeline : plot;
         x = Math.Clamp(x, area.X, area.Right); y = Math.Clamp(y, area.Y, area.Bottom);
-        if (Math.Abs(x - dragStartX) >= 3 || Math.Abs(y - dragStartY) >= 3) dragMoved = true;
+        if (Math.Abs(x - dragStartX) >= ContentDragThreshold || Math.Abs(y - dragStartY) >= ContentDragThreshold) dragMoved = true;
         if (!dragMoved || selectionBeforeBox is null) return;
         float startX = boxTimeline ? objectTimeline.X + (float)((boxStartTime - ObjectTimelineStartMs) * objectTimelineScale) : dragStartX;
         float startY = boxTimeline ? dragStartY : Screen(new(boxStartTime, 0)).Y;

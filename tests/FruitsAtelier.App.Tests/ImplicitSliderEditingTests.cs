@@ -54,7 +54,7 @@ internal static class ImplicitSliderEditingTests
                 var before = ui.View.Document.DeepClone();
                 var child = ui.View.Conversion.Objects.First(o => o.Kind == kind);
                 ui.ClickMap(child.TimeMs, child.X);
-                ui.DownMap(child.TimeMs, child.X); ui.MoveMap(child.TimeMs, child.X + 10); ui.UpMap(child.TimeMs, child.X + 10);
+                ui.DownMap(child.TimeMs, child.X); ui.MoveMap(child.TimeMs, child.X + 20); ui.UpMap(child.TimeMs, child.X + 20);
                 Check(ui.View.Document.Tracks.Count == 1 && !ui.View.SliderImportPromptVisible, "Child drag did not convert its parent.");
                 ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Child conversion drag did not undo atomically.");
             }

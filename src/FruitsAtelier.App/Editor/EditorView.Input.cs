@@ -6,6 +6,8 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private const float ContentDragThreshold = 6;
+
     private double timelineMsPerDip;
     private float snapWheelRemainder, toolWheelRemainder;
     private int breakStartMs;
@@ -514,7 +516,7 @@ public sealed partial class EditorView
         if (drag == DragKind.BreakEdge) { MoveBreakEdge(x); return; }
         if (!dragMoved)
         {
-            if (MathF.Abs(x - dragStartX) < 2 && MathF.Abs(y - dragStartY) < 2) return;
+            if (MathF.Abs(x - dragStartX) < ContentDragThreshold && MathF.Abs(y - dragStartY) < ContentDragThreshold) return;
             dragMoved = true;
         }
         if (drag == DragKind.TimelineTail) { MoveTimelineTail(x, shift); return; }
@@ -831,8 +833,9 @@ public sealed partial class EditorView
         }
     }
 
-    private bool ContinueDragAfterNavigation(double previousViewStart, double previousPlayhead, bool shift, bool ctrl)
+    private bool ContinueDragAfterNavigation(double previousViewStart, double previousPlayhead, bool shift, bool ctrl, bool requireStarted = false)
     {
+        if (requireStarted && !dragMoved) return false;
         if (!NavigationDuringDrag || drag == DragKind.Objects && selectionScaleSide != 0) return false;
         double scroll = viewStart - previousViewStart;
         double time = drag == DragKind.TimelineTail || drag == DragKind.Objects && objectDragTimeline

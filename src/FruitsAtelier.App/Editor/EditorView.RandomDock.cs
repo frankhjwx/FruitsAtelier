@@ -17,9 +17,9 @@ public sealed partial class EditorView
     private bool randomDragging;
     private RandomDraft? randomBaseline;
     private string randomError = "";
-    private const float RandomContentHeight = 290;
+    private const float RandomContentHeight = 480;
     internal Rect RandomDockViewport => randomBounds;
-    internal Rect RandomDockValueBounds(int field) => new(randomBounds.X, randomBounds.Y - randomScroll + (field == 0 ? 118 : 220),
+    internal Rect RandomDockValueBounds(int field) => new(randomBounds.X, randomBounds.Y - randomScroll + (field == 0 ? 142 : 244),
         field == 0 ? Math.Min(78, randomBounds.Width * .35f) : randomBounds.Width, 32);
     private bool RandomDockEditing => DockContentInputAvailable && PanelVisible(DockPanel.RandomizeDroplets)
         && ReferenceEquals(randomDockSnapshot, convertedSnapshot);
@@ -84,6 +84,8 @@ public sealed partial class EditorView
         float y = bounds.Y - randomScroll;
         int firstHit = hits.Count; c.Clip(bounds);
         bool editable = !notesLocked;
+        c.Text(L.Get("randomize.currentDifficulty"), bounds.X, y, 12, Foreground, bounds.Width, true);
+        y += 24;
         Button(c, new(bounds.X, y, bounds.Width, 38), L.Get(randomDerandomize ? "randomize.derandomizeOn" : "randomize.derandomizeOff"), () => RunRandomDockAction(() =>
         {
             randomDerandomize = !randomDerandomize;
@@ -106,6 +108,7 @@ public sealed partial class EditorView
             c.Circle(randomStrengthBounds.X + (float)Math.Clamp(strength / 100, 0, 1) * randomStrengthBounds.Width, randomStrengthBounds.Y + 12, 7, Accent);
         Button(c, new(bounds.X, y + 158, bounds.Width, 30), L.Get("randomize.resetStrength"), () => RunRandomDockAction(() => { randomNumbers[0] = "20"; Document.RandomizeDropletStrength = 20; }), enabled: editable, fontSize: 12);
         c.Text(randomError, bounds.X, y + 266, 12, Error, bounds.Width);
+        DrawDropletDefaults(c, new(bounds.X, y + 304, bounds.Width, 132));
         c.Unclip();
         for (int i = hits.Count - 1; i >= firstHit; i--) if (hits[i].Bounds.Y < bounds.Y || hits[i].Bounds.Bottom > bounds.Bottom) hits.RemoveAt(i);
         if (RandomContentHeight > bounds.Height)

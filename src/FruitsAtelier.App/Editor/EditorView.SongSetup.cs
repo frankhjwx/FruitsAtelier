@@ -68,6 +68,7 @@ public sealed partial class EditorView
 
     private void CloseSongSetup()
     {
+        if (dropletSettingsFromGeneral) { librarySettingsOpen = true; dropletSettingsFromGeneral = false; }
         audioProjectPath = null;
         songDockSnapshot = null;
         SongSetupVisible = false; songField = ""; songDrag = -1; songCountdownOpen = false; SongSetupInputSession++;
@@ -88,6 +89,7 @@ public sealed partial class EditorView
     private void DrawSongSetup(ICanvas c)
     {
         if (!SongSetupVisible) return;
+        if (dropletSettingsFromGeneral && !HasEditorProject) { DrawGlobalDropletSettings(c); return; }
         if (audioProjectPath is not null) { DrawAudioProjectSetup(c); return; }
         hits.Clear(); fields.Clear(); songFieldBounds.Clear(); songSliders.Clear();
         PrepareSongTags(c);
@@ -119,6 +121,7 @@ public sealed partial class EditorView
         else if (songTab == 2) DrawSongColours(c, r);
         else if (songTab == 4)
         {
+            c.Text(L.Get("randomize.currentDifficulty"), r.X + 22, r.Y + 90, 12, Foreground, r.Width - 44, true);
             Button(c, new(r.X + 22, r.Y + 116, r.Width - 44, 32),
                 L.Get(songDerandomizeDroplets ? "randomize.derandomizeOn" : "randomize.derandomizeOff"), () =>
                 {
@@ -136,6 +139,7 @@ public sealed partial class EditorView
                 songField = songError = ""; SongSetupInputSession++;
             }, enabled: !notesLocked);
             SongTextField(c, "RandomizeDropletSeed", r.Y + 308);
+            DrawDropletDefaults(c, new(r.X + 22, r.Y + 352, r.Width - 44, 110));
         }
         else
         {
@@ -212,6 +216,7 @@ public sealed partial class EditorView
 
     private void ApplySongSetup()
     {
+        if (dropletSettingsFromGeneral && !HasEditorProject) { CloseSongSetup(); return; }
         if (audioProjectPath is not null) { CreateAudioProject(); return; }
         if (!double.TryParse(songValues["RandomizeDropletStrength"], NumberStyles.Float, CultureInfo.InvariantCulture, out double randomStrength)
             || !double.IsFinite(randomStrength) || randomStrength is < 0 or > 100

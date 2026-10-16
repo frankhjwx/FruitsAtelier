@@ -13,6 +13,7 @@ internal static class SliderEventTestDriver
         typeof(EditorView).GetMethod("SelectObjects", PrivateInstance)!.Invoke(ui.View, [new[] { target.SourceId }, target.SourceId]);
         var pointer = ui.ScreenAt(time, x);
         typeof(EditorView).GetMethod("BeginSliderObjectDrag", PrivateInstance)!.Invoke(ui.View, [target, pointer.X, pointer.Y]);
+        typeof(EditorView).GetField("dragMoved", PrivateInstance)!.SetValue(ui.View, true);
         ui.Paint();
     }
 
