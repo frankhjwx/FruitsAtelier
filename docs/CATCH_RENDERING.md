@@ -63,8 +63,8 @@ the playhead and horizontal scale. Numeric fields retain ordinary text input;
 Ctrl+- and Ctrl+= retain their slider-reverse actions. F3 opens Timing and F4
 opens Song Setup.
 
-Hit lighting has one global **Follow mode / On / Off** preference in the skin
-selector. Follow mode is enabled for lazer editing and disabled for Mapping.
+Hit lighting has one global **Follow mode / On / Off** preference in
+**Settings → Appearance**. Follow mode is enabled for lazer editing and disabled for Mapping.
 Preview and canvas use seekable autoplay catches; testplay uses successful live
 judgements. Repainting does not create additional catches, and missed objects do
 not produce catch lighting.

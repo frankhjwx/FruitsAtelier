@@ -34,6 +34,14 @@ internal static class LazerEditingRenderCheck
                 Paint();
                 editor.OpenSettings(); Paint();
                 var settings = editor.SettingsBounds;
+                Click(settings.X + 40, settings.Y + 96 + 2 * 48);
+                Paint("appearance-lighting");
+                var lightingBounds = editor.HitLightingSettingsBounds;
+                Click(lightingBounds.X + 10, lightingBounds.Y + lightingBounds.Height / 2);
+                Paint("appearance-lighting-menu");
+                editor.KeyDown(27, false, false); Paint();
+                editor.KeyDown(27, false, false); Paint();
+                editor.OpenSettings(); Paint();
                 Click(settings.X + 40, settings.Y + 96 + 6 * 48);
                 Paint("settings-off");
                 var toggle = editor.LazerEditingToggleBounds;

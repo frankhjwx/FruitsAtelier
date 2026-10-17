@@ -115,10 +115,10 @@ The upper object timeline has a separate lazer zoom: Alt+wheel animates its
 visible time range over 200 ms. It starts at 6000 ms and ranges from 500 to
 10000 ms, bounded by song length. Mapping's saved timeline scale is preserved.
 
-The skin selector's **Hit lighting** choice applies to the canvas, Catch Preview
+**Settings → Appearance → Hit lighting** applies to the canvas, Catch Preview
 and testplay. **Follow mode** enables it in lazer editing and disables it in
-Mapping; **On** and **Off** override that choice. Selecting an option saves it
-immediately. Applying other Settings preserves the current lighting choice.
+Mapping; **On** and **Off** override that choice. Apply saves the preference;
+closing Settings discards unapplied changes.
 Keyboard and mouse differences are listed in the
 [shortcut manual](KEY_BINDINGS.md#experimental-lazer-editing).
 

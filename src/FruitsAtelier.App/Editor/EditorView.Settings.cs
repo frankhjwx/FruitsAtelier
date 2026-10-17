@@ -23,6 +23,8 @@ public sealed partial class EditorView
     private bool draftFullscreen, fullscreenShortcutHeld;
     private bool draftExperimentalSnapDivisions;
     private bool draftLazerEditing;
+    private CatchHitLightingMode draftCatchHitLighting;
+    internal Rect HitLightingSettingsBounds => new(SettingsContentX, SettingsTop + 464, SettingsContentWidth, SettingsControlHeight);
     internal Rect LazerEditingToggleBounds { get; private set; }
     private bool draftReverseCanvasScroll;
     private double draftTestplayStartupDelaySeconds;
@@ -112,6 +114,7 @@ public sealed partial class EditorView
         draftDerandomizeNewProjects = LibrarySettings.DerandomizeNewProjects;
         draftExperimentalSnapDivisions = LibrarySettings.ExperimentalSnapDivisions;
         draftLazerEditing = LibrarySettings.LazerEditing;
+        draftCatchHitLighting = LibrarySettings.CatchHitLighting;
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
         draftUiScalePercent = LibrarySettings.UiScalePercent;
@@ -153,6 +156,7 @@ public sealed partial class EditorView
         draftFullscreen != LibrarySettings.Fullscreen ||
         draftExperimentalSnapDivisions != LibrarySettings.ExperimentalSnapDivisions ||
         draftLazerEditing != LibrarySettings.LazerEditing ||
+        draftCatchHitLighting != LibrarySettings.CatchHitLighting ||
         draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
         draftSettingsColours[0] != LibrarySettings.StandIndicatorColour ||
         draftSettingsColours[1] != LibrarySettings.WalkIndicatorColour ||
@@ -267,6 +271,8 @@ public sealed partial class EditorView
                 var scaleBounds = new Rect(SettingsContentX, SettingsTop + 306, SettingsContentWidth, SettingsControlHeight);
                 SettingsButton(c, scaleBounds, $"{draftUiScalePercent}% ▾", () => OpenUiScaleMenu(scaleBounds));
                 SettingsParagraph(c, L.Get("settings.uiScaleHint"), SettingsTop + 350);
+                SettingsButton(c, HitLightingSettingsBounds, L.Get(HitLightingKey(draftCatchHitLighting)) + " ▾",
+                    () => OpenHitLightingMenu(HitLightingSettingsBounds));
                 break;
             case SettingsCategory.Experimental:
                 float snapToggleTop = SettingsParagraph(c, L.Get("settings.experimentalSnapDivisions"), SettingsTop + 128, SettingsTextSize);
@@ -298,6 +304,23 @@ public sealed partial class EditorView
             active: canApply, enabled: canApply);
         if (settingsColourIndex >= 0) DrawSettingsColourPicker(c);
         if (settingsCategory == SettingsCategory.Workspace) DrawStorageTooltip(c);
+    }
+
+    private static string HitLightingKey(CatchHitLightingMode mode) => mode switch
+    {
+        CatchHitLightingMode.On => "skin.hitLightingOn",
+        CatchHitLightingMode.Off => "skin.hitLightingOff",
+        _ => "skin.hitLightingFollowMode"
+    };
+
+    private void OpenHitLightingMenu(Rect bounds)
+    {
+        contextItems.Clear();
+        foreach (var mode in Enum.GetValues<CatchHitLightingMode>())
+            contextItems.Add(new((draftCatchHitLighting == mode ? "✓ " : "") + L.Get(HitLightingKey(mode)),
+                () => draftCatchHitLighting = mode));
+        float menuHeight = 12 + contextItems.Count * 32;
+        contextBounds = new(bounds.X, Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), bounds.Width, menuHeight);
     }
 
     private void OpenUiScaleMenu(Rect bounds)
@@ -358,7 +381,7 @@ public sealed partial class EditorView
             settings.LazerSpeedDistanceSnap = LibrarySettings.LazerSpeedDistanceSnap;
             settings.LazerDistanceCustomSpeeds = LibrarySettings.LazerDistanceCustomSpeeds;
             settings.LazerDistanceGuidesVisible = LibrarySettings.LazerDistanceGuidesVisible;
-            settings.CatchHitLighting = LibrarySettings.CatchHitLighting;
+            settings.CatchHitLighting = draftCatchHitLighting;
             settings.ReverseCanvasScroll = draftReverseCanvasScroll;
             settings.StandIndicatorColour = draftSettingsColours[0]; settings.WalkIndicatorColour = draftSettingsColours[1];
             settings.DashIndicatorColour = draftSettingsColours[2]; settings.HyperDashIndicatorColour = draftSettingsColours[3];
