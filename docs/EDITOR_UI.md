@@ -16,6 +16,12 @@ The coordinate readout below the Distance Snapping control shows the pointer's X
 in the 512×384 geometric space, including after zooming or panning. Coordinates
 outside the playfield retain their signed values; leaving the canvas shows dashes.
 Selecting objects does not replace the pointer coordinates in this view.
+Selected circles have the same orange ring as their timeline markers. Selected
+sliders show this ring at both geometric endpoints, including even-repeat sliders.
+Circle and slider placement previews use their resulting combo colour and number.
+Combo colour also takes precedence over skin slider-track overrides in this view.
+Alt+wheel over the upper object timeline changes its time scale independently of
+osu! canvas zoom.
 
 Slider bodies retain a white border and a brighter centre with darker edges.
 Static `sliderb.png` and numbered slider-ball animations use the owning skin's
@@ -37,7 +43,8 @@ white lines connect the controls. The draft uses the final slider body, skin,
 combo colour and end circles. Selected controls can be dragged; Ctrl+click
 turns an interior control into a red boundary and right-click removes it.
 The Context Menu key opens path type, repeats and length actions. The geometric
-grid is always visible at the selected 4/8/16/32 px level. Grid Snap uses that
+grid is shown only inside the white 512×384 playfield at the selected
+4/8/16/32 px level. Zoom and pan keep it clipped to that playfield. Grid Snap uses that
 lattice on both axes; holding Shift temporarily inverts snapping. Both remain
 available independently of Catch editing mode and its speed presets.
 Alt+wheel zooms and middle drag pans the geometric view.

@@ -90,6 +90,13 @@ internal static class OsuCanvasRenderCheck
                 var coordinatePointer = editor.OsuCanvasScreen(184, 96);
                 editor.PointerMove(coordinatePointer.X, coordinatePointer.Y, false, false);
                 Paint("selected-controls-grid");
+                var canvasBeforeTimelineZoom = editor.OsuCanvasBounds;
+                double timelineScale = editor.ObjectTimelinePixelsPerMs;
+                var timeline = editor.ObjectTimelineBounds;
+                editor.Wheel(timeline.X + timeline.Width / 2, timeline.Y + timeline.Height / 2, 120, false, false, true);
+                Paint("timeline-zoom");
+                if (editor.OsuCanvasBounds != canvasBeforeTimelineZoom || editor.ObjectTimelinePixelsPerMs <= timelineScale)
+                    throw new InvalidOperationException("Upper timeline zoom changed the osu canvas or did not change its time scale.");
                 editor.KeyDown('3', false, false); editor.KeyUp('3');
                 foreach (var point in new[] { (80, 160), (160, 220) })
                 {
@@ -102,6 +109,11 @@ internal static class OsuCanvasRenderCheck
                 editor.PointerMove(pointer.X, pointer.Y, false, false);
                 Paint("draft-controls-grid");
                 editor.KeyDown(27, false, false); editor.KeyUp(27);
+                editor.KeyDown('2', false, false); editor.KeyUp('2');
+                var circlePointer = editor.OsuCanvasScreen(184, 96);
+                editor.PointerMove(circlePointer.X, circlePointer.Y, false, false);
+                Paint("circle-combo-preview");
+                editor.KeyDown('1', false, false); editor.KeyUp('1');
                 var preview = editor.PreviewToggleBounds;
                 if (!editor.CatchPreviewVisible && preview.Width > 0)
                 { editor.PointerDown(preview.X + 10, preview.Y + 10, 0, false, false); editor.PointerUp(preview.X + 10, preview.Y + 10, 0); }

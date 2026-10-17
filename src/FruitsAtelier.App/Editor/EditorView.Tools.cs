@@ -26,11 +26,21 @@ public sealed partial class EditorView
         for (int i = 0; i < 4; i++)
         {
             var mode = (Tool)i;
-            string name = i == 2 ? "fslider" : mode.ToString().ToLowerInvariant();
+            string name = IsOsuCanvas && i > 0 ? i switch { 1 => "osu-circle", 2 => "osu-slider", _ => "osu-spinner" }
+                : i == 2 ? "fslider" : mode.ToString().ToLowerInvariant();
             var bounds = new Rect(leftPanel.Right + (108 - size) / 2, top + i * size, size, size);
             toolButtons.Add(bounds);
             bool active = mode == tool;
-            c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", name + ".png"), bounds, opacity: active ? 1 : .45f);
+            if (IsOsuCanvas && i > 0)
+            {
+                float inset = size / 32;
+                var frame = new Rect(bounds.X + inset, bounds.Y + inset, size - 2 * inset, size - 2 * inset);
+                c.Fill(frame, Panel, size / 8);
+                c.StrokeOpacity(frame, Accent, Math.Max(1, size / 64), size / 8, active ? 1 : .45f);
+                var icon = new Rect(bounds.X + size * .19f, bounds.Y + size * .08f, size * .62f, size * .62f);
+                c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", name + ".png"), icon, opacity: active ? 1 : .45f);
+            }
+            else c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", name + ".png"), bounds, opacity: active ? 1 : .45f);
             string label = L.Get(IsOsuCanvas ? i switch { 0 => "tools.select", 1 => "osu.circle", 2 => "osu.slider", _ => "osu.spinner" }
                 : i switch { 0 => "tools.select", 1 => "tools.fruit", 2 => "tools.fslider", _ => "tools.banana" });
             float fontSize = size * 52 / 512;

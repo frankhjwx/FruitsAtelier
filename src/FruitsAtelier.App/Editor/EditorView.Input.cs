@@ -1012,7 +1012,7 @@ public sealed partial class EditorView
         bool onTimeline = objectTimeline.Contains(x, y);
         bool onCanvas = canvas.Contains(x, y);
         bool onOverview = overview.Contains(x, y);
-        if (IsOsuCanvas && onCanvas && alt && !ctrl && !shift)
+        if (IsOsuCanvas && onCanvas && !onTimeline && alt && !ctrl && !shift)
         { ZoomOsuCanvasAt(x, y, Math.Pow(1.16, delta / 120)); return; }
         if (IsLazerEditing && HandleLazerWheel(x, y, delta, ctrl, shift, alt, onTimeline, onCanvas, onOverview)) return;
         if ((onTimeline || onCanvas) && ctrl && alt && !shift)

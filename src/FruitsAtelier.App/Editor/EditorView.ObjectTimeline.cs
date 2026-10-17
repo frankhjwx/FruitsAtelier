@@ -451,7 +451,7 @@ public sealed partial class EditorView
             if (item.IsBanana)
             {
                 c.Stroke(bounds, 0xFFFFFF, 1.5f, bounds.Height / 2);
-                if (selected) c.Stroke(bounds, 0x2866C6, 2, bounds.Height / 2);
+                if (selected) c.Stroke(bounds, IsOsuCanvas ? OsuSelectionColour : 0x2866C6, 2, bounds.Height / 2);
             }
         }
 
@@ -467,10 +467,11 @@ public sealed partial class EditorView
                 FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin, ringX, cy, 38 * TimelineMarkerScale, color, number);
                 if (selected && (soundEdge is not { } picked || picked.Id != item.Id || picked.Edge == edge))
                 {
-                    c.Circle(ringX, cy, 19 * TimelineMarkerScale, 0xFFA600, false, Math.Max(1, 3 * TimelineMarkerScale));
-                    c.Circle(ringX, cy, 21 * TimelineMarkerScale, 0x2866C6, false, Math.Max(1, 2 * TimelineMarkerScale));
+                    c.Circle(ringX, cy, 19 * TimelineMarkerScale, OsuSelectionColour, false, Math.Max(1, 3 * TimelineMarkerScale));
+                    if (!IsOsuCanvas)
+                        c.Circle(ringX, cy, 21 * TimelineMarkerScale, 0x2866C6, false, Math.Max(1, 2 * TimelineMarkerScale));
                 }
-                if (timelineFruit == (item.Id, item.EventIndex)) c.Circle(ringX, cy, 21 * TimelineMarkerScale, Gold, false, Math.Max(1, 2 * TimelineMarkerScale));
+                if (!IsOsuCanvas && timelineFruit == (item.Id, item.EventIndex)) c.Circle(ringX, cy, 21 * TimelineMarkerScale, Gold, false, Math.Max(1, 2 * TimelineMarkerScale));
             }
             if (right > left + 1) Ring(right, edge: item.Spans);
             if (item.Spans > 1 && item.End > item.Start)

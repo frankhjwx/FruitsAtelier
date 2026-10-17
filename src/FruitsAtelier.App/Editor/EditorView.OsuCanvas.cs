@@ -7,6 +7,8 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private const uint OsuSelectionColour = 0xFFA600;
+
     private sealed class OsuCanvasObject
     {
         public required Guid Id;
@@ -231,7 +233,7 @@ public sealed partial class EditorView
                 {
                     var origin = Point(0, 0);
                     c.SliderBody(o.StrokePath, origin.X, origin.Y, scale, (float)OsuCanvasRadius * 2,
-                        (skin ?? defaultSkin)?.SliderBorderColour ?? 0xFFFFFF, (skin ?? defaultSkin)?.SliderTrackColour ?? colour, bodyOpacity);
+                        (skin ?? defaultSkin)?.SliderBorderColour ?? 0xFFFFFF, colour, bodyOpacity);
                 }
                 double spanDuration = (o.End - o.Start) / o.Spans;
                 double elapsed = Math.Clamp(now - o.Start, 0, Math.Max(0, o.End - o.Start));
@@ -293,7 +295,18 @@ public sealed partial class EditorView
                 float approach = radius * (1 + 3 * (float)Math.Clamp((o.Start - now) / OsuCanvasPreempt, 0, 1));
                 if (!((skin ?? defaultSkin)?.DrawOsuTexture(c, "approachcircle", head.X, head.Y, approach * 2 * 128 / 118, colour, opacity) ?? false)) c.Circle(head.X, head.Y, approach, colour, false, 2 * scale, opacity);
             }
-            if (IsObjectSelected(o.Id)) c.Circle(head.X, head.Y, radius + 3, 0x59D3C3, false, 2);
+            if (IsObjectSelected(o.Id))
+            {
+                float ringRadius = radius * 118 / 128;
+                float ringWidth = Math.Max(1, 3 * scale);
+                c.Circle(head.X, head.Y, ringRadius, OsuSelectionColour, false, ringWidth);
+                if (o.Path.Length > 0)
+                {
+                    var tail = o.Path[^1];
+                    var tailScreen = Point(tail.X, tail.GeometryY);
+                    c.Circle(tailScreen.X, tailScreen.Y, ringRadius, OsuSelectionColour, false, ringWidth);
+                }
+            }
             float FadeAfter(double eventTime, double duration) => (float)Math.Clamp(1 - (now - eventTime) / duration, 0, 1);
         }
         DrawOsuCanvasControls(c);
@@ -327,8 +340,10 @@ public sealed partial class EditorView
         {
             var point = OsuInputPoint(mouseX, mouseY, useDistance: true);
             var at = OsuCanvasScreen(point.X, point.Y);
+            var style = OsuPlacementStyle(OsuPlacementTime);
             DrawOsuCircle(c, at.X, at.Y,
-                (float)OsuCanvasRadius * OsuCanvasBounds.Width / 256, Accent, opacity: .45f);
+                (float)OsuCanvasRadius * OsuCanvasBounds.Width / 256, style.Colour, style.Number,
+                label: style.Number.ToString(CultureInfo.InvariantCulture));
         }
         foreach (var slider in Document.ImportedSliders)
         {
@@ -362,7 +377,7 @@ public sealed partial class EditorView
             var style = OsuPlacementStyle(draft.TimeMs);
             c.SliderBody(osuDraftStrokePath, origin.X, origin.Y, OsuCanvasBounds.Width / 512, (float)OsuCanvasRadius * 2,
                 (skin ?? defaultSkin)?.SliderBorderColour ?? 0xFFFFFF,
-                (skin ?? defaultSkin)?.SliderTrackColour ?? style.Colour, 1);
+                style.Colour, 1);
             if (osuDraftPath.Count > 1)
             {
                 var tail = osuDraftPath[^1];
@@ -394,9 +409,14 @@ public sealed partial class EditorView
     }
     private void DrawOsuCanvasGrid(ICanvas c)
     {
-        var field = OsuCanvasBounds; var bounds = CanvasRenderBounds;
+        var field = OsuCanvasBounds;
+        var viewport = CanvasRenderBounds;
+        float left = Math.Max(field.X, viewport.X), top = Math.Max(field.Y, viewport.Y);
+        var bounds = new Rect(left, top, Math.Min(field.Right, viewport.Right) - left,
+            Math.Min(field.Bottom, viewport.Bottom) - top);
         float spacing = gridSize * field.Width / 512;
-        if (spacing < 1) return;
+        if (spacing < 1 || bounds.Width <= 0 || bounds.Height <= 0) return;
+        c.Clip(bounds);
         int firstX = (int)Math.Ceiling((bounds.X - field.X) / spacing), lastX = (int)Math.Floor((bounds.Right - field.X) / spacing);
         int firstY = (int)Math.Ceiling((bounds.Y - field.Y) / spacing), lastY = (int)Math.Floor((bounds.Bottom - field.Y) / spacing);
         for (int i = firstX; i <= lastX; i++)
@@ -409,6 +429,7 @@ public sealed partial class EditorView
             float y = field.Y + i * spacing;
             c.Line(bounds.X, y, bounds.Right, y, 0xFFFFFF, .5f, .15f);
         }
+        c.Unclip();
     }
     private static void DrawOsuControlPoint(ICanvas c, float x, float y, bool separator, bool active)
     {
