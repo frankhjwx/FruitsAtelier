@@ -52,8 +52,20 @@ public sealed partial class EditorView
     {
         if (legacyDropletJob is not { } job) return;
         legacyDropletJob = null;
-        if (job.Owner.ActiveTransactionVersion == job.Version) job.Owner.Cancel();
+        RollbackLegacyDropletRefresh(job);
         if (StatusMessage == L.Get("osu.updatingDroplets")) StatusMessage = "";
+    }
+
+    private void RollbackLegacyDropletRefresh(LegacyDropletJob job)
+    {
+        if (job.Owner.ActiveTransactionVersion != job.Version) return;
+        job.Owner.Cancel();
+        if (!ReferenceEquals(job.Owner, history)) return;
+        // Placement selects the new parent before validation; rollback can remove that parent.
+        var ids = Document.Fruits.Select(f => f.Id).Concat(Document.Tracks.Select(t => t.Id))
+            .Concat(Document.ImportedSliders.Select(s => s.Id)).Concat(Document.BananaShowers.Select(b => b.Id)).ToHashSet();
+        if (objectSelection.Any(id => !ids.Contains(id)))
+            SelectObjects(objectSelection.Where(ids.Contains), selection);
     }
 
     private void PumpLegacyDropletRefresh()
@@ -67,12 +79,12 @@ public sealed partial class EditorView
         if (job.Compensation != compensateTinyDroplets || job.Language != L.Language
             || !job.Expected.ContentEquals(Document))
         {
-            if (job.Owner.ActiveTransactionVersion == job.Version) job.Owner.Cancel();
+            RollbackLegacyDropletRefresh(job);
             return;
         }
         if (result.Export is null || result.Conversion is null)
         {
-            job.Owner.Cancel();
+            RollbackLegacyDropletRefresh(job);
             StatusMessage = fieldError = string.Join(L.Get("editor.diagnostics.separator"), result.Diagnostics);
             return;
         }

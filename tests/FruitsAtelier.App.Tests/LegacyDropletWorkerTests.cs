@@ -10,6 +10,7 @@ internal static class LegacyDropletWorkerTests
 
     public static void Run()
     {
+        FailedSliderPlacementClearsSelection();
         var ui = new Ui(false);
         ui.LoadDocument(Map(600));
         var before = ui.View.Document.DeepClone();
@@ -63,6 +64,25 @@ internal static class LegacyDropletWorkerTests
         ui.View.LoadDocument(replacement);
         ui.View.Render(ui.Canvas, ui.Width, ui.Height);
         Check(!ui.View.LegacyDropletRefreshBusy && ui.View.Document.ContentEquals(replacement), "Old worker published into a replacement document");
+    }
+
+    private static void FailedSliderPlacementClearsSelection()
+    {
+        var ui = new Ui(false);
+        ui.LoadDocument(Map(1));
+        ui.View.ToggleOsuCanvas(); ui.Paint();
+        var before = ui.View.Document.DeepClone();
+        var slider = new ImportedSlider { TimeMs = 3000, X = 100, Y = 192, PixelLength = 100, PathType = 'Z' };
+        slider.ControlPoints.AddRange([new(100, 192), new(200, 192)]);
+        Queue(ui.View, document => { document.RandomizeDropletStrength = 8; document.ImportedSliders.Add(slider); });
+        typeof(EditorView).GetMethod("SelectObjects", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(ui.View, [new[] { slider.Id }, slider.Id]);
+        Complete(ui);
+        Check(ui.View.Document.ContentEquals(before), "Failed slider placement did not restore content");
+        Check(ui.View.SelectedObjectIds.Count == 0, "Failed slider placement retained a removed source selection");
+        ui.Paint(); ui.Paint();
+        ui.Key('W'); ui.Paint();
+        Check(ui.View.Document.ContentEquals(before), "Post-failure assist input edited restored content");
     }
 
     private static EditorHistory History(EditorView view) => (EditorHistory)historyProperty.GetValue(view)!;
