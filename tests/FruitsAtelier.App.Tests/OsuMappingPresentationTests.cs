@@ -5,6 +5,7 @@ internal static class OsuMappingPresentationTests
 {
     public static void Run()
     {
+        PlacementFollowsPointer();
         foreach (bool lazer in new[] { false, true })
         {
             var ui = NewUi(lazer);
@@ -32,6 +33,32 @@ internal static class OsuMappingPresentationTests
         GridBoundsAndSelectionRings();
         CircleComboPreview(false); CircleComboPreview(true);
         TimelineWheelAndToolIcons();
+    }
+
+    private static void PlacementFollowsPointer()
+    {
+        foreach (int key in new[] { (int)'2', (int)'3' })
+        {
+            var ui = NewUi();
+            var before = ui.View.Document.DeepClone();
+            ui.Key(key);
+            var grid = ui.View.AssistButtonBounds[4];
+            ui.Click(grid.X + 8, grid.Y + 8);
+            foreach (var (x, y) in new[] { (103, 107), (183, 155) })
+            {
+                var pointer = ui.View.OsuCanvasScreen(x, y);
+                var expected = ui.View.OsuCanvasScreen(x + 1, y + 1);
+                ui.View.PointerMove(pointer.X, pointer.Y, false, false); ui.Paint();
+                Check(ui.Canvas.Circles.Any(c => c.Filled && Math.Abs(c.X - expected.X) < .05
+                    && Math.Abs(c.Y - expected.Y) < .05), "Circle and slider tools must preview the snapped placement before the first click.");
+            }
+            ui.View.PointerMove(0, 0, false, false); ui.Paint();
+            var last = ui.View.OsuCanvasScreen(184, 156);
+            Check(!ui.Canvas.Circles.Any(c => c.Filled && Math.Abs(c.X - last.X) < .05 && Math.Abs(c.Y - last.Y) < .05),
+                "Leaving the canvas must hide the placement circle.");
+            Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty,
+                "Moving the placement preview must not add objects or history.");
+        }
     }
 
     private static Ui NewUi(bool lazer = false)

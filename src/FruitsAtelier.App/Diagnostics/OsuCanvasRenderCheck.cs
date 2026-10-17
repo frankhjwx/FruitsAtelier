@@ -80,6 +80,14 @@ internal static class OsuCanvasRenderCheck
                 }
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
                 Paint(); editor.KeyDown(9, false, false); editor.KeyUp(9);
+                foreach (int toolKey in new[] { (int)'2', (int)'3' })
+                {
+                    editor.KeyDown(toolKey, false, false); editor.KeyUp(toolKey);
+                    var placementPointer = editor.OsuCanvasScreen(184, 192);
+                    editor.PointerMove(placementPointer.X, placementPointer.Y, false, false);
+                    Paint(toolKey == '2' ? "circle-placement" : "slider-placement");
+                }
+                editor.KeyDown('1', false, false); editor.KeyUp('1');
                 foreach (var (time, name) in new[] { (900, "approach-stack"), (1400, "late-fade"), (1900, "slider-approach"), (2500, "slider-repeat"), (5700, "spinner"), (6450, "spinner-end"), (6800, "spinner-fade") })
                 {
                     editor.UpdateTransport(time, 10000, true, false, false, null, null);

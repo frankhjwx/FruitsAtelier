@@ -336,13 +336,15 @@ public sealed partial class EditorView
 
     private void DrawOsuCanvasControls(ICanvas c)
     {
-        if (tool == Tool.Fruit && plot.Contains(mouseX, mouseY) && drag == DragKind.None)
+        if (tool is Tool.Fruit or Tool.Slider && osuDraftSlider is null
+            && plot.Contains(mouseX, mouseY) && drag == DragKind.None)
         {
-            var point = OsuInputPoint(mouseX, mouseY, useDistance: true);
+            var point = OsuInputPoint(mouseX, mouseY, useDistance: tool == Tool.Fruit);
             var at = OsuCanvasScreen(point.X, point.Y);
             var style = OsuPlacementStyle(OsuPlacementTime);
             DrawOsuCircle(c, at.X, at.Y,
                 (float)OsuCanvasRadius * OsuCanvasBounds.Width / 256, style.Colour, style.Number,
+                prefix: tool == Tool.Slider ? "sliderstartcircle" : "hitcircle",
                 label: style.Number.ToString(CultureInfo.InvariantCulture));
         }
         foreach (var slider in Document.ImportedSliders)
