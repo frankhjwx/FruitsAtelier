@@ -33,6 +33,11 @@ internal static class OsuCanvasRenderCheck
             expectedSkinName = requested!.Name;
         }
         if (explicitDefault is not null && !File.Exists(explicitDefault)) throw new FileNotFoundException("Explicit native-check default skin archive is missing.", explicitDefault);
+        if (arguments.Contains("--osu-image-cache-check"))
+        {
+            VerifyImageResidency(canvas, folder, configuredSkin, explicitSkin, explicitDefault);
+            return;
+        }
         VerifyGradient(canvas, folder);
         if (Environment.GetCommandLineArgs().Contains("--osu-gradient-only")) return;
         try
@@ -183,6 +188,52 @@ internal static class OsuCanvasRenderCheck
             if (count == 0) throw new InvalidOperationException("Native map check found no beatmaps.");
             AppLog.Write($"Imported map native rendering checks passed: {count} maps, both canvases.");
         }
+    }
+
+    private static void VerifyImageResidency(D2DCanvas canvas, string folder, LibrarySettings? configured,
+        string? skinFolder, string? defaultArchive)
+    {
+        var editor = new EditorView(false);
+        editor.LibrarySettings.Workspace = Path.Combine(folder, "cache-check-workspace");
+        editor.LibrarySettings.SelectedSkin = skinFolder ?? configured?.SelectedSkin;
+        editor.LibrarySettings.DefaultSkin = defaultArchive ?? configured?.DefaultSkin;
+        editor.InitializeSkin();
+        var map = new MapDocument { DurationMs = 10000, IsDemo = false };
+        for (int i = 0; i < 16; i++)
+        {
+            int x = 48 + i % 4 * 120, y = 48 + i / 4 * 88;
+            map.Fruits.Add(new() { X = x, Y = y, TimeMs = 1000 + i, OriginalLine = $"{x},{y},{1000 + i},5,0,0:0:0:0:" });
+        }
+        editor.LoadDocument(map); editor.ToggleOsuCanvas();
+        editor.UpdateTransport(900, 10000, true, false, false, null, null);
+        canvas.Resize(2520, 1575, 168);
+        for (int i = 0; i < 8; i++) Paint();
+        int decoded = canvas.ImageDecodeCount;
+        var timings = new List<double>();
+        for (int i = 0; i < 30; i++)
+        {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            canvas.Begin(); editor.Render(canvas, 1440, 900);
+            timings.Add(clock.Elapsed.TotalMilliseconds);
+            canvas.End(lowLatency: true);
+        }
+        timings.Sort();
+        int repeatedDecodes = canvas.ImageDecodeCount - decoded;
+        editor.UpdateTransport(1100, 10000, true, false, false, null, null); Paint();
+        editor.UpdateTransport(900, 10000, true, false, false, null, null); Paint();
+        decoded = canvas.ImageDecodeCount;
+        for (int i = 0; i < 30; i++)
+        {
+            editor.UpdateTransport(900 + i * 10, 10000, true, true, false, null, null);
+            Paint();
+        }
+        int playbackRepeatedDecodes = canvas.ImageDecodeCount - decoded;
+        string report = $"osu image residency: skin={editor.SkinName}; repeatedDecodes={repeatedDecodes}; playbackRepeatedDecodes={playbackRepeatedDecodes}; CPU median={timings[timings.Count / 2]:F2} ms; p95={timings[(int)(timings.Count * .95)]:F2} ms.";
+        AppLog.Write(report);
+        File.WriteAllText(Path.Combine(folder, "image-residency.txt"), report);
+        if (repeatedDecodes != 0 || playbackRepeatedDecodes != 0)
+            throw new InvalidOperationException("Static osu rendering repeatedly decodes unchanged images: " + report);
+        void Paint() { canvas.Begin(); editor.Render(canvas, 1440, 900); canvas.End(lowLatency: true); }
     }
 
     private static void VerifyGradient(D2DCanvas canvas, string folder)

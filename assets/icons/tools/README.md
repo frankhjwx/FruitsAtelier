@@ -2,6 +2,10 @@
 
 `osu-circle.png`, `osu-slider.png` and `osu-spinner.png` are transparent PNG symbols generated with the built-in OpenAI image generation tool. The shared editor draws their charcoal button frames, active state and localized labels. Catch tools retain their fruit, FSlider and banana artwork.
 
+The shipped osu! symbols are 512×512 RGBA images (1 MiB decoded each), matching
+the tool palette asset budget. Keep these runtime copies at that size so the
+chrome and skin textures can remain in the shared scene cache.
+
 ## Generation prompts
 
 ### osu-circle.png

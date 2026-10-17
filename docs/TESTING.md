@@ -71,6 +71,11 @@ without changing saved preferences.
 Use `--osu-skin-folder=/path/to/skin` and `--osu-default-skin=/path/to/default.osk`
 to keep those fixtures independent of concurrent preference changes.
 
+Add `--osu-image-cache-check --osu-configured-skin` to run the native texture
+residency regression. It warms a scene with multiple combo colours and requires
+zero additional image decodes during repeated static and playback rendering.
+The CPU timing report is written to `artifacts/tests/osu-canvas-native/image-residency.txt`.
+
 Add `--osu-map-folder=/path/to/beatmap-set` to load each `.osu` file and capture
 both canvases at the slider with the most control points. The check verifies a
 complete Catch conversion, the requested seek position and unchanged content.
