@@ -110,6 +110,7 @@ public sealed partial class EditorView
             DrawDistanceReadout(c);
             DrawAssistPalette(c);
             DrawSelectionBox(c);
+            DrawCoordinateReadout(c);
         }
         DrawInspector(c);
         if (TimingPageVisible) DrawTimingPage(c); else DrawDockPanels(c);

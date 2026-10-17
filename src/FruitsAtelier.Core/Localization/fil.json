@@ -895,6 +895,7 @@
   "distance.previousField": "Nakaraang DS",
   "coordinate.x": "X coordinate",
   "coordinate.readout": "X: {0}",
+  "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Hindi maabot ng Slider ang X coordinate na ito nang sabay.",
   "distance.nextField": "Susunod na DS",
   "distance.nonnegative": "Ang DS ay dapat na zero o positibo.",

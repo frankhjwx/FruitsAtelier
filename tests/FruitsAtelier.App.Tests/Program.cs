@@ -191,6 +191,13 @@ if (args.Length == 2 && args[0] == "--anchor-drag-performance")
 
 if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.InspectMap(args[1]);
 
+if (args.Contains("--coordinate-readout-check"))
+{
+    CoordinateReadoutTests.Run();
+    Console.WriteLine("PASS Catch X and osu XY coordinate readouts");
+    return 0;
+}
+
 if (args.Contains("--lazer-editing-check"))
 {
     LazerSettingsTests.Run();

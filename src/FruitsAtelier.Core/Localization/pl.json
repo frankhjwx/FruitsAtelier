@@ -895,6 +895,7 @@
   "distance.previousField": "Poprzedni DS",
   "coordinate.x": "Współrzędna X",
   "coordinate.readout": "X: {0}",
+  "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Slider nie może jednocześnie osiągnąć tej współrzędnej X.",
   "distance.nextField": "Następny DS",
   "distance.nonnegative": "DS musi wynosić zero lub być dodatnie.",

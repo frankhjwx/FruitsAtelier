@@ -12,6 +12,11 @@ The osu! canvas draws circles, approach circles, Legacy Slider paths, repeats,
 slider balls and spinners. Circle size, approach rate, combo ordering and stacking
 use standard geometry. Past circles turn white and fade over 700 ms. Seeking and
 pausing use the same map-time presentation. Skin elements are used when available.
+The coordinate readout below the osu! DS control shows the pointer's X and Y
+in the 512×384 geometric space, including after zooming or panning. Coordinates
+outside the playfield retain their signed values; leaving the canvas shows dashes.
+Selecting objects does not replace the pointer coordinates in this view.
+
 Slider bodies retain a white border and a brighter centre with darker edges.
 Static `sliderb.png` and numbered slider-ball animations use the owning skin's
 resources and tint settings. Retained skin archives upgrade older extraction

@@ -895,6 +895,7 @@
   "distance.previousField": "이전 DS",
   "coordinate.x": "X 좌표",
   "coordinate.readout": "X: {0}",
+  "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "슬라이더는 동시에 이 X 좌표에 도달할 수 없습니다.",
   "distance.nextField": "다음 DS",
   "distance.nonnegative": "DS는 0이거나 양수여야 합니다.",

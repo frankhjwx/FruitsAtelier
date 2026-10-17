@@ -895,6 +895,7 @@
   "distance.previousField": "以前のDS",
   "coordinate.x": "X座標",
   "coordinate.readout": "X: {0}",
+  "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "スライダー は同時にこの X 座標に到達することはできません。",
   "distance.nextField": "次期DS",
   "distance.nonnegative": "DS はゼロまたは正でなければなりません。",

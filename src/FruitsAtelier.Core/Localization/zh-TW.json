@@ -895,6 +895,7 @@
   "distance.previousField": "上一個 DS",
   "coordinate.x": "X座標",
   "coordinate.readout": "X: {0}",
+  "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "滑條 不能同時到達該X 座標。",
   "distance.nextField": "下一個 DS",
   "distance.nonnegative": "DS 必須為零或正數。",

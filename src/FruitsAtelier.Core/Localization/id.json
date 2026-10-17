@@ -895,6 +895,7 @@
   "distance.previousField": "DS sebelumnya",
   "coordinate.x": "koordinat X",
   "coordinate.readout": "X: {0}",
+  "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Slider tidak dapat mencapai koordinat X ini secara bersamaan.",
   "distance.nextField": "DS berikutnya",
   "distance.nonnegative": "DS harus nol atau positif.",

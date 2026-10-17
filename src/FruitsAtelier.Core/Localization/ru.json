@@ -895,6 +895,7 @@
   "distance.previousField": "Предыдущий ДС",
   "coordinate.x": "координата X",
   "coordinate.readout": "X: {0}",
+  "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Слайдер не может одновременно достичь этой координаты X.",
   "distance.nextField": "Следующий ДС",
   "distance.nonnegative": "DS должно быть нулевым или положительным.",

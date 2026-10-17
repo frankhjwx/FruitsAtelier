@@ -87,6 +87,8 @@ internal static class OsuCanvasRenderCheck
                 Paint();
                 var selectedHead = editor.OsuCanvasScreen(350, 100);
                 editor.PointerDown(selectedHead.X, selectedHead.Y, 0, false, false); editor.PointerUp(selectedHead.X, selectedHead.Y, 0);
+                var coordinatePointer = editor.OsuCanvasScreen(184, 96);
+                editor.PointerMove(coordinatePointer.X, coordinatePointer.Y, false, false);
                 Paint("selected-controls-grid");
                 editor.KeyDown('3', false, false); editor.KeyUp('3');
                 foreach (var point in new[] { (80, 160), (160, 220) })

@@ -895,6 +895,7 @@
   "distance.previousField": "DS ก่อนหน้า",
   "coordinate.x": "พิกัดเอ็กซ์",
   "coordinate.readout": "X: {0}",
+  "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "สไลเดอร์ ไม่สามารถเข้าถึงพิกัด X นี้ในเวลาเดียวกัน",
   "distance.nextField": "ถัดไป DS",
   "distance.nonnegative": "DS ต้องเป็นศูนย์หรือบวก",

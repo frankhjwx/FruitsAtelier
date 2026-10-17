@@ -895,6 +895,7 @@
   "distance.previousField": "DS précédente",
   "coordinate.x": "Coordonnée X",
   "coordinate.readout": "X: {0}",
+  "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Le Slider ne peut pas atteindre cette coordonnée X en même temps.",
   "distance.nextField": "Suivant DS",
   "distance.nonnegative": "DS doit être nul ou positif.",
