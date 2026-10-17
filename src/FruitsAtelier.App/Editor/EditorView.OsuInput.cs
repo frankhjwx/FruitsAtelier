@@ -622,8 +622,10 @@ public sealed partial class EditorView
         finally { osuAllowSliderConversion = false; }
     }
 
-    private Rect OsuSpacingBounds => new(plot.Right - 190, plot.Y + 8, 180, 48);
-    private Rect OsuSpacingTrack => new(OsuSpacingBounds.X + 12, OsuSpacingBounds.Y + 32, OsuSpacingBounds.Width - 24, 8);
+    private float osuSpacingLabelWidth = 148;
+    private Rect OsuSpacingBounds => new(plot.Right - Math.Min(400, plot.Width - 16) - 10, plot.Y + 8, Math.Min(400, plot.Width - 16), 32);
+    private Rect OsuSpacingTrack => new(OsuSpacingBounds.X + osuSpacingLabelWidth, OsuSpacingBounds.Y + 12,
+        Math.Max(24, OsuSpacingBounds.Width - osuSpacingLabelWidth - 54), 8);
     internal Rect OsuDistanceSpacingTrackBounds => OsuSpacingTrack;
     private void SetOsuSpacing(float x, bool shift)
     {
@@ -635,9 +637,12 @@ public sealed partial class EditorView
     {
         if (osuMarquee) c.Stroke(osuMarqueeBounds, Accent, 1.5f);
         c.Fill(OsuSpacingBounds, Panel, 4);
-        c.Text(L.Get("osu.distanceSpacing") + " " + Document.OsuDistanceSpacing.ToString("0.00", CultureInfo.InvariantCulture),
-            OsuSpacingBounds.X + 8, OsuSpacingBounds.Y + 7, 11, Foreground, 170);
+        string label = L.Get("osu.distanceSpacing");
+        osuSpacingLabelWidth = Math.Min(c.MeasureText(label, 12) + 20, OsuSpacingBounds.Width * .6f);
+        c.Text(label, OsuSpacingBounds.X + 8, OsuSpacingBounds.Y + 8, 12, Foreground, osuSpacingLabelWidth - 16);
         var track = OsuSpacingTrack;
+        c.Text(Document.OsuDistanceSpacing.ToString("0.00", CultureInfo.InvariantCulture) + "x",
+            track.Right + 10, OsuSpacingBounds.Y + 8, 12, Foreground, 42);
         c.Line(track.X, track.Y + 4, track.Right, track.Y + 4, Grid, 4);
         c.Circle(track.X + (float)Math.Clamp((Document.OsuDistanceSpacing - .1) / 3.1, 0, 1) * track.Width, track.Y + 4, 6, Accent);
     }

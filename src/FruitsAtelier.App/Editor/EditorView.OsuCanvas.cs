@@ -223,8 +223,7 @@ public sealed partial class EditorView
             double shift = -o.Stack * OsuCanvasRadius / 10;
             (float X, float Y) Point(double x, double y) => OsuCanvasScreen(x + shift, y + shift);
             var head = Point(o.X, o.Y);
-            var palette = beatmapColours.Length > 0 ? beatmapColours : (skin ?? defaultSkin)?.ComboColours ?? CatchSkin.DefaultComboColours;
-            uint colour = palette[o.Colour % palette.Count];
+            uint colour = OsuComboColour(o.Colour);
             if (o.Path.Length > 0)
             {
                 float bodyOpacity = opacity * FadeAfter(o.End, 240);
@@ -302,6 +301,26 @@ public sealed partial class EditorView
         DrawOsuDistanceSpacing(c);
     }
 
+    private uint OsuComboColour(int index)
+    {
+        var palette = beatmapColours.Length > 0 ? beatmapColours : (skin ?? defaultSkin)?.ComboColours ?? CatchSkin.DefaultComboColours;
+        return palette[index % palette.Count];
+    }
+
+    private (uint Colour, int Number) OsuPlacementStyle(double time)
+    {
+        int low = 0, high = osuCanvasObjects.Length;
+        while (low < high)
+        {
+            int middle = (low + high) / 2;
+            if (osuCanvasObjects[middle].Start <= time) low = middle + 1; else high = middle;
+        }
+        if (low == 0) return (OsuComboColour(0), 1);
+        var previous = osuCanvasObjects[low - 1];
+        bool newCombo = nextFruitNewCombo || previous.Spinner;
+        return (OsuComboColour(previous.Colour + (newCombo ? 1 : 0)), newCombo ? 1 : previous.Number + 1);
+    }
+
     private void DrawOsuCanvasControls(ICanvas c)
     {
         if (tool == Tool.Fruit && plot.Contains(mouseX, mouseY) && drag == DragKind.None)
@@ -340,7 +359,19 @@ public sealed partial class EditorView
             }
             float radius = (float)OsuCanvasRadius * OsuCanvasBounds.Width / 512;
             var origin = OsuCanvasScreen(0, 0);
-            c.Polyline(osuDraftStrokePath, origin.X, origin.Y, OsuCanvasBounds.Width / 512, Accent, radius * 2, .4f);
+            var style = OsuPlacementStyle(draft.TimeMs);
+            c.SliderBody(osuDraftStrokePath, origin.X, origin.Y, OsuCanvasBounds.Width / 512, (float)OsuCanvasRadius * 2,
+                (skin ?? defaultSkin)?.SliderBorderColour ?? 0xFFFFFF,
+                (skin ?? defaultSkin)?.SliderTrackColour ?? style.Colour, 1);
+            if (osuDraftPath.Count > 1)
+            {
+                var tail = osuDraftPath[^1];
+                var tailScreen = OsuCanvasScreen(tail.X, tail.GeometryY);
+                DrawOsuCircle(c, tailScreen.X, tailScreen.Y, radius * 2, style.Colour, prefix: "sliderendcircle");
+            }
+            var head = OsuCanvasScreen(draft.X, draft.Y);
+            DrawOsuCircle(c, head.X, head.Y, radius * 2, style.Colour, style.Number, "sliderstartcircle",
+                label: style.Number.ToString(CultureInfo.InvariantCulture));
             (float X, float Y)? previous = null;
             for (int i = 0; i < draft.ControlPoints.Count; i++)
             {
@@ -363,7 +394,6 @@ public sealed partial class EditorView
     }
     private void DrawOsuCanvasGrid(ICanvas c)
     {
-        if (gridSnap == shiftHeld) return;
         var field = OsuCanvasBounds; var bounds = CanvasRenderBounds;
         float spacing = gridSize * field.Width / 512;
         if (spacing < 1) return;
@@ -390,6 +420,8 @@ public sealed partial class EditorView
         int? number = null, string prefix = "hitcircle", float opacity = 1, string? label = null)
     {
         if (opacity <= 0) return;
+        // Slider bodies expose 118 pixels of the legacy 128-pixel circle reference.
+        diameter *= 118f / 128;
         if ((skin ?? defaultSkin) is { } provider)
         {
             CatchSkin.DrawTimelineCircle(c, provider, x, y, diameter, colour, number, prefix, opacity);

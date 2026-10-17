@@ -18,6 +18,7 @@ internal static class OsuCanvasRenderTests
     }
     public static void Run()
     {
+        OsuMappingPresentationTests.Run();
         StableGridAndControlMarkers();
         QuantizedTrackGeometry();
         var collapsed = new MapDocument { DurationMs = 10000, IsDemo = false };
@@ -146,7 +147,7 @@ internal static class OsuCanvasRenderTests
         if (!ui.Canvas.Lines.Any(l => l.Color == 0xFFFFFF && l.Width == .5f && l.Opacity == .9f)) throw new Exception("Stable control polygon must use thin white lines.");
         CheckGrid();
         ui.View.SetModifiers(false, true); ui.Paint();
-        if (GridLines().Any()) throw new Exception("Shift did not temporarily invert the standard grid.");
+        CheckGrid();
         ui.View.SetModifiers(false, false);
         var center = ui.View.OsuCanvasScreen(256, 192); ui.View.ZoomOsuCanvasAt(center.X, center.Y, 2); ui.Paint();
         CheckGrid(); CheckMarker(128, 64, 0xE00000);

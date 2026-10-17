@@ -12,7 +12,7 @@ The osu! canvas draws circles, approach circles, Legacy Slider paths, repeats,
 slider balls and spinners. Circle size, approach rate, combo ordering and stacking
 use standard geometry. Past circles turn white and fade over 700 ms. Seeking and
 pausing use the same map-time presentation. Skin elements are used when available.
-The coordinate readout below the osu! DS control shows the pointer's X and Y
+The coordinate readout below the Distance Snapping control shows the pointer's X and Y
 in the 512×384 geometric space, including after zooming or panning. Coordinates
 outside the playfield retain their signed values; leaving the canvas shows dashes.
 Selecting objects does not replace the pointer coordinates in this view.
@@ -33,12 +33,16 @@ fruit targets; this can change their two-dimensional shape.
 In osu! view the Fruit and Banana tools place circles and spinners. The Slider
 tool places Legacy controls: click creates a grey square anchor, double-click
 creates a red segment boundary, and right-click finishes at the pointer. Thin
-white lines connect the controls. Selected controls can be dragged; Ctrl+click
+white lines connect the controls. The draft uses the final slider body, skin,
+combo colour and end circles. Selected controls can be dragged; Ctrl+click
 turns an interior control into a red boundary and right-click removes it.
-The Context Menu key opens path type, repeats and length actions. Grid Snap uses
-the selected 4/8/16/32 px level on both axes; holding Shift temporarily inverts it.
+The Context Menu key opens path type, repeats and length actions. The geometric
+grid is always visible at the selected 4/8/16/32 px level. Grid Snap uses that
+lattice on both axes; holding Shift temporarily inverts snapping. Both remain
+available independently of Catch editing mode and its speed presets.
 Alt+wheel zooms and middle drag pans the geometric view.
-The upper-right osu! DS slider has its own 0.1–3.2 multiplier; Shift uses 0.01
+The upper-right **Distance Snapping:** row places its slider beside the label
+and shows its own 0.1–3.2 multiplier; Shift uses 0.01
 steps instead of 0.1. Changing it does not change Catch DS.
 
 Both canvases draw into the side areas beneath the tool palettes. Logical
