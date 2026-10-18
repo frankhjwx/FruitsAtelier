@@ -926,6 +926,43 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--synchronization-wait-render-check"))
+        {
+            string language = FruitsAtelier.Localization.Strings.Language;
+            try
+            {
+                foreach (string locale in new[] { "en", "zh-CN" })
+                foreach (int dpi in new[] { 96, 144, 192 })
+                foreach (var size in new[] { (980, 620), (1440, 900) })
+                {
+                    FruitsAtelier.Localization.Strings.SetLanguage(locale);
+                    canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                    var editor = new EditorView(false);
+                    editor.NewProject();
+                    void Paint() { canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2); canvas.End(); }
+                    Paint();
+                    var field = typeof(EditorView).GetField("syncCommitTask", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+                    field.SetValue(editor, new TaskCompletionSource<WorkspaceSession>().Task);
+                    foreach (Action input in new Action[] {
+                        () => editor.KeyDown('S', true, false), () => editor.SaveCurrentDifficulty(),
+                        () => editor.PointerDown(400, 300, 0, false, false),
+                        () => editor.PointerDoubleClick(400, 300, false, false),
+                        () => editor.Wheel(400, 300, 120, false), () => editor.TextInput('x') })
+                    {
+                        input(); Paint();
+                        if (editor.SynchronizationWaitVisible) throw new InvalidOperationException("Ordinary native input opened a synchronization wait.");
+                    }
+                    editor.ShowLibrary(); Paint();
+                    if (!editor.SynchronizationWaitVisible) throw new InvalidOperationException("Library navigation must wait for publication.");
+                    field.SetValue(editor, null); Paint();
+                    if (editor.SynchronizationWaitVisible || !editor.LibraryVisible) throw new InvalidOperationException("Library navigation did not resume after publication.");
+                    editor.StopFileMonitoring();
+                    AppLog.Write($"Synchronization wait native check passed: {locale}, {size}, {dpi} DPI.");
+                }
+            }
+            finally { FruitsAtelier.Localization.Strings.SetLanguage(language); }
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--osu-canvas-render-check"))
         {
             OsuCanvasRenderCheck.Run(canvas);

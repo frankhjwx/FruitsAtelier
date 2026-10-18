@@ -86,6 +86,9 @@ and language may publish the prepared geometry, timing and warmed export cache.
 Failure or cancellation restores the baseline. Worker caches are never shared
 with the UI. Baseline fitting data preserves idempotent strength/seed changes and
 is retimed when authored timing changes.
+Automatic Legacy droplet refresh reports progress in the status bar without
+opening the slider conversion dialog. The pending transaction still gates further
+content edits and save/export until validation completes; Escape cancels it.
 
 Placement movement overlays project break reconciliation from cached parent
 intervals and the candidate interval. They share the transaction's break algorithm

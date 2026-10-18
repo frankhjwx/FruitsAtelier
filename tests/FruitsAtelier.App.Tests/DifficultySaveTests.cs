@@ -91,6 +91,63 @@ internal static class DifficultySaveTests
         }
         Recovery();
         ReceiptRecovery();
+        EditingDuringSave();
+    }
+
+    private static void EditingDuringSave()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/save-editing", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
+        Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+        File.WriteAllText(source, "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Editing fixture\nArtist:Fixture\nCreator:Test\nVersion:Catch\n[Difficulty]\nSliderMultiplier:1.4\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,500,1,0,0:0:0:0:\n100,192,1000,2,0,L|200:192,1,100\n");
+        var ui = new Ui(false);
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace");
+        ui.View.LibrarySettings.Songs = songs;
+        var session = WorkspaceProject.Create(ui.View.LibrarySettings.Workspace,
+            BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source)]), songs);
+        session.Manifest.Difficulties[0].ExportConfirmed = true;
+        ui.View.LoadWorkspace(session);
+        ui.View.EnableFileMonitoring();
+        ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+        try
+        {
+            ui.Paint();
+            for (int i = 0; i < 5; i++)
+            {
+                ui.Key('2');
+                int count = ui.View.Document.Fruits.Count;
+                ui.ClickMap(750, 200);
+                Check(ui.View.Document.Fruits.Count == count + 1, "Note placement remains available");
+                NoModal();
+                ui.Key('S', ctrl: true);
+                ui.Key('S', ctrl: true);
+                NoModal();
+                ui.Key(46);
+                Check(ui.View.Document.Fruits.Count == count, "Note deletion remains available during background save");
+                NoModal();
+                WaitQuiet();
+                ui.View.CheckFilesOnActivation();
+                WaitQuiet();
+            }
+        }
+        finally { ui.View.StopFileMonitoring(); }
+
+        void WaitQuiet()
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(15);
+            do
+            {
+                ui.Paint(); NoModal();
+                if (!ui.View.SynchronizationBusy) return;
+                Thread.Sleep(1);
+            } while (DateTime.UtcNow < deadline);
+            throw new Exception("Background publication did not finish");
+        }
+
+        void NoModal() => Check(!ui.View.SynchronizationWaitVisible && !ui.View.SynchronizationVisible
+            && !ui.Canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("sync.waitHelp")
+                || t.Value == FruitsAtelier.Localization.Strings.Get("sync.title")),
+            "Placing, deleting and saving notes must not flash synchronization windows");
     }
 
     private static void Recovery()

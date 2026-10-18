@@ -81,6 +81,9 @@ directions, Legacy droplet effects, timing changes, failure atomicity and undo.
 `App.Tests --legacy-droplet-worker-check` verifies responsive submission, prepared
 export publication, failure rollback, save blocking, cancellation, undo/redo and
 rejection of stale content or history transactions.
+It also checks that the first note placement and deletion finish without a
+progress dialog. `App.Tests --legacy-edit-map <difficulty.catchdiff>` runs this
+first-edit check against a saved document in memory without writing its source.
 
 `FruitsAtelier.App.exe --render-check --osu-canvas-render-check` exercises the
 native Direct2D renderer in English/Chinese at two sizes and three DPI values,
@@ -661,6 +664,13 @@ project/`.osu` persistence. Native window checks open all four tabs in both
 languages at each supported test size and DPI and exercise the color picker.
 
 ## Synchronization regression coverage
+
+`App.Tests --synchronization-wait-check` checks that ordinary input and repeated
+save shortcuts do not open waiting overlays, local publication still permits note
+placement, and file/navigation waits resume on completion. Windows
+`FruitsAtelier.App.exe --render-check --synchronization-wait-render-check` checks
+the input and navigation behavior in English and Chinese at two sizes and
+96/144/192 DPI.
 
 Formats regressions exercise metadata and directory/file renames, uploaded IDs,
 three-way field conflicts, timing updates, pending local choices, external deletion,

@@ -26,7 +26,10 @@ preserves newer edits, other difficulties' dirty state, playback and active tab.
 Saved-file notifications are checked against accepted content hashes in the
 background before scheduling another reconciliation.
 
-Attempting an operation that must wait for them shows a small overlay with the
+Ordinary keyboard, pointer and wheel input during synchronization publication,
+including repeated save shortcuts, does not open a waiting overlay. Local saves
+continue to allow content editing while their captured snapshot is written.
+Attempting a file or navigation operation that must wait shows a small overlay with the
 current saving, checking or applying stage and an indeterminate progress bar.
 It disappears when the work finishes. Returning to Library, opening another
 project and closing the window resume after successful completion; a failure or

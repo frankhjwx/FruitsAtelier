@@ -29,7 +29,7 @@ public sealed partial class EditorView
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
             if (button == 0 && HeaderNavigationBounds.Contains(x, y)) ShowLibrary();
-            NotifySynchronizationBlocked(); return;
+            return;
         }
         placementCtrl = ctrl;
         if (IsTestplaying) { TestplayPointerDown(x, y, button); return; }
@@ -748,7 +748,7 @@ public sealed partial class EditorView
 
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
-            NotifySynchronizationBlocked(); return;
+            return;
         }
         if (librarySettingsOpen)
         {
@@ -904,7 +904,7 @@ public sealed partial class EditorView
         if (VersionHistoryVisible) { ScrollVersionHistory(x, y, delta, ctrl); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
-            NotifySynchronizationBlocked(); return;
+            return;
         }
         if (SynchronizationVisible) { ScrollSyncComparison(x, y, delta, ctrl); return; }
         if (librarySettingsOpen) { ScrollStorage(x, y, delta); return; }
@@ -1136,7 +1136,7 @@ public sealed partial class EditorView
         if (VersionHistoryVisible) { VersionHistoryKey(virtualKey); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
-            NotifySynchronizationBlocked(); return;
+            return;
         }
         if (DistanceKeyDown(virtualKey, ctrl, shift)) return;
         if (HitsoundCopierVisible && !ErrorVisible && !DiscardConfirmationVisible) { HitsoundCopierKey(virtualKey, ctrl, shift); return; }
@@ -1445,7 +1445,7 @@ public sealed partial class EditorView
 
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
-            NotifySynchronizationBlocked(); return;
+            return;
         }
         if (TimingModal || TimingPageVisible && timingField.Length > 0)
         { if (!char.IsControl(value)) PasteTimingText(value.ToString(), TimingInputSession); return; }
