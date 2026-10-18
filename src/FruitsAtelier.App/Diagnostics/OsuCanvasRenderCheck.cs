@@ -87,6 +87,19 @@ internal static class OsuCanvasRenderCheck
                     editor.PointerMove(placementPointer.X, placementPointer.Y, false, false);
                     Paint(toolKey == '2' ? "circle-placement" : "slider-placement");
                 }
+                foreach (var (x, y) in new[] { (64, 192), (192, 64) })
+                {
+                    var control = editor.OsuCanvasScreen(x, y);
+                    editor.PointerDown(control.X, control.Y, 0, false, false); editor.PointerUp(control.X, control.Y, 0);
+                }
+                var circularTail = editor.OsuCanvasScreen(320, 192);
+                editor.PointerMove(circularTail.X, circularTail.Y, false, false);
+                Paint("circular-slider-draft");
+                editor.KeyDown(13, false, false); editor.KeyUp(13);
+                Paint("circular-slider-committed");
+                if (editor.Document.ImportedSliders.Last().PathType != 'P')
+                    throw new InvalidOperationException("Native three-point slider did not commit as a circle.");
+                editor.KeyDown('Z', true, false); editor.KeyUp('Z');
                 editor.KeyDown('1', false, false); editor.KeyUp('1');
                 var notesLock = editor.AssistButtonBounds[6];
                 editor.LibrarySettings.LockSlidersToCanvas = true;

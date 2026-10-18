@@ -372,6 +372,7 @@ public sealed partial class EditorView
                 candidate.ControlPoints.AddRange(draft.ControlPoints);
                 if (osuDraftPointer is { } p && (candidate.ControlPoints.Count == 0 || candidate.ControlPoints[^1] != new SliderPathPoint(p.X, p.Y)))
                     candidate.ControlPoints.Add(new(p.X, p.Y));
+                candidate.PathType = OsuPlacementPathType(candidate.ControlPoints.Count);
                 osuDraftPath = candidate.ControlPoints.Count >= 2 ? ImportedSliderConverter.Path(candidate) : [];
                 osuDraftStrokePath = osuDraftPath.Select(p => new System.Numerics.Vector2((float)p.X, (float)p.GeometryY)).ToArray();
             }

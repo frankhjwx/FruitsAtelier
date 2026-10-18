@@ -23,7 +23,7 @@ Legacy sliders can retain detached `RandomizationSource` geometry and a fitted
 repeated strength or seed changes do not compound previous effects. Materialized
 geometry and emitted timing are validated through NM and HR export/read-back
 before replacement. A failure retains the original objects and reports its reason.
-Legacy sliders authored in the osu! canvas persist `PreserveNativeGeometry`.
+Legacy sliders authored or manually edited in the osu! canvas persist `PreserveNativeGeometry`.
 Their original two-dimensional controls are excluded from global droplet path
 rebuilding, including after reopening the project. Older objects default to false.
 

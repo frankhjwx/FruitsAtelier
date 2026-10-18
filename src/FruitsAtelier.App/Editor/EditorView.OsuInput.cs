@@ -185,7 +185,7 @@ public sealed partial class EditorView
             if (Edit(L.Get("editor.command.insertPoint"), () =>
             {
                 insert.ControlPoints.Insert(index + 1, new(point.X, point.Y));
-                OsuRecalculateLength(insert); OsuSyncSliderLine(insert);
+                OsuRecalculateLength(insert, controlCountChanged: true); OsuSyncSliderLine(insert);
             })) { osuControlSlider = insert.Id; osuSelectedControl = index + 1; }
             return true;
         }
@@ -264,6 +264,7 @@ public sealed partial class EditorView
                 target.OriginalLine = source.OriginalLine; target.RandomizationSource = source.RandomizationSource;
                 target.RandomizationTrack = source.RandomizationTrack;
                 target.RandomizationBaseVelocity = source.RandomizationBaseVelocity;
+                target.PreserveNativeGeometry = source.PreserveNativeGeometry;
             }
             return true;
         }
@@ -364,6 +365,7 @@ public sealed partial class EditorView
         if (osuDraftPointer is { } pointer && slider.ControlPoints[^1] != new SliderPathPoint(pointer.X, pointer.Y))
             slider.ControlPoints.Add(new(pointer.X, pointer.Y));
         if (slider.ControlPoints.Count < 2) return;
+        slider.PathType = OsuPlacementPathType(slider.ControlPoints.Count);
         OsuRecalculateLength(slider);
         if (slider.PixelLength < .001) return;
         OsuSyncSliderLine(slider);
@@ -377,8 +379,11 @@ public sealed partial class EditorView
         tool = Tool.Select;
     }
 
-    private static void OsuRecalculateLength(ImportedSlider slider)
+    private static char OsuPlacementPathType(int count) => count == 3 ? 'P' : 'B';
+
+    private static void OsuRecalculateLength(ImportedSlider slider, bool controlCountChanged = false)
     {
+        if (controlCountChanged && slider.PathType == 'P' && slider.ControlPoints.Count != 3) slider.PathType = 'B';
         slider.PixelLength = 0;
         var path = ImportedSliderConverter.Path(slider);
         for (int i = 1; i < path.Count; i++)
@@ -388,6 +393,7 @@ public sealed partial class EditorView
     private static void OsuSyncSliderLine(ImportedSlider slider)
     {
         slider.RandomizationSource = null; slider.RandomizationTrack = null; slider.RandomizationBaseVelocity = null;
+        slider.PreserveNativeGeometry = true;
         static string N(double value) => value.ToString("R", CultureInfo.InvariantCulture);
         string[] parts = slider.OriginalLine?.Split(',') ?? ["0", "0", "0", "2", "0", "B", "1", "0", "", "", "0:0:0:0:"];
         int oldSpans = parts.Length > 6 && int.TryParse(parts[6], out int parsed) ? parsed : slider.SpanCount;
@@ -420,7 +426,8 @@ public sealed partial class EditorView
         var copy = new ImportedSlider { Id = slider.Id, X = slider.X, Y = slider.Y, TimeMs = slider.TimeMs,
             PathType = slider.PathType, PixelLength = slider.PixelLength, SpanCount = slider.SpanCount,
             SourceOrder = slider.SourceOrder, OriginalLine = slider.OriginalLine, RandomizationSource = slider.RandomizationSource,
-            RandomizationTrack = slider.RandomizationTrack, RandomizationBaseVelocity = slider.RandomizationBaseVelocity };
+            RandomizationTrack = slider.RandomizationTrack, RandomizationBaseVelocity = slider.RandomizationBaseVelocity,
+            PreserveNativeGeometry = slider.PreserveNativeGeometry };
         copy.ControlPoints.AddRange(slider.ControlPoints);
         return copy;
     }
@@ -473,7 +480,13 @@ public sealed partial class EditorView
         if (key == 13 && osuDraftSlider is not null) { FinishOsuSlider(); return true; }
         if (osuDraftSlider is not null || osuSpinnerStart is not null)
         {
-            if (!ctrl && key is >= 49 and <= 52) { CancelOsuInteraction(); ChangeTool(key switch { 49 => Tool.Select, 50 => Tool.Fruit, 51 => Tool.Slider, _ => Tool.Banana }); return true; }
+            if (!ctrl && key is >= 49 and <= 52)
+            {
+                if (osuDraftSlider is not null) FinishOsuSlider();
+                CancelOsuInteraction();
+                ChangeTool(key switch { 49 => Tool.Select, 50 => Tool.Fruit, 51 => Tool.Slider, _ => Tool.Banana });
+                return true;
+            }
             return ctrl && key is 83 or 90 or 89 or 88 or 86;
         }
         // These commands start their own transaction; the captured gesture already owns one.
@@ -543,7 +556,7 @@ public sealed partial class EditorView
         {
             slider.ControlPoints.RemoveRange(first, last - first + 1);
             slider.X = slider.ControlPoints[0].X; slider.Y = slider.ControlPoints[0].GeometryY;
-            OsuRecalculateLength(slider); OsuSyncSliderLine(slider);
+            OsuRecalculateLength(slider, controlCountChanged: true); OsuSyncSliderLine(slider);
         });
         osuSelectedControl = -1; osuControlSlider = Guid.Empty;
     }
@@ -556,7 +569,7 @@ public sealed partial class EditorView
         if (Edit(L.Get("editor.command.insertPoint"), () =>
         {
             slider.ControlPoints.Insert(index + 1, slider.ControlPoints[index]);
-            OsuRecalculateLength(slider); OsuSyncSliderLine(slider);
+            OsuRecalculateLength(slider, controlCountChanged: true); OsuSyncSliderLine(slider);
         })) osuSelectedControl = index + 1;
     }
 
@@ -582,7 +595,8 @@ public sealed partial class EditorView
         contextItems.Add(new(L.Get("editor.command.deletePoint"), () => DeleteOsuControl(slider, index)));
         foreach (char type in new[] { 'L', 'B', 'P', 'C' })
             contextItems.Add(new(L.Get("osu.path." + type), () => Edit(L.Get("editor.command.curveType"), () =>
-            { slider.PathType = type; OsuRecalculateLength(slider); OsuSyncSliderLine(slider); }), Active: slider.PathType == type));
+            { slider.PathType = type; OsuRecalculateLength(slider); OsuSyncSliderLine(slider); }),
+                Enabled: type != 'P' || slider.ControlPoints.Count == 3, Active: slider.PathType == type));
         contextItems.Add(new(L.Get("editor.command.addReverse"), () => Edit(L.Get("editor.command.addReverse"), () =>
         { ChangeOsuSpanCount(slider, Math.Min(9000, slider.SpanCount + 1)); })));
         contextItems.Add(new(L.Get("editor.command.removeReverse"), () => Edit(L.Get("editor.command.removeReverse"), () =>

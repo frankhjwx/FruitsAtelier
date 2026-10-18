@@ -59,10 +59,17 @@ tool places Legacy controls and preserves their original two-dimensional path
 through global droplet-setting changes and project reopening. Click creates a grey square anchor, double-click
 creates a red segment boundary, and right-click finishes at the pointer. Thin
 white lines connect the controls. The draft uses the final slider body, skin,
-combo colour and end circles. Selected controls can be dragged; Ctrl+click
+combo colour and end circles. A new slider with exactly three controls (head,
+one interior anchor and tail) uses a perfect circular arc; collinear controls
+form a straight path. Other new sliders use Bezier geometry. Adding a fourth
+control or a red boundary to a circle switches it to Bezier. Removing a control
+from an existing Bezier retains Bezier geometry. Selected controls can be dragged; Ctrl+click
 turns an interior control into a red boundary and right-click removes it.
-The Context Menu key opens path type, repeats and length actions. The geometric
-grid is shown only inside the white 512×384 playfield at the selected
+The Context Menu key opens path type, repeats and length actions.
+Perfect circle requires three controls. Enter, right-click or a number-key tool
+switch completes a valid draft; Escape cancels it. An insufficient draft is
+discarded when switching tools.
+The geometric grid is shown only inside the white 512×384 playfield at the selected
 4/8/16/32 px level. Zoom and pan keep it clipped to that playfield. Grid Snap uses that
 lattice on both axes; holding Shift temporarily inverts snapping. Both remain
 available independently of Catch editing mode and its speed presets.
