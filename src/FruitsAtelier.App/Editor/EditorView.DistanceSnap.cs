@@ -8,6 +8,7 @@ public sealed partial class EditorView
 {
     public bool DistanceSnapDialogVisible { get; private set; }
     private bool distanceSnapFlyout, dsSliderShift, dsSnapDragging, dsBaseDragging, dsBaseFocused;
+    private Rect distanceSnapFlyoutBounds;
     private bool dsGridInitialized, dsGridSnap;
     private int dsGridSize = 4;
     internal (bool Enabled, int Size) EditorGridSettings => (gridSnap, gridSize);
@@ -65,6 +66,7 @@ public sealed partial class EditorView
         var button = assistButtons[5];
         float y = Math.Clamp(button.Y, assistPalette.Y, assistPalette.Bottom - 34);
         var flyout = new Rect(button.X - 154, y, 154, 34);
+        distanceSnapFlyoutBounds = flyout;
         var area = new Rect(flyout.X, y, flyout.Width + button.Width, Math.Max(34, button.Height));
         distanceSnapFlyout = button.Contains(mouseX, mouseY) && assistPalette.Contains(mouseX, mouseY)
             || distanceSnapFlyout && area.Contains(mouseX, mouseY);

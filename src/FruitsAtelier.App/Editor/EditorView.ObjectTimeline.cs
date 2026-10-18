@@ -338,6 +338,10 @@ public sealed partial class EditorView
     {
         if (!plot.Contains(mouseX, mouseY) || drag != DragKind.None || menu >= 0 || contextItems.Count > 0 || editField >= 0)
             return null;
+        if (IsOsuCanvas && EnsureOsuDraftGeometry() is { } osuDraft)
+            return (osuDraft.Id, osuDraft.TimeMs,
+                osuDraft.TimeMs + ImportedSliderConverter.DurationMs(Document, osuDraft, SnapTiming()),
+                OsuPlacementStyle(osuDraft.TimeMs).Colour);
         if (tool == Tool.Banana)
         {
             double time = IsOsuCanvas ? OsuPlacementTime : MapAt(mouseX, mouseY, true).TimeMs;

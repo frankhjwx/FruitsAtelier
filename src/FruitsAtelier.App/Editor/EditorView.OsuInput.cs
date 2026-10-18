@@ -101,6 +101,7 @@ public sealed partial class EditorView
     {
         if (!IsOsuCanvas || TimingPageVisible || !plot.Contains(x, y)) return false;
         if (notesLockFlyout && notesLockFlyoutBounds.Contains(x, y)) return false;
+        if (distanceSnapFlyout && distanceSnapFlyoutBounds.Contains(x, y)) return false;
         if (menu >= 0) return false;
         if (contextItems.Count > 0)
         {
@@ -381,13 +382,20 @@ public sealed partial class EditorView
 
     private static char OsuPlacementPathType(int count) => count == 3 ? 'P' : 'B';
 
-    private static void OsuRecalculateLength(ImportedSlider slider, bool controlCountChanged = false)
+    private void OsuRecalculateLength(ImportedSlider slider, bool controlCountChanged = false)
     {
         if (controlCountChanged && slider.PathType == 'P' && slider.ControlPoints.Count != 3) slider.PathType = 'B';
         slider.PixelLength = 0;
         var path = ImportedSliderConverter.Path(slider);
         for (int i = 1; i < path.Count; i++)
             slider.PixelLength += Math.Sqrt(Math.Pow(path[i].X - path[i - 1].X, 2) + Math.Pow(path[i].GeometryY - path[i - 1].GeometryY, 2));
+        if (snap && slider.PixelLength > .001)
+        {
+            var timing = SnapTiming();
+            double step = ImportedSliderConverter.VelocityAt(Document, slider.TimeMs, timing)
+                * timing.At(slider.TimeMs).BeatLengthMs / divisor;
+            slider.PixelLength = Math.Max(1, Math.Round(slider.PixelLength / step, MidpointRounding.AwayFromZero)) * step;
+        }
     }
 
     private static void OsuSyncSliderLine(ImportedSlider slider)
@@ -609,11 +617,14 @@ public sealed partial class EditorView
 
     private void ChangeOsuSliderLength(ImportedSlider slider, int direction)
     {
-        var timing = SnapTiming().At(slider.TimeMs);
-        double step = 100 * Document.EffectiveSliderMultiplier * timing.SliderVelocityMultiplier / divisor;
+        var timing = SnapTiming();
+        double step = ImportedSliderConverter.VelocityAt(Document, slider.TimeMs, timing)
+            * timing.At(slider.TimeMs).BeatLengthMs / divisor;
         Edit(L.Get("inspector.length"), () =>
         {
-            slider.PixelLength = Math.Max(.01, slider.PixelLength + direction * step);
+            double units = direction > 0 ? Math.Floor(slider.PixelLength / step + 1e-7) + 1
+                : Math.Ceiling(slider.PixelLength / step - 1e-7) - 1;
+            slider.PixelLength = snap ? Math.Max(1, units) * step : Math.Max(.01, slider.PixelLength + direction * step);
             OsuSyncSliderLine(slider);
         });
     }

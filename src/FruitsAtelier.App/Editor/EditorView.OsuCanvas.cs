@@ -33,6 +33,8 @@ public sealed partial class EditorView
     private (double X, double Y)? osuDraftPathPointer;
     private IReadOnlyList<SliderPathPoint> osuDraftPath = [];
     private System.Numerics.Vector2[] osuDraftStrokePath = [];
+    private ImportedSlider? osuDraftCandidate;
+    private (TimingMap.Lookup? Timing, bool Snap, int Divisor, double Multiplier) osuDraftInputs;
     private double osuCanvasZoom = 1, osuCanvasPanX, osuCanvasPanY;
     internal Rect OsuCanvasBounds
     {
@@ -335,6 +337,26 @@ public sealed partial class EditorView
         return (OsuComboColour(previous.Colour + (newCombo ? 1 : 0)), newCombo ? 1 : previous.Number + 1);
     }
 
+    private ImportedSlider? EnsureOsuDraftGeometry()
+    {
+        if (osuDraftSlider is not { } draft) return null;
+        var inputs = (SnapTiming(), snap, divisor, Document.EffectiveSliderMultiplier);
+        if (ReferenceEquals(osuDraftPathSource, draft) && osuDraftPathCount == draft.ControlPoints.Count
+            && osuDraftPathPointer == osuDraftPointer && osuDraftPathType == draft.PathType && osuDraftInputs == inputs)
+            return osuDraftCandidate;
+        osuDraftPathSource = draft; osuDraftPathCount = draft.ControlPoints.Count;
+        osuDraftPathPointer = osuDraftPointer; osuDraftPathType = draft.PathType; osuDraftInputs = inputs;
+        var candidate = new ImportedSlider { Id = draft.Id, TimeMs = draft.TimeMs, X = draft.X, Y = draft.Y, SpanCount = draft.SpanCount };
+        candidate.ControlPoints.AddRange(draft.ControlPoints);
+        if (osuDraftPointer is { } p && candidate.ControlPoints[^1] != new SliderPathPoint(p.X, p.Y))
+            candidate.ControlPoints.Add(new(p.X, p.Y));
+        candidate.PathType = OsuPlacementPathType(candidate.ControlPoints.Count);
+        if (candidate.ControlPoints.Count >= 2) OsuRecalculateLength(candidate);
+        osuDraftPath = candidate.ControlPoints.Count >= 2 ? ImportedSliderConverter.Path(candidate) : [];
+        osuDraftStrokePath = osuDraftPath.Select(p => new System.Numerics.Vector2((float)p.X, (float)p.GeometryY)).ToArray();
+        return osuDraftCandidate = candidate;
+    }
+
     private void DrawOsuCanvasControls(ICanvas c)
     {
         if (tool is Tool.Fruit or Tool.Slider && osuDraftSlider is null
@@ -363,19 +385,7 @@ public sealed partial class EditorView
         }
         if (osuDraftSlider is { } draft)
         {
-            if (!ReferenceEquals(osuDraftPathSource, draft) || osuDraftPathCount != draft.ControlPoints.Count
-                || osuDraftPathPointer != osuDraftPointer || osuDraftPathType != draft.PathType)
-            {
-                osuDraftPathSource = draft; osuDraftPathCount = draft.ControlPoints.Count;
-                osuDraftPathPointer = osuDraftPointer; osuDraftPathType = draft.PathType;
-                var candidate = new ImportedSlider { X = draft.X, Y = draft.Y, PathType = draft.PathType };
-                candidate.ControlPoints.AddRange(draft.ControlPoints);
-                if (osuDraftPointer is { } p && (candidate.ControlPoints.Count == 0 || candidate.ControlPoints[^1] != new SliderPathPoint(p.X, p.Y)))
-                    candidate.ControlPoints.Add(new(p.X, p.Y));
-                candidate.PathType = OsuPlacementPathType(candidate.ControlPoints.Count);
-                osuDraftPath = candidate.ControlPoints.Count >= 2 ? ImportedSliderConverter.Path(candidate) : [];
-                osuDraftStrokePath = osuDraftPath.Select(p => new System.Numerics.Vector2((float)p.X, (float)p.GeometryY)).ToArray();
-            }
+            EnsureOsuDraftGeometry();
             float radius = (float)OsuCanvasRadius * OsuCanvasBounds.Width / 512;
             var origin = OsuCanvasScreen(0, 0);
             var style = OsuPlacementStyle(draft.TimeMs);

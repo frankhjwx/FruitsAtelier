@@ -6,11 +6,16 @@ public static class ImportedSliderConverter
     public static IReadOnlyList<SliderPathPoint> Path(ImportedSlider slider)
         => slider.GetGeometry().AbsolutePoints();
 
-    public static double DurationMs(MapDocument document, ImportedSlider slider)
+    public static double VelocityAt(MapDocument document, double timeMs, TimingMap.Lookup? lookup = null)
+    {
+        var timing = lookup?.At(timeMs) ?? TimingMap.At(document, timeMs);
+        return LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier);
+    }
+
+    public static double DurationMs(MapDocument document, ImportedSlider slider, TimingMap.Lookup? lookup = null)
     {
         var path = slider.GetGeometry();
-        var timing = TimingMap.At(document, slider.TimeMs);
-        return path.Distance / LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier) * slider.SpanCount;
+        return path.Distance / VelocityAt(document, slider.TimeMs, lookup) * slider.SpanCount;
     }
 
     public static double EndTimeMs(MapDocument document, ImportedSlider slider) => slider.TimeMs + DurationMs(document, slider);

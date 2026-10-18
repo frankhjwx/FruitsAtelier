@@ -112,7 +112,9 @@ internal static class OsuMappingPresentationTests
         var draft = Body(ui);
         Check(draft.Length > 0 && draft.Any(l => l.Color == 0xFFFFFF), "A draft must use the final bordered slider body.");
         var head = ui.View.OsuCanvasScreen(80, 80);
-        var tail = ui.View.OsuCanvasScreen(240, 80);
+        var draftPath = (IReadOnlyList<SliderPathPoint>)typeof(FruitsAtelier.App.Editor.EditorView)
+            .GetField("osuDraftPath", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+        var tail = ui.View.OsuCanvasScreen(draftPath[^1].X, draftPath[^1].GeometryY);
         foreach (var at in new[] { head, tail })
             Check(ui.Canvas.Circles.Any(c => c.Filled && Math.Abs(c.X - at.X) < .05 && Math.Abs(c.Y - at.Y) < .05),
                 "The draft must show its head and end circles.");

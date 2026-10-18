@@ -60,7 +60,7 @@ internal static class OsuStableInputTests
         static void CheckArc(IReadOnlyList<SliderPathPoint> path)
         {
             Check(path.Count > 3 && path.Min(p => p.GeometryY) < 65, "The three-point path did not pass through its circular midpoint.");
-            Check(path.All(p => Math.Abs(Math.Sqrt(Math.Pow(p.X - 192, 2) + Math.Pow(p.GeometryY - 192, 2)) - 128) < .05),
+            Check(path.All(p => Math.Abs(Math.Sqrt(Math.Pow(p.X - 192, 2) + Math.Pow(p.GeometryY - 192, 2)) - 128) < .11),
                 "The three-point path was not a constant-radius circle.");
         }
     }

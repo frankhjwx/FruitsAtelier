@@ -5,6 +5,7 @@ internal static class OsuCanvasInputTests
     public static void Run()
     {
         OsuStableInputTests.Run();
+        OsuSliderTimingTests.Run();
         SliderCanvasLockTests.Run();
         ToggleAndHeldKeys();
         NativeCircleAndLegacySlider();

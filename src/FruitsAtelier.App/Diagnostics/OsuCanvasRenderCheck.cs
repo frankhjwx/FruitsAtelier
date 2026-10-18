@@ -107,6 +107,19 @@ internal static class OsuCanvasRenderCheck
                 Paint("slider-canvas-lock");
                 editor.LibrarySettings.LockSlidersToCanvas = false;
                 editor.PointerMove(0, 0, false, false);
+                if (size.Item1 == 1440)
+                {
+                    var dsButton = editor.AssistButtonBounds[5];
+                    editor.PointerMove(dsButton.X + 5, dsButton.Y + 5, false, false);
+                    Paint("osu-configure-ds-entry");
+                    editor.PointerDown(dsButton.X - 100, dsButton.Y + 12, 0, false, false);
+                    editor.PointerUp(dsButton.X - 100, dsButton.Y + 12, 0);
+                    if (!editor.DistanceSnapDialogVisible)
+                        throw new InvalidOperationException("The osu canvas intercepted Configure DS.");
+                    Paint("osu-configure-ds");
+                    editor.KeyDown(27, false, false); editor.KeyUp(27);
+                    Paint();
+                }
                 foreach (var (time, name) in new[] { (900, "approach-stack"), (1400, "late-fade"), (1900, "slider-approach"), (2500, "slider-repeat"), (5700, "spinner"), (6450, "spinner-end"), (6800, "spinner-fade") })
                 {
                     editor.UpdateTransport(time, 10000, true, false, false, null, null);

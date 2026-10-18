@@ -69,6 +69,11 @@ The Context Menu key opens path type, repeats and length actions.
 Perfect circle requires three controls. Enter, right-click or a number-key tool
 switch completes a valid draft; Escape cancels it. An insufficient draft is
 discarded when switching tools.
+With beat snapping enabled, draft and control-edit lengths round to the nearest
+current Snap subdivision using the slider head's BPM and SV, with a minimum of
+one subdivision. The visible slider end follows that length; its final control
+point can extend beyond or fall before it. Disabling beat snapping allows free
+lengths. The upper timeline shows the draft's current interval before placement.
 The geometric grid is shown only inside the white 512×384 playfield at the selected
 4/8/16/32 px level. Zoom and pan keep it clipped to that playfield. Grid Snap uses that
 lattice on both axes; holding Shift temporarily inverts snapping. Both remain

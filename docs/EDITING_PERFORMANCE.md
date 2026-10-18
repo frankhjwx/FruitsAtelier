@@ -154,6 +154,12 @@ Testplay requests wait for validated output. Save and export use their own autho
 snapshots, never the provisional preview. Cancellation restores the pre-draft
 preview; switching projects or difficulties retires the pending result.
 
+Native osu slider drafts retain one local candidate and sampled path shared by
+the geometric canvas and upper timeline. Controls, pointer, path type, timing
+lookup identity, beat-snap state, divisor and effective base SV invalidate it.
+Length snapping and duration queries reuse the editor's timing lookup. Pointer
+movement does not export or convert the committed map for this draft geometry.
+
 The object timeline retains Stream/Stack fruit times, stacking, combo numbers and
 event lookup entries for the current conversion snapshot. The colour presentation
 owns one combo-entry snapshot shared by numbering and preview combo ends. Content
