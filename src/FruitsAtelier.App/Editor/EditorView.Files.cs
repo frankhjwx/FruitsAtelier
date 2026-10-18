@@ -123,7 +123,9 @@ public sealed partial class EditorView
     {
         var document = new MapDocument
         {
-            IsDemo = false, DerandomizeFSliderDroplets = LibrarySettings.DerandomizeNewProjects, RandomizeNewSliders = !LibrarySettings.DerandomizeNewProjects
+            IsDemo = false, DerandomizeFSliderDroplets = LibrarySettings.DerandomizeNewProjects, RandomizeNewSliders = !LibrarySettings.DerandomizeNewProjects,
+            DerandomizeDropletsForHardRock = LibrarySettings.DefaultDropletHardRock,
+            RandomizeDropletStrength = LibrarySettings.DefaultDropletStrength, RandomizeDropletSeed = LibrarySettings.DefaultDropletSeed
         };
         SongSetup.Set(document, "General", "Mode", "2");
         foreach (var (key, value) in new[]

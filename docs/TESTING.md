@@ -24,6 +24,10 @@ dotnet build ../FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
 
 See [Running on macOS](MACOS.md) for launch and packaging. Project files and `packages.lock.json` pin package versions; NuGet caches packages in `artifacts/packages`.
 
+`App.Tests --droplet-defaults-check` verifies global Droplet Settings and Inspector
+mode persistence, new-project initialization, both FSlider drawing modes after
+reloading preferences, and preservation of existing project values.
+
 ### Windows sandbox permissions
 
 `App.Tests --window-preferences-check` checks canvas switch persistence, settings

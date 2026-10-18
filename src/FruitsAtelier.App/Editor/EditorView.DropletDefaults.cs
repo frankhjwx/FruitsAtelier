@@ -7,6 +7,15 @@ public sealed partial class EditorView
 {
     private bool dropletSettingsFromGeneral;
 
+    private void RememberDropletSettings()
+    {
+        LibrarySettings.DerandomizeNewProjects = Document.DerandomizeFSliderDroplets;
+        LibrarySettings.DefaultDropletHardRock = Document.DerandomizeDropletsForHardRock;
+        LibrarySettings.DefaultDropletStrength = Document.RandomizeDropletStrength;
+        LibrarySettings.DefaultDropletSeed = Document.RandomizeDropletSeed;
+        RequestViewPreference?.Invoke();
+    }
+
     private void OpenDropletSettingsFromGeneral()
     {
         FinishBackgroundDimDrag(); FinishVolumeDrag();

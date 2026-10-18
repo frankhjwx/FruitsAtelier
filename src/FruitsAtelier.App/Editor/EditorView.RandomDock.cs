@@ -64,7 +64,7 @@ public sealed partial class EditorView
     {
         if (!RandomDockEditing || notesLocked || ReadRandomDraft() is not { } draft || draft == randomBaseline) return;
         if (Edit(L.Get("randomize.title"), () => SetRandomDraft(Document, draft)))
-        { randomBaseline = draft; liveRandomSnapshot = Document.DeepClone(); }
+        { randomBaseline = draft; liveRandomSnapshot = Document.DeepClone(); RememberDropletSettings(); }
     }
     private void RunRandomDockAction(Action action)
     {
@@ -74,6 +74,7 @@ public sealed partial class EditorView
         {
             randomBaseline = ReadRandomDraft();
             liveRandomSnapshot = Document.DeepClone();
+            RememberDropletSettings();
         }
     }
     private void DrawRandomDock(ICanvas c, Rect bounds)

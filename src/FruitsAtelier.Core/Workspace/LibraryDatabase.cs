@@ -34,6 +34,20 @@ public sealed class LibrarySettings
     public bool RomanisedMetadata { get; set; } = true;
     public bool DerandomizeDroplets { get; set; } = true;
     public bool DerandomizeNewProjects { get; set; } = true;
+    public bool DefaultDropletHardRock { get; set; }
+    private double defaultDropletStrength = 20;
+    public double DefaultDropletStrength
+    {
+        get => defaultDropletStrength;
+        set => defaultDropletStrength = double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 20;
+    }
+    public int DefaultDropletSeed { get; set; } = 1337;
+    private SliderDropletMode defaultDropletMode = SliderDropletMode.FollowMap;
+    public SliderDropletMode DefaultDropletMode
+    {
+        get => defaultDropletMode;
+        set => defaultDropletMode = Enum.IsDefined(value) ? value : SliderDropletMode.FollowMap;
+    }
     public bool ExperimentalSnapDivisions { get; set; }
     public bool LazerEditing { get; set; }
     public bool MappingSpeedDistanceSnap { get; set; }

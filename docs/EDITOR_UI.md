@@ -294,11 +294,15 @@ field and slider, plus Reset strength to restore 20.
 The separate **Global Derandomize** section controls derandomization for new projects
 and Legacy-to-FSlider conversion. These preferences save immediately and do not
 change the current difficulty or its undo history. New projects default to
-derandomization. Newly drawn FSliders use **Follow map**. In **Slider Inspector**, **Droplet mode** selects
+derandomization. Valid current-difficulty edits also save the last used mode, strength,
+seed and NM/HR target as global defaults for new projects. Existing projects retain
+their own saved values. In **Slider Inspector**, **Droplet mode** selects
 Follow map, Derandomize or Randomize for the selected ordinary FSliders without
 switching tabs. Explicit modes take precedence over the difficulty default.
 Multiple differing modes display Mixed; choosing a mode applies it to all eligible
-selected sliders in one undo step. Legacy Sliders and managed Stream/Stack objects
+selected sliders in one undo step. The chosen mode is also remembered globally for
+newly drawn FSliders in both drawing modes, including after restarting; it initially
+uses Follow map. Existing sliders keep their own modes. Legacy Sliders and managed Stream/Stack objects
 are excluded. The effective mode is displayed with the Inspector metrics.
 
 **Reset manual droplet adjustments** shows the selected sliders' correction count

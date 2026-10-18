@@ -218,6 +218,8 @@ public sealed partial class EditorView
                     foreach (var track in Document.Tracks.Where(t => t.StreamSnapDivisor is null && targets.Contains(t.Id)))
                         track.DropletMode = mode;
                 });
+                LibrarySettings.DefaultDropletMode = mode;
+                RequestViewPreference?.Invoke();
             }, Active: modes.Length == 1 && modes[0] == mode));
         float menuWidth = Math.Min(280, width), menuHeight = ContextMenuHeight;
         contextBounds = new(Math.Clamp(mouseX, 0, width - menuWidth),

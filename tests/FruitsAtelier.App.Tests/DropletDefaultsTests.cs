@@ -12,6 +12,8 @@ internal static class DropletDefaultsTests
         try
         {
             var defaults = new LibrarySettings();
+            Check(defaults.DefaultDropletMode == SliderDropletMode.FollowMap && defaults.DefaultDropletStrength == 20
+                && defaults.DefaultDropletSeed == 1337 && !defaults.DefaultDropletHardRock, "Missing settings retain the established defaults");
             Check(defaults.DerandomizeDroplets && defaults.DerandomizeNewProjects, "both derandomization preferences default to On");
             L.SetLanguage("en");
             Check(L.Get("settings.dropletDefaults") == "Droplet Derandomize Settings"
@@ -104,10 +106,40 @@ internal static class DropletDefaultsTests
             Check(!libraryUi.View.SongSetupVisible && !libraryUi.View.HasEditorProject
                 && !libraryUi.View.LibrarySettings.DerandomizeNewProjects, "global dialog returns to General and preserves its saved choice");
             libraryUi.Paint(); Check(libraryUi.Canvas.Texts.Any(t => t.Value == L.Get("settings.openDropletSettings")), "dialog returns to General");
+            RememberSettings(root);
             RandomizationRoundTrip();
         }
         finally { L.SetLanguage(language); }
     }
+    private static void RememberSettings(string root)
+    {
+        var ui = new Ui(); ui.LoadDocument(new MapDocument { IsDemo = false });
+        string path = Path.Combine(root, "remember.json");
+        ui.View.RequestViewPreference = () => ui.View.LibrarySettings.Save(path);
+        ui.View.ShowRandomDock(); ui.Paint();
+        ui.ClickText(L.Get("randomize.derandomizeOff"));
+        var saved = LibrarySettings.Load(path);
+        Check(saved.DerandomizeNewProjects, "Droplet Settings mode did not save globally");
+        ui.ClickText(L.Get("randomize.derandomizeHrOff"));
+        var field = ui.View.RandomDockValueBounds(0);
+        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true); ui.View.TextInput('3'); ui.View.TextInput('7'); ui.Key(13); ui.Paint();
+        field = ui.View.RandomDockValueBounds(1);
+        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true); ui.View.TextInput('4'); ui.View.TextInput('2'); ui.Key(13); ui.Paint();
+        saved = LibrarySettings.Load(path);
+        Check(saved.DefaultDropletSeed == 42, "Droplet seed did not save globally");
+        Check(saved.DefaultDropletHardRock && saved.DefaultDropletStrength == 37, "Droplet Settings parameters did not save globally");
+        OpenSettings(ui); ui.View.ApplySettings(path, force: true); ui.Key(27);
+        saved = LibrarySettings.Load(path);
+        Check(saved.DefaultDropletHardRock && saved.DefaultDropletStrength == 37 && saved.DefaultDropletSeed == 42,
+            "General Settings Apply reset global droplet parameters");
+        var restarted = new Ui(false); restarted.View.InitializeLibrary(false, saved);
+        restarted.View.NewProject(); restarted.Paint();
+        Check(restarted.View.Document.DerandomizeFSliderDroplets && restarted.View.Document.DerandomizeDropletsForHardRock
+            && restarted.View.Document.RandomizeDropletStrength == 37 && restarted.View.Document.RandomizeDropletSeed == 42, "Restart did not restore new project droplet defaults");
+        restarted.LoadDocument(new MapDocument { RandomizeDropletStrength = 11, IsDemo = false });
+        Check(restarted.View.Document.RandomizeDropletStrength == 11, "Global defaults overwrote an existing project");
+    }
+
     private static void RandomizationRoundTrip()
     {
         L.SetLanguage("en");
@@ -121,6 +153,8 @@ internal static class DropletDefaultsTests
             var ui = new Ui(); ui.LoadDocument(map);
             ui.View.LibrarySettings.DerandomizeNewProjects = !derandomize;
             ui.SelectTrack(track.Id); ui.View.ShowSliderInspector(); ui.Paint();
+            string path = Path.GetFullPath(Path.Combine("artifacts/tests/droplet-defaults", Guid.NewGuid().ToString("N") + ".json"));
+            ui.View.RequestViewPreference = () => ui.View.LibrarySettings.Save(path);
             var current = SliderDropletMode.FollowMap;
             foreach (var next in new[] { SliderDropletMode.Randomize, SliderDropletMode.Derandomize, SliderDropletMode.FollowMap, SliderDropletMode.Randomize })
             {
@@ -137,6 +171,15 @@ internal static class DropletDefaultsTests
                 Check(Tiny(expected).SequenceEqual(Tiny(ui.View.Document)), "Inspector mode round trips restore exported tiny-droplet positions");
                 Check(ui.View.Document.Tracks[0].Nodes.Count == 2 && ui.View.Document.DerandomizeFSliderDroplets == derandomize,
                     "Inspector overrides preserve authored geometry and map defaults");
+                var restored = LibrarySettings.Load(path);
+                Check(restored.DefaultDropletMode == next, "Inspector mode did not persist globally");
+                foreach (var drawingMode in Enum.GetValues<SliderEditingMode>())
+                {
+                    var restarted = new Ui(false); restarted.View.InitializeLibrary(false, restored);
+                    restarted.View.NewProject(); restarted.Paint(); restarted.View.SetSliderEditingMode(drawingMode);
+                    restarted.Key('B'); restarted.ClickMap(1000, 256); restarted.ClickMap(3000, 256, ctrl: true); restarted.Key(13); Wait(restarted);
+                    Check(restarted.View.Document.Tracks.Single().DropletMode == next, "Restarted drawing did not use the remembered mode");
+                }
                 current = next;
             }
         }

@@ -372,6 +372,10 @@ public sealed partial class EditorView
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.DerandomizeDroplets = FirstRunSetupVisible ? draftDerandomizeDroplets : LibrarySettings.DerandomizeDroplets;
             settings.DerandomizeNewProjects = FirstRunSetupVisible ? draftDerandomizeNewProjects : LibrarySettings.DerandomizeNewProjects;
+            settings.DefaultDropletMode = LibrarySettings.DefaultDropletMode;
+            settings.DefaultDropletHardRock = LibrarySettings.DefaultDropletHardRock;
+            settings.DefaultDropletStrength = LibrarySettings.DefaultDropletStrength;
+            settings.DefaultDropletSeed = LibrarySettings.DefaultDropletSeed;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
             settings.UiScalePercent = draftUiScalePercent;
             settings.Fullscreen = draftFullscreen;

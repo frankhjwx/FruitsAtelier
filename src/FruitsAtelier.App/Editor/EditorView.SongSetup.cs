@@ -277,6 +277,10 @@ public sealed partial class EditorView
             OsuBeatmapReader.Validate(Document);
         }, RestoreRelated)) { songError = StatusMessage; return; }
         RestoreRelated(true, original, Document);
+        if (original.DerandomizeFSliderDroplets != Document.DerandomizeFSliderDroplets
+            || original.DerandomizeDropletsForHardRock != Document.DerandomizeDropletsForHardRock
+            || original.RandomizeDropletStrength != Document.RandomizeDropletStrength
+            || original.RandomizeDropletSeed != Document.RandomizeDropletSeed) RememberDropletSettings();
         if (committingLiveSong)
         {
             foreach (var pair in songValues) songInitial[pair.Key] = pair.Value;
