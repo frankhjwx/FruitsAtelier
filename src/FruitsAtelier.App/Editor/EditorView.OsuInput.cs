@@ -81,12 +81,13 @@ public sealed partial class EditorView
         return true;
     }
 
-    private (double X, double Y) OsuInputPoint(float x, float y, bool useDistance = false, bool? shift = null)
+    private (double X, double Y) OsuInputPoint(float x, float y, bool useDistance = false, bool? shift = null, bool useObjects = false)
     {
         var p = OsuCanvasPoint(x, y);
         bool useGrid = gridSnap ^ (shift ?? shiftHeld);
         double px = useGrid ? Math.Round(p.X / gridSize, MidpointRounding.AwayFromZero) * gridSize : Math.Round(p.X);
         double py = useGrid ? Math.Round(p.Y / gridSize, MidpointRounding.AwayFromZero) * gridSize : Math.Round(p.Y);
+        bool distanceSnapped = false;
         if (useDistance && distanceSnap != altHeld)
         {
             EnsureOsuDistanceReferences();
@@ -99,10 +100,11 @@ public sealed partial class EditorView
                     * Document.EffectiveSliderMultiplier * previous.Sv * Document.OsuDistanceSpacing;
                 double dx = px - previous.X, dy = py - previous.Y;
                 double length = Math.Sqrt(dx * dx + dy * dy);
-                if (length > .001) { px = previous.X + dx / length * distance; py = previous.Y + dy / length * distance; }
+                if (length > .001) { px = previous.X + dx / length * distance; py = previous.Y + dy / length * distance; distanceSnapped = true; }
             }
         }
-        return (Math.Clamp(Math.Round(px), 0, 512), Math.Clamp(Math.Round(py), 0, 384));
+        var result = (X: Math.Clamp(Math.Round(px), 0, 512), Y: Math.Clamp(Math.Round(py), 0, 384));
+        return useObjects && EditingPreferences.ObjectSnap ? SnapOsuObjectPoint(p, result, OsuObjectSnapTargets(), null, distanceSnapped) : result;
     }
 
     private double OsuPlacementTime => Math.Max(0, snap ? SnapTiming().Snap(playhead, divisor) : playhead);
@@ -155,7 +157,7 @@ public sealed partial class EditorView
             osuPanning = true; osuPanPointer = (x, y); osuPanOrigin = (osuCanvasPanX, osuCanvasPanY);
             drag = DragKind.Pan; return true;
         }
-        var point = OsuInputPoint(x, y, tool == Tool.Fruit || tool == Tool.Slider && osuDraftSlider is null, shift);
+        var point = OsuInputPoint(x, y, tool == Tool.Fruit || tool == Tool.Slider && osuDraftSlider is null, shift, useObjects: tool is Tool.Fruit or Tool.Slider || ctrl);
         if (button == 2)
         {
             if (osuDraftSlider is not null) { osuDraftPointer = point; FinishOsuSlider(); return true; }
@@ -277,6 +279,7 @@ public sealed partial class EditorView
     {
         if (notesLocked || RejectReadOnlySelection()) return;
         history.Begin(L.Get("editor.command.moveObjects"));
+        BeginOsuDragSnap();
         osuDragStart = Document.DeepClone(); osuDragOrigin = point;
         osuDragMoved = false;
         drag = DragKind.Objects;
@@ -294,7 +297,7 @@ public sealed partial class EditorView
         }
         if (osuDefaultSvDragging) { SetOsuDefaultSv(x, shift); return true; }
         if (osuSpacingDragging) { SetOsuSpacing(x, shift); return true; }
-        if (osuDraftSlider is not null) osuDraftPointer = OsuInputPoint(x, y, shift: shift);
+        if (osuDraftSlider is not null) osuDraftPointer = OsuInputPoint(x, y, shift: shift, useObjects: true);
         if (osuDragStart is null) return false;
         var point = OsuInputPoint(x, y, shift: shift);
         if (point == osuDragOrigin && !osuDragMoved) return true;
@@ -325,6 +328,7 @@ public sealed partial class EditorView
             var source = osuDragStart.ImportedSliders.First(s => s.Id == controlSlider.Id);
             var geometry = OsuControlGeometry(source);
             RestoreOsuControlGeometry(controlSlider, geometry);
+            point = SnapOsuDragPoint(point, useDistance: osuSelectedControl == 0);
             var original = geometry.ControlPoints[osuSelectedControl];
             int first = osuSelectedControl, last = osuSelectedControl;
             while (first > 0 && geometry.ControlPoints[first - 1] == original) first--;
@@ -346,6 +350,7 @@ public sealed partial class EditorView
             return true;
         }
         double dx = point.X - osuDragOrigin.X, dy = point.Y - osuDragOrigin.Y;
+        (dx, dy) = SnapOsuDragOffset(dx, dy);
         foreach (var source in osuDragStart.Fruits.Where(f => objectSelection.Contains(f.Id)))
         {
             var target = Document.Fruits.First(f => f.Id == source.Id);
@@ -391,7 +396,7 @@ public sealed partial class EditorView
             CommitContentHistory();
         }
         catch (InvalidOperationException error) { history.Cancel(); StatusMessage = error.Message; }
-        osuDragStart = null; drag = DragKind.None;
+        osuDragStart = null; EndOsuDragSnap(); drag = DragKind.None;
         return true;
     }
 
@@ -403,7 +408,7 @@ public sealed partial class EditorView
         osuDefaultSvDragging = false;
         osuPanning = false;
         osuMarquee = false;
-        osuDragStart = null; osuDraftSlider = null; osuDraftPointer = null; osuSpinnerStart = null;
+        osuDragStart = null; EndOsuDragSnap(); osuDraftSlider = null; osuDraftPointer = null; osuSpinnerStart = null;
         osuControlSlider = Guid.Empty; osuSelectedControl = -1;
     }
 

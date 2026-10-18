@@ -415,7 +415,7 @@ public sealed partial class EditorView
         if (tool is Tool.Fruit or Tool.Slider && osuDraftSlider is null
             && plot.Contains(mouseX, mouseY) && drag == DragKind.None)
         {
-            var point = OsuInputPoint(mouseX, mouseY, useDistance: true);
+            var point = OsuInputPoint(mouseX, mouseY, useDistance: true, useObjects: true);
             var at = OsuCanvasScreen(point.X, point.Y);
             var style = OsuPlacementStyle(OsuPlacementTime);
             DrawOsuCircle(c, at.X, at.Y,

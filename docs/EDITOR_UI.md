@@ -1417,6 +1417,13 @@ these gestures edit the retained original controls and regenerate the processed 
 
 Distance Snap places both circles and Legacy slider heads at the configured spacing
 from the preceding object's endpoint; the placement circle shows the same snapped position.
+Whole-object dragging uses the preceding unselected object's endpoint, retains times
+and translates the selection together. Slider head controls also use DS; other
+controls retain their path-editing gestures. Object Snap in the osu! canvas uses
+active visible circles and geometric slider endpoints within 6 screen pixels,
+independently of the Catch beat-window settings. Moving parents are excluded.
+Nearby object targets compete with DS by correction distance. Dragging retains
+its reference snapshot until release or cancellation.
 The osu! canvas toolbar includes geometric Zoom, Movement Analysis, Insert Break Time
 and Snap. Movement Analysis colours connections between successive objects using
 the Catch movement classification and labels each connection with its DS ratio.

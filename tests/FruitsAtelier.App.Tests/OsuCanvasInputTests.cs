@@ -6,6 +6,7 @@ internal static class OsuCanvasInputTests
     {
         OsuSliderDefaultSvTests.Run();
         OsuPlacementControlsTests.Run();
+        OsuDragSnapTests.Run();
         IndependentSliderSvTests.Run();
         OsuStableInputTests.Run();
         SliderDisplayTests.Run();

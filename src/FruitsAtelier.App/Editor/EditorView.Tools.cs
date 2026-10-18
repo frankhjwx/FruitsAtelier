@@ -225,7 +225,7 @@ public sealed partial class EditorView
         if (IsOsuCanvas)
         {
             if (osuDraftSlider is { } slider) return new(slider.TimeMs, slider.X);
-            var position = OsuInputPoint(mouseX, mouseY, useDistance: tool is Tool.Fruit or Tool.Slider && osuDraftSlider is null);
+            var position = OsuInputPoint(mouseX, mouseY, useDistance: tool is Tool.Fruit or Tool.Slider && osuDraftSlider is null, useObjects: true);
             return new(OsuPlacementTime, position.X);
         }
         if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack

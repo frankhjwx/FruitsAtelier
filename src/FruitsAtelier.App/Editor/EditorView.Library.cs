@@ -556,7 +556,7 @@ public sealed partial class EditorView
             c.Text(diff.Difficulty, x + 32, y + 3, 13, diff.ExternalMissing || diff.ReferenceSearching ? 0x718092u : Foreground, 200);
             if (diff.ReferenceSearching) c.Text(L.Get("sync.searchingReference"), x + 32, y + 20, 10, Muted, 200);
             else if (diff.ExternalMissing) c.Text(L.Get("sync.missingBadge"), x + 32, y + 20, 10, 0x718092, 200);
-            else if (diff.Mode != 2) c.Text(L.Get("sync.readOnlyMode", diff.Mode), x + 32, y + 20, 10, Muted, 200);
+            else if (diff.Mode != 2) c.Text(diff.Mode == 0 ? L.Get("sync.readOnlyStandard") : L.Get("sync.readOnlyMode", diff.Mode), x + 32, y + 20, 10, Muted, 200);
             c.Text(stars is null ? "—" : stars.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "★", x + 238, y + 3, 12, DifficultyColour(stars), 60);
         }
         DrawLibraryScrollbar(c, new(width - 16, 334, 8, count * 40), libraryDiffScroll, group.Count, count, true);

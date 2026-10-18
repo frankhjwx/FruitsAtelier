@@ -91,6 +91,15 @@ internal static class IndependentSliderSvRenderCheck
                 editor.LoadDocument(distanceMap); editor.UpdateTransport(900, 5000, true, false, false, null, null); Paint();
                 if (!editor.MovementAnalysisEnabled) ClickAnalysis();
                 Paint("ds");
+                editor.UpdateTransport(1500, 5000, true, false, false, null, null); Paint();
+                if (!editor.DistanceSnapEnabled) { editor.KeyDown('Y', false, false); editor.KeyUp('Y'); Paint(); }
+                var dragFrom = editor.OsuCanvasScreen(212, 192); var dragTo = editor.OsuCanvasScreen(400, 192);
+                editor.PointerDown(dragFrom.X, dragFrom.Y, 0, false, false);
+                editor.PointerMove(dragTo.X, dragTo.Y, false, false); editor.PointerUp(dragTo.X, dragTo.Y, 0); Wait();
+                var snappedFruit = editor.Document.Fruits.Last();
+                if (Math.Abs(snappedFruit.X - 268) > .001 || Math.Abs(snappedFruit.Y - 192) > .001)
+                    throw new InvalidOperationException("Native osu DS dragging missed the preceding object.");
+                Paint("ds-drag");
                 void Wait()
                 {
                     var deadline = DateTime.UtcNow.AddSeconds(15);
