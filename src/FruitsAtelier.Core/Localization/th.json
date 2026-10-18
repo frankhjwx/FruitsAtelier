@@ -1,6 +1,10 @@
 {
   "inspector.title": "ข้อมูลสไลเดอร์",
   "inspector.select": "เลือกสไลเดอร์หนึ่งรายการขึ้นไป",
+  "inspector.pathDisplay": "แสดง Legacy: {0} ▾",
+  "inspector.pathDrawn": "สไลเดอร์ที่วาด",
+  "inspector.pathProcessed": "สไลเดอร์หลังประมวลผล",
+  "inspector.pathPreviewOnly": "ตัวอย่างเส้นทางต้นฉบับ สลับไปที่สไลเดอร์หลังประมวลผลเพื่อแก้ไขรูปทรงปัจจุบัน",
   "inspector.selection": "วัตถุที่เลือก",
   "inspector.type": "ชนิด",
   "inspector.start": "เริ่ม",

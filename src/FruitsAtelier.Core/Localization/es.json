@@ -1,6 +1,10 @@
 {
   "inspector.title": "Inspector de sliders",
   "inspector.select": "Selecciona uno o más sliders",
+  "inspector.pathDisplay": "Vista Legacy: {0} ▾",
+  "inspector.pathDrawn": "Slider dibujado",
+  "inspector.pathProcessed": "Slider procesado",
+  "inspector.pathPreviewOnly": "Vista previa de la ruta original. Cambia al slider procesado para editar su geometría actual.",
   "inspector.selection": "Objetos seleccionados",
   "inspector.type": "Tipo",
   "inspector.start": "Inicio",

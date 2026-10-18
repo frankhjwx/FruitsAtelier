@@ -180,7 +180,7 @@ public sealed partial class EditorView
             else BeginOsuDrag(point);
             return true;
         }
-        if (ctrl && SelectedImportedSlider is { } insert)
+        if (ctrl && SelectedImportedSlider is { } insert && !IsOsuDrawnPathPreview(insert.Id))
         {
             int index = NearestOsuSegment(insert, point);
             if (Edit(L.Get("editor.command.insertPoint"), () =>
@@ -204,6 +204,7 @@ public sealed partial class EditorView
 
     private int? HitOsuControl(ImportedSlider slider, float x, float y)
     {
+        if (IsOsuDrawnPathPreview(slider.Id)) return null;
         for (int i = slider.ControlPoints.Count - 1; i >= 0; i--)
         {
             var p = OsuCanvasScreen(slider.ControlPoints[i].X, slider.ControlPoints[i].GeometryY);
@@ -229,6 +230,7 @@ public sealed partial class EditorView
     private void BeginOsuDrag((double X, double Y) point)
     {
         if (notesLocked || RejectReadOnlySelection()) return;
+        if (objectSelection.Any(IsOsuDrawnPathPreview)) { StatusMessage = L.Get("inspector.pathPreviewOnly"); return; }
         history.Begin(L.Get("editor.command.moveObjects"));
         osuDragStart = Document.DeepClone(); osuDragOrigin = point;
         osuDragMoved = false;
@@ -509,6 +511,7 @@ public sealed partial class EditorView
         if (ctrl && !shift && key == 72) { MirrorOsuSelection(); return true; }
         if (ctrl && !shift && key == 71 && SelectedImportedSlider is { } reversed)
         {
+            if (IsOsuDrawnPathPreview(reversed.Id)) { StatusMessage = L.Get("inspector.pathPreviewOnly"); return true; }
             Edit(L.Get("editor.command.reversePath"), () =>
             {
                 reversed.ControlPoints.Reverse();
@@ -524,6 +527,7 @@ public sealed partial class EditorView
     {
         if (notesLocked || RejectReadOnlySelection()) return;
         var ids = ClipboardSelectedParentIds();
+        if (ids.Any(IsOsuDrawnPathPreview)) { StatusMessage = L.Get("inspector.pathPreviewOnly"); return; }
         Edit(L.Get("shortcut.mirror"), () =>
         {
             foreach (var fruit in Document.Fruits.Where(f => ids.Contains(f.Id))) fruit.X = 512 - fruit.X;
@@ -540,6 +544,7 @@ public sealed partial class EditorView
     {
         if (notesLocked || RejectReadOnlySelection()) return;
         var ids = ClipboardSelectedParentIds();
+        if (ids.Any(IsOsuDrawnPathPreview)) { StatusMessage = L.Get("inspector.pathPreviewOnly"); return; }
         Edit(L.Get("editor.command.moveObjects"), () =>
         {
             foreach (var fruit in Document.Fruits.Where(f => ids.Contains(f.Id))) { fruit.X += dx; fruit.Y += dy; }

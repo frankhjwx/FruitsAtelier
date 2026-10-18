@@ -1,6 +1,10 @@
 {
   "inspector.title": "슬라이더 속성",
   "inspector.select": "슬라이더를 선택하세요",
+  "inspector.pathDisplay": "Legacy 표시: {0} ▾",
+  "inspector.pathDrawn": "그린 슬라이더",
+  "inspector.pathProcessed": "처리된 슬라이더",
+  "inspector.pathPreviewOnly": "원본 경로 미리보기입니다. 현재 모양을 편집하려면 처리된 슬라이더로 전환하세요.",
   "inspector.selection": "선택한 오브젝트",
   "inspector.type": "유형",
   "inspector.start": "시작",

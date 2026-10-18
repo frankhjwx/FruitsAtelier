@@ -14,6 +14,11 @@ internal static class OsuCanvasRenderCheck
         string folder = Path.GetFullPath("artifacts/tests/osu-canvas-native");
         Directory.CreateDirectory(folder);
         string[] arguments = Environment.GetCommandLineArgs();
+        if (arguments.Contains("--slider-display-render-check"))
+        {
+            VerifySliderDisplay(canvas, folder);
+            return;
+        }
         var configuredSkin = arguments.Contains("--osu-configured-skin") ? LibrarySettings.Load() : null;
         string? explicitSkin = Argument("--osu-skin-folder"), explicitDefault = Argument("--osu-default-skin");
         if (Argument("--osu-performance-map") is { } performanceMap)
@@ -274,6 +279,53 @@ internal static class OsuCanvasRenderCheck
         if (repeatedDecodes != 0 || playbackRepeatedDecodes != 0)
             throw new InvalidOperationException("Static osu rendering repeatedly decodes unchanged images: " + report);
         void Paint() { canvas.Begin(); editor.Render(canvas, 1440, 900); canvas.End(lowLatency: true); }
+    }
+
+    private static void VerifySliderDisplay(D2DCanvas canvas, string folder)
+    {
+        string language = L.Language;
+        var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500\n[HitObjects]\n100,192,1000,2,0,L|300:192,1,200\n");
+        map.DurationMs = 5000; map.DerandomizeFSliderDroplets = true;
+        var result = SliderRepresentationEditing.RefreshLegacyDroplets(map);
+        if (!result.Success) throw new InvalidOperationException(string.Join("; ", result.Diagnostics));
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (980, 620), (1440, 900) })
+            {
+                L.SetLanguage(locale);
+                var editor = new EditorView(false);
+                editor.LoadDocument(map); editor.ToggleOsuCanvas();
+                editor.UpdateTransport(900, 5000, true, false, false, null, null);
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                Paint();
+                var head = editor.OsuCanvasScreen(100, 192);
+                editor.PointerDown(head.X, head.Y, 0, false, false); editor.PointerUp(head.X, head.Y, 0);
+                editor.ShowSliderInspector();
+                foreach (bool processed in new[] { false, true })
+                {
+                    editor.SetOsuSliderDisplay(processed);
+                    Paint($"slider-display-{(processed ? "processed" : "drawn")}-{locale}-{size.Item1}x{size.Item2}-{dpi}");
+                }
+                if (editor.IsDirty || !map.ContentEquals(editor.Document))
+                    throw new InvalidOperationException("Changing the native slider display edited content.");
+                void Paint(string? name = null)
+                {
+                    canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
+                    canvas.End(capture: name is null ? null : () =>
+                    {
+                        var frame = canvas.CapturePixels();
+                        using var output = new BinaryWriter(File.Create(Path.Combine(folder, name + ".bmp")));
+                        output.Write((ushort)0x4D42); output.Write(54 + frame.Pixels.Length); output.Write(0); output.Write(54);
+                        output.Write(40); output.Write(frame.Width); output.Write(-frame.Height); output.Write((ushort)1); output.Write((ushort)32);
+                        output.Write(0); output.Write(frame.Pixels.Length); output.Write(0); output.Write(0); output.Write(0); output.Write(0); output.Write(frame.Pixels);
+                    });
+                }
+            }
+        }
+        finally { L.SetLanguage(language); }
+        AppLog.Write("Native original and processed Legacy slider display checks passed.");
     }
 
     private static void VerifyGradient(D2DCanvas canvas, string folder)

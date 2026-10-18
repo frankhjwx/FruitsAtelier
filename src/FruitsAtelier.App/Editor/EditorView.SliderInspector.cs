@@ -15,6 +15,28 @@ public sealed partial class EditorView
     private float inspectorScroll, inspectorContentHeight;
     private bool inspectorMerge, inspectorHasSliders, inspectorOnlySliders;
     private bool inspectorSpeedMode;
+    private bool osuShowProcessedSliders;
+
+    internal void SetOsuSliderDisplay(bool processed)
+    {
+        osuShowProcessedSliders = processed;
+        osuCanvasSource = null;
+        osuControlSlider = Guid.Empty; osuSelectedControl = -1;
+    }
+
+    private void OpenOsuSliderDisplayMenu()
+    {
+        contextItems.Clear(); menu = -1; languageMenuOpen = false;
+        foreach (bool processed in new[] { false, true })
+            contextItems.Add(new(L.Get(processed ? "inspector.pathProcessed" : "inspector.pathDrawn"), () =>
+            { SetOsuSliderDisplay(processed); }, Active: osuShowProcessedSliders == processed));
+        float w = Math.Min(300, width);
+        contextBounds = new(Math.Clamp(mouseX, 0, width - w),
+            Math.Clamp(mouseY + 4, 0, Math.Max(0, height - ContextMenuHeight)), w, ContextMenuHeight);
+    }
+
+    private bool IsOsuDrawnPathPreview(Guid id) => IsOsuCanvas && !osuShowProcessedSliders
+        && Document.ImportedSliders.Any(s => s.Id == id && s.RandomizationSource is not null);
     internal double? InspectorPeakRatio { get; private set; }
     internal double? InspectorMaxDs { get; private set; }
     internal Rect SliderInspectorViewport => inspectorBounds;
@@ -101,7 +123,7 @@ public sealed partial class EditorView
         inspectorRows.Add(("inspector.spans", Range(tracks.Select(t => (double)t.SpanCount).Concat(imported.Select(t => (double)t.SpanCount)))));
         var derandomization = tracks.Where(t => t.StreamSnapDivisor is null)
             .Select(t => !t.RandomizesDroplets(Document))
-            .Concat(imported.Select(_ => false)).Distinct().ToArray();
+            .Concat(imported.Select(s => s.RandomizationTrack is not null && Document.DerandomizeFSliderDroplets)).Distinct().ToArray();
         inspectorRows.Add(("inspector.dropletEffective", derandomization.Length == 0 ? "—"
             : derandomization.Length > 1 ? L.Get("inspector.mixed")
             : L.Get(derandomization[0] ? "droplet.mode.Derandomize" : "droplet.mode.Randomize")));
@@ -145,6 +167,9 @@ public sealed partial class EditorView
     private List<(string Label, System.Action Action, bool Enabled, int Kind)> SliderInspectorActions()
     {
         var actions = new List<(string Label, System.Action Action, bool Enabled, int Kind)>();
+        if (IsOsuCanvas && Document.ImportedSliders.Any(s => inspectorTargetSet.Contains(s.Id)))
+            actions.Add((L.Get("inspector.pathDisplay", L.Get(osuShowProcessedSliders ? "inspector.pathProcessed" : "inspector.pathDrawn")),
+                OpenOsuSliderDisplayMenu, drag == DragKind.None && osuDraftSlider is null, 0));
         bool enabled = ClipboardInteractionReady && !notesLocked;
         if (inspectorTargets.Length == 1 && Document.Tracks.Any(s => s.Id == inspectorTargets[0] && s.StreamSnapDivisor is null))
             actions.Add((L.Get("osu.convertLegacy"), () => ConvertSelectedSliderRepresentation(inspectorTargets[0]), enabled, 0));

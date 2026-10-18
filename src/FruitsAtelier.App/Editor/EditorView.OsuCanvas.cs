@@ -85,10 +85,15 @@ public sealed partial class EditorView
             sliders.TryGetValue(id, out var converted);
             if (converted is not { IsImported: true } || playableExport is not null
                 && (!importedSources.TryGetValue(id, out var original) || s.OriginalLine != original.OriginalLine)) converted = null;
-            var path = (converted?.Path ?? ImportedSliderConverter.Path(s)).ToArray();
+            var drawn = !osuShowProcessedSliders && importedSources.TryGetValue(id, out var authored)
+                ? authored.RandomizationSource : null;
+            var path = (drawn is not null ? ImportedSliderConverter.Path(drawn)
+                : converted?.Path ?? ImportedSliderConverter.Path(s)).ToArray();
             var state = timing.At(s.TimeMs);
             double duration = converted?.DurationMs ?? ImportedSliderConverter.DurationMs(map, s);
             double tick = converted?.TickDistance ?? 100 * map.EffectiveSliderMultiplier * state.SliderVelocityMultiplier / (map.SliderTickRate > 0 ? map.SliderTickRate : 1);
+            if (drawn is not null && duration > 0)
+                tick = drawn.PixelLength * s.SpanCount / duration * state.BeatLengthMs / (map.SliderTickRate > 0 ? map.SliderTickRate : 1);
             if (!state.GenerateTicks) tick = 0;
             items.Add(Slider(id, s.TimeMs, duration, s.SourceOrder, Flags(s.OriginalLine), s.SpanCount, path, tick));
         }
@@ -372,7 +377,7 @@ public sealed partial class EditorView
         }
         foreach (var slider in Document.ImportedSliders)
         {
-            if (!IsObjectSelected(slider.Id)) continue;
+            if (!IsObjectSelected(slider.Id) || IsOsuDrawnPathPreview(slider.Id)) continue;
             for (int i = 0; i < slider.ControlPoints.Count; i++)
             {
                 var p = slider.ControlPoints[i]; var at = OsuCanvasScreen(p.X, p.GeometryY);

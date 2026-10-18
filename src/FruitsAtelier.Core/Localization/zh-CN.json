@@ -1,6 +1,10 @@
 {
   "inspector.title": "Slider Inspector",
   "inspector.select": "请选择一个或多个 Slider",
+  "inspector.pathDisplay": "Legacy 显示：{0} ▾",
+  "inspector.pathDrawn": "绘制的滑条",
+  "inspector.pathProcessed": "后处理滑条",
+  "inspector.pathPreviewOnly": "当前为原始路径预览。切换到后处理滑条可编辑当前几何。",
   "inspector.selection": "选中物件数量",
   "inspector.type": "类型",
   "inspector.start": "开始时间",

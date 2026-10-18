@@ -1396,6 +1396,14 @@ duration, spans, control-point count, exported SV and exported path length.
 Multiple sliders show value ranges. Managed streams and stacks have no exported
 slider SV. These properties are read-only.
 
+With Legacy Sliders selected in the osu! canvas, **Legacy display** switches
+between **Drawn slider** and **Processed slider**. Drawn is the default and uses
+the retained original path when available; Processed uses the actual exported
+derandomized or randomized path. Without a retained processing baseline, both
+views show the same geometry. Switching affects only the osu! canvas, preserving
+content, history, Catch preview, Testplay and export. A retained original path is
+a read-only preview; switch to Processed to edit the current materialized geometry.
+
 **Max DS** always includes tiny droplets. **Peak
 horizontal speed** is expressed relative to the map's base SV/DPB, shown directly
 below it: 0.50× at a base of 1.92× SV / 192 DPB means half that base horizontal

@@ -76,6 +76,10 @@ using skin and geometric fallback rendering. Captures are written to
 `artifacts/tests/osu-canvas-native`.
 Add `--osu-configured-skin` to inspect the configured selected/default skin paths
 without changing saved preferences.
+Add `--slider-display-render-check` to the osu canvas native check for original
+and processed Legacy paths with the Inspector open, in English/Chinese at both
+window sizes and 96/144/192 DPI. The shared osu canvas suite verifies both effect
+modes, narrow panels, warm cache reuse and unchanged content/export during switches.
 Use `--osu-skin-folder=/path/to/skin` and `--osu-default-skin=/path/to/default.osk`
 to keep those fixtures independent of concurrent preference changes.
 

@@ -1,6 +1,10 @@
 {
   "inspector.title": "Slider Inspector",
   "inspector.select": "Select one or more sliders",
+  "inspector.pathDisplay": "Legacy display: {0} ▾",
+  "inspector.pathDrawn": "Drawn slider",
+  "inspector.pathProcessed": "Processed slider",
+  "inspector.pathPreviewOnly": "Original path preview. Switch to the processed slider to edit its current geometry.",
   "inspector.selection": "Selected objects",
   "inspector.type": "Type",
   "inspector.start": "Start",

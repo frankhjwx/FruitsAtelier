@@ -1,6 +1,10 @@
 {
   "inspector.title": "Slider Inspector",
   "inspector.select": "Pumili ng mga slider",
+  "inspector.pathDisplay": "Legacy display: {0} ▾",
+  "inspector.pathDrawn": "Iginuhit na slider",
+  "inspector.pathProcessed": "Naprosesong slider",
+  "inspector.pathPreviewOnly": "Preview ng orihinal na path. Lumipat sa naprosesong slider upang i-edit ang kasalukuyang hugis.",
   "inspector.selection": "Napiling mga object",
   "inspector.type": "Uri",
   "inspector.start": "Simula",
