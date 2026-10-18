@@ -276,7 +276,7 @@ public sealed partial class EditorView
         libraryProjectsNeedReindex = true; QueueLibrarySearch(); CloseLibrary();
         if (session.IsNewImport) OfferSliderConversion(true);
         else if (checkAdditionalDifficulties) RefreshSynchronization();
-        nextSyncCheck = DateTime.UtcNow.AddSeconds(30);
+        nextSyncCheck = DateTime.UtcNow + SyncCheckInterval;
     }
     public void LibraryExportFinished(WorkspaceExportPlan plan)
     {

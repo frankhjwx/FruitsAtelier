@@ -15,9 +15,11 @@ public sealed partial class EditorView
     private bool SynchronizationBlocksInput => LibraryOpening || AudioProjectCreating || workspaceSaveTask is not null && workspaceSaveBlocksInput || syncCommitTask is not null && !syncCommitAllowsEditing;
     private bool syncCommitAllowsEditing;
     private bool syncCommitCompletesSave;
+    private bool syncCommitPreservesActiveDifficulty;
     private bool SearchingReference(int index) => syncTask is not null && index >= 0 && index < difficulties.Count && syncSearching.Contains(difficulties[index].Id);
     private Task<WorkspaceSession>? syncCommitTask;
     private DateTime nextSyncCheck = DateTime.MaxValue;
+    private static readonly TimeSpan SyncCheckInterval = TimeSpan.FromMinutes(5);
     private readonly Dictionary<Guid, WorkspaceSyncStatus> syncStatuses = [];
     private readonly Dictionary<Guid, WorkspaceMerge> syncMerges = [];
     private string? syncPage;
@@ -104,7 +106,7 @@ public sealed partial class EditorView
                 Path.Combine(session.Directory, manifest.Difficulties.Single(d => d.Id == m.Key).File)));
             return new SyncResult(session, snapshot, manifest, stamp, scan, merges, WorkspaceAssociations.Claims(Path.GetDirectoryName(session.Directory)!), comparisons, localExports, localExportErrors, reviewResolved, quiet, writeCaches);
         });
-        nextSyncCheck = DateTime.UtcNow.AddSeconds(30);
+        nextSyncCheck = DateTime.UtcNow + SyncCheckInterval;
     }
 
     private void PumpSynchronization()
@@ -128,8 +130,10 @@ public sealed partial class EditorView
         {
             bool localCommit = syncCommitAllowsEditing;
             bool completesSave = syncCommitCompletesSave;
+            bool preserveActiveDifficulty = syncCommitPreservesActiveDifficulty;
             syncCommitAllowsEditing = false;
             syncCommitCompletesSave = false;
+            syncCommitPreservesActiveDifficulty = false;
             syncCommitTask = null;
             try
             {
@@ -146,7 +150,7 @@ public sealed partial class EditorView
                 double previousPlayhead = playhead, previousViewStart = viewStart;
                 var previousTransport = (AudioReady, AudioPlaying, AudioLoading, AudioDurationMs, AudioNotice, initializeTransport);
                 bool previousPin = pinPlayhead;
-                Guid active = syncDifficulty == Guid.Empty ? difficulties[activeDifficulty].Id : syncDifficulty;
+                Guid active = preserveActiveDifficulty || syncDifficulty == Guid.Empty ? previousDifficulty : syncDifficulty;
                 bool preserveView = syncPreserveHistory && WorkspaceSession?.Directory == session.Directory;
                 if (preserveView)
                 {
@@ -234,7 +238,7 @@ public sealed partial class EditorView
                 { nextSyncCheck = DateTime.UtcNow.AddSeconds(2); return; }
                 unreadableSyncRetries = 0;
                 syncSearching.Clear(); syncReviewRequested = false;
-                nextSyncCheck = DateTime.UtcNow.AddSeconds(30);
+                nextSyncCheck = DateTime.UtcNow + SyncCheckInterval;
                 syncStatuses.Clear(); syncMerges.Clear();
                 syncComparisons.Clear();
                 foreach (var comparison in result.Comparisons) syncComparisons[comparison.Key] = comparison.Value;
@@ -249,6 +253,7 @@ public sealed partial class EditorView
                 bool canAdd = !result.Scan.Difficulties.Any(s => s.State is WorkspaceSyncState.Ambiguous or WorkspaceSyncState.Duplicate or WorkspaceSyncState.Unavailable);
                 if (automatic.Length > 0 || canAdd && result.Scan.Additions.Count > 0)
                 {
+                    syncCommitPreservesActiveDifficulty = true;
                     syncCommitAllowsEditing = automatic.Length > 0 && automatic.All(s => result.LocalExports.ContainsKey(s.DifficultyId))
                         && !(canAdd && result.Scan.Additions.Count > 0);
                     syncCommitCompletesSave = syncCommitAllowsEditing && result.LocalExports.ContainsKey(syncDifficulty);
@@ -308,6 +313,7 @@ public sealed partial class EditorView
                 if (target >= 0 && (!LibraryVisible || reviewResolved || afterSynchronization is not null)
                     && ShowSyncProblem(target, reviewResolved || afterSynchronization is not null)) return;
                 var continuation = afterSynchronization; afterSynchronization = null;
+                syncDifficulty = Guid.Empty;
                 syncBypass = true;
                 try { continuation?.Invoke(); }
                 finally { syncBypass = false; }

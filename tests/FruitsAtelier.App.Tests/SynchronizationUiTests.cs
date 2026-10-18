@@ -4,6 +4,66 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class SynchronizationUiTests
 {
+    public static void BackgroundDifficultySelection()
+    {
+        foreach (bool switchDuringScan in new[] { false, true })
+        {
+            var ui = new Ui(false);
+            string root = Path.GetFullPath(Path.Combine("artifacts/tests/sync-selection", Guid.NewGuid().ToString("N")));
+            string source = Path.Combine(root, "Songs", "set", "map.osu");
+            Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+            File.WriteAllText(source, Fixture);
+            ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace");
+            ui.View.LibrarySettings.Songs = Path.Combine(root, "Songs");
+            ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+            ui.View.WorkspaceSession!.Manifest.Difficulties[0].ExportConfirmed = true;
+            Check(ui.View.AddDifficulty(), "A new local difficulty opens");
+            Guid selected = ui.View.CaptureProject().Difficulties[1].Id;
+            Check(ui.View.SwitchDifficulty(0), "The linked difficulty opens for saving");
+            try
+            {
+                var history = (EditorHistory)typeof(FruitsAtelier.App.Editor.EditorView).GetProperty("history",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+                history.Begin("Add fruit");
+                history.Document.Fruits.Add(new Fruit { TimeMs = 3000, X = 200 });
+                history.Commit();
+                ui.View.SaveCurrentDifficulty();
+                if (!switchDuringScan) Wait(ui);
+                var field = typeof(FruitsAtelier.App.Editor.EditorView).GetField("syncTask",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+                var scan = field.GetValue(ui.View);
+                if (switchDuringScan)
+                {
+                    var gateType = typeof(TaskCompletionSource<>).MakeGenericType(field.FieldType.GenericTypeArguments[0]);
+                    var gate = Activator.CreateInstance(gateType)!;
+                    field.SetValue(ui.View, gateType.GetProperty("Task")!.GetValue(gate));
+                }
+                Check(ui.View.SwitchDifficulty(1), "Navigation remains available during discovery");
+                var document = ui.View.Document;
+                if (switchDuringScan) field.SetValue(ui.View, scan);
+                else
+                {
+                    string renamed = Path.Combine(Path.GetDirectoryName(source)!, "renamed.osu");
+                    File.Move(source, renamed);
+                    ui.View.RefreshSynchronization(quiet: true);
+                }
+                Wait(ui);
+                Check(ReferenceEquals(document, ui.View.Document) && ui.View.CaptureProject().Difficulties[1].Id == selected,
+                    "Automatic publication keeps the new difficulty and its history active");
+                Check(!ui.View.SynchronizationVisible && !ui.View.SynchronizationWaitVisible,
+                    "Background synchronization leaves no review or waiting overlay");
+                Check((Guid)typeof(FruitsAtelier.App.Editor.EditorView).GetField("syncDifficulty",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)! == Guid.Empty,
+                    "Completed synchronization releases its explicit difficulty target");
+                var next = (DateTime)typeof(FruitsAtelier.App.Editor.EditorView).GetField("nextSyncCheck",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+                Check(next > DateTime.UtcNow.AddMinutes(4) && next <= DateTime.UtcNow.AddMinutes(5),
+                    "Periodic fallback leaves five minutes between completed checks");
+            }
+            finally { ui.View.StopFileMonitoring(); }
+        }
+    }
+
     public static void LegacyFormat()
     {
         string language = L.Language;

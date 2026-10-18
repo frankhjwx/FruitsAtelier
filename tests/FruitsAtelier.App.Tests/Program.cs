@@ -324,6 +324,7 @@ var tests = new (string Name, Action Run)[]
     ("Workspace saves and linked synchronization persist before optional Songs export", WorkspaceSaveTests.Run),
     ("Metadata merge rows share a page and highlight unresolved, retained and selected text", SynchronizationUiTests.MetadataRows),
     ("Local difficulty deletion reimports osu and preserves edits on cancel or failure", SynchronizationUiTests.DeleteLocalVersion),
+    ("Background synchronization preserves difficulty selection and limits fallback frequency", SynchronizationUiTests.BackgroundDifficultySelection),
     ("Synchronization UI permits background editing, preserves undo, repairs missing files and resolves objects", SynchronizationUiTests.Run),
     ("Synchronization canvases use AR and distinguish retained choices from renewed conflicts", SynchronizationUiTests.ArScaleAndDecisions),
     ("File notifications coalesce and recover through native create rename delete events", WorkspaceFileMonitorTests.Run),

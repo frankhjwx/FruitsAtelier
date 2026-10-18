@@ -37,8 +37,10 @@ Edits to other fields alone preserve the existing filename.
 
 Opening or resuming an existing project, checking synchronization from a difficulty
 tab, and saving a linked difficulty check its external files. The editor also
-checks periodically in the background. Opening or explicitly checking a project
-with missing paths can trigger a wider Songs search.
+checks every five minutes in the background as a fallback for missed filesystem
+notifications. Automatic publication preserves the currently selected difficulty,
+including when the selection changes during a scan. Opening or explicitly checking
+a project with missing paths can trigger a wider Songs search.
 Filesystem notifications for Songs, the workspace and linked external directories
 also queue background checks. Notifications are coalesced after 750 ms of quiet;
 they request content inspection rather than directly importing or deleting data.
