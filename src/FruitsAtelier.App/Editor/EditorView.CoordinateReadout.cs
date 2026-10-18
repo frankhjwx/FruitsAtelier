@@ -56,7 +56,7 @@ public sealed partial class EditorView
         const float font = 12, lineHeight = 18;
         float textWidth = c.MeasureText(coordinate, font);
         if (selected) textWidth = Math.Max(textWidth, Math.Max(c.MeasureText(prev, font), c.MeasureText(following, font)));
-        var bounds = new Rect(plot.Right - textWidth - 24, IsOsuCanvas ? OsuSpacingBounds.Bottom + 8 : plot.Y + 8, textWidth + 16, selected ? 62 : 26);
+        var bounds = new Rect(plot.Right - textWidth - 24, IsOsuCanvas ? OsuDefaultSvBounds.Bottom + 8 : plot.Y + 8, textWidth + 16, selected ? 62 : 26);
         c.Fill(bounds, Panel, 4, .85f);
         c.Text(coordinate, bounds.X + 8, bounds.Y + 5, font, selected ? Gold : Foreground, textWidth);
         if (!selected) return;

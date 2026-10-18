@@ -1480,6 +1480,7 @@
   "osu.canvasActive": "osu! canvas — Legacy Slider editing",
   "osu.catchCanvasActive": "Catch canvas — FSlider editing",
   "osu.convertLegacy": "Convert to Legacy Slider",
+  "osu.sliderDefaultSv": "SV слайдера osu! по умолчанию:",
   "osu.distanceSpacing": "Привязка расстояния:",
   "osu.lengthDecrease": "Decrease slider length",
   "osu.lengthIncrease": "Increase slider length",

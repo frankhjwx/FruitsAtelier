@@ -386,6 +386,7 @@
   "osu.path.B": "Bezier",
   "osu.path.P": "Perfect circle",
   "osu.path.C": "Catmull",
+  "osu.sliderDefaultSv": "osu! slider default SV:",
   "osu.distanceSpacing": "Distance Snapping:",
   "osu.circle": "Circle",
   "osu.updatingDroplets": "Updating slider droplets…",

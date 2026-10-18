@@ -1403,7 +1403,10 @@ slider SV. These properties are read-only.
 Selecting one Legacy Slider exposes **Legacy SV (×)** in Slider Inspector. This
 edits its independent authored multiplier (0.1–10); it retains path length and
 changes duration without inserting authoring green timing points. Imported
-sliders capture their original head SV. New Legacy sliders start at 1×. Moving a
+sliders capture their original head SV. New Legacy sliders use **osu! slider default SV**
+below Distance Snapping in the osu! canvas (0.1–10×, initially 1×). Dragging adjusts
+in 0.1× steps; Shift uses 0.01×. The default saves globally on release and survives
+restarts without changing existing sliders or content history. Moving a
 Legacy slider across green timing boundaries retains its own SV. Ordinary control
 dragging retains SV and snaps length; holding Shift during the drag changes length
 and authored SV together to preserve duration, within the legal SV range. The

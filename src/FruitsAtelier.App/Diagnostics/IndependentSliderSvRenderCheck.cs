@@ -25,6 +25,13 @@ internal static class IndependentSliderSvRenderCheck
                 var editor = new EditorView(false); editor.LoadDocument(map); editor.ToggleOsuCanvas();
                 editor.UpdateTransport(900, 5000, true, false, false, null, null);
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi); Paint();
+                var defaultTrack = editor.OsuSliderDefaultSvTrackBounds;
+                float defaultX = defaultTrack.X + (float)((2.5 - .1) / 9.9) * defaultTrack.Width;
+                var unchanged = editor.Document.DeepClone();
+                editor.PointerDown(defaultX, defaultTrack.Y + 4, 0, false, false);
+                editor.PointerUp(defaultX, defaultTrack.Y + 4, 0); Paint();
+                if (editor.LibrarySettings.OsuSliderDefaultSv != 2.5 || !unchanged.ContentEquals(editor.Document) || editor.IsDirty)
+                    throw new InvalidOperationException("Native default SV control changed content or failed to update.");
                 var head = editor.OsuCanvasScreen(100, 192);
                 editor.PointerDown(head.X, head.Y, 0, false, false); editor.PointerUp(head.X, head.Y, 0);
                 editor.ShowSliderInspector(); Paint();

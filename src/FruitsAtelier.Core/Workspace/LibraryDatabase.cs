@@ -70,6 +70,12 @@ public sealed class LibrarySettings
     public bool ReverseCanvasScroll { get; set; }
     public bool LockDropletSelection { get; set; } = true;
     public bool LockSlidersToCanvas { get; set; }
+    private double osuSliderDefaultSv = 1;
+    public double OsuSliderDefaultSv
+    {
+        get => osuSliderDefaultSv;
+        set => osuSliderDefaultSv = double.IsFinite(value) ? Math.Clamp(value, .1, 10) : 1;
+    }
     public bool LowLatencyDisplay { get; set; }
     public const int DefaultUiScalePercent = 150;
     public const int MinimumUiScalePercent = 50;
