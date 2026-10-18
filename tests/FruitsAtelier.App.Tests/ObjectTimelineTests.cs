@@ -177,8 +177,10 @@ internal static class ObjectTimelineTests
             float y = r.Y + 2.5f;
             Guid last = imported ? map.ImportedSliders[^1].Id : map.Tracks[^1].Id;
             ui.Click(X(1500), y);
+            uint selectionColour = imported ? 0xFFA600u : 0x2866C6u;
+            float selectionRadius = imported ? 19 : 21;
             if (!ui.View.SelectedObjectIds.SequenceEqual(new[] { last })
-                || !ui.Canvas.Circles.Any(c => c.Radius == 21 && c.Color == 0x2866C6 && Math.Abs(c.X - X(1500)) < .01 && c.Y == r.Y + 21))
+                || !ui.Canvas.Circles.Any(c => !c.Filled && c.Radius == selectionRadius && c.Color == selectionColour && Math.Abs(c.X - X(1500)) < .01 && c.Y == r.Y + 21))
                 throw new Exception("Stacked slider repeat did not select its shifted sound edge.");
             ui.View.PointerMove(X(2000), y, false, false);
             if (!ui.View.TimelineResizeCursor) throw new Exception("Stacked tail has no resize cursor.");
@@ -602,11 +604,13 @@ internal static class ObjectTimelineTests
             var r=ui.View.ObjectTimelineBounds;
             float X(double time)=>r.X+(float)((time-ui.View.ObjectTimelineStartMs)*ui.View.ObjectTimelinePixelsPerMs);
             var before=ui.View.Document.DeepClone();
+            uint selectionColour = imported ? 0xFFA600u : 0x2866C6u;
+            float selectionRadius = imported ? 19 : 21;
             for(int edge=0;edge<=3;edge++)
             {
                 ui.Click(X(1000+500*edge),r.Y+27); ui.Paint();
                 if(!ui.View.Document.ContentEquals(before)) throw new Exception("Timeline edge selection edits content");
-                var selected=ui.Canvas.Circles.Where(c=>c.Radius==21 && c.Color==0x2866C6 && c.Y==r.Y+27).ToArray();
+                var selected=ui.Canvas.Circles.Where(c=>!c.Filled && c.Radius==selectionRadius && c.Color==selectionColour && c.Y==r.Y+27).ToArray();
                 if(selected.Length!=1 || Math.Abs(selected[0].X-X(1000+500*edge))>.01) throw new Exception("Only selected sound edge is highlighted");
                 var clap=ui.View.AssistButtonBounds[3]; ui.Click(clap.X+clap.Width/2,clap.Y+clap.Height/2);
                 for(int other=0;other<=3;other++)
