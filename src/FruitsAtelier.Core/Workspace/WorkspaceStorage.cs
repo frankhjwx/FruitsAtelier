@@ -111,7 +111,7 @@ public static class WorkspaceStorage
         // Large history documents are parsed outside the lock used by project saves and opens.
         using var document = JsonDocument.Parse(text);
         var paths = new HashSet<string>(WorkspaceSynchronization.Paths);
-        FindPaths(document.RootElement, Path.GetDirectoryName(WorkspaceHistoryFile.LogicalPath(path))!, new(WorkspaceSynchronization.Paths), paths, history);
+        FindPaths(document.RootElement, WorkspaceVersionHistory.ReferenceDirectory(path), new(WorkspaceSynchronization.Paths), paths, history);
         lock (WorkspaceProject.Gate)
         {
             var current = new FileInfo(path);
@@ -185,7 +185,7 @@ public static class WorkspaceStorage
             var files = Files(root).ToArray();
             // Recovery receipts and in-progress publications own their backups until recovery finishes.
             bool pending = files.Any(f => f.Name == "delete.json" || WorkspaceProject.Within(Path.Combine(history, "pending"), f.FullName)
-                || Path.GetRelativePath(root, f.FullName).Split(Path.DirectorySeparatorChar).Any(p => p.EndsWith(".saving") || p.EndsWith(".previous")));
+                || Path.GetRelativePath(root, f.FullName).Split(Path.DirectorySeparatorChar).Any(p => p.EndsWith(".saving") || p.EndsWith(".previous") || p.EndsWith(".updating")));
             if (pending) return Inspect(root) with { RecoveryPending = true };
             var snapshots = new List<Snapshot>();
             if (Directory.Exists(history)) foreach (string project in Directory.EnumerateDirectories(history))
@@ -224,7 +224,7 @@ public static class WorkspaceStorage
                 var playback = new HashSet<string>(WorkspaceSynchronization.Paths);
                 playbackReferences[file.FullName] = playback;
                 var paths = new HashSet<string>(WorkspaceSynchronization.Paths);
-                FindPaths(document.RootElement, Path.GetDirectoryName(logical)!, playback, paths, history);
+                FindPaths(document.RootElement, WorkspaceVersionHistory.ReferenceDirectory(logical), playback, paths, history);
                 PinReferences(paths, owner);
                 if (cacheable)
                 {

@@ -676,7 +676,7 @@ public sealed partial class EditorView
     {
         c.Fill(new(0, height - 28, width, 28), 0x171C23);
         c.Circle(13, height - 14, 3, IsDirty ? Gold : Accent);
-        string notice = workspaceSaveTask is not null ? L.Get("files.saving") : SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
+        string notice = workspaceSaveTask is not null || difficultySaveTask is not null ? L.Get("files.saving") : SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
             : deferredConversion ? L.Get("editor.status.convertingSlider") : conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
         float speedLabelX = DrawPlaybackSpeedSelector(c);
         c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(0, speedLabelX - 33));

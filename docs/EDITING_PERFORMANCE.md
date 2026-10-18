@@ -228,6 +228,15 @@ state during rendering. The fallback driver still advances with transport update
 
 ## Correctness boundaries
 
+Ordinary difficulty saves clone only the requested document on the UI thread.
+Their worker owns synchronization, export validation and journal publication, and
+prepares the saved baseline before handing it back. Completion transfers that
+detached baseline without cloning other difficulties or rebuilding conversion.
+Recovery history copies persisted difficulty files and records the current
+difficulty separately; full project reconstruction happens when a version is read.
+History compression remains deferred to the idle worker. See
+[workspace publication](WORKSPACE.md#file-structure) for recovery boundaries.
+
 Optimizations must preserve source order for tied timestamps, exported time and
 coordinate quantization, nested event identities, downstream random events, NM/HR
 results, and undo/redo. Removing an RNG-consuming parent can invalidate later

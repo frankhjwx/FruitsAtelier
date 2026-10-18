@@ -38,8 +38,8 @@ public sealed partial class EditorView
     private IReadOnlyList<WorkspaceClaim> syncClaims = [];
     private string syncFailure = "";
     public bool SynchronizationVisible => syncPage is not null and not "checking";
-    public bool SynchronizationBusy => LibraryOpening || syncRetry is not null || workspaceSaveTask is not null || syncTask is not null || syncCommitTask is not null;
-    public bool SynchronizationNeedsRedraw => LibraryOpening || SynchronizationWaitVisible || syncRetry is { } retry && DateTime.UtcNow >= retry.After || workspaceSaveTask is { IsCompleted: true } || VersionHistoryNeedsRedraw || syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
+    public bool SynchronizationBusy => LibraryOpening || difficultySaveTask is not null || syncRetry is not null || workspaceSaveTask is not null || syncTask is not null || syncCommitTask is not null;
+    public bool SynchronizationNeedsRedraw => LibraryOpening || acceptedFileCheck is { IsCompleted: true } || difficultySaveTask is { IsCompleted: true } || SynchronizationWaitVisible || syncRetry is { } retry && DateTime.UtcNow >= retry.After || workspaceSaveTask is { IsCompleted: true } || VersionHistoryNeedsRedraw || syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
         || fileMonitor?.IsReady(DateTime.UtcNow) == true
         || WorkspaceSession is not null && !SynchronizationVisible && (fileSyncPending || !LibraryVisible && DateTime.UtcNow >= nextSyncCheck);
     public WorkspaceSyncState DifficultySyncState(int index) => index >= 0 && index < difficulties.Count

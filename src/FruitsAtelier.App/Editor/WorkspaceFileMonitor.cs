@@ -43,7 +43,7 @@ public sealed class WorkspaceFileMonitor : IDisposable
     public void Record(string path)
     {
         // Recovery archives and index/database writes are not source changes.
-        if (path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Contains(".sync-history")) return;
+        if (path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(p => p == ".sync-history" || p.EndsWith(".updating", StringComparison.OrdinalIgnoreCase))) return;
         string ext = Path.GetExtension(path).ToLowerInvariant();
         if (ext is ".db" or ".db-wal" or ".db-shm" or ".db-journal" or ".tmp" or ".log" or ".json") return;
         lock (gate)

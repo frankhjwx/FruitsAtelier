@@ -68,6 +68,9 @@ public sealed class EditorHistory
     // A background save acknowledges its frozen snapshot, including while a newer edit is active.
     public void MarkSaved(MapDocument savedDocument) => baseline = savedDocument.DeepClone();
 
+    // The caller transfers a detached baseline prepared by its completed save worker.
+    public void AdoptSavedSnapshot(MapDocument savedDocument) => baseline = savedDocument;
+
     public void Begin(string label, Action<bool, MapDocument, MapDocument>? restoreRelated = null)
     {
         if (transactionStart is not null) throw new InvalidOperationException(L.Get("core.history.activeEdit"));

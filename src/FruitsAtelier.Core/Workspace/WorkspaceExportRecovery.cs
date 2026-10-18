@@ -5,11 +5,11 @@ namespace FruitsAtelier.Core;
 
 public static class WorkspaceExportRecovery
 {
-    private sealed record Receipt(string Directory, string Project, string Manifest, string? PreviousTarget = null, string? Target = null, string? OutputHash = null);
+    private sealed record Receipt(string Directory, string Project, string Manifest, string? PreviousTarget = null, string? Target = null, string? OutputHash = null, bool DifficultyOnly = false);
     private static string ReceiptPath(string directory) => Path.Combine(Path.GetDirectoryName(directory)!, ".sync-history", "pending",
         WorkspaceSynchronization.Digest(Path.GetFullPath(directory)) + ".json");
 
-    public static string Prepare(WorkspaceSession session, BeatmapProject project, WorkspaceExportPlan plan, Guid owner)
+    public static string Prepare(WorkspaceSession session, BeatmapProject project, WorkspaceExportPlan plan, Guid owner, bool difficultyOnly = false)
     {
         var manifest = WorkspaceProject.SnapshotManifest(session.Manifest);
         var entry = manifest.Difficulties.FirstOrDefault(d => d.Id == owner);
@@ -19,10 +19,11 @@ public static class WorkspaceExportRecovery
         entry.SourceHash = entry.ExportHash = WorkspaceSynchronization.Digest(plan.Output.Text);
         entry.ExportConfirmed = true;
         entry.Sync = WorkspaceSynchronization.Capture(plan.Target, difficulty.Document, session.Directory, plan.Output.Text, plan.Output.ObjectSources, entry.Sync);
+        if (difficultyOnly) manifest.Difficulties.RemoveAll(d => d.Id != owner);
         var recoveredProject = new BeatmapProject
         {
             Name = project.Name, Notes = project.Notes,
-            Difficulties = project.Difficulties.Select(d => new ProjectDifficulty
+            Difficulties = project.Difficulties.Where(d => !difficultyOnly || d.Id == owner).Select(d => new ProjectDifficulty
             {
                 Id = d.Id, Name = d.Name, Document = d.Id == owner ? d.Document.DeepClone() : d.Document
             }).ToList()
@@ -31,7 +32,7 @@ public static class WorkspaceExportRecovery
         string path = ReceiptPath(session.Directory);
         WorkspaceProject.RejectLinks(path); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         WorkspaceHistoryFile.Write(path, System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new Receipt(session.Directory,
-            ProjectSerializer.Serialize(recoveredProject, Path.Combine(session.Directory, "recovery.catchproj")), JsonSerializer.Serialize(manifest), plan.PreviousTarget, plan.Target, WorkspaceSynchronization.Digest(plan.Output.Text)))));
+            ProjectSerializer.Serialize(recoveredProject, Path.Combine(session.Directory, "recovery.catchproj")), JsonSerializer.Serialize(manifest), plan.PreviousTarget, plan.Target, WorkspaceSynchronization.Digest(plan.Output.Text), difficultyOnly))));
         return path;
     }
 
@@ -58,7 +59,23 @@ public static class WorkspaceExportRecovery
             File.Move(previous, target);
         }
         // Preserve external content that may have changed again after the interrupted write.
-        WorkspaceProject.Save(new(directory, manifest, project), project);
+        if (receipt.DifficultyOnly)
+        {
+            var savedManifest = WorkspaceProject.ReadManifest(directory);
+            var savedProject = new BeatmapProject { Name = savedManifest.Name, Notes = savedManifest.Notes };
+            foreach (var entry in savedManifest.Difficulties)
+            {
+                if (Path.GetFileName(entry.File) != entry.File) throw new InvalidDataException(L.Get("project.invalid"));
+                savedProject.Difficulties.Add(new() { Id = entry.Id, Name = entry.Name,
+                    Document = ProjectSerializer.ReadFile(Path.Combine(directory, entry.File)) });
+            }
+            var recovered = project.Difficulties.Single();
+            int index = savedManifest.Difficulties.FindIndex(d => d.Id == recovered.Id);
+            if (index < 0) throw new InvalidDataException(L.Get("project.invalid"));
+            savedManifest.Difficulties[index] = manifest.Difficulties.Single();
+            WorkspaceProject.SaveDifficulty(new(directory, savedManifest, savedProject), recovered.Id, recovered.Document, recovered.Name);
+        }
+        else WorkspaceProject.Save(new(directory, manifest, project), project);
         Complete(path);
     }
 }

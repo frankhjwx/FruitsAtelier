@@ -61,6 +61,14 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --difficulty-save-check` covers six-difficulty local and linked saves,
+unchanged file timestamps, navigation and edits during saving, per-difficulty undo,
+compressed history reconstruction and interrupted publication recovery.
+`App.Tests --difficulty-save-performance` compares complete and single-difficulty
+publication on identical one- and six-difficulty fixtures, including repeated
+imported sliders. It reports CPU-thread allocations and elapsed storage work to
+`artifacts/tests/difficulty-save-performance`; it does not measure native FPS.
+
 `App.Tests --osu-canvas-check` verifies standard geometry, source-identity picking,
 stacking, approach/disappearance, native editing, slider representation boundaries,
 stable grid and anchor gestures, horizontal canvas overscan, independent DS,

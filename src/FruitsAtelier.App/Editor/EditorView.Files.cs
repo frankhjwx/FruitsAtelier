@@ -64,7 +64,7 @@ public sealed partial class EditorView
         syncTask = null; syncRetry = null; afterSynchronization = null; syncReviewRequested = false; syncSearching.Clear();
         syncStatuses.Clear(); syncMerges.Clear(); syncPage = null; nextSyncCheck = DateTime.MaxValue;
         syncDifficulty = Guid.Empty; syncPreserveHistory = false;
-        fileSyncPending = fileSearchMissing = false; nextMonitorConfiguration = DateTime.MinValue;
+        fileSyncPending = fileSearchMissing = false; acceptedFileCheck = null; nextMonitorConfiguration = DateTime.MinValue;
         syncRetainedReview.Clear();
         unreadableSyncRetries = 0;
         syncComparisons.Clear(); syncVisualMerge = null; syncResultPane = null; syncPreviewRevision++;
@@ -166,7 +166,7 @@ public sealed partial class EditorView
         }
         if (!syncBypass && WorkspaceSession is not null && ShowSyncProblem(index)) return false;
         if (index == activeDifficulty) return true;
-        if (!PrepareFileOperation()) return false;
+        if (!PrepareFileOperation(allowDifficultySave: true)) return false;
         double currentPlayhead = playhead;
         double currentViewStart = viewStart;
         activeDifficulty = index;
@@ -227,13 +227,14 @@ public sealed partial class EditorView
 
     public void ChangeAudioPath(string path) => Edit(L.Get("editor.command.changeAudio"), () => Document.AudioPath = path);
 
-    public bool PrepareFileOperation()
+    public bool PrepareFileOperation(bool allowDifficultySave = false)
     {
         PumpLegacyDropletRefresh();
         if (LegacyDropletRefreshBusy) return false;
         if (AcknowledgementsVisible) return false;
         if (previousSaveRestore is not null) return false;
         if (LibraryOpening || AudioProjectCreating) return false;
+        if (difficultySaveTask is not null && !allowDifficultySave) { NotifySynchronizationBlocked(); return false; }
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (VersionHistoryVisible || SynchronizationVisible) return false;
         if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;

@@ -134,9 +134,9 @@ public static class WorkspaceSynchronization
         return new(System.IO.Path.GetFullPath(path), hash, text, OsuBeatmapReader.Read(text, path));
     }
 
-    public static WorkspaceSyncScan Scan(WorkspaceSession session, string songs, bool searchMissing = true, CancellationToken cancellation = default)
+    public static WorkspaceSyncScan Scan(WorkspaceSession session, string songs, bool searchMissing = true, CancellationToken cancellation = default, Guid? difficultyId = null)
     {
-        var entries = session.Manifest.Difficulties;
+        var entries = session.Manifest.Difficulties.Where(e => difficultyId is null || e.Id == difficultyId).ToList();
         var files = new Dictionary<string, WorkspaceSyncCandidate>(Paths);
         var errors = new List<string>();
         var roots = new HashSet<string>(Paths);
@@ -148,6 +148,16 @@ public static class WorkspaceSynchronization
         if (!string.IsNullOrWhiteSpace(songs) && missingAssociation && searchMissing) roots.Add(System.IO.Path.GetFullPath(songs));
         foreach (var path in entries.Select(Target).OfType<string>())
             if (string.IsNullOrWhiteSpace(songs) || !missingAssociation || !searchMissing || !WorkspaceProject.Within(songs, path)) roots.Add(System.IO.Path.GetDirectoryName(path)!);
+        if (difficultyId is not null && !missingAssociation)
+        {
+            foreach (string path in trackedPaths)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                try { files[path] = ReadStable(path); }
+                catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException) { errors.Add(path); }
+            }
+            roots.Clear();
+        }
         foreach (var root in roots)
         {
             try
@@ -230,7 +240,8 @@ public static class WorkspaceSynchronization
                 results.Add(new(entry.Id, WorkspaceSyncState.Ambiguous, null, candidates.Select(c => c.Path).ToArray())); continue;
             }
             var candidate = candidates[0];
-            bool duplicate = duplicates.Any(c => Paths.Equals(c.Target, candidate.Path) || Paths.Equals(c.Target, path)
+            bool duplicate = session.Manifest.Difficulties.Any(e => e.Id != entry.Id && Paths.Equals(Target(e), candidate.Path))
+                || duplicates.Any(c => Paths.Equals(c.Target, candidate.Path) || Paths.Equals(c.Target, path)
                 || Paths.Equals(System.IO.Path.GetDirectoryName(c.Target), System.IO.Path.GetDirectoryName(candidate.Path)));
             var state = duplicate ? WorkspaceSyncState.Duplicate : entry.Sync is null
                 ? WorkspaceSyncState.NeedsBaseline
@@ -251,7 +262,7 @@ public static class WorkspaceSynchronization
         var known = results.SelectMany(r => r.Candidate is { } c ? new[] { c.Path } : r.Candidates).ToHashSet(Paths);
         var folders = entries.Select(Target).OfType<string>().Select(p => System.IO.Path.GetDirectoryName(p)!)
             .Concat(results.Where(r => r.Candidate is not null).Select(r => System.IO.Path.GetDirectoryName(r.Candidate!.Path)!)).ToHashSet(Paths);
-        return new(results, files.Values.Where(f => folders.Contains(System.IO.Path.GetDirectoryName(f.Path)!) && !known.Contains(f.Path)).ToArray());
+        return new(results, difficultyId is not null ? [] : files.Values.Where(f => folders.Contains(System.IO.Path.GetDirectoryName(f.Path)!) && !known.Contains(f.Path)).ToArray());
     }
 
     public static WorkspaceMerge CompareWithoutBaseline(MapDocument local, WorkspaceSyncCandidate external, string directory, bool compensate)
@@ -632,7 +643,7 @@ public static class WorkspaceSynchronization
         return ObjectLines(external.Text).Select(line => exact.TryGetValue(line, out var id) ? id : historical.GetValueOrDefault(ObjectKey(line))).ToArray();
     }
 
-    public static string Archive(WorkspaceSession session, string operation)
+    public static string Archive(WorkspaceSession session, string operation, bool deferProject = false)
     {
         string target = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(session.Directory)!, ".sync-history", session.Manifest.Id.ToString("N"), DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffffff") + "-" + operation);
         Directory.CreateDirectory(target);
@@ -640,8 +651,14 @@ public static class WorkspaceSynchronization
         {
             WorkspaceProject.RejectLinks(path);
             string copy = System.IO.Path.Combine(target, System.IO.Path.GetFileName(path));
-            if (WorkspaceHistoryFile.Compressible(path)) WorkspaceHistoryFile.Write(copy, File.ReadAllBytes(path));
+            if (!deferProject && WorkspaceHistoryFile.Compressible(path)) WorkspaceHistoryFile.Write(copy, File.ReadAllBytes(path));
             else File.Copy(path, copy);
+        }
+        if (deferProject)
+        {
+            AtomicFile.Write(System.IO.Path.Combine(target, "saved.snapshot"), System.IO.Path.GetFullPath(session.Directory));
+            WorkspaceStorage.EnforceVersionLimit(session);
+            return target;
         }
         var saved = new BeatmapProject { Name = session.Manifest.Name, Notes = session.Manifest.Notes };
         var manifest = WorkspaceProject.ReadManifest(session.Directory);

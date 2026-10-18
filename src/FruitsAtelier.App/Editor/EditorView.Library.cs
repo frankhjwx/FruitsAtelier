@@ -213,6 +213,7 @@ public sealed partial class EditorView
 
     private void PumpWorkspaceSave()
     {
+        PumpDifficultySave();
         if (workspaceSaveTask is not { IsCompleted: true } task) return;
         workspaceSaveTask = null;
         var completed = workspaceSaveCompleted; workspaceSaveCompleted = null;
@@ -238,6 +239,7 @@ public sealed partial class EditorView
         : Document.SourcePath is { } path && WorkspaceProject.Within(LibrarySettings.Songs, path) && File.Exists(path));
     public void SaveCurrentDifficulty()
     {
+        if (difficultySaveTask is not null) { NotifySynchronizationBlocked(); return; }
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return; }
         if (DiscardConfirmationVisible || ExportVisible || !PrepareFileOperation()) return;
         var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);
@@ -247,6 +249,7 @@ public sealed partial class EditorView
             ShowWorkspaceExport();
             return;
         }
+        if (BeginCurrentDifficultySave()) return;
         if (WorkspaceSession is { } syncSession && syncSession.Manifest.Difficulties.Any(d => WorkspaceSynchronization.Target(d) is not null) && !syncBypass)
         {
             syncDifficulty = difficulties[activeDifficulty].Id;

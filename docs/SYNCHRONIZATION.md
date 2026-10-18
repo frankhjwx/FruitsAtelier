@@ -19,6 +19,13 @@ Replacing audio, including changed bytes at the same path, reloads it at the
 current timeline position.
 
 Background saving and synchronization do not open a progress overlay by default.
+Ordinary saves of an existing difficulty inspect its linked file independently;
+periodic checks, external change reconciliation and explicit synchronization still
+inspect the set. Save completion acknowledges only the captured difficulty and
+preserves newer edits, other difficulties' dirty state, playback and active tab.
+Saved-file notifications are checked against accepted content hashes in the
+background before scheduling another reconciliation.
+
 Attempting an operation that must wait for them shows a small overlay with the
 current saving, checking or applying stage and an indeterminate progress bar.
 It disappears when the work finishes. Returning to Library, opening another
@@ -300,12 +307,21 @@ Unchanged saves do not add versions. The storage retention policy below still ap
 
 ### Compressed recovery files
 
-New authoring snapshots, synchronization baselines, external `.osu` recovery copies,
-and pending export receipts are compressed on each write. Each logical file has a
+Materialized project snapshots, synchronization recovery files and pending export
+receipts are compressed on write. Each logical file has a
 binary companion with the suffix `.catchbackup`; current workspace authoring files
 keep their existing JSON format. Snapshot directories and logical file locations stay
 the same, so relative resource paths resolve without extracting a temporary project.
-Version browsing decompresses only the selected project file in memory.
+Version browsing reads the selected version in memory.
+
+Single-difficulty saves first copy the persisted manifest, authoring files and
+baselines into their recovery round. `saved.snapshot` records the original project
+directory for resolving relative paths. A `current/` manifest and the captured
+difficulty, with a `current.snapshot` marker, preserve the working version before
+linked publication. Unchanged difficulties reuse the saved files in that round.
+Version reading assembles the complete project on demand. The idle history worker
+compresses these retained files through the same verified migration used for
+legacy snapshots.
 
 The version 1 envelope contains eight bytes `46 41 43 42 01 00 00 00` (`FACB`,
 version 1), a little-endian signed 32-bit uncompressed byte count, a 32-byte SHA-256

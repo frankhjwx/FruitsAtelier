@@ -40,7 +40,7 @@ public sealed record WorkspaceSession(string Directory, WorkspaceManifest Manife
     public bool IsNewImport { get; init; }
 }
 
-public static class WorkspaceProject
+public static partial class WorkspaceProject
 {
     internal static readonly object Gate = new();
     public const string ManifestName = "project.catchdiff";
@@ -248,6 +248,7 @@ public static class WorkspaceProject
     public static void Recover(string directory) { lock (Gate) { RecoverLocked(directory); } }
     private static void RecoverLocked(string directory)
     {
+        RecoverDifficultyPublication(directory);
         string previous = directory + ".previous";
         RejectLinks(directory); RejectLinks(previous);
         if (!System.IO.Directory.Exists(previous)) return;

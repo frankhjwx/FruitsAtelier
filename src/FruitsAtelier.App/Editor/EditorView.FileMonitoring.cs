@@ -7,6 +7,7 @@ public sealed partial class EditorView
     private WorkspaceFileMonitor? fileMonitor;
     private DateTime nextMonitorConfiguration;
     private bool fileSyncPending, fileSearchMissing;
+    private Task<bool>? acceptedFileCheck;
     private bool SyncInteractionActive => WantsCapture || IsEditingText || SongSetupVisible || RatingEditInProgress
         || BananaEditVisible || BananaEditVisible || StreamDialogVisible || TimingModal || DiscardConfirmationVisible || IsTestplaying;
 
@@ -19,6 +20,7 @@ public sealed partial class EditorView
 
     public void StopFileMonitoring()
     {
+        acceptedFileCheck = null;
         fileMonitor?.Dispose(); fileMonitor = null;
         historyCompressionEnabled = false;
         StopHistoryCompression(); historyCompressionRoot = "";
@@ -44,6 +46,11 @@ public sealed partial class EditorView
 
     private void PumpFileMonitoring()
     {
+        if (acceptedFileCheck is { IsCompleted: true } check)
+        {
+            acceptedFileCheck = null;
+            if (!check.IsCompletedSuccessfully || !check.Result) fileSyncPending = true;
+        }
         ConfigureFileMonitoring();
         if (fileMonitor is null || !fileMonitor.IsReady(DateTime.UtcNow)) return;
         var changes = fileMonitor.Drain(DateTime.UtcNow);
@@ -62,9 +69,25 @@ public sealed partial class EditorView
         var directories = session.Manifest.Difficulties.Select(WorkspaceSynchronization.Target).OfType<string>()
             .Concat(difficulties.Select(d => d.History.Document.AudioPath).OfType<string>())
             .Select(p => Path.GetDirectoryName(p)!).Append(session.Directory).Distinct(WorkspaceSynchronization.Paths).ToArray();
-        bool affected = changes.FullScan || changes.Paths.Any(p => directories.Any(d =>
-            WorkspaceSynchronization.Paths.Equals(p, d) || WorkspaceProject.Within(d, p) || WorkspaceProject.Within(p, d)));
+        var affectedPaths = changes.Paths.Where(p => directories.Any(d =>
+            WorkspaceSynchronization.Paths.Equals(p, d) || WorkspaceProject.Within(d, p) || WorkspaceProject.Within(p, d)))
+            .Where(p => !WorkspaceProject.Within(session.Directory, p) || WorkspaceSynchronization.Paths.Equals(p, session.Directory)
+                || Path.GetExtension(p).ToLowerInvariant() is not (".catchdiff" or ".catchsync")).ToArray();
+        bool affected = changes.FullScan || affectedPaths.Length > 0;
         if (!affected) return;
+        var accepted = affectedPaths.Select(path => (Path: path, Hash: session.Manifest.Difficulties
+            .FirstOrDefault(d => WorkspaceSynchronization.Paths.Equals(WorkspaceSynchronization.Target(d), path)) is { } entry
+                ? entry.ExportHash ?? entry.SourceHash : null)).ToArray();
+        if (!changes.FullScan && acceptedFileCheck is null && accepted.All(item => item.Hash is not null))
+        {
+            // Verify notifications against accepted bytes off-thread; a later external edit must still trigger reconciliation.
+            acceptedFileCheck = Task.Run(() =>
+            {
+                try { return accepted.All(item => WorkspaceProject.Hash(item.Path) == item.Hash); }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return false; }
+            });
+            return;
+        }
         fileSyncPending = true;
         fileSearchMissing |= changes.FullScan || session.Manifest.Difficulties.Select(WorkspaceSynchronization.Target)
             .OfType<string>().Any(p => !File.Exists(p));

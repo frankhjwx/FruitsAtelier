@@ -415,8 +415,9 @@ public sealed class LibraryDatabase
     private void ReindexProjectsLocked()
     {
         foreach (var previous in Directory.EnumerateDirectories(workspace, "*.previous")) WorkspaceProject.Recover(previous[..^9]);
+        foreach (var updating in Directory.EnumerateDirectories(workspace, "*.updating")) WorkspaceProject.Recover(updating[..^9]);
         var manifests = Directory.EnumerateDirectories(workspace)
-            .Where(folder => !folder.EndsWith(".saving") && !folder.EndsWith(".previous"))
+            .Where(folder => !folder.EndsWith(".saving") && !folder.EndsWith(".previous") && !folder.EndsWith(".updating"))
             .Select(folder => new FileInfo(Path.Combine(folder, WorkspaceProject.ManifestName))).Where(file => file.Exists)
             .Select(file => (Path: file.FullName, Stamp: file.LastWriteTimeUtc.Ticks, Size: file.Length)).OrderBy(file => file.Path, WorkspaceSynchronization.Paths).ToArray();
         if (projectIndexFiles is not null && projectIndexFiles.SequenceEqual(manifests)) return;
