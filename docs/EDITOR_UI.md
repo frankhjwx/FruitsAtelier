@@ -1400,6 +1400,10 @@ duration, spans, control-point count, exported SV and exported path length.
 Multiple sliders show value ranges. Managed streams and stacks have no exported
 slider SV. These properties are read-only.
 
+Hand-drawn Legacy Sliders also use Droplet Settings for Catch preview, Testplay
+and export. Their original two-dimensional controls are retained separately from
+the processed geometry, including across settings changes and project saves.
+
 With Legacy Sliders selected in the osu! canvas, **Legacy display** switches
 between **Drawn slider** and **Processed slider**. Drawn is the default and uses
 the retained original path when available; Processed uses the actual exported

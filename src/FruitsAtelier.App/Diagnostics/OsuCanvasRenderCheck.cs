@@ -285,6 +285,7 @@ internal static class OsuCanvasRenderCheck
     {
         string language = L.Language;
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500\n[HitObjects]\n100,192,1000,2,0,L|300:192,1,200\n");
+        map.ImportedSliders.Single().PreserveNativeGeometry = true;
         map.DurationMs = 5000; map.DerandomizeFSliderDroplets = true;
         var result = SliderRepresentationEditing.RefreshLegacyDroplets(map);
         if (!result.Success) throw new InvalidOperationException(string.Join("; ", result.Diagnostics));

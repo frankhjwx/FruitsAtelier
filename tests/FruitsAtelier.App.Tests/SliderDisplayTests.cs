@@ -12,17 +12,25 @@ internal static class SliderDisplayTests
         string language = L.Language;
         try
         {
+            foreach (bool arc in new[] { false, true })
             foreach (bool derandomize in new[] { true, false })
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(locale);
-                var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500\n[HitObjects]\n100,192,1000,2,0,L|300:192,1,200\n");
+                string curve = arc ? "P|300:64|100:320,1,400" : "L|300:192,1,200";
+                var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500\n[HitObjects]\n100,192,1000,2,0," + curve + "\n");
+                map.ImportedSliders.Single().PreserveNativeGeometry = true;
                 map.DurationMs = 5000; map.DerandomizeFSliderDroplets = derandomize;
                 if (!derandomize) map.RandomizeDropletStrength = 8;
                 var drawn = ImportedSliderConverter.Path(map.ImportedSliders.Single()).ToArray();
+                var original = map.DeepClone();
                 var result = SliderRepresentationEditing.RefreshLegacyDroplets(map);
                 Check(result.Success, string.Join("; ", result.Diagnostics));
                 var processed = OsuBeatmapWriter.Serialize(map);
+                if (derandomize)
+                    Check(processed.PlayableObjects.Where(o => o.Kind == CatchObjectKind.TinyDroplet).All(o =>
+                        Math.Abs(o.X - ImportedSliderConverter.PositionAtTime(original, original.ImportedSliders.Single(), o.TimeMs)) < 1),
+                        "Native straight/arc TinyDroplets did not return to the authored path.");
                 var processedPath = ImportedSliderConverter.Path(processed.ReadBack.ImportedSliders.Single()).ToArray();
                 Check(!drawn.SequenceEqual(processedPath), "Display fixture must have distinct drawn and processed geometry.");
                 foreach (int width in new[] { 980, 1440 })
@@ -31,6 +39,7 @@ internal static class SliderDisplayTests
                     ui.View.ToggleOsuCanvas(); ui.View.UpdateTransport(900, 5000, true, false, false, null, null); ui.Paint();
                     var head = ui.View.OsuCanvasScreen(100, 192); ui.Click(head.X, head.Y);
                     ui.View.ShowSliderInspector(); ui.Paint();
+                    head = ui.View.OsuCanvasScreen(100, 192);
                     Check(ui.Canvas.Texts.Any(t => t.Value == L.Get(derandomize ? "droplet.mode.Derandomize" : "droplet.mode.Randomize")),
                         "The inspector reported the wrong effective Legacy droplet mode.");
                     var baseline = ui.View.Document.DeepClone();

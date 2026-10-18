@@ -11,7 +11,7 @@ public static class SliderRepresentationEditing
 {
     public static bool NeedsLegacyDropletRefresh(MapDocument before, MapDocument after)
     {
-        if (after.ImportedSliders.All(s => s.PreserveNativeGeometry)) return false;
+        if (after.ImportedSliders.Count == 0) return false;
         bool settingsChanged = before.DerandomizeFSliderDroplets != after.DerandomizeFSliderDroplets
             || before.DerandomizeDropletsForHardRock != after.DerandomizeDropletsForHardRock
             || before.RandomizeDropletStrength != after.RandomizeDropletStrength
@@ -38,12 +38,12 @@ public static class SliderRepresentationEditing
     {
         try
         {
-            if (document.ImportedSliders.All(s => s.PreserveNativeGeometry)) return new(true, []);
+            if (document.ImportedSliders.Count == 0) return new(true, []);
             if (!document.DerandomizeFSliderDroplets && !document.DerandomizeDropletsForHardRock
                 && document.RandomizeDropletStrength == 20 && document.RandomizeDropletSeed == 1337
                 && document.ImportedSliders.All(s => s.RandomizationSource is null)) return new(true, []);
             var candidate = document.DeepClone();
-            var sources = candidate.ImportedSliders.Where(s => !s.PreserveNativeGeometry).ToArray();
+            var sources = candidate.ImportedSliders.ToArray();
             var timingLookup = new TimingMap.Lookup(document);
             var previousLookup = previous is null ? null : new TimingMap.Lookup(previous);
             var previousSliders = previous?.ImportedSliders.ToDictionary(s => s.Id);
@@ -119,6 +119,7 @@ public static class SliderRepresentationEditing
             {
                 var slider = materialized[source.Id].DeepClone();
                 slider.SourceOrder = source.SourceOrder;
+                slider.PreserveNativeGeometry = source.PreserveNativeGeometry;
                 slider.RandomizationSource = (source.RandomizationSource ?? source).DeepClone();
                 slider.RandomizationTrack = baselineTracks[source.Id];
                 slider.RandomizationBaseVelocity = initialVelocities[source.Id];

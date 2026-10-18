@@ -56,9 +56,9 @@ internal static class OsuCanvasModelTests
         random = SliderRepresentationEditing.RefreshLegacyDroplets(mixed);
         Check(random.Success, string.Join("; ", random.Diagnostics));
         var retainedNative = mixed.ImportedSliders.Single(s => s.Id == native.Id);
-        Check(retainedNative.PreserveNativeGeometry && retainedNative.RandomizationTrack is null
-            && retainedNative.ControlPoints.SequenceEqual(native.ControlPoints) && retainedNative.PixelLength == native.PixelLength,
-            "Mixed Legacy refresh reshaped native controls");
+        Check(retainedNative.PreserveNativeGeometry && retainedNative.RandomizationTrack is not null
+            && retainedNative.RandomizationSource!.ControlPoints.SequenceEqual(native.ControlPoints) && retainedNative.RandomizationSource.PixelLength == native.PixelLength,
+            "Mixed Legacy refresh lost original native controls");
         random = SliderRepresentationEditing.RefreshLegacyDroplets(randomized);
         Check(random.Success, string.Join("; ", random.Diagnostics));
         var stable = OsuBeatmapWriter.Serialize(randomized).PlayableObjects.Select(o => (o.Kind, o.TimeMs, o.X)).ToArray();

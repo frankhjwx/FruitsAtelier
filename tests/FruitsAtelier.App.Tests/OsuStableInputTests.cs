@@ -133,10 +133,13 @@ internal static class OsuStableInputTests
         Check(baseline.ContentEquals(ui.View.Document), "A no-op imported drag changed native geometry ownership.");
         ui.View.PointerDown(from.X, from.Y, 0, false, false);
         ui.View.PointerMove(to.X, to.Y, false, false); ui.View.PointerUp(to.X, to.Y, 0); ui.Paint();
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        while (ui.View.LegacyDropletRefreshBusy && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(5); }
+        Check(!ui.View.LegacyDropletRefreshBusy, "Legacy effects did not finish after control editing.");
         var edited = ui.View.Document.ImportedSliders.Single();
-        Check(edited.PreserveNativeGeometry && edited.RandomizationTrack is null && edited.PathType == 'P'
-            && edited.ControlPoints.SequenceEqual(new SliderPathPoint[] { new(64, 192), new(192, 96), new(320, 192) }),
-            "Editing an imported circle rebuilt the native controls through global effects.");
+        Check(edited.PreserveNativeGeometry && edited.RandomizationTrack is not null && edited.RandomizationSource is { PathType: 'P' }
+            && edited.RandomizationSource.ControlPoints.SequenceEqual(new SliderPathPoint[] { new(64, 192), new(192, 96), new(320, 192) }),
+            "Editing an imported circle lost its authored controls while applying droplet effects.");
         ui.Key('Z', ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Imported geometry ownership did not undo.");
     }
 
