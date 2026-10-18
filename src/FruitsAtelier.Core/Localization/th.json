@@ -934,6 +934,7 @@
   "settings.derandomizeOff": "เปิดการยกเลิกการสุ่มเมื่อแปลง Legacy slider เป็น FSlider: ปิด",
   "settings.uiScale": "ขนาด UI",
   "settings.uiScaleHint": "150% คือขนาดเริ่มต้น กดนำไปใช้เพื่อปรับขนาดอินเทอร์เฟซ",
+  "settings.selectionHighlight": "สีไฮไลต์วัตถุที่เลือก",
   "settings.appearance": "ลักษณะที่ปรากฏ",
   "settings.skins": "สกิน",
   "settings.immediatePreferences": "การเปลี่ยนแปลงมีผลทันทีและจะถูกบันทึกโดยอัตโนมัติ",

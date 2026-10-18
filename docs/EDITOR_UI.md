@@ -96,6 +96,16 @@ Apply activates and saves the choice without restarting; closing Settings discar
 unapplied changes. Drawing and pointer coordinates use the same scale on both
 platforms. Compact startup dialogs retain their fitted layout size.
 
+Outside text fields, dialogs and active gestures, Ctrl+= / Ctrl+- adjusts UI scale
+by one step with any selection. Ctrl+Shift+= and Ctrl+keypad plus/minus are aliases.
+Shortcut changes save immediately and do not enter content history.
+
+**Settings → Appearance → Selection highlight** sets the colour of selected-object
+rings on the Catch canvas, Catch timeline selection rings and selection boxes.
+The osu! canvas and its timeline use orange selection rings.
+The colour picker supports HEX input; Apply saves the global preference, Cancel
+discards the draft, and Reset restores turquoise. Skin hyperdash colours stay independent.
+
 On Windows, the editor scales uniformly with its client pixel dimensions, using
 2520 × 1575 at 175% as the reference: the original 1440 × 900 logical startup
 window. This preserves its text, buttons and layout proportions. Equal client dimensions give
@@ -471,6 +481,13 @@ Canvas zoom, upper object-timeline scale and Timing waveform scale are remembere
 The arrow to the left of the four tool buttons opens a whole-map **Movement strain** sidebar. Its default left dock is 280 DIP wide at normal window sizes. Time increases upward in its vertical curve, matching the canvas; an amber marker shows the shared playback position. Click or drag in the graph to seek continuously. The left sidebar and Catch Preview can be open together. A very narrow window may compress the sidebars to preserve at least 192 DIP for the central playfield. Sidebar visibility is session display state and does not edit the beatmap.
 
 During playback and seeking, the play line stays at its configured height, initially 25% above the bottom of the drawing area. While paused, drag its leftmost yellow handle vertically to set that height between 5% and 95% of the drawing area. The current time stays unchanged and canvas content scrolls with the line. Playback disables handle dragging and uses the chosen height. The height is saved as a global view preference when the drag finishes and restored after restarting the editor. It is retained across resizing and difficulty switches without editing map content or undo history. Esc or lost capture cancels a drag. Left-button marquee selection on the canvas and object timeline keeps playback scrolling and accepts wheel navigation while held. Space or C can start or pause playback without releasing the selection. The start stays anchored to its original map time while the other end follows the pointer, so the box grows during scrolling even with a stationary pointer. Within 24 DIP of the canvas's top/bottom edge or the object timeline's left/right edge, a dragged selection automatically scrolls toward that edge, gradually increasing to 1200 DIP per second on the canvas or 600 DIP per second on the object timeline. Moving back inside, releasing the button, cancelling, or reaching the map boundary stops automatic scrolling. Objects inside the time range remain selected after they move outside the viewport. Paused middle-button panning is free; canvas wheel navigation preserves the current playhead-to-viewport offset, while playback and other seeking resume following.
+
+The upper-right corner of the Mapping canvas shows the pointer's playfield X
+coordinate. Selecting an object shows its X coordinate and **Prev / Next** DS
+ratios instead. Multiple selections use chronological object order: X and Prev
+come from the first selected object, while Next comes from the last selected
+object's end. Missing neighbours show a dash. These readouts use map coordinates
+and base SV, independently of canvas zoom.
 
 ### Playback pause snapping
 

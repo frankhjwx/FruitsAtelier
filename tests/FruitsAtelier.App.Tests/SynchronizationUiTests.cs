@@ -263,8 +263,17 @@ internal static class SynchronizationUiTests
                 Check(!ui.View.SynchronizationVisible && ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 1
                     && ui.View.Document.Tracks.Single().Id == track.Id, "apply transfers one timing addition and keeps editable curves");
                 var shifted = OsuBeatmapReader.ReadFile(source);
-                foreach (var point in shifted.TimingPoints) point.TimeMs += 12;
-                File.WriteAllText(source, OsuBeatmapWriter.Serialize(shifted).Text);
+                // Shift the timing section directly so exporting does not regenerate SV at unchanged slider heads.
+                string shiftedText = File.ReadAllText(source);
+                var timingSection = shifted.OriginalSections.Single(section => section.Name == "TimingPoints");
+                string timingText = string.Join("\r\n", timingSection.Lines);
+                string shiftedTiming = string.Join("\r\n", timingSection.Lines.Select(line =>
+                {
+                    int comma = line.IndexOf(',');
+                    return comma < 0 ? line : (double.Parse(line[..comma], System.Globalization.CultureInfo.InvariantCulture) + 12)
+                        .ToString("R", System.Globalization.CultureInfo.InvariantCulture) + line[comma..];
+                }));
+                File.WriteAllText(source, shiftedText.Replace(timingText, shiftedTiming));
                 ui.View.RefreshSynchronization(); Wait(ui);
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingOffsetSummary", shifted.TimingPoints.Count, 12))
                     && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingOffsetSummary", shifted.TimingPoints.Count, 0)),

@@ -19,6 +19,13 @@ public sealed class LibrarySettings
         set => FirstRunSetupVersion = value ? CurrentFirstRunSetupVersion : 0;
     }
     public const uint DefaultCanvasGridColour = 0x8F8F8F;
+    public const uint DefaultSelectionHighlightColour = 0x59D3C3;
+    private uint selectionHighlightColour = DefaultSelectionHighlightColour;
+    public uint SelectionHighlightColour
+    {
+        get => selectionHighlightColour;
+        set => selectionHighlightColour = value & 0xFFFFFF;
+    }
     public const uint DefaultCanvasCentreLineColour = 0xFFFFFF;
     public const int DefaultCanvasGridOpacity = 40;
     public const uint DefaultStandIndicatorColour = 0xC0C0C0;

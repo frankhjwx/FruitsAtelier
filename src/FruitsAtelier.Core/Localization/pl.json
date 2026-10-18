@@ -934,6 +934,7 @@
   "settings.derandomizeOff": "Włącz derandomizację przy konwersji Legacy slider do FSlider: Wył.",
   "settings.uiScale": "Skala interfejsu",
   "settings.uiScaleHint": "150% to domyślny rozmiar. Zastosuj, aby zmienić rozmiar interfejsu.",
+  "settings.selectionHighlight": "Kolor zaznaczenia",
   "settings.appearance": "Wygląd",
   "settings.skins": "Skórki",
   "settings.immediatePreferences": "Zmiany obowiązują natychmiast i są zapisywane automatycznie.",

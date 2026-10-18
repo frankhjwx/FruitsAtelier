@@ -14,11 +14,15 @@ public static class ImportedSliderConverter
 
     public static double SliderVelocityAt(MapDocument document, ImportedSlider slider, TimingMap.Lookup? lookup = null)
     {
-        double sv = (slider.ProcessedSliderVelocityMultiplier ?? slider.SliderVelocityMultiplier) is { } own
+        double? stored = slider.ProcessedSliderVelocityMultiplier ?? slider.SliderVelocityMultiplier;
+        double sv = stored is { } own
             ? own * document.SliderMultiplier / document.EffectiveSliderMultiplier
             : (lookup?.At(slider.TimeMs) ?? TimingMap.At(document, slider.TimeMs)).SliderVelocityMultiplier;
         if (!double.IsFinite(sv) || sv < .1 - 1e-12 || sv > 10 + 1e-12)
             throw new CatchConversionException(L.Get("timing.sliderMultiplierSvLimit"));
+        if (stored is { } original && document.EffectiveSliderMultiplier != document.SliderMultiplier)
+            sv = 100 / SliderMultiplierEditing.ScaleBeatLength(100 / original,
+                document.SliderMultiplier / document.EffectiveSliderMultiplier, requireRepresentable: false);
         return Math.Clamp(sv, .1, 10);
     }
 

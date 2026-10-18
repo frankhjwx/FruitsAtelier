@@ -28,6 +28,11 @@ internal sealed partial class EditorWindow
                 view.LibrarySettings.OverviewTimelineHeight = 40;
                 Native.SetWindowPos(hwnd, 0, 0, 0, size.Item1, size.Item2, 0x0004 | 0x0010 | 0x0020);
                 Paint();
+                view.KeyDown(107, true, false); Paint();
+                if (view.LibrarySettings.UiScalePercent != 175
+                    || Math.Abs(uiDpi - ClientUiDpi(size.Item1, size.Item2) * 175 / 150f) > .001)
+                    throw new InvalidOperationException("Native scale shortcut did not refresh drawing/input scale.");
+                view.KeyDown(109, true, false); Paint();
                 view.OpenSettings(); Paint();
                 var r = view.SettingsBounds;
                 Click(r.X + 40, r.Y + 192); Paint();
@@ -47,6 +52,19 @@ internal sealed partial class EditorWindow
                     SaveFrame(frame.Width, frame.Height, frame.Pixels, Path.Combine(folder, $"{locale}-{size.Item1}-{percent}.bmp"));
                 });
                 view.KeyDown(27, false, false); Paint();
+                if (!timelineLayout && percent == 150)
+                {
+                    view.LibrarySettings.SelectionHighlightColour = 0xFF33AA;
+                    view.KeyDown(65, true, false); Paint(); Capture("selection-catch");
+                    view.ToggleOsuCanvas(); view.KeyDown(65, true, false); Paint(); Capture("selection-osu");
+                    view.ToggleOsuCanvas();
+                    view.OpenSettings(); Paint();
+                    r = view.SettingsBounds;
+                    Click(r.X + 40, r.Y + 192); Paint(); Capture("selection-settings");
+                    Click(r.X + 260, r.Y + 422); Paint(); Capture("selection-picker");
+                    view.KeyDown(27, false, false); view.KeyDown(27, false, false); Paint();
+                    view.LibrarySettings.SelectionHighlightColour = FruitsAtelier.Core.LibrarySettings.DefaultSelectionHighlightColour;
+                }
                 if (timelineLayout)
                 {
                     var upper = view.ObjectTimelineResizeBounds;

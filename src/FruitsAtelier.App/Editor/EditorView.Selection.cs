@@ -214,7 +214,7 @@ public sealed partial class EditorView
     {
         if (drag != DragKind.Marquee || !dragMoved) return;
         c.Clip(boxTimeline ? objectTimeline : plot);
-        c.Stroke(selectionBox, Accent, 1.5f);
+        c.Stroke(selectionBox, SelectionHighlightColour, 1.5f);
         c.Unclip();
     }
 

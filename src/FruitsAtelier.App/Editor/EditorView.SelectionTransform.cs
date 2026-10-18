@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private const uint SelectionTransformColour = 0x35ABC9;
+    private uint SelectionTransformColour => SelectionHighlightColour;
     private IReadOnlyList<ConvertedCatchObject>? selectionBoundsObjects;
     private double selectionBoundsCircleSize = double.NaN;
     private readonly HashSet<Guid> selectionBoundsIds = [];

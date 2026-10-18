@@ -394,6 +394,7 @@ var tests = new (string Name, Action Run)[]
     ("Stable root migration and skin selection preserve content and archive provenance", SkinSelectorTests.Run),
     ("Object timeline navigation and group movement preserve geometry and undo", ObjectTimelineTests.MoveAndNavigate),
     ("Returning to Library saves, discards or cancels before closing the editor", LibraryExitTests.Run),
+    ("Pointer and selection coordinate readouts", CoordinateReadoutTests.Run),
     ("DS numeric fields use base SV, preserve direction and support undo", DistanceEditingTests.NumericFields),
     ("X coordinate input clamps, previews and supports undo", DistanceEditingTests.XCoordinate),
     ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),

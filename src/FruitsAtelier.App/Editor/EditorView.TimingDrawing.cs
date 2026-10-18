@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 using L = FruitsAtelier.Localization.Strings;

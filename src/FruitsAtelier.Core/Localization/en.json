@@ -956,6 +956,7 @@
   "settings.derandomizeOff": "Enable Derandomization for Legacy slider to FSlider Conversion: Off",
   "settings.uiScale": "UI scale",
   "settings.uiScaleHint": "150% matches the default size. Apply to resize the interface.",
+  "settings.selectionHighlight": "Selection highlight",
   "settings.appearance": "Appearance",
   "settings.skins": "Skins",
   "settings.immediatePreferences": "Changes apply immediately and are saved automatically.",

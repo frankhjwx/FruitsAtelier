@@ -934,6 +934,7 @@
   "settings.derandomizeOff": "Legacy slider를 FSlider로 변환할 때 무작위화 해제 활성화: 꺼짐",
   "settings.uiScale": "UI 배율",
   "settings.uiScaleHint": "150%가 기본 크기입니다. 적용하면 인터페이스 크기가 변경됩니다.",
+  "settings.selectionHighlight": "선택한 오브젝트 강조 색상",
   "settings.appearance": "외관",
   "settings.skins": "스킨",
   "settings.immediatePreferences": "변경 사항은 즉시 적용되며 자동으로 저장됩니다.",

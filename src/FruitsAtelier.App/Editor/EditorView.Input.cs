@@ -1288,6 +1288,7 @@ public sealed partial class EditorView
             }
             return;
         }
+        if (LibraryVisible && !librarySettingsOpen && !resourcePage && libraryField < 0 && UiScaleKey(virtualKey, ctrl)) return;
         if (librarySettingsOpen || LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
         if (editField < 0 && OsuToggleKey(virtualKey, ctrl, shift)) return;
         if (TimingKey(virtualKey, ctrl, shift)) return;
@@ -1330,6 +1331,7 @@ public sealed partial class EditorView
             replaceText = false;
             return;
         }
+        if (UiScaleKey(virtualKey, ctrl)) return;
         if (OsuEditingKey(virtualKey, ctrl, shift)) return;
         if (virtualKey == 27)
         {
@@ -1391,8 +1393,6 @@ public sealed partial class EditorView
             else if (virtualKey == 73 && !shift) DeleteCurrentTiming();
             else if (virtualKey == 73 && shift && plot.Contains(mouseX, mouseY) && HitSliderLocation(mouseX, mouseY) is { } location) InsertControlPoint(location);
             else if (virtualKey == 80) AddTimingPoint(shift);
-            else if (virtualKey == 187 && !shift && SelectedTrack is { } addReverse) ChangeReverseCount(addReverse.Id, 1);
-            else if (virtualKey == 189 && !shift && SelectedTrack is { } removeReverse) ChangeReverseCount(removeReverse.Id, -1);
             else if (virtualKey == 74 && !shift && plot.Contains(mouseX, mouseY) && SelectedTrack is { } extend) ExtendSlider(extend.Id, MapAt(mouseX, mouseY, true, clampX: false));
             return;
         }

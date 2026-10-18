@@ -75,6 +75,8 @@ public sealed partial class EditorView
                 slider.SpanCount = spans; slider.OriginalLine = tailOriginalLine;
                 slider.RandomizationSource = before.RandomizationSource; slider.RandomizationTrack = before.RandomizationTrack;
                 slider.RandomizationBaseVelocity = before.RandomizationBaseVelocity;
+                slider.ProcessedSliderVelocityMultiplier = before.ProcessedSliderVelocityMultiplier;
+                slider.PreserveNativeGeometry = before.PreserveNativeGeometry;
                 return;
             }
             if (tailOriginalLine is { } original)
@@ -456,7 +458,7 @@ public sealed partial class EditorView
             if (item.IsBanana)
             {
                 c.Stroke(bounds, 0xFFFFFF, 1.5f, bounds.Height / 2);
-                if (selected) c.Stroke(bounds, IsOsuCanvas ? OsuSelectionColour : 0x2866C6, 2, bounds.Height / 2);
+                if (selected) c.Stroke(bounds, IsOsuCanvas ? OsuSelectionColour : SelectionHighlightColour, 2, bounds.Height / 2);
             }
         }
 
@@ -474,7 +476,7 @@ public sealed partial class EditorView
                 {
                     c.Circle(ringX, cy, 19 * TimelineMarkerScale, OsuSelectionColour, false, Math.Max(1, 3 * TimelineMarkerScale));
                     if (!IsOsuCanvas)
-                        c.Circle(ringX, cy, 21 * TimelineMarkerScale, 0x2866C6, false, Math.Max(1, 2 * TimelineMarkerScale));
+                        c.Circle(ringX, cy, 21 * TimelineMarkerScale, SelectionHighlightColour, false, Math.Max(1, 2 * TimelineMarkerScale));
                 }
                 if (!IsOsuCanvas && timelineFruit == (item.Id, item.EventIndex)) c.Circle(ringX, cy, 21 * TimelineMarkerScale, Gold, false, Math.Max(1, 2 * TimelineMarkerScale));
             }

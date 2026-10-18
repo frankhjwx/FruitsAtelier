@@ -956,6 +956,7 @@
   "settings.derandomizeOff": "Legacy slider 转 FSlider 时启用去随机化：关闭",
   "settings.uiScale": "界面缩放",
   "settings.uiScaleHint": "150% 为默认尺寸。点击应用后调整界面大小。",
+  "settings.selectionHighlight": "选中物件高亮颜色",
   "settings.appearance": "外观",
   "settings.skins": "皮肤",
   "settings.immediatePreferences": "更改会立即生效并自动保存。",

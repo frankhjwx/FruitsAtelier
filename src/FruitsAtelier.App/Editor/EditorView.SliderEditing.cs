@@ -14,16 +14,6 @@ public sealed partial class EditorView
     }
 
     private readonly HashSet<Guid> pendingImplicitSliderConversions = [];
-    private void ChangeReverseCount(Guid id, int change)
-    {
-        if (Document.Tracks.FirstOrDefault(t => t.Id == id) is not { } track) return;
-        Edit(L.Get(change > 0 ? "editor.command.addReverse" : "editor.command.removeReverse"), () =>
-        {
-            track.SpanCount = Math.Clamp(track.SpanCount + change, 1, 9000);
-            Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
-        });
-    }
-
     private void ExtendSlider(Guid id, MapPoint target)
     {
         if (Document.Tracks.FirstOrDefault(t => t.Id == id) is not { } track || track.Nodes.Count < 2) return;

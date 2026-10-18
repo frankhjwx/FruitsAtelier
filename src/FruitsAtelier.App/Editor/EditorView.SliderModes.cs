@@ -276,7 +276,7 @@ public sealed partial class EditorView
             bool selected = anchorSelection.Contains(vertices[i].Id);
             uint color = vertices[i].Type is null ? Foreground : Error;
             c.Circle(p.X, p.Y, selected ? 7 : 5, color);
-            if (selected) c.Circle(p.X, p.Y, 10, Accent, false, 1.5f);
+            if (selected) c.Circle(p.X, p.Y, 10, SelectionHighlightColour, false, 1.5f);
         }
     }
 

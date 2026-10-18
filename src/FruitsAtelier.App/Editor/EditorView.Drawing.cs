@@ -467,7 +467,7 @@ public sealed partial class EditorView
             DrawCatchObject(c, item, p.X, p.Y, CanvasObjectWidth, opacity * (previewTail ? .6f : 1), hyperStarts: placementHyperdash,
                 animated: IsLazerEditing, presentationTime: LazerPresentationTime, approachRate: Document.ApproachRate);
             if (IsObjectSelected(item.SourceId))
-                c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * CanvasObjectWidth / 512 + 3, Accent, false, 1.5f);
+                c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * CanvasObjectWidth / 512 + 3, SelectionHighlightColour, false, 1.5f);
             if (item.Kind == CatchObjectKind.Fruit && newComboEvents.Contains((item.SourceId, item.EventIndex)))
             {
                 if (comboLabelWidth == 0)

@@ -934,6 +934,7 @@
   "settings.derandomizeOff": "Derandomisatie inschakelen bij conversie van Legacy slider naar FSlider: Uit",
   "settings.uiScale": "Interfaceschaal",
   "settings.uiScaleHint": "150% is de standaardgrootte. Pas toe om de interfacegrootte te wijzigen.",
+  "settings.selectionHighlight": "Selectiekleur",
   "settings.appearance": "Uiterlijk",
   "settings.skins": "Skins",
   "settings.immediatePreferences": "Wijzigingen zijn direct van toepassing en worden automatisch opgeslagen.",

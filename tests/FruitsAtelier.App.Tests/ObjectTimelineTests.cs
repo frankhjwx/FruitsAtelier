@@ -177,7 +177,7 @@ internal static class ObjectTimelineTests
             float y = r.Y + 2.5f;
             Guid last = imported ? map.ImportedSliders[^1].Id : map.Tracks[^1].Id;
             ui.Click(X(1500), y);
-            uint selectionColour = imported ? 0xFFA600u : 0x2866C6u;
+            uint selectionColour = imported ? 0xFFA600u : ui.View.LibrarySettings.SelectionHighlightColour;
             float selectionRadius = imported ? 19 : 21;
             if (!ui.View.SelectedObjectIds.SequenceEqual(new[] { last })
                 || !ui.Canvas.Circles.Any(c => !c.Filled && c.Radius == selectionRadius && c.Color == selectionColour && Math.Abs(c.X - X(1500)) < .01 && c.Y == r.Y + 21))
@@ -604,7 +604,7 @@ internal static class ObjectTimelineTests
             var r=ui.View.ObjectTimelineBounds;
             float X(double time)=>r.X+(float)((time-ui.View.ObjectTimelineStartMs)*ui.View.ObjectTimelinePixelsPerMs);
             var before=ui.View.Document.DeepClone();
-            uint selectionColour = imported ? 0xFFA600u : 0x2866C6u;
+            uint selectionColour = imported ? 0xFFA600u : ui.View.LibrarySettings.SelectionHighlightColour;
             float selectionRadius = imported ? 19 : 21;
             for(int edge=0;edge<=3;edge++)
             {

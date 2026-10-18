@@ -934,6 +934,7 @@
   "settings.derandomizeOff": "Legacy slider から FSlider への変換時に非ランダム化を有効化: オフ",
   "settings.uiScale": "UI の拡大率",
   "settings.uiScaleHint": "150% が標準サイズです。適用すると画面の大きさが変わります。",
+  "settings.selectionHighlight": "選択オブジェクトの強調色",
   "settings.appearance": "外観",
   "settings.skins": "スキン",
   "settings.immediatePreferences": "変更はすぐに適用され、自動的に保存されます。",

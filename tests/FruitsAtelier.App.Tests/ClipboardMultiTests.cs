@@ -18,8 +18,9 @@ internal static class ClipboardMultiTests
         var before = ui.View.Document.DeepClone();
         ui.View.UpdateTransport(3000.25, 10000, true, false, false, null, "fixture.wav");
         Check(ui.View.PasteSelection(), ui.View.StatusMessage);
+        ui.Paint();
         var pasted = Parents(ui.View.Document).Where(p => !oldIds.Contains(p.Id)).OrderBy(p => p.Order).ToArray();
-        Check(pasted.Length == originals.Length && Selected(ui).SetEquals(pasted.Select(p => p.Id)), "Paste did not select the complete new batch.");
+        Check(pasted.Length == originals.Length && Selected(ui).SetEquals(pasted.Select(p => p.Id)), $"Paste did not select the complete new batch: {ui.View.StatusMessage}");
         for (int i = 0; i < originals.Length; i++)
         {
             Near(3000.25 + originals[i].Time - 800, pasted[i].Time);
@@ -137,7 +138,7 @@ internal static class ClipboardMultiTests
 
     private static MapDocument MixedMap()
     {
-        var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,192,1000,12,8,1300,2:3:4:60:banana.wav\n160,192,1000,6,2,B|220:250|300:192,2,200,2|4|8,1:2|2:3|3:4,2:3:4:70:clap.wav\n320,192,1000,5,2,2:3:4:70:fruit.wav\n64,192,800,1,0,0:0:0:0:\n");
+        var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:3\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,192,1000,12,8,1300,2:3:4:60:banana.wav\n160,192,1000,6,2,B|220:250|300:192,2,200,2|4|8,1:2|2:3|3:4,2:3:4:70:clap.wav\n320,192,1000,5,2,2:3:4:70:fruit.wav\n64,192,800,1,0,0:0:0:0:\n");
         var track = new CurveTrack { Name = "Mixed clipboard", SpanCount = 2, SourceOrder = int.MaxValue, CompensateTinyDroplets = false };
         track.Nodes.Add(new() { TimeMs = 1000, X = 100, HandleOut = new(100, 20), OutgoingKind = CurveKind.Bezier });
         track.Nodes.Add(new() { TimeMs = 1500, X = 200, HandleIn = new(-100, -20) });

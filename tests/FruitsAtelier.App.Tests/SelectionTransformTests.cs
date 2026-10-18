@@ -148,7 +148,7 @@ internal static class SelectionTransformTests
                     return ui.Canvas.Texts.First(t => t.Value.Length > 0 && value.StartsWith(t.Value, StringComparison.Ordinal) && t.Y >= 88 && t.Y < 117);
                 }
                 ui.Click(toggle.X + 1, toggle.Y + 2);
-                Check(ui.View.SelectionTransformBounds.Width == 0 && !ui.Canvas.Outlines.Any(o => o.Color == 0x35ABC9),
+                Check(ui.View.SelectionTransformBounds.Width == 0 && !ui.Canvas.Outlines.Any(o => o.Color == ui.View.LibrarySettings.SelectionHighlightColour),
                     "Disabled selection rectangle is still drawn.");
                 ui.View.PointerMove(bounds.Right, bounds.Y + bounds.Height / 2, false, false);
                 Check(!ui.View.SelectionScaleCursor, "Hidden rectangle still exposes a scale cursor.");
