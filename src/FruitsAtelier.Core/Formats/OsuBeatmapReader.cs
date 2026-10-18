@@ -90,6 +90,7 @@ public static class OsuBeatmapReader
             ValidateOsuResourceReference(audio);
             document.AudioPath = sourcePath is null ? audio : ResolveResource(sourcePath, audio);
         }
+        LegacySliderVelocityEditing.Capture(document);
         Validate(document);
         if (inferDuration) SetDuration(document, document.ImportedSliders.Select(s => ImportedSliderConverter.EndTimeMs(document, s)));
         return document;
@@ -276,11 +277,14 @@ public static class OsuBeatmapReader
         }
         foreach (var shower in document.BananaShowers)
         { Id(shower.Id); Time(shower.TimeMs); Time(shower.EndTimeMs); shower.Pattern?.Validate(); if (shower.EndTimeMs < shower.TimeMs) throw new InvalidDataException(L.Get("core.reader.bananaEnd")); }
+        if (document.ImportedSliders.Any(s => InvalidSv(s.SliderVelocityMultiplier) || InvalidSv(s.ProcessedSliderVelocityMultiplier * document.SliderMultiplier / document.EffectiveSliderMultiplier)))
+            throw new InvalidDataException(L.Get("legacySv.range"));
         foreach (var timing in document.TimingPoints) ValidateTiming(timing);
         var errors = CurveMath.Validate(document, int.MaxValue);
         if (errors.Count != 0) throw new InvalidDataException(string.Join(L.Get("core.diagnostics.separator"), errors));
 
         void Id(Guid id) { if (id == Guid.Empty || !ids.Add(id)) throw new InvalidDataException(L.Get("core.reader.uniqueId")); }
+        static bool InvalidSv(double? value) => value is { } sv && (!double.IsFinite(sv) || sv < .1 || sv > 10);
         static void Time(double time) { if (!double.IsFinite(time) || time < 0 || time > int.MaxValue) throw new InvalidDataException(L.Get("core.reader.timeRange")); }
         static void X(double x) { if (!double.IsFinite(x) || x < 0 || x > 512) throw new InvalidDataException(L.Get("core.reader.xRange")); }
     }

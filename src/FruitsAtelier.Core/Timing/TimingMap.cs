@@ -35,7 +35,13 @@ public static class TimingMap
             if (ratio != 1)
             {
                 requiredStates = [];
-                importedHeads = document.ImportedSliders.Select(s => s.TimeMs).ToArray();
+                foreach (var slider in document.ImportedSliders.Where(s => s.SliderVelocityMultiplier is not null))
+                {
+                    double own = (slider.ProcessedSliderVelocityMultiplier ?? slider.SliderVelocityMultiplier!.Value) * ratio;
+                    if (own < .1 - 1e-12 || own > 10 + 1e-12)
+                        throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("timing.sliderMultiplierSvLimit"));
+                }
+                importedHeads = document.ImportedSliders.Where(s => s.SliderVelocityMultiplier is null).Select(s => s.TimeMs).ToArray();
                 var boundaries = groups.Select(g => g.TimeMs).ToArray();
                 foreach (double head in importedHeads)
                 {
@@ -47,7 +53,7 @@ public static class TimingMap
             double beatLength = EffectiveBeatLength(firstRed?.BeatLengthMs ?? document.BeatLengthMs);
             double offset = firstRed?.TimeMs ?? document.TimingOffsetMs;
             int meter = firstRed?.Meter ?? 4;
-            // Only retained Legacy heads require exact compensation; FSliders solve their own legal SV.
+            // Only sliders inheriting timing SV require exact compensation of these states.
             double sv = ratio == 1 ? 1 : 100 / SliderMultiplierEditing.ScaleBeatLength(100, ratio, requiredStates!.Contains(-1));
             bool generateTicks = true;
             initial = new(offset, beatLength, sv, generateTicks, meter);
@@ -88,7 +94,7 @@ public static class TimingMap
             if (beatLengthMs != document.BeatLengthMs || offsetMs != document.TimingOffsetMs
                 || sourceMultiplier != document.SliderMultiplier || effectiveMultiplier != document.EffectiveSliderMultiplier
                 || inputPoints.Length != document.TimingPoints.Count) return false;
-            if (importedHeads is not null && !importedHeads.SequenceEqual(document.ImportedSliders.Select(s => s.TimeMs))) return false;
+            if (importedHeads is not null && !importedHeads.SequenceEqual(document.ImportedSliders.Where(s => s.SliderVelocityMultiplier is null).Select(s => s.TimeMs))) return false;
             for (int i = 0; i < inputPoints.Length; i++)
                 if (!inputPoints[i].ContentEquals(document.TimingPoints[i])) return false;
             return true;

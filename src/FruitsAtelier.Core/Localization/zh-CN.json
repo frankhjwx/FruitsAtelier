@@ -1,4 +1,6 @@
 {
+  "legacySv.label": "Legacy SV（×）",
+  "legacySv.range": "Legacy 滑条 SV 必须在 0.1 到 10 之间。",
   "inspector.title": "Slider Inspector",
   "inspector.select": "请选择一个或多个 Slider",
   "inspector.pathDisplay": "Legacy 显示：{0} ▾",

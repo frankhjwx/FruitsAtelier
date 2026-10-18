@@ -11,6 +11,7 @@ public sealed class CatchConversionCache
     private readonly HashSet<Guid> seen = new();
     private (double, double, double, double, double, double, bool, double, int, bool, bool, double, bool) settings;
     private TimingMap.Lookup? timing;
+    private Dictionary<double, double> fixedHeads = [];
     internal void Begin(MapDocument document, bool compensation)
     {
         var current = (document.DurationMs, document.BeatLengthMs, document.TimingOffsetMs, document.ApproachRate,
@@ -21,6 +22,7 @@ public sealed class CatchConversionCache
             entries.Clear(); trackPositions.Clear(); settings = current;
         }
         if (timing is null || !timing.MatchesTiming(document)) timing = new(document);
+        fixedHeads = LegacySliderVelocityEditing.HeadVelocities(document);
         seen.Clear();
     }
     internal void End()
@@ -57,6 +59,9 @@ public sealed class CatchConversionCache
         // Sliders and streams lock their timing at the head; unrelated timing edits
         // cannot invalidate their geometry or nested events. Bananas use no timing.
         if (entry.Timing != TimingAt(track, imported)) return false;
+        if (track is not null && entry.Slider is not null
+            && LegacySliderVelocityEditing.ConstraintAt(fixedHeads, track.Nodes[0].TimeMs) is { } requiredSv
+            && Math.Abs(entry.Slider.SliderVelocityMultiplier - requiredSv) > 1e-9) return false;
         rng = entry.After; slider = entry.Slider; objects = entry.Objects; return true;
     }
     internal void Store(CurveTrack? track, ImportedSlider? imported, BananaShower? banana,
@@ -77,12 +82,18 @@ public sealed class CatchConversionCache
     }
 
     private TimingState TimingAt(CurveTrack? track, ImportedSlider? imported)
-        => track is not null ? timing!.At(track.Nodes[0].TimeMs) : imported is not null ? timing!.At(imported.TimeMs) : default;
+    {
+        if (track is null) return imported is null ? default : timing!.At(imported.TimeMs);
+        var state = timing!.At(track.Nodes[0].TimeMs);
+        return state with { SliderVelocityMultiplier = track.FixedSliderVelocityMultiplier ?? LegacySliderVelocityEditing.ConstraintAt(fixedHeads, track.Nodes[0].TimeMs)
+            ?? state.SliderVelocityMultiplier };
+    }
 
     private static bool Equal(CurveTrack a, CurveTrack b, bool includeRandomization = true)
     {
         if (a.Id != b.Id || a.Kind != b.Kind || a.Name != b.Name || a.SourceOrder != b.SourceOrder || a.SpanCount != b.SpanCount
             || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets || a.Nodes.Count != b.Nodes.Count
+            || a.SliderVelocitySeed != b.SliderVelocitySeed || a.FixedSliderVelocityMultiplier != b.FixedSliderVelocityMultiplier
             || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
             || !a.StreamNewComboOffsets.SequenceEqual(b.StreamNewComboOffsets)
             || includeRandomization && (a.DropletMode != b.DropletMode || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization))) return false;
@@ -97,5 +108,7 @@ public sealed class CatchConversionCache
     // Parent order is applied by the converter before cache lookup; the incoming RNG state is checked separately.
     private static bool Equal(ImportedSlider a, ImportedSlider b) => a.Id == b.Id && a.OriginalLine == b.OriginalLine
         && a.X == b.X && a.Y == b.Y && a.TimeMs == b.TimeMs && a.PathType == b.PathType
+        && a.ProcessedSliderVelocityMultiplier == b.ProcessedSliderVelocityMultiplier
+        && a.SliderVelocityMultiplier == b.SliderVelocityMultiplier
         && a.SpanCount == b.SpanCount && a.PixelLength == b.PixelLength && a.ControlPoints.ContentEquals(b.ControlPoints);
 }

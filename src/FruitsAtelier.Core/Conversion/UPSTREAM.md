@@ -90,3 +90,15 @@ imported control points, 9000 spans and 1000000 imported path samples. Imported
 editing is bounded to 30000 anchors and 20 million simplification checks. Grid
 enumeration is bounded to 10000 lines. Inputs
 outside these bounds fail with diagnostics rather than silently trimming data.
+
+## Independent slider velocity editing
+
+The per-object SV and legacy-export separation also references ppy/osu revision
+`676f3b01f28841ebd97ab583e178f2d7b99fe48c`:
+
+- [SliderSelectionBlueprint](https://github.com/ppy/osu/blob/676f3b01f28841ebd97ab583e178f2d7b99fe48c/osu.Game.Rulesets.Osu/Edit/Blueprints/Sliders/SliderSelectionBlueprint.cs): ordinary length adjustment keeps SV; Shift adjustment keeps the distance/SV ratio, with SV in 0.1–10.
+- [LegacyBeatmapEncoder](https://github.com/ppy/osu/blob/676f3b01f28841ebd97ab583e178f2d7b99fe48c/osu.Game/Beatmaps/Formats/LegacyBeatmapEncoder.cs): per-object slider multipliers supply difficulty control points during legacy export.
+
+Fruits Atelier keeps authored and postprocessed Legacy multipliers separate; its
+Shift gesture adjusts control geometry and authored length together. The existing
+osu! MIT notice applies to this reference; no additional dependency is introduced.

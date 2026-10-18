@@ -57,10 +57,12 @@ internal static class TimingEditingTests
         var overridden = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n500,-100,4,1,0,100,0,0\n[HitObjects]\n100,192,1000,2,0,L|250:192,1,150\n");
         SliderMultiplierEditing.Apply(overridden, 1.3);
         var green = overridden.TimingPoints[1].DeepClone(); green.BeatLengthMs = -10;
-        bool rejected = false;
-        try { TimingEditing.Apply(overridden, [overridden.TimingPoints[0], green], [(overridden.TimingPoints[1], green)], new()); }
-        catch (System.IO.InvalidDataException) { rejected = true; }
-        Check(rejected, "Timing edits reject green SV that base-SV compensation cannot export");
+        double oldDuration = ImportedSliderConverter.DurationMs(overridden, overridden.ImportedSliders.Single());
+        TimingEditing.Apply(overridden, [overridden.TimingPoints[0], green], [(overridden.TimingPoints[1], green)], new());
+        Check(overridden.ImportedSliders.Single().SliderVelocityMultiplier == 1
+            && ImportedSliderConverter.DurationMs(overridden, overridden.ImportedSliders.Single()) == oldDuration
+            && OsuBeatmapWriter.Serialize(overridden).ObjectSequenceMatches,
+            "A green edit changed the independent Legacy SV or constrained base compensation");
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
 }

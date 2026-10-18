@@ -141,7 +141,7 @@ public static class TimingEditing
             var state = TimingMap.At(map, slider.TimeMs);
             double oldEnd = ImportedSliderConverter.EndTimeMs(map, slider);
             double duration = Math.Max(state.BeatLengthMs / divisor, TimingMap.Snap(map, oldEnd, divisor) - slider.TimeMs);
-            slider.PixelLength = duration / slider.SpanCount * 100 * map.EffectiveSliderMultiplier * state.SliderVelocityMultiplier / state.BeatLengthMs;
+            slider.PixelLength = duration / slider.SpanCount * 100 * map.EffectiveSliderMultiplier * ImportedSliderConverter.SliderVelocityAt(map, slider) / state.BeatLengthMs;
             UpdateSliderSource(slider, 7, slider.PixelLength);
         }
         foreach (var track in map.Tracks.Where(t => t.Nodes.Count >= 2))

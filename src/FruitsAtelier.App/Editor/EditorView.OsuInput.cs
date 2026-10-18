@@ -34,12 +34,20 @@ public sealed partial class EditorView
         EnsureOsuCanvasObjects();
         if (ReferenceEquals(osuDistanceSource, osuCanvasObjects)) return;
         var timing = SnapTiming();
+        var imported = Document.ImportedSliders.ToDictionary(s => s.Id);
+        var generated = conversion?.Sliders.ToDictionary(s => s.SourceId);
         osuDistanceReferences = osuCanvasObjects.Where(o => !o.Spinner).Select(o =>
         {
             var state = timing.At(o.Start);
             double x = o.X, y = o.Y;
             if (o.Path.Length > 0 && o.Spans % 2 == 1) { x = o.Path[^1].X; y = o.Path[^1].GeometryY; }
-            return (Time: o.End, X: x, Y: y, BeatLength: state.BeatLengthMs, Sv: state.SliderVelocityMultiplier);
+            double sv = state.SliderVelocityMultiplier;
+            if (imported.TryGetValue(o.Id, out var slider))
+                sv = !osuShowProcessedSliders && slider.SliderVelocityMultiplier is { } authored
+                    ? authored * Document.SliderMultiplier / Document.EffectiveSliderMultiplier
+                    : ImportedSliderConverter.SliderVelocityAt(Document, slider, timing);
+            else if (generated?.TryGetValue(o.Id, out var path) == true) sv = path.SliderVelocityMultiplier;
+            return (Time: o.End, X: x, Y: y, BeatLength: state.BeatLengthMs, Sv: sv);
         }).OrderBy(o => o.Time).ToArray();
         osuDistanceSource = osuCanvasObjects;
     }
@@ -165,7 +173,7 @@ public sealed partial class EditorView
         }
         if (tool == Tool.Slider)
         {
-            osuDraftSlider ??= new ImportedSlider { TimeMs = OsuPlacementTime, X = point.X, Y = point.Y, PreserveNativeGeometry = true };
+            osuDraftSlider ??= new ImportedSlider { TimeMs = OsuPlacementTime, X = point.X, Y = point.Y, PreserveNativeGeometry = true, SliderVelocityMultiplier = 1 };
             osuDraftSlider.ControlPoints.Add(new(point.X, point.Y));
             osuDraftPointer = point;
             StatusMessage = L.Get("osu.sliderDraft"); return true;
@@ -262,12 +270,14 @@ public sealed partial class EditorView
             foreach (var source in osuDragStart.ImportedSliders.Where(s => objectSelection.Contains(s.Id)))
             {
                 var target = Document.ImportedSliders.First(s => s.Id == source.Id);
-                target.X = source.X; target.Y = source.Y; target.PixelLength = source.PixelLength;
+                target.X = source.X; target.Y = source.Y; target.PixelLength = source.PixelLength; target.PathType = source.PathType;
                 target.ControlPoints.Clear(); target.ControlPoints.AddRange(source.ControlPoints);
                 target.OriginalLine = source.OriginalLine; target.RandomizationSource = source.RandomizationSource;
                 target.RandomizationTrack = source.RandomizationTrack;
                 target.RandomizationBaseVelocity = source.RandomizationBaseVelocity;
                 target.PreserveNativeGeometry = source.PreserveNativeGeometry;
+                target.SliderVelocityMultiplier = source.SliderVelocityMultiplier;
+                target.ProcessedSliderVelocityMultiplier = source.ProcessedSliderVelocityMultiplier;
             }
             return true;
         }
@@ -281,7 +291,18 @@ public sealed partial class EditorView
             while (last + 1 < source.ControlPoints.Count && source.ControlPoints[last + 1] == original) last++;
             for (int i = first; i <= last; i++) controlSlider.ControlPoints[i] = new(point.X, point.Y);
             if (first == 0) { controlSlider.X = point.X; controlSlider.Y = point.Y; }
-            OsuRecalculateLength(controlSlider); OsuSyncSliderLine(controlSlider);
+            controlSlider.SliderVelocityMultiplier = source.SliderVelocityMultiplier;
+            controlSlider.ProcessedSliderVelocityMultiplier = null;
+            OsuRecalculateLength(controlSlider, snapLength: !shift);
+            if (shift && source.PixelLength > 0)
+            {
+                double oldSv = (source.ProcessedSliderVelocityMultiplier ?? source.SliderVelocityMultiplier)
+                    ?? ImportedSliderConverter.SliderVelocityAt(osuDragStart, source);
+                double ratio = source.PixelLength / oldSv;
+                controlSlider.PixelLength = Math.Clamp(controlSlider.PixelLength, .1 * ratio, 10 * ratio);
+                controlSlider.SliderVelocityMultiplier = controlSlider.PixelLength / ratio;
+            }
+            OsuSyncSliderLine(controlSlider);
             return true;
         }
         double dx = point.X - osuDragOrigin.X, dy = point.Y - osuDragOrigin.Y;
@@ -293,9 +314,11 @@ public sealed partial class EditorView
         foreach (var source in osuDragStart.ImportedSliders.Where(s => objectSelection.Contains(s.Id)))
         {
             var target = Document.ImportedSliders.First(s => s.Id == source.Id);
-            target.X = source.X + dx; target.Y = source.Y + dy;
-            for (int i = 0; i < source.ControlPoints.Count; i++)
-                target.ControlPoints[i] = new(source.ControlPoints[i].X + dx, source.ControlPoints[i].GeometryY + dy);
+            var geometry = source.RandomizationSource ?? source;
+            target.X = geometry.X + dx; target.Y = geometry.Y + dy;
+            target.PathType = geometry.PathType; target.PixelLength = geometry.PixelLength;
+            target.ControlPoints.Clear();
+            target.ControlPoints.AddRange(geometry.ControlPoints.Select(p => new SliderPathPoint(p.X + dx, p.GeometryY + dy)));
             OsuSyncSliderLine(target);
         }
         return true;
@@ -384,17 +407,18 @@ public sealed partial class EditorView
 
     private static char OsuPlacementPathType(int count) => count == 3 ? 'P' : 'B';
 
-    private void OsuRecalculateLength(ImportedSlider slider, bool controlCountChanged = false)
+    private void OsuRecalculateLength(ImportedSlider slider, bool controlCountChanged = false, bool snapLength = true)
     {
         if (controlCountChanged && slider.PathType == 'P' && slider.ControlPoints.Count != 3) slider.PathType = 'B';
+        slider.ProcessedSliderVelocityMultiplier = null;
         slider.PixelLength = 0;
         var path = ImportedSliderConverter.Path(slider);
         for (int i = 1; i < path.Count; i++)
             slider.PixelLength += Math.Sqrt(Math.Pow(path[i].X - path[i - 1].X, 2) + Math.Pow(path[i].GeometryY - path[i - 1].GeometryY, 2));
-        if (snap && slider.PixelLength > .001)
+        if (snapLength && snap && slider.PixelLength > .001)
         {
             var timing = SnapTiming();
-            double step = ImportedSliderConverter.VelocityAt(Document, slider.TimeMs, timing)
+            double step = ImportedSliderConverter.VelocityAt(Document, slider, timing)
                 * timing.At(slider.TimeMs).BeatLengthMs / divisor;
             slider.PixelLength = Math.Max(1, Math.Round(slider.PixelLength / step, MidpointRounding.AwayFromZero)) * step;
         }
@@ -402,6 +426,7 @@ public sealed partial class EditorView
 
     private static void OsuSyncSliderLine(ImportedSlider slider)
     {
+        slider.ProcessedSliderVelocityMultiplier = null;
         slider.RandomizationSource = null; slider.RandomizationTrack = null; slider.RandomizationBaseVelocity = null;
         slider.PreserveNativeGeometry = true;
         static string N(double value) => value.ToString("R", CultureInfo.InvariantCulture);
@@ -437,7 +462,7 @@ public sealed partial class EditorView
             PathType = slider.PathType, PixelLength = slider.PixelLength, SpanCount = slider.SpanCount,
             SourceOrder = slider.SourceOrder, OriginalLine = slider.OriginalLine, RandomizationSource = slider.RandomizationSource,
             RandomizationTrack = slider.RandomizationTrack, RandomizationBaseVelocity = slider.RandomizationBaseVelocity,
-            PreserveNativeGeometry = slider.PreserveNativeGeometry };
+            PreserveNativeGeometry = slider.PreserveNativeGeometry, SliderVelocityMultiplier = slider.SliderVelocityMultiplier, ProcessedSliderVelocityMultiplier = slider.ProcessedSliderVelocityMultiplier };
         copy.ControlPoints.AddRange(slider.ControlPoints);
         return copy;
     }
@@ -623,7 +648,7 @@ public sealed partial class EditorView
     private void ChangeOsuSliderLength(ImportedSlider slider, int direction)
     {
         var timing = SnapTiming();
-        double step = ImportedSliderConverter.VelocityAt(Document, slider.TimeMs, timing)
+        double step = ImportedSliderConverter.VelocityAt(Document, slider, timing)
             * timing.At(slider.TimeMs).BeatLengthMs / divisor;
         Edit(L.Get("inspector.length"), () =>
         {

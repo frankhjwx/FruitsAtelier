@@ -1,4 +1,6 @@
 {
+  "legacySv.label": "Legacy SV (×)",
+  "legacySv.range": "Legacy slider SV must be between 0.1 and 10.",
   "inspector.title": "Slider Inspector",
   "inspector.select": "Select one or more sliders",
   "inspector.pathDisplay": "Legacy display: {0} ▾",

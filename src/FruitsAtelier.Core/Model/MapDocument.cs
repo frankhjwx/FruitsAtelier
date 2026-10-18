@@ -101,6 +101,9 @@ public sealed class CurveTrack
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SliderDropletMode? DropletMode { get; set; }
 
+    internal double? SliderVelocitySeed { get; set; }
+    internal double? FixedSliderVelocityMultiplier { get; set; }
+
     public bool RandomizesDroplets(MapDocument document) => DropletMode switch
     {
         SliderDropletMode.FollowMap => !document.DerandomizeFSliderDroplets,
@@ -164,6 +167,10 @@ public sealed class ImportedSlider
     public double Y { get; set; }
     public double TimeMs { get; set; }
     public char PathType { get; set; } = 'B';
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? SliderVelocityMultiplier { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? ProcessedSliderVelocityMultiplier { get; set; }
     public SliderControlPoints ControlPoints { get; private set; } = new();
     public int SpanCount { get; set; } = 1;
     public double PixelLength { get; set; }
@@ -175,7 +182,8 @@ public sealed class ImportedSlider
             Id = Id, SourceOrder = SourceOrder, OriginalLine = OriginalLine, X = X, Y = Y,
             TimeMs = TimeMs, PathType = PathType, SpanCount = SpanCount, PixelLength = PixelLength,
             RandomizationSource = RandomizationSource?.DeepClone(), RandomizationTrack = RandomizationTrack?.DeepClone(),
-            RandomizationBaseVelocity = RandomizationBaseVelocity, PreserveNativeGeometry = PreserveNativeGeometry
+            RandomizationBaseVelocity = RandomizationBaseVelocity, PreserveNativeGeometry = PreserveNativeGeometry,
+            SliderVelocityMultiplier = SliderVelocityMultiplier, ProcessedSliderVelocityMultiplier = ProcessedSliderVelocityMultiplier
         };
         copy.ControlPoints = ControlPoints.Share();
         copy.geometryMemo = geometryMemo;
@@ -185,6 +193,7 @@ public sealed class ImportedSlider
     internal bool ContentEquals(ImportedSlider other) => Id == other.Id && SourceOrder == other.SourceOrder
         && OriginalLine == other.OriginalLine && X == other.X && Y == other.Y && TimeMs == other.TimeMs
         && PathType == other.PathType && SpanCount == other.SpanCount && PixelLength == other.PixelLength
+        && SliderVelocityMultiplier == other.SliderVelocityMultiplier && ProcessedSliderVelocityMultiplier == other.ProcessedSliderVelocityMultiplier
         && RandomizationBaseVelocity == other.RandomizationBaseVelocity
         && PreserveNativeGeometry == other.PreserveNativeGeometry
         && ControlPoints.ContentEquals(other.ControlPoints)

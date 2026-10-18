@@ -7,6 +7,15 @@ The authoring model persists as UTF-8 JSON. Documents containing exact control c
 Non-default osu canvas coordinates, independent osu distance spacing, Legacy native
 geometry preservation, or randomization baselines use schema 27 (single difficulty)
 or 28 (multi-difficulty).
+Independent Legacy slider SV uses schema 29 (single difficulty) or 30 (multiple
+difficulties). Each Legacy slider stores its authored `SliderVelocityMultiplier`
+and an optional `ProcessedSliderVelocityMultiplier` for materialized droplet
+compensation. Imported sliders capture the effective SV at their head; opening an
+older project in the editor captures missing values before establishing history.
+Moving or reshaping a slider retains its authored SV. Green timing changes do not
+replace this per-object value. The Inspector edits authored SV; export metrics
+report the processed value. Export alone synthesizes required green points.
+
 Older schemas remain readable. A fruit's geometric Y defaults to 192; old saved
 fruits recover Y from their retained source object line when present. Catch editing
 preserves this coordinate. `OsuDistanceSpacing` is independent of Catch spacing,
@@ -24,8 +33,9 @@ repeated strength or seed changes do not compound previous effects. Materialized
 geometry and emitted timing are validated through NM and HR export/read-back
 before replacement. A failure retains the original objects and reports its reason.
 Legacy sliders authored or manually edited in the osu! canvas persist `PreserveNativeGeometry`.
-Their original two-dimensional controls are excluded from global droplet path
-rebuilding, including after reopening the project. Older objects default to false.
+Their original two-dimensional controls and authored SV remain separate from the
+materialized droplet path and processed SV, including after reopening. Failed
+processing retains the prior committed state. Older objects default to false.
 
 ## Authoritative and derived data
 

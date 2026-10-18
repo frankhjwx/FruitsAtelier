@@ -40,6 +40,7 @@ public sealed partial class EditorView
     internal double? InspectorPeakRatio { get; private set; }
     internal double? InspectorMaxDs { get; private set; }
     internal Rect SliderInspectorViewport => inspectorBounds;
+    internal Rect LegacySliderSvBounds => fields.FirstOrDefault(f => f.Label == L.Get("legacySv.label"))?.Bounds ?? default;
 
     internal void ShowSliderInspector()
     {
@@ -171,6 +172,9 @@ public sealed partial class EditorView
             actions.Add((L.Get("inspector.pathDisplay", L.Get(osuShowProcessedSliders ? "inspector.pathProcessed" : "inspector.pathDrawn")),
                 OpenOsuSliderDisplayMenu, drag == DragKind.None && osuDraftSlider is null, 0));
         bool enabled = ClipboardInteractionReady && !notesLocked;
+        if (inspectorTargets.Length == 1 && Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0]))
+            actions.Add((L.Get("legacySv.label"), () => { }, !notesLocked && drag == DragKind.None
+                && draftTrack == Guid.Empty && draftBanana == Guid.Empty && !LegacyDropletRefreshBusy, 3));
         if (inspectorTargets.Length == 1 && Document.Tracks.Any(s => s.Id == inspectorTargets[0] && s.StreamSnapDivisor is null))
             actions.Add((L.Get("osu.convertLegacy"), () => ConvertSelectedSliderRepresentation(inspectorTargets[0]), enabled, 0));
         if (inspectorTargets.Length == 1 && Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0]))
@@ -273,7 +277,17 @@ public sealed partial class EditorView
             var action = actions[i]; var box = new Rect(x, y + metricsHeight + 10 + i * 38, contentWidth, 32);
             if (action.Kind == 1) LegacyConversionBounds = box;
             if (action.Kind == 2) StreamConversionBounds = box;
-            Button(c, box, action.Label, action.Action, enabled: action.Enabled, fontSize: 12);
+            if (action.Kind == 3 && action.Enabled)
+            {
+                var slider = Document.ImportedSliders.Single(s => s.Id == inspectorTargets[0]);
+                double value = slider.SliderVelocityMultiplier ?? ImportedSliderConverter.SliderVelocityAt(Document, slider);
+                var targets = inspectorTargetSet.ToHashSet();
+                float fieldY = box.Y;
+                Field(c, box.X, ref fieldY, box.Width, action.Label, value,
+                    v => LegacySliderVelocityEditing.Apply(Document, targets, v), Math.Min(110, box.Width * .55f));
+            }
+            else
+                Button(c, box, action.Label, action.Action, enabled: action.Enabled, fontSize: 12);
         }
         if (mergeHeight > 0)
             DrawMergeControls(c, new(x, y + metricsHeight + 10 + actions.Count * 38, contentWidth, mergeHeight), enabled);
@@ -283,6 +297,8 @@ public sealed partial class EditorView
             var box = hits[i].Bounds;
             if (box.Y < viewport.Y || box.Bottom > viewport.Bottom || box.Right <= viewport.X || box.X >= viewport.Right) hits.RemoveAt(i);
         }
+        fields.RemoveAll(f => f.Label == L.Get("legacySv.label")
+            && (f.Bounds.Y < viewport.Y || f.Bounds.Bottom > viewport.Bottom));
         if (inspectorContentHeight > viewport.Height)
         {
             float thumb = Math.Max(20, viewport.Height * viewport.Height / inspectorContentHeight);

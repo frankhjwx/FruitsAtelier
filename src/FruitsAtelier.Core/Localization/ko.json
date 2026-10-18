@@ -1,4 +1,6 @@
 {
+  "legacySv.label": "Legacy SV (×)",
+  "legacySv.range": "Legacy 슬라이더 SV는 0.1~10이어야 합니다.",
   "inspector.title": "슬라이더 속성",
   "inspector.select": "슬라이더를 선택하세요",
   "inspector.pathDisplay": "Legacy 표시: {0} ▾",

@@ -145,6 +145,8 @@ public static class OsuBeatmapWriter
                 original.ImportedSliders[0].RandomizationTrack = slider.RandomizationTrack;
                 original.ImportedSliders[0].RandomizationBaseVelocity = slider.RandomizationBaseVelocity;
                 original.ImportedSliders[0].PreserveNativeGeometry = slider.PreserveNativeGeometry;
+                original.ImportedSliders[0].SliderVelocityMultiplier = slider.SliderVelocityMultiplier;
+                original.ImportedSliders[0].ProcessedSliderVelocityMultiplier = slider.ProcessedSliderVelocityMultiplier;
                 if (!slider.ContentEquals(original.ImportedSliders[0])) throw new InvalidDataException(L.Get("core.writer.importedChanged"));
                 lines.Add((slider.TimeMs, slider.SourceOrder, slider.Id, slider.OriginalLine));
             }
@@ -206,7 +208,18 @@ public static class OsuBeatmapWriter
                 .Concat(document.ImportedSliders.Select(s => s.TimeMs)).DefaultIfEmpty(double.PositiveInfinity).Min();
             SliderMultiplierEditing.RebaseTiming(timingDocument, document.EffectiveSliderMultiplier, firstSlider);
         }
-        var timing = cache is null ? BuildTiming(timingDocument, generated) : cache.Timing(timingDocument, generated, BuildTiming);
+        var sourceTiming = new TimingMap.Lookup(document);
+        var independent = document.ImportedSliders.Where(s => s.SliderVelocityMultiplier is not null
+            && Math.Abs(ImportedSliderConverter.SliderVelocityAt(document, s, sourceTiming)
+                - sourceTiming.At(s.TimeMs).SliderVelocityMultiplier) > 1e-9).Select(s => s.Id).ToHashSet();
+        var timingSliders = generated;
+        if (independent.Count > 0)
+        {
+            timingDocument = timingDocument.DeepClone();
+            timingDocument.ImportedSliders.RemoveAll(s => independent.Contains(s.Id));
+            timingSliders = generated.Concat(converted.Sliders.Where(s => independent.Contains(s.SourceId))).ToArray();
+        }
+        var timing = cache is null ? BuildTiming(timingDocument, timingSliders) : cache.Timing(timingDocument, timingSliders, BuildTiming);
         if (document.HitsoundOverrides.Count > 0)
         {
             timing = timing.Select(p => p.DeepClone()).ToList();

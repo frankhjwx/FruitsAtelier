@@ -16,7 +16,12 @@ public sealed partial class EditorView
         public Guid Id { get; } = difficulty.Id;
         public MapEditingPreferences EditingPreferences { get; set; } = new();
         public string Name => OsuBeatmapReader.Setting(History.Document, "Metadata", "Version") ?? difficulty.Name;
-        public EditorHistory History { get; } = new(difficulty.Document);
+        public EditorHistory History { get; } = new(PrepareDocument(difficulty.Document));
+        private static MapDocument PrepareDocument(MapDocument document)
+        {
+            LegacySliderVelocityEditing.Capture(document);
+            return document;
+        }
         public MapDocument? RatingSnapshot;
         public double? Stars, EasyStars, HardRockStars;
         public IReadOnlyList<CatchStrainSample>? StrainSamples;

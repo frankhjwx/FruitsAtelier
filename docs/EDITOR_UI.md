@@ -1400,9 +1400,23 @@ duration, spans, control-point count, exported SV and exported path length.
 Multiple sliders show value ranges. Managed streams and stacks have no exported
 slider SV. These properties are read-only.
 
+Selecting one Legacy Slider exposes **Legacy SV (×)** in Slider Inspector. This
+edits its independent authored multiplier (0.1–10); it retains path length and
+changes duration without inserting authoring green timing points. Imported
+sliders capture their original head SV. New Legacy sliders start at 1×. Moving a
+Legacy slider across green timing boundaries retains its own SV. Ordinary control
+dragging retains SV and snaps length; holding Shift during the drag changes length
+and authored SV together to preserve duration, within the legal SV range. The
+whole gesture is one undo step. For a retained original-path preview, switch to
+Processed to edit its current controls.
+
 Hand-drawn Legacy Sliders also use Droplet Settings for Catch preview, Testplay
-and export. Their original two-dimensional controls are retained separately from
-the processed geometry, including across settings changes and project saves.
+and export. Their original two-dimensional controls and visible authored SV are retained
+separately from processed geometry and SV. Postprocessing may increase its own
+processed SV to preserve duration, without adding editor timing points. Failed
+processing retains the previous state. Both representations survive project saves.
+Coincident FSlider/Legacy heads share the Legacy slider's actual SV; incompatible
+requirements are rejected instead of changing the Legacy slider's SV.
 
 With Legacy Sliders selected in the osu! canvas, **Legacy display** switches
 between **Drawn slider** and **Processed slider**. Drawn is the default and uses

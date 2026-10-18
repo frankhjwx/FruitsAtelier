@@ -79,11 +79,10 @@ internal static class OsuCanvasModelTests
         lowSv.DurationMs = 100000;
         var lowSvBefore = lowSv.DeepClone();
         var managed = lowSv.ImportedSliders[0];
-        Check(TimingMap.At(lowSv, managed.TimeMs).SliderVelocityMultiplier > managed.RandomizationBaseVelocity.GetValueOrDefault(),
+        Check(managed.ProcessedSliderVelocityMultiplier > managed.RandomizationBaseVelocity.GetValueOrDefault(),
             "Low-SV fixture must require generated SV above its fitting seed");
-        foreach (var point in lowSv.TimingPoints.Where(p => p.TimeMs == managed.TimeMs && !p.Uninherited))
-            point.BeatLengthMs = -1000;
-        double targetDuration = ImportedSliderConverter.DurationMs(lowSv, managed);
+        double targetDuration = ImportedSliderConverter.DurationMs(lowSv, managed) * managed.SliderVelocityMultiplier!.Value / .1;
+        managed.SliderVelocityMultiplier = .1;
         random = SliderRepresentationEditing.RefreshLegacyDroplets(lowSv, previous: lowSvBefore);
         Check(random.Success, string.Join("; ", random.Diagnostics));
         Check(lowSv.ImportedSliders[0].RandomizationBaseVelocity == .1

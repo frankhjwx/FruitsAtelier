@@ -1,4 +1,6 @@
 {
+  "legacySv.label": "Legacy SV (×)",
+  "legacySv.range": "Legacy スライダーの SV は 0.1～10 で指定してください。",
   "inspector.title": "スライダー情報",
   "inspector.select": "スライダーを選択してください",
   "inspector.pathDisplay": "Legacy 表示：{0} ▾",

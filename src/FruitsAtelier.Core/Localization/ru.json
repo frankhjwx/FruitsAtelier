@@ -1,4 +1,6 @@
 {
+  "legacySv.label": "SV Legacy (×)",
+  "legacySv.range": "SV Legacy-слайдера должен быть от 0.1 до 10.",
   "inspector.title": "Инспектор слайдеров",
   "inspector.select": "Выберите слайдеры",
   "inspector.pathDisplay": "Вид Legacy: {0} ▾",

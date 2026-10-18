@@ -351,7 +351,7 @@ public sealed partial class EditorView
             return osuDraftCandidate;
         osuDraftPathSource = draft; osuDraftPathCount = draft.ControlPoints.Count;
         osuDraftPathPointer = osuDraftPointer; osuDraftPathType = draft.PathType; osuDraftInputs = inputs;
-        var candidate = new ImportedSlider { Id = draft.Id, TimeMs = draft.TimeMs, X = draft.X, Y = draft.Y, SpanCount = draft.SpanCount };
+        var candidate = new ImportedSlider { Id = draft.Id, TimeMs = draft.TimeMs, X = draft.X, Y = draft.Y, SpanCount = draft.SpanCount, SliderVelocityMultiplier = draft.SliderVelocityMultiplier };
         candidate.ControlPoints.AddRange(draft.ControlPoints);
         if (osuDraftPointer is { } p && candidate.ControlPoints[^1] != new SliderPathPoint(p.X, p.Y))
             candidate.ControlPoints.Add(new(p.X, p.Y));

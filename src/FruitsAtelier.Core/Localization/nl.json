@@ -1,4 +1,6 @@
 {
+  "legacySv.label": "Legacy SV (×)",
+  "legacySv.range": "De SV van een Legacy-slider moet tussen 0.1 en 10 liggen.",
   "inspector.title": "Slider-inspecteur",
   "inspector.select": "Selecteer een of meer sliders",
   "inspector.pathDisplay": "Legacy-weergave: {0} ▾",

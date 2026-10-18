@@ -800,3 +800,11 @@ new difficulties and overflow in English and Chinese.
 `FruitsAtelier.App.exe --render-check --difficulty-tabs-render-check` checks native
 dragging and pinned tabs at two sizes and three DPI values in both languages,
 with captures under `artifacts/tests/difficulty-tabs-native`.
+
+`App.Tests --independent-sv-check` checks Legacy Inspector SV editing, undo/redo,
+Shift duration locking and unchanged authoring timing. `Formats.Tests
+--independent-sv-check` checks v7/v14 independent SV import, movement, export,
+project persistence and compatible/incompatible coincident FSlider heads. Native
+`--render-check --osu-canvas-render-check --independent-sv-render-check` exercises
+Inspector input and Shift dragging in English/Chinese at both window sizes and
+96/144/192 DPI. `Formats.Tests --sv-timing-sync-check` checks timing/SV sync.

@@ -4,6 +4,18 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: external SV edits update independent Legacy multipliers", () => Run(f =>
+        {
+            f.Diff.Document = OsuBeatmapReader.Read(Fixture() + "\n100,192,2500,2,0,L|300:192,1,200\n", f.Source);
+            var output = OsuBeatmapWriter.Serialize(f.Diff.Document);
+            File.WriteAllText(f.Source, output.Text);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory, output.Text, output.ObjectSources);
+            File.WriteAllText(f.Source, output.Text.Replace("0,500,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\r\n0,-50,4,1,0,100,0,0"));
+            var merge = f.Merge();
+            var resolved = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true));
+            Check(resolved.ImportedSliders.Single().SliderVelocityMultiplier == 2
+                && OsuBeatmapWriter.Serialize(resolved).ObjectSequenceMatches, "Accepted external green SV did not update the Legacy object's own SV");
+        }));
         yield return ("Sync: legacy associations require explicit export consent before automatic publication", () => Run(f =>
         {
             var entry = f.Session.Manifest.Difficulties[0];
@@ -204,6 +216,8 @@ internal static class SynchronizationTests
             var output = CaptureCurveTiming(f);
             var shifted = output.ReadBack.DeepClone();
             foreach (var point in shifted.TimingPoints) point.TimeMs += 12;
+            foreach (var slider in shifted.ImportedSliders) slider.SliderVelocityMultiplier = null;
+            LegacySliderVelocityEditing.Capture(shifted);
             string external = OsuBeatmapWriter.Serialize(shifted).Text;
             File.WriteAllText(f.Source, external);
             var merge = f.Merge();

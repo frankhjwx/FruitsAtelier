@@ -124,7 +124,10 @@ public sealed partial class EditorView
         if (DockContentInputAvailable && PanelVisible(DockPanel.SliderInspector) && menu < 0 && contextItems.Count == 0 && inspectorBounds.Contains(x, y))
         {
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
-                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return; }
+            if (button == 0 && !notesLocked)
+                for (int i = 0; i < fields.Count; i++)
+                    if (fields[i].Bounds.Contains(x, y)) { FocusField(i); FocusInput("numeric:" + i, editBuffer, x); return; }
             return;
         }
         if (SongDockPointer(x, y, button, shift)) return;
@@ -1724,7 +1727,8 @@ public sealed partial class EditorView
         history.Begin(L.Get("editor.command.changeField", field.Label));
         try
         {
-            var readOnlyIds = (IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id)).ToArray();
+            var readOnlyIds = field.Label == L.Get("legacySv.label") ? Array.Empty<Guid>()
+                : (IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id)).ToArray();
             field.Apply(value);
             if (history.TransactionChangesObjects(readOnlyIds))
             { history.Cancel(); fieldError = StatusMessage = L.Get("osu.readOnlySlider"); return false; }

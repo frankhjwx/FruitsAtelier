@@ -1,4 +1,6 @@
 {
+  "legacySv.label": "SV Legacy (×)",
+  "legacySv.range": "SV slider Legacy harus antara 0.1 dan 10.",
   "inspector.title": "Inspektur Slider",
   "inspector.select": "Pilih satu atau beberapa slider",
   "inspector.pathDisplay": "Tampilan Legacy: {0} ▾",

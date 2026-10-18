@@ -1,4 +1,6 @@
 {
+  "legacySv.label": "Legacy SV (×)",
+  "legacySv.range": "Ang SV ng Legacy slider ay dapat nasa pagitan ng 0.1 at 10.",
   "inspector.title": "Slider Inspector",
   "inspector.select": "Pumili ng mga slider",
   "inspector.pathDisplay": "Legacy display: {0} ▾",

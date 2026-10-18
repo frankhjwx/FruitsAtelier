@@ -17,7 +17,7 @@ internal sealed class ImportedSliderLengthCache
         }
         var timing = timingLookup.At(slider.TimeMs);
         return slider.TimeMs + entry.Length / LegacyCatchRules.Velocity(timing.BeatLengthMs,
-            document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier) * slider.SpanCount;
+            document.EffectiveSliderMultiplier, ImportedSliderConverter.SliderVelocityAt(document, slider, timingLookup)) * slider.SpanCount;
     }
 
     public void Retain(MapDocument document)

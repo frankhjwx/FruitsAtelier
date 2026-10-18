@@ -1,4 +1,6 @@
 {
+  "legacySv.label": "Legacy SV (×)",
+  "legacySv.range": "SV ของสไลเดอร์ Legacy ต้องอยู่ระหว่าง 0.1 ถึง 10",
   "inspector.title": "ข้อมูลสไลเดอร์",
   "inspector.select": "เลือกสไลเดอร์หนึ่งรายการขึ้นไป",
   "inspector.pathDisplay": "แสดง Legacy: {0} ▾",

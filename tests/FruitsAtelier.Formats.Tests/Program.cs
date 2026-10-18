@@ -2,6 +2,15 @@ using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 
+if (args.Contains("--sv-timing-sync-check"))
+{
+    foreach (var (name, run) in SynchronizationTests.Cases().Where(c => c.Item1.Contains("timing", StringComparison.OrdinalIgnoreCase)
+        || c.Item1.Contains("SV", StringComparison.Ordinal))) { run(); Console.WriteLine("PASS " + name); }
+    return 0;
+}
+
+if (args.Contains("--independent-sv-check")) { IndependentSliderSvTests.Run(); Console.WriteLine("PASS Independent Legacy SV, overlap and editing"); return 0; }
+
 if (args.Contains("--large-imported-path-check")) { LargeImportedPathTests.Run(); Console.WriteLine("PASS large imported paths and compact projects"); return 0; }
 if (args.Length == 2 && args[0] == "--import-set-roundtrip")
 {
@@ -35,6 +44,7 @@ if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Independent Legacy SV preserves per-object timing, postprocessing and overlap constraints", IndependentSliderSvTests.Run),
     ("Large imported paths preserve compact project data and capacity limits", LargeImportedPathTests.Run),
     ("Legacy red timing preserves positive beat lengths, slider lifetime and raw source values", XnorTimingTests.Run),
     ("Generated sliders start upwards and export Bezier red anchors with equivalent NM/HR playback", GeneratedSliderPathTests.Run),
