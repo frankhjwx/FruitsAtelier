@@ -26,6 +26,14 @@ See [Running on macOS](MACOS.md) for launch and packaging. Project files and `pa
 
 ### Windows sandbox permissions
 
+`App.Tests --window-preferences-check` checks canvas switch persistence, settings
+compatibility, window preference serialization, per-difficulty GS/DS, grid level,
+Anchor Snap and beat-snap restoration, and temporary beat-grid isolation. It also
+checks that snap slider movement defers saving until release. On Windows,
+`FruitsAtelier.App.exe --render-check --window-preferences-render-check` launches
+native windows and checks normal/maximized restoration after minimized and
+fullscreen states, setup isolation and work-area clamping.
+
 Before running checks from a restricted agent sandbox, inspect the selected
 command's access requirements. Run Windows `dotnet build`, the full App regression
 suite, tests that write system temporary directories or application-data settings,

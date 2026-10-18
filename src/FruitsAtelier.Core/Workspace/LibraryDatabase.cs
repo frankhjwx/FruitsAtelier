@@ -76,6 +76,11 @@ public sealed class LibrarySettings
         set => audioDiagnosticProfile = value is "event-50" or "poll-10" or "poll-50" ? value : "event-10";
     }
     public bool Fullscreen { get; set; }
+    // Hosts retain their native dimensions: Windows outer pixels and macOS logical client units.
+    public EditorWindowPreferences? WindowsWindow { get; set; }
+    public EditorWindowPreferences? MacWindow { get; set; }
+    public bool ShowSliderPaths { get; set; } = true;
+    public bool ShowSelectionRect { get; set; } = true;
     public uint StandIndicatorColour { get; set; } = DefaultStandIndicatorColour;
     public uint WalkIndicatorColour { get; set; } = DefaultWalkIndicatorColour;
     public uint DashIndicatorColour { get; set; } = DefaultDashIndicatorColour;
@@ -162,6 +167,13 @@ public sealed class LibrarySettings
 public sealed class MapEditingPreferences
 {
     public const int MaximumObjectSnapBeats = 4;
+    public bool AnchorSnap { get; set; }
+    private int beatSnapDivisor = 4;
+    public int BeatSnapDivisor
+    {
+        get => beatSnapDivisor;
+        set => beatSnapDivisor = value is >= 1 and <= 9 or 12 or 16 or 24 or 32 or 48 ? value : 4;
+    }
     public bool GridSnap { get; set; }
     public bool DistanceSnap { get; set; }
     public bool ObjectSnap { get; set; }

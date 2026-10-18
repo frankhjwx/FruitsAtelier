@@ -1,5 +1,21 @@
 # Editing Controls
 
+## Remembered window and canvas preferences
+
+Closing the editor saves its normal window size and maximized state for the next
+launch. Restored sizes fit the current monitor's work area. Windows and macOS keep
+separate window sizes; fullscreen retains the preceding windowed size and state.
+Startup setup and acknowledgement windows do not replace these preferences.
+
+The Catch canvas **Slider Path** and **Selection Rect** switches are saved globally
+as soon as they change, including Slider Path changes through the View menu.
+They survive project changes and restarts without changing beatmap content or undo history.
+
+Each difficulty remembers its beat-snap divisor and Anchor Snap setting alongside
+GS (Grid Snap), its grid level, DS (Distance Snap), and Object Snap. Switching
+difficulties or reopening the project restores their individual preferences.
+Temporary beat grids shown by inspecting a note do not replace the saved divisor.
+
 ## osu! canvas
 
 Tab switches the Compose canvas between Catch's time–X view and an

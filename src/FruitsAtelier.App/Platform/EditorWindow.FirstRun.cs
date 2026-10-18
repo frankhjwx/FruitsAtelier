@@ -30,7 +30,7 @@ internal sealed partial class EditorWindow
     }
 
     private void FitSetupWindow() => FitWindow(setup: true);
-    private void FitEditorWindow() => FitWindow(setup: false);
+    private void FitEditorWindow() { FitWindow(setup: false); RestoreWindowPreferences(); }
     private bool startupWindowTransition;
 
     private void TransitionStartupWindow(Action transition)

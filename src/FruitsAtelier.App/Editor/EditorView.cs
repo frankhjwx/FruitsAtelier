@@ -75,16 +75,41 @@ public sealed partial class EditorView
     private MapDocument? objectDragStart;
     private bool objectDragPrepared;
     private bool snap = true;
-    private bool anchorSnap;
+    private bool anchorSnap
+    {
+        get => EditingPreferences.AnchorSnap;
+        set { EditingPreferences.AnchorSnap = value; SaveMapEditingPreferences(); }
+    }
     public bool AnchorSnapEnabled => anchorSnap;
     private static readonly int[] StandardSnapDivisors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
     private static readonly int[] ExtendedSnapDivisors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16, 24, 32, 48];
     private int[] SnapDivisors => LibrarySettings.ExperimentalSnapDivisions ? ExtendedSnapDivisors : StandardSnapDivisors;
     // Keep edge room stable while CS is edited; 54.4 is the CS=0 fruit radius.
     private const float PlayfieldPadding = 54.4f;
-    private int divisor = 4, menu = -1, editField = -1;
+    private int currentSnapDivisor = 4, menu = -1, editField = -1;
+    private int divisor
+    {
+        get => currentSnapDivisor;
+        set
+        {
+            currentSnapDivisor = value;
+            if (temporarySnapSource != Guid.Empty || EditingPreferences.BeatSnapDivisor == value) return;
+            EditingPreferences.BeatSnapDivisor = value;
+            if (drag != DragKind.SnapDivisor) SaveMapEditingPreferences();
+        }
+    }
     private string editBuffer = "", fieldError = "";
-    private bool replaceText = true, showTargets = true, showSelectionRect = true;
+    private bool replaceText = true;
+    private bool showTargets
+    {
+        get => LibrarySettings.ShowSliderPaths;
+        set { LibrarySettings.ShowSliderPaths = value; RequestViewPreference?.Invoke(); }
+    }
+    private bool showSelectionRect
+    {
+        get => LibrarySettings.ShowSelectionRect;
+        set { LibrarySettings.ShowSelectionRect = value; RequestViewPreference?.Invoke(); }
+    }
 
     public Action? RequestClose { get; set; }
     public Action? RequestLoadSkin { get; set; }

@@ -2,6 +2,8 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--window-preferences-check")) { WindowPreferenceTests.Run(); Console.WriteLine("PASS Window and canvas preferences"); return 0; }
+
 if (args.Contains("--legacy-droplet-worker-check"))
 {
     LegacyDropletWorkerTests.Run(); Console.WriteLine("PASS Background Legacy droplet validation"); return 0;
@@ -276,6 +278,7 @@ var tests = new (string Name, Action Run)[]
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
     ("UI scale defaults, steps, draft cancellation and persistence preserve content", UiScaleTests.Run),
+    ("Window and canvas display preferences persist without content edits", WindowPreferenceTests.Run),
     ("Fullscreen settings and Alt Enter preserve drafts, content and testplay", FullscreenSettingsTests.Run),
     ("Legacy sliders stay read-only in Catch until explicit undoable conversion", LegacyReadOnlyEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),

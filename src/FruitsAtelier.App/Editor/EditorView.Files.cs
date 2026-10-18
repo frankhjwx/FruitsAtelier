@@ -89,6 +89,8 @@ public sealed partial class EditorView
 
     private void ResetDifficultyView()
     {
+        RestoreTemporarySnap();
+        RestoreSnapPreferences();
         CloseAimod();
         ResetDeferredConversion();
         pauseSnapDivisor = null;

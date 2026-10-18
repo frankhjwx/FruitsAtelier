@@ -202,7 +202,7 @@ public sealed partial class EditorView
         }
         if (snapSlider.Contains(x, y))
         {
-            SetSnapDivisor(x); drag = DragKind.SnapDivisor;
+            drag = DragKind.SnapDivisor; SetSnapDivisor(x);
             BeginPointerDrag(x, y);
             return;
         }
@@ -681,6 +681,7 @@ public sealed partial class EditorView
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
         if (drag == DragKind.CanvasZoom) { canvasScaleAxis = -1; SaveCanvasScale(); }
+        if (drag == DragKind.SnapDivisor) SaveMapEditingPreferences();
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
         {
             var readOnlyIds = IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id);
@@ -1476,6 +1477,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        if (drag == DragKind.SnapDivisor) SaveMapEditingPreferences();
         CancelLegacyDropletRefresh();
         CancelOsuInteraction();
         tailImportedBefore = null;

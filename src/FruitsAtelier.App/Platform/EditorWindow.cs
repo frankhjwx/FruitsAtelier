@@ -132,6 +132,12 @@ internal sealed partial class EditorWindow : IDisposable
         }
         if (renderCheck)
         {
+            if (Environment.GetCommandLineArgs().Contains("--window-preferences-render-check"))
+            {
+                CheckWindowPreferences();
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--workspace-save-render-check"))
             {
                 view.RequestViewPreference = null;
@@ -229,6 +235,7 @@ internal sealed partial class EditorWindow : IDisposable
         }
         ConfigureUpdates();
         CompleteStartupFiles();
+        RestoreWindowPreferences();
         SetFullscreen(view.LibrarySettings.Fullscreen);
         UpdateTitle();
         view.RequestRunTestplay = session => new TestplayInputThread(hwnd, session, () => audio.State);
@@ -297,7 +304,7 @@ internal sealed partial class EditorWindow : IDisposable
     {
         if (view.AcknowledgementsVisible) { Native.DestroyWindow(hwnd); return; }
         view.CancelFirstRunSetup();
-        ConfirmDiscard(() => { view.SaveLibraryMemory(); Native.DestroyWindow(hwnd); });
+        ConfirmDiscard(() => { SaveWindowPreferences(); view.SaveLibraryMemory(); Native.DestroyWindow(hwnd); });
     }
     private void Invalidate() { if (hwnd != 0 && !failed && !NativeModalScope.Active) Native.InvalidateRect(hwnd, 0, false); }
 
