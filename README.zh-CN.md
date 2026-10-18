@@ -8,7 +8,7 @@
 
 [官网](https://fruitsatelier.himiko.moe/) · [下载](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**当前版本：1.1.0**
+**当前版本：1.1.1**
 
 ![水果工坊的编辑画布、物件时间轴与 Catch 预览](assets/screenshots/twin-bloom.png)
 
@@ -32,7 +32,7 @@
 - **移动指示与分析**：查看前后物件间距，在画布上识别站立、走路、冲刺和超级冲刺连接。通过全曲 Movement strain 曲线定位运动负荷较高的段落；AiMod 可检查接水果物件吸附、计时、资源和谱面集元数据。
 - **可编辑的 Stream 与 Stack**：沿滑条曲线按指定节拍细分生成水果串，或用宽度包络生成交替排列的叠果。保留可编辑的父曲线，调整单个水果，或拆分成独立水果；两者均导出为 hit circle。
 
-支持读取 v7–v14 及兼容 stable 的 lazer v128 Catch `.osu`。v7 谱面导出保留 v7，以保留旧版滑条水滴规则；其余导出为 v14。1.1.0 暂不提供视频与故事板播放。
+支持读取 v7–v14 及兼容 stable 的 lazer v128 Catch `.osu`。v7 谱面导出保留 v7，以保留旧版滑条水滴规则；其余导出为 v14。1.1.1 暂不提供视频与故事板播放。
 
 ## 开始使用
 
