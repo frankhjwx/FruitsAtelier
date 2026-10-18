@@ -48,6 +48,7 @@ public sealed partial class EditorView
                     ? authored * Document.SliderMultiplier / Document.EffectiveSliderMultiplier
                     : ImportedSliderConverter.SliderVelocityAt(Document, slider, timing);
             else if (generated?.TryGetValue(o.Id, out var path) == true) sv = path.SliderVelocityMultiplier;
+            o.DistanceVelocity = 100 * Document.EffectiveSliderMultiplier * sv / state.BeatLengthMs;
             return (Time: o.End, X: x, Y: y, BeatLength: state.BeatLengthMs, Sv: sv);
         }).OrderBy(o => o.Time).ToArray();
         osuDistanceSource = osuCanvasObjects;
@@ -759,7 +760,7 @@ public sealed partial class EditorView
         c.Fill(input, focused ? 0x273638u : 0x151B24u, 3);
         c.Stroke(input, focused ? (fieldError.Length > 0 ? Error : Accent) : Grid, 1, 3);
         DrawInputText(c, new(input.X + 5, input.Y + 4, input.Width - 10, 18),
-            focused ? editBuffer : LibrarySettings.OsuSliderDefaultSv.ToString("G", CultureInfo.InvariantCulture),
+            focused ? editBuffer : LibrarySettings.OsuSliderDefaultSv.ToString("0.00", CultureInfo.InvariantCulture),
             12, focused, "numeric:" + index);
         fields.Add(new(input, label, LibrarySettings.OsuSliderDefaultSv, value =>
         {

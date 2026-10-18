@@ -2,6 +2,7 @@ using System.Globalization;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.App.Skinning;
 using FruitsAtelier.Core;
+using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.App.Editor;
 
@@ -12,7 +13,7 @@ public sealed partial class EditorView
     private sealed class OsuCanvasObject
     {
         public required Guid Id;
-        public double Start, End, X, Y;
+        public double Start, End, X, Y, DistanceVelocity;
         public int Order, Flags, Number, Colour, Stack, Spans = 1;
         public string NumberText = "";
         public bool Spinner;
@@ -332,6 +333,7 @@ public sealed partial class EditorView
     private void DrawOsuMovementConnections(ICanvas c)
     {
         if (!movementAnalysis) return;
+        EnsureOsuDistanceReferences();
         if (!ReferenceEquals(osuMovementSource, playableObjects) || osuMovementCircleSize != Document.CircleSize)
         {
             EnsureMovementStates(playableObjects);
@@ -357,6 +359,14 @@ public sealed partial class EditorView
             var a = OsuCanvasScreen(tail.X + fromShift, tail.Y + fromShift);
             var b = OsuCanvasScreen(to.X + toShift, to.Y + toShift);
             c.Line(a.X, a.Y, b.X, b.Y, MovementColour(mode), 3, .65f);
+            double unit = (to.Start - from.End) * from.DistanceVelocity;
+            if (!(unit > 0) || !double.IsFinite(unit)) continue;
+            double ratio = Distance(tail.X, tail.Y, to.X, to.Y) / unit;
+            string label = L.Get("assist.ratio", ratio);
+            float labelWidth = c.MeasureText(label, 11) + 10;
+            var bounds = new Rect((a.X + b.X - labelWidth) / 2, (a.Y + b.Y) / 2 - 24, labelWidth, 20);
+            c.Fill(bounds, Panel, 3, .88f);
+            c.Text(label, bounds.X + 5, bounds.Y + 3, 11, Foreground, labelWidth - 10);
         }
     }
 

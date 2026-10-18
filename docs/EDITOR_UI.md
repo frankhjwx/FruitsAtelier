@@ -1419,7 +1419,10 @@ Distance Snap places both circles and Legacy slider heads at the configured spac
 from the preceding object's endpoint; the placement circle shows the same snapped position.
 The osu! canvas toolbar includes geometric Zoom, Movement Analysis, Insert Break Time
 and Snap. Movement Analysis colours connections between successive objects using
-the Catch movement classification; switching it does not change beatmap content.
+the Catch movement classification and labels each connection with its DS ratio.
+The osu! DS ratio uses two-dimensional endpoint-to-head distance and the preceding
+object's SV, matching placement spacing independently of canvas zoom. Switching
+analysis does not change beatmap content.
 
 Hand-drawn Legacy Sliders also use Droplet Settings for Catch preview, Testplay
 and export. Their original two-dimensional controls and visible authored SV are retained

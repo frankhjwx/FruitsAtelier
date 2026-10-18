@@ -85,6 +85,12 @@ internal static class IndependentSliderSvRenderCheck
                     || authored.ControlPoints[1].X <= 300)
                     throw new InvalidOperationException("Native drawn-path control editing did not retain the original arc controls.");
                 Paint("shift");
+                var distanceMap = new MapDocument { BeatLengthMs = 500, SliderMultiplier = 1.4, DurationMs = 5000 };
+                distanceMap.Fruits.Add(new() { TimeMs = 1000, X = 128, Y = 192 });
+                distanceMap.Fruits.Add(new() { TimeMs = 1500, X = 212, Y = 192 });
+                editor.LoadDocument(distanceMap); editor.UpdateTransport(900, 5000, true, false, false, null, null); Paint();
+                if (!editor.MovementAnalysisEnabled) ClickAnalysis();
+                Paint("ds");
                 void Wait()
                 {
                     var deadline = DateTime.UtcNow.AddSeconds(15);
