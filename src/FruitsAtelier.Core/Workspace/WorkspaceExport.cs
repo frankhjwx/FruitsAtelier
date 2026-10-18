@@ -23,6 +23,8 @@ public static class WorkspaceExport
         {
             if (target is null || expected is null || !File.Exists(target) || !WorkspaceProject.Within(songs, target))
                 throw new IOException(L.Get("library.noExportTarget"));
+            if (LibraryDatabase.ReadMetadata(target)?.Mode != 2)
+                throw new IOException(L.Get("library.noExportTarget"));
             if (WorkspaceProject.Hash(target) != expected) throw new IOException(L.Get("library.exportConflict", target));
             WorkspaceAssociations.EnsureOwner(session, difficulty.Id, target);
         }

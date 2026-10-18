@@ -1,5 +1,9 @@
 # Keyboard and mouse shortcut manual
 
+In Compose, Tab toggles the Catch and osu! canvases. Text fields,
+dialogs, Ctrl+Tab difficulty switching and Testplay retain their own Tab actions.
+See [osu! canvas](EDITOR_UI.md#osu-canvas) for native slider controls and distance spacing.
+
 This reference describes FruitsAtelier 0.9.0. Bindings depend on the active page,
 focused field, selected object and drawing state. For differences from osu!stable
 and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
@@ -8,8 +12,7 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 
 - `Ctrl` also accepts Command on macOS. `Alt` corresponds to Option. Some Mac
   keyboards require Fn for function keys.
-- Number shortcuts use the main number row. Slider reverse shortcuts use the
-  main `=` and `-` keys, without Shift; keypad plus/minus are not aliases.
+- Number shortcuts use the main number row. UI scale accepts main-row and keypad plus/minus.
 - Unless stated otherwise, editing shortcuts apply in Compose, outside text
   fields and dialogs, after releasing a drag and finishing a drawing draft.
 - Selection-dependent commands require a compatible selection. Lock Notes blocks
@@ -176,7 +179,7 @@ Object sampleset selection is not bound to Shift+Q/W/E/R or Ctrl+Q/W/E/R.
 | Shift+F | Immediately open the long-press actions for a slider under the canvas pointer, or a selected slider visible on the canvas. Selection from the upper object timeline is supported; a selected target retains the complete selection. |
 | Edit → Toggle straight / curved point | Toggle the selected control between straight and curved. |
 | Ctrl+Shift+I | Insert a control on the curve under the pointer in Compose. |
-| Ctrl+= / Ctrl+- | Add / remove one reverse on the selected FSlider. |
+| Ctrl+= / Ctrl+- | Increase / decrease UI scale by 25 percentage points, within 50%–200%. |
 | Ctrl+G | Reverse the selection in time, including each slider’s own path. A single FSlider retains its time range and repeats. |
 | Ctrl+J | Extend the selected FSlider to the pointer at a valid later canvas time. |
 | Ctrl+Shift+F | Open/focus the Stream/Stack dock, adding it if closed. Existing patterns retain their mode; ordinary sliders start on Stream. |
@@ -197,8 +200,10 @@ the original objects; reopening cannot restore them, while session undo remains
 available.
 
 Ctrl+L restores the previous saved version with confirmation. Ctrl+J and Ctrl+Shift+I have editor-specific meanings; do not assume
-osu!stable behavior. Ctrl++ (Ctrl+Shift+= on a US keyboard) and keypad plus/minus
-currently do not adjust reverses.
+osu!stable behavior. Ctrl++ (Ctrl+Shift+= on a US keyboard) and Ctrl+keypad plus/minus
+also adjust UI scale. Slider reverses use the object-timeline tail drag, with no keyboard binding.
+Scale changes use the saved 50%–200% range in 25% steps, outside text fields,
+dialogs and active gestures.
 
 ## Mouse combinations
 

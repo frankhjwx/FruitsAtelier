@@ -89,7 +89,7 @@ public sealed partial class EditorView
             BeginDraftConversion();
             history.Begin(L.Get("editor.command.drawTrack"));
             var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = true,
-                DropletMode = SliderDropletMode.FollowMap,
+                DropletMode = LibrarySettings.DefaultDropletMode,
                 Name = L.Get("editor.track.defaultName", Document.Tracks.Count + 1) };
             var node = new Anchor { TimeMs = point.TimeMs, X = point.X };
             track.Nodes.Add(node); Document.Tracks.Add(track); draftTrack = track.Id;
@@ -252,7 +252,11 @@ public sealed partial class EditorView
         var hit = SliderControlEditing.Vertices(track).FirstOrDefault(v => Near(v.Point, x, y, 8));
         if (hit is null || draftTrack != Guid.Empty) return false;
         tool = Tool.Select;
-        if (drag == DragKind.LegacyControl) { history.Commit(); drag = DragKind.None; }
+        if (drag == DragKind.LegacyControl)
+        {
+            CommitContentHistory(); drag = DragKind.None;
+            if (LegacyDropletRefreshBusy) return true;
+        }
         if (Edit(L.Get("editor.command.toggleBoundary"), () => SliderControlEditing.ToggleBoundary(track, hit.Id))) SelectAnchors(track, [hit.Id]);
         return true;
     }
@@ -272,7 +276,7 @@ public sealed partial class EditorView
             bool selected = anchorSelection.Contains(vertices[i].Id);
             uint color = vertices[i].Type is null ? Foreground : Error;
             c.Circle(p.X, p.Y, selected ? 7 : 5, color);
-            if (selected) c.Circle(p.X, p.Y, 10, Accent, false, 1.5f);
+            if (selected) c.Circle(p.X, p.Y, 10, SelectionHighlightColour, false, 1.5f);
         }
     }
 

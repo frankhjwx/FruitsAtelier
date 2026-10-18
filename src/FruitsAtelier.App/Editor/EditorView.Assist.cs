@@ -20,7 +20,9 @@ public sealed partial class EditorView
     public bool NotesLocked => notesLocked;
     private bool dropletSelectionLocked { get => LibrarySettings.LockDropletSelection; set => LibrarySettings.LockDropletSelection = value; }
     private bool notesLockFlyout;
+    private Rect notesLockFlyoutBounds;
     public bool DropletSelectionLocked => dropletSelectionLocked;
+    private bool CanSelectSlider(Guid id) => !LibrarySettings.LockSlidersToCanvas || !IsReadOnlySlider(id);
     private bool EffectiveGridSnap => !UsesSpeedDistanceSnap && (gridSnap ^ (shiftHeld && !altHeld));
     public (double? Previous, double? Next) DistanceReadout { get; private set; }
 
@@ -170,21 +172,33 @@ public sealed partial class EditorView
     }
 
     private bool CanSelectCatchObject(ConvertedCatchObject item)
-        => !dropletSelectionLocked || item.Kind is not (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet);
+        => CanSelectSlider(item.SourceId)
+            && (!dropletSelectionLocked || item.Kind is not (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet));
+
+    private void ToggleSliderCanvasLock()
+    {
+        LibrarySettings.LockSlidersToCanvas = !LibrarySettings.LockSlidersToCanvas;
+        if (objectSelection.Any(id => !CanSelectSlider(id))) SelectObjects(objectSelection, selection);
+        if (SelectedTrack is { } track && !CanSelectSlider(track.Id)) Select(Guid.Empty);
+        RequestViewPreference?.Invoke();
+    }
 
     private void DrawNotesLockFlyout(ICanvas c)
     {
         var button = assistButtons[6];
         string label = L.Get("assist.lockDropletSelection");
-        float w = Math.Max(180, c.MeasureText(label, 12, true) + 20);
-        float y = Math.Clamp(button.Y, assistPalette.Y, assistPalette.Bottom - 34);
-        var flyout = new Rect(button.X - w, y, w, 34);
-        var area = new Rect(flyout.X, y, w + button.Width, Math.Max(34, button.Height));
+        string sliderLabel = L.Get("assist.lockSlidersToCanvas");
+        float w = Math.Max(180, Math.Max(c.MeasureText(label, 12, true), c.MeasureText(sliderLabel, 12, true)) + 20);
+        float y = Math.Clamp(button.Y, assistPalette.Y, assistPalette.Bottom - 68);
+        var flyout = new Rect(button.X - w, y, w, 68);
+        notesLockFlyoutBounds = flyout;
+        var area = new Rect(flyout.X, y, w + button.Width, Math.Max(68, button.Height));
         notesLockFlyout = button.Contains(mouseX, mouseY) && assistPalette.Contains(mouseX, mouseY)
             || notesLockFlyout && area.Contains(mouseX, mouseY);
         if (!notesLockFlyout) return;
         c.Fill(flyout, Surface, 4);
         Button(c, new(flyout.X, flyout.Y, w - 2, 32), label, ToggleDropletSelectionLock, dropletSelectionLocked);
+        Button(c, new(flyout.X, flyout.Y + 34, w - 2, 32), sliderLabel, ToggleSliderCanvasLock, LibrarySettings.LockSlidersToCanvas);
     }
 
     private static bool PositionsEqual(MapDocument before, MapDocument after)

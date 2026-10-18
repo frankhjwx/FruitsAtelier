@@ -17,7 +17,7 @@ public sealed partial class EditorView
     {
         get
         {
-            if (drag != DragKind.Marquee || !dragMoved) return 0;
+            if (drag != DragKind.Marquee || !dragMoved || osuMarquee) return 0;
             var area = boxTimeline ? objectTimeline : plot;
             double position = boxTimeline ? mouseX : mouseY;
             double start = boxTimeline ? area.X : area.Y, end = boxTimeline ? area.Right : area.Bottom;
@@ -48,7 +48,7 @@ public sealed partial class EditorView
     private void SelectObjects(IEnumerable<Guid> ids, Guid primary = default)
     {
         soundEdge = null; distanceObject = null; clickedCoordinate = null; timelineFruit = null;
-        var selected = ids.Distinct().ToArray();
+        var selected = ids.Where(CanSelectSlider).Distinct().ToArray();
         if (temporarySnapSource != Guid.Empty && (selected.Length != 1 || selected[0] != temporarySnapSource)) RestoreTemporarySnap();
         objectSelection.Clear(); objectSelection.UnionWith(selected);
         anchorSelection.Clear();
@@ -134,7 +134,7 @@ public sealed partial class EditorView
     {
         var area = boxTimeline ? objectTimeline : plot;
         x = Math.Clamp(x, area.X, area.Right); y = Math.Clamp(y, area.Y, area.Bottom);
-        if (Math.Abs(x - dragStartX) >= 3 || Math.Abs(y - dragStartY) >= 3) dragMoved = true;
+        if (Math.Abs(x - dragStartX) >= ContentDragThreshold || Math.Abs(y - dragStartY) >= ContentDragThreshold) dragMoved = true;
         if (!dragMoved || selectionBeforeBox is null) return;
         float startX = boxTimeline ? objectTimeline.X + (float)((boxStartTime - ObjectTimelineStartMs) * objectTimelineScale) : dragStartX;
         float startY = boxTimeline ? dragStartY : Screen(new(boxStartTime, 0)).Y;
@@ -214,7 +214,7 @@ public sealed partial class EditorView
     {
         if (drag != DragKind.Marquee || !dragMoved) return;
         c.Clip(boxTimeline ? objectTimeline : plot);
-        c.Stroke(selectionBox, Accent, 1.5f);
+        c.Stroke(selectionBox, SelectionHighlightColour, 1.5f);
         c.Unclip();
     }
 

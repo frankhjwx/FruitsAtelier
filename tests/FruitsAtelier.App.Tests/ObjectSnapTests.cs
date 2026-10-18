@@ -13,6 +13,18 @@ internal static class ObjectSnapTests
         BeatRanges(); Placement(); Configuration(); Dragging(); OrderedDragging();
     }
 
+    private static void LoadWithObjectSnap(Ui ui, MapDocument map)
+    {
+        ui.LoadDocument(map);
+        if (ui.View.ObjectSnapSettings.Enabled) return;
+        ui.Key('F'); ui.MoveMap(2000, 103);
+        Check(ui.View.ObjectSnapTargetPoint is null, "Object snap should be inactive by default.");
+        ui.View.OpenDistanceSnapDialog(); ui.Paint();
+        var toggle = ui.View.ObjectSnapToggleBounds;
+        ui.Click(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2);
+        ui.ClickText(Strings.Get("library.apply"));
+    }
+
     private static void BeatRanges()
     {
         var map = new MapDocument { BeatLengthMs = 500 };
@@ -33,8 +45,8 @@ internal static class ObjectSnapTests
         var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
         map.Fruits.AddRange([new() { TimeMs = 1000, X = 100.25 }, new() { TimeMs = 875, X = 200 },
             new() { TimeMs = 2500, X = 300 }, new() { TimeMs = 2625, X = 400 }]);
-        var ui = new Ui(); ui.LoadDocument(map); ui.Key('F');
-        Check(ui.View.ObjectSnapSettings == (true, 2, 1), "Object snap defaults are incorrect.");
+        var ui = new Ui(); LoadWithObjectSnap(ui, map); ui.Key('F');
+        Check(ui.View.ObjectSnapSettings == (true, 2, 1), "Object snap settings are incorrect.");
         ui.MoveMap(2000, 103);
         Near(100.25, ui.View.ObjectSnapTargetPoint!.Value.X);
         ui.ClickMap(2000, 103);
@@ -51,7 +63,7 @@ internal static class ObjectSnapTests
         ui.Key('Z', ctrl: true);
         foreach (var mode in new[] { SliderEditingMode.PenTool, SliderEditingMode.OsuLegacy })
         {
-            ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Key('B');
+            LoadWithObjectSnap(ui, map); ui.View.SetSliderEditingMode(mode); ui.Key('B');
             ui.ClickMap(2000, 302);
             var head = ui.View.Document.Tracks.Single().Nodes[0];
             Near(300, head.X); Near(2000, head.TimeMs);
@@ -61,7 +73,7 @@ internal static class ObjectSnapTests
         var sliderMap = new MapDocument { DurationMs = 8000, BeatLengthMs = 500 };
         sliderMap.Tracks.Add(new CurveTrack { Kind = CurveKind.Linear,
             Nodes = { new() { TimeMs = 1000, X = 90 }, new() { TimeMs = 1500, X = 190 } } });
-        ui.LoadDocument(sliderMap); ui.Key('F'); ui.MoveMap(2000, 192);
+        LoadWithObjectSnap(ui, sliderMap); ui.Key('F'); ui.MoveMap(2000, 192);
         Near(190, ui.View.ObjectSnapTargetPoint!.Value.X);
         Check(sliderMap.ContentEquals(ui.View.Document), "Object snap hover edited map content.");
     }
@@ -69,8 +81,11 @@ internal static class ObjectSnapTests
     private static void Configuration()
     {
         var legacy = JsonSerializer.Deserialize<MapEditingPreferences>("{\"DistanceSnap\":true}")!;
-        Check(legacy.ObjectSnap && legacy.ObjectSnapEarlierBeats == 2 && legacy.ObjectSnapLaterBeats == 1,
-            "Older settings lost default object snap.");
+        Check(!legacy.ObjectSnap && legacy.ObjectSnapEarlierBeats == 2 && legacy.ObjectSnapLaterBeats == 1,
+            "Older settings should default object snap to off.");
+        Check(!new MapEditingPreferences().ObjectSnap, "New preferences should default object snap to off.");
+        Check(JsonSerializer.Deserialize<MapEditingPreferences>("{\"ObjectSnap\":true}")!.ObjectSnap,
+            "Explicitly enabled object snap was not preserved.");
         var limits = JsonSerializer.Deserialize<MapEditingPreferences>("{\"ObjectSnapEarlierBeats\":16,\"ObjectSnapLaterBeats\":-1}")!;
         Check(limits.ObjectSnapEarlierBeats == 4 && limits.ObjectSnapLaterBeats == 0,
             "Stored object snap ranges exceeded zero to four beats.");
@@ -82,7 +97,7 @@ internal static class ObjectSnapTests
             {
                 Strings.SetLanguage(locale);
                 var map = new MapDocument { DurationMs = 10000 };
-                var ui = new Ui(); ui.LoadDocument(map); ui.Resize(size.Item1, size.Item2);
+                var ui = new Ui(); LoadWithObjectSnap(ui, map); ui.Resize(size.Item1, size.Item2);
                 int saved = 0; ui.View.RequestViewPreference = () => saved++;
                 var before = ui.View.Document.DeepClone(); bool dirty = ui.View.IsDirty;
                 Open(); Click(ui.View.ObjectSnapEarlierPlusBounds); Click(ui.View.ObjectSnapLaterPlusBounds);
@@ -129,7 +144,7 @@ internal static class ObjectSnapTests
                 new() { TimeMs = 1500, X = 400 }, new() { TimeMs = 900, X = 280 },
                 new() { TimeMs = 850, X = 251.1 }]);
             map.DistanceSnapRatios.AddRange([.5, 1, 1.8]);
-            var ui = new Ui(); ui.LoadDocument(map); ui.Key('1'); ui.Key('Y');
+            var ui = new Ui(); LoadWithObjectSnap(ui, map); ui.Key('1'); ui.Key('Y');
             if (grid) ui.Key('T');
             ui.DownMap(moving.TimeMs, moving.X);
             ui.MoveMap(moving.TimeMs, 480);
@@ -179,7 +194,7 @@ internal static class ObjectSnapTests
             var tailTarget = new Fruit { TimeMs = 2250, X = 385.4 };
             map.Fruits.AddRange([first, middle, last, headTarget, tailTarget,
                 new() { TimeMs = 1500, X = 284 }]);
-            var ui = new Ui(); ui.LoadDocument(map); ui.Key('1');
+            var ui = new Ui(); LoadWithObjectSnap(ui, map); ui.Key('1');
             ui.ClickFruit(first.Id); ui.ClickMap(middle.TimeMs, middle.X, ctrl: true); ui.ClickMap(last.TimeMs, last.X, ctrl: true);
             ui.Key('T');
             ui.DownMap(1000, 100); ui.MoveMap(1125, 182);
@@ -195,7 +210,7 @@ internal static class ObjectSnapTests
 
         var single = new MapDocument { DurationMs = 8000, BeatLengthMs = 500 };
         single.Fruits.Add(new() { TimeMs = 1000, X = 100 });
-        var one = new Ui(); one.LoadDocument(single); one.Key('1');
+        var one = new Ui(); LoadWithObjectSnap(one, single); one.Key('1');
         one.DownMap(1000, 100); one.MoveMap(1125, 109); one.UpMap(1125, 109);
         Near(109, one.View.Document.Fruits.Single().X);
         one.Key('Z', ctrl: true); Check(single.ContentEquals(one.View.Document), "Single-fruit movement did not undo.");
@@ -210,9 +225,9 @@ internal static class ObjectSnapTests
         var left = new Fruit { TimeMs = 1000, X = 5 };
         var right = new Fruit { TimeMs = 2000, X = 300 };
         bounded.Fruits.AddRange([left, right, new() { TimeMs = 2250, X = 294 }]);
-        var boundsUi = new Ui(); boundsUi.LoadDocument(bounded); boundsUi.Key('1');
+        var boundsUi = new Ui(); LoadWithObjectSnap(boundsUi, bounded); boundsUi.Key('1');
         boundsUi.ClickFruit(left.Id); boundsUi.ClickMap(right.TimeMs, right.X, ctrl: true);
-        boundsUi.DownMap(2000, 300); boundsUi.MoveMap(2000, 292);
+        boundsUi.DownMap(2000, 300); boundsUi.MoveMap(2000, 280);
         Near(0, boundsUi.Fruit(left.Id).X); Near(295, boundsUi.Fruit(right.Id).X);
         Check(boundsUi.View.ObjectSnapTargetPoint is null, "Snap moved the other end beyond the playfield.");
         boundsUi.View.CancelInteraction(); boundsUi.Paint();
@@ -237,7 +252,9 @@ internal static class ObjectSnapTests
             double finalX = repeats % 2 == 0 ? 100 : 300;
             var reference = new Fruit { TimeMs = 1000 + repeats * 500 + 250, X = finalX + 85.4 };
             map.Fruits.Add(reference);
-            var ui = new Ui(); ui.LoadDocument(map); ui.Key('1'); ui.ClickMap(1000, 100);
+            var ui = new Ui(); LoadWithObjectSnap(ui, map); ui.Key('1'); ui.ClickMap(1000, 100);
+            if (imported) { ui.View.ConvertSelectedSliderRepresentation(sourceId); ui.Paint(); }
+            var editableBaseline = ui.View.Document.DeepClone();
             var box = ui.View.SelectionTransformBounds;
             float x = box.X + 20, y = box.Y + box.Height / 2;
             float dx = 82 * ui.View.PlayfieldBounds.Width / 512;
@@ -252,7 +269,8 @@ internal static class ObjectSnapTests
             Near(1000, fruits[0].TimeMs); Near(1000 + repeats * 500, fruits[^1].TimeMs);
             ui.View.PointerUp(x + dx, y, 0); ui.Paint();
             Check(OsuBeatmapWriter.Serialize(ui.View.Document).ObjectSequenceMatches, "Snapped slider failed export validation.");
-            ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Slider snap failed to restore its source on undo.");
+            ui.Key('Z', ctrl: true); Check(editableBaseline.ContentEquals(ui.View.Document), "Slider snap failed to restore its editable source on undo.");
+            if (imported) { ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Explicit slider conversion did not undo independently."); }
         }
     }
 }

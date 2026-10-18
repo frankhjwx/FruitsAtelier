@@ -8,6 +8,7 @@ public sealed partial class EditorView
 {
     public bool DistanceSnapDialogVisible { get; private set; }
     private bool distanceSnapFlyout, dsSliderShift, dsSnapDragging, dsBaseDragging, dsBaseFocused;
+    private Rect distanceSnapFlyoutBounds;
     private bool dsGridInitialized, dsGridSnap;
     private int dsGridSize = 4;
     internal (bool Enabled, int Size) EditorGridSettings => (gridSnap, gridSize);
@@ -57,7 +58,7 @@ public sealed partial class EditorView
     });
     internal Rect DistanceSnapSubdivisionBounds { get; private set; }
     private float dsDragX;
-    private Rect DistanceSnapDialogBounds => new((width - Math.Min(1040, width - 32)) / 2,
+    internal Rect DistanceSnapDialogBounds => new((width - Math.Min(1040, width - 32)) / 2,
         (height - Math.Min(640, height - 32)) / 2, Math.Min(1040, width - 32), Math.Min(640, height - 32));
 
     private void DrawDistanceSnapFlyout(ICanvas c)
@@ -65,6 +66,7 @@ public sealed partial class EditorView
         var button = assistButtons[5];
         float y = Math.Clamp(button.Y, assistPalette.Y, assistPalette.Bottom - 34);
         var flyout = new Rect(button.X - 154, y, 154, 34);
+        distanceSnapFlyoutBounds = flyout;
         var area = new Rect(flyout.X, y, flyout.Width + button.Width, Math.Max(34, button.Height));
         distanceSnapFlyout = button.Contains(mouseX, mouseY) && assistPalette.Contains(mouseX, mouseY)
             || distanceSnapFlyout && area.Contains(mouseX, mouseY);
@@ -296,27 +298,35 @@ public sealed partial class EditorView
 
     private void DrawObjectSnapConfiguration(ICanvas c, Rect r)
     {
+        bool available = IsOsuCanvas || !dsSpeedMode;
         c.Line(r.X, r.Y, r.Right, r.Y, Grid);
         ObjectSnapToggleBounds = new(r.X, r.Y + 6, r.Width, 28);
         c.Text(L.Get("ds.objectSnap"), r.X, r.Y + 14, 12, Foreground, r.Width - 54, true);
         var toggle = new Rect(r.Right - 46, r.Y + 8, 46, 24);
-        c.Fill(toggle, !dsSpeedMode && dsObjectSnap ? 0x417D77u : 0x46515Fu, 12);
-        c.Circle(toggle.X + (!dsSpeedMode && dsObjectSnap ? 34 : 12), toggle.Y + 12, 9, 0xF0F3F6);
-        hits.Add(new(ObjectSnapToggleBounds, () => dsObjectSnap = !dsObjectSnap, !dsSpeedMode));
+        c.Fill(toggle, available && dsObjectSnap ? 0x417D77u : 0x46515Fu, 12);
+        c.Circle(toggle.X + (available && dsObjectSnap ? 34 : 12), toggle.Y + 12, 9, 0xF0F3F6);
+        hits.Add(new(ObjectSnapToggleBounds, () => dsObjectSnap = !dsObjectSnap, available));
+        if (IsOsuCanvas)
+        {
+            ObjectSnapEarlierPlusBounds = ObjectSnapLaterPlusBounds = default;
+            if (ObjectSnapToggleBounds.Contains(mouseX, mouseY))
+                DrawPaletteTooltip(c, L.Get("ds.osuObjectSnapTip"), toggle, left: true, above: true);
+            return;
+        }
         ObjectSnapEarlierPlusBounds = Row(r.Y + 38, "ds.objectEarlier", dsObjectEarlier,
             () => dsObjectEarlier = Math.Max(0, dsObjectEarlier - 1), () => dsObjectEarlier = Math.Min(MapEditingPreferences.MaximumObjectSnapBeats, dsObjectEarlier + 1));
         ObjectSnapLaterPlusBounds = Row(r.Y + 70, "ds.objectLater", dsObjectLater,
             () => dsObjectLater = Math.Max(0, dsObjectLater - 1), () => dsObjectLater = Math.Min(MapEditingPreferences.MaximumObjectSnapBeats, dsObjectLater + 1));
-        if (!dsSpeedMode && ObjectSnapToggleBounds.Contains(mouseX, mouseY))
+        if (available && ObjectSnapToggleBounds.Contains(mouseX, mouseY))
             DrawPaletteTooltip(c, L.Get("ds.objectSnapTip"), toggle, left: true, above: true);
 
         Rect Row(float y, string key, int value, Action decrease, Action increase)
         {
-            c.Text(L.Get(key), r.X, y + 7, 11, !dsSpeedMode && dsObjectSnap ? Foreground : Muted, Math.Max(0, r.Width - 134));
-            Button(c, new(r.Right - 130, y, 26, 26), "−", decrease, enabled: !dsSpeedMode && dsObjectSnap && value > 0);
+            c.Text(L.Get(key), r.X, y + 7, 11, available && dsObjectSnap ? Foreground : Muted, Math.Max(0, r.Width - 134));
+            Button(c, new(r.Right - 130, y, 26, 26), "−", decrease, enabled: available && dsObjectSnap && value > 0);
             c.Text(L.Get("ds.objectBeats", value), r.Right - 98, y + 7, 11, Foreground, 66);
             var plus = new Rect(r.Right - 26, y, 26, 26);
-            Button(c, plus, "+", increase, enabled: !dsSpeedMode && dsObjectSnap && value < MapEditingPreferences.MaximumObjectSnapBeats);
+            Button(c, plus, "+", increase, enabled: available && dsObjectSnap && value < MapEditingPreferences.MaximumObjectSnapBeats);
             return plus;
         }
     }

@@ -4,7 +4,8 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 
 ## Input and output
 
-- Accept v7 through v14 and stable-compatible lazer v128 / Mode=2. Export retains v7 tick semantics for imported v7 maps; other maps export as v14. The reader rejects other format versions and unsupported object types.
+- Accept v7 through v14 and stable-compatible lazer v128, in osu!standard Mode=0 or Catch Mode=2. Export retains v7 tick semantics for imported v7 maps; other maps export as v14 with Catch Mode=2. The reader rejects other rulesets, format versions and unsupported object types.
+- Imported spinners with an end before their start use zero playback duration while retaining the original object line.
 - Preserve General, Editor, Metadata, Difficulty, Events, TimingPoints, Colours, HitObjects, and audio/sample references.
 - Import/export `[Editor] DistanceSpacing` as the per-difficulty spacing multiplier.
 - Synchronization accepts osu!'s `Editor/TimelineZoom` without a conflict; it is
@@ -41,13 +42,17 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 
 ## Object and timing rules
 
+Finite red-line beat lengths retain their source values, including zero and negative values. Playback, beat grids and timing edits retain positive source beat lengths, including sub-millisecond values, so imported slider durations follow the stable file-format formula. Zero and negative red values use a 6 ms fallback beat. Negative red values also supply inherited SV independently (for example, `-50` gives SV 2 with a 6 ms beat). Project saves and unedited exports preserve the raw timing line; nonfinite red values are rejected.
+
+Imported sliders retain their full actual path length and duration. Legacy tick generation caps its distance at 100,000 px and computes tick progress against that cap, while repeat and tail times retain the full span duration. Authored paths retain their 100,000 px limit. A collapsed imported path has zero duration and coincident head, repeat and tail fruits, even when its retained expected length is positive; duplicate final path points prevent extension as in the pinned upstream implementation.
+
 Lazer v128 imports use the same supported object and timing fields. They require integer-valued coordinates after float parsing and ordinary L/B/C/P slider paths. Fractional coordinates, explicit mixed path segments and B-spline degree syntax are rejected; these need a stable-compatible export before import. This prevents interpreting lazer's fractional coordinates with stable's integer truncation. Project saves preserve accepted raw fields, and export still writes v14. See the pinned [ConvertHitObjectParser](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs) for the coordinate and path syntax boundaries.
 
 Versions 8–14 share the Catch timing and slider tick rules used here. Version 7 additionally multiplies tick distance by the reciprocal of inherited SV, so changing only its header can change droplets and downstream RNG. Imported v7 maps retain this rule through project saves, undo, conversion caches, new FSliders and v7 export. New maps and other supported imports use v14 export. Synchronization reviews changes between these tick rules as `Format/Version`; this comparison field is not written as an `.osu` section. Import preserves raw sections and object/sample fields. All supported stable versions use the same legacy coordinate rules; the timing offset for versions below v5 remains outside the supported input range. These boundaries follow the pinned [LegacyBeatmapDecoder](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs) and [CatchBeatmapConverter](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapConverter.cs).
 
 | Item | Representation |
 | --- | --- |
-| Standalone fruit | Hit circle preserving X, time, type flags, and samples |
+| Standalone fruit | Hit circle preserving X, geometric Y, time, type flags, and samples |
 | Ordinary slider | Slider with curve type/points, span count, path length, and edge samples; the stream is derived |
 | Slider-managed fruit stream | Hit circles sampled at the saved StreamSnapDivisor; no slider or SV override |
 | Banana shower | Spinner start/end times; individual banana X positions are not serialized |
@@ -85,6 +90,14 @@ including exports without generated sliders; same-time points retain source orde
 Output defaults to a new file. It validates all objects before writing a temporary file and safely replacing the destination. Failure preserves the original file. Hosts copy available associated resources and manage relative paths for exports across directories; missing song audio and same-name content conflicts are errors. Optional video, storyboard, background, and custom sample files may be absent; their original references are preserved.
 
 Unedited sliders are not resampled. SV changes are checked against parameters affecting simultaneous and later objects; required restoration points are written and verified. `.osu` export and project saving maintain separate success states and dirty-state handling.
+
+Legacy sliders with independent SV encode their actual per-object multiplier at
+the head, using the processed value when droplet effects are materialized. Their
+stored green points are unchanged by drawing, movement or Inspector SV editing.
+The writer merges per-object SV requirements with original timing/sample/effect
+states and applies its existing restoration and lookup-window checks. Unchanged
+imported SV requires no generated override. Coincident incompatible requirements
+fail explicitly; FSliders at a Legacy head must generate at its actual SV.
 
 When an edited slider requires a different SV, the writer replaces the old green point at its start time to avoid stacking different velocities at the same time, preserving red points and effective sample fields. Catch interprets inherited SV within stable's 0.1–10 range; FSliders requiring SV above 10 fail generation and export. A restoration point is written if an unedited slider before the next independent timing boundary still depends on the old velocity, or if a nearby original SV change must be deferred. Otherwise it is omitted.
 

@@ -193,11 +193,11 @@ internal static class SliderModeInteractionTests
         p = Screen(ui, 1500, 200);
         ui.View.PointerDown(p.X, p.Y, 0, false, true); ui.View.PointerUp(p.X, p.Y, 0);
         Check(ui.View.SelectedAnchorIds.Count == 1, "Ctrl-click did not target the pointed anchor.");
-        var target = Screen(ui, 1500, 210);
+        var target = Screen(ui, 1500, 220);
         ui.View.PointerDown(p.X, p.Y, 0, false, false);
         ui.View.PointerMove(target.X, target.Y, false, false); ui.View.PointerUp(target.X, target.Y, 0); ui.Paint();
         Near(200, ui.View.Document.Tracks[0].Nodes[0].X);
-        Near(210, ui.View.Document.Tracks[0].Nodes[^1].X);
+        Near(220, ui.View.Document.Tracks[0].Nodes[^1].X);
 
         ui = new Ui(); ui.LoadDocument(new MapDocument { DurationMs = 10000 });
         ui.View.SetSliderEditingMode(SliderEditingMode.OsuLegacy); ui.Key('B');

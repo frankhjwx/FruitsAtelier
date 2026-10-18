@@ -10,7 +10,12 @@ public sealed partial class EditorView
     {
         foreach (var difficulty in difficulties)
             difficulty.EditingPreferences = LibrarySettings.MapEditingPreferences.GetValueOrDefault(difficulty.Id) ?? new();
+        RestoreSnapPreferences();
     }
+
+    private void RestoreSnapPreferences()
+        => currentSnapDivisor = LibrarySettings.ExperimentalSnapDivisions
+            ? EditingPreferences.BeatSnapDivisor : Math.Min(EditingPreferences.BeatSnapDivisor, 16);
 
     private void SaveMapEditingPreferences()
     {

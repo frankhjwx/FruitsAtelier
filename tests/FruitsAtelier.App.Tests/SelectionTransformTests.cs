@@ -148,7 +148,7 @@ internal static class SelectionTransformTests
                     return ui.Canvas.Texts.First(t => t.Value.Length > 0 && value.StartsWith(t.Value, StringComparison.Ordinal) && t.Y >= 88 && t.Y < 117);
                 }
                 ui.Click(toggle.X + 1, toggle.Y + 2);
-                Check(ui.View.SelectionTransformBounds.Width == 0 && !ui.Canvas.Outlines.Any(o => o.Color == 0x35ABC9),
+                Check(ui.View.SelectionTransformBounds.Width == 0 && !ui.Canvas.Outlines.Any(o => o.Color == ui.View.LibrarySettings.SelectionHighlightColour),
                     "Disabled selection rectangle is still drawn.");
                 ui.View.PointerMove(bounds.Right, bounds.Y + bounds.Height / 2, false, false);
                 Check(!ui.View.SelectionScaleCursor, "Hidden rectangle still exposes a scale cursor.");
@@ -177,6 +177,7 @@ internal static class SelectionTransformTests
                 var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 240 };
                 slider.ControlPoints.AddRange([new(120, 192), new(360, 192)]);
                 map.ImportedSliders.Add(slider);
+                ImportedSliderEditing.ConvertToTrack(map, slider.Id);
             }
             else
             {
@@ -198,7 +199,7 @@ internal static class SelectionTransformTests
                 && Math.Abs(c.X - p.X) < 1 && Math.Abs(c.Y - p.Y) < 1), "Endpoint child was not selected inside its box.");
             var before = ui.View.Document.DeepClone();
             double wantedTime = target.TimeMs + (vertical ? 125 : 0);
-            ui.DownMap(target.TimeMs, pointerX); ui.MoveMap(wantedTime, pointerX + 10); ui.UpMap(wantedTime, pointerX + 10);
+            ui.DownMap(target.TimeMs, pointerX); ui.MoveMap(wantedTime, pointerX + 20); ui.UpMap(wantedTime, pointerX + 20);
             var moved = ui.View.Document.DeepClone();
             var output = CatchStreamConverter.Convert(moved);
             Check(output.Success, "Selected endpoint drag produced invalid geometry.");
@@ -208,7 +209,7 @@ internal static class SelectionTransformTests
             Near(opposite.TimeMs, fixedEnd.TimeMs); Near(opposite.X, fixedEnd.X);
             Near(wantedTime, current.TimeMs);
             // Horizontal child editing follows the displayed X; endpoint time editing starts from the authored anchor.
-            Near((vertical ? authoredTarget.X : target.X) + 10, current.X);
+            Near((vertical ? authoredTarget.X : target.X) + 20, current.X);
             ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Selected endpoint drag undo differs.");
             ui.Key('Y', ctrl: true); Check(moved.ContentEquals(ui.View.Document), "Selected endpoint drag redo differs.");
         }
@@ -228,6 +229,7 @@ internal static class SelectionTransformTests
                 var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 240 };
                 slider.ControlPoints.AddRange([new(120, 192), new(360, 192)]);
                 map.ImportedSliders.Add(slider);
+                ImportedSliderEditing.ConvertToTrack(map, slider.Id);
                 source = slider.Id;
             }
             else
@@ -249,7 +251,7 @@ internal static class SelectionTransformTests
             ui.ClickMap(target.TimeMs, target.X);
             Check(ui.Canvas.Circles.Any(c => !c.Filled && c.Color == 0xE7EBF2
                 && Math.Abs(c.X - point.X) < 1 && Math.Abs(c.Y - point.Y) < 1), "Box blocked droplet child selection.");
-            ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, target.X + 10); ui.UpMap(target.TimeMs, target.X + 10);
+            ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, target.X + 20); ui.UpMap(target.TimeMs, target.X + 20);
             var after = CatchStreamConverter.Convert(ui.View.Document);
             Check(after.Success, "Droplet drag produced invalid geometry.");
             foreach (var old in baseline)
@@ -257,7 +259,7 @@ internal static class SelectionTransformTests
                 var current = after.Objects.Single(o => o.EventIndex == old.EventIndex);
                 Near(old.TimeMs, current.TimeMs);
                 if (imported && old.Kind == CatchObjectKind.TinyDroplet && old.EventIndex != target.EventIndex) continue;
-                double expected = old.EventIndex == target.EventIndex ? target.X + 10 : old.X;
+                double expected = old.EventIndex == target.EventIndex ? target.X + 20 : old.X;
                 Check(Math.Abs(expected - current.X) < .02,
                     $"{mode}, imported={imported}, hidden={hidden}, {kind} #{target.EventIndex}: event #{old.EventIndex} expected X {expected}, got {current.X}.");
             }
@@ -291,7 +293,7 @@ internal static class SelectionTransformTests
         Near(events.Min(o => ui.ScreenAt(o.TimeMs, o.X).Y - Radius(o) * ui.Plot.Width / 512), box.Y);
         Near(events.Max(o => ui.ScreenAt(o.TimeMs, o.X).Y + Radius(o) * ui.Plot.Width / 512), box.Bottom);
         Scale(ui, 1, -10);
-        ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Small-droplet box scale undo differs.");
+        Check(map.ContentEquals(ui.View.Document), "Catch box scaling changed the read-only Legacy Slider.");
     }
 
     private static void SpecialSliders()
@@ -312,13 +314,11 @@ internal static class SelectionTransformTests
         var legacyMap = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,2,0,L|300:192,1,200\n");
         legacyMap.DurationMs = 12000;
         ui.LoadDocument(legacyMap); ui.Key('1'); ui.Key('A', ctrl: true);
-        Scale(ui, -1, -20, cancel: true);
-        Check(legacyMap.ContentEquals(ui.View.Document), "Cancelled Legacy scale retained conversion.");
+        var readOnlyLegacy = ui.View.Document.DeepClone();
         Scale(ui, -1, -20);
-        Check(ui.View.Document.ImportedSliders.Count == 0 && ui.View.Document.Tracks.Count == 1, "Legacy scale did not convert.");
-        Near(1000, ui.View.Document.Tracks.Single().Nodes[0].TimeMs);
-        Near(2000, ui.View.Document.Tracks.Single().Nodes[^1].TimeMs);
-        ui.Key('Z', ctrl: true); Check(legacyMap.ContentEquals(ui.View.Document), "Legacy scale undo is not atomic.");
+        Check(readOnlyLegacy.ContentEquals(ui.View.Document)
+            && ui.View.Document.ImportedSliders.Count == 1 && ui.View.Document.Tracks.Count == 0,
+            "Catch canvas scaling changed the read-only Legacy Slider.");
 
         var narrow = new MapDocument { DurationMs = 12000 };
         narrow.Fruits.AddRange([new() { TimeMs = 1000, X = 200 }, new() { TimeMs = 2000, X = 200 }]);

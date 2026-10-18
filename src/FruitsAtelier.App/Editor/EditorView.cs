@@ -16,7 +16,12 @@ public sealed partial class EditorView
         public Guid Id { get; } = difficulty.Id;
         public MapEditingPreferences EditingPreferences { get; set; } = new();
         public string Name => OsuBeatmapReader.Setting(History.Document, "Metadata", "Version") ?? difficulty.Name;
-        public EditorHistory History { get; } = new(difficulty.Document);
+        public EditorHistory History { get; } = new(PrepareDocument(difficulty.Document));
+        private static MapDocument PrepareDocument(MapDocument document)
+        {
+            LegacySliderVelocityEditing.Capture(document);
+            return document;
+        }
         public MapDocument? RatingSnapshot;
         public double? Stars, EasyStars, HardRockStars;
         public IReadOnlyList<CatchStrainSample>? StrainSamples;
@@ -75,16 +80,41 @@ public sealed partial class EditorView
     private MapDocument? objectDragStart;
     private bool objectDragPrepared;
     private bool snap = true;
-    private bool anchorSnap;
+    private bool anchorSnap
+    {
+        get => EditingPreferences.AnchorSnap;
+        set { EditingPreferences.AnchorSnap = value; SaveMapEditingPreferences(); }
+    }
     public bool AnchorSnapEnabled => anchorSnap;
     private static readonly int[] StandardSnapDivisors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
     private static readonly int[] ExtendedSnapDivisors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16, 24, 32, 48];
     private int[] SnapDivisors => LibrarySettings.ExperimentalSnapDivisions ? ExtendedSnapDivisors : StandardSnapDivisors;
     // Keep edge room stable while CS is edited; 54.4 is the CS=0 fruit radius.
     private const float PlayfieldPadding = 54.4f;
-    private int divisor = 4, menu = -1, editField = -1;
+    private int currentSnapDivisor = 4, menu = -1, editField = -1;
+    private int divisor
+    {
+        get => currentSnapDivisor;
+        set
+        {
+            currentSnapDivisor = value;
+            if (temporarySnapSource != Guid.Empty || EditingPreferences.BeatSnapDivisor == value) return;
+            EditingPreferences.BeatSnapDivisor = value;
+            if (drag != DragKind.SnapDivisor) SaveMapEditingPreferences();
+        }
+    }
     private string editBuffer = "", fieldError = "";
-    private bool replaceText = true, showTargets = true, showSelectionRect = true;
+    private bool replaceText = true;
+    private bool showTargets
+    {
+        get => LibrarySettings.ShowSliderPaths;
+        set { LibrarySettings.ShowSliderPaths = value; RequestViewPreference?.Invoke(); }
+    }
+    private bool showSelectionRect
+    {
+        get => LibrarySettings.ShowSelectionRect;
+        set { LibrarySettings.ShowSelectionRect = value; RequestViewPreference?.Invoke(); }
+    }
 
     public Action? RequestClose { get; set; }
     public Action? RequestLoadSkin { get; set; }
@@ -134,6 +164,8 @@ public sealed partial class EditorView
 
     private void EnsureConversion()
     {
+        PumpLegacyDropletRefresh();
+        if (LegacyDropletRefreshBusy) return;
         if (draftTrack != Guid.Empty && draftBaseConversion is not null)
         {
             UpdateDraftConversion();
@@ -145,11 +177,15 @@ public sealed partial class EditorView
             return;
         }
         long checkStart = Performance.Start();
-        bool cached = convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
+        bool cached = convertedSnapshot is not null && convertedSnapshot.ContentEqualsIgnoringOsuDistanceSpacing(Document)
             && convertedWithCompensation == compensateTinyDroplets
             && (!contentDragPreview || IsContentDrag);
         Performance.End(EditorPerformanceStage.ConversionCheck, checkStart);
-        if (cached) return;
+        if (cached)
+        {
+            convertedSnapshot!.OsuDistanceSpacing = Document.OsuDistanceSpacing;
+            return;
+        }
         long rebuildStart = Performance.Start();
         try { RebuildConversion(); }
         finally { Performance.End(EditorPerformanceStage.ConversionRebuild, rebuildStart); }
@@ -208,9 +244,9 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, PlaybackLine, Objects, SliderObject, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize, DifficultySeek, TimelinePanelResize }
+    private enum DragKind { None, PlaybackLine, Objects, SliderObject, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, OsuDefaultSv, CanvasZoom, LegacyControl, TimelineTail, PreviewResize, DifficultySeek, TimelinePanelResize }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
-    private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
+    private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp, bool Preference = false);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);
     private double MinimumCanvasZoom => IsLazerEditing ? .25 : Math.Min(1, MinimumPlayfieldWidth / Math.Max(1, FullPlayfieldWidth));
     private float PlayfieldScale => IsLazerEditing ? LazerCanvasScale : FullPlayfieldWidth * (float)canvasZoom / 512;
@@ -275,6 +311,12 @@ public sealed partial class EditorView
 
     private void SetCanvasZoom(float x)
     {
+        if (IsOsuCanvas)
+        {
+            double zoom = .25 + Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1) * 3.75;
+            ZoomOsuCanvasAt(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, zoom / osuCanvasZoom);
+            return;
+        }
         if (IsLazerEditing)
         {
             SetLazerCanvasZoom(MinimumCanvasZoom + (MaximumCanvasZoom - MinimumCanvasZoom)
@@ -313,6 +355,7 @@ public sealed partial class EditorView
 
     private void Select(Guid id, Guid track = default)
     {
+        if (!CanSelectSlider(track != Guid.Empty ? track : id)) { id = Guid.Empty; track = Guid.Empty; }
         if (id != temporarySnapSource || track != Guid.Empty) RestoreTemporarySnap();
         soundEdge = null; distanceObject = null; clickedCoordinate = null; timelineFruit = null;
         objectSelection.Clear(); anchorSelection.Clear();
@@ -328,6 +371,7 @@ public sealed partial class EditorView
 
     private void ChangeTool(Tool next)
     {
+        if (osuDraftSlider is not null || osuSpinnerStart is not null) CancelOsuInteraction();
         if (draftBanana != Guid.Empty)
         {
             history.Cancel();
@@ -388,13 +432,16 @@ public sealed partial class EditorView
         try
         {
             var before = notesLocked ? Document.DeepClone() : null;
+            var readOnlyIds = (IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id)).ToHashSet();
             int importedBefore = Document.ImportedSliders.Count;
             change();
+            if (!osuAllowSliderConversion && history.TransactionChangesObjects(readOnlyIds))
+            { history.Cancel(); StatusMessage = L.Get("osu.readOnlySlider"); return false; }
             if (before is not null && !PositionsEqual(before, Document))
             { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }
             if (Document.DerandomizeDroplets is null && Document.ImportedSliders.Count < importedBefore)
                 Document.DerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
-            history.Commit(); return true;
+            CommitContentHistory(); return true;
         }
         catch (ArgumentException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }
         catch (InvalidOperationException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }
@@ -431,7 +478,7 @@ public sealed partial class EditorView
         Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
         // Completion can append an endpoint after the last render; retain that final draft while validation runs.
         UpdateDraftConversion();
-        history.Commit();
+        CommitContentHistory();
         EndDraftConversion(cancelled: false);
         legacyDraft = null; legacyPreviewVertices = null;
         draftTrack = Guid.Empty;

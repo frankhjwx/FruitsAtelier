@@ -12,7 +12,7 @@ internal static class LibraryScanProgressTests
             using (var file = File.Create(oversized)) file.SetLength(OsuBeatmapReader.MaximumFileBytes + 1);
             string valid = Path.Combine(songs, "valid.osu");
             File.WriteAllText(valid, "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Valid\n[HitObjects]\n");
-            File.WriteAllText(Path.Combine(songs, "standard.osu"), "osu file format v14\n[General]\nMode:0\n");
+            File.WriteAllText(Path.Combine(songs, "mania.osu"), "osu file format v14\n[General]\nMode:3\n");
             var db = new LibraryDatabase(Path.Combine(root, "Workspace"), songs);
             var progress = new List<LibraryScanProgress>();
             bool visibleDuringScan = false;

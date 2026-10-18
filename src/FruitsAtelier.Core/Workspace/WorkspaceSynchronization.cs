@@ -479,6 +479,23 @@ public static class WorkspaceSynchronization
                 .ToDictionary(g => g.Key, g => new Queue<int>(g.Select(p => p.i)));
             foreach (string line in group.Lines) OsuBeatmapReader.ParseObject(result, line, positions[line].Dequeue());
         }
+        bool acceptedTiming = WorkspaceTimingSynchronization.Text(result.TimingPoints)
+            != WorkspaceTimingSynchronization.Text(merge.Local.TimingPoints);
+        var incomingSliders = merge.External.Document.ImportedSliders.GroupBy(s => SliderShape(s.OriginalLine ?? ""))
+            .Where(g => g.Key is not null).ToDictionary(g => g.Key!, g => g.First());
+        foreach (var slider in result.ImportedSliders)
+        {
+            if (SliderShape(slider.OriginalLine ?? "") is not { } shape || !incomingSliders.TryGetValue(shape, out var incoming)) continue;
+            double incomingSv = ImportedSliderConverter.SliderVelocityAt(merge.External.Document, incoming)
+                * merge.External.Document.EffectiveSliderMultiplier / result.SliderMultiplier;
+            if (slider.SliderVelocityMultiplier is null || acceptedTiming
+                && Math.Abs(ImportedSliderConverter.SliderVelocityAt(result, slider) * result.EffectiveSliderMultiplier
+                    - incomingSv * result.SliderMultiplier) > 1e-9)
+            {
+                slider.SliderVelocityMultiplier = incomingSv; slider.ProcessedSliderVelocityMultiplier = null;
+                slider.RandomizationSource = null; slider.RandomizationTrack = null; slider.RandomizationBaseVelocity = null;
+            }
+        }
         if (merge.Objects.Any(g => externalChoices.GetValueOrDefault(g.Key)))
         {
             PreserveCurves(merge, result, merge.Objects.Where(g => externalChoices.GetValueOrDefault(g.Key)).SelectMany(g => g.Sources).ToHashSet());

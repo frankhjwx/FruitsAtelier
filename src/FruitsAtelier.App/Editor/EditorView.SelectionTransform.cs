@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private const uint SelectionTransformColour = 0x35ABC9;
+    private uint SelectionTransformColour => SelectionHighlightColour;
     private IReadOnlyList<ConvertedCatchObject>? selectionBoundsObjects;
     private double selectionBoundsCircleSize = double.NaN;
     private readonly HashSet<Guid> selectionBoundsIds = [];
@@ -135,6 +135,7 @@ public sealed partial class EditorView
         if (side == 0 && TryBeginSelectedSliderObjectDrag(x, y, requireSelectedFruit: true)) return true;
         if (HitSelectedSliderControl(x, y)) return false;
         if (side == 0 && !bounds.Contains(x, y)) return false;
+        if (RejectReadOnlySelection()) return true;
         if (side != 0 && selectionMapBounds is { } map && map.Right - map.Left < .001) return true;
         BeginObjectDrag(x, y, scaleSelection: side != 0);
         selectionScaleSide = side;

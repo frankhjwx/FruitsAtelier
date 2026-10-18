@@ -218,7 +218,7 @@ internal static class DropletDragTests
             var original = ui.View.Document.DeepClone();
             var child = CatchStreamConverter.Convert(map).Objects.First(o => o.SourceId == slider.Id && o.Kind == kind);
             ui.ClickMap(child.TimeMs, child.X); ui.ClickMap(child.TimeMs, child.X);
-            Check(ui.View.SelectedObjectIds.Single() == slider.Id && ui.View.XCoordinateFieldBounds is not null
+            Check(ui.View.SelectedObjectIds.Single() == slider.Id && ui.View.XCoordinateFieldBounds is null
                 && original.ContentEquals(ui.View.Document),
                 $"Selecting Legacy {kind} changed its representation before an edit.");
         }

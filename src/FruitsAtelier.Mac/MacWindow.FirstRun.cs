@@ -18,6 +18,7 @@ internal sealed partial class MacWindow
         Width = size.Width; Height = size.Height;
         if (work is { } area) Position = new Avalonia.PixelPoint(area.X + (area.Width - (int)(Width * scale)) / 2,
             area.Y + (area.Height - (int)(Height * scale)) / 2);
+        if (!setup) RestoreWindowPreferences();
     }
 
     private MacAudio? setupAudio;

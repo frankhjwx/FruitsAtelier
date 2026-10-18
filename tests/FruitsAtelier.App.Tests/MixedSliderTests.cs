@@ -48,14 +48,18 @@ internal static class MixedSliderTests
         Guid id = map.ImportedSliders.Single().Id;
         ui.LoadDocument(map); ui.Paint();
         ui.Key('1'); ui.ClickMap(1000, 160);
+        var original = ui.View.Document.DeepClone();
+        ui.DownMap(1000, 160); ui.MoveMap(1000, 120); ui.UpMap(1000, 120);
+        Check(ui.View.Document.ContentEquals(original) && !ui.View.IsDirty,
+            "Dragging an opposite-mode slider must preserve its legacy representation and geometry.");
         ui.HoldMap(1000, 160); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
         Check(!ui.View.SliderImportPromptVisible, "Single-slider conversion prompted instead of editing.");
         var track = ui.View.Document.Tracks.Single();
         Check(track.Id == id && track.SpanCount == 1 && track.CompensateTinyDroplets == true
             && ui.View.Document.ImportedSliders.Count == 0, "Conversion lost the original parent identity or FSlider alignment policy.");
         ui.ClickMap(track.Nodes[0].TimeMs, track.Nodes[0].X);
-        ui.DownMap(track.Nodes[0].TimeMs, track.Nodes[0].X); ui.MoveMap(track.Nodes[0].TimeMs, 155); ui.UpMap(track.Nodes[0].TimeMs, 155);
-        Check(Math.Abs(track.Nodes[0].X - 155) < 0.001, "An imported slider node remained read-only.");
+        ui.DownMap(track.Nodes[0].TimeMs, track.Nodes[0].X); ui.MoveMap(track.Nodes[0].TimeMs, 140); ui.UpMap(track.Nodes[0].TimeMs, 140);
+        Check(Math.Abs(track.Nodes[0].X - 140) < 0.001, "An imported slider node remained read-only.");
         bool wasCurved = CurvePointEditing.IsCurved(track, track.Nodes[0].Id);
         ui.TogglePointCurve();
         Check(CurvePointEditing.IsCurved(track, track.Nodes[0].Id) != wasCurved, "Fitted control point cannot be edited.");

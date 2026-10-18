@@ -23,6 +23,8 @@ public sealed partial class EditorView
     private bool draftFullscreen, fullscreenShortcutHeld;
     private bool draftExperimentalSnapDivisions;
     private bool draftLazerEditing;
+    private CatchHitLightingMode draftCatchHitLighting;
+    internal Rect HitLightingSettingsBounds => new(SettingsContentX, SettingsTop + 464, SettingsContentWidth, SettingsControlHeight);
     internal Rect LazerEditingToggleBounds { get; private set; }
     private bool draftReverseCanvasScroll;
     private double draftTestplayStartupDelaySeconds;
@@ -30,7 +32,8 @@ public sealed partial class EditorView
     private bool draftShowTestplayCombo;
     private int draftBackgroundDim, draftMappingCanvasBackgroundDim, draftCanvasGridOpacity;
     private bool draftForceBackgroundDim;
-    private readonly uint[] draftSettingsColours = new uint[6];
+    private readonly uint[] draftSettingsColours = new uint[7];
+    private uint SelectionHighlightColour => LibrarySettings.SelectionHighlightColour;
     private int settingsColourIndex = -1;
     private uint settingsColourOriginal;
     private string settingsColourHex = "", settingsColourError = "";
@@ -112,6 +115,7 @@ public sealed partial class EditorView
         draftDerandomizeNewProjects = LibrarySettings.DerandomizeNewProjects;
         draftExperimentalSnapDivisions = LibrarySettings.ExperimentalSnapDivisions;
         draftLazerEditing = LibrarySettings.LazerEditing;
+        draftCatchHitLighting = LibrarySettings.CatchHitLighting;
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
         draftUiScalePercent = LibrarySettings.UiScalePercent;
@@ -122,6 +126,7 @@ public sealed partial class EditorView
         draftSettingsColours[3] = LibrarySettings.HyperDashIndicatorColour;
         draftSettingsColours[4] = LibrarySettings.CanvasGridColour;
         draftSettingsColours[5] = LibrarySettings.CanvasCentreLineColour;
+        draftSettingsColours[6] = LibrarySettings.SelectionHighlightColour;
         draftCanvasGridOpacity = LibrarySettings.CanvasGridOpacity;
         settingsColourIndex = -1; settingsColourDrag = 0; settingsColourHex = settingsColourError = "";
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
@@ -146,13 +151,15 @@ public sealed partial class EditorView
         draftOsuRoot != LibrarySettings.OsuRoot ||
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
-        draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
-        draftDerandomizeNewProjects != LibrarySettings.DerandomizeNewProjects ||
+        FirstRunSetupVisible && (draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
+            draftDerandomizeNewProjects != LibrarySettings.DerandomizeNewProjects) ||
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
         draftUiScalePercent != LibrarySettings.UiScalePercent ||
+        draftSettingsColours[6] != LibrarySettings.SelectionHighlightColour ||
         draftFullscreen != LibrarySettings.Fullscreen ||
         draftExperimentalSnapDivisions != LibrarySettings.ExperimentalSnapDivisions ||
         draftLazerEditing != LibrarySettings.LazerEditing ||
+        draftCatchHitLighting != LibrarySettings.CatchHitLighting ||
         draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
         draftSettingsColours[0] != LibrarySettings.StandIndicatorColour ||
         draftSettingsColours[1] != LibrarySettings.WalkIndicatorColour ||
@@ -245,17 +252,14 @@ public sealed partial class EditorView
                         () => draftFullscreen = !draftFullscreen, draftFullscreen);
                     c.Text(L.Get("settings.fullscreenShortcut"), SettingsContentX, fullscreenTop + 72, SettingsHintSize, Muted, SettingsContentWidth);
                 }
-                float scrollTop = fullscreenTop + (SupportsFullscreen ? 108 : 0);
-                float scrollWidth = SettingsContentWidth;
-                c.Line(SettingsContentX, scrollTop, SettingsContentX + scrollWidth, scrollTop, Grid);
-                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, scrollTop + 12, SettingsSectionSize, Foreground,
-                    SettingsContentWidth, true);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 46, SettingsContentWidth, 32),
-                    L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
-                    () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 94, SettingsContentWidth, 32),
-                    L.Get(draftDerandomizeNewProjects ? "settings.newProjectDerandomizeOn" : "settings.newProjectDerandomizeOff"),
-                    () => draftDerandomizeNewProjects = !draftDerandomizeNewProjects, draftDerandomizeNewProjects);
+                float dropletsTop = fullscreenTop + (SupportsFullscreen ? 108 : 0);
+                c.Line(SettingsContentX, dropletsTop, SettingsContentX + SettingsContentWidth, dropletsTop, Grid);
+                c.Text(L.Get("randomize.title"), SettingsContentX, dropletsTop + 12, SettingsSectionSize, Foreground, SettingsContentWidth, true);
+                var dropletHint = WrapSyncText(c, L.Get("settings.dropletManagementHint"), SettingsContentWidth);
+                for (int i = 0; i < dropletHint.Length; i++)
+                    c.Text(dropletHint[i].Text, SettingsContentX, dropletsTop + 40 + i * 18, SettingsHintSize, Muted, SettingsContentWidth);
+                SettingsButton(c, new(SettingsContentX, dropletsTop + 46 + dropletHint.Length * 18, SettingsContentWidth, SettingsControlHeight),
+                    L.Get("settings.openDropletSettings"), OpenDropletSettingsFromGeneral);
                 c.Unclip();
                 ClipSettingsHits(generalFirstHit);
                 DrawSettingsScrollbar(c, GeneralContentHeight);
@@ -270,6 +274,17 @@ public sealed partial class EditorView
                 var scaleBounds = new Rect(SettingsContentX, SettingsTop + 306, SettingsContentWidth, SettingsControlHeight);
                 SettingsButton(c, scaleBounds, $"{draftUiScalePercent}% ▾", () => OpenUiScaleMenu(scaleBounds));
                 SettingsParagraph(c, L.Get("settings.uiScaleHint"), SettingsTop + 350);
+                var highlightBounds = new Rect(SettingsContentX, SettingsTop + 408, SettingsContentWidth - 130, SettingsControlHeight);
+                c.Fill(highlightBounds, Surface, 4); c.Stroke(highlightBounds, Grid, radius: 4);
+                c.Fill(new(highlightBounds.X + 7, highlightBounds.Y + 6, 20, 20), draftSettingsColours[6], 3);
+                c.Text(L.Get("settings.selectionHighlight"), highlightBounds.X + 36, highlightBounds.Y + 7.5f,
+                    SettingsTextSize, Foreground, highlightBounds.Width - 124);
+                c.Text($"#{draftSettingsColours[6]:X6}", highlightBounds.Right - 82, highlightBounds.Y + 7.5f, SettingsTextSize, Muted, 76);
+                hits.Add(new(highlightBounds, () => OpenSettingsColourPicker(6), true));
+                SettingsButton(c, new(highlightBounds.Right + 10, highlightBounds.Y, 120, SettingsControlHeight),
+                    L.Get("settings.indicatorReset"), () => draftSettingsColours[6] = FruitsAtelier.Core.LibrarySettings.DefaultSelectionHighlightColour);
+                SettingsButton(c, HitLightingSettingsBounds, L.Get(HitLightingKey(draftCatchHitLighting)) + " ▾",
+                    () => OpenHitLightingMenu(HitLightingSettingsBounds));
                 break;
             case SettingsCategory.Experimental:
                 float snapToggleTop = SettingsParagraph(c, L.Get("settings.experimentalSnapDivisions"), SettingsTop + 128, SettingsTextSize);
@@ -301,6 +316,23 @@ public sealed partial class EditorView
             active: canApply, enabled: canApply);
         if (settingsColourIndex >= 0) DrawSettingsColourPicker(c);
         if (settingsCategory == SettingsCategory.Workspace) DrawStorageTooltip(c);
+    }
+
+    private static string HitLightingKey(CatchHitLightingMode mode) => mode switch
+    {
+        CatchHitLightingMode.On => "skin.hitLightingOn",
+        CatchHitLightingMode.Off => "skin.hitLightingOff",
+        _ => "skin.hitLightingFollowMode"
+    };
+
+    private void OpenHitLightingMenu(Rect bounds)
+    {
+        contextItems.Clear();
+        foreach (var mode in Enum.GetValues<CatchHitLightingMode>())
+            contextItems.Add(new((draftCatchHitLighting == mode ? "✓ " : "") + L.Get(HitLightingKey(mode)),
+                () => draftCatchHitLighting = mode));
+        float menuHeight = 12 + contextItems.Count * 32;
+        contextBounds = new(bounds.X, Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), bounds.Width, menuHeight);
     }
 
     private void OpenUiScaleMenu(Rect bounds)
@@ -350,10 +382,15 @@ public sealed partial class EditorView
             settings.CanvasGridOpacity = draftCanvasGridOpacity;
             settings.ForceBackgroundDim = draftForceBackgroundDim;
             settings.RomanisedMetadata = draftRomanisedMetadata;
-            settings.DerandomizeDroplets = draftDerandomizeDroplets;
-            settings.DerandomizeNewProjects = draftDerandomizeNewProjects;
+            settings.DerandomizeDroplets = FirstRunSetupVisible ? draftDerandomizeDroplets : LibrarySettings.DerandomizeDroplets;
+            settings.DerandomizeNewProjects = FirstRunSetupVisible ? draftDerandomizeNewProjects : LibrarySettings.DerandomizeNewProjects;
+            settings.DefaultDropletMode = LibrarySettings.DefaultDropletMode;
+            settings.DefaultDropletHardRock = LibrarySettings.DefaultDropletHardRock;
+            settings.DefaultDropletStrength = LibrarySettings.DefaultDropletStrength;
+            settings.DefaultDropletSeed = LibrarySettings.DefaultDropletSeed;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
             settings.UiScalePercent = draftUiScalePercent;
+            settings.SelectionHighlightColour = draftSettingsColours[6];
             settings.Fullscreen = draftFullscreen;
             settings.ExperimentalSnapDivisions = draftExperimentalSnapDivisions;
             settings.LazerEditing = draftLazerEditing;
@@ -361,7 +398,7 @@ public sealed partial class EditorView
             settings.LazerSpeedDistanceSnap = LibrarySettings.LazerSpeedDistanceSnap;
             settings.LazerDistanceCustomSpeeds = LibrarySettings.LazerDistanceCustomSpeeds;
             settings.LazerDistanceGuidesVisible = LibrarySettings.LazerDistanceGuidesVisible;
-            settings.CatchHitLighting = LibrarySettings.CatchHitLighting;
+            settings.CatchHitLighting = draftCatchHitLighting;
             settings.ReverseCanvasScroll = draftReverseCanvasScroll;
             settings.StandIndicatorColour = draftSettingsColours[0]; settings.WalkIndicatorColour = draftSettingsColours[1];
             settings.DashIndicatorColour = draftSettingsColours[2]; settings.HyperDashIndicatorColour = draftSettingsColours[3];
@@ -544,7 +581,7 @@ public sealed partial class EditorView
         hits.Add(new(screen, () => { }, true));
         var dialog = new Rect((width - 560) / 2, (height - 430) / 2, 560, 430);
         c.Fill(dialog, Panel, 8); c.Stroke(dialog, Grid, radius: 8);
-        string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash", "settings.canvasGridLine", "settings.canvasCentreLine"];
+        string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash", "settings.canvasGridLine", "settings.canvasCentreLine", "settings.selectionHighlight"];
         c.Text(L.Get(names[settingsColourIndex]), dialog.X + 20, dialog.Y + 17, 18, Foreground, 300, true);
         settingsPalette = new(dialog.X + 20, dialog.Y + 58, dialog.Width - 40, 216);
         for (int row = 0; row < 24; row++)

@@ -128,6 +128,7 @@ public static class OsuBeatmapWriter
             string[] p = fruit.OriginalLine?.Split(',') ?? ["0", "192", "0", "1", "0", "0:0:0:0:"];
             // Preserve all original flags, sample columns and untouched numeric spelling.
             if (fruit.OriginalLine is null || OsuBeatmapReader.LegacyCoordinate(p[0]) != fruit.X) p[0] = Coordinate(fruit.X);
+            if (fruit.OriginalLine is null || OsuBeatmapReader.LegacyCoordinate(p[1]) != fruit.Y) p[1] = Coordinate(fruit.Y);
             if (fruit.OriginalLine is null || OsuBeatmapReader.Number(p[2]) != fruit.TimeMs) p[2] = Time(fruit.TimeMs);
             lines.Add((fruit.TimeMs, fruit.SourceOrder, fruit.Id, string.Join(',', p)));
         }
@@ -140,6 +141,12 @@ public static class OsuBeatmapWriter
                 else cache.ParsedSliders.Parse(original, slider.OriginalLine, slider.SourceOrder);
                 if (original.ImportedSliders.Count != 1) throw new InvalidDataException(L.Get("core.writer.importedText"));
                 original.ImportedSliders[0].Id = slider.Id;
+                original.ImportedSliders[0].RandomizationSource = slider.RandomizationSource;
+                original.ImportedSliders[0].RandomizationTrack = slider.RandomizationTrack;
+                original.ImportedSliders[0].RandomizationBaseVelocity = slider.RandomizationBaseVelocity;
+                original.ImportedSliders[0].PreserveNativeGeometry = slider.PreserveNativeGeometry;
+                original.ImportedSliders[0].SliderVelocityMultiplier = slider.SliderVelocityMultiplier;
+                original.ImportedSliders[0].ProcessedSliderVelocityMultiplier = slider.ProcessedSliderVelocityMultiplier;
                 if (!slider.ContentEquals(original.ImportedSliders[0])) throw new InvalidDataException(L.Get("core.writer.importedChanged"));
                 lines.Add((slider.TimeMs, slider.SourceOrder, slider.Id, slider.OriginalLine));
             }
@@ -156,7 +163,7 @@ public static class OsuBeatmapWriter
                 string[] values = shower.OriginalLine.Split(',');
                 if (values.Length < 6) throw new InvalidDataException(L.Get("core.writer.bananaText"));
                 if (OsuBeatmapReader.Number(values[2]) != shower.TimeMs) values[2] = Time(shower.TimeMs);
-                if (OsuBeatmapReader.Number(values[5]) != shower.EndTimeMs) values[5] = Time(shower.EndTimeMs);
+                if (Math.Max(shower.TimeMs, OsuBeatmapReader.Number(values[5])) != shower.EndTimeMs) values[5] = Time(shower.EndTimeMs);
                 lines.Add((shower.TimeMs, shower.SourceOrder, shower.Id, string.Join(',', values)));
             }
             else lines.Add((shower.TimeMs, shower.SourceOrder, shower.Id, $"256,192,{Time(shower.TimeMs)},8,0,{Time(shower.EndTimeMs)},0:0:0:0:"));
@@ -201,7 +208,18 @@ public static class OsuBeatmapWriter
                 .Concat(document.ImportedSliders.Select(s => s.TimeMs)).DefaultIfEmpty(double.PositiveInfinity).Min();
             SliderMultiplierEditing.RebaseTiming(timingDocument, document.EffectiveSliderMultiplier, firstSlider);
         }
-        var timing = cache is null ? BuildTiming(timingDocument, generated) : cache.Timing(timingDocument, generated, BuildTiming);
+        var sourceTiming = new TimingMap.Lookup(document);
+        var independent = document.ImportedSliders.Where(s => s.SliderVelocityMultiplier is not null
+            && Math.Abs(ImportedSliderConverter.SliderVelocityAt(document, s, sourceTiming)
+                - sourceTiming.At(s.TimeMs).SliderVelocityMultiplier) > 1e-9).Select(s => s.Id).ToHashSet();
+        var timingSliders = generated;
+        if (independent.Count > 0)
+        {
+            timingDocument = timingDocument.DeepClone();
+            timingDocument.ImportedSliders.RemoveAll(s => independent.Contains(s.Id));
+            timingSliders = generated.Concat(converted.Sliders.Where(s => independent.Contains(s.SourceId))).ToArray();
+        }
+        var timing = cache is null ? BuildTiming(timingDocument, timingSliders) : cache.Timing(timingDocument, timingSliders, BuildTiming);
         if (document.HitsoundOverrides.Count > 0)
         {
             timing = timing.Select(p => p.DeepClone()).ToList();
@@ -525,7 +543,8 @@ public static class OsuBeatmapWriter
         return (Effective(shower.TimeMs, 2), Effective(shower.EndTimeMs, 5));
 
         double Effective(double time, int field) => values is not null && values.Length > field
-            && OsuBeatmapReader.Number(values[field]) == time ? time : QuantizeTime(time);
+            && (field == 5 ? Math.Max(OsuBeatmapReader.Number(values[2]), OsuBeatmapReader.Number(values[5]))
+                : OsuBeatmapReader.Number(values[field])) == time ? time : QuantizeTime(time);
     }
 
     public static double QuantizeTime(double value) => Math.Truncate(value);

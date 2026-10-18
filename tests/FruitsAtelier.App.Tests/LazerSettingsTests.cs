@@ -49,18 +49,23 @@ internal static class LazerSettingsTests
                 AssertRetained(LibrarySettings.Load(path));
                 foreach (var mode in new[] { CatchHitLightingMode.Off, CatchHitLightingMode.On, CatchHitLightingMode.FollowMode })
                 {
-                    int saves = 0;
-                    ui.View.RequestSkinPreference = () => { saves++; ui.View.LibrarySettings.Save(path); };
                     var bounds = ui.View.SkinSelectorBounds;
                     ui.Click(bounds.X + 4, bounds.Y + 4);
-                    ui.ClickText(L.Get(mode switch
-                    {
-                        CatchHitLightingMode.Off => "skin.hitLightingOff",
-                        CatchHitLightingMode.On => "skin.hitLightingOn",
-                        _ => "skin.hitLightingFollowMode"
-                    }));
-                    Check(saves == 1 && LibrarySettings.Load(path).CatchHitLighting == mode,
-                        "Skin-menu lighting changes must persist immediately.");
+                    Check(!ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("skin.hitLightingFollowMode"))),
+                        "The skin selector must contain only skin choices.");
+                    ui.Key(27);
+                    var previous = ui.View.LibrarySettings.CatchHitLighting;
+                    Appearance(); SelectLighting(mode);
+                    Check(ui.View.LibrarySettings.CatchHitLighting == previous,
+                        "Lighting changes must remain a draft before Apply.");
+                    ui.Key(27);
+                    Appearance();
+                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get(LightingKey(previous)) + " ▾"),
+                        "Closing Settings must discard the lighting draft.");
+                    SelectLighting(mode);
+                    ui.View.ApplySettings(path); ui.Paint(); ui.Key(27);
+                    Check(LibrarySettings.Load(path).CatchHitLighting == mode,
+                        "Applying Appearance settings must persist the lighting choice.");
                     Check(ui.View.HitLightingEnabled == (mode != CatchHitLightingMode.Off),
                         "The effective lazer lighting policy is incorrect.");
                     Experimental();
@@ -78,6 +83,23 @@ internal static class LazerSettingsTests
                 Check(before.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty,
                     "Mode and lighting settings must preserve beatmap content and dirty state.");
 
+                void Appearance()
+                {
+                    ui.View.OpenSettings(); ui.Paint();
+                    ui.ClickText(L.Get("settings.appearance"));
+                }
+                string LightingKey(CatchHitLightingMode mode) => mode switch
+                {
+                    CatchHitLightingMode.Off => "skin.hitLightingOff",
+                    CatchHitLightingMode.On => "skin.hitLightingOn",
+                    _ => "skin.hitLightingFollowMode"
+                };
+                void SelectLighting(CatchHitLightingMode mode)
+                {
+                    var bounds = ui.View.HitLightingSettingsBounds;
+                    ui.Click(bounds.X + 4, bounds.Y + 4);
+                    ui.ClickText(L.Get(LightingKey(mode)));
+                }
                 void Experimental()
                 {
                     ui.View.OpenSettings(); ui.Paint();

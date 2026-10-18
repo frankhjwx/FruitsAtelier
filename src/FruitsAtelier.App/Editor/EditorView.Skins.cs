@@ -121,22 +121,11 @@ public sealed partial class EditorView
             }
             Add(LibrarySettings.Skins, false);
             Add(Path.Combine(LibrarySettings.Workspace, "Skins", "Imported"), true);
-            int size = Math.Max(1, (int)((height - 60) / 32) - 7);
+            int size = Math.Max(1, (int)((height - 60) / 32) - 4);
             int lastPage = Math.Max(0, (entries.Count - 1) / size);
             page = Math.Clamp(page, 0, lastPage);
             contextItems.Add(new(L.Get("skin.default"), () => SelectSkin(null)));
             contextItems.Add(new(L.Get("skin.import"), () => RequestLoadSkin?.Invoke(), Color: Gold));
-            foreach (var lighting in Enum.GetValues<CatchHitLightingMode>())
-            {
-                string key = lighting switch
-                {
-                    CatchHitLightingMode.On => "skin.hitLightingOn",
-                    CatchHitLightingMode.Off => "skin.hitLightingOff",
-                    _ => "skin.hitLightingFollowMode"
-                };
-                contextItems.Add(new((LibrarySettings.CatchHitLighting == lighting ? "✓ " : "") + L.Get(key),
-                    () => SetCatchHitLighting(lighting)));
-            }
             foreach (var entry in entries.Skip(page * size).Take(size))
             {
                 string label = (skin?.FolderPath == entry.Folder ? "✓ " : "") + entry.Name
@@ -153,10 +142,4 @@ public sealed partial class EditorView
         { contextItems.Clear(); ShowError(error.Message); }
     }
 
-    private void SetCatchHitLighting(CatchHitLightingMode mode)
-    {
-        if (LibrarySettings.CatchHitLighting == mode) return;
-        LibrarySettings.CatchHitLighting = mode;
-        if (!FirstRunSetupVisible) RequestSkinPreference?.Invoke();
-    }
 }

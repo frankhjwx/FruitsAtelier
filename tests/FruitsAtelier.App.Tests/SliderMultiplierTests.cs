@@ -127,6 +127,7 @@ internal static class SliderMultiplierTests
                     Check(!SliderMultiplierEditing.TryRebase(before, value, out _, 0), "Exhausted fast-check budget falls back without applying");
                 }
                 var limited = Fixture(); limited.TimingPoints.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = -10 });
+                foreach (var slider in limited.ImportedSliders) slider.SliderVelocityMultiplier = 10;
                 var original = limited.DeepClone();
                 try { SliderMultiplierEditing.Apply(limited, .4); throw new Exception("SV limit accepted"); }
                 catch (System.IO.InvalidDataException) { Check(limited.ContentEquals(original), "Unrepresentable SV leaves map intact"); }
@@ -137,11 +138,12 @@ internal static class SliderMultiplierTests
                 timingUi.Key(117); timingUi.ClickText(L.Get("timing.green")); timingUi.Key('A', ctrl: true); timingUi.Key(46);
                 timingUi.View.PasteTimingText("500,-10,4,1,0,100,0,0", timingUi.View.TimingInputSession);
                 timingUi.Key(13);
-                Check(timingUi.View.TimingSetupVisible && timingUi.View.Document.ContentEquals(timingWithOverride),
-                    "Unexportable green SV is rejected before timing changes commit");
+                Check(!timingUi.View.TimingSetupVisible && timingUi.View.Document.ImportedSliders.All(s => s.SliderVelocityMultiplier == 1),
+                    "A green edit overrode independent Legacy SV");
                 _ = OsuBeatmapWriter.Serialize(timingUi.View.Document);
                 timingUi.Key(27);
                 var slowest = Fixture(); slowest.TimingPoints.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = -1000 });
+                foreach (var slider in slowest.ImportedSliders) slider.SliderVelocityMultiplier = .1;
                 var slowBefore = OsuBeatmapWriter.Serialize(slowest);
                 try { SliderMultiplierEditing.CheckLimits(slowBefore, 3.6); throw new Exception("Minimum green SV accepted"); }
                 catch (System.IO.InvalidDataException) { }
@@ -278,6 +280,7 @@ internal static class SliderMultiplierTests
         Check(ui.View.Document.EffectiveSliderMultiplier == 1.3 && ui.View.Document.Fruits.Count == 1, "Stale validation cannot overwrite later content");
         ui.Key(27);
         var limited = Fixture(); limited.TimingPoints.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = -10 });
+        foreach (var slider in limited.ImportedSliders) slider.SliderVelocityMultiplier = 10;
         var rejected = new Ui(false); rejected.LoadDocument(limited); rejected.View.OpenDistanceSnapDialog(); rejected.Paint();
         Set(rejected, "40"); rejected.ClickText(L.Get("library.apply")); Wait(rejected);
         Check(rejected.View.DistanceSnapDialogVisible && rejected.View.Document.ContentEquals(limited), "Unrepresentable compensation rejects the entire draft");

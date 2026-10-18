@@ -18,13 +18,13 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 
 ```powershell
 ./scripts/Publish-Windows.ps1
-./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.0.3-win-x64.zip
+./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.1.0-win-x64.zip
 ```
 
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
 `releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`
-(currently 1.0.3); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
+(currently 1.1.0); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the
@@ -226,8 +226,8 @@ The maintainer copies the message to Discord.
 Use the following order, matching the established announcements:
 
 1. A bold version link: `**[<tag> Release](<GitHub release URL>)**`.
-2. `**FruitsAtelier <tag> Beta** is now available! :tangerine:`. Match the
-   release notes' product label; include Beta only while the product uses it.
+2. `**FruitsAtelier <tag>** is now available! :tangerine:`. Stable releases from
+   v1.1.0 onward omit the Beta product label.
 3. `**What's new**` with concise, user-facing bullets and bold feature names.
 4. `**Fixes & improvements**` with the most useful fixes. Omit an empty section.
 5. `**Download / Update**` with the release's fixed-name **Windows x64 ZIP**

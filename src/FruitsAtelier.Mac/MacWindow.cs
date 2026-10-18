@@ -55,10 +55,16 @@ internal sealed partial class MacWindow : Window
         PropertyChanged += (_, change) =>
         {
             if (!fullscreenInitialized || change.Property != WindowStateProperty || WindowState == WindowState.Minimized) return;
+            lastWindowState = WindowState;
             var previous = change.GetOldValue<WindowState>();
             if (WindowState == WindowState.FullScreen && previous is WindowState.Normal or WindowState.Maximized)
                 windowedState = previous;
             View.UpdateFullscreenState(WindowState == WindowState.FullScreen);
+        };
+        SizeChanged += (_, change) =>
+        {
+            if (!fullscreenInitialized || View.StartupDialogVisible || WindowState != WindowState.Normal) return;
+            normalWidth = change.NewSize.Width; normalHeight = change.NewSize.Height;
         };
         View.ApplyAudioVolume();
         View.RequestScheduleHitsound = (sound, time) =>
@@ -137,6 +143,8 @@ internal sealed partial class MacWindow : Window
         Opened += async (_, _) =>
         {
             if (View.StartupDialogVisible) ResizeForSetup(true);
+            else if (!smokeCheck) RestoreWindowPreferences();
+            lastWindowState = WindowState;
             if (!smokeCheck) View.RequestFullscreen(View.LibrarySettings.Fullscreen);
             fullscreenInitialized = true;
             MacPaths.Log($"Native macOS window opened: {Bounds}, scaling={RenderScaling}");
@@ -159,7 +167,7 @@ internal sealed partial class MacWindow : Window
         {
             if (View.AcknowledgementsVisible) { allowClose = true; return; }
             View.CancelFirstRunSetup();
-            if (allowClose) return;
+            if (allowClose) { if (!smokeCheck) SaveWindowPreferences(); return; }
             e.Cancel = true;
             RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
         };

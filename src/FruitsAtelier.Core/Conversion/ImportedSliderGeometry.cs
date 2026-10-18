@@ -7,14 +7,15 @@ namespace FruitsAtelier.Core;
 
 internal sealed class ImportedSliderGeometry
 {
-    private const int maximumPoints = 200_000;
+    private const int maximumPoints = 1_000_000;
     private readonly Vector2[] points;
     private readonly double[] distances;
+    private readonly Lazy<IReadOnlyList<SliderPathPoint>> absolutePoints;
     public double Distance => distances[^1];
 
     public ImportedSliderGeometry(ImportedSlider slider)
     {
-        if (slider.ControlPoints.Count is < 1 or > ImportedSlider.MaximumControlPoints) throw new CatchConversionException(L.Get("core.importGeometry.pointCount"));
+        if (slider.ControlPoints.Count is < 1 or > ImportedSlider.MaximumControlPoints) throw new CatchConversionException(L.Get("core.importGeometry.pointCount", ImportedSlider.MaximumControlPoints));
         var head = new Vector2((float)slider.X, (float)slider.Y);
         Vector2[] controls = slider.ControlPoints.Select(p => new Vector2((float)p.X, (float)p.GeometryY) - head).ToArray();
         char type = char.ToUpperInvariant(slider.PathType);
@@ -31,7 +32,7 @@ internal sealed class ImportedSliderGeometry
         }
         Append(Approximate(type, controls[start..]));
         if (path.Count == 0) path.Add(Vector2.Zero);
-        if (path.Count > maximumPoints) throw new CatchConversionException(L.Get("core.importGeometry.sampleLimit"));
+        if (path.Count > maximumPoints) throw new CatchConversionException(L.Get("core.importGeometry.sampleLimit", maximumPoints));
         var cumulative = new List<double> { 0 };
         for (int i = 1; i < path.Count; i++) cumulative.Add(cumulative[^1] + (path[i] - path[i - 1]).Length());
         if (!double.IsFinite(cumulative[^1])) throw new CatchConversionException(L.Get("core.importGeometry.finiteGeometry"));
@@ -61,10 +62,18 @@ internal sealed class ImportedSliderGeometry
         }
         points = path.ToArray();
         distances = cumulative.ToArray();
+        absolutePoints = new(() =>
+        {
+            var absolute = new SliderPathPoint[points.Length];
+            for (int i = 0; i < points.Length; i++) absolute[i] = new(head.X + points[i].X, head.Y + points[i].Y);
+            return Array.AsReadOnly(absolute);
+        });
 
         void Append(List<Vector2> section)
         {
             int skip = path.Count > 0 && section.Count > 0 && path[^1] == section[0] ? 1 : 0;
+            if ((long)path.Count + section.Count - skip > maximumPoints)
+                throw new CatchConversionException(L.Get("core.importGeometry.sampleLimit", maximumPoints));
             for (int i = skip; i < section.Count; i++) path.Add(section[i]);
         }
     }
@@ -81,8 +90,7 @@ internal sealed class ImportedSliderGeometry
         return points[index - 1] + (points[index] - points[index - 1]) * (float)((distance - distances[index - 1]) / interval);
     }
 
-    public IReadOnlyList<SliderPathPoint> AbsolutePoints(ImportedSlider slider)
-        => points.Select(p => new SliderPathPoint((float)slider.X + p.X, (float)slider.Y + p.Y)).ToArray();
+    public IReadOnlyList<SliderPathPoint> AbsolutePoints() => absolutePoints.Value;
 
     public IReadOnlyList<MapPoint> TimeXPoints(ImportedSlider slider, double velocity)
     {
@@ -123,6 +131,8 @@ internal sealed class ImportedSliderGeometry
 
     private static List<Vector2> Bezier(Vector2[] controls)
     {
+        if (controls.Length == 2) return [controls[0], controls[1]];
+        if (controls.Length == 3) return Quadratic(controls);
         var output = new List<Vector2>();
         var pending = new Stack<(Vector2[] Points, int Depth)>();
         pending.Push((controls, 0));
@@ -146,10 +156,38 @@ internal sealed class ImportedSliderGeometry
                 pending.Push((right, item.Depth + 1));
                 pending.Push((left, item.Depth + 1));
             }
-            if (output.Count > maximumPoints) throw new CatchConversionException(L.Get("core.importGeometry.bezierLimit"));
+            if (output.Count > maximumPoints) throw new CatchConversionException(L.Get("core.importGeometry.bezierLimit", maximumPoints));
         }
         output.Add(controls[^1]);
         return output;
+    }
+
+    private static List<Vector2> Quadratic(Vector2[] controls)
+    {
+        var output = new List<Vector2>();
+        Append(controls[0], controls[1], controls[2], 0);
+        output.Add(controls[2]);
+        return output;
+
+        void Append(Vector2 a, Vector2 b, Vector2 c, int depth)
+        {
+            bool flat = (a - 2 * b + c).LengthSquared() <= .25f;
+            var ab = (a + b) / 2;
+            var bc = (b + c) / 2;
+            var middle = (ab + bc) / 2;
+            if (flat)
+            {
+                output.Add(a);
+                output.Add(.25f * (ab + 2 * middle + bc));
+            }
+            else
+            {
+                if (depth >= 24) throw new CatchConversionException(L.Get("core.importGeometry.bezierConvergence"));
+                Append(a, ab, middle, depth + 1);
+                Append(middle, bc, c, depth + 1);
+            }
+            if (output.Count > maximumPoints) throw new CatchConversionException(L.Get("core.importGeometry.bezierLimit", maximumPoints));
+        }
     }
 
     private static void Split(Vector2[] points, out Vector2[] left, out Vector2[] right)
@@ -166,7 +204,7 @@ internal sealed class ImportedSliderGeometry
 
     private static List<Vector2> Catmull(Vector2[] points)
     {
-        if ((points.Length - 1) * 100L > maximumPoints) throw new CatchConversionException(L.Get("core.importGeometry.catmullLimit"));
+        if ((points.Length - 1) * 100L > maximumPoints) throw new CatchConversionException(L.Get("core.importGeometry.catmullLimit", maximumPoints));
         var result = new List<Vector2>();
         for (int i = 0; i < points.Length - 1; i++)
         {

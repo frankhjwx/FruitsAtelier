@@ -7,6 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private CatchTestplaySession? testplay;
+    private readonly HashSet<int> heldEditorKeys = [];
     private CatchTestplayFrame? testplayFrame;
     private IDisposable? testplayDriver;
     private bool testplayEscapeConsumed;
@@ -121,6 +122,8 @@ public sealed partial class EditorView
                 }
             });
         if (startPaused) testplay.TogglePause();
+        if (RequestRunTestplay is null)
+            foreach (int key in heldEditorKeys) testplay.SetKey(key, true);
         testplayFrame = testplay.Capture();
         if (AudioReady && !audioAlreadyPlaying)
         {
@@ -240,6 +243,8 @@ public sealed partial class EditorView
 
     public void KeyUp(int virtualKey)
     {
+        heldEditorKeys.Remove(virtualKey);
+        osuToggleKeys.Remove(virtualKey);
         if (virtualKey == 123) screenshotHeld = false;
         if (virtualKey == 119) audioDiagnosticMarkerHeld = false;
         if (virtualKey == 13) fullscreenShortcutHeld = false;

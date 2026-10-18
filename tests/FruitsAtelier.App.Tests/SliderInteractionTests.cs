@@ -280,15 +280,18 @@ internal static class SliderInteractionTests
         var ui = Load(map);
         var original = ui.View.Document.DeepClone();
         Guid sourceId = map.ImportedSliders.Single().Id;
+        ui.View.ConvertSelectedSliderRepresentation(sourceId); ui.Paint();
+        var editable = ui.View.Document.DeepClone();
         // The return span goes X=300 to X=100 between 2000 and 3000 ms.
         ui.MoveMap(2500, 200); ui.Key('I', ctrl: true, shift: true);
-        Check(ui.View.Document.ImportedSliders.Count == 0, "Repeat insertion left the source unconverted.");
+        Check(ui.View.Document.ImportedSliders.Count == 0, "Repeat insertion changed the editable representation.");
         var converted = ui.View.Document.Tracks.Single();
         Check(converted.Id == sourceId && converted.SpanCount == 2 && converted.Nodes.Any(n => Math.Abs(n.TimeMs - 1500) < .001),
             "Return-span insertion did not map back to the first-span anchor.");
         Check(Math.Abs(CurveMath.EndTimeMs(converted) - 3000) < .001, "Repeat insertion changed the duration.");
         Valid(ui); ui.Key('Z', ctrl: true);
-        Check(original.ContentEquals(ui.View.Document), "Undo did not restore the imported repeat.");
+        Check(editable.ContentEquals(ui.View.Document), "Undo did not restore the editable repeat before insertion.");
+        ui.Key('Z', ctrl: true); Check(original.ContentEquals(ui.View.Document), "Explicit repeat conversion did not undo independently.");
     }
 
     public static void LegacyContextConversion()
@@ -360,15 +363,16 @@ internal static class SliderInteractionTests
         }
         var ui = Load(map);
         ui.EditTrack(original.Id);
-        ui.Key(187, ctrl: true);
+        SetReverses(1);
         Check(ui.View.Document.Tracks.Single().SpanCount == 2, "Reverse not added during anchor editing.");
-        ui.Key(187, ctrl: true);
+        SetReverses(1);
         Check(ui.View.Document.Tracks.Single().SpanCount == 3, "Multiple reverses not supported.");
-        ui.Key(189, ctrl: true);
+        SetReverses(-1);
+        ui.Key('Z'); ui.EditTrack(original.Id);
         var before = ui.View.Document.DeepClone();
         ui.MoveMap(3500, 400); ui.Key('J', ctrl: true);
         var extended = ui.View.Document.Tracks.Single();
-        Check(extended.SpanCount == 2 && extended.Nodes.Count == 4, "Extension lost repeat count or failed to append.");
+        Check(extended.SpanCount == 2 && extended.Nodes.Count == 4, $"Extension lost repeat count or failed to append: spans={extended.SpanCount}, nodes={extended.Nodes.Count}, status={ui.View.StatusMessage}.");
         Near(3500, extended.Nodes[^1].TimeMs); Near(400, extended.Nodes[^1].X);
         Near(6750, CurveMath.EndTimeMs(extended));
         Near(before.Tracks[0].Nodes[^1].HandleIn.TimeMs, extended.Nodes[^2].HandleIn.TimeMs);
@@ -380,6 +384,18 @@ internal static class SliderInteractionTests
         Check(output.ReadBack.ImportedSliders.Single().SpanCount == 2, "Export lost reverse count.");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ContentEquals(before), "Extension undo changed existing curve or reverses.");
+        void SetReverses(int change)
+        {
+            var track = ui.View.Document.Tracks.Single();
+            double end = CurveMath.EndTimeMs(track), span = track.Nodes[^1].TimeMs - track.Nodes[0].TimeMs;
+            ui.View.UpdateTransport(end, 12000, true, false, false, null, null); ui.Paint();
+            var bounds = ui.View.ObjectTimelineBounds;
+            float x = bounds.X + (float)((end - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+            float target = x + (float)(change * span * ui.View.ObjectTimelinePixelsPerMs), y = bounds.Y + 27;
+            ui.View.PointerMove(x, y, false, false); ui.View.PointerDown(x, y, 0, false, false);
+            ui.View.PointerMove(target, y, false, false); ui.View.PointerUp(target, y, 0); ui.Paint();
+            ui.EditTrack(track.Id);
+        }
     }
 
     private static void CheckDragPreview(Ui ui, bool active)

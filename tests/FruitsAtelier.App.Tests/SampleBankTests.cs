@@ -28,7 +28,9 @@ static class SampleBankTests
         foreach (string language in new[] { "en", "zh-CN" })
         {
             L.SetLanguage(language);
-            var ui = new Ui(); ui.LoadDocument(map); ui.Key('1'); ui.Key('A', ctrl: true);
+            var ui = new Ui(); ui.LoadDocument(map);
+            ui.View.ConvertSelectedSliderRepresentation(slider.Id); ui.Paint();
+            ui.Key('1'); ui.Key('A', ctrl: true);
             var before = ui.View.Document.DeepClone();
             var bounds = ui.View.SamplesetBounds;
             Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("samples.auto") + " ▾"), "Mixed selection displays Auto");

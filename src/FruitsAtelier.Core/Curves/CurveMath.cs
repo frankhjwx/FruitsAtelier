@@ -164,7 +164,7 @@ public static class CurveMath
         foreach (var timing in document.TimingPoints)
         {
             if (!double.IsFinite(timing.TimeMs) || double.IsInfinity(timing.BeatLengthMs)
-                || timing.Uninherited && (!double.IsFinite(timing.BeatLengthMs) || timing.BeatLengthMs <= 0))
+                || timing.Uninherited && !double.IsFinite(timing.BeatLengthMs))
                 errors.Add(L.Get("core.curves.timingValues"));
             if (timing.Meter < 1 || timing.Volume is < 0 or > 100) errors.Add(L.Get("core.curves.timingRange"));
         }

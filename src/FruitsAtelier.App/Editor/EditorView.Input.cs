@@ -6,6 +6,8 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private const float ContentDragThreshold = 6;
+
     private double timelineMsPerDip;
     private float snapWheelRemainder, toolWheelRemainder;
     private int breakStartMs;
@@ -122,7 +124,10 @@ public sealed partial class EditorView
         if (DockContentInputAvailable && PanelVisible(DockPanel.SliderInspector) && menu < 0 && contextItems.Count == 0 && inspectorBounds.Contains(x, y))
         {
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
-                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return; }
+            if (button == 0 && !notesLocked)
+                for (int i = 0; i < fields.Count; i++)
+                    if (fields[i].Bounds.Contains(x, y)) { FocusField(i); FocusInput("numeric:" + i, editBuffer, x); return; }
             return;
         }
         if (SongDockPointer(x, y, button, shift)) return;
@@ -136,6 +141,7 @@ public sealed partial class EditorView
         if (menu < 0 && contextItems.Count == 0 && DistancePointerDown(x, y, button, shift)) return;
         if (button == 2 && DockTabContext(x, y)) return;
         if (button == 2 && DifficultyTabContext(x, y)) return;
+        if (OsuPointerDown(x, y, button, shift, ctrl)) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
         if (IsLazerEditing && HandleLazerPointerDown(x, y, button, shift, ctrl)) return;
         if (button == 2)
@@ -199,7 +205,7 @@ public sealed partial class EditorView
         }
         if (snapSlider.Contains(x, y))
         {
-            SetSnapDivisor(x); drag = DragKind.SnapDivisor;
+            drag = DragKind.SnapDivisor; SetSnapDivisor(x);
             BeginPointerDrag(x, y);
             return;
         }
@@ -248,6 +254,12 @@ public sealed partial class EditorView
             return;
         }
         if (!plot.Contains(x, y)) return;
+        if (!IsOsuCanvas && HitCatchObject(x, y) is { } readOnlyHit && IsReadOnlySlider(readOnlyHit.SourceId))
+        {
+            PickObject(readOnlyHit.SourceId, ctrl);
+            clickedCoordinate = readOnlyHit.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet ? readOnlyHit : null;
+            BeginSliderHold(x, y, ctrl || shift); StatusMessage = L.Get("osu.readOnlySlider"); return;
+        }
         timelineFruit = null;
         if (!ctrl && tool == Tool.Select && objectSelection.Count == 1 && SelectedDistanceObject() is { IsStandalone: false } selectedChild
             && !SelectionTransformBounds.Contains(x, y)
@@ -480,6 +492,7 @@ public sealed partial class EditorView
         if (librarySettingsOpen || ExportVisible || languageMenuOpen) return;
         if (LibraryVisible) { MoveLibraryPointer(y); return; }
         if (tabPointer) { MoveTabPointer(x); return; }
+        if (OsuPointerMove(x, y, shift)) return;
         if (drag == DragKind.TimelinePanelResize) { MoveTimelinePanelResize(y); return; }
         if (drag == DragKind.PreviewResize)
         {
@@ -514,7 +527,7 @@ public sealed partial class EditorView
         if (drag == DragKind.BreakEdge) { MoveBreakEdge(x); return; }
         if (!dragMoved)
         {
-            if (MathF.Abs(x - dragStartX) < 2 && MathF.Abs(y - dragStartY) < 2) return;
+            if (MathF.Abs(x - dragStartX) < ContentDragThreshold && MathF.Abs(y - dragStartY) < ContentDragThreshold) return;
             dragMoved = true;
         }
         if (drag == DragKind.TimelineTail) { MoveTimelineTail(x, shift); return; }
@@ -646,6 +659,7 @@ public sealed partial class EditorView
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
         if (librarySettingsOpen || ExportVisible) return;
+        if (OsuPointerUp(x, y, button, shift)) return;
         if (IsLazerEditing && lazerMiddleMarquee && button == 1 && drag == DragKind.Marquee)
         { lazerMiddleMarquee = false; PointerMove(x, y, shiftHeld, false); FinishBox(x, y); return; }
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
@@ -670,11 +684,23 @@ public sealed partial class EditorView
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
         if (drag == DragKind.CanvasZoom) { canvasScaleAxis = -1; SaveCanvasScale(); }
+        if (drag == DragKind.SnapDivisor) SaveMapEditingPreferences();
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
         {
+            var readOnlyIds = IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id);
+            if (history.TransactionChangesObjects(readOnlyIds))
+            { history.Cancel(); drag = DragKind.None; StatusMessage = L.Get("osu.readOnlySlider"); return; }
+            try
+            {
+                if (drag == DragKind.TimelineTail && tailImportedBefore is { } beforeTail
+                    && Document.ImportedSliders.FirstOrDefault(s => s.Id == beforeTail.Id) is { } afterTail)
+                    RemapOsuRepeatOverrides(beforeTail, afterTail);
+            }
+            catch (InvalidOperationException error)
+            { history.Cancel(); drag = DragKind.None; StatusMessage = error.Message; return; }
             if (Document.DerandomizeDroplets is null && Document.Tracks.Any(track => pendingImplicitSliderConversions.Contains(track.Id)))
                 Document.DerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
-            history.Commit();
+            CommitContentHistory();
         }
         pendingImplicitSliderConversions.Clear();
         if (drag == DragKind.SliderObject)
@@ -777,6 +803,11 @@ public sealed partial class EditorView
             }
             return;
         }
+        if (IsOsuCanvas && plot.Contains(x, y))
+        {
+            OsuDoubleClick(x, y, shift);
+            return;
+        }
         if (ctrl || tool == Tool.Fruit) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (!LegacyMode && draftTrack != Guid.Empty && SelectedTrack is { } draft && Near(Point(draft.Nodes[^1]), x, y, 8))
         { draft.Nodes[^1].HandleOut = default; draftStraight = true; return; }
@@ -793,7 +824,7 @@ public sealed partial class EditorView
         if (Document.ImportedSliders.Any(slider => slider.Id == sourceId))
         {
             SelectObjects([sourceId], sourceId);
-            EditImportedSlider();
+            StatusMessage = L.Get("osu.readOnlySlider");
             return;
         }
         if (Document.Tracks.FirstOrDefault(track => track.Id == sourceId) is not { } track) return;
@@ -831,8 +862,9 @@ public sealed partial class EditorView
         }
     }
 
-    private bool ContinueDragAfterNavigation(double previousViewStart, double previousPlayhead, bool shift, bool ctrl)
+    private bool ContinueDragAfterNavigation(double previousViewStart, double previousPlayhead, bool shift, bool ctrl, bool requireStarted = false)
     {
+        if (requireStarted && !dragMoved) return false;
         if (!NavigationDuringDrag || drag == DragKind.Objects && selectionScaleSide != 0) return false;
         double scroll = viewStart - previousViewStart;
         double time = drag == DragKind.TimelineTail || drag == DragKind.Objects && objectDragTimeline
@@ -984,6 +1016,8 @@ public sealed partial class EditorView
         bool onTimeline = objectTimeline.Contains(x, y);
         bool onCanvas = canvas.Contains(x, y);
         bool onOverview = overview.Contains(x, y);
+        if (IsOsuCanvas && onCanvas && !onTimeline && alt && !ctrl && !shift)
+        { ZoomOsuCanvasAt(x, y, Math.Pow(1.16, delta / 120)); return; }
         if (IsLazerEditing && HandleLazerWheel(x, y, delta, ctrl, shift, alt, onTimeline, onCanvas, onOverview)) return;
         if ((onTimeline || onCanvas) && ctrl && alt && !shift)
         {
@@ -1254,7 +1288,9 @@ public sealed partial class EditorView
             }
             return;
         }
+        if (LibraryVisible && !librarySettingsOpen && !resourcePage && libraryField < 0 && UiScaleKey(virtualKey, ctrl)) return;
         if (librarySettingsOpen || LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
+        if (editField < 0 && OsuToggleKey(virtualKey, ctrl, shift)) return;
         if (TimingKey(virtualKey, ctrl, shift)) return;
         if (virtualKey == 117 && !ctrl && !shift && !altHeld) { OpenTimingSetup(); return; }
         if (virtualKey == 114 && !ctrl && !shift && !altHeld) { ShowTimingPage(true); return; }
@@ -1274,7 +1310,7 @@ public sealed partial class EditorView
         {
             if (!dragMoved && draftTrack == Guid.Empty && draftBanana == Guid.Empty
                 && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.LegacyControl)
-            { history.Commit(); drag = DragKind.None; sliderHoldConsumed = false; }
+            { CommitContentHistory(); drag = DragKind.None; sliderHoldConsumed = false; }
             if (editField >= 0 && !CommitField()) return;
             if (virtualKey == 77) ShowMergeInspector();
             else ShowPatternDock();
@@ -1295,6 +1331,8 @@ public sealed partial class EditorView
             replaceText = false;
             return;
         }
+        if (UiScaleKey(virtualKey, ctrl)) return;
+        if (OsuEditingKey(virtualKey, ctrl, shift)) return;
         if (virtualKey == 27)
         {
             if (VolumePopoverVisible) { CloseVolumePopover(); return; }
@@ -1355,8 +1393,6 @@ public sealed partial class EditorView
             else if (virtualKey == 73 && !shift) DeleteCurrentTiming();
             else if (virtualKey == 73 && shift && plot.Contains(mouseX, mouseY) && HitSliderLocation(mouseX, mouseY) is { } location) InsertControlPoint(location);
             else if (virtualKey == 80) AddTimingPoint(shift);
-            else if (virtualKey == 187 && !shift && SelectedTrack is { } addReverse) ChangeReverseCount(addReverse.Id, 1);
-            else if (virtualKey == 189 && !shift && SelectedTrack is { } removeReverse) ChangeReverseCount(removeReverse.Id, -1);
             else if (virtualKey == 74 && !shift && plot.Contains(mouseX, mouseY) && SelectedTrack is { } extend) ExtendSlider(extend.Id, MapAt(mouseX, mouseY, true, clampX: false));
             return;
         }
@@ -1444,6 +1480,11 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        heldEditorKeys.Clear();
+        if (drag == DragKind.SnapDivisor) SaveMapEditingPreferences();
+        CancelLegacyDropletRefresh();
+        CancelOsuInteraction();
+        tailImportedBefore = null;
         FinishTimelinePanelResize(cancel: true);
         EndTimelineScrub();
         notesSelecting = false; CancelAimodGesture(); aimodFocused = false;
@@ -1525,7 +1566,7 @@ public sealed partial class EditorView
                 Name = L.Get("editor.track.defaultName", Document.Tracks.Count + 1),
                 Kind = CurveKind.Linear,
                 CompensateTinyDroplets = true,
-                DropletMode = SliderDropletMode.FollowMap
+                DropletMode = LibrarySettings.DefaultDropletMode
             };
             Document.Tracks.Add(track);
             draftTrack = track.Id;
@@ -1610,7 +1651,7 @@ public sealed partial class EditorView
         }
         shower.EndTimeMs = end;
         Document.DurationMs = Math.Max(Document.DurationMs, end);
-        history.Commit();
+        CommitContentHistory();
         draftBanana = Guid.Empty;
         SelectObjects([shower.Id], shower.Id);
         StatusMessage = L.Get("editor.status.bananaFinished", Time(shower.TimeMs), Time(end));
@@ -1684,11 +1725,22 @@ public sealed partial class EditorView
         }
         if (!double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) || !double.IsFinite(value))
         { fieldError = L.Get("editor.error.finiteNumberRequired"); return false; }
+        if (field.Preference)
+        {
+            try { field.Apply(value); }
+            catch (ArgumentException error) { fieldError = error.Message; return false; }
+            editField = -1; fieldError = "";
+            return true;
+        }
         history.Begin(L.Get("editor.command.changeField", field.Label));
         try
         {
+            var readOnlyIds = field.Label == L.Get("legacySv.label") ? Array.Empty<Guid>()
+                : (IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id)).ToArray();
             field.Apply(value);
-            history.Commit();
+            if (history.TransactionChangesObjects(readOnlyIds))
+            { history.Cancel(); fieldError = StatusMessage = L.Get("osu.readOnlySlider"); return false; }
+            CommitContentHistory();
             editField = -1;
             fieldError = "";
             StatusMessage = L.Get("editor.status.fieldChanged", field.Label);
@@ -1751,6 +1803,11 @@ public sealed partial class EditorView
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        bool shortcut = ctrl && !altHeld && (virtualKey is 38 or 40 || virtualKey == 82 && !shift)
+            || altHeld && virtualKey is 13 or 37 or 38 or 39 or 40;
+        if (!shortcut) heldEditorKeys.Add(virtualKey);
+        else heldEditorKeys.Remove(virtualKey);
+        if (!shortcut && testplayDriver is null && TestplayPaused) testplay?.SetKey(virtualKey, true);
         var document = Document;
         try { KeyDownCore(virtualKey, ctrl, shift); }
         finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }

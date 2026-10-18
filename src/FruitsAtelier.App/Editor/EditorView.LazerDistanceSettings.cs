@@ -21,7 +21,7 @@ public sealed partial class EditorView
         }
     }
 
-    internal bool UsesSpeedDistanceSnap => IsLazerEditing ? LibrarySettings.LazerSpeedDistanceSnap : LibrarySettings.MappingSpeedDistanceSnap;
+    internal bool UsesSpeedDistanceSnap => !IsOsuCanvas && (IsLazerEditing ? LibrarySettings.LazerSpeedDistanceSnap : LibrarySettings.MappingSpeedDistanceSnap);
 
     private void SetDistanceSnapPresetMode(bool speed)
     {

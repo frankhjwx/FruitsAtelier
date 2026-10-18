@@ -130,18 +130,7 @@ public static class LibraryOperations
     {
         if (map.ProjectPath is { } project) return WorkspaceProject.Open(project).Project;
         var documents = Directory.EnumerateFiles(map.Directory, "*.osu")
-            .Where(path =>
-            {
-                bool general = false;
-                foreach (string line in File.ReadLines(path))
-                {
-                    string value = line.Trim();
-                    if (value.StartsWith('[')) general = value == "[General]";
-                    else if (general && value.Split(':', 2) is [var key, var setting] && key.Trim() == "Mode")
-                        return setting.Trim() == "2";
-                }
-                return false;
-            })
+            .Where(path => LibraryDatabase.ReadMetadata(path) is not null)
             .Select(OsuBeatmapReader.ReadFile).ToArray();
         if (documents.Length == 0) throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("project.noCatch"));
         return BeatmapProject.FromDocuments(documents);
@@ -230,7 +219,7 @@ public static class LibraryOperations
         // A library card may predate the project's creation or the next database scan.
         if (new LibraryDatabase(settings.Workspace, settings.Songs).ProjectForSource(map.Directory) is { } existing)
             return WorkspaceProject.Open(existing);
-        string? supported = map.Mode == 2 ? map.Path : Directory.EnumerateFiles(map.Directory).FirstOrDefault(p => Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase) && LibraryDatabase.ReadMetadata(p) is not null);
+        string? supported = map.Mode is 0 or 2 ? map.Path : Directory.EnumerateFiles(map.Directory).FirstOrDefault(p => Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase) && LibraryDatabase.ReadMetadata(p) is not null);
         if (supported is null) throw new InvalidOperationException(FruitsAtelier.Localization.Strings.Get("sync.readOnly"));
         if (WorkspaceAssociations.FindProject(settings.Workspace, supported) is { } tracked) return WorkspaceProject.Open(tracked);
         var documents = Directory.EnumerateFiles(map.Directory).Where(p => Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase)

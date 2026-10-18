@@ -16,6 +16,34 @@ internal sealed class ImageCache : IDisposable
     private ((string, uint, long, long) Key, Bitmap Bitmap)? beatmapBackground;
     private long clock;
     private long bytes;
+    private readonly Dictionary<IReadOnlyList<System.Numerics.Vector2>, StreamGeometry> paths = new(ReferenceEqualityComparer.Instance);
+    private readonly Queue<IReadOnlyList<System.Numerics.Vector2>> pathOrder = new();
+    private readonly Dictionary<(IReadOnlyList<System.Numerics.Vector2>, float), Geometry> sliderBorders = [];
+    private readonly Queue<(IReadOnlyList<System.Numerics.Vector2>, float)> sliderBorderOrder = new();
+    internal Geometry CachedSliderBorder(IReadOnlyList<System.Numerics.Vector2> points, float diameter)
+    {
+        var key = (points, diameter);
+        if (sliderBorders.TryGetValue(key, out var cached)) return cached;
+        if (sliderBorders.Count >= 128) sliderBorders.Remove(sliderBorderOrder.Dequeue());
+        var path = CachedPolyline(points);
+        var outer = path.GetWidenedGeometry(new Pen(Brushes.White, diameter * .921875f, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round));
+        var inner = path.GetWidenedGeometry(new Pen(Brushes.White, diameter * .8125f, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round));
+        var ring = new CombinedGeometry(GeometryCombineMode.Exclude, outer, inner);
+        sliderBorders.Add(key, ring); sliderBorderOrder.Enqueue(key); return ring;
+    }
+    internal StreamGeometry CachedPolyline(IReadOnlyList<System.Numerics.Vector2> points)
+    {
+        if (paths.TryGetValue(points, out var existing)) return existing;
+        if (paths.Count >= 128) paths.Remove(pathOrder.Dequeue());
+        var geometry = new StreamGeometry();
+        using (var sink = geometry.Open())
+        {
+            sink.BeginFigure(new Point(points[0].X, points[0].Y), false);
+            for (int i = 1; i < points.Count; i++) sink.LineTo(new Point(points[i].X, points[i].Y));
+            sink.EndFigure(false);
+        }
+        paths.Add(points, geometry); pathOrder.Enqueue(points); return geometry;
+    }
     private readonly ThumbnailCache<Bitmap> thumbnails = new(path =>
     {
         var file = new FileInfo(path);
@@ -74,7 +102,7 @@ internal sealed class ImageCache : IDisposable
         bookmarkToolbar?.Bitmap.Dispose(); bookmarkToolbar = null;
         foreach (var image in images.Values) image.Bitmap.Dispose(); images.Clear(); bytes = 0;
     }
-    public void Dispose() { ClearImages(); thumbnails.Dispose(); }
+    public void Dispose() { ClearImages(); thumbnails.Dispose(); paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear(); }
 }
 
 internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICanvas, IDisposable
@@ -98,6 +126,25 @@ internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICa
     {
         using var state = context.PushOpacity(opacity);
         context.DrawLine(new Pen(Brush(color), width), new Point(x1, y1), new Point(x2, y2));
+    }
+    public void Polyline(IReadOnlyList<System.Numerics.Vector2> points, float x, float y, float scale, uint color, float width, float opacity)
+    {
+        if (points.Count < 2 || scale <= 0 || opacity <= 0) return;
+        using var transform = context.PushTransform(new Matrix(scale, 0, 0, scale, x, y));
+        using var state = context.PushOpacity(opacity);
+        context.DrawGeometry(null, new Pen(Brush(color), width / scale, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), images.CachedPolyline(points));
+    }
+    public void SliderBody(IReadOnlyList<System.Numerics.Vector2> points, float x, float y, float scale,
+        float diameter, uint border, uint accent, float opacity)
+    {
+        if (points.Count < 2 || diameter <= 0 || scale <= 0 || opacity <= 0) return;
+        using var transform = context.PushTransform(new Matrix(scale, 0, 0, scale, x, y));
+        using (context.PushOpacity(opacity)) context.DrawGeometry(Brush(border), null, images.CachedSliderBorder(points, diameter));
+        using var alpha = context.PushOpacity(opacity * .7f);
+        var geometry = images.CachedPolyline(points);
+        for (int i = 0; i < SliderTrackGradient.Steps; i++)
+            context.DrawGeometry(null, new Pen(Brush(SliderTrackGradient.Colour(accent, i)), diameter * .8125f * (1 - i / (float)SliderTrackGradient.Steps),
+                lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), geometry);
     }
     public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1, float opacity = 1)
     {

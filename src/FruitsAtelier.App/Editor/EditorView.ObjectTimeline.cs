@@ -37,6 +37,7 @@ public sealed partial class EditorView
     private bool boxTimeline;
     private Guid tailId;
     private string? tailOriginalLine;
+    private ImportedSlider? tailImportedBefore;
     private double tailStart, tailEnd, tailSpanDuration;
     private double tailPointerOffset;
     private int breakEditIndex;
@@ -44,7 +45,7 @@ public sealed partial class EditorView
     private BreakPeriod breakEditOriginal, breakEditPreview;
     private BreakPeriod[] breakPeriods = [];
     private bool IsTimelineTail((Guid Id, double Time, Rect Bounds) item, float x, float y)
-        => item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - item.Bounds.Height / 2)) <= Math.Min(10, item.Bounds.Height / 2)
+        => !IsReadOnlySlider(item.Id) && item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - item.Bounds.Height / 2)) <= Math.Min(10, item.Bounds.Height / 2)
         && (Document.Tracks.Any(t => t.Id == item.Id && t.Nodes.Count > 1 && t.StreamSnapDivisor is null)
             || Document.ImportedSliders.Any(s => s.Id == item.Id)
             || Document.BananaShowers.Any(s => s.Id == item.Id));
@@ -69,6 +70,15 @@ public sealed partial class EditorView
         else if (Document.ImportedSliders.FirstOrDefault(s => s.Id == tailId) is { } slider)
         {
             if (slider.SpanCount == spans) return;
+            if (tailImportedBefore is { } before && spans == before.SpanCount)
+            {
+                slider.SpanCount = spans; slider.OriginalLine = tailOriginalLine;
+                slider.RandomizationSource = before.RandomizationSource; slider.RandomizationTrack = before.RandomizationTrack;
+                slider.RandomizationBaseVelocity = before.RandomizationBaseVelocity;
+                slider.ProcessedSliderVelocityMultiplier = before.ProcessedSliderVelocityMultiplier;
+                slider.PreserveNativeGeometry = before.PreserveNativeGeometry;
+                return;
+            }
             if (tailOriginalLine is { } original)
             {
                 var fields = original.Split(',');
@@ -82,6 +92,7 @@ public sealed partial class EditorView
                 slider.OriginalLine = string.Join(',', fields);
             }
             slider.SpanCount = spans;
+            OsuSyncSliderLine(slider);
         }
         if (soundEdge is { } edge && edge.Id == tailId) soundEdge = (tailId, spans);
         Document.DurationMs = Math.Max(Document.DurationMs, tailStart + tailSpanDuration * spans);
@@ -329,9 +340,14 @@ public sealed partial class EditorView
     {
         if (!plot.Contains(mouseX, mouseY) || drag != DragKind.None || menu >= 0 || contextItems.Count > 0 || editField >= 0)
             return null;
+        if (IsOsuCanvas && EnsureOsuDraftGeometry() is { } osuDraft)
+            return (osuDraft.Id, osuDraft.TimeMs,
+                osuDraft.TimeMs + ImportedSliderConverter.DurationMs(Document, osuDraft, SnapTiming()),
+                OsuPlacementStyle(osuDraft.TimeMs).Colour);
         if (tool == Tool.Banana)
         {
-            double time = MapAt(mouseX, mouseY, true).TimeMs;
+            double time = IsOsuCanvas ? OsuPlacementTime : MapAt(mouseX, mouseY, true).TimeMs;
+            if (IsOsuCanvas) return (placementId, osuSpinnerStart ?? time, Math.Max(osuSpinnerStart ?? time, time), Gold);
             if (Document.BananaShowers.FirstOrDefault(s => s.Id == draftBanana) is { } banana)
                 return (banana.Id, banana.TimeMs, Math.Max(banana.TimeMs, time), Gold);
             return (placementId, time, time, Gold);
@@ -442,7 +458,7 @@ public sealed partial class EditorView
             if (item.IsBanana)
             {
                 c.Stroke(bounds, 0xFFFFFF, 1.5f, bounds.Height / 2);
-                if (selected) c.Stroke(bounds, 0x2866C6, 2, bounds.Height / 2);
+                if (selected) c.Stroke(bounds, IsOsuCanvas ? OsuSelectionColour : SelectionHighlightColour, 2, bounds.Height / 2);
             }
         }
 
@@ -458,10 +474,11 @@ public sealed partial class EditorView
                 FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin, ringX, cy, 38 * TimelineMarkerScale, color, number);
                 if (selected && (soundEdge is not { } picked || picked.Id != item.Id || picked.Edge == edge))
                 {
-                    c.Circle(ringX, cy, 19 * TimelineMarkerScale, 0xFFA600, false, Math.Max(1, 3 * TimelineMarkerScale));
-                    c.Circle(ringX, cy, 21 * TimelineMarkerScale, 0x2866C6, false, Math.Max(1, 2 * TimelineMarkerScale));
+                    c.Circle(ringX, cy, 19 * TimelineMarkerScale, OsuSelectionColour, false, Math.Max(1, 3 * TimelineMarkerScale));
+                    if (!IsOsuCanvas)
+                        c.Circle(ringX, cy, 21 * TimelineMarkerScale, SelectionHighlightColour, false, Math.Max(1, 2 * TimelineMarkerScale));
                 }
-                if (timelineFruit == (item.Id, item.EventIndex)) c.Circle(ringX, cy, 21 * TimelineMarkerScale, Gold, false, Math.Max(1, 2 * TimelineMarkerScale));
+                if (!IsOsuCanvas && timelineFruit == (item.Id, item.EventIndex)) c.Circle(ringX, cy, 21 * TimelineMarkerScale, Gold, false, Math.Max(1, 2 * TimelineMarkerScale));
             }
             if (right > left + 1) Ring(right, edge: item.Spans);
             if (item.Spans > 1 && item.End > item.Start)
@@ -530,6 +547,7 @@ public sealed partial class EditorView
         for (int i = timelineObjects.Count - 1; i >= 0; i--)
         {
             var item = timelineObjects[i];
+            if (!CanSelectSlider(item.Id)) continue;
             if (!item.Bounds.Contains(x, y)) continue;
             tool = Tool.Select;
             PickObject(item.Id, toggle);
@@ -552,6 +570,8 @@ public sealed partial class EditorView
                 int spans = Document.Tracks.FirstOrDefault(t => t.Id == item.Id)?.SpanCount
                     ?? Document.ImportedSliders.FirstOrDefault(s => s.Id == item.Id)?.SpanCount ?? 1;
                 tailOriginalLine = Document.ImportedSliders.FirstOrDefault(s => s.Id == item.Id)?.OriginalLine;
+                tailImportedBefore = Document.ImportedSliders.FirstOrDefault(s => s.Id == item.Id) is { } importedTail
+                    ? OsuSliderGeometrySnapshot(importedTail) : null;
                 tailId = item.Id; tailStart = source.Start; tailEnd = source.End;
                 tailPointerOffset = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale - source.End;
                 tailSpanDuration = (source.End - source.Start) / spans;

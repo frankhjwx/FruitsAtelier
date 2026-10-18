@@ -49,6 +49,14 @@ project and display the error.
 
 ## Editing and conversion
 
+The Compose canvas has Catch time–X and osu!standard geometric presentations.
+The latter owns a 512×384 coordinate transform, standard stacking/visibility
+snapshot and independent viewport. Both share transport and the exported Catch
+preview. Switching presentation leaves content and history unchanged; explicit
+slider representation conversion commits through history. Native slider path
+strokes retain immutable point-array identities in bounded renderer geometry
+caches (128 entries), released or evicted with their renderer owner.
+
 Hosts map input to DIP coordinates before passing it to `EditorView`. Content changes commit through `EditorHistory` transactions; a drag, batch operation, or curve draft becomes one undo step. Selection and viewport are separate session state.
 
 The Windows host derives its drawing, layout and pointer scale from client pixel

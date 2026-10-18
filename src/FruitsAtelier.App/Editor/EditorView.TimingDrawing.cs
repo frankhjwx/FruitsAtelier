@@ -81,7 +81,7 @@ public sealed partial class EditorView
             var row = new Rect(list.X + 3, list.Y + 32 + (i - timingScroll) * 28, list.Width - 12, 28);
             c.Fill(row, timingSelected.Contains(entry.Id) ? 0x35495B : i % 2 == 0 ? 0x222832u : Background);
             c.Circle(row.X + 6, row.Y + 14, 3, p.Uninherited ? Error : Accent);
-            string[] values = [Time(p.TimeMs), p.Uninherited ? TimingN(TimingPageValue("bpm", 60000 / p.BeatLengthMs)) : "",
+            string[] values = [Time(p.TimeMs), p.Uninherited ? TimingN(TimingPageValue("bpm", 60000 / TimingMap.EffectiveBeatLength(p.BeatLengthMs))) : "",
                 p.Uninherited ? p.Meter + "/4" : "", (p.SampleSet switch { 1 => "N", 2 => "S", 3 => "D", _ => "–" }) + (p.SampleIndex == 0 ? "" : ":C" + p.SampleIndex),
                 p.Volume + "%", (p.Effects & 1) != 0 ? "✓" : ""];
             for (int k = 0; k < columns.Length; k++) c.Text(values[k], list.X + (k == 0 ? 15 : 9) + list.Width * columns[k], row.Y + 7, 11, Foreground,
@@ -146,7 +146,7 @@ public sealed partial class EditorView
             c.Text(L.Get("timing.shiftSelected"), r.X + 12, y, 12, Foreground, r.Width - 24); y += 20;
             TimingNumber(c, "shift", new(r.X + 12, y, r.Width - 112, 30), TimingN(timingShiftMs), v => timingShiftMs = v);
             TimingButton(c, new(r.Right - 94, y, 82, 30), L.Get("timing.shiftApply"), () => ShiftSelectedTiming(timingShiftMs)); y += 38;
-            if (points.All(p => p.Uninherited)) { Number("bpm", p => 60000 / p.BeatLengthMs); Number("meter", p => p.Meter); }
+            if (points.All(p => p.Uninherited)) { Number("bpm", p => 60000 / TimingMap.EffectiveBeatLength(p.BeatLengthMs)); Number("meter", p => p.Meter); }
             else if (points.Any(p => p.Uninherited)) c.Text(L.Get("timing.mixedTypes"), r.X + 12, y, 12, Muted, r.Width - 24);
         }
         else if (timingTab == 1)
@@ -309,7 +309,7 @@ public sealed partial class EditorView
             void Step(int direction)
             {
                 var current = SnapTiming().At(playhead);
-                double number = key == "bpm" ? 60000 / (timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs) : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : Document.SliderTickRate;
+                double number = key == "bpm" ? 60000 / TimingMap.EffectiveBeatLength(timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs) : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : Document.SliderTickRate;
                 double step = key == "bpm" ? placementCtrl ? .25 : timingPointerShift ? 5 : 1 : key == "offset" ? placementCtrl ? 1 : timingPointerShift ? 10 : 2 : 1;
                 double next = TimingPageValue(key, number) + direction * step;
                 try { apply(next); } catch (ArgumentException ex) { timingError = ex.Message; }
@@ -318,7 +318,7 @@ public sealed partial class EditorView
             TimingButton(c, new(input.Right - 24, y, 24, row), "›", () => Step(1), enabled: enabled);
             y += row + gap;
         }
-        Number("bpm", 60000 / (timingResetPoint?.BeatLengthMs ?? state.BeatLengthMs), v => ChangeCurrentRed("bpm", v));
+        Number("bpm", 60000 / TimingMap.EffectiveBeatLength(timingResetPoint?.BeatLengthMs ?? state.BeatLengthMs), v => ChangeCurrentRed("bpm", v));
         Number("offset", timingResetPoint?.TimeMs ?? state.OffsetMs, v => ChangeCurrentRed("offset", v));
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveNotes", timingMoveNotes, () => timingMoveNotes = !timingMoveNotes); y += row + gap;
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveMarkers", timingMoveMarkers, () => timingMoveMarkers = !timingMoveMarkers); y += row + gap;

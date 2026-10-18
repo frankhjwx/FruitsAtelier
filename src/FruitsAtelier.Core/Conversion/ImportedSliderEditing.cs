@@ -102,7 +102,7 @@ public static class ImportedSliderEditing
         return new(candidates, failures);
     }
 
-    private static SliderBatchConversionResult Convert(MapDocument document, IReadOnlyCollection<Guid> ids, CancellationToken cancellation = default, CatchConversionCache? cache = null)
+    internal static SliderBatchConversionResult Convert(MapDocument document, IReadOnlyCollection<Guid> ids, CancellationToken cancellation = default, CatchConversionCache? cache = null)
     {
         ArgumentNullException.ThrowIfNull(document);
         var wanted = ids.ToHashSet();
@@ -116,9 +116,9 @@ public static class ImportedSliderEditing
             cancellation.ThrowIfCancellationRequested();
             try
             {
-                var path = new ImportedSliderGeometry(slider);
+                var path = slider.GetGeometry();
                 var timing = TimingMap.At(document, slider.TimeMs);
-                double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier);
+                double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, ImportedSliderConverter.SliderVelocityAt(document, slider));
                 if (!double.IsFinite(velocity) || velocity <= 0 || path.Distance <= 0)
                     throw new InvalidOperationException(L.Get("core.importEditing.invalidPath"));
                 if (path.Distance / velocity < .001) throw new InvalidOperationException(L.Get("core.importEditing.zeroDuration"));

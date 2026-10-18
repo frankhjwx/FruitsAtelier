@@ -49,6 +49,44 @@ the winning offset; pointer updates do not rebuild DS references from moved cont
 
 ## Full-map work and cache ownership
 
+Imported control points use copy-on-write buffers: exact integer coordinates occupy
+two 32-bit fields; coordinates requiring double precision retain it. History and
+conversion snapshots share immutable storage, and every mutation detaches first.
+Equality can reuse buffer identity. Derived geometry uses a weak memo keyed by all
+geometry inputs, so inactive imports do not pin their sampled paths. Active
+conversion results retain the geometry they use.
+
+Catch path drawing retains cumulative distances per conversion and binary-searches
+the visible span interval. Screen polylines are reused while the viewport is
+unchanged; subpixel screen samples do not change authoring or exported geometry.
+Dense standard slider bodies use a bounded Direct2D raster cache with a 32 MiB
+budget, retaining the border and gradient. Pan, zoom and fade reuse cached pixels.
+Bitmap effect inputs compensate their 96 DPI before path-space transforms, keeping
+body positions and radii aligned with anchors when window DPI changes.
+Visible dense bodies share that budget; their per-texture resolution is bounded by
+the simultaneous body count so cached bodies do not repeatedly evict one another.
+During playback, new bodies use small preview textures while one background CPU
+worker builds their detailed pixels. Only the rendering thread uploads native
+bitmaps. Ready textures replace the previous image through a short premultiplied
+cross-fade, preserving one application of object opacity. Budget reductions retain
+the displayed texture until its replacement is ready. Both images count toward
+the 32 MiB cache limit. Paused windows repaint until pending replacements finish.
+Stopping playback permits synchronous detail generation.
+Huge path bounds use a padded viewport window instead of allocating an unbounded
+texture. Ordinary paths retain vector rendering.
+
+Hitsound snapshots parse each parent's sample and edge fields once. Nested events
+must not copy or split its slider geometry text while resolving their samples.
+
+Legacy droplet effects run on a detached candidate at the content commit boundary.
+The active transaction retains its baseline until validation completes. Rendering
+and playback reuse the prior committed conversion; save/export and content edits
+wait for validation. Only the matching history transaction, content, compensation
+and language may publish the prepared geometry, timing and warmed export cache.
+Failure or cancellation restores the baseline. Worker caches are never shared
+with the UI. Baseline fitting data preserves idempotent strength/seed changes and
+is retimed when authored timing changes.
+
 Placement movement overlays project break reconciliation from cached parent
 intervals and the candidate interval. They share the transaction's break algorithm
 without cloning a document or exporting the map. The interval cache follows the
@@ -115,6 +153,12 @@ content, compensation and language still match. A new draft delays publication.
 Testplay requests wait for validated output. Save and export use their own authored
 snapshots, never the provisional preview. Cancellation restores the pre-draft
 preview; switching projects or difficulties retires the pending result.
+
+Native osu slider drafts retain one local candidate and sampled path shared by
+the geometric canvas and upper timeline. Controls, pointer, path type, timing
+lookup identity, beat-snap state, divisor and effective base SV invalidate it.
+Length snapping and duration queries reuse the editor's timing lookup. Pointer
+movement does not export or convert the committed map for this draft geometry.
 
 The object timeline retains Stream/Stack fruit times, stacking, combo numbers and
 event lookup entries for the current conversion snapshot. The colour presentation

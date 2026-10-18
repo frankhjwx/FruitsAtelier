@@ -261,6 +261,7 @@ internal static class EditorPerformance
 
     public static int RunMap(string path, bool lazer = false)
     {
+        long initialAllocation = GC.GetTotalAllocatedBytes();
         var watch = Stopwatch.StartNew();
         var document = Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase)
             ? OsuBeatmapReader.ReadFile(path) : ProjectSerializer.ReadFile(path);
@@ -271,6 +272,7 @@ internal static class EditorPerformance
         Console.WriteLine($"LoadDocument: {watch.Elapsed.TotalMilliseconds:F1} ms");
         watch.Restart(); _ = view.Conversion;
         Console.WriteLine($"Conversion: {watch.Elapsed.TotalMilliseconds:F1} ms");
+        ReportMemory("Loaded");
         var canvas = new CountCanvas();
         view.Render(canvas, 1440, 900);
         view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom,
@@ -306,6 +308,12 @@ internal static class EditorPerformance
             for (int i = 0; i < 40; i++) { watch.Restart(); run(); samples.Add(watch.Elapsed.TotalMilliseconds); }
             samples.Sort();
             Console.WriteLine($"  {phase}: median={samples[20]:F3} p95={samples[38]:F3} ms; allocated={(GC.GetAllocatedBytesForCurrentThread() - bytes) / 40 / 1024} KiB/call");
+        }
+        ReportMemory("Measured");
+        void ReportMemory(string label)
+        {
+            using var process = Process.GetCurrentProcess(); process.Refresh();
+            Console.WriteLine($"{label} memory: working={process.WorkingSet64 / 1048576d:F1} MiB, peak={process.PeakWorkingSet64 / 1048576d:F1} MiB, private={process.PrivateMemorySize64 / 1048576d:F1} MiB, managed={GC.GetTotalMemory(false) / 1048576d:F1} MiB; cumulative allocation={(GC.GetTotalAllocatedBytes() - initialAllocation) / 1048576d:F1} MiB");
         }
         if (lazer)
         {

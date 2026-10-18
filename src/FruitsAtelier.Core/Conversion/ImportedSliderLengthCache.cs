@@ -10,14 +10,14 @@ internal sealed class ImportedSliderLengthCache
         if (!entries.TryGetValue(slider.Id, out var entry)
             || entry.Snapshot.X != slider.X || entry.Snapshot.Y != slider.Y
             || entry.Snapshot.PathType != slider.PathType || entry.Snapshot.PixelLength != slider.PixelLength
-            || !entry.Snapshot.ControlPoints.SequenceEqual(slider.ControlPoints))
+            || !entry.Snapshot.ControlPoints.ContentEquals(slider.ControlPoints))
         {
-            entry = (slider.DeepClone(), new ImportedSliderGeometry(slider).Distance);
+            entry = (slider.DeepClone(), slider.GetGeometry().Distance);
             entries[slider.Id] = entry;
         }
         var timing = timingLookup.At(slider.TimeMs);
         return slider.TimeMs + entry.Length / LegacyCatchRules.Velocity(timing.BeatLengthMs,
-            document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier) * slider.SpanCount;
+            document.EffectiveSliderMultiplier, ImportedSliderConverter.SliderVelocityAt(document, slider, timingLookup)) * slider.SpanCount;
     }
 
     public void Retain(MapDocument document)

@@ -2,7 +2,29 @@ using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 
+if (args.Contains("--sv-timing-sync-check"))
+{
+    foreach (var (name, run) in SynchronizationTests.Cases().Where(c => c.Item1.Contains("timing", StringComparison.OrdinalIgnoreCase)
+        || c.Item1.Contains("SV", StringComparison.Ordinal))) { run(); Console.WriteLine("PASS " + name); }
+    return 0;
+}
+
+if (args.Contains("--independent-sv-check")) { IndependentSliderSvTests.Run(); Console.WriteLine("PASS Independent Legacy SV, overlap and editing"); return 0; }
+
+if (args.Contains("--large-imported-path-check")) { LargeImportedPathTests.Run(); Console.WriteLine("PASS large imported paths and compact projects"); return 0; }
+if (args.Length == 2 && args[0] == "--import-set-roundtrip")
+{
+    var project = BeatmapProject.FromDocuments(Directory.EnumerateFiles(args[1], "*.osu").Order().Select(OsuBeatmapReader.ReadFile));
+    string text = ProjectSerializer.Serialize(project);
+    var restored = ProjectSerializer.ReadProject(text);
+    Check(project.Difficulties.Count == restored.Difficulties.Count && project.Difficulties.Zip(restored.Difficulties).All(p => p.First.Document.ContentEquals(p.Second.Document)), "Beatmap set project round trip changed content");
+    Console.WriteLine($"PASS {project.Difficulties.Count} difficulties, {System.Text.Encoding.UTF8.GetByteCount(text)} project bytes");
+    return 0;
+}
+
+if (args.Contains("--xnor-timing-check")) { XnorTimingTests.Run(); Console.WriteLine("PASS Legacy red timing, sub-millisecond slider lifetime and source preservation"); return 0; }
 if (args.Contains("--benchmark-sv-edits")) return WriteCacheTests.BenchmarkMultiplierEdits();
+if (args.Contains("--osu-model-check")) { OsuCanvasModelTests.Run(); Console.WriteLine("PASS osu canvas model and slider conversions"); return 0; }
 if (args.Contains("--legacy-v7-check")) { LegacyV7Tests.Run(); Console.WriteLine("PASS v7 tick rules, persistence, editing and export"); return 0; }
 if (args.Contains("--generated-slider-path-check")) { GeneratedSliderPathTests.Run(); Console.WriteLine("PASS Generated slider paths"); return 0; }
 
@@ -22,6 +44,9 @@ if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Independent Legacy SV preserves per-object timing, postprocessing and overlap constraints", IndependentSliderSvTests.Run),
+    ("Large imported paths preserve compact project data and capacity limits", LargeImportedPathTests.Run),
+    ("Legacy red timing preserves positive beat lengths, slider lifetime and raw source values", XnorTimingTests.Run),
     ("Generated sliders start upwards and export Bezier red anchors with equivalent NM/HR playback", GeneratedSliderPathTests.Run),
     ("Current base SV governs slider editing, cached conversion, export and reload", UnifiedSliderMultiplierTests.Run),
     ("Version history preserves saved, unsaved and deleted authoring by project identity", VersionHistoryTests.Run),
@@ -79,7 +104,7 @@ var tests = new (string Name, Action Run)[]
     ("Project JSON retains curves, IDs, paths, original sections and NaN timing", ProjectRoundTrip),
     ("Project resources are relative on disk and resolve on reload", ProjectResourcePaths),
     ("Project rejects missing or unknown schema, duplicate IDs and invalid numbers", InvalidProjects),
-    ("Reader rejects non-Catch, unsupported format and unknown objects", InvalidBeatmaps),
+    ("Reader rejects unsupported modes, formats and unknown objects", InvalidBeatmaps),
     ("Saving refuses original osu and failed serialization leaves target untouched", SafeWrites),
     ("Beatmap audio paths stay local and changed audio exports its new name", AudioReferences),
     ("Supplied real maps preserve original objects and timing on export", RealMaps),
@@ -660,7 +685,7 @@ static void InvalidProjects()
 
 static void InvalidBeatmaps()
 {
-    Throws(() => OsuBeatmapReader.Read(Fixture().Replace("Mode: 2", "Mode: 0")), "non-Catch input");
+    Throws(() => OsuBeatmapReader.Read(Fixture().Replace("Mode: 2", "Mode: 1")), "unsupported mode input");
     foreach (string version in new[] { "v6", "v15", "v127", "v129", "v7x", "v8x", "v08", "v12x", "v128x" })
         Throws(() => OsuBeatmapReader.Read(Fixture().Replace("format v14", "format " + version)), "unsupported version");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("250,21,8", "250,128,8")), "unknown object");

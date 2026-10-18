@@ -12,16 +12,24 @@ public readonly record struct MapPoint(double TimeMs, double X)
     public static MapPoint Lerp(MapPoint a, MapPoint b, double u) => a * (1 - u) + b * u;
 }
 
-public sealed class Fruit
+public sealed class Fruit : IJsonOnDeserialized
 {
+    private double y = 192;
+    private bool hasY;
     internal Fruit DeepClone() => (Fruit)MemberwiseClone();
-    internal bool ContentEquals(Fruit other) => Id == other.Id && TimeMs == other.TimeMs && X == other.X
+    internal bool ContentEquals(Fruit other) => Id == other.Id && TimeMs == other.TimeMs && X == other.X && Y == other.Y
         && SourceOrder == other.SourceOrder && OriginalLine == other.OriginalLine;
     public Guid Id { get; set; } = Guid.NewGuid();
     public double TimeMs { get; set; }
     public double X { get; set; }
+    public double Y { get => y; set { y = value; hasY = true; } }
     public int SourceOrder { get; set; } = int.MaxValue;
     public string? OriginalLine { get; set; }
+    void IJsonOnDeserialized.OnDeserialized()
+    {
+        if (!hasY && OriginalLine?.Split(',') is { Length: >= 2 } fields)
+            y = OsuBeatmapReader.LegacyCoordinate(fields[1]);
+    }
 }
 
 public sealed class Anchor
@@ -93,6 +101,9 @@ public sealed class CurveTrack
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SliderDropletMode? DropletMode { get; set; }
 
+    internal double? SliderVelocitySeed { get; set; }
+    internal double? FixedSliderVelocityMultiplier { get; set; }
+
     public bool RandomizesDroplets(MapDocument document) => DropletMode switch
     {
         SliderDropletMode.FollowMap => !document.DerandomizeFSliderDroplets,
@@ -125,7 +136,30 @@ public sealed class TimingPoint
 
 public sealed class ImportedSlider
 {
-    public const int MaximumControlPoints = 65536;
+    private sealed record GeometryMemo(WeakReference<ImportedSliderGeometry> Geometry, SliderControlPoints Controls,
+        long X, long Y, long Length, char PathType);
+    private GeometryMemo? geometryMemo;
+
+    internal ImportedSliderGeometry GetGeometry()
+    {
+        long x = BitConverter.DoubleToInt64Bits(X), y = BitConverter.DoubleToInt64Bits(Y), length = BitConverter.DoubleToInt64Bits(PixelLength);
+        if (geometryMemo is { } memo && memo.X == x && memo.Y == y && memo.Length == length
+            && memo.PathType == PathType && memo.Controls.ContentEquals(ControlPoints)
+            && memo.Geometry.TryGetTarget(out var cached)) return cached;
+        var geometry = new ImportedSliderGeometry(this);
+        geometryMemo = new(new(geometry), ControlPoints.Share(), x, y, length, PathType);
+        return geometry;
+    }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ImportedSlider? RandomizationSource { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CurveTrack? RandomizationTrack { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? RandomizationBaseVelocity { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool PreserveNativeGeometry { get; set; }
+    public const int MaximumControlPoints = 262144;
     public Guid Id { get; set; } = Guid.NewGuid();
     public int SourceOrder { get; set; } = int.MaxValue;
     public string? OriginalLine { get; set; }
@@ -133,7 +167,11 @@ public sealed class ImportedSlider
     public double Y { get; set; }
     public double TimeMs { get; set; }
     public char PathType { get; set; } = 'B';
-    public List<SliderPathPoint> ControlPoints { get; } = new();
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? SliderVelocityMultiplier { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? ProcessedSliderVelocityMultiplier { get; set; }
+    public SliderControlPoints ControlPoints { get; private set; } = new();
     public int SpanCount { get; set; } = 1;
     public double PixelLength { get; set; }
 
@@ -142,16 +180,28 @@ public sealed class ImportedSlider
         var copy = new ImportedSlider
         {
             Id = Id, SourceOrder = SourceOrder, OriginalLine = OriginalLine, X = X, Y = Y,
-            TimeMs = TimeMs, PathType = PathType, SpanCount = SpanCount, PixelLength = PixelLength
+            TimeMs = TimeMs, PathType = PathType, SpanCount = SpanCount, PixelLength = PixelLength,
+            RandomizationSource = RandomizationSource?.DeepClone(), RandomizationTrack = RandomizationTrack?.DeepClone(),
+            RandomizationBaseVelocity = RandomizationBaseVelocity, PreserveNativeGeometry = PreserveNativeGeometry,
+            SliderVelocityMultiplier = SliderVelocityMultiplier, ProcessedSliderVelocityMultiplier = ProcessedSliderVelocityMultiplier
         };
-        copy.ControlPoints.AddRange(ControlPoints);
+        copy.ControlPoints = ControlPoints.Share();
+        copy.geometryMemo = geometryMemo;
         return copy;
     }
 
     internal bool ContentEquals(ImportedSlider other) => Id == other.Id && SourceOrder == other.SourceOrder
         && OriginalLine == other.OriginalLine && X == other.X && Y == other.Y && TimeMs == other.TimeMs
         && PathType == other.PathType && SpanCount == other.SpanCount && PixelLength == other.PixelLength
-        && ControlPoints.SequenceEqual(other.ControlPoints);
+        && SliderVelocityMultiplier == other.SliderVelocityMultiplier && ProcessedSliderVelocityMultiplier == other.ProcessedSliderVelocityMultiplier
+        && RandomizationBaseVelocity == other.RandomizationBaseVelocity
+        && PreserveNativeGeometry == other.PreserveNativeGeometry
+        && ControlPoints.ContentEquals(other.ControlPoints)
+        && (ReferenceEquals(RandomizationTrack, other.RandomizationTrack)
+            || RandomizationTrack is not null && other.RandomizationTrack is not null && RandomizationTrack.ContentEquals(other.RandomizationTrack))
+        && (ReferenceEquals(RandomizationSource, other.RandomizationSource)
+            || RandomizationSource is not null && other.RandomizationSource is not null && RandomizationSource.ContentEquals(other.RandomizationSource));
+
 }
 
 public sealed class BananaShower
@@ -192,6 +242,7 @@ public sealed partial class MapDocument
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool LegacySliderTicks { get; set; }
     public double DistanceSpacing { get; set; } = 1;
+    public double OsuDistanceSpacing { get; set; } = 1;
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? DerandomizeDroplets { get; set; }
     public bool DistanceSnapCollinear { get; set; } = true;
@@ -223,7 +274,7 @@ public sealed partial class MapDocument
             DistanceSnapCollinear = DistanceSnapCollinear,
             RandomizeDropletStrength = RandomizeDropletStrength, RandomizeDropletSeed = RandomizeDropletSeed,
             DerandomizeFSliderDroplets = DerandomizeFSliderDroplets, DerandomizeDropletsForHardRock = DerandomizeDropletsForHardRock, RandomizeNewSliders = RandomizeNewSliders,
-            SliderTickRate = SliderTickRate, LegacySliderTicks = LegacySliderTicks, DistanceSpacing = DistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
+            SliderTickRate = SliderTickRate, LegacySliderTicks = LegacySliderTicks, DistanceSpacing = DistanceSpacing, OsuDistanceSpacing = OsuDistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
         };
         copy.DistanceSnapRatios.AddRange(DistanceSnapRatios);
         copy.HitsoundOverrides.AddRange(HitsoundOverrides);
@@ -256,6 +307,12 @@ public sealed partial class MapDocument
         => ContentEquals(other, ignoreMultiplierOverride: false);
 
     internal bool ContentEquals(MapDocument other, bool ignoreMultiplierOverride)
+        => ContentEquals(other, ignoreMultiplierOverride, ignoreOsuDistanceSpacing: false);
+
+    public bool ContentEqualsIgnoringOsuDistanceSpacing(MapDocument other)
+        => ContentEquals(other, ignoreMultiplierOverride: false, ignoreOsuDistanceSpacing: true);
+
+    private bool ContentEquals(MapDocument other, bool ignoreMultiplierOverride, bool ignoreOsuDistanceSpacing)
     {
         if (Name != other.Name || DurationMs != other.DurationMs || BeatLengthMs != other.BeatLengthMs
             || TimingOffsetMs != other.TimingOffsetMs || ApproachRate != other.ApproachRate
@@ -268,7 +325,8 @@ public sealed partial class MapDocument
             || RandomizeDropletStrength != other.RandomizeDropletStrength || RandomizeDropletSeed != other.RandomizeDropletSeed
             || DerandomizeFSliderDroplets != other.DerandomizeFSliderDroplets || DerandomizeDropletsForHardRock != other.DerandomizeDropletsForHardRock || RandomizeNewSliders != other.RandomizeNewSliders
             || !DistanceSnapRatios.SequenceEqual(other.DistanceSnapRatios)
-            || DistanceSpacing != other.DistanceSpacing || DerandomizeDroplets != other.DerandomizeDroplets
+            || DistanceSpacing != other.DistanceSpacing || (!ignoreOsuDistanceSpacing && OsuDistanceSpacing != other.OsuDistanceSpacing)
+            || DerandomizeDroplets != other.DerandomizeDroplets
             || !HitsoundOverrides.SequenceEqual(other.HitsoundOverrides)
             || Fruits.Count != other.Fruits.Count || Tracks.Count != other.Tracks.Count
             || TimingPoints.Count != other.TimingPoints.Count || ImportedSliders.Count != other.ImportedSliders.Count

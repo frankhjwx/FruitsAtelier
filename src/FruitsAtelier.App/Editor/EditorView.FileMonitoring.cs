@@ -24,7 +24,11 @@ public sealed partial class EditorView
         StopHistoryCompression(); historyCompressionRoot = "";
     }
 
-    public void CheckFilesOnActivation() => fileMonitor?.Invalidate();
+    public void CheckFilesOnActivation()
+    {
+        if (WorkspaceSession is null) return;
+        fileSyncPending = true; fileSearchMissing = true;
+    }
 
     private void ConfigureFileMonitoring()
     {
@@ -43,9 +47,17 @@ public sealed partial class EditorView
         ConfigureFileMonitoring();
         if (fileMonitor is null || !fileMonitor.IsReady(DateTime.UtcNow)) return;
         var changes = fileMonitor.Drain(DateTime.UtcNow);
-        libraryProjectsNeedReindex = true;
-        if (scanTask is { IsCompleted: false }) libraryRescanRequested = true;
-        else StartLibraryScan();
+        if (changes.FullScan) libraryRescanRequested = true;
+        foreach (string path in changes.Paths)
+        {
+            if (Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase))
+                libraryPendingDirectories.Add(Path.GetDirectoryName(path)!);
+            else if (!WorkspaceProject.Within(LibrarySettings.Workspace, path) && (Directory.Exists(path) || !File.Exists(path)))
+                libraryPendingDirectories.Add(path);
+            if (Path.GetExtension(path).Equals(".catchdiff", StringComparison.OrdinalIgnoreCase)) libraryProjectsNeedReindex = true;
+        }
+        if (libraryProjectsNeedReindex && LibraryVisible) QueueLibrarySearch();
+        PumpPendingLibraryScan();
         if (WorkspaceSession is not { } session) return;
         var directories = session.Manifest.Difficulties.Select(WorkspaceSynchronization.Target).OfType<string>()
             .Concat(difficulties.Select(d => d.History.Document.AudioPath).OfType<string>())

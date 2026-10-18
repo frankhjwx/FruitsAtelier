@@ -1,5 +1,93 @@
 # Editing Controls
 
+## Remembered window and canvas preferences
+
+Closing the editor saves its normal window size and maximized state for the next
+launch. Restored sizes fit the current monitor's work area. Windows and macOS keep
+separate window sizes; fullscreen retains the preceding windowed size and state.
+Startup setup and acknowledgement windows do not replace these preferences.
+
+The Catch canvas **Slider Path** and **Selection Rect** switches are saved globally
+as soon as they change, including Slider Path changes through the View menu.
+They survive project changes and restarts without changing beatmap content or undo history.
+
+Each difficulty remembers its beat-snap divisor and Anchor Snap setting alongside
+GS (Grid Snap), its grid level, DS (Distance Snap), and Object Snap. Switching
+difficulties or reopening the project restores their individual preferences.
+Temporary beat grids shown by inspecting a note do not replace the saved divisor.
+
+## osu! canvas
+
+Tab switches the Compose canvas between Catch's time–X view and an
+osu!standard 512×384 geometric view. Text fields, dialogs, Ctrl+Tab difficulty
+navigation and Testplay retain their own key handling. Switching views does not
+convert objects or create a content edit. Catch preview continues to show the
+exported fruits in either view.
+
+The osu! canvas draws circles, approach circles, Legacy Slider paths, repeats,
+slider balls and spinners. Circle size, approach rate, combo ordering and stacking
+use standard geometry. Past circles turn white and fade over 700 ms. Seeking and
+pausing use the same map-time presentation. Skin elements are used when available.
+The coordinate readout below the Distance Snapping control shows the pointer's X and Y
+in the 512×384 geometric space, including after zooming or panning. Coordinates
+outside the playfield retain their signed values; leaving the canvas shows dashes.
+Selecting objects does not replace the pointer coordinates in this view.
+Selected circles have the same orange ring as their timeline markers. Selected
+sliders show this ring at both geometric endpoints, including even-repeat sliders.
+Circle and slider placement previews use their resulting combo colour and number.
+Their placement time follows the snapped playhead; pointer Y controls only the
+geometric position, including the placement marker in the upper timeline.
+Combo colour also takes precedence over skin slider-track overrides in this view.
+Alt+wheel over the upper object timeline changes its time scale independently of
+osu! canvas zoom.
+
+Slider bodies retain a white border and a brighter centre with darker edges.
+Static `sliderb.png` and numbered slider-ball animations use the owning skin's
+resources and tint settings. Retained skin archives upgrade older extraction
+caches when the supported resource set changes.
+Spinners use the owning skin's old or modern composition and native texture
+dimensions, with the fixed centre's tint following the spinner's elapsed time.
+
+Catch edits FSliders; osu! edits Legacy Sliders. The other representation remains
+visible and read-only. Use the explicit conversion action before editing it.
+Conversion is undoable, validates playback and preserves the original object on
+failure. Global droplet settings can rebuild Legacy paths to match their exported
+fruit targets; this can change their two-dimensional shape.
+
+In osu! view the Fruit and Banana tools place circles and spinners. The Slider
+tool places Legacy controls and preserves their original two-dimensional path
+through global droplet-setting changes and project reopening. Click creates a grey square anchor, double-click
+creates a red segment boundary, and right-click finishes at the pointer. Thin
+white lines connect the controls. The draft uses the final slider body, skin,
+combo colour and end circles. A new slider with exactly three controls (head,
+one interior anchor and tail) uses a perfect circular arc; collinear controls
+form a straight path. Other new sliders use Bezier geometry. Adding a fourth
+control or a red boundary to a circle switches it to Bezier. Removing a control
+from an existing Bezier retains Bezier geometry. Selected controls can be dragged; Ctrl+click
+turns an interior control into a red boundary and right-click removes it.
+The Context Menu key opens path type, repeats and length actions.
+Perfect circle requires three controls. Enter, right-click or a number-key tool
+switch completes a valid draft; Escape cancels it. An insufficient draft is
+discarded when switching tools.
+With beat snapping enabled, draft and control-edit lengths round to the nearest
+current Snap subdivision using the slider head's BPM and SV, with a minimum of
+one subdivision. The visible slider end follows that length; its final control
+point can extend beyond or fall before it. Disabling beat snapping allows free
+lengths. The upper timeline shows the draft's current interval before placement.
+The geometric grid is shown only inside the white 512×384 playfield at the selected
+4/8/16/32 px level. Zoom and pan keep it clipped to that playfield. Grid Snap uses that
+lattice on both axes; holding Shift temporarily inverts snapping. Both remain
+available independently of Catch editing mode and its speed presets.
+Alt+wheel zooms and middle drag pans the geometric view.
+The upper-right **Distance Snapping:** row places its slider beside the label
+and shows its own 0.1–3.2 multiplier; Shift uses 0.01
+steps instead of 0.1. Changing it does not change Catch DS.
+
+Both canvases draw into the side areas beneath the tool palettes. Logical
+playfield coordinates and zoom stay unchanged; tool buttons remain above the
+content and receive clicks first. Side docks, the toolbar and transport retain
+their own drawing regions.
+
 ## Interface size
 
 **Settings → Appearance → UI scale** adjusts the whole interface from 50% to
@@ -7,6 +95,16 @@
 Apply activates and saves the choice without restarting; closing Settings discards
 unapplied changes. Drawing and pointer coordinates use the same scale on both
 platforms. Compact startup dialogs retain their fitted layout size.
+
+Outside text fields, dialogs and active gestures, Ctrl+= / Ctrl+- adjusts UI scale
+by one step with any selection. Ctrl+Shift+= and Ctrl+keypad plus/minus are aliases.
+Shortcut changes save immediately and do not enter content history.
+
+**Settings → Appearance → Selection highlight** sets the colour of selected-object
+rings on the Catch canvas, Catch timeline selection rings and selection boxes.
+The osu! canvas and its timeline use orange selection rings.
+The colour picker supports HEX input; Apply saves the global preference, Cancel
+discards the draft, and Reset restores turquoise. Skin hyperdash colours stay independent.
 
 On Windows, the editor scales uniformly with its client pixel dimensions, using
 2520 × 1575 at 175% as the reference: the original 1440 × 900 logical startup
@@ -74,10 +172,10 @@ The upper object timeline has a separate lazer zoom: Alt+wheel animates its
 visible time range over 200 ms. It starts at 6000 ms and ranges from 500 to
 10000 ms, bounded by song length. Mapping's saved timeline scale is preserved.
 
-The skin selector's **Hit lighting** choice applies to the canvas, Catch Preview
+**Settings → Appearance → Hit lighting** applies to the canvas, Catch Preview
 and testplay. **Follow mode** enables it in lazer editing and disables it in
-Mapping; **On** and **Off** override that choice. Selecting an option saves it
-immediately. Applying other Settings preserves the current lighting choice.
+Mapping; **On** and **Off** override that choice. Apply saves the preference;
+closing Settings discards unapplied changes.
 Keyboard and mouse differences are listed in the
 [shortcut manual](KEY_BINDINGS.md#experimental-lazer-editing).
 
@@ -197,18 +295,24 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 ## Droplet randomization
 
 **Droplet Settings** is an independent dock tab opened from Layout or Edit.
-It contains only current-difficulty settings: the default droplet mode
+Its current-difficulty section contains the default droplet mode
 (Derandomize or Randomize), Strength (0–100 playfield pixels), a signed 32-bit
 Seed, and the NM/HR compensation target. Valid edits apply immediately with undo;
 invalid numeric input leaves the last valid value intact. Strength has a numeric
 field and slider, plus Reset strength to restore 20.
 
-New projects default to derandomization, configurable in General settings. Newly
-drawn FSliders use **Follow map**. In **Slider Inspector**, **Droplet mode** selects
+The separate **Global Derandomize** section controls derandomization for new projects
+and Legacy-to-FSlider conversion. These preferences save immediately and do not
+change the current difficulty or its undo history. New projects default to
+derandomization. Valid current-difficulty edits also save the last used mode, strength,
+seed and NM/HR target as global defaults for new projects. Existing projects retain
+their own saved values. In **Slider Inspector**, **Droplet mode** selects
 Follow map, Derandomize or Randomize for the selected ordinary FSliders without
 switching tabs. Explicit modes take precedence over the difficulty default.
 Multiple differing modes display Mixed; choosing a mode applies it to all eligible
-selected sliders in one undo step. Legacy Sliders and managed Stream/Stack objects
+selected sliders in one undo step. The chosen mode is also remembered globally for
+newly drawn FSliders in both drawing modes, including after restarting; it initially
+uses Follow map. Existing sliders keep their own modes. Legacy Sliders and managed Stream/Stack objects
 are excluded. The effective mode is displayed with the Inspector metrics.
 
 **Reset manual droplet adjustments** shows the selected sliders' correction count
@@ -378,6 +482,13 @@ The arrow to the left of the four tool buttons opens a whole-map **Movement stra
 
 During playback and seeking, the play line stays at its configured height, initially 25% above the bottom of the drawing area. While paused, drag its leftmost yellow handle vertically to set that height between 5% and 95% of the drawing area. The current time stays unchanged and canvas content scrolls with the line. Playback disables handle dragging and uses the chosen height. The height is saved as a global view preference when the drag finishes and restored after restarting the editor. It is retained across resizing and difficulty switches without editing map content or undo history. Esc or lost capture cancels a drag. Left-button marquee selection on the canvas and object timeline keeps playback scrolling and accepts wheel navigation while held. Space or C can start or pause playback without releasing the selection. The start stays anchored to its original map time while the other end follows the pointer, so the box grows during scrolling even with a stationary pointer. Within 24 DIP of the canvas's top/bottom edge or the object timeline's left/right edge, a dragged selection automatically scrolls toward that edge, gradually increasing to 1200 DIP per second on the canvas or 600 DIP per second on the object timeline. Moving back inside, releasing the button, cancelling, or reaching the map boundary stops automatic scrolling. Objects inside the time range remain selected after they move outside the viewport. Paused middle-button panning is free; canvas wheel navigation preserves the current playhead-to-viewport offset, while playback and other seeking resume following.
 
+The upper-right corner of the Mapping canvas shows the pointer's playfield X
+coordinate. Selecting an object shows its X coordinate and **Prev / Next** DS
+ratios instead. Multiple selections use chronological object order: X and Prev
+come from the first selected object, while Next comes from the last selected
+object's end. Missing neighbours show a dash. These readouts use map coordinates
+and base SV, independently of canvas zoom.
+
 ### Playback pause snapping
 
 In Compose, with beat snapping enabled, pausing through Space, C or the Pause button aligns
@@ -474,19 +585,20 @@ saved fullscreen preference. Fullscreen does not change beatmap content or histo
 Settings Workspace, Audio and embedded Updates show their controls without the
 workspace-path, skin-sound, automatic-save or restart explanatory paragraphs.
 
-**General → Droplet Derandomize Settings** is the last section of General,
-following the scroll-direction setting and a separator. It contains two independent
-preferences. **Enable Derandomization for Legacy slider to FSlider Conversion** sets the initial conversion
-choice in maps without a saved choice. **Enable Derandomization for new catchprojects**
-controls projects created from scratch or from audio. Both start On. With the
-new-project option Off, the new difficulty saves a default that enables
-randomization on newly drawn FSliders, with Strength 20 and Seed 1337. With it On,
-the map starts with Derandomize droplets On and newly drawn FSliders start without the effect. This default survives project
-reopening and is inherited by additional blank difficulties. Imported
-difficulties retain their own defaults. Settings Apply saves both preferences
-across launches; changing them does not modify existing beatmap content or a
-map's saved Legacy conversion choice. Batch randomization actions affect current
-FSliders without changing the default for future ones.
+**Droplet Settings → Global Derandomize** contains two independently saved preferences.
+First-time setup also offers both preferences as part of its draft, saved on Finish.
+General retains a link and a notice directing randomization and derandomization to
+Droplet Settings. The link preserves unapplied General preferences and returns there
+when the dialog closes. With no open project, it shows only global preferences.
+**Legacy → FSlider** sets the initial conversion choice in maps
+without a saved choice. **New projects** controls projects created
+from scratch or from audio. Both start On. With the new-project option Off,
+new FSliders using Follow map randomize with Strength 20 and Seed 1337; with it
+On, they derandomize. The map default survives reopening and is inherited by
+additional blank difficulties. Imported difficulties retain their own settings.
+Global defaults save immediately, including when the current difficulty is locked;
+Cancel in Song Setup discards map drafts while retaining these global preferences.
+Changing them does not modify existing maps or a saved Legacy conversion choice.
 
 Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same logical dimensions apply on both desktop platforms and follow their interface scaling. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
@@ -635,7 +747,7 @@ A single click on empty canvas space clears selection without changing playback 
 
 The timestamp block sits left of Play, Pause, Stop and Testplay on the same transport row, followed by the overview timeline. Click the current timestamp to open Jump to time with its value selected. Copy/Paste buttons and Ctrl+C/Ctrl+V (Cmd on macOS) use the system clipboard; Ctrl+A selects the full input. Enter or Jump seeks without beat snapping, and Escape cancels. Inputs accept `mm:ss:ms`, milliseconds, or an osu! timestamp reference such as `03:03:311 (2,3) -`. Invalid input keeps the dialog open; times beyond the track clamp to its end. The dialog blocks background editing and does not change beatmap content.
 
-The bottom status bar places a static **Playback speed** label and a compact percentage selector immediately left of **Volume**. The selector offers **10%, 25%, 50%, 75%, 100%, and 150%** playback speed. Only song tempo changes, with pitch preserved. Hitsounds keep their original pitch and real-time duration, with trigger times mapped to the music clock. Changing speed preserves the map position and play/pause state. This setting does not edit or export beatmap timing.
+The bottom status bar places a static **Playback speed** label and six always-visible buttons immediately left of **Volume**. The buttons select **10%, 25%, 50%, 75%, 100%, and 150%** playback speed with one click; the current preset is highlighted. Only song tempo changes, with pitch preserved. Hitsounds keep their original pitch and real-time duration, with trigger times mapped to the music clock. Changing speed preserves the map position and play/pause state. This setting does not edit or export beatmap timing.
 
 In the editor, the status-bar **Volume** button or **View → Volume** opens three vertical bars, ordered Master, Music and Effect from left to right, from 0% to 100%. Alt+Left/Right selects a channel; Alt+Up/Down opens the controls and changes the selected channel by five percentage points. The shortcuts also show the controls during testplay and take precedence over catcher movement. The controls fade in over 120 ms, wait 800 ms after interaction, then fade out over 150 ms. Hovering, dragging or holding an adjustment key keeps them visible; Esc dismisses them in the editor. Changes apply immediately and persist after mouse release or a keyboard adjustment. Master multiplies both channels; Music and Effect independently control music and preview/testplay samples. Opening the controls preserves active drawing drafts. Muting does not pause playback or change the beatmap.
 
@@ -686,7 +798,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Ctrl+Up / Down | Increase / decrease playback speed by 25 percentage points, within 10%–150% |
 | Ctrl+Shift+Up / Down | Increase / decrease playback speed by 5 percentage points |
 | Ctrl+Shift+F | Open and focus the Stream/Stack dock |
-| Ctrl+= / Ctrl+− | Add / remove one reverse |
+| Ctrl+= / Ctrl+− | Increase / decrease UI scale |
 | Ctrl+J | Extend the selected FSlider to the pointer |
 | Esc | Cancel an active drag, box selection, draft, or text input |
 
@@ -744,7 +856,7 @@ Changing DS settings, BPM, or tick rate does not reshape existing sliders.
 
 **Collinear snap**, in its own row below the presets and a horizontal divider in Configure DS, is on by default and is saved with the current difficulty through Apply/Cancel and undo. While DS is active, it adds a candidate at the current time on the straight line from the preceding object's final tail to the following object's head. The nearest candidate wins alongside the DS presets and implicit zero; missing neighbours or overlapping intervals add no candidate. Placement and whole-object dragging use this candidate, excluding dragged objects from the neighbours. With Grid Snap enabled, the chosen X rounds to the nearest horizontal grid position; with Grid Snap disabled, it retains the exact collinear coordinate. Hover over the row for a detailed explanation of neighbour selection, DS candidates and Grid Snap. The preview canvas uses the draft option immediately. This option does not constrain a slider's internal curve or add a shortcut.
 
-**Object snap**, below the Configure DS preview, is enabled by default independently
+**Object snap**, below the Configure DS preview, is disabled by default and operates independently
 of Distance Snap. Fruit placement and the first point of either slider tool align X
 to a nearby fruit, including slider heads, tails, repeats and Stream/Stack fruits,
 while retaining the placement's Beat Snap time. Droplets, tiny droplets and bananas
@@ -802,7 +914,9 @@ shows the previous/next object indicators without a separate slider speed badge.
 
 For a clicked or selected tiny droplet, Prev and Next display movement classifications and DS ratios to its immediate neighbours, including other tiny droplets. A missing neighbour or zero time interval displays a dash. These tiny-droplet distance values are read-only.
 
-With droplet selection unlocked, clicking a droplet or tiny droplet displays its X coordinate, including when the click selects its parent slider. Clicking that child again selects the specific event and shows a bright outer ring above curves and movement lines. The coordinate readout alone does not change selection, dragging or the parent geometry. Lock droplet selection blocks droplet selection and coordinate inspection. In Select mode, a click closer to the droplet than nearby controls selects the droplet; an already selected droplet remains draggable after its curve gains an anchor. Horizontal dragging changes the selected event's X and recalculates the curve. Droplets of the same kind that share that path sample on repeated traversals move together; other events remain fixed, and all event times are preserved. The curve between the adjacent event samples becomes linear, replacing any intervening anchors and handles while retaining the curve outside that interval. TinyDroplet sampling follows the slider's compensation policy. Unreachable positions clamp to the last valid X. One drag is one undoable edit. Dragging a selected Legacy Slider droplet or tiny droplet converts its parent to an FSlider automatically within the same undo step. The ring follows live edits and is visible with Movement Analysis on or off.
+With droplet selection unlocked, clicking a droplet or tiny droplet displays its X coordinate, including when the click selects its parent slider. Clicking that child again selects the specific event and shows a bright outer ring above curves and movement lines. The coordinate readout alone does not change selection, dragging or the parent geometry. Lock droplet selection blocks droplet selection and coordinate inspection. In Select mode, a click closer to the droplet than nearby controls selects the droplet; an already selected droplet remains draggable after its curve gains an anchor. Horizontal dragging changes the selected event's X and recalculates the curve. Droplets of the same kind that share that path sample on repeated traversals move together; other events remain fixed, and all event times are preserved. The curve between the adjacent event samples becomes linear, replacing any intervening anchors and handles while retaining the curve outside that interval. TinyDroplet sampling follows the slider's compensation policy. Unreachable positions clamp to the last valid X. Content dragging starts after at least 6 DIP of pointer movement on either axis.
+Playback alone does not start a drag; an already started drag follows playback.
+One drag is one undoable edit. Dragging a selected Legacy Slider droplet or tiny droplet converts its parent to an FSlider automatically within the same undo step. The ring follows live edits and is visible with Movement Analysis on or off.
 
 For selected slider children, DS editing inserts or reuses an anchor at the child's first-span time and reshapes the curve locally. A reference in the same slider is anchored too so its position remains fixed. Editing an imported Legacy Slider child converts its parent to an FSlider within the same transaction. Repeated spans share the edited first-span geometry. Conversion must retain the selected child's time and achieve the requested position; unsupported or unreachable changes show an error and roll back.
 
@@ -818,7 +932,7 @@ Slider Path, Selection Rect and Movement Analysis use equal-width buttons. Long 
 
 In Select mode, New Combo toggles the selected parents, or the particular Stream/Stack fruit selected in the upper timeline. On the editing canvas, a fruit with this flag has an NC label beside it in every UI language. The label sits to the right when there is room and otherwise to the left; slider heads with the flag are labelled once. A pending New Combo fruit placement shows the same NC label beside its preview. The sound buttons toggle additions independently and support mixed multi-selection. Clicking a slider fruit targets that head, repeat or tail's hitsound; selecting the whole slider through its timeline body targets every edge. Droplet/tiny selections target the parent, whose edge sounds are editable; these children retain their existing tick/silent playback rules. Banana showers use their fixed banana sound and disable the three additions. In Fruit placement mode, or with no selection, buttons set pending flags for new objects. New Combo resets after placement; pending additions remain until changed or switching difficulty.
 
-Lock Notes prevents moving, reshaping or deleting existing objects, including timeline reverse edits. Selection, playback, New Combo and sound editing remain available. New objects can still be placed; undo/redo remains available. Hover Lock Notes to reveal **Lock Droplet Selection**. This independent toggle is enabled by default and excludes droplets and tiny droplets from canvas hit testing and box selection, and clears an active droplet child selection. Clicking a locked droplet with the Pen slider tool selects its parent without starting a new anchor. Slider paths, controls, fruits and parent selection in the object timeline remain available. Lock Droplet Selection is saved automatically as a user preference and restored after restarting. Changing these controls alone does not dirty the difficulty.
+Lock Notes prevents moving, reshaping or deleting existing objects, including timeline reverse edits. Selection, playback, New Combo and sound editing remain available. New objects can still be placed; undo/redo remains available. Hover Lock Notes to reveal **Lock Droplet Selection**. This independent toggle is enabled by default and excludes droplets and tiny droplets from canvas hit testing and box selection, and clears an active droplet child selection. Clicking a locked droplet with the Pen slider tool selects its parent without starting a new anchor. Slider paths, controls, fruits and parent selection in the object timeline remain available. Lock Droplet Selection is saved automatically as a user preference and restored after restarting. The flyout also offers **Lock Sliders to Their Canvas**. When enabled, FSliders can be selected only in Catch and Legacy Sliders only in osu!, including click, box and object-timeline selection. This global preference is disabled by default and restored after restarting. Changing these controls alone does not dirty the difficulty.
 
 The four left tool buttons show multiline operation hints. FSlider's hint follows the current editing mode. FSlider and Distance Snap display their hints above their hover buttons so the controls remain accessible.
 
@@ -838,15 +952,15 @@ In **pen tool mode**, press B or 3 to clear selection and start drawing. Click t
 
 Select an FSlider and click its controls, or double-click its track, to edit anchors in **Select**. Clicking an interior control on an already selected complete track also enters editing; visible slider fruits use the selection rules below. Drag anchors and handles directly on the canvas. Interior anchor dragging is free by default. Enable **View → Snap interior anchors** to snap interior anchor times to the selected beat subdivision. Head and tail anchors follow beat Snap. Invalid snapped endpoint moves keep their previous time rather than clamping between grid lines. Handles remain free, and the option does not change placement or whole-object snapping. Anchor times remain increasing; anchors and handles may extend beyond the playfield. Moving a pen draft anchor preserves its handle vectors, and the whole draft remains one undo step. Curve handles may extend before the start or after the end; the curve must define an unambiguous forward branch inside the slider time interval. Generated events still undergo normal conversion validation.
 
-In Select mode, the first click selects the whole slider; the second click on a head, tail or repeat selects that fruit with an individual outer ring. Dragging that selected fruit inside the selection box edits the fruit instead of moving the whole slider. Horizontal dragging changes its X while preserving its time. Dragging a selected FSlider fruit at a base-path endpoint vertically edits that red anchor in time and X, with endpoint beat snapping and a single undo step. This works in both editing modes, including paths with only two red anchors; the opposite endpoint stays fixed. Other slider events keep their time during dragging; repeated traversals share the same endpoint geometry. Legacy endpoint edits convert the owning slider to an FSlider inside the same undo step. Clicking outside a selected child returns to whole-slider selection; a subsequent outside click clears it. Dragging the body selects and moves the whole slider. In anchor edit mode, dragging an anchor changes that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+Shift+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
+In Select mode, the first click selects the whole slider; the second click on a head, tail or repeat selects that fruit with an individual outer ring. Dragging that selected fruit inside the selection box edits the fruit instead of moving the whole slider. Horizontal dragging changes its X while preserving its time. Dragging a selected FSlider fruit at a base-path endpoint vertically edits that red anchor in time and X, with endpoint beat snapping and a single undo step. This works in both editing modes, including paths with only two red anchors; the opposite endpoint stays fixed. Other slider events keep their time during dragging; repeated traversals share the same endpoint geometry. Legacy Sliders remain read-only in the Catch canvas until explicitly converted to FSliders. Clicking outside a selected child returns to whole-slider selection; a subsequent outside click clears it. Dragging the body selects and moves the whole slider. In anchor edit mode, dragging an anchor changes that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+Shift+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
 
-Editing a selected Legacy Slider automatically converts that parent when inserting a control point or reshaping a child. Vertical head and first-span tail drags continue as FSlider anchor drags; Ctrl-click inserts at the pointer time and X, including away from the visible curve. Conversion and the edit share one undo step; Escape or lost capture restores the Legacy Slider. Selecting without moving preserves the imported representation. Double-clicking a slider also converts without confirmation. B / 3 selects the new-slider tool and does not convert the selected imported slider.
+Selecting or double-clicking a Legacy Slider in Catch preserves its representation. Editing requires the explicit Convert to FSlider action; the conversion and subsequent edits have separate undo steps. Legacy geometry can instead be edited directly in the osu! canvas. B / 3 selects the current canvas's slider tool.
 
 Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Hold the left mouse button stationary on a Legacy Slider to open its conversion actions beside the pointer. Holding a slider fruit first identifies its beat at 300 ms. Continuing to hold stationary opens conversion actions at 1000 ms; a small progress ring fills during the final 700 ms. Moving at least 2 DIP or releasing before completion cancels the hold; ordinary selection and dragging remain available. The buttons stay open until an action, another click, a key, or focus loss dismisses them. Conversion preserves start time, total duration, and span count. It first fits a small set of straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete the conversion. Exact nested-object positions and sequences are not required to match. Invalid or unrepresentable input retains its original object with a reason.
 
 The first workspace import from Songs, an external folder, `.osu`, or `.osz` asks whether to convert sliders in all newly imported difficulties if they contain Legacy Sliders. The prompt offers **Derandomize droplets**. With it off, conversion builds an editable path through the actual legacy fruit and droplet positions, including randomized TinyDroplets. Generated geometry compensates the RNG so objects stay on that path. Conversion preserves their times and positions; incompatible shared repeat targets remain Legacy with a reason. The selected policy is saved per difficulty after a successful conversion and reused for later conversions. Keeping Legacy preserves that representation. Reopening an existing project does not prompt again. Importing one difficulty into a project prompts only for that difficulty.
 
-**Edit → Convert all sliders to FSliders** opens the droplet choice for the current difficulty and is disabled when it has no Legacy Sliders. Single-slider editing and explicit conversion proceed without a prompt, using the saved difficulty policy or the General settings default. Batch conversion runs in the background with a cancellable prompt and blocks content editing. Cancellation applies no partial results. Conversions per difficulty can be undone together; valid sliders that previously failed strict alignment now convert approximately. Invalid input and reasons appear in paginated results. Saving persists conversion in the workspace without modifying original Songs/external files; Export is still required to write `.osu`.
+**Edit → Convert all sliders to FSliders** opens the droplet choice for the current difficulty and is disabled when it has no Legacy Sliders. Explicit single-slider conversion proceeds without a prompt, using the saved difficulty policy or the global conversion default in Droplet Settings. Batch conversion runs in the background with a cancellable prompt and blocks content editing. Cancellation applies no partial results. Conversions per difficulty can be undone together; valid sliders that previously failed strict alignment now convert approximately. Invalid input and reasons appear in paginated results. Saving persists conversion in the workspace without modifying original Songs/external files; Export is still required to write `.osu`.
 
 With Distance Snap disabled, dragging a selected slider fruit, droplet or tiny droplet follows horizontal Grid Snap, including the existing Shift override. Unreachable positions stop at an accepted grid point, or retain the original X when no grid point is reachable. With Distance Snap enabled, the strict event snapping rules above apply; rejected candidates do not leave partial geometry.
 
@@ -886,7 +1000,7 @@ slider retains the complete selection for the batch operation.
 
 ### Reverses and direction
 
-Both modes use **Ctrl+= / Ctrl+−** to change reverses. Dragging a base-path endpoint instead edits the path and therefore changes the duration of every traversal.
+In both modes, drag the slider tail in the object timeline to change reverses. Dragging a base-path endpoint instead edits the path and therefore changes the duration of every traversal.
 
 **Ctrl+G / Edit → Reverse selection** reflects selected parent intervals within the complete selection time range and reverses each slider’s first-span path, retaining its repeat count. A single FSlider keeps its original interval. Imported sliders become editable FSliders in the same undo step. Banana showers exchange their relative start/end interval positions; standalone fruit X coordinates stay unchanged. Lock Notes blocks the operation. **Edit → Reverse path direction** applies only to the active FSlider and preserves its time range. It is distinct from adding a reverse. All repeated spans derive from the same controls; changing the base path updates every traversal.
 
@@ -1022,7 +1136,7 @@ A new project's blank difficulty starts unmodified, so directly opening or impor
 
 The bottom status bar shows current action feedback, such as save results or operation limits. During background synchronization checks or application of changes, synchronization status takes priority; otherwise conversion errors take priority. It is not a log viewer. Platform details, internal zoom percentages, and duplicate dirty indicators are omitted.
 
-For FSliders, 0 reverses plays the path once, 1 returns once, and higher counts continue alternating. Use **Ctrl+= / Ctrl+−** to add/remove a reverse. With a completed FSlider selected, move the pointer to empty canvas at a time after its final end and press **Ctrl+J**. A new anchor is placed at the pointer position using the placement snap setting, with a straight segment from the base path endpoint. Existing segments remain unchanged. Extending a repeated slider lengthens its base path for every span; it does not append after the repeats. Each operation is undoable.
+For FSliders, 0 reverses plays the path once, 1 returns once, and higher counts continue alternating. Drag the slider tail in the object timeline to add or remove reverses. With a completed FSlider selected, move the pointer to empty canvas at a time after its final end and press **Ctrl+J**. A new anchor is placed at the pointer position using the placement snap setting, with a straight segment from the base path endpoint. Existing segments remain unchanged. Extending a repeated slider lengthens its base path for every span; it does not append after the repeats. Each operation is undoable.
 
 In the object timeline, a slider tail displays a horizontal resize cursor. Drag it right to add reverses or left to remove them, down to one traversal. Each step equals one unchanged base-span duration. This works for FSliders and imported Legacy Sliders; release commits one undo step and Esc cancels.
 
@@ -1302,6 +1416,54 @@ corresponding dock. Ctrl+Shift+M focuses the merge controls in Slider Inspector.
 duration, spans, control-point count, exported SV and exported path length.
 Multiple sliders show value ranges. Managed streams and stacks have no exported
 slider SV. These properties are read-only.
+
+Selecting one Legacy Slider exposes **Legacy SV (×)** in Slider Inspector. This
+edits its independent authored multiplier (0.1–10); it retains path length and
+changes duration without inserting authoring green timing points. Imported
+sliders capture their original head SV. New Legacy sliders use **osu! slider default SV**
+below Distance Snapping in the osu! canvas (initially 1×). The slider covers
+0.1–3.2× in 0.1× steps; Shift uses 0.01×. Click its numeric value to enter any SV
+from 0.1–10×, confirm with Enter or by clicking outside, and cancel with Esc.
+Values above 3.2× keep the slider at its right endpoint. The default saves globally
+on release or numeric confirmation and survives restarts without changing existing
+sliders or content history. Moving a Legacy slider across green timing boundaries
+retains its own SV. Ordinary control dragging retains SV and snaps length; holding
+Shift during the drag changes length and authored SV together to preserve duration,
+within the legal SV range. The whole gesture is one undo step. In Drawn view,
+these gestures edit the retained original controls and regenerate the processed result.
+
+Distance Snap places both circles and Legacy slider heads at the configured spacing
+from the preceding object's endpoint; the placement circle shows the same snapped position.
+Whole-object dragging uses the preceding unselected object's endpoint, retains times
+and translates the selection together. Slider head controls also use DS; other
+controls retain their path-editing gestures. Object Snap in the osu! canvas uses
+active visible circles and geometric slider endpoints within 6 screen pixels,
+independently of the Catch beat-window settings. Moving parents are excluded.
+Nearby object targets compete with DS by correction distance. Dragging retains
+its reference snapshot until release or cancellation.
+The osu! canvas toolbar includes geometric Zoom, Movement Analysis, Insert Break Time
+and Snap. Movement Analysis colours connections between successive objects using
+the Catch movement classification and labels each connection with its DS ratio.
+The osu! DS ratio uses two-dimensional endpoint-to-head distance and the preceding
+object's SV, matching placement spacing independently of canvas zoom. Switching
+analysis does not change beatmap content.
+
+Hand-drawn Legacy Sliders also use Droplet Settings for Catch preview, Testplay
+and export. Their original two-dimensional controls and visible authored SV are retained
+separately from processed geometry and SV. Postprocessing may increase its own
+processed SV to preserve duration, without adding editor timing points. Failed
+processing retains the previous state. Both representations survive project saves.
+Coincident FSlider/Legacy heads share the Legacy slider's actual SV; incompatible
+requirements are rejected instead of changing the Legacy slider's SV.
+
+With Legacy Sliders selected in the osu! canvas, **Legacy display** switches
+between **Drawn slider** and **Processed slider**. Drawn is the default and uses
+the retained original path when available; Processed uses the actual exported
+derandomized or randomized path. Without a retained processing baseline, both
+views show the same geometry. Switching affects only the osu! canvas, preserving
+content, history, Catch preview, Testplay and export. Selected sliders expose the
+controls of the displayed path. Editing Drawn controls retains the original path
+as the authoring source and regenerates droplet effects in the same undo step.
 
 **Max DS** always includes tiny droplets. **Peak
 horizontal speed** is expressed relative to the map's base SV/DPB, shown directly

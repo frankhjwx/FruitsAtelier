@@ -156,7 +156,10 @@ public sealed partial class EditorView
 
         float panelWidth = Math.Min(MovementPanelWidth, plot.Width - 12);
         if (panelWidth < 180 || plot.Height < MovementPanelHeight + 20) return;
-        var r = new Rect(Math.Clamp(Playfield.X + Playfield.Width / 2 - panelWidth / 2, plot.X + 6, plot.Right - panelWidth - 6),
+        float minX = plot.X + 6;
+        // A panel filling the available width can reverse these bounds by one float ULP.
+        float maxX = Math.Max(minX, plot.Right - panelWidth - 6);
+        var r = new Rect(Math.Clamp(Playfield.X + Playfield.Width / 2 - panelWidth / 2, minX, maxX),
             plot.Bottom - MovementPanelHeight - 8, panelWidth, MovementPanelHeight);
         if (movementPanelPosition is { } position)
             r = r with { X = Math.Clamp(position.X, plot.X, plot.Right - panelWidth),

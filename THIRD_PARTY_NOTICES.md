@@ -205,6 +205,17 @@ slider-start samples for droplets. The upstream MIT licence is retained in
 
 ## Standard skin and editor timeline references
 
+The osu! canvas's standard stacking, approach and editor fade behavior additionally
+references MIT-licensed [ppy/osu revision
+676f3b01f28841ebd97ab583e178f2d7b99fe48c](https://github.com/ppy/osu/tree/676f3b01f28841ebd97ab583e178f2d7b99fe48c):
+`osu.Game.Rulesets.Osu/Beatmaps/OsuBeatmapProcessor.cs`,
+`Objects/Drawables/DrawableHitCircle.cs`, `Objects/Drawables/DrawableSlider.cs`,
+`Skinning/Legacy/LegacySliderBody.cs`, `LegacySliderBall.cs` and
+`LegacySpinner.cs` within that ruleset. The existing retained
+MIT licence in `src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt` applies.
+The editor supplies its own drawing implementation; no osu! host or framework
+runtime or additional skin artwork is bundled.
+
 Timeline ordering, standard circle composition, padding and HitCircle font scaling reference ppy/osu
 revision `48c4800e3ae4ee752452cdff83bd3787ccf3105f` (ppy Pty Ltd, MIT).
 Source files and the independently implemented editor behaviour are listed in

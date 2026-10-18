@@ -69,12 +69,15 @@ internal static class MappingSessionTests
         ui.Key('Z', ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Nudge did not undo.");
 
         ui = new Ui(); ui.LoadDocument(OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,2,0,L|300:192,1,200\n50,192,3000,1,0,0:0:0:0:"));
+        var sourceLegacy = ui.View.Document.DeepClone();
+        ui.View.ConvertSelectedSliderRepresentation(ui.View.Document.ImportedSliders.Single().Id); ui.Paint();
         baseline = ui.View.Document.DeepClone(); ui.Key('A', ctrl: true); ui.Key('G', ctrl: true);
         Check(ui.View.Document.ImportedSliders.Count == 0 && ui.View.Document.Tracks.Count == 1, "Imported slider was not reversed as an editable path.");
         Near(1000, ui.View.Document.Fruits.Single().TimeMs);
         Check(ui.View.Document.Tracks.Single().Nodes[0].X > 250, "Imported slider body did not reverse.");
         OsuBeatmapWriter.Serialize(ui.View.Document);
         ui.Key('Z', ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Imported reverse did not restore source context.");
+        ui.Key('Z', ctrl: true); Check(sourceLegacy.ContentEquals(ui.View.Document), "Explicit conversion did not undo separately from reverse.");
     }
 
     public static void SnapAndVolume()

@@ -56,6 +56,7 @@ public sealed partial class EditorView
     {
         DistanceSliderBounds = null;
         var target = PlacementGhostPoint() is null ? SelectedDistanceObject() : null;
+        if (target is not null && IsReadOnlySlider(target.SourceId)) target = null;
         var previous = target is not null ? DistanceNeighbours(target).Previous : null;
         bool editable = target is not null && target.Kind != CatchObjectKind.TinyDroplet && previous is not null && DistanceReadout.Previous.HasValue && !notesLocked && drag == DragKind.None;
         NextDistanceFieldBounds = null;
@@ -198,7 +199,21 @@ public sealed partial class EditorView
             history.Cancel();
             distanceObject = (distanceEditTarget!.SourceId, distanceEditTarget.EventIndex);
         }
-        else history.Commit();
+        else
+        {
+            try
+            {
+                CommitContentHistory();
+            }
+            catch (InvalidOperationException error)
+            {
+                history.Cancel();
+                distanceEditTarget = distanceEditReference = null;
+                editingXCoordinate = false; distanceDragging = false;
+                StatusMessage = fieldError = error.Message;
+                return false;
+            }
+        }
         distanceEditTarget = distanceEditReference = null;
         editingXCoordinate = false;
         distanceDragging = false; fieldError = "";

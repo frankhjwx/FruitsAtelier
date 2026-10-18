@@ -1,5 +1,32 @@
 # Catch PNG skin rendering
 
+## Standard slider artwork
+
+Slider balls choose the first skin supplying either consecutive `sliderb0`,
+`sliderb1`, ... frames or a static `sliderb.png`. Animation wins within that
+skin; a custom static ball takes precedence over default-skin animation.
+Each texture prefers `@2x`. Ball tint uses `SliderBall`, white when unset,
+unless `AllowSliderBallTint` enables the current combo colour.
+Frame timing, provider resolution and the bright-centre/dark-edge slider body
+reference `LegacySliderBall.cs`, `LegacySkinExtensions.cs` and
+`Skinning/Legacy/LegacySliderBody.cs` at [ppy/osu revision
+676f3b01f28841ebd97ab583e178f2d7b99fe48c](https://github.com/ppy/osu/tree/676f3b01f28841ebd97ab583e178f2d7b99fe48c).
+The existing upstream MIT notice is retained in
+`src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt`.
+Native slider bodies cache the widened border separately from the path.
+The body gradient composites once at 70% opacity; the border retains its own
+opacity. Path and border caches retain at most 128 entries per renderer and
+release evicted Windows geometries and all retained resources on disposal.
+
+Spinner artwork resolves one skin provider and one legacy style. A background
+selects the old style; otherwise a top texture selects the newer layered style.
+Missing layers do not borrow artwork from another style or fallback provider.
+Sprites retain their raw dimensions, density and legacy scale. Editor preview
+keeps gameplay-driven rotation and glow inactive; the fixed middle transitions
+from white to red over the spinner duration, and its approach circle shrinks
+independently. These rules reference `LegacyOldStyleSpinner.cs`,
+`LegacyNewStyleSpinner.cs` and `OsuLegacySkinTransformer.cs` at the same revision.
+
 ## Testplay interface
 
 Skip uses `play-skip.png` or consecutive `play-skip-{n}.png` frames starting at

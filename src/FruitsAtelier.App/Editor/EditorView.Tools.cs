@@ -26,12 +26,23 @@ public sealed partial class EditorView
         for (int i = 0; i < 4; i++)
         {
             var mode = (Tool)i;
-            string name = i == 2 ? "fslider" : mode.ToString().ToLowerInvariant();
+            string name = IsOsuCanvas && i > 0 ? i switch { 1 => "osu-circle", 2 => "osu-slider", _ => "osu-spinner" }
+                : i == 2 ? "fslider" : mode.ToString().ToLowerInvariant();
             var bounds = new Rect(leftPanel.Right + (108 - size) / 2, top + i * size, size, size);
             toolButtons.Add(bounds);
             bool active = mode == tool;
-            c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", name + ".png"), bounds, opacity: active ? 1 : .45f);
-            string label = L.Get(i switch { 0 => "tools.select", 1 => "tools.fruit", 2 => "tools.fslider", _ => "tools.banana" });
+            if (IsOsuCanvas && i > 0)
+            {
+                float inset = size / 32;
+                var frame = new Rect(bounds.X + inset, bounds.Y + inset, size - 2 * inset, size - 2 * inset);
+                c.Fill(frame, Panel, size / 8);
+                c.StrokeOpacity(frame, Accent, Math.Max(1, size / 64), size / 8, active ? 1 : .45f);
+                var icon = new Rect(bounds.X + size * .19f, bounds.Y + size * .08f, size * .62f, size * .62f);
+                c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", name + ".png"), icon, opacity: active ? 1 : .45f);
+            }
+            else c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", name + ".png"), bounds, opacity: active ? 1 : .45f);
+            string label = L.Get(IsOsuCanvas ? i switch { 0 => "tools.select", 1 => "osu.circle", 2 => "osu.slider", _ => "osu.spinner" }
+                : i switch { 0 => "tools.select", 1 => "tools.fruit", 2 => "tools.fslider", _ => "tools.banana" });
             float fontSize = size * 52 / 512;
             c.Text(label, bounds.X + (size - c.MeasureText(label, fontSize, true)) / 2, bounds.Y + size * .76f,
                 fontSize, active ? Foreground : 0x747B85, size, true);
@@ -44,7 +55,7 @@ public sealed partial class EditorView
         var slider = toolButtons[2];
         var hoverArea = new Rect(slider.Right, slider.Y, 144, Math.Max(66, slider.Height));
         var flyout = new Rect(slider.Right, slider.Y, 144, 66);
-        sliderModeFlyoutOpen = slider.Contains(mouseX, mouseY) || sliderModeFlyoutOpen && hoverArea.Contains(mouseX, mouseY);
+        sliderModeFlyoutOpen = !IsOsuCanvas && (slider.Contains(mouseX, mouseY) || sliderModeFlyoutOpen && hoverArea.Contains(mouseX, mouseY));
         if (sliderModeFlyoutOpen)
         {
             c.Fill(flyout, Surface, 4);
@@ -53,7 +64,10 @@ public sealed partial class EditorView
         }
         for (int i = 0; i < toolButtons.Count; i++)
             if (toolButtons[i].Contains(mouseX, mouseY))
-                DrawPaletteTooltip(c, L.Get(IsLazerEditing && i < 3 ? i switch
+                DrawPaletteTooltip(c, L.Get(IsOsuCanvas ? i switch
+                {
+                    0 => "osu.hint.select", 1 => "osu.hint.circle", 2 => "osu.sliderDraft", _ => "osu.hint.spinner"
+                } : IsLazerEditing && i < 3 ? i switch
                 {
                     0 => "tools.hint.lazerSelect", 1 => "tools.hint.lazerFruit",
                     _ => LegacyMode ? "tools.hint.lazerSliderLegacy" : "tools.hint.lazerSliderPen"
@@ -207,7 +221,13 @@ public sealed partial class EditorView
     {
         if (PointerOverCanvasBackgroundDim) return null;
         if (tool is not (Tool.Fruit or Tool.Slider) || !plot.Contains(mouseX, mouseY) || drag != DragKind.None
-            || menu >= 0 || contextItems.Count > 0 || editField >= 0 || tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is not null) return null;
+            || menu >= 0 || contextItems.Count > 0 || editField >= 0 || !IsOsuCanvas && tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is not null) return null;
+        if (IsOsuCanvas)
+        {
+            if (osuDraftSlider is { } slider) return new(slider.TimeMs, slider.X);
+            var position = OsuInputPoint(mouseX, mouseY, useDistance: tool is Tool.Fruit or Tool.Slider && osuDraftSlider is null, useObjects: true);
+            return new(OsuPlacementTime, position.X);
+        }
         if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack
             && (LegacyMode && legacyPreviewValid || draft.Nodes.Any(n => Near(Point(n), mouseX, mouseY, 8)))) return null;
         var point = tool == Tool.Slider && !LegacyMode
@@ -356,7 +376,6 @@ public sealed partial class EditorView
         bool Replaces(double startTimeMs) => Math.Abs(startTimeMs - timeMs) <= 2;
         document.Fruits.RemoveAll(f => Replaces(f.TimeMs));
         document.Tracks.RemoveAll(t => t.Nodes.Count > 0 && Replaces(t.Nodes[0].TimeMs));
-        document.ImportedSliders.RemoveAll(s => Replaces(s.TimeMs));
         document.BananaShowers.RemoveAll(s => Replaces(s.TimeMs));
     }
 

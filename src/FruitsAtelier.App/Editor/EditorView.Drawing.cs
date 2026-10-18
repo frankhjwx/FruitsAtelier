@@ -14,6 +14,8 @@ public sealed partial class EditorView
     internal Rect WorkspaceSelectorBounds => new(8, 88, 132, 30);
     internal Rect CanvasToolbarBounds => new(148, 84, Math.Max(0, width - 356), 38);
     internal Rect WorkspaceStatsBounds => new(width - 208, 84, 208, 38);
+    internal Rect CanvasRenderBounds => new(leftPanel.Right, plot.Y,
+        Math.Max(0, canvas.Right - leftPanel.Right), plot.Height);
 
     private void RefreshKiaiTransitions()
     {
@@ -44,6 +46,7 @@ public sealed partial class EditorView
         PumpSynchronizationWait();
         PumpAudioProject();
         PumpLibraryOpen();
+        PumpLegacyDropletRefresh();
         if (ConversionNeedsRedraw) PumpDeferredConversion();
         CompleteSliderMultiplierValidation();
         RefreshLanguage();
@@ -107,6 +110,7 @@ public sealed partial class EditorView
             DrawDistanceReadout(c);
             DrawAssistPalette(c);
             DrawSelectionBox(c);
+            DrawCoordinateReadout(c);
         }
         DrawInspector(c);
         if (TimingPageVisible) DrawTimingPage(c); else DrawDockPanels(c);
@@ -168,7 +172,7 @@ public sealed partial class EditorView
         float snapLeft = toolbarRight - 158;
         bool compactToolbar = CanvasToolbarBounds.Width < 900;
         bool narrowZoom = compactToolbar;
-        if (UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), toolbarLeft + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
+        if (IsOsuCanvas || UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), toolbarLeft + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
         float breakWidth = compactToolbar ? 115 : 140;
         float breakX = snapLeft - breakWidth - 5;
         float toggleWidth = compactToolbar ? CanvasToolbarBounds.Width < 700 ? 75 : 105 : 155;
@@ -177,26 +181,45 @@ public sealed partial class EditorView
         float pathX = selectionX - toggleWidth - 5;
         zoomSlider = new(toolbarLeft + (narrowZoom ? 8 : 74), canvas.Y + 4,
             Math.Max(30, pathX - (narrowZoom ? 70 : 154) - toolbarLeft), 29);
-        DrawCanvasScaleLock(c);
-        if (UniformCanvasScale)
+        if (!IsOsuCanvas)
         {
-            float progress = IsLazerEditing ? (float)((lazerZoomTarget - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom))
-                : (float)(MaximumCanvasZoom - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom) : 1);
-            float zoomX = zoomSlider.X + progress * zoomSlider.Width;
+            DrawCanvasScaleLock(c);
+            if (UniformCanvasScale)
+            {
+                float progress = IsLazerEditing ? (float)((lazerZoomTarget - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom))
+                    : (float)(MaximumCanvasZoom - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom) : 1);
+                float zoomX = zoomSlider.X + progress * zoomSlider.Width;
+                float zoomY = canvas.Y + (narrowZoom ? 27 : 19);
+                c.Line(zoomSlider.X, zoomY, zoomSlider.Right, zoomY, Grid, 3);
+                c.Line(zoomSlider.X, zoomY, zoomX, zoomY, Accent, 3);
+                c.Circle(zoomX, zoomY, 6, Accent);
+                c.Text(L.Get("ui.zoomPercent", (IsLazerEditing ? lazerZoomTarget : canvasZoom) * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 32 : 48);
+            }
+            else DrawCanvasAxisZoom(c);
+            PrepareCanvasToggleText(c, compactToolbar, toggleWidth);
+            CanvasToggle(0, pathX, () => showTargets = !showTargets, showTargets);
+            CanvasToggle(1, selectionX, () => showSelectionRect = !showSelectionRect, showSelectionRect);
+            CanvasToggle(2, movementX, () => movementAnalysis = !movementAnalysis, movementAnalysis);
+        }
+        else
+        {
+            CanvasScaleLockBounds = default;
+            zoomSlider = new(toolbarLeft + (narrowZoom ? 8 : 74), canvas.Y + 4,
+                Math.Max(30, movementX - toolbarLeft - (narrowZoom ? 60 : 140)), 29);
+            float zoomX = zoomSlider.X + (float)((osuCanvasZoom - .25) / 3.75) * zoomSlider.Width;
             float zoomY = canvas.Y + (narrowZoom ? 27 : 19);
             c.Line(zoomSlider.X, zoomY, zoomSlider.Right, zoomY, Grid, 3);
             c.Line(zoomSlider.X, zoomY, zoomX, zoomY, Accent, 3);
             c.Circle(zoomX, zoomY, 6, Accent);
-            c.Text(L.Get("ui.zoomPercent", (IsLazerEditing ? lazerZoomTarget : canvasZoom) * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 32 : 48);
+            c.Text(L.Get("ui.zoomPercent", osuCanvasZoom * 100), zoomSlider.Right + 8,
+                canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 40 : 48);
+            PrepareCanvasToggleText(c, compactToolbar, toggleWidth);
+            CanvasToggle(2, movementX, () => movementAnalysis = !movementAnalysis, movementAnalysis);
         }
-        else DrawCanvasAxisZoom(c);
-        PrepareCanvasToggleText(c, compactToolbar, toggleWidth);
-        CanvasToggle(0, pathX, () => showTargets = !showTargets, showTargets);
-        CanvasToggle(1, selectionX, () => showSelectionRect = !showSelectionRect, showSelectionRect);
-        CanvasToggle(2, movementX, () => movementAnalysis = !movementAnalysis, movementAnalysis);
         void CanvasToggle(int index, float x, Action action, bool active)
         {
             var bounds = new Rect(x, canvas.Y + 4, toggleWidth, 29);
+            if (index == 2) OsuMovementAnalysisBounds = IsOsuCanvas ? bounds : default;
             Button(c, bounds, "", action, active);
             var text = canvasToggleText[index];
             float size = text.Size;
@@ -223,6 +246,7 @@ public sealed partial class EditorView
         c.Circle(snapX, snapCenterY, 6, Accent);
         c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, snapTextY, 11, Foreground, 40);
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
+        if (IsOsuCanvas) { DrawOsuCanvas(c); return; }
         c.Text(L.Get("ui.timeAxis"), canvas.X + 11, plot.Y - 20, 10, Muted, 43);
         var playfield = Playfield;
         c.Clip(new(plot.X - 16, plot.Y - 22, plot.Width + 32, plot.Height + 22));
@@ -289,7 +313,7 @@ public sealed partial class EditorView
             axisLabelRows.Add(labelY);
         }
         c.Unclip();
-        c.Clip(plot);
+        c.Clip(CanvasRenderBounds);
         foreach (var shower in Document.BananaShowers.Where(item => item.Id != draftBanana))
         {
             var bounds = BananaRectangle(shower);
@@ -443,7 +467,7 @@ public sealed partial class EditorView
             DrawCatchObject(c, item, p.X, p.Y, CanvasObjectWidth, opacity * (previewTail ? .6f : 1), hyperStarts: placementHyperdash,
                 animated: IsLazerEditing, presentationTime: LazerPresentationTime, approachRate: Document.ApproachRate);
             if (IsObjectSelected(item.SourceId))
-                c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * CanvasObjectWidth / 512 + 3, Accent, false, 1.5f);
+                c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * CanvasObjectWidth / 512 + 3, SelectionHighlightColour, false, 1.5f);
             if (item.Kind == CatchObjectKind.Fruit && newComboEvents.Contains((item.SourceId, item.EventIndex)))
             {
                 if (comboLabelWidth == 0)

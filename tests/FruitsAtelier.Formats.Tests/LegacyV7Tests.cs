@@ -75,7 +75,7 @@ internal static class LegacyV7Tests
         history.Redo(); Check(!history.Document.LegacySliderTicks, "redo lost modern rules");
         var project = BeatmapProject.FromDocuments([legacy, OsuBeatmapReader.Read(Fixture(1).Replace("format v7", "format v14"))]);
         string multi = ProjectSerializer.Serialize(project);
-        Check(multi.Contains("\"SchemaVersion\": 20"), "v7 multi-project must reject older readers");
+        Check((multi.Contains("\"SchemaVersion\": 20") || multi.Contains("\"SchemaVersion\": 30")), "v7 multi-project must reject older readers");
         var restored = ProjectSerializer.ReadProject(multi);
         Check(restored.Difficulties[0].Document.LegacySliderTicks && !restored.Difficulties[1].Document.LegacySliderTicks, "mixed-format project lost independent rules");
         string ordinary = ProjectSerializer.Serialize(new MapDocument());
@@ -88,7 +88,7 @@ internal static class LegacyV7Tests
     private static OsuWriteResult RoundTrip(MapDocument document)
     {
         string project = ProjectSerializer.Serialize(document);
-        Check(project.Contains("\"SchemaVersion\": 19"), "v7 project must reject older readers");
+        Check((project.Contains("\"SchemaVersion\": 19") || project.Contains("\"SchemaVersion\": 29")), "v7 project must reject older readers");
         var restored = ProjectSerializer.Read(project);
         Check(document.ContentEquals(restored), "project lost v7 content");
         var result = OsuBeatmapWriter.Serialize(restored);

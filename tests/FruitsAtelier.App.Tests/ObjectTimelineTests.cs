@@ -170,14 +170,17 @@ internal static class ObjectTimelineTests
                 }
             }
             var ui = new Ui(false); ui.LoadDocument(map);
+            if (imported) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
             ui.View.UpdateTransport(1500, 10000, false, false, false, null, null); ui.Paint();
             var r = ui.View.ObjectTimelineBounds;
             float X(double t) => r.X + (float)((t - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
             float y = r.Y + 2.5f;
             Guid last = imported ? map.ImportedSliders[^1].Id : map.Tracks[^1].Id;
             ui.Click(X(1500), y);
+            uint selectionColour = imported ? 0xFFA600u : ui.View.LibrarySettings.SelectionHighlightColour;
+            float selectionRadius = imported ? 19 : 21;
             if (!ui.View.SelectedObjectIds.SequenceEqual(new[] { last })
-                || !ui.Canvas.Circles.Any(c => c.Radius == 21 && c.Color == 0x2866C6 && Math.Abs(c.X - X(1500)) < .01 && c.Y == r.Y + 21))
+                || !ui.Canvas.Circles.Any(c => !c.Filled && c.Radius == selectionRadius && c.Color == selectionColour && Math.Abs(c.X - X(1500)) < .01 && c.Y == r.Y + 21))
                 throw new Exception("Stacked slider repeat did not select its shifted sound edge.");
             ui.View.PointerMove(X(2000), y, false, false);
             if (!ui.View.TimelineResizeCursor) throw new Exception("Stacked tail has no resize cursor.");
@@ -226,7 +229,7 @@ internal static class ObjectTimelineTests
         float X(double time) => r.X + (float)((time - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
         void CheckOrder()
         {
-            var labels = ui.Canvas.Texts.Where(t => t.Y == r.Y + 19 && t.Value is "1" or "2").ToArray();
+            var labels = ui.Canvas.Texts.Where(t => Math.Abs(t.Y + t.Size * .6f - (r.Y + 27)) < .01 && t.Value is "1" or "2").ToArray();
             if (!labels.Select(t => t.Value).SequenceEqual(new[] { "2", "1" })) throw new Exception("Earlier timeline numbers do not cover later objects.");
             var bodies = ui.Canvas.Circles.Where(c => c.Y == r.Y + 27 && c.Radius == 19 && c.Filled).ToArray();
             if (bodies.Length != 2 || bodies[0].X <= bodies[1].X) throw new Exception("Earlier circle is not painted last.");
@@ -316,6 +319,13 @@ internal static class ObjectTimelineTests
             if (ui.View.PlayheadMs != 1500 || ui.View.SelectedObjectIds.Count != 0)
                 throw new Exception("Empty timeline click must clear selection without seeking");
         }
+        var readOnly = ui.View.Document.DeepClone();
+        ui.Click(X(2000), y);
+        ui.View.PointerDown(X(2000), y, 0, false, false);
+        ui.View.PointerMove(X(2250), y, false, false);
+        ui.View.PointerUp(X(2250), y, 0); ui.Paint();
+        if (!readOnly.ContentEquals(ui.View.Document)) throw new Exception("Catch timeline changed a read-only Legacy slider.");
+        ui.View.ToggleOsuCanvas(); ui.Paint();
         ui.View.UpdateTransport(1500, 10000, true, false, false, null, null); ui.Paint();
         ui.Click(X(1000), y);
         ui.View.PointerDown(X(2000), y, 0, false, true); ui.View.PointerUp(X(2000), y, 0); ui.Paint();
@@ -381,6 +391,7 @@ internal static class ObjectTimelineTests
             track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 200 }]);
             if (imported) map.ImportedSliders.Add(slider); else map.Tracks.Add(track);
             var ui = new Ui(false); ui.LoadDocument(map);
+            if (imported) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
             ui.View.UpdateTransport(1750, 10000, true, false, false, null, null); ui.Paint();
             var r = ui.View.ObjectTimelineBounds;
             float X(double t) => r.X + (float)((t - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
@@ -425,6 +436,7 @@ internal static class ObjectTimelineTests
                 map.Tracks.Add(track);
             }
             var ui = new Ui(false); ui.LoadDocument(map);
+            if (imported) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
             ui.View.UpdateTransport(1500, 10000, true, false, false, null, null); ui.Paint();
             int Spans() => imported ? ui.View.Document.ImportedSliders.Single().SpanCount : ui.View.Document.Tracks.Single().SpanCount;
             var before = ui.View.Document.DeepClone();
@@ -553,9 +565,7 @@ internal static class ObjectTimelineTests
             L.SetLanguage(language); ui.Resize(980, 620);
             foreach (double speed in new[] { .1, .25, .5, .75, 1, 1.5 })
             {
-                var selector = ui.View.PlaybackSpeedSelectorBounds;
-                ui.Click(selector.X + 5, selector.Y + 5);
-                var text = ui.Canvas.Texts.Last(t => t.Value == (ui.View.PlaybackSpeed == speed ? "✓ " : "") + L.Get("ui.zoomPercent", speed * 100));
+                var text = ui.Canvas.Texts.Last(t => t.Value == L.Get("ui.zoomPercent", speed * 100));
                 ui.Click(text.X + 2, text.Y + 2);
                 if (requested != speed || ui.View.PlaybackSpeed != speed || ui.View.IsDirty)
                     throw new Exception("Speed selector did not update transport alone");
@@ -589,15 +599,18 @@ internal static class ObjectTimelineTests
                 map.Tracks.Add(track); id=track.Id;
             }
             var ui=new Ui(); ui.LoadDocument(map);
+            if (imported) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
             ui.View.UpdateTransport(1750,10000,false,false,false,null,null); ui.Paint();
             var r=ui.View.ObjectTimelineBounds;
             float X(double time)=>r.X+(float)((time-ui.View.ObjectTimelineStartMs)*ui.View.ObjectTimelinePixelsPerMs);
             var before=ui.View.Document.DeepClone();
+            uint selectionColour = imported ? 0xFFA600u : ui.View.LibrarySettings.SelectionHighlightColour;
+            float selectionRadius = imported ? 19 : 21;
             for(int edge=0;edge<=3;edge++)
             {
                 ui.Click(X(1000+500*edge),r.Y+27); ui.Paint();
                 if(!ui.View.Document.ContentEquals(before)) throw new Exception("Timeline edge selection edits content");
-                var selected=ui.Canvas.Circles.Where(c=>c.Radius==21 && c.Color==0x2866C6 && c.Y==r.Y+27).ToArray();
+                var selected=ui.Canvas.Circles.Where(c=>!c.Filled && c.Radius==selectionRadius && c.Color==selectionColour && c.Y==r.Y+27).ToArray();
                 if(selected.Length!=1 || Math.Abs(selected[0].X-X(1000+500*edge))>.01) throw new Exception("Only selected sound edge is highlighted");
                 var clap=ui.View.AssistButtonBounds[3]; ui.Click(clap.X+clap.Width/2,clap.Y+clap.Height/2);
                 for(int other=0;other<=3;other++)

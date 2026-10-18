@@ -18,8 +18,9 @@ internal static class ClipboardMultiTests
         var before = ui.View.Document.DeepClone();
         ui.View.UpdateTransport(3000.25, 10000, true, false, false, null, "fixture.wav");
         Check(ui.View.PasteSelection(), ui.View.StatusMessage);
+        ui.Paint();
         var pasted = Parents(ui.View.Document).Where(p => !oldIds.Contains(p.Id)).OrderBy(p => p.Order).ToArray();
-        Check(pasted.Length == originals.Length && Selected(ui).SetEquals(pasted.Select(p => p.Id)), "Paste did not select the complete new batch.");
+        Check(pasted.Length == originals.Length && Selected(ui).SetEquals(pasted.Select(p => p.Id)), $"Paste did not select the complete new batch: {ui.View.StatusMessage}");
         for (int i = 0; i < originals.Length; i++)
         {
             Near(3000.25 + originals[i].Time - 800, pasted[i].Time);
@@ -46,6 +47,9 @@ internal static class ClipboardMultiTests
         Check(shower.OriginalLine!.Contains(",3200.25,12,8,3500.25,", StringComparison.Ordinal)
             && shower.OriginalLine.EndsWith("2:3:4:60:banana.wav", StringComparison.Ordinal), "Banana range or sample metadata was lost.");
         var after = ui.View.Document.DeepClone();
+        Check(!ui.View.CutSelection() && ui.View.Document.ContentEquals(after)
+            && Selected(ui).SetEquals(pasted.Select(p => p.Id)),
+            "Cutting a pasted batch with an opposite-mode slider must preserve the entire batch and selection.");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ContentEquals(before), "One undo did not remove the whole batch without altering its originals.");
         ui.Key('Y', ctrl: true);
@@ -63,16 +67,33 @@ internal static class ClipboardMultiTests
         Guid untouched = ui.View.Document.Fruits.Single(f => f.TimeMs == 800).Id;
         var ids = Parents(ui.View.Document).Select(p => p.Id).Where(id => id != untouched).ToArray();
         Select(ui, ids);
+        Check(!ui.View.CutSelection() && ui.View.Document.ContentEquals(before)
+            && Selected(ui).SetEquals(ids) && !ui.View.IsDirty,
+            "A mixed cut containing an opposite-mode slider must reject the whole transaction.");
+        Guid imported = ui.View.Document.ImportedSliders.Single().Id;
+        ids = ids.Where(id => id != imported).ToArray();
+        Select(ui, ids);
         Check(ui.View.CutSelection(), ui.View.StatusMessage);
-        Check(Parents(ui.View.Document).Single().Id == untouched && Selected(ui).Count == 0 && ui.View.CanPasteSelection,
-            "Cut did not remove every selected parent or also removed the unselected fruit.");
+        Check(Parents(ui.View.Document).Select(p => p.Id).ToHashSet().SetEquals([untouched, imported])
+            && Selected(ui).Count == 0 && ui.View.CanPasteSelection,
+            "Cut did not remove every editable selected parent or removed an unselected parent.");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ContentEquals(before), "One undo did not restore every cut object and its identity.");
         ui.Key('Y', ctrl: true);
-        Check(Parents(ui.View.Document).Single().Id == untouched, "Redo did not cut the complete batch.");
+        Check(Parents(ui.View.Document).Select(p => p.Id).ToHashSet().SetEquals([untouched, imported]), "Redo did not cut the complete editable batch.");
         ui.View.UpdateTransport(4000, 10000, true, false, false, null, "fixture.wav");
-        Check(ui.View.PasteSelection() && Parents(ui.View.Document).Count() == ids.Length + 1,
+        Check(ui.View.PasteSelection() && Parents(ui.View.Document).Count() == ids.Length + 2,
             "Cut did not retain all objects in the clipboard.");
+        ui.View.ToggleOsuCanvas();
+        Select(ui, [ui.View.Document.Tracks.Single().Id]);
+        var osuBefore = ui.View.Document.DeepClone();
+        Check(ui.View.CopySelection() && !ui.View.CutSelection() && ui.View.Document.ContentEquals(osuBefore),
+            "The standard canvas must copy an FSlider while rejecting its deletion.");
+        Check(ui.View.PasteSelection() && ui.View.Document.Tracks.Count == 2,
+            "The standard canvas must preserve an FSlider clipboard representation when inserting a new copy.");
+        var osuPasted = ui.View.Document.DeepClone();
+        Check(!ui.View.CutSelection() && ui.View.Document.ContentEquals(osuPasted),
+            "A newly pasted FSlider must remain read-only on the standard canvas.");
     }
 
     public static void OverflowPasteRollsBackBatch()
@@ -117,7 +138,7 @@ internal static class ClipboardMultiTests
 
     private static MapDocument MixedMap()
     {
-        var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,192,1000,12,8,1300,2:3:4:60:banana.wav\n160,192,1000,6,2,B|220:250|300:192,2,200,2|4|8,1:2|2:3|3:4,2:3:4:70:clap.wav\n320,192,1000,5,2,2:3:4:70:fruit.wav\n64,192,800,1,0,0:0:0:0:\n");
+        var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:3\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,192,1000,12,8,1300,2:3:4:60:banana.wav\n160,192,1000,6,2,B|220:250|300:192,2,200,2|4|8,1:2|2:3|3:4,2:3:4:70:clap.wav\n320,192,1000,5,2,2:3:4:70:fruit.wav\n64,192,800,1,0,0:0:0:0:\n");
         var track = new CurveTrack { Name = "Mixed clipboard", SpanCount = 2, SourceOrder = int.MaxValue, CompensateTinyDroplets = false };
         track.Nodes.Add(new() { TimeMs = 1000, X = 100, HandleOut = new(100, 20), OutgoingKind = CurveKind.Bezier });
         track.Nodes.Add(new() { TimeMs = 1500, X = 200, HandleIn = new(-100, -20) });

@@ -39,15 +39,6 @@ an earlier branch returns without handling Ctrl. Shift+1–9, Ctrl+M and the vis
 Snap bar provide alternatives. Share Snap-wheel dispatch across the surfaces if
 the intended behavior is global. Source: [Wheel](../src/FruitsAtelier.App/Editor/EditorView.Input.cs).
 
-### P3: Reverse count has narrow physical-key support
-
-Only virtual keys 187 (`=`) and 189 (`-`) with Ctrl and without Shift are handled.
-Ctrl+Shift+= and keypad Add/Subtract are ignored. The Mac adapter emits distinct
-keypad codes too. Add these aliases if desired; preserve the documented Ctrl+=
-binding. This is an accessibility/usability addition, not a stable compatibility
-requirement. Sources: [KeyDown](../src/FruitsAtelier.App/Editor/EditorView.Input.cs),
-[MacInput](../src/FruitsAtelier.Mac/EditorControl.cs).
-
 ## Differences from osu!stable
 
 The following compact comparison uses the official reference above. The remaining
@@ -86,7 +77,6 @@ Ctrl+P are isolated from Compose commands. These are legitimate context reuse.
 | --- | --- | --- |
 | Ctrl+N: clear objects | Select-all and transactional deletion | Add a confirmation and a dedicated clear-all command; respect Lock Notes, drafts and undo. A shortcut alone is insufficient because the confirmation does not exist. |
 | Ctrl+Shift+wheel: canvas zoom alias | `ZoomCanvasAt` | Small dispatch addition if this previously documented alias is still desired. Preserve Ctrl+wheel Snap and Ctrl+Alt+wheel tools. |
-| Ctrl++ / keypad reverse aliases | `ChangeReverseCount` | Small exact-chord addition, with Windows/Mac mapping checks. |
 | Double-click fruit / slider endpoint to seek | `SeekTo`, hit testing | Feasible, but must arbitrate against point editing, child selection and double-click boundary conversion. |
 | Dedicated key to open Jump to time | `OpenTimeJump` | Small addition once an unused chord is chosen; not an existing stable editor requirement. |
 | Stop playback key | Transport Stop behavior | Expose a chosen free chord if useful; X already restarts playback and Home only seeks. |

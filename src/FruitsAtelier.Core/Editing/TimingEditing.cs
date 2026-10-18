@@ -33,7 +33,7 @@ public static class TimingEditing
         var before = map.DeepClone();
         map.TimingPoints.Clear(); map.TimingPoints.AddRange(points.Select(Copy));
         var first = map.TimingPoints.Where(p => p.Uninherited).OrderBy(p => p.TimeMs).FirstOrDefault();
-        if (first is not null) { map.BeatLengthMs = first.BeatLengthMs; map.TimingOffsetMs = first.TimeMs; }
+        if (first is not null) { map.BeatLengthMs = TimingMap.EffectiveBeatLength(first.BeatLengthMs); map.TimingOffsetMs = first.TimeMs; }
         var oldReds = before.TimingPoints.Where(p => p.Uninherited).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).GroupBy(p => p.TimeMs).Select(g => g.First()).ToArray();
         (double Time, double Scale) Transform(double time)
         {
@@ -42,7 +42,7 @@ public static class TimingEditing
             var change = changes.LastOrDefault(c => c.Before.Uninherited && c.After.Uninherited
                 && c.Before.TimeMs == red.TimeMs && c.Before.SourceOrder == red.SourceOrder);
             if (change.Before is null) return (time, 1);
-            double scale = change.After.BeatLengthMs / change.Before.BeatLengthMs;
+            double scale = TimingMap.EffectiveBeatLength(change.After.BeatLengthMs) / TimingMap.EffectiveBeatLength(change.Before.BeatLengthMs);
             return (change.After.TimeMs + (time - change.Before.TimeMs) * scale, scale);
         }
         if (options.Scale) TransformObjects(map, Transform);
@@ -112,7 +112,7 @@ public static class TimingEditing
             .Concat(map.BananaShowers.Select(s => s.EndTimeMs)).DefaultIfEmpty(0).Max());
     }
 
-    private static void TransformTrack(CurveTrack track, double origin, double target, double scale)
+    internal static void TransformTrack(CurveTrack track, double origin, double target, double scale)
     {
         for (int i = 0; i < track.StreamNewComboOffsets.Count; i++) track.StreamNewComboOffsets[i] *= scale;
         foreach (var node in track.Nodes)
@@ -141,7 +141,7 @@ public static class TimingEditing
             var state = TimingMap.At(map, slider.TimeMs);
             double oldEnd = ImportedSliderConverter.EndTimeMs(map, slider);
             double duration = Math.Max(state.BeatLengthMs / divisor, TimingMap.Snap(map, oldEnd, divisor) - slider.TimeMs);
-            slider.PixelLength = duration / slider.SpanCount * 100 * map.EffectiveSliderMultiplier * state.SliderVelocityMultiplier / state.BeatLengthMs;
+            slider.PixelLength = duration / slider.SpanCount * 100 * map.EffectiveSliderMultiplier * ImportedSliderConverter.SliderVelocityAt(map, slider) / state.BeatLengthMs;
             UpdateSliderSource(slider, 7, slider.PixelLength);
         }
         foreach (var track in map.Tracks.Where(t => t.Nodes.Count >= 2))

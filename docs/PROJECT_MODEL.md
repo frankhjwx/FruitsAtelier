@@ -2,7 +2,40 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. Per-fruit stream combos use schema 17/18. Documents retaining v7 slider tick rules use schema 19/20. Banana shower patterns use schema 21/22. Project-level notes use multi-difficulty schema 24; empty notes retain the document-derived schema. Per-slider droplet modes use schema 25 (single difficulty) or 26 (multi-difficulty). All preceding schemas remain readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v7–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing, retaining v7 on export for v7 maps and using v14 otherwise. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. Per-fruit stream combos use schema 17/18. Documents retaining v7 slider tick rules use schema 19/20. Banana shower patterns use schema 21/22. Project-level notes use multi-difficulty schema 24; empty notes retain the document-derived schema. Per-slider droplet modes use schema 25 (single difficulty) or 26 (multi-difficulty). All preceding schemas remain readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v7–v14 and stable-compatible lazer v128 / Mode=0 or Mode=2 `.osu` parsing, retaining v7 on export for v7 maps and using v14 otherwise. Authored content, imported context, and derived output remain separate.
+
+Non-default osu canvas coordinates, independent osu distance spacing, Legacy native
+geometry preservation, or randomization baselines use schema 27 (single difficulty)
+or 28 (multi-difficulty).
+Independent Legacy slider SV uses schema 29 (single difficulty) or 30 (multiple
+difficulties). Each Legacy slider stores its authored `SliderVelocityMultiplier`
+and an optional `ProcessedSliderVelocityMultiplier` for materialized droplet
+compensation. Imported sliders capture the effective SV at their head; opening an
+older project in the editor captures missing values before establishing history.
+Moving or reshaping a slider retains its authored SV. Green timing changes do not
+replace this per-object value. The Inspector edits authored SV; export metrics
+report the processed value. Export alone synthesizes required green points.
+
+Older schemas remain readable. A fruit's geometric Y defaults to 192; old saved
+fruits recover Y from their retained source object line when present. Catch editing
+preserves this coordinate. `OsuDistanceSpacing` is independent of Catch spacing,
+defaults to 1 and accepts 0.1–3.2. It participates in persistence and undo and is
+not exported as the Catch `Editor/DistanceSpacing` value.
+
+Imported slider control points retain the existing JSON array representation.
+In memory, integer coordinates use exact 32-bit pairs; other values preserve
+double precision. Independent mutable collections may share immutable backing
+storage until an edit detaches it. Derived geometry caches are not serialized.
+
+Legacy sliders can retain detached `RandomizationSource` geometry and a fitted
+`RandomizationTrack`. Settings changes derive their path from this baseline so
+repeated strength or seed changes do not compound previous effects. Materialized
+geometry and emitted timing are validated through NM and HR export/read-back
+before replacement. A failure retains the original objects and reports its reason.
+Legacy sliders authored or manually edited in the osu! canvas persist `PreserveNativeGeometry`.
+Their original two-dimensional controls and authored SV remain separate from the
+materialized droplet path and processed SV, including after reopening. Failed
+processing retains the prior committed state. Older objects default to false.
 
 ## Authoritative and derived data
 
@@ -29,7 +62,9 @@ and their document title when synchronization reconstructs their context. Snapsh
 without timing points use their stored BPM and offset to reconstruct the initial
 red point, matching export.
 
-`BeatmapProject` stores a project Name, optional project-wide Notes, and 1–256 `ProjectDifficulty` entries. Each difficulty contains its own Guid, Version display name, and complete `MapDocument`. Schema 2 uses a `Project` outer container and atomically saves all difficulties together. Schema 1's `Document` is automatically wrapped as a single-difficulty project. Each difficulty's resource paths are written and resolved relative to the project directory, retaining the older path safety checks. Project JSON is limited to 128 MiB of UTF-8 data per file, including workspace difficulty files and legacy single- or multi-difficulty projects.
+`BeatmapProject` stores a project Name, optional project-wide Notes, and 1–256 `ProjectDifficulty` entries. Each difficulty contains its own Guid, Version display name, and complete `MapDocument`. Schema 2 uses a `Project` outer container and atomically saves all difficulties together. Schema 1's `Document` is automatically wrapped as a single-difficulty project. Each difficulty's resource paths are written and resolved relative to the project directory, retaining the older path safety checks. Project JSON is limited to 256 MiB of UTF-8 data per file, including workspace difficulty files and legacy single- or multi-difficulty projects.
+
+Large imported paths use compact JSON above 65,536 total control points. This changes whitespace only; source text, control points and project schemas remain unchanged.
 
 The editor maintains an independent `EditorHistory` per difficulty and accesses `Document` through the current difficulty. Undo affects only that difficulty; saving updates every history baseline. Adding a difficulty changes project structure rather than a difficulty's object undo stack and keeps the project dirty until saved. The active difficulty, tab scroll position, playhead, and viewport are session state and are not persisted. Opening selects the first difficulty; switching does not create content history. The project container does not force imported `.osu` difficulties to share audio or timing, avoiding overwriting source content.
 
@@ -251,7 +286,7 @@ and exported read-back apply the ordinary osu HR rules to the generated geometry
 
 `.catchproj` saves nodes, handles, optional exact OutgoingCurve controls and reference ratios, OutgoingKind, default track Kind, SpanCount, OriginalLine, CompensateTinyDroplets, difficulty, complete timing, and resource references. It excludes undo history, derived objects, and GPU caches. Older projects default to OutgoingKind=null, SpanCount=1, and Tiny override=null. Reading validates schema, IDs, model boundaries, and curve constraints, rejecting unsupported fields and versions. Inherited NaN uses named JSON floating-point representation. Saving replaces a same-directory temporary file and stores resource paths relative to the project directory without copying audio.
 
-`.osu` accepts v7–v14 and stable-compatible lazer v128 / Mode=2 and emits v7 for maps retaining legacy slider ticks or v14 otherwise, always with Mode=2; see [stable File Contract](STABLE_FORMAT.md). Legacy Sliders retain original lines. FSliders encode integer time and path coordinates, preserve SpanCount, and insert/restore inherited SV as needed. Legacy-converted FSliders reuse original type/hitsound/sample fields. Span-count edits preserve surviving edge samples; new edges receive defaults and a diagnostic. Incompatible same-time SV conflicts fail explicitly. Export read-back compares the full object sequence, times, and X; quantization can introduce errors or sequence changes.
+`.osu` accepts v7–v14 and stable-compatible lazer v128 / Mode=0 or Mode=2 and emits v7 for maps retaining legacy slider ticks or v14 otherwise, always with Mode=2; see [stable File Contract](STABLE_FORMAT.md). Legacy Sliders retain original lines. FSliders encode integer time and path coordinates, preserve SpanCount, and insert/restore inherited SV as needed. Legacy-converted FSliders reuse original type/hitsound/sample fields. Span-count edits preserve surviving edge samples; new edges receive defaults and a diagnostic. Incompatible same-time SV conflicts fail explicitly. Export read-back compares the full object sequence, times, and X; quantization can introduce errors or sequence changes.
 
 Project saving and `.osu` export are independent; exporting cannot replace saving authoring intent. Video and storyboard playback are unsupported. Preserving raw section text alone does not mean its referenced assets have been packaged; workspace archive retention is described separately in [Workspace](WORKSPACE.md).
 

@@ -33,7 +33,8 @@ public sealed partial class EditorView
         var result = new Dictionary<Guid, int>();
         int number = 0;
         bool afterSpinner = false;
-        foreach (var item in ComboEntries())
+        // A pasted batch can precede publication of its cached rendering entries.
+        foreach (var item in BuildComboEntries())
         {
             if ((item.Flags & 4) != 0 || item.IsBanana || afterSpinner) number = 0;
             result.TryAdd(item.Id, ++number);
@@ -126,6 +127,7 @@ public sealed partial class EditorView
     {
         if (!TryCopySnapshot(out var snapshot)) return false;
         var ids = ClipboardParents(snapshot!).Select(p => p.Id).ToHashSet();
+        if (ids.Any(IsReadOnlySlider)) { StatusMessage = L.Get("osu.readOnlySlider"); return false; }
         string reference = SelectionReference(snapshot!);
         if (!Edit(L.Get("editor.command.cutObjects"), () =>
         {

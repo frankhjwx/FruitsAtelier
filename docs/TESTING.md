@@ -24,7 +24,19 @@ dotnet build ../FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
 
 See [Running on macOS](MACOS.md) for launch and packaging. Project files and `packages.lock.json` pin package versions; NuGet caches packages in `artifacts/packages`.
 
+`App.Tests --droplet-defaults-check` verifies global Droplet Settings and Inspector
+mode persistence, new-project initialization, both FSlider drawing modes after
+reloading preferences, and preservation of existing project values.
+
 ### Windows sandbox permissions
+
+`App.Tests --window-preferences-check` checks canvas switch persistence, settings
+compatibility, window preference serialization, per-difficulty GS/DS, grid level,
+Anchor Snap and beat-snap restoration, and temporary beat-grid isolation. It also
+checks that snap slider movement defers saving until release. On Windows,
+`FruitsAtelier.App.exe --render-check --window-preferences-render-check` launches
+native windows and checks normal/maximized restoration after minimized and
+fullscreen states, setup isolation and work-area clamping.
 
 Before running checks from a restricted agent sandbox, inspect the selected
 command's access requirements. Run Windows `dotnet build`, the full App regression
@@ -48,6 +60,69 @@ existing settings isolation and cleanup.
 Windows distribution uses the self-contained ZIP and extracted-executable check described in [Windows releases](RELEASING.md). Desktop CI checks packaging before a version is tagged; the tag workflow repeats the regressions and package check before publishing its assets.
 
 ## Automated regressions
+
+`App.Tests --osu-canvas-check` verifies standard geometry, source-identity picking,
+stacking, approach/disappearance, native editing, slider representation boundaries,
+stable grid and anchor gestures, horizontal canvas overscan, independent DS,
+undo and navigation. It also reports warm rendering and pointer
+CPU/allocation measurements on a 10,000-circle fixture; its recording canvas
+excludes native GPU rendering. `Formats.Tests --osu-model-check` verifies Mode=0
+import/Catch export, coordinates and project compatibility, both slider conversion
+directions, Legacy droplet effects, timing changes, failure atomicity and undo.
+
+`App.Tests --legacy-droplet-worker-check` verifies responsive submission, prepared
+export publication, failure rollback, save blocking, cancellation, undo/redo and
+rejection of stale content or history transactions.
+
+`FruitsAtelier.App.exe --render-check --osu-canvas-render-check` exercises the
+native Direct2D renderer in English/Chinese at two sizes and three DPI values,
+using skin and geometric fallback rendering. Captures are written to
+`artifacts/tests/osu-canvas-native`.
+Add `--osu-configured-skin` to inspect the configured selected/default skin paths
+without changing saved preferences.
+Add `--slider-display-render-check` to the osu canvas native check for original
+and processed Legacy paths with the Inspector open, in English/Chinese at both
+window sizes and 96/144/192 DPI. The shared osu canvas suite verifies both effect
+modes, narrow panels, warm cache reuse and unchanged content/export during switches.
+Use `--osu-skin-folder=/path/to/skin` and `--osu-default-skin=/path/to/default.osk`
+to keep those fixtures independent of concurrent preference changes.
+
+Add `--osu-image-cache-check --osu-configured-skin` to run the native texture
+residency regression. It warms a scene with multiple combo colours and requires
+zero additional image decodes during repeated static and playback rendering.
+The CPU timing report is written to `artifacts/tests/osu-canvas-native/image-residency.txt`.
+
+Add `--osu-map-folder=/path/to/beatmap-set` to load each `.osu` file and capture
+both canvases at the slider with the most control points. The check verifies a
+complete Catch conversion, the requested seek position and unchanged content.
+`Formats.Tests --import-roundtrip /path/to/map.osu` verifies an external map's
+project and Catch export without writing its source. `--import-set-roundtrip`
+accepts a folder and verifies the complete multi-difficulty project.
+`--xnor-timing-check` and `--large-imported-path-check` exercise the synthetic
+legacy edge cases and compact project storage without external fixtures.
+
+`--osu-performance-map=/path/to/map.osu` with the native canvas check measures
+pointer movement, seeking, zoom and continuous playback in both canvases at
+168 DPI. It reports CPU and submission frame percentiles, process working-set
+peak, private memory, managed memory and cumulative allocations in
+`artifacts/tests/dense-map-performance.json`. Skin arguments apply to this check.
+Use `--osu-performance-time=50836` to select a specific millisecond position;
+otherwise the check starts at the slider with the most control points. Continuous
+playback covers twenty seconds and reports the maximum as well as percentiles.
+Audio samples are not sent to a hardware device. Cumulative allocations are not
+simultaneous memory usage. The check waits for background star ratings before
+sampling interactive frames. `App.Tests --map-performance` additionally reports
+conversion and individual drawing phases with a recording canvas, excluding GPU
+work. `Core.Tests --packed-slider-points-check`, `--hitsound-snapshot-check` and
+`--imported-geometry-memo-check` verify lossless storage, snapshot isolation,
+sample resolution and derived-cache invalidation.
+
+`App.Tests --library-incremental-check` verifies scoped source scans, cached cards
+remaining openable during refresh, standard-source protection and background
+database locks. `App.Tests --benchmark-library-loading` creates 10,000 synthetic
+standard/Catch difficulties in 1,000 sets under `artifacts/`, then measures cold and
+warm scans, cached startup, query construction and a single-directory update.
+Its report excludes native rendering, media and real library filesystem variance.
 
 `Core.Tests --aimod-check` and `App.Tests --aimod-check` cover AiMod rules,
 resource checks, read-only navigation, localization, Ctrl+Shift+A, table column
@@ -362,7 +437,10 @@ The same native check compares the 1000 Hz timer-only baseline with the 2000 Hz
 bounded-tail worker, reporting actual median and P95 update intervals separately
 from message dispatch latency. These rates do not measure hardware input or scanout.
 Autoplay regressions cover Tab repeat/release, live judgement and sounds, return to
-manual movement, and session reset. Visual tests cover deterministic rotation,
+manual movement, and session reset. Held-key regressions cover movement and dash
+at testplay entry, pause and Continue countdown, releases during audio restart,
+focus loss, custom bindings and native startup key sampling with shortcut filtering.
+Visual tests cover deterministic rotation,
 banana arrival transforms, static editor sprites, combo palette offsets, and the
 base-only additive hyperdash layer with independent overlay crop and rotation.
 
@@ -694,13 +772,14 @@ are written under `artifacts/tests/banana-edit/native`.
 
 `App.Tests --timeline-layout-check` checks both timelines' 50–100% height limits,
 saved view preferences, cancellation, minimum-height selection and seeking,
-transport alignment and the static playback-speed label with its percentage
-selector. `FruitsAtelier.App.exe --render-check --timeline-layout-render-check`
+transport alignment and the static playback-speed label with its expanded
+speed buttons. `FruitsAtelier.App.exe --render-check --timeline-layout-render-check`
 exercises resizing and speed selection at every UI-scale step in English and
 Chinese at two client resolutions. Captures, including minimum heights, are
 stored under `artifacts/tests/timeline-layout-native`.
 
-`App.Tests --ui-scale-check` checks the 150% default, supported 25% steps,
+`App.Tests --ui-scale-check` checks scale shortcuts with slider selections and persistence, selection-colour draft cancellation and HEX input on both canvases,
+the 150% default, supported 25% steps,
 settings normalization, draft cancellation, persistence, layout and content isolation.
 `FruitsAtelier.App.exe --render-check --ui-scale-render-check` exercises every
 UI-scale step in English and Chinese at two client resolutions, including native
@@ -724,3 +803,11 @@ new difficulties and overflow in English and Chinese.
 `FruitsAtelier.App.exe --render-check --difficulty-tabs-render-check` checks native
 dragging and pinned tabs at two sizes and three DPI values in both languages,
 with captures under `artifacts/tests/difficulty-tabs-native`.
+
+`App.Tests --independent-sv-check` checks Legacy Inspector SV editing, undo/redo,
+Shift duration locking and unchanged authoring timing. `Formats.Tests
+--independent-sv-check` checks v7/v14 independent SV import, movement, export,
+project persistence and compatible/incompatible coincident FSlider heads. Native
+`--render-check --osu-canvas-render-check --independent-sv-render-check` exercises
+Inspector input and Shift dragging in English/Chinese at both window sizes and
+96/144/192 DPI. `Formats.Tests --sv-timing-sync-check` checks timing/SV sync.

@@ -15,9 +15,30 @@ public sealed partial class EditorView
     private float inspectorScroll, inspectorContentHeight;
     private bool inspectorMerge, inspectorHasSliders, inspectorOnlySliders;
     private bool inspectorSpeedMode;
+    private bool osuShowProcessedSliders;
+
+    internal void SetOsuSliderDisplay(bool processed)
+    {
+        osuShowProcessedSliders = processed;
+        osuCanvasSource = null;
+        osuControlSlider = Guid.Empty; osuSelectedControl = -1;
+    }
+
+    private void OpenOsuSliderDisplayMenu()
+    {
+        contextItems.Clear(); menu = -1; languageMenuOpen = false;
+        foreach (bool processed in new[] { false, true })
+            contextItems.Add(new(L.Get(processed ? "inspector.pathProcessed" : "inspector.pathDrawn"), () =>
+            { SetOsuSliderDisplay(processed); }, Active: osuShowProcessedSliders == processed));
+        float w = Math.Min(300, width);
+        contextBounds = new(Math.Clamp(mouseX, 0, width - w),
+            Math.Clamp(mouseY + 4, 0, Math.Max(0, height - ContextMenuHeight)), w, ContextMenuHeight);
+    }
+
     internal double? InspectorPeakRatio { get; private set; }
     internal double? InspectorMaxDs { get; private set; }
     internal Rect SliderInspectorViewport => inspectorBounds;
+    internal Rect LegacySliderSvBounds => fields.FirstOrDefault(f => f.Label == L.Get("legacySv.label"))?.Bounds ?? default;
 
     internal void ShowSliderInspector()
     {
@@ -101,7 +122,7 @@ public sealed partial class EditorView
         inspectorRows.Add(("inspector.spans", Range(tracks.Select(t => (double)t.SpanCount).Concat(imported.Select(t => (double)t.SpanCount)))));
         var derandomization = tracks.Where(t => t.StreamSnapDivisor is null)
             .Select(t => !t.RandomizesDroplets(Document))
-            .Concat(imported.Select(_ => false)).Distinct().ToArray();
+            .Concat(imported.Select(s => s.RandomizationTrack is not null && Document.DerandomizeFSliderDroplets)).Distinct().ToArray();
         inspectorRows.Add(("inspector.dropletEffective", derandomization.Length == 0 ? "—"
             : derandomization.Length > 1 ? L.Get("inspector.mixed")
             : L.Get(derandomization[0] ? "droplet.mode.Derandomize" : "droplet.mode.Randomize")));
@@ -145,7 +166,15 @@ public sealed partial class EditorView
     private List<(string Label, System.Action Action, bool Enabled, int Kind)> SliderInspectorActions()
     {
         var actions = new List<(string Label, System.Action Action, bool Enabled, int Kind)>();
+        if (IsOsuCanvas && Document.ImportedSliders.Any(s => inspectorTargetSet.Contains(s.Id)))
+            actions.Add((L.Get("inspector.pathDisplay", L.Get(osuShowProcessedSliders ? "inspector.pathProcessed" : "inspector.pathDrawn")),
+                OpenOsuSliderDisplayMenu, drag == DragKind.None && osuDraftSlider is null, 0));
         bool enabled = ClipboardInteractionReady && !notesLocked;
+        if (inspectorTargets.Length == 1 && Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0]))
+            actions.Add((L.Get("legacySv.label"), () => { }, !notesLocked && drag == DragKind.None
+                && draftTrack == Guid.Empty && draftBanana == Guid.Empty && !LegacyDropletRefreshBusy, 3));
+        if (inspectorTargets.Length == 1 && Document.Tracks.Any(s => s.Id == inspectorTargets[0] && s.StreamSnapDivisor is null))
+            actions.Add((L.Get("osu.convertLegacy"), () => ConvertSelectedSliderRepresentation(inspectorTargets[0]), enabled, 0));
         if (inspectorTargets.Length == 1 && Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0]))
             actions.Add((L.Get("preview.convertSlider"), () => EditImportedSlider(inspectorTargets[0]), enabled, 1));
         if (inspectorHasSliders)
@@ -191,6 +220,8 @@ public sealed partial class EditorView
                     foreach (var track in Document.Tracks.Where(t => t.StreamSnapDivisor is null && targets.Contains(t.Id)))
                         track.DropletMode = mode;
                 });
+                LibrarySettings.DefaultDropletMode = mode;
+                RequestViewPreference?.Invoke();
             }, Active: modes.Length == 1 && modes[0] == mode));
         float menuWidth = Math.Min(280, width), menuHeight = ContextMenuHeight;
         contextBounds = new(Math.Clamp(mouseX, 0, width - menuWidth),
@@ -244,7 +275,17 @@ public sealed partial class EditorView
             var action = actions[i]; var box = new Rect(x, y + metricsHeight + 10 + i * 38, contentWidth, 32);
             if (action.Kind == 1) LegacyConversionBounds = box;
             if (action.Kind == 2) StreamConversionBounds = box;
-            Button(c, box, action.Label, action.Action, enabled: action.Enabled, fontSize: 12);
+            if (action.Kind == 3 && action.Enabled)
+            {
+                var slider = Document.ImportedSliders.Single(s => s.Id == inspectorTargets[0]);
+                double value = slider.SliderVelocityMultiplier ?? ImportedSliderConverter.SliderVelocityAt(Document, slider);
+                var targets = inspectorTargetSet.ToHashSet();
+                float fieldY = box.Y;
+                Field(c, box.X, ref fieldY, box.Width, action.Label, value,
+                    v => LegacySliderVelocityEditing.Apply(Document, targets, v), Math.Min(110, box.Width * .55f));
+            }
+            else
+                Button(c, box, action.Label, action.Action, enabled: action.Enabled, fontSize: 12);
         }
         if (mergeHeight > 0)
             DrawMergeControls(c, new(x, y + metricsHeight + 10 + actions.Count * 38, contentWidth, mergeHeight), enabled);
@@ -254,6 +295,8 @@ public sealed partial class EditorView
             var box = hits[i].Bounds;
             if (box.Y < viewport.Y || box.Bottom > viewport.Bottom || box.Right <= viewport.X || box.X >= viewport.Right) hits.RemoveAt(i);
         }
+        fields.RemoveAll(f => f.Label == L.Get("legacySv.label")
+            && (f.Bounds.Y < viewport.Y || f.Bounds.Bottom > viewport.Bottom));
         if (inspectorContentHeight > viewport.Height)
         {
             float thumb = Math.Max(20, viewport.Height * viewport.Height / inspectorContentHeight);

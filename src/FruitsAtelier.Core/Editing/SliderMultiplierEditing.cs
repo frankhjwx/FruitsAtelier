@@ -134,6 +134,12 @@ public static class SliderMultiplierEditing
     {
         var initial = new TimingMap.Lookup(candidate).At(double.IsFinite(firstSlider) ? firstSlider : 0);
         double ratio = candidate.SliderMultiplier / multiplier;
+        foreach (var slider in candidate.ImportedSliders.Where(s => s.SliderVelocityMultiplier is not null))
+        {
+            slider.SliderVelocityMultiplier = 100 / ScaleBeatLength(100 / slider.SliderVelocityMultiplier!.Value, ratio);
+            if (slider.ProcessedSliderVelocityMultiplier is { } processed)
+                slider.ProcessedSliderVelocityMultiplier = 100 / ScaleBeatLength(100 / processed, ratio);
+        }
         candidate.SliderMultiplier = multiplier;
         candidate.SliderMultiplierOverride = null;
         var points = candidate.TimingPoints;

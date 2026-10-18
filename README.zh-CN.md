@@ -8,7 +8,7 @@
 
 [官网](https://fruitsatelier.himiko.moe/) · [下载](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**当前版本：1.0.3 Beta**
+**当前版本：1.1.0**
 
 ![水果工坊的编辑画布、物件时间轴与 Catch 预览](assets/screenshots/twin-bloom.png)
 
@@ -32,7 +32,7 @@
 - **移动指示与分析**：查看前后物件间距，在画布上识别站立、走路、冲刺和超级冲刺连接。通过全曲 Movement strain 曲线定位运动负荷较高的段落；AiMod 可检查接水果物件吸附、计时、资源和谱面集元数据。
 - **可编辑的 Stream 与 Stack**：沿滑条曲线按指定节拍细分生成水果串，或用宽度包络生成交替排列的叠果。保留可编辑的父曲线，调整单个水果，或拆分成独立水果；两者均导出为 hit circle。
 
-支持读取 v7–v14 及兼容 stable 的 lazer v128 Catch `.osu`。v7 谱面导出保留 v7，以保留旧版滑条水滴规则；其余导出为 v14。1.0.3 Beta 暂不提供视频与故事板播放。
+支持读取 v7–v14 及兼容 stable 的 lazer v128 Catch `.osu`。v7 谱面导出保留 v7，以保留旧版滑条水滴规则；其余导出为 v14。1.1.0 暂不提供视频与故事板播放。
 
 ## 开始使用
 
@@ -64,7 +64,7 @@ bash scripts/Install-Mac-SDK.sh
 
 工作区的 `.catchdiff` 文件保留编辑数据，也支持打开旧版 `.catchproj` 工程。请保留完整工程文件夹与引用资源。版本历史支持比较快照和恢复单个难度，保留策略通常限制为 30 天、每个工程 100 轮。详见[同步与恢复说明（英文）](docs/SYNCHRONIZATION.md)。
 
-加入 [Discord](https://discord.gg/Dwe7bshYHY) 参与 Beta 测试、交流使用反馈。可通过 [GitHub Issues](https://github.com/frankhjwx/FruitsAtelier/issues) 报告问题，或[在 osu! 上联系我](https://osu.ppy.sh/users/1806962)。
+加入 [Discord](https://discord.gg/Dwe7bshYHY) 体验编辑器、交流使用反馈。可通过 [GitHub Issues](https://github.com/frankhjwx/FruitsAtelier/issues) 报告问题，或[在 osu! 上联系我](https://osu.ppy.sh/users/1806962)。
 
 ## 开发
 

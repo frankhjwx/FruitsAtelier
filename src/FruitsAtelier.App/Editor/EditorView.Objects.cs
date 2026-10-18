@@ -63,6 +63,7 @@ public sealed partial class EditorView
         double timeRadius = Math.Max(7, CatchSize.FruitDiameter(Document.CircleSize) * CanvasObjectWidth / 512) / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(pointerTime - timeRadius, pointerTime + timeRadius))
         {
+            if (!CanSelectSlider(item.SourceId)) continue;
             if (IsLazerEditing && LazerCanvasObjectOpacity(item) <= .001f) continue;
             if (!includeLockedDroplets && !CanSelectCatchObject(item)) continue;
             if (sourceId is { } id && item.SourceId != id) continue;
@@ -183,6 +184,7 @@ public sealed partial class EditorView
     private double objectDragFollowTime;
     private void BeginObjectDrag(float x, float y, bool timeline = false, bool scaleSelection = false)
     {
+        if (RejectReadOnlySelection()) return;
         if (notesLocked) return;
         if (objectSelection.Count == 0) return;
         EnsureConversion();

@@ -5,6 +5,7 @@ internal static class PlaybackPlacementTests
 {
     public static void DragFollowsPlayback()
     {
+        ClickTolerance();
         foreach (var mode in new[] { SliderEditingMode.PenTool, SliderEditingMode.OsuLegacy })
         foreach (bool tail in new[] { false, true })
         foreach (bool moved in new[] { false, true })
@@ -32,8 +33,8 @@ internal static class PlaybackPlacementTests
             ui.View.UpdateTransport(1500, 20000, true, true, false, null, "fixture.wav");
             ui.View.UpdateTransport(2000, 20000, true, true, false, null, "fixture.wav"); ui.Paint();
             Near(beforeView + 500, ui.View.ViewStartMs);
-            Near(beforeTime + 500, Time());
-            Check(Math.Abs(y - ui.ScreenAt(Time(), tail ? 300 : 100).Y) <= ui.View.PixelsPerMs * 62.5 + .05,
+            Near(beforeTime + (moved ? 500 : 0), Time());
+            Check(!moved || Math.Abs(y - ui.ScreenAt(Time(), tail ? 300 : 100).Y) <= ui.View.PixelsPerMs * 62.5 + .05,
                 "Playback lost the snapped object's pointer position.");
             ui.View.UpdateTransport(2000, 20000, true, false, false, null, "fixture.wav");
             double paused = ui.View.ViewStartMs;
@@ -42,6 +43,35 @@ internal static class PlaybackPlacementTests
             if (cancel) ui.View.CancelInteraction();
             else { ui.View.PointerUp(pointer.X, y, 0); ui.Key('Z', ctrl: true); }
             Check(original.ContentEquals(ui.View.Document), "Playback drag did not cancel or undo atomically.");
+        }
+    }
+
+    private static void ClickTolerance()
+    {
+        foreach (var mode in Enum.GetValues<SliderEditingMode>())
+        foreach (bool slider in new[] { false, true })
+        foreach (bool playing in new[] { false, true })
+        foreach (float jitter in new[] { 0f, 2f, 5f })
+        {
+            var map = new MapDocument { DurationMs = 20000, IsDemo = false };
+            var fruit = new Fruit { TimeMs = 1000, X = 100 };
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 2000, X = 300 }]);
+            if (slider) map.Tracks.Add(track); else map.Fruits.Add(fruit);
+            var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);
+            ui.View.UpdateTransport(1500, 20000, true, playing, false, null, "fixture.wav"); ui.Paint();
+            var original = ui.View.Document.DeepClone();
+            var point = ui.ScreenAt(slider ? 2000 : 1000, slider ? 300 : 100);
+            ui.View.PointerDown(point.X, point.Y, 0, false, false);
+            ui.View.PointerMove(point.X + jitter, point.Y - jitter, false, false);
+            ui.View.UpdateTransport(1516, 20000, true, playing, false, null, "fixture.wav"); ui.Paint();
+            ui.View.PointerUp(point.X + jitter, point.Y - jitter, 0); ui.Paint();
+            Check(original.ContentEquals(ui.View.Document) && !ui.View.IsDirty, $"Click jitter must preserve content: mode={mode}, slider={slider}, playing={playing}, jitter={jitter}, dirty={ui.View.IsDirty}.");
+            ui.Key('Q');
+            Check(ObjectFlags.NewCombo(ui.View.Document, slider ? track.Id : fruit.Id), "Click retains the target for New Combo.");
+            Check(original.Tracks.Count == 0 || original.Tracks[0].Nodes.Select(n => (n.TimeMs, n.X)).SequenceEqual(ui.View.Document.Tracks[0].Nodes.Select(n => (n.TimeMs, n.X))), "New Combo preserves slider geometry.");
+            ui.Key('Z', ctrl: true);
+            Check(original.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "New Combo is the only undo step after a click.");
         }
     }
 
@@ -136,6 +166,7 @@ internal static class PlaybackPlacementTests
                 var imported = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 140 };
                 imported.ControlPoints.AddRange([new(100, 192), new(240, 192)]);
                 map.ImportedSliders.Add(imported);
+                ImportedSliderEditing.ConvertToTrack(map, imported.Id);
             }
             else map.Tracks.Add(track);
             var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);

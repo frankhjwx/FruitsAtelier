@@ -130,7 +130,7 @@ public sealed class CatchTestplaySession
         {
             Advance();
             if (ended) return time;
-            paused = !paused; keys.Clear();
+            paused = !paused;
             if (!paused)
             {
                 awaitingResume = WithAudio;
@@ -154,11 +154,12 @@ public sealed class CatchTestplaySession
         if (!UsesKey(key)) return;
         lock (gate)
         {
-            if (ended || paused || awaitingResume) return;
+            if (ended) return;
+            // Continue needs current held keys even while gameplay or the audio clock is paused.
             Advance();
             if (down)
             {
-                autoplay = false;
+                if (!paused && !awaitingResume) autoplay = false;
                 keys.Add(key);
             }
             else keys.Remove(key);

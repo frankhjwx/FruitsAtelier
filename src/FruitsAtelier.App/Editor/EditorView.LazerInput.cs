@@ -155,7 +155,12 @@ public sealed partial class EditorView
             if (target < point.OffsetMs && point.OffsetMs != first) target = point.OffsetMs;
         }
         if (drag == DragKind.Marquee) ScrollBoxTo(target);
-        else SeekLazerSmoothlyTo(target);
+        else
+        {
+            SeekLazerSmoothlyTo(target);
+            // A seek starts the held edit; presentation frames apply its movement as the viewport eases.
+            if (NavigationDuringDrag && playhead != current) dragMoved = true;
+        }
     }
 
     private bool HandleLazerWheel(float x, float y, float delta, bool ctrl, bool shift, bool alt, bool timeline, bool canvasArea, bool summary)

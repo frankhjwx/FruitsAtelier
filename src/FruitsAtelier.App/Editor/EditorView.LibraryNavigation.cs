@@ -91,7 +91,7 @@ public sealed partial class EditorView
         libraryBrowser = cached.Browser; libraryBrowserQuery = cached.Query ?? "";
         if (libraryBrowserQuery != libraryQuery) { libraryBrowser?.Retire(); libraryBrowser = null; }
         libraryCards.Clear(); libraryResultsReady = libraryBrowser is not null;
-        libraryProjectsNeedReindex |= projects || favourites; libraryField = -1; contextItems.Clear();
+        libraryField = -1; contextItems.Clear();
         QueueLibrarySearch(); RememberLibraryPosition();
     }
     private bool IsLibraryFavourite(LibraryMap map)

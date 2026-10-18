@@ -24,10 +24,10 @@ internal static class LazerDistanceSettingsTests
                 ui.View.LibrarySettings.Workspace = Path.Combine(root, locale);
                 ui.View.LibrarySettings.OsuRoot = "";
                 int saves = 0;
-                ui.View.RequestViewPreference = () => { saves++; ui.View.LibrarySettings.Save(path); };
                 var map = new MapDocument { DurationMs = 4000, IsDemo = false, BeatLengthMs = 500, CircleSize = 5 };
                 map.DistanceSnapRatios.AddRange([.75, 1.5]);
                 ui.LoadDocument(map); ui.SetSnapDivisor(8);
+                ui.View.RequestViewPreference = () => { saves++; ui.View.LibrarySettings.Save(path); };
                 var before = ui.View.Document.DeepClone();
                 bool dirty = ui.View.IsDirty;
                 var cached = ui.View.LazerDistanceSpeeds;
