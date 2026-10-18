@@ -97,12 +97,12 @@ internal static class OsuCanvasRenderCheck
                     editor.PointerMove(placementPointer.X, placementPointer.Y, false, false);
                     Paint(toolKey == '2' ? "circle-placement" : "slider-placement");
                 }
-                foreach (var (x, y) in new[] { (64, 192), (192, 64) })
+                foreach (var (x, y) in new[] { (64, 256), (192, 128) })
                 {
                     var control = editor.OsuCanvasScreen(x, y);
                     editor.PointerDown(control.X, control.Y, 0, false, false); editor.PointerUp(control.X, control.Y, 0);
                 }
-                var circularTail = editor.OsuCanvasScreen(320, 192);
+                var circularTail = editor.OsuCanvasScreen(320, 256);
                 editor.PointerMove(circularTail.X, circularTail.Y, false, false);
                 Paint("circular-slider-draft");
                 editor.KeyDown(13, false, false); editor.KeyUp(13);
@@ -176,6 +176,13 @@ internal static class OsuCanvasRenderCheck
                 if (!editor.IsOsuCanvas || editor.IsDirty || !map.ContentEquals(editor.Document)) throw new InvalidOperationException("Standard canvas rendering changed content or mode.");
                 void Paint(string? name = null)
                 {
+                    var wait = System.Diagnostics.Stopwatch.StartNew();
+                    while (editor.LegacyDropletRefreshBusy)
+                    {
+                        canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2); canvas.End();
+                        if (wait.Elapsed.TotalSeconds > 15) throw new InvalidOperationException("Native slider validation did not settle.");
+                        Thread.Sleep(1);
+                    }
                     canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
                     canvas.End(capture: name is null ? null : () =>
                     {
