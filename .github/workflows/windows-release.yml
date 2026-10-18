@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: windows-release-${{ inputs.tag || github.ref_name }}
@@ -46,13 +47,28 @@ jobs:
           "version=$($tag.Substring(1))" >> $env:GITHUB_OUTPUT
           "tag=$tag" >> $env:GITHUB_OUTPUT
           "commit=$commit" >> $env:GITHUB_OUTPUT
+      - name: Find identical validated source
+        id: validation
+        if: github.event_name != 'workflow_dispatch'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const validate = require('./.github/scripts/find-desktop-validation.cjs');
+            await validate({ github, context, core });
+      - uses: actions/cache@v4
+        with:
+          path: artifacts/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages*.lock.json', '.config/dotnet-tools.json', '**/global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
           dotnet-version: 8.0.419
       - name: Build regression suites
+        if: steps.validation.outputs.reused != 'true'
         run: dotnet build FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
       - name: Run regression suites
+        if: steps.validation.outputs.reused != 'true'
         shell: pwsh
         run: |
           foreach ($suite in @('Core', 'Gameplay', 'App', 'Skinning', 'SkinArchive')) {
@@ -82,6 +98,7 @@ jobs:
             artifacts/releases/*.nupkg
             artifacts/releases/releases.*.json
           if-no-files-found: error
+          compression-level: 0
       - uses: actions/upload-artifact@v4
         if: always()
         with:

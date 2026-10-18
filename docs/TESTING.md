@@ -57,7 +57,7 @@ required execution permissions before classifying it as a code regression. Keep
 logs and generated validation artifacts under `artifacts/` and retain the checks'
 existing settings isolation and cleanup.
 
-Windows distribution uses the self-contained ZIP and extracted-executable check described in [Windows releases](RELEASING.md). Desktop CI checks packaging before a version is tagged; the tag workflow repeats the regressions and package check before publishing its assets.
+Windows distribution uses the self-contained ZIP and extracted-executable check described in [Windows releases](RELEASING.md). Desktop CI checks packaging before a version is tagged; the tag workflow reuses successful desktop regression for identical source content when available and always builds and checks its own package. See [CI validation and reuse](RELEASING.md#ci-validation-and-reuse) for fallback and forced-validation behavior.
 
 ## Automated regressions
 
