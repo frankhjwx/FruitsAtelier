@@ -209,6 +209,7 @@
   "assist.hint.5": "Snap spacing sa pagitan ng magkakasunod na bagay batay sa kanilang pagkakaiba sa oras.\nShortcut: Pindutin ang Alt upang pansamantalang mag-toggle, o pindutin ang Y.\nUse Configure DS... para baguhin ang mga preset ng snap ng distansya.",
   "assist.hint.6": "Mga posisyon ng lock at timestamp (L)",
   "assist.lockDropletSelection": "Lock Droplet Selection",
+  "assist.lockSlidersToCanvas": "Piliin ang mga slider sa kaukulang canvas lamang",
   "tools.hint.select": "Piliin at baguhin ang mga umiiral nang tala.\nCtrl+Click: Multi-select, magdagdag ng Slider control point.\nRight-click: Alisin ang tala o i-edit ang control point.",
   "tools.hint.fruit": "Pag-left-click: Ilagay ang Fruit.\nRight-click: New combo / alisin ang tala (naka-pause).",
   "tools.hint.sliderLegacy": "Mag-left-click: Simulan ang Slider, magdagdag ng punto sa kasalukuyang Slider.\nRight-click: Alisin ang punto, tapusin ang kasalukuyang Slider.\nI-click muli ang parehong punto upang magsimula ng bagong seksyon ng curve.",

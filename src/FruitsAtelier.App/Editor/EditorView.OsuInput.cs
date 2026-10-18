@@ -100,6 +100,7 @@ public sealed partial class EditorView
     private bool OsuPointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
         if (!IsOsuCanvas || TimingPageVisible || !plot.Contains(x, y)) return false;
+        if (notesLockFlyout && notesLockFlyoutBounds.Contains(x, y)) return false;
         if (menu >= 0) return false;
         if (contextItems.Count > 0)
         {
@@ -163,7 +164,7 @@ public sealed partial class EditorView
         }
         if (tool == Tool.Slider)
         {
-            osuDraftSlider ??= new ImportedSlider { TimeMs = OsuPlacementTime, X = point.X, Y = point.Y };
+            osuDraftSlider ??= new ImportedSlider { TimeMs = OsuPlacementTime, X = point.X, Y = point.Y, PreserveNativeGeometry = true };
             osuDraftSlider.ControlPoints.Add(new(point.X, point.Y));
             osuDraftPointer = point;
             StatusMessage = L.Get("osu.sliderDraft"); return true;

@@ -5,11 +5,12 @@ internal static class OsuCanvasInputTests
     public static void Run()
     {
         OsuStableInputTests.Run();
+        SliderCanvasLockTests.Run();
         ToggleAndHeldKeys();
         NativeCircleAndLegacySlider();
         NativeSelectionAndCancellation();
         StackedMarqueeUsesVisibleCenters();
-        NativePlacementUsesGlobalDropletSettings();
+        NativePlacementPreservesGeometry();
         NativeRepeatSamples();
         SubMillisecondSliderLifetime();
         ReadOnlyBoundaries();
@@ -162,7 +163,7 @@ internal static class OsuCanvasInputTests
         Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Stacked marquee selection edited beatmap content.");
     }
 
-    private static void NativePlacementUsesGlobalDropletSettings()
+    private static void NativePlacementPreservesGeometry()
     {
         var ui = NewUi();
         ui.LoadDocument(new MapDocument { DurationMs = 5000, DerandomizeFSliderDroplets = true });
@@ -173,12 +174,21 @@ internal static class OsuCanvasInputTests
         WaitLegacyRefresh(ui);
         Check(ui.View.Document.ImportedSliders.Count == 1, "Native slider placement under global settings failed: " + ui.View.StatusMessage);
         var slider = ui.View.Document.ImportedSliders.Single();
-        Check(slider.RandomizationTrack is not null && slider.RandomizationSource is not null,
-            "New native Legacy Slider ignored the already active global droplet settings.");
+        Check(slider.PreserveNativeGeometry && slider.RandomizationTrack is null && slider.RandomizationSource is null
+            && slider.PathType == 'B' && slider.ControlPoints.SequenceEqual(new SliderPathPoint[] { new(64, 64), new(192, 64) }),
+            "Native Legacy Slider must retain its authored controls under global droplet settings.");
+        var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document));
+        Check(restored.ContentEquals(ui.View.Document) && restored.ImportedSliders.Single().PreserveNativeGeometry,
+            "Native Legacy geometry preference was not saved.");
+        restored.RandomizeDropletStrength = 8;
+        var refresh = SliderRepresentationEditing.RefreshLegacyDroplets(restored);
+        Check(refresh.Success && restored.ImportedSliders.Single().ControlPoints.SequenceEqual(slider.ControlPoints)
+            && restored.ImportedSliders.Single().RandomizationTrack is null,
+            "Later global droplet edits reshaped native Legacy geometry.");
         var exported = OsuBeatmapWriter.Serialize(ui.View.Document);
         Check(exported.ObjectSequenceMatches, "Native global-droplet placement did not validate its exported sequence.");
         var after = ui.View.Document.DeepClone();
-        ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Native creation and global path application were not one undo step.");
+        ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Native Legacy creation was not one undo step.");
         ui.Key('Y', ctrl: true); Check(after.ContentEquals(ui.View.Document), "Native global-droplet placement changed on redo.");
     }
 

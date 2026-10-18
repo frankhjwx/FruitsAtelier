@@ -209,6 +209,7 @@
   "assist.hint.5": "Odstępy przyciągania pomiędzy kolejnymi obiektami na podstawie różnicy czasu.\nSkrót: Przytrzymaj Alt, aby tymczasowo przełączyć, lub naciśnij Y.\nUżyj opcji Konfiguruj DS…, aby zmienić wstępne ustawienia przyciągania na odległość.",
   "assist.hint.6": "Pozycje blokady i znaczniki czasu (L)",
   "assist.lockDropletSelection": "Zablokuj wybór kropel",
+  "assist.lockSlidersToCanvas": "Wybieraj slidery tylko na ich płótnie",
   "tools.hint.select": "Wybierz i zmodyfikuj istniejące notatki.\nCtrl+Click: Zaznacz wielokrotny, dodaj punkt kontrolny Slider.\nKliknij prawym przyciskiem myszy: Usuń notatkę lub edytuj punkt kontrolny.",
   "tools.hint.fruit": "Kliknięcie lewym przyciskiem myszy: Umieść Owoc.\nKliknięcie prawym przyciskiem myszy: New combo / usuń notatkę (wstrzymana).",
   "tools.hint.sliderLegacy": "Kliknięcie lewym przyciskiem myszy: Rozpocznij Slider, dodaj punkt do bieżącego Slider.\nKliknięcie prawym przyciskiem myszy: Usuń punkt, zakończ bieżący Slider.\nKliknij ponownie ten sam punkt, aby rozpocząć nowy przekrój krzywej.",

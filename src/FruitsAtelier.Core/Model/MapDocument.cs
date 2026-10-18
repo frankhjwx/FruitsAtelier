@@ -154,6 +154,8 @@ public sealed class ImportedSlider
     public CurveTrack? RandomizationTrack { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? RandomizationBaseVelocity { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool PreserveNativeGeometry { get; set; }
     public const int MaximumControlPoints = 262144;
     public Guid Id { get; set; } = Guid.NewGuid();
     public int SourceOrder { get; set; } = int.MaxValue;
@@ -173,7 +175,7 @@ public sealed class ImportedSlider
             Id = Id, SourceOrder = SourceOrder, OriginalLine = OriginalLine, X = X, Y = Y,
             TimeMs = TimeMs, PathType = PathType, SpanCount = SpanCount, PixelLength = PixelLength,
             RandomizationSource = RandomizationSource?.DeepClone(), RandomizationTrack = RandomizationTrack?.DeepClone(),
-            RandomizationBaseVelocity = RandomizationBaseVelocity
+            RandomizationBaseVelocity = RandomizationBaseVelocity, PreserveNativeGeometry = PreserveNativeGeometry
         };
         copy.ControlPoints = ControlPoints.Share();
         copy.geometryMemo = geometryMemo;
@@ -184,6 +186,7 @@ public sealed class ImportedSlider
         && OriginalLine == other.OriginalLine && X == other.X && Y == other.Y && TimeMs == other.TimeMs
         && PathType == other.PathType && SpanCount == other.SpanCount && PixelLength == other.PixelLength
         && RandomizationBaseVelocity == other.RandomizationBaseVelocity
+        && PreserveNativeGeometry == other.PreserveNativeGeometry
         && ControlPoints.ContentEquals(other.ControlPoints)
         && (ReferenceEquals(RandomizationTrack, other.RandomizationTrack)
             || RandomizationTrack is not null && other.RandomizationTrack is not null && RandomizationTrack.ContentEquals(other.RandomizationTrack))

@@ -344,6 +344,7 @@ public sealed partial class EditorView
 
     private void Select(Guid id, Guid track = default)
     {
+        if (!CanSelectSlider(track != Guid.Empty ? track : id)) { id = Guid.Empty; track = Guid.Empty; }
         if (id != temporarySnapSource || track != Guid.Empty) RestoreTemporarySnap();
         soundEdge = null; distanceObject = null; clickedCoordinate = null; timelineFruit = null;
         objectSelection.Clear(); anchorSelection.Clear();

@@ -55,6 +55,7 @@ public sealed class LibrarySettings
     }
     public bool ReverseCanvasScroll { get; set; }
     public bool LockDropletSelection { get; set; } = true;
+    public bool LockSlidersToCanvas { get; set; }
     public bool LowLatencyDisplay { get; set; }
     public const int DefaultUiScalePercent = 150;
     public const int MinimumUiScalePercent = 50;

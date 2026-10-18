@@ -35,6 +35,8 @@ Selecting objects does not replace the pointer coordinates in this view.
 Selected circles have the same orange ring as their timeline markers. Selected
 sliders show this ring at both geometric endpoints, including even-repeat sliders.
 Circle and slider placement previews use their resulting combo colour and number.
+Their placement time follows the snapped playhead; pointer Y controls only the
+geometric position, including the placement marker in the upper timeline.
 Combo colour also takes precedence over skin slider-track overrides in this view.
 Alt+wheel over the upper object timeline changes its time scale independently of
 osu! canvas zoom.
@@ -53,7 +55,8 @@ failure. Global droplet settings can rebuild Legacy paths to match their exporte
 fruit targets; this can change their two-dimensional shape.
 
 In osu! view the Fruit and Banana tools place circles and spinners. The Slider
-tool places Legacy controls: click creates a grey square anchor, double-click
+tool places Legacy controls and preserves their original two-dimensional path
+through global droplet-setting changes and project reopening. Click creates a grey square anchor, double-click
 creates a red segment boundary, and right-click finishes at the pointer. Thin
 white lines connect the controls. The draft uses the final slider body, skin,
 combo colour and end circles. Selected controls can be dragged; Ctrl+click
@@ -896,7 +899,7 @@ Slider Path, Selection Rect and Movement Analysis use equal-width buttons. Long 
 
 In Select mode, New Combo toggles the selected parents, or the particular Stream/Stack fruit selected in the upper timeline. On the editing canvas, a fruit with this flag has an NC label beside it in every UI language. The label sits to the right when there is room and otherwise to the left; slider heads with the flag are labelled once. A pending New Combo fruit placement shows the same NC label beside its preview. The sound buttons toggle additions independently and support mixed multi-selection. Clicking a slider fruit targets that head, repeat or tail's hitsound; selecting the whole slider through its timeline body targets every edge. Droplet/tiny selections target the parent, whose edge sounds are editable; these children retain their existing tick/silent playback rules. Banana showers use their fixed banana sound and disable the three additions. In Fruit placement mode, or with no selection, buttons set pending flags for new objects. New Combo resets after placement; pending additions remain until changed or switching difficulty.
 
-Lock Notes prevents moving, reshaping or deleting existing objects, including timeline reverse edits. Selection, playback, New Combo and sound editing remain available. New objects can still be placed; undo/redo remains available. Hover Lock Notes to reveal **Lock Droplet Selection**. This independent toggle is enabled by default and excludes droplets and tiny droplets from canvas hit testing and box selection, and clears an active droplet child selection. Clicking a locked droplet with the Pen slider tool selects its parent without starting a new anchor. Slider paths, controls, fruits and parent selection in the object timeline remain available. Lock Droplet Selection is saved automatically as a user preference and restored after restarting. Changing these controls alone does not dirty the difficulty.
+Lock Notes prevents moving, reshaping or deleting existing objects, including timeline reverse edits. Selection, playback, New Combo and sound editing remain available. New objects can still be placed; undo/redo remains available. Hover Lock Notes to reveal **Lock Droplet Selection**. This independent toggle is enabled by default and excludes droplets and tiny droplets from canvas hit testing and box selection, and clears an active droplet child selection. Clicking a locked droplet with the Pen slider tool selects its parent without starting a new anchor. Slider paths, controls, fruits and parent selection in the object timeline remain available. Lock Droplet Selection is saved automatically as a user preference and restored after restarting. The flyout also offers **Lock Sliders to Their Canvas**. When enabled, FSliders can be selected only in Catch and Legacy Sliders only in osu!, including click, box and object-timeline selection. This global preference is disabled by default and restored after restarting. Changing these controls alone does not dirty the difficulty.
 
 The four left tool buttons show multiline operation hints. FSlider's hint follows the current editing mode. FSlider and Distance Snap display their hints above their hover buttons so the controls remain accessible.
 

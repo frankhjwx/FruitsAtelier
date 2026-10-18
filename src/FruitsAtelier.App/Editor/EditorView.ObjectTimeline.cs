@@ -340,7 +340,8 @@ public sealed partial class EditorView
             return null;
         if (tool == Tool.Banana)
         {
-            double time = MapAt(mouseX, mouseY, true).TimeMs;
+            double time = IsOsuCanvas ? OsuPlacementTime : MapAt(mouseX, mouseY, true).TimeMs;
+            if (IsOsuCanvas) return (placementId, osuSpinnerStart ?? time, Math.Max(osuSpinnerStart ?? time, time), Gold);
             if (Document.BananaShowers.FirstOrDefault(s => s.Id == draftBanana) is { } banana)
                 return (banana.Id, banana.TimeMs, Math.Max(banana.TimeMs, time), Gold);
             return (placementId, time, time, Gold);
@@ -540,6 +541,7 @@ public sealed partial class EditorView
         for (int i = timelineObjects.Count - 1; i >= 0; i--)
         {
             var item = timelineObjects[i];
+            if (!CanSelectSlider(item.Id)) continue;
             if (!item.Bounds.Contains(x, y)) continue;
             tool = Tool.Select;
             PickObject(item.Id, toggle);

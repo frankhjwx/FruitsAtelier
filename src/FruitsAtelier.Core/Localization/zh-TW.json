@@ -209,6 +209,7 @@
   "assist.hint.5": "根據時間差捕捉連續物件之間的間距。\n捷徑：按住 Alt 暫時切換，或按 Y.\n使用設定 DS… 變更距離捕捉預設。",
   "assist.hint.6": "鎖定位置和時間戳記 (L)",
   "assist.lockDropletSelection": "鎖定液滴選擇",
+  "assist.lockSlidersToCanvas": "滑條僅限對應畫布選取",
   "tools.hint.select": "選擇並修改現有註釋。\nCtrl+Click：多選，新增滑條控制點。\n右鍵點選：刪除註解或編輯控制點。",
   "tools.hint.fruit": "左鍵點選：放置 Fruit.\n右鍵點選：New combo / 刪除註解（已暫停）。",
   "tools.hint.sliderLegacy": "左鍵：開始 滑條，在目前 滑條.\n上新增點右鍵：刪除點，結束目前 滑條.\n再次點選同一點開始新的曲線段。",

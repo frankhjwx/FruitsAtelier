@@ -6,6 +6,7 @@ internal static class OsuMappingPresentationTests
     public static void Run()
     {
         PlacementFollowsPointer();
+        PlacementTimeUsesPlayhead();
         foreach (bool lazer in new[] { false, true })
         {
             var ui = NewUi(lazer);
@@ -58,6 +59,28 @@ internal static class OsuMappingPresentationTests
                 "Leaving the canvas must hide the placement circle.");
             Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty,
                 "Moving the placement preview must not add objects or history.");
+        }
+    }
+
+    private static void PlacementTimeUsesPlayhead()
+    {
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var ghost = typeof(FruitsAtelier.App.Editor.EditorView).GetMethod("PlacementGhostPoint", flags)!;
+        var timeline = typeof(FruitsAtelier.App.Editor.EditorView).GetMethod("TimelinePlacementPreview", flags)!;
+        foreach (int key in new[] { (int)'2', (int)'3', (int)'4' })
+        {
+            var ui = NewUi(); ui.Key(key);
+            var before = ui.View.Document.DeepClone();
+            foreach (int y in new[] { 64, 192, 320 })
+            {
+                var pointer = ui.View.OsuCanvasScreen(184, y);
+                ui.View.PointerMove(pointer.X, pointer.Y, false, false); ui.Paint();
+                var marker = ((Guid Id, double Start, double End, uint Colour))timeline.Invoke(ui.View, null)!;
+                Check((key == '4' || ((MapPoint)ghost.Invoke(ui.View, null)!).TimeMs == 1000)
+                    && marker.Start == 1000 && marker.End == 1000,
+                    "osu placement and timeline previews must use playhead time independently of geometric Y.");
+            }
+            Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Placement time previews must not edit content.");
         }
     }
 

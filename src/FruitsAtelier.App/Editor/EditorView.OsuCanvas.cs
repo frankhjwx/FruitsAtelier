@@ -185,6 +185,7 @@ public sealed partial class EditorView
         foreach (int index in osuCanvasVisible)
         {
             var o = osuCanvasObjects[index];
+            if (!CanSelectSlider(o.Id)) continue;
             double now = LazerPresentationTime;
             if (o.Spinner) { if (now < o.End + 240 && Distance(point.X, point.Y, 256, 192) < 160) return o.Id; continue; }
             double shift = -o.Stack * OsuCanvasRadius / 10;

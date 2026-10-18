@@ -49,6 +49,16 @@ internal static class OsuCanvasModelTests
         Check(randomMap.ImportedSliders[0].RandomizationSource is not null, "Missing durable Legacy baseline");
         var randomized = ProjectSerializer.Read(ProjectSerializer.Serialize(randomMap));
         Check(randomized.ContentEquals(randomMap), "Legacy baseline persistence");
+        var native = new ImportedSlider { X = 64, Y = 64, TimeMs = 3000, PixelLength = 128, PathType = 'L', PreserveNativeGeometry = true };
+        native.ControlPoints.AddRange([new(64, 64), new(192, 64)]);
+        var mixed = randomized.DeepClone();
+        mixed.ImportedSliders.Add(native);
+        random = SliderRepresentationEditing.RefreshLegacyDroplets(mixed);
+        Check(random.Success, string.Join("; ", random.Diagnostics));
+        var retainedNative = mixed.ImportedSliders.Single(s => s.Id == native.Id);
+        Check(retainedNative.PreserveNativeGeometry && retainedNative.RandomizationTrack is null
+            && retainedNative.ControlPoints.SequenceEqual(native.ControlPoints) && retainedNative.PixelLength == native.PixelLength,
+            "Mixed Legacy refresh reshaped native controls");
         random = SliderRepresentationEditing.RefreshLegacyDroplets(randomized);
         Check(random.Success, string.Join("; ", random.Diagnostics));
         var stable = OsuBeatmapWriter.Serialize(randomized).PlayableObjects.Select(o => (o.Kind, o.TimeMs, o.X)).ToArray();

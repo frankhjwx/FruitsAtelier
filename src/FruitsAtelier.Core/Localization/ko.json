@@ -209,6 +209,7 @@
   "assist.hint.5": "시간 차이를 기준으로 연속 개체 사이의 간격을 스냅합니다.\n단축키: Alt를 길게 눌러 일시적으로 전환하거나 Y.\nDS 구성…을 사용하여 거리 스냅 사전 설정을 변경합니다.",
   "assist.hint.6": "잠금 위치 및 타임스탬프(L)",
   "assist.lockDropletSelection": "물방울 선택 잠금",
+  "assist.lockSlidersToCanvas": "슬라이더를 해당 캔버스에서만 선택",
   "tools.hint.select": "기존 메모를 선택하고 수정합니다.\nCtrl+Click: 다중 선택, 슬라이더 제어점을 추가합니다.\n오른쪽 클릭: 메모를 제거하거나 제어점을 편집합니다.",
   "tools.hint.fruit": "왼쪽 클릭: Fruit.\n배치오른쪽 클릭: New combo / 메모 제거(일시 중지됨).",
   "tools.hint.sliderLegacy": "왼쪽 클릭: 슬라이더를 시작하고 현재 슬라이더.\n에 점을 추가합니다. 오른쪽 클릭: 점을 제거하고 현재 슬라이더.\n를 종료합니다. 동일한 점을 다시 클릭하여 새 곡선 섹션을 시작합니다.",

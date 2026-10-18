@@ -221,7 +221,13 @@ public sealed partial class EditorView
     {
         if (PointerOverCanvasBackgroundDim) return null;
         if (tool is not (Tool.Fruit or Tool.Slider) || !plot.Contains(mouseX, mouseY) || drag != DragKind.None
-            || menu >= 0 || contextItems.Count > 0 || editField >= 0 || tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is not null) return null;
+            || menu >= 0 || contextItems.Count > 0 || editField >= 0 || !IsOsuCanvas && tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is not null) return null;
+        if (IsOsuCanvas)
+        {
+            if (osuDraftSlider is { } slider) return new(slider.TimeMs, slider.X);
+            var position = OsuInputPoint(mouseX, mouseY, useDistance: tool == Tool.Fruit);
+            return new(OsuPlacementTime, position.X);
+        }
         if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack
             && (LegacyMode && legacyPreviewValid || draft.Nodes.Any(n => Near(Point(n), mouseX, mouseY, 8)))) return null;
         var point = tool == Tool.Slider && !LegacyMode

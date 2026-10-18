@@ -209,6 +209,7 @@
   "assist.hint.5": "Snap-afstand tussen opeenvolgende objecten op basis van hun tijdsverschil.\nSnelkoppeling: Houd Alt ingedrukt om tijdelijk te schakelen, of druk op Y.\nGebruik DS configureren... om de voorinstellingen voor afstandsnap te wijzigen.",
   "assist.hint.6": "Posities en tijdstempels vergrendelen (L)",
   "assist.lockDropletSelection": "Druppelselectie vergrendelen",
+  "assist.lockSlidersToCanvas": "Sliders alleen op hun eigen canvas selecteren",
   "tools.hint.select": "Selecteer en wijzig bestaande notities.\nCtrl+Click: Meerdere selecteren, een Slider-controlepunt toevoegen.\nRechtsklikken: notitie verwijderen of controlepunt bewerken.",
   "tools.hint.fruit": "Klik met de linkermuisknop: plaats Fruit.\nKlik met de rechtermuisknop: New combo / notitie verwijderen (onderbroken).",
   "tools.hint.sliderLegacy": "Klik met de linkermuisknop: start Slider, voeg een punt toe aan de huidige Slider.\nKlik met de rechtermuisknop: verwijder een punt, beëindig de huidige Slider.\nKlik opnieuw op hetzelfde punt om een ​​nieuw curvegedeelte te starten.",

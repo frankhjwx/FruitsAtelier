@@ -209,6 +209,7 @@
   "assist.hint.5": "Snap spacing between consecutive objects based on their time difference.\nShortcut: Hold Alt to temporarily toggle, or press Y.\nUse Configure DS… to change distance snap presets.",
   "assist.hint.6": "Lock positions and timestamps (L)",
   "assist.lockDropletSelection": "Lock Droplet Selection",
+  "assist.lockSlidersToCanvas": "Lock Sliders to Their Canvas",
   "tools.hint.select": "Select and modify existing notes.\nCtrl+click: Multi-select, add a slider control point.\nRight-click: Remove note or edit control point.",
   "tools.hint.fruit": "Left-click: Place fruit.\nRight-click: New combo / remove note (paused).",
   "tools.hint.sliderLegacy": "Left-click: Start slider, add point on current slider.\nRight-click: Remove point, end current slider.\nClick the same point again to start a new curve section.",

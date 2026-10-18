@@ -116,7 +116,7 @@ public static partial class ProjectSerializer
     private static bool HasFruitY(Fruit fruit) => fruit.Y != 192
         || fruit.OriginalLine?.Split(',') is { Length: >= 2 } fields && OsuBeatmapReader.LegacyCoordinate(fields[1]) != fruit.Y;
     private static bool HasOsuCanvasData(MapDocument document) => document.OsuDistanceSpacing != 1 || document.Fruits.Any(HasFruitY)
-        || document.ImportedSliders.Any(s => s.RandomizationSource is not null || s.RandomizationTrack is not null || s.RandomizationBaseVelocity is not null);
+        || document.ImportedSliders.Any(s => s.PreserveNativeGeometry || s.RandomizationSource is not null || s.RandomizationTrack is not null || s.RandomizationBaseVelocity is not null);
     private static bool HasDropletModes(MapDocument document) => document.Tracks.Any(t => t.DropletMode is not null);
     private static bool HasControlCurves(MapDocument document) => document.Tracks.Any(t => t.Nodes.Any(n => n.OutgoingCurve is not null));
     private static bool HasStacks(MapDocument document) => document.Tracks.Any(t => t.Stack is not null);

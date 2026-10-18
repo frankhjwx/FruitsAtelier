@@ -11,7 +11,7 @@ public static class SliderRepresentationEditing
 {
     public static bool NeedsLegacyDropletRefresh(MapDocument before, MapDocument after)
     {
-        if (after.ImportedSliders.Count == 0) return false;
+        if (after.ImportedSliders.All(s => s.PreserveNativeGeometry)) return false;
         bool settingsChanged = before.DerandomizeFSliderDroplets != after.DerandomizeFSliderDroplets
             || before.DerandomizeDropletsForHardRock != after.DerandomizeDropletsForHardRock
             || before.RandomizeDropletStrength != after.RandomizeDropletStrength
@@ -38,12 +38,12 @@ public static class SliderRepresentationEditing
     {
         try
         {
-            if (document.ImportedSliders.Count == 0) return new(true, []);
+            if (document.ImportedSliders.All(s => s.PreserveNativeGeometry)) return new(true, []);
             if (!document.DerandomizeFSliderDroplets && !document.DerandomizeDropletsForHardRock
                 && document.RandomizeDropletStrength == 20 && document.RandomizeDropletSeed == 1337
                 && document.ImportedSliders.All(s => s.RandomizationSource is null)) return new(true, []);
             var candidate = document.DeepClone();
-            var sources = candidate.ImportedSliders.ToArray();
+            var sources = candidate.ImportedSliders.Where(s => !s.PreserveNativeGeometry).ToArray();
             var timingLookup = new TimingMap.Lookup(document);
             var previousLookup = previous is null ? null : new TimingMap.Lookup(previous);
             var previousSliders = previous?.ImportedSliders.ToDictionary(s => s.Id);
@@ -98,7 +98,8 @@ public static class SliderRepresentationEditing
                 baseline.SourceOrder = slider.SourceOrder;
                 candidate.Tracks.Add(baseline);
             }
-            var fitted = ImportedSliderEditing.ConvertAll(candidate, derandomizeDroplets: true);
+            var fitted = ImportedSliderEditing.Convert(candidate,
+                sources.Where(s => s.RandomizationTrack is null).Select(s => s.Id).ToArray());
             if (fitted.Failures.Count > 0)
                 return new(false, fitted.Failures.Select(f => f.Reason).ToArray());
             var tracks = candidate.Tracks.ToDictionary(t => t.Id);

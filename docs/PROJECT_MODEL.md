@@ -4,8 +4,9 @@ Default saves use [workspace project directories](WORKSPACE.md): a `project.catc
 
 The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. Per-fruit stream combos use schema 17/18. Documents retaining v7 slider tick rules use schema 19/20. Banana shower patterns use schema 21/22. Project-level notes use multi-difficulty schema 24; empty notes retain the document-derived schema. Per-slider droplet modes use schema 25 (single difficulty) or 26 (multi-difficulty). All preceding schemas remain readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v7–v14 and stable-compatible lazer v128 / Mode=0 or Mode=2 `.osu` parsing, retaining v7 on export for v7 maps and using v14 otherwise. Authored content, imported context, and derived output remain separate.
 
-Non-default osu canvas coordinates, independent osu distance spacing, or Legacy
-randomization baselines use schema 27 (single difficulty) or 28 (multi-difficulty).
+Non-default osu canvas coordinates, independent osu distance spacing, Legacy native
+geometry preservation, or randomization baselines use schema 27 (single difficulty)
+or 28 (multi-difficulty).
 Older schemas remain readable. A fruit's geometric Y defaults to 192; old saved
 fruits recover Y from their retained source object line when present. Catch editing
 preserves this coordinate. `OsuDistanceSpacing` is independent of Catch spacing,
@@ -22,6 +23,9 @@ Legacy sliders can retain detached `RandomizationSource` geometry and a fitted
 repeated strength or seed changes do not compound previous effects. Materialized
 geometry and emitted timing are validated through NM and HR export/read-back
 before replacement. A failure retains the original objects and reports its reason.
+Legacy sliders authored in the osu! canvas persist `PreserveNativeGeometry`.
+Their original two-dimensional controls are excluded from global droplet path
+rebuilding, including after reopening the project. Older objects default to false.
 
 ## Authoritative and derived data
 

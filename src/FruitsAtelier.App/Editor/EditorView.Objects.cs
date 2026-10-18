@@ -63,6 +63,7 @@ public sealed partial class EditorView
         double timeRadius = Math.Max(7, CatchSize.FruitDiameter(Document.CircleSize) * CanvasObjectWidth / 512) / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(pointerTime - timeRadius, pointerTime + timeRadius))
         {
+            if (!CanSelectSlider(item.SourceId)) continue;
             if (IsLazerEditing && LazerCanvasObjectOpacity(item) <= .001f) continue;
             if (!includeLockedDroplets && !CanSelectCatchObject(item)) continue;
             if (sourceId is { } id && item.SourceId != id) continue;

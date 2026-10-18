@@ -209,6 +209,7 @@
   "assist.hint.5": "Espacement d'accrochage entre des objets consécutifs en fonction de leur différence de temps.\nRaccourci : maintenez Alt pour basculer temporairement, ou appuyez sur Y.\nUtilisez Configurer DS… pour modifier les préréglages d'accrochage à distance.",
   "assist.hint.6": "Positions de verrouillage et horodatages (L)",
   "assist.lockDropletSelection": "Verrouiller la sélection des gouttelettes",
+  "assist.lockSlidersToCanvas": "Sélectionner les sliders sur leur canevas uniquement",
   "tools.hint.select": "Sélectionnez et modifiez les notes existantes.\nCtrl+Click : sélection multiple, ajoutez un point de contrôle Slider.\nClic droit : supprimez la note ou modifiez le point de contrôle.",
   "tools.hint.fruit": "Clic gauche : placer Fruit.\nClic droit : Nouveau combo / supprimer la note (en pause).",
   "tools.hint.sliderLegacy": "Clic gauche : démarrer Slider, ajouter un point sur le Slider.\nactuel. Clic droit : supprimer le point, terminer le Slider.\nactuel. Cliquez à nouveau sur le même point pour démarrer une nouvelle section de courbe.",

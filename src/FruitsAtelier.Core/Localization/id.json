@@ -209,6 +209,7 @@
   "assist.hint.5": "Jarak jepret antara objek yang berurutan berdasarkan perbedaan waktunya.\nPintasan: Tahan Alt untuk beralih sementara, atau tekan Y.\nGunakan Konfigurasi DS… untuk mengubah preset jepret jarak.",
   "assist.hint.6": "Kunci posisi dan stempel waktu (L)",
   "assist.lockDropletSelection": "Kunci Pilihan Tetesan",
+  "assist.lockSlidersToCanvas": "Pilih slider hanya di kanvas yang sesuai",
   "tools.hint.select": "Pilih dan ubah catatan yang ada.\nCtrl+Click: Pilih banyak, tambahkan titik kontrol Slider.\nKlik kanan: Hapus catatan atau edit titik kontrol.",
   "tools.hint.fruit": "Klik kiri: Tempatkan Fruit.\nKlik kanan: Kombo baru / hapus catatan (dijeda).",
   "tools.hint.sliderLegacy": "Klik kiri: Mulai Slider, tambahkan titik pada Slider.\nKlik kanan: Hapus titik, akhiri Slider.\nKlik lagi titik yang sama untuk memulai bagian kurva baru.",

@@ -209,6 +209,7 @@
   "assist.hint.5": "根据相邻物件的时间间隔吸附它们之间的距离。\n快捷键：按住 Alt 临时切换，或按 Y 切换。\n通过“配置 DS…”修改距离吸附预设。",
   "assist.hint.6": "锁定位置与时间（L）",
   "assist.lockDropletSelection": "锁定水滴选择",
+  "assist.lockSlidersToCanvas": "滑条仅限对应画布选中",
   "tools.hint.select": "选择和修改已有物件。\nCtrl+单击：多选，添加滑条控制点。\n右键：删除物件或编辑控制点。",
   "tools.hint.fruit": "左键：放置单独大果。\n右键：新连击 / 删除物件（暂停时）。",
   "tools.hint.sliderLegacy": "左键：开始滑条，为当前滑条添加控制点。\n右键：删除控制点，结束当前滑条。\n再次单击同一控制点可开始新的曲线段。",

@@ -102,7 +102,7 @@ public static class ImportedSliderEditing
         return new(candidates, failures);
     }
 
-    private static SliderBatchConversionResult Convert(MapDocument document, IReadOnlyCollection<Guid> ids, CancellationToken cancellation = default, CatchConversionCache? cache = null)
+    internal static SliderBatchConversionResult Convert(MapDocument document, IReadOnlyCollection<Guid> ids, CancellationToken cancellation = default, CatchConversionCache? cache = null)
     {
         ArgumentNullException.ThrowIfNull(document);
         var wanted = ids.ToHashSet();

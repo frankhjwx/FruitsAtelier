@@ -209,6 +209,7 @@
   "assist.hint.5": "Ajuste el espacio entre objetos consecutivos según su diferencia horaria.\nAtajo: mantenga presionado Alt para alternar temporalmente, o presione Y.\nUse Configurar DS… para cambiar los ajustes preestablecidos de ajuste de distancia.",
   "assist.hint.6": "Posiciones de bloqueo y marcas de tiempo (L)",
   "assist.lockDropletSelection": "Bloquear selección de gotas",
+  "assist.lockSlidersToCanvas": "Seleccionar sliders solo en su lienzo",
   "tools.hint.select": "Seleccione y modifique notas existentes.\nCtrl+Click: selección múltiple, agregue un punto de control Slider.\nClic derecho: elimine nota o edite punto de control.",
   "tools.hint.fruit": "Clic izquierdo: Colocar Fruit.\nClic derecho: New combo / eliminar nota (en pausa).",
   "tools.hint.sliderLegacy": "Haga clic con el botón izquierdo: inicie Slider, agregue un punto en el Slider.\nactual. Haga clic con el botón derecho: elimine el punto, finalice el Slider.\nactual. Haga clic nuevamente en el mismo punto para comenzar una nueva sección de curva.",

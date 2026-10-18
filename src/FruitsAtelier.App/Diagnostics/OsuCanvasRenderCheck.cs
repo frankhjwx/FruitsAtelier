@@ -88,6 +88,12 @@ internal static class OsuCanvasRenderCheck
                     Paint(toolKey == '2' ? "circle-placement" : "slider-placement");
                 }
                 editor.KeyDown('1', false, false); editor.KeyUp('1');
+                var notesLock = editor.AssistButtonBounds[6];
+                editor.LibrarySettings.LockSlidersToCanvas = true;
+                editor.PointerMove(notesLock.X + 5, notesLock.Y + 5, false, false);
+                Paint("slider-canvas-lock");
+                editor.LibrarySettings.LockSlidersToCanvas = false;
+                editor.PointerMove(0, 0, false, false);
                 foreach (var (time, name) in new[] { (900, "approach-stack"), (1400, "late-fade"), (1900, "slider-approach"), (2500, "slider-repeat"), (5700, "spinner"), (6450, "spinner-end"), (6800, "spinner-fade") })
                 {
                     editor.UpdateTransport(time, 10000, true, false, false, null, null);
