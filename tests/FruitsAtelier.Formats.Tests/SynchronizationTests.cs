@@ -654,6 +654,45 @@ internal static class SynchronizationTests
                 "periodic check does not search unrelated folders");
             Check(f.Scan().Difficulties.Single().State == WorkspaceSyncState.Changed, "explicit discovery finds the relocated association");
         }));
+        yield return ("Sync: reference discovery preserves normalized heads and rejects different tails", () => Run(f =>
+        {
+            File.Delete(f.Source);
+            string other = Path.Combine(f.Songs, "other"); Directory.CreateDirectory(other);
+            string moved = Path.Combine(other, "moved.osu");
+            File.WriteAllText(moved, Fixture().Replace("100,192,1000,1", "100.0,192.0,1000.9,5"));
+            File.WriteAllText(Path.Combine(other, "different-tail.osu"), Fixture().Replace("200,192,2000", "300,192,2000"));
+            var status = f.Scan().Difficulties.Single();
+            Check(status.State == WorkspaceSyncState.Changed && status.Candidate!.Path == moved,
+                "Discovery must fully compare candidates after the normalized first-object filter");
+        }));
+        yield return ("Sync: reference discovery finds changed heads by online IDs after object sections", () => Run(f =>
+        {
+            string text = Fixture().Replace("BeatmapID:0", "BeatmapID:12").Replace("BeatmapSetID:-1", "BeatmapSetID:34");
+            File.WriteAllText(f.Source, text);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory, text);
+            File.Delete(f.Source);
+            string other = Path.Combine(f.Songs, "other"); Directory.CreateDirectory(other);
+            string moved = Path.Combine(other, "moved.osu");
+            File.WriteAllText(moved, text.Replace("100,192,1000", "300,192,1000")
+                .Replace("BeatmapID:12\nBeatmapSetID:34\n", "") + "\n[Metadata]\nBeatmapID:12\nBeatmapSetID:34\n");
+            var status = f.Scan().Difficulties.Single();
+            Check(status.State == WorkspaceSyncState.Changed && status.Candidate!.Path == moved,
+                "Discovery cannot reject changed objects before reading later online IDs");
+        }));
+        yield return ("Sync: reference discovery retains empty maps and cancellation", () => Run(f =>
+        {
+            string text = Fixture().Split("[HitObjects]")[0] + "[HitObjects]\n";
+            File.WriteAllText(f.Source, text);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory, text);
+            File.Delete(f.Source);
+            string other = Path.Combine(f.Songs, "other"); Directory.CreateDirectory(other);
+            string moved = Path.Combine(other, "empty.osu"); File.WriteAllText(moved, text);
+            Check(f.Scan().Difficulties.Single().Candidate!.Path == moved, "Empty maps remain discoverable");
+            using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+            try { WorkspaceSynchronization.Scan(f.Session, f.Songs, cancellation: cancellation.Token); }
+            catch (OperationCanceledException) { return; }
+            throw new Exception("Cancelled reference discovery must stop");
+        }));
         yield return ("Sync: missing difficulty search skips unrelated oversized and invalid maps", () => Run(f =>
         {
             File.Delete(f.Source);

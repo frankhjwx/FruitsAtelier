@@ -665,6 +665,12 @@ languages at each supported test size and DPI and exercise the color picker.
 
 ## Synchronization regression coverage
 
+`Formats.Tests --reference-discovery-check` verifies missing and relocated files,
+normalized first-object filtering, complete-sequence rejection, later online IDs,
+empty maps, cancellation and association ownership. `App.Tests
+--synchronization-wait-check` also checks immediate navigation away from a read-only
+search while save and publication waits remain in effect.
+
 `App.Tests --synchronization-wait-check` checks that ordinary input and repeated
 save shortcuts do not open waiting overlays, local publication still permits note
 placement, and file/navigation waits resume on completion. Windows

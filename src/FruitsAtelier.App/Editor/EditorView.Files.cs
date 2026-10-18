@@ -60,7 +60,10 @@ public sealed partial class EditorView
         sliderBatchTask = null; sliderBatchCancellation = null;
         sliderImportTargets = []; sliderBatchErrors = []; sliderDialogHits.Clear();
         WorkspaceSession = null; resourceErrors = [];
-        if (syncTask is { } retiredSync) _ = retiredSync.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        var retiredSyncCancellation = syncCancellation;
+        retiredSyncCancellation?.Cancel(); syncCancellation = null;
+        if (syncTask is { } retiredSync) _ = retiredSync.ContinueWith(t => { _ = t.Exception; retiredSyncCancellation?.Dispose(); }, TaskScheduler.Default);
+        else retiredSyncCancellation?.Dispose();
         syncTask = null; syncRetry = null; afterSynchronization = null; syncReviewRequested = false; syncSearching.Clear();
         syncStatuses.Clear(); syncMerges.Clear(); syncPage = null; nextSyncCheck = DateTime.MaxValue;
         syncDifficulty = Guid.Empty; syncPreserveHistory = false;

@@ -18,6 +18,8 @@ public sealed partial class EditorView
 
     public bool WaitForSynchronization(Action<bool> completed)
     {
+        if (!LibraryOpening && difficultySaveTask is null && workspaceSaveTask is null && syncCommitTask is null
+            && afterSynchronization is null) return false;
         if (!NotifySynchronizationBlocked()) return false;
         if (synchronizationWaitCompleted is not null) completed(false);
         else synchronizationWaitCompleted = completed;

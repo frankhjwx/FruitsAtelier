@@ -956,6 +956,17 @@ internal static class RenderCheck
                     if (!editor.SynchronizationWaitVisible) throw new InvalidOperationException("Library navigation must wait for publication.");
                     field.SetValue(editor, null); Paint();
                     if (editor.SynchronizationWaitVisible || !editor.LibraryVisible) throw new InvalidOperationException("Library navigation did not resume after publication.");
+                    editor.NewProject(); Paint();
+                    var scanField = typeof(EditorView).GetField("syncTask", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+                    var gateType = typeof(TaskCompletionSource<>).MakeGenericType(scanField.FieldType.GenericTypeArguments[0]);
+                    var gate = Activator.CreateInstance(gateType)!;
+                    scanField.SetValue(editor, gateType.GetProperty("Task")!.GetValue(gate));
+                    var cancellation = new CancellationTokenSource(); var token = cancellation.Token;
+                    typeof(EditorView).GetField("syncCancellation", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(editor, cancellation);
+                    editor.ShowLibrary(); Paint();
+                    if (!editor.LibraryVisible || editor.SynchronizationWaitVisible || !token.IsCancellationRequested)
+                        throw new InvalidOperationException("Read-only discovery blocked native Library navigation.");
+                    gateType.GetMethod("SetCanceled", Type.EmptyTypes)!.Invoke(gate, null);
                     editor.StopFileMonitoring();
                     AppLog.Write($"Synchronization wait native check passed: {locale}, {size}, {dpi} DPI.");
                 }

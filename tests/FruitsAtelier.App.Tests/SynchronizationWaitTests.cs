@@ -13,6 +13,33 @@ internal static class SynchronizationWaitTests
         foreach (string language in new[] { "en", "zh-CN" })
         {
             L.SetLanguage(language);
+            {
+                var ui = new Ui(false); ui.View.NewProject(); ui.Paint();
+                var field = Field("syncTask");
+                var gateType = typeof(TaskCompletionSource<>).MakeGenericType(field.FieldType.GenericTypeArguments[0]);
+                var gate = Activator.CreateInstance(gateType)!;
+                field.SetValue(ui.View, gateType.GetProperty("Task")!.GetValue(gate));
+                var cancellation = new CancellationTokenSource();
+                var token = cancellation.Token;
+                Field("syncCancellation").SetValue(ui.View, cancellation);
+                ui.View.ShowLibrary(); ui.Paint();
+                Check(ui.View.LibraryVisible && !ui.View.SynchronizationWaitVisible && token.IsCancellationRequested,
+                    "Leaving a read-only reference search must cancel it without waiting for the Songs scan.");
+                gateType.GetMethod("SetCanceled", Type.EmptyTypes)!.Invoke(gate, null);
+            }
+            {
+                var ui = new Ui(false); ui.View.NewProject(); ui.Paint();
+                var field = Field("syncTask");
+                var gateType = typeof(TaskCompletionSource<>).MakeGenericType(field.FieldType.GenericTypeArguments[0]);
+                var gate = Activator.CreateInstance(gateType)!;
+                field.SetValue(ui.View, gateType.GetProperty("Task")!.GetValue(gate));
+                Field("afterSynchronization").SetValue(ui.View, (Action)ui.View.SaveCurrentDifficulty);
+                ui.View.ShowLibrary(); ui.Paint();
+                Check(!ui.View.LibraryVisible && ui.View.SynchronizationWaitVisible,
+                    "A save waiting for discovery must finish before navigation");
+                field.SetValue(ui.View, null); Field("afterSynchronization").SetValue(ui.View, null); ui.Paint();
+                gateType.GetMethod("SetCanceled", Type.EmptyTypes)!.Invoke(gate, null);
+            }
             foreach (string taskField in new[] { "workspaceSaveTask", "syncCommitTask" })
             {
                 var ui = new Ui(false);

@@ -142,7 +142,14 @@ public static class WorkspaceSynchronization
         var roots = new HashSet<string>(Paths);
         var trackedPaths = entries.Select(Target).OfType<string>().ToHashSet(Paths);
         var associatedFolders = trackedPaths.Select(p => System.IO.Path.GetDirectoryName(p)!).ToHashSet(Paths);
-        var signatures = entries.Where(e => e.Sync is not null).Select(e => ObjectSignature(e.Sync!.Text)).ToHashSet();
+        var signatures = new HashSet<string>();
+        var firstObjects = new HashSet<string>();
+        foreach (var entry in entries.Where(e => e.Sync is not null))
+        {
+            var objects = ObjectLines(entry.Sync!.Text);
+            signatures.Add(Digest(string.Join("\n", objects)));
+            firstObjects.Add(objects.FirstOrDefault() ?? "");
+        }
         var onlineIds = entries.Where(e => e.Sync is not null).Select(e => OnlineIdentity(e.Sync!.Text)).OfType<string>().ToHashSet();
         bool missingAssociation = entries.Select(Target).OfType<string>().Any(path => !File.Exists(path));
         if (!string.IsNullOrWhiteSpace(songs) && missingAssociation && searchMissing) roots.Add(System.IO.Path.GetFullPath(songs));
@@ -180,6 +187,7 @@ public static class WorkspaceSynchronization
                             // documents only for this set or identity candidates, not for the entire library.
                             if (!associatedFolders.Contains(System.IO.Path.GetDirectoryName(file)!))
                             {
+                                if (!DiscoveryHeadMatches(file, firstObjects, onlineIds, cancellation)) continue;
                                 string text = File.ReadAllText(file);
                                 if (!signatures.Contains(ObjectSignature(text)) && (OnlineIdentity(text) is not { } identity || !onlineIds.Contains(identity))) continue;
                             }
@@ -263,6 +271,37 @@ public static class WorkspaceSynchronization
         var folders = entries.Select(Target).OfType<string>().Select(p => System.IO.Path.GetDirectoryName(p)!)
             .Concat(results.Where(r => r.Candidate is not null).Select(r => System.IO.Path.GetDirectoryName(r.Candidate!.Path)!)).ToHashSet(Paths);
         return new(results, difficultyId is not null ? [] : files.Values.Where(f => folders.Contains(System.IO.Path.GetDirectoryName(f.Path)!) && !known.Contains(f.Path)).ToArray());
+    }
+
+    private static bool DiscoveryHeadMatches(string path, HashSet<string> firstObjects, HashSet<string> onlineIds, CancellationToken cancellation)
+    {
+        using var reader = new StreamReader(path);
+        bool metadata = false, objects = false, foundObject = false;
+        string? id = null, set = null;
+        while (reader.ReadLine() is { } raw)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            string line = raw.Trim();
+            if (line.StartsWith('[')) { metadata = line == "[Metadata]"; objects = line == "[HitObjects]"; continue; }
+            if (metadata)
+            {
+                int colon = line.IndexOf(':');
+                if (colon >= 0)
+                {
+                    string key = line[..colon].Trim();
+                    if (key == "BeatmapID") id = line[(colon + 1)..].Trim();
+                    if (key == "BeatmapSetID") set = line[(colon + 1)..].Trim();
+                }
+            }
+            if (!objects || foundObject || !OsuBeatmapReader.IsDataLine(line)) continue;
+            foundObject = true;
+            // A different normalized head cannot have the same complete object signature.
+            if (firstObjects.Contains(ObjectLines("[HitObjects]\n" + line)[0])) return true;
+            if (onlineIds.Count == 0) return false;
+        }
+        return !foundObject && firstObjects.Contains("")
+            || long.TryParse(id, out long mapId) && mapId > 0 && long.TryParse(set, out long setId) && setId > 0
+                && onlineIds.Contains(setId + "/" + mapId);
     }
 
     public static WorkspaceMerge CompareWithoutBaseline(MapDocument local, WorkspaceSyncCandidate external, string directory, bool compensate)

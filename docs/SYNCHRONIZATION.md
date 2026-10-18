@@ -34,6 +34,9 @@ current saving, checking or applying stage and an indeterminate progress bar.
 It disappears when the work finishes. Returning to Library, opening another
 project and closing the window resume after successful completion; a failure or
 conflict review keeps the current editor open. Other blocked input is not replayed.
+Returning to Library, opening another project or closing the window can retire a
+read-only reference search immediately when no requested save is waiting on it.
+The retired search is cancelled and cannot publish into the next project.
 
 Saving local changes to Artist, Title, Creator (mapper), or Version (difficulty name)
 renames the linked `.osu` to `Artist - Title (Creator) [Version].osu` in its existing
@@ -102,6 +105,9 @@ repair. Required resources are still validated before export.
 
 Existing paths are checked by content, not only modification time and size. When a
 path disappears, the last synchronized object sequence locates rename candidates.
+Discovery filters unrelated files by their normalized first object or online IDs
+before comparing complete object sequences. Empty maps and metadata stored after
+the object section remain supported.
 Positive beatmap and set IDs provide additional candidates when objects changed.
 Multiple candidates require explicit association. Identical copies at different
 live paths remain separate files. An unavailable root or an unreadable live file
