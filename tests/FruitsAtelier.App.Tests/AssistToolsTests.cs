@@ -133,6 +133,7 @@ internal static class AssistToolsTests
 
     public static void MovementOverlay()
     {
+        MovementOverlayBoundsTests.Run();
         var ui = new Ui(); var map = Map();
         ui.LoadDocument(map);
         var original = ui.View.Document.DeepClone();
