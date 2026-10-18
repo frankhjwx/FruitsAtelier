@@ -95,7 +95,6 @@ Sources: [shortcut operations](../src/FruitsAtelier.App/Editor/EditorView.Shortc
 | Candidate | Why it is not just a binding |
 | --- | --- |
 | Ctrl+Shift+L reload | Define project versus linked `.osu` authority and partial/full reload. Ctrl+L restores the prior workspace save with confirmation; it does not reload a linked `.osu`. |
-| Shift+Q/W/E/R and Ctrl+Q/W/E/R sample banks | Add selection-wide sample-bank editing, including imported source context and slider edge overrides, undo and export preservation. Timing-point bank controls do not implement object-bank edits. |
 | Ctrl+Shift+I sample import | Needs an import dialog, asset copying/name policy and persistence; also conflicts with control insertion. |
 | Ctrl+Shift+S scaling | Define separate X/time scaling, pivot, range validation and slider-handle/repeat behavior. |
 | Alt / Alt+Shift+wheel DS adjustment | DS uses multiple simultaneous presets. Choose which preset or aggregate is adjusted; existing Alt+wheel zoom would need a migration. |
@@ -125,5 +124,5 @@ client rendering/debug shortcuts are outside the editor compatibility scope.
   F4, F6, T tap tempo or timing precision modifiers as missing.
 
 Physical-key aliases and consistent Snap-wheel handling can be added independently.
-Clear-all and sample-bank editing require content operations. Larger transformation
+Clear-all requires a content operation. Larger transformation
 and resource-import features need their own behavior specification.

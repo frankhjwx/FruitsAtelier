@@ -86,6 +86,9 @@ and language may publish the prepared geometry, timing and warmed export cache.
 Failure or cancellation restores the baseline. Worker caches are never shared
 with the UI. Baseline fitting data preserves idempotent strength/seed changes and
 is retimed when authored timing changes.
+Automatic Legacy droplet refresh reports progress in the status bar without
+opening the slider conversion dialog. The pending transaction still gates further
+content edits and save/export until validation completes; Escape cancels it.
 
 Placement movement overlays project break reconciliation from cached parent
 intervals and the candidate interval. They share the transaction's break algorithm
@@ -227,6 +230,15 @@ transport polling leaves simulation updates to that driver and copies presentati
 state during rendering. The fallback driver still advances with transport updates.
 
 ## Correctness boundaries
+
+Ordinary difficulty saves clone only the requested document on the UI thread.
+Their worker owns synchronization, export validation and journal publication, and
+prepares the saved baseline before handing it back. Completion transfers that
+detached baseline without cloning other difficulties or rebuilding conversion.
+Recovery history copies persisted difficulty files and records the current
+difficulty separately; full project reconstruction happens when a version is read.
+History compression remains deferred to the idle worker. See
+[workspace publication](WORKSPACE.md#file-structure) for recovery boundaries.
 
 Optimizations must preserve source order for tied timestamps, exported time and
 coordinate quantization, nested event identities, downstream random events, NM/HR

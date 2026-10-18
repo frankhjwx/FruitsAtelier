@@ -30,7 +30,7 @@ public static class WorkspaceAssociations
         if (!Directory.Exists(workspace)) return result;
         foreach (string directory in Directory.EnumerateDirectories(workspace))
         {
-            if (!File.Exists(Path.Combine(directory, WorkspaceProject.ManifestName)) || directory.EndsWith(".previous") || directory.EndsWith(".saving")) continue;
+            if (!File.Exists(Path.Combine(directory, WorkspaceProject.ManifestName)) || directory.EndsWith(".previous") || directory.EndsWith(".saving") || directory.EndsWith(".updating")) continue;
             var manifest = WorkspaceProject.ReadManifest(directory, includeSync: false);
             foreach (var entry in manifest.Difficulties)
                 if (WorkspaceSynchronization.Target(entry) is { } target)

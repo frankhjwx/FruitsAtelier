@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.Core;
@@ -22,7 +23,8 @@ public static class WorkspaceVersionHistory
             foreach (string file in new[] { "current.catchproj", "saved.catchproj" })
             {
                 string path = System.IO.Path.Combine(directory, file);
-                if (WorkspaceHistoryFile.Exists(path)) versions.Add(new(path, time, name[23..], file == "current.catchproj"));
+                if (WorkspaceHistoryFile.Exists(path) || File.Exists(System.IO.Path.Combine(directory, file == "current.catchproj" ? "current.snapshot" : "saved.snapshot")))
+                    versions.Add(new(path, time, name[23..], file == "current.catchproj"));
             }
         }
         return versions.OrderByDescending(v => v.TimeUtc).ThenByDescending(v => v.WorkingCopy).ToArray();
@@ -34,7 +36,53 @@ public static class WorkspaceVersionHistory
             || System.IO.Path.GetFileName(version.Path) is not ("current.catchproj" or "saved.catchproj"))
             throw new InvalidDataException(L.Get("project.invalid"));
         WorkspaceProject.RejectLinks(version.Path);
-        return ProjectSerializer.ReadProject(WorkspaceHistoryFile.ReadText(version.Path), version.Path);
+        if (WorkspaceHistoryFile.Exists(version.Path)) return ProjectSerializer.ReadProject(WorkspaceHistoryFile.ReadText(version.Path), version.Path);
+        string directory = System.IO.Path.GetDirectoryName(version.Path)!;
+        string marker = System.IO.Path.Combine(directory, version.WorkingCopy ? "current.snapshot" : "saved.snapshot");
+        WorkspaceProject.RejectLinks(marker);
+        string origin = File.ReadAllText(marker);
+        string manifestPath = System.IO.Path.Combine(directory, version.WorkingCopy ? "current" : "", WorkspaceProject.ManifestName);
+        var manifest = JsonSerializer.Deserialize<WorkspaceManifest>(WorkspaceHistoryFile.ReadText(manifestPath))
+            ?? throw new InvalidDataException(L.Get("project.invalid"));
+        var project = new BeatmapProject { Name = manifest.Name, Notes = manifest.Notes };
+        foreach (var entry in manifest.Difficulties)
+        {
+            if (System.IO.Path.GetFileName(entry.File) != entry.File) throw new InvalidDataException(L.Get("project.invalid"));
+            string working = System.IO.Path.Combine(directory, "current", entry.File);
+            string source = version.WorkingCopy && WorkspaceHistoryFile.Exists(working) ? working : System.IO.Path.Combine(directory, entry.File);
+            project.Difficulties.Add(new() { Id = entry.Id, Name = entry.Name,
+                Document = ProjectSerializer.Read(WorkspaceHistoryFile.ReadText(source), System.IO.Path.Combine(origin, entry.File)) });
+        }
+        project.Validate();
+        return project;
+    }
+
+    internal static string ReferenceDirectory(string path)
+    {
+        string directory = System.IO.Path.GetDirectoryName(WorkspaceHistoryFile.LogicalPath(path))!;
+        string marker = System.IO.Path.Combine(directory, "saved.snapshot");
+        if (!File.Exists(marker)) marker = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(directory)!, "current.snapshot");
+        if (!File.Exists(marker)) return directory;
+        WorkspaceProject.RejectLinks(marker);
+        return File.ReadAllText(marker);
+    }
+
+    public static void ArchiveCurrentDifficulty(WorkspaceSession session, BeatmapProject project, Guid id)
+    {
+        lock (WorkspaceProject.Gate)
+        {
+            string directory = WorkspaceSynchronization.Archive(session, "before-sync", deferProject: true);
+            string working = System.IO.Path.Combine(directory, "current");
+            Directory.CreateDirectory(working);
+            var manifest = WorkspaceProject.SnapshotManifest(session.Manifest);
+            var entry = manifest.Difficulties.Single(d => d.Id == id);
+            var difficulty = project.Difficulties.Single(d => d.Id == id);
+            entry.Name = difficulty.Name;
+            foreach (var item in manifest.Difficulties) item.Sync = null;
+            AtomicFile.Write(System.IO.Path.Combine(working, entry.File), ProjectSerializer.Serialize(difficulty.Document, System.IO.Path.Combine(session.Directory, entry.File)));
+            AtomicFile.Write(System.IO.Path.Combine(working, WorkspaceProject.ManifestName), JsonSerializer.Serialize(manifest));
+            AtomicFile.Write(System.IO.Path.Combine(directory, "current.snapshot"), System.IO.Path.GetFullPath(session.Directory));
+        }
     }
 
     public static void ArchiveCurrent(WorkspaceSession session, BeatmapProject project)

@@ -13,11 +13,66 @@ internal static class SynchronizationWaitTests
         foreach (string language in new[] { "en", "zh-CN" })
         {
             L.SetLanguage(language);
+            {
+                var ui = new Ui(false); ui.View.NewProject(); ui.Paint();
+                var field = Field("syncTask");
+                var gateType = typeof(TaskCompletionSource<>).MakeGenericType(field.FieldType.GenericTypeArguments[0]);
+                var gate = Activator.CreateInstance(gateType)!;
+                field.SetValue(ui.View, gateType.GetProperty("Task")!.GetValue(gate));
+                var cancellation = new CancellationTokenSource();
+                var token = cancellation.Token;
+                Field("syncCancellation").SetValue(ui.View, cancellation);
+                ui.View.ShowLibrary(); ui.Paint();
+                Check(ui.View.LibraryVisible && !ui.View.SynchronizationWaitVisible && token.IsCancellationRequested,
+                    "Leaving a read-only reference search must cancel it without waiting for the Songs scan.");
+                gateType.GetMethod("SetCanceled", Type.EmptyTypes)!.Invoke(gate, null);
+            }
+            {
+                var ui = new Ui(false); ui.View.NewProject(); ui.Paint();
+                var field = Field("syncTask");
+                var gateType = typeof(TaskCompletionSource<>).MakeGenericType(field.FieldType.GenericTypeArguments[0]);
+                var gate = Activator.CreateInstance(gateType)!;
+                field.SetValue(ui.View, gateType.GetProperty("Task")!.GetValue(gate));
+                Field("afterSynchronization").SetValue(ui.View, (Action)ui.View.SaveCurrentDifficulty);
+                ui.View.ShowLibrary(); ui.Paint();
+                Check(!ui.View.LibraryVisible && ui.View.SynchronizationWaitVisible,
+                    "A save waiting for discovery must finish before navigation");
+                field.SetValue(ui.View, null); Field("afterSynchronization").SetValue(ui.View, null); ui.Paint();
+                gateType.GetMethod("SetCanceled", Type.EmptyTypes)!.Invoke(gate, null);
+            }
+            foreach (string taskField in new[] { "workspaceSaveTask", "syncCommitTask" })
+            {
+                var ui = new Ui(false);
+                ui.LoadDocument(new MapDocument { DurationMs = 6000, IsDemo = false });
+                Field("syncCommitAllowsEditing").SetValue(ui.View, true);
+                Field(taskField).SetValue(ui.View, new TaskCompletionSource<WorkspaceSession>().Task);
+                ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+                ui.Key('S', ctrl: true);
+                ui.Key('2'); ui.ClickMap(2000, 200);
+                Check(ui.View.Document.Fruits.Count == 1 && !ui.View.SynchronizationWaitVisible
+                    && !ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.waitHelp")),
+                    "Background local publication must allow note placement without an overlay after repeated saves.");
+                Field(taskField).SetValue(ui.View, null);
+            }
+            foreach (Action<Ui> input in new Action<Ui>[] {
+                ui => ui.Key('Z', ctrl: true), ui => ui.View.PointerDown(300, 300, 0, false, false),
+                ui => ui.View.PointerDoubleClick(300, 300, false, false),
+                ui => ui.View.Wheel(300, 300, 120, false), ui => ui.View.TextInput('x'),
+                ui => ui.Key('S', ctrl: true), ui => ui.View.SaveCurrentDifficulty() })
+            {
+                var ui = new Ui(false); ui.View.NewProject(); ui.Paint();
+                ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+                var before = ui.View.Document.DeepClone();
+                Field("syncCommitTask").SetValue(ui.View, new TaskCompletionSource<WorkspaceSession>().Task);
+                input(ui); ui.Paint();
+                Check(!ui.View.SynchronizationWaitVisible && !ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.waitHelp")),
+                    "Ordinary editor input and repeated save shortcuts must not open a synchronization overlay.");
+                Check(ui.View.Document.ContentEquals(before), "Input must not modify a synchronization snapshot being applied.");
+                Field("syncCommitTask").SetValue(ui.View, null); ui.Paint();
+            }
             foreach (Action<Ui> blocked in new Action<Ui>[] {
                 ui => ui.View.PrepareFileOperation(), ui => ui.View.SwitchDifficulty(0),
-                ui => ui.Key('Z', ctrl: true), ui => ui.View.PointerDown(300, 300, 0, false, false),
-                ui => ui.View.Wheel(300, 300, 120, false), ui => ui.View.TextInput('x'),
-                ui => ui.View.OpenSettings(), ui => ui.View.SaveCurrentDifficulty(), ui => ui.View.ShowDeleteDifficulty(0) })
+                ui => ui.View.OpenSettings(), ui => ui.View.ShowDeleteDifficulty(0) })
             {
                 var ui = new Ui(false); ui.View.NewProject(); ui.Paint();
                 var before = ui.View.Document.DeepClone();

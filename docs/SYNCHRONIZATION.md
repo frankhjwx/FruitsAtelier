@@ -19,11 +19,24 @@ Replacing audio, including changed bytes at the same path, reloads it at the
 current timeline position.
 
 Background saving and synchronization do not open a progress overlay by default.
-Attempting an operation that must wait for them shows a small overlay with the
+Ordinary saves of an existing difficulty inspect its linked file independently;
+periodic checks, external change reconciliation and explicit synchronization still
+inspect the set. Save completion acknowledges only the captured difficulty and
+preserves newer edits, other difficulties' dirty state, playback and active tab.
+Saved-file notifications are checked against accepted content hashes in the
+background before scheduling another reconciliation.
+
+Ordinary keyboard, pointer and wheel input during synchronization publication,
+including repeated save shortcuts, does not open a waiting overlay. Local saves
+continue to allow content editing while their captured snapshot is written.
+Attempting a file or navigation operation that must wait shows a small overlay with the
 current saving, checking or applying stage and an indeterminate progress bar.
 It disappears when the work finishes. Returning to Library, opening another
 project and closing the window resume after successful completion; a failure or
 conflict review keeps the current editor open. Other blocked input is not replayed.
+Returning to Library, opening another project or closing the window can retire a
+read-only reference search immediately when no requested save is waiting on it.
+The retired search is cancelled and cannot publish into the next project.
 
 Saving local changes to Artist, Title, Creator (mapper), or Version (difficulty name)
 renames the linked `.osu` to `Artist - Title (Creator) [Version].osu` in its existing
@@ -92,6 +105,9 @@ repair. Required resources are still validated before export.
 
 Existing paths are checked by content, not only modification time and size. When a
 path disappears, the last synchronized object sequence locates rename candidates.
+Discovery filters unrelated files by their normalized first object or online IDs
+before comparing complete object sequences. Empty maps and metadata stored after
+the object section remain supported.
 Positive beatmap and set IDs provide additional candidates when objects changed.
 Multiple candidates require explicit association. Identical copies at different
 live paths remain separate files. An unavailable root or an unreadable live file
@@ -300,12 +316,21 @@ Unchanged saves do not add versions. The storage retention policy below still ap
 
 ### Compressed recovery files
 
-New authoring snapshots, synchronization baselines, external `.osu` recovery copies,
-and pending export receipts are compressed on each write. Each logical file has a
+Materialized project snapshots, synchronization recovery files and pending export
+receipts are compressed on write. Each logical file has a
 binary companion with the suffix `.catchbackup`; current workspace authoring files
 keep their existing JSON format. Snapshot directories and logical file locations stay
 the same, so relative resource paths resolve without extracting a temporary project.
-Version browsing decompresses only the selected project file in memory.
+Version browsing reads the selected version in memory.
+
+Single-difficulty saves first copy the persisted manifest, authoring files and
+baselines into their recovery round. `saved.snapshot` records the original project
+directory for resolving relative paths. A `current/` manifest and the captured
+difficulty, with a `current.snapshot` marker, preserve the working version before
+linked publication. Unchanged difficulties reuse the saved files in that round.
+Version reading assembles the complete project on demand. The idle history worker
+compresses these retained files through the same verified migration used for
+legacy snapshots.
 
 The version 1 envelope contains eight bytes `46 41 43 42 01 00 00 00` (`FACB`,
 version 1), a little-endian signed 32-bit uncompressed byte count, a 32-byte SHA-256

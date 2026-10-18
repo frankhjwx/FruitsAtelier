@@ -18,13 +18,13 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 
 ```powershell
 ./scripts/Publish-Windows.ps1
-./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.1.0-win-x64.zip
+./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.1.1-win-x64.zip
 ```
 
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
 `releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`
-(currently 1.1.0); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
+(currently 1.1.1); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the
@@ -176,7 +176,8 @@ the published artifacts.
    ancestry or PR approval. These checks are the release maintainer's responsibility.
 
 5. Wait for the tag-triggered **Windows release** workflow. It validates the tag,
-   builds and tests that exact commit, packages the self-contained ZIP, runs the
+   reuses matching desktop regression evidence when available (otherwise running
+   Windows regression), packages that exact commit as a self-contained ZIP, runs the
    extracted executable, checks its bundled runtime, and publishes a GitHub
    Release. Suffixed tags become prereleases. The workflow uses the repository
    `GITHUB_TOKEN`; no personal token is needed. Actions must be enabled and
@@ -196,9 +197,34 @@ the published artifacts.
    `git merge-base --is-ancestor origin/main origin/dev` succeeds; if `main`
    advanced, repeat the synchronization before handing off on `dev`.
 
-The manual **Run workflow** entry builds an existing tag and stores downloadable
-Actions artifacts without publishing a GitHub Release. The normal desktop regression
-also checks Windows packaging, so changes can be validated before tagging.
+### CI validation and reuse
+
+**Desktop regression** runs on pushes to `dev` and PRs targeting `main` or `dev`.
+Pushes to `main` and tags do not start another desktop run. Its required `windows`
+and `macos` jobs keep their existing names; `main` still requires both checks and
+an up-to-date PR base. New commits cancel obsolete runs for the same branch or PR.
+
+Each job compares the checked-out Git tree (the merge-result tree for a PR) with
+up to 30 recent successful `dev` push runs of `desktop.yml` in this repository.
+Reuse requires identical tracked content, including workflows, scripts and lock
+files, and successful Windows and Mac regression steps that actually executed.
+Runs that only reused evidence cannot supply it. The source run must have completed
+successfully, including Windows package/upgrade checks and Mac packaging. The job
+summary links the original run. A changed merge result, missing evidence, unavailable
+API, or insufficient read permission falls back to normal regression. An unfinished
+dev run is not evidence: wait for dev validation before opening the release PR to
+avoid overlapping full runs.
+
+The tag workflow uses the same evidence to avoid repeating Windows regression.
+It always builds a fresh package from the tagged commit with the release SDK and
+runs the extracted-executable check. Version/commit metadata, bundled-runtime checks,
+checksums, publication and anonymous updater discovery remain part of each release.
+NuGet package caches reduce restore downloads; compiled outputs and release packages
+are not reused. Already-compressed release assets are uploaded without recompression.
+
+Use **Run workflow** on Desktop regression to force a full check. The manual Windows
+release entry always builds and tests an existing tag and stores downloadable Actions
+artifacts without publishing a GitHub Release. Manual runs do not reuse validation.
 
 A failed test or package check prevents release publication. Re-running a failed
 tag workflow can complete an unfinished draft; published releases are never

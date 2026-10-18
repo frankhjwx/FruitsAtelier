@@ -37,7 +37,21 @@ Workspace/
 
 `project.catchdiff` is the project manifest. It stores a stable project ID, name, difficulty order, difficulty IDs, filenames, Songs/external-folder origins, and each difficulty's source and export fingerprints. Other `.catchdiff` files contain complete documents using the encoding described in [Project Model](PROJECT_MODEL.md), including handles, curve controls and AR references, stream and stack settings, timing, and original imported context. The manifest schema remains 1 and difficulties optionally retain synchronization baselines as described in [Synchronization](SYNCHRONIZATION.md). Filenames are generated from the original Metadata Artist, Title, Creator, and project difficulty name, with characters invalid across platforms removed. Numeric suffixes resolve collisions. Filenames are not identities.
 
-Saving first creates a complete temporary project directory, then publishes it by renaming directories. An interrupted save can recover from the retained `.previous` directory; the manifest and difficulty files never combine different save versions. Resource paths are recorded relative to the final project location. Saving does not copy resources: external directories stay in place, and complete OSZ contents remain separately in `Resources`, unaffected by project snapshot saves.
+Ctrl/Cmd+S saves the current difficulty of an existing project. Other difficulties'
+unsaved edits remain pending. The worker checks only the current linked `.osu`
+before publishing its authoring file, synchronization baseline and manifest.
+Editing, playback and difficulty navigation remain available; edits made after
+the captured snapshot remain unsaved. New projects, project-level changes,
+authoring filename changes and conflict resolution use complete project publication.
+
+Single-difficulty publication stages replacements and retains originals in a
+sibling `.updating` journal. The journal becomes ready before any live file changes;
+an interrupted publication restores the originals unless its completion marker
+exists. Complete project publication uses sibling `.saving` and `.previous`
+directories. Opening or indexing projects recovers interrupted publications before
+reading them. Resource paths are recorded relative to the final project location.
+Saving does not copy resources: external directories stay in place, and complete
+OSZ contents remain separately in `Resources`, unaffected by project snapshot saves.
 
 Older `.catchproj` files still open; the next save writes a workspace project.
 

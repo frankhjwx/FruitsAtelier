@@ -1,6 +1,10 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Length == 2 && args[0] == "--legacy-edit-map") { LegacyDropletWorkerTests.FirstEdits(ProjectSerializer.ReadFile(args[1])); Console.WriteLine("PASS first note placement and deletion without conversion dialogs"); return 0; }
+if (args.Contains("--synchronization-wait-check")) { SynchronizationWaitTests.Run(); Console.WriteLine("PASS background input and explicit synchronization waits"); return 0; }
+if (args.Contains("--difficulty-save-check")) { DifficultySaveTests.Run(); Console.WriteLine("PASS current difficulty background saves and recovery"); return 0; }
+if (args.Contains("--difficulty-save-performance")) { DifficultySavePerformance.Run(); return 0; }
 
 if (args.Contains("--movement-overlay-check")) { AssistToolsTests.MovementOverlay(); Console.WriteLine("PASS Movement overlay fractional bounds and input"); return 0; }
 
@@ -258,6 +262,7 @@ var tests = new (string Name, Action Run)[]
     ("AiMod panel checks objects, scopes focused input, navigates errors and preserves undo", AimodTests.Run),
     ("AiMod table resizes, reorders, copies and docks without content edits", AimodTests.TableAndDock),
     ("Background workspace saves isolate input and acknowledge only their snapshot", PerformanceSchedulingTests.Save),
+    ("Current difficulty saves retain other edits, navigation and recoverable publication", DifficultySaveTests.Run),
     ("Blocked operations show synchronization progress only on demand", SynchronizationWaitTests.Run),
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
     ("Stale synchronization waits for stable edits and archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),

@@ -11,6 +11,7 @@ public sealed partial class EditorView
     private sealed record SyncRetry(SyncResult Previous, BeatmapProject Snapshot, DateTime After);
     private SyncRetry? syncRetry;
     private Task<SyncResult>? syncTask;
+    private CancellationTokenSource? syncCancellation;
     private readonly HashSet<Guid> syncSearching = [];
     private bool SynchronizationBlocksInput => LibraryOpening || AudioProjectCreating || workspaceSaveTask is not null && workspaceSaveBlocksInput || syncCommitTask is not null && !syncCommitAllowsEditing;
     private bool syncCommitAllowsEditing;
@@ -38,8 +39,8 @@ public sealed partial class EditorView
     private IReadOnlyList<WorkspaceClaim> syncClaims = [];
     private string syncFailure = "";
     public bool SynchronizationVisible => syncPage is not null and not "checking";
-    public bool SynchronizationBusy => LibraryOpening || syncRetry is not null || workspaceSaveTask is not null || syncTask is not null || syncCommitTask is not null;
-    public bool SynchronizationNeedsRedraw => LibraryOpening || SynchronizationWaitVisible || syncRetry is { } retry && DateTime.UtcNow >= retry.After || workspaceSaveTask is { IsCompleted: true } || VersionHistoryNeedsRedraw || syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
+    public bool SynchronizationBusy => LibraryOpening || difficultySaveTask is not null || syncRetry is not null || workspaceSaveTask is not null || syncTask is not null || syncCommitTask is not null;
+    public bool SynchronizationNeedsRedraw => LibraryOpening || acceptedFileCheck is { IsCompleted: true } || difficultySaveTask is { IsCompleted: true } || SynchronizationWaitVisible || syncRetry is { } retry && DateTime.UtcNow >= retry.After || workspaceSaveTask is { IsCompleted: true } || VersionHistoryNeedsRedraw || syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
         || fileMonitor?.IsReady(DateTime.UtcNow) == true
         || WorkspaceSession is not null && !SynchronizationVisible && (fileSyncPending || !LibraryVisible && DateTime.UtcNow >= nextSyncCheck);
     public WorkspaceSyncState DifficultySyncState(int index) => index >= 0 && index < difficulties.Count
@@ -72,9 +73,11 @@ public sealed partial class EditorView
         writeCaches ??= [];
         string songs = LibrarySettings.Songs; bool compensate = compensateTinyDroplets;
         afterSynchronization = continuation;
+        syncCancellation = new();
+        var cancellation = syncCancellation.Token;
         syncTask = Task.Run(() =>
         {
-            var scan = previousScan ?? WorkspaceSynchronization.Scan(frozen, songs, searchMissing: searchMissing || !quiet);
+            var scan = previousScan ?? WorkspaceSynchronization.Scan(frozen, songs, searchMissing: searchMissing || !quiet, cancellation: cancellation);
             var merges = new Dictionary<Guid, WorkspaceMerge>();
             var localExports = new Dictionary<Guid, WorkspaceExportPlan>();
             var localExportErrors = new Dictionary<Guid, string>();
@@ -84,6 +87,7 @@ public sealed partial class EditorView
                     || WorkspaceSynchronization.HasFieldDifferences(
                     snapshot.Difficulties.Single(d => d.Id == s.DifficultyId).Document, s.Candidate!.Document))))
             {
+                cancellation.ThrowIfCancellationRequested();
                 var entry = frozen.Manifest.Difficulties.Single(d => d.Id == status.DifficultyId);
                 var diff = snapshot.Difficulties.Single(d => d.Id == status.DifficultyId);
                 merges[entry.Id] = entry.Sync is null
@@ -219,6 +223,7 @@ public sealed partial class EditorView
         if (syncTask is { IsCompleted: true } completed && !SyncInteractionActive && !SynchronizationVisible)
         {
             syncTask = null;
+            syncCancellation?.Dispose(); syncCancellation = null;
             try
             {
                 var result = completed.GetAwaiter().GetResult();

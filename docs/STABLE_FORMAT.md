@@ -91,6 +91,12 @@ Output defaults to a new file. It validates all objects before writing a tempora
 
 Unedited sliders are not resampled. SV changes are checked against parameters affecting simultaneous and later objects; required restoration points are written and verified. `.osu` export and project saving maintain separate success states and dirty-state handling.
 
+Generated sliders write explicit edge sounds, edge sample banks and hit samples
+when expanding omitted optional columns. Empty optional sample columns in retained
+slider lines are also filled on export. Default edges inherit the object's sound
+and sample banks; explicit edge values and omitted trailing columns on unedited
+sliders retain their source representation.
+
 Legacy sliders with independent SV encode their actual per-object multiplier at
 the head, using the processed value when droplet effects are materialized. Their
 stored green points are unchanged by drawing, movement or Inspector SV editing.

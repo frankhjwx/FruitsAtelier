@@ -57,9 +57,17 @@ required execution permissions before classifying it as a code regression. Keep
 logs and generated validation artifacts under `artifacts/` and retain the checks'
 existing settings isolation and cleanup.
 
-Windows distribution uses the self-contained ZIP and extracted-executable check described in [Windows releases](RELEASING.md). Desktop CI checks packaging before a version is tagged; the tag workflow repeats the regressions and package check before publishing its assets.
+Windows distribution uses the self-contained ZIP and extracted-executable check described in [Windows releases](RELEASING.md). Desktop CI checks packaging before a version is tagged; the tag workflow reuses successful desktop regression for identical source content when available and always builds and checks its own package. See [CI validation and reuse](RELEASING.md#ci-validation-and-reuse) for fallback and forced-validation behavior.
 
 ## Automated regressions
+
+`App.Tests --difficulty-save-check` covers six-difficulty local and linked saves,
+unchanged file timestamps, navigation and edits during saving, per-difficulty undo,
+compressed history reconstruction and interrupted publication recovery.
+`App.Tests --difficulty-save-performance` compares complete and single-difficulty
+publication on identical one- and six-difficulty fixtures, including repeated
+imported sliders. It reports CPU-thread allocations and elapsed storage work to
+`artifacts/tests/difficulty-save-performance`; it does not measure native FPS.
 
 `App.Tests --osu-canvas-check` verifies standard geometry, source-identity picking,
 stacking, approach/disappearance, native editing, slider representation boundaries,
@@ -73,6 +81,9 @@ directions, Legacy droplet effects, timing changes, failure atomicity and undo.
 `App.Tests --legacy-droplet-worker-check` verifies responsive submission, prepared
 export publication, failure rollback, save blocking, cancellation, undo/redo and
 rejection of stale content or history transactions.
+It also checks that the first note placement and deletion finish without a
+progress dialog. `App.Tests --legacy-edit-map <difficulty.catchdiff>` runs this
+first-edit check against a saved document in memory without writing its source.
 
 `FruitsAtelier.App.exe --render-check --osu-canvas-render-check` exercises the
 native Direct2D renderer in English/Chinese at two sizes and three DPI values,
@@ -653,6 +664,19 @@ project/`.osu` persistence. Native window checks open all four tabs in both
 languages at each supported test size and DPI and exercise the color picker.
 
 ## Synchronization regression coverage
+
+`Formats.Tests --reference-discovery-check` verifies missing and relocated files,
+normalized first-object filtering, complete-sequence rejection, later online IDs,
+empty maps, cancellation and association ownership. `App.Tests
+--synchronization-wait-check` also checks immediate navigation away from a read-only
+search while save and publication waits remain in effect.
+
+`App.Tests --synchronization-wait-check` checks that ordinary input and repeated
+save shortcuts do not open waiting overlays, local publication still permits note
+placement, and file/navigation waits resume on completion. Windows
+`FruitsAtelier.App.exe --render-check --synchronization-wait-render-check` checks
+the input and navigation behavior in English and Chinese at two sizes and
+96/144/192 DPI.
 
 Formats regressions exercise metadata and directory/file renames, uploaded IDs,
 three-way field conflicts, timing updates, pending local choices, external deletion,

@@ -65,7 +65,55 @@ static class SampleBankTests
             Check(ui.View.AdditionsBounds.Bottom <= ui.View.ToolButtonBounds[0].Y, "Selectors remain above tools");
             ui.Key(27);
         }
+        ShortcutTests(map);
         L.SetLanguage("zh-CN");
+    }
+
+    private static void ShortcutTests(MapDocument map)
+    {
+        foreach (bool lazer in new[] { false, true })
+        foreach (bool osuCanvas in new[] { false, true })
+        {
+            var ui = new Ui();
+            ui.LoadDocument(map.DeepClone());
+            if (ui.View.SliderImportPromptVisible) ui.View.AnswerSliderImport(false);
+            ui.View.LibrarySettings.LazerEditing = lazer;
+            if (ui.View.IsOsuCanvas != osuCanvas) ui.View.ToggleOsuCanvas();
+            if (!osuCanvas) ui.View.ConvertSelectedSliderRepresentation(map.ImportedSliders.Single().Id);
+            ui.Paint();
+            ui.Key('1'); ui.Key('A', ctrl: true);
+            Check(ui.View.SelectedObjectIds.Count == 2, $"Shortcut fixture selects both parents: {ui.View.SelectedObjectIds.Count}, {ui.View.StatusMessage}");
+            foreach (bool additions in new[] { false, true })
+            foreach (var (key, bank) in new[] { ('W', 1), ('E', 2), ('R', 3), ('Q', 0) })
+            {
+                ui.Key('A', ctrl: true);
+                var before = ui.View.Document.DeepClone();
+                var expected = before.DeepClone();
+                foreach (var id in expected.Fruits.Select(f => f.Id).Concat(expected.ImportedSliders.Select(s => s.Id)).Concat(expected.Tracks.Select(t => t.Id)))
+                    ObjectFlags.SetSampleBank(expected, id, additions, bank);
+                ui.Key(key, ctrl: additions, shift: !additions);
+                Check(ui.View.Document.ContentEquals(expected), $"Sample shortcut changes only its bank across the selection and slider edges (lazer={lazer}, osu={osuCanvas}, additions={additions}, key={key}); {ui.View.StatusMessage}; {ui.View.ActiveTool}");
+                ui.Key('Z', ctrl: true);
+                Check(ui.View.Document.ContentEquals(before), "Sample shortcut is one undo step");
+                ui.Key('Y', ctrl: true);
+                Check(ui.View.Document.ContentEquals(expected), "Sample shortcut redo restores sample banks");
+            }
+            var unchanged = ui.View.Document.DeepClone();
+            foreach (char key in "QWER") ui.Key(key, ctrl: true, shift: true);
+            Check(ui.View.Document.ContentEquals(unchanged), "Ctrl+Shift does not change sample banks or flags");
+
+            ui.Key('2');
+            ui.Key('E', shift: true);
+            ui.Key('R', ctrl: true);
+            Check(ui.View.Document.ContentEquals(unchanged), "Placement sample shortcuts leave existing content unchanged");
+            if (osuCanvas) ui.View.ToggleOsuCanvas();
+            ui.Paint();
+            ui.ClickMap(1500, 300);
+            var placed = ui.View.Document.Fruits.Last();
+            Check(ObjectFlags.SampleBanks(ui.View.Document, placed.Id, false).Single() == 2
+                && ObjectFlags.SampleBanks(ui.View.Document, placed.Id, true).Single() == 3,
+                "New fruit uses both shortcut placement banks");
+        }
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
 }

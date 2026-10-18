@@ -10,6 +10,9 @@ internal static class LegacyDropletWorkerTests
 
     public static void Run()
     {
+        var firstEditMap = Map(2);
+        firstEditMap.RandomizeDropletStrength = 8;
+        FirstEdits(firstEditMap);
         FailedSliderPlacementClearsSelection();
         var ui = new Ui(false);
         ui.LoadDocument(Map(600));
@@ -64,6 +67,39 @@ internal static class LegacyDropletWorkerTests
         ui.View.LoadDocument(replacement);
         ui.View.Render(ui.Canvas, ui.Width, ui.Height);
         Check(!ui.View.LegacyDropletRefreshBusy && ui.View.Document.ContentEquals(replacement), "Old worker published into a replacement document");
+    }
+
+    public static void FirstEdits(MapDocument document)
+    {
+        var ui = new Ui(false);
+        ui.LoadDocument(document);
+        int count = ui.View.Document.Fruits.Count;
+        ui.Key('2');
+        var point = ui.ScreenAt(500, 200);
+        ui.View.PointerDown(point.X, point.Y, 0, false, false);
+        CheckFrames();
+        Check(ui.View.Document.Fruits.Count == count + 1, "First note placement was not committed");
+        ui.View.PointerUp(point.X, point.Y, 0);
+        ui.View.KeyDown(46, false, false);
+        CheckFrames();
+        Check(ui.View.Document.Fruits.Count == count && !History(ui.View).HasActiveTransaction, "First note deletion was not committed");
+
+        void CheckFrames()
+        {
+            var timeout = Stopwatch.StartNew();
+            do
+            {
+                ui.Canvas.Clear();
+                ui.View.Render(ui.Canvas, ui.Width, ui.Height);
+                Check(!ui.Canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("sliderBatch.title")
+                    || t.Value == FruitsAtelier.Localization.Strings.Get("sync.waitHelp")
+                    || t.Value == FruitsAtelier.Localization.Strings.Get("osu.updatingDroplets") && t.Y < ui.Height - 30),
+                    "Ordinary note editing opened a progress dialog");
+                if (!ui.View.LegacyDropletRefreshBusy) return;
+                Thread.Sleep(1);
+            } while (timeout.Elapsed < TimeSpan.FromSeconds(20));
+            throw new Exception("First-edit Legacy refresh did not finish");
+        }
     }
 
     private static void FailedSliderPlacementClearsSelection()
