@@ -4,6 +4,7 @@ internal static class GeneratedSliderPathTests
 {
     public static void Run()
     {
+        OptionalSamples();
         foreach (int spans in new[] { 1, 3 })
         foreach (bool compensation in new[] { false, true })
         {
@@ -59,6 +60,57 @@ internal static class GeneratedSliderPathTests
                 var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = spans, CompensateTinyDroplets = compensation };
                 track.Nodes.AddRange([new() { TimeMs = start, X = from }, new() { TimeMs = end, X = to }]);
                 map.Tracks.Add(track);
+            }
+        }
+    }
+
+    private static void OptionalSamples()
+    {
+        foreach (string suffix in new[] { "", ",2|4", ",2|4,1:2|2:3", ",,,2:3:0:0:", ",,,", ",,", ",,1:2|2:3,2:3:0:0:" })
+        {
+            string line = "100,192,1000,2,8,L|200:192,1,100" + suffix;
+            var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n" + line);
+            var snapshot = map.DeepClone();
+            CheckSamples(map, OsuBeatmapWriter.Serialize(map));
+            Check(map.ContentEquals(snapshot), "Optional sample repair mutated the imported source.");
+            var result = SliderRepresentationEditing.ConvertToTrack(map, map.ImportedSliders.Single().Id, derandomize: false);
+            Check(result.Success, string.Join("; ", result.Diagnostics));
+            snapshot = map.DeepClone();
+            var output = OsuBeatmapWriter.Serialize(map);
+            string[] fields = output.ReadBack.ImportedSliders.Single().OriginalLine!.Split(',');
+            Check(fields.Length >= 11 && fields.Skip(8).Take(3).All(s => s.Length > 0),
+                "Generated slider emitted empty optional sample fields.");
+            CheckSamples(map, output);
+            Check(map.ContentEquals(snapshot), "Optional sample defaults mutated the authored track.");
+            var cache = new OsuWriteCache();
+            for (int i = 0; i < 2; i++)
+                Check(OsuBeatmapWriter.Serialize(map, cache: cache).Text == output.Text, "Cached export changed optional samples.");
+            map = ProjectSerializer.Read(ProjectSerializer.Serialize(map));
+            Check(OsuBeatmapWriter.Serialize(map).Text == output.Text, "Project round trip changed optional samples.");
+        }
+
+        var authored = new MapDocument();
+        var track = new CurveTrack { Kind = CurveKind.Linear };
+        track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 200 }]);
+        authored.Tracks.Add(track);
+        ObjectFlags.SetNewCombo(authored, track.Id, true);
+        CheckSamples(authored, OsuBeatmapWriter.Serialize(authored));
+
+        static void CheckSamples(MapDocument map, OsuWriteResult output)
+        {
+            var objects = CatchStreamConverter.Convert(map).Objects;
+            var source = new HitsoundResolver(map, objects);
+            var target = new HitsoundResolver(output.ReadBack, output.PlayableObjects);
+            Check(objects.Select(source.Describe).SequenceEqual(output.PlayableObjects.Select(target.Describe)),
+                "Filling optional fields changed inherited hitsounds or sample banks.");
+            foreach (var slider in output.ReadBack.ImportedSliders)
+            {
+                string[] fields = slider.OriginalLine!.Split(',');
+                if (fields.Length > 8)
+                    Check(fields[8].Split('|').All(s => int.TryParse(s, out _)), "Present edge sounds must contain integers.");
+                if (fields.Length > 9)
+                    Check(fields[9].Split('|').All(s => s.Split(':') is var bank && bank.Length == 2
+                        && bank.All(b => int.TryParse(b, out _))), "Present edge sets must contain integer bank pairs.");
             }
         }
     }

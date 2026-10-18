@@ -148,7 +148,14 @@ public static class OsuBeatmapWriter
                 original.ImportedSliders[0].SliderVelocityMultiplier = slider.SliderVelocityMultiplier;
                 original.ImportedSliders[0].ProcessedSliderVelocityMultiplier = slider.ProcessedSliderVelocityMultiplier;
                 if (!slider.ContentEquals(original.ImportedSliders[0])) throw new InvalidDataException(L.Get("core.writer.importedChanged"));
-                lines.Add((slider.TimeMs, slider.SourceOrder, slider.Id, slider.OriginalLine));
+                string line = slider.OriginalLine;
+                if (line.Contains(",,", StringComparison.Ordinal) || line.EndsWith(','))
+                {
+                    string[] values = line.Split(',');
+                    FillSliderSamples(values, slider.SpanCount);
+                    line = string.Join(',', values);
+                }
+                lines.Add((slider.TimeMs, slider.SourceOrder, slider.Id, line));
             }
             else
             {
@@ -188,6 +195,7 @@ public static class OsuBeatmapWriter
                 throw new InvalidDataException(L.Get("core.writer.originalObject"));
             int originalSpans = OsuBeatmapReader.Integer(values[6]);
             if (values.Length < 11) Array.Resize(ref values, 11);
+            FillSliderSamples(values, originalSpans);
             values[0] = Coordinate(first.X); values[1] = Coordinate(first.GeometryY); values[2] = Time(slider.StartTimeMs);
             values[5] = path; values[6] = slider.SpanCount.ToString(CultureInfo.InvariantCulture); values[7] = Number(slider.Length);
             if (track.OriginalLine is null || originalSpans != slider.SpanCount)
@@ -195,7 +203,6 @@ public static class OsuBeatmapWriter
                 values[8] = ResizeEdges(values[8], slider.SpanCount, "0");
                 values[9] = ResizeEdges(values[9], slider.SpanCount, "0:0");
             }
-            values[10] ??= "0:0:0:0:";
             lines.Add((slider.StartTimeMs, track.SourceOrder, slider.SourceId, string.Join(',', values)));
         }
         var timingDocument = document;
@@ -551,6 +558,16 @@ public static class OsuBeatmapWriter
 
     private static double Round(double value) => Math.Round(value, MidpointRounding.AwayFromZero);
     private static string DefaultEdges(int spans, string value) => string.Join('|', Enumerable.Repeat(value, checked(spans + 1)));
+    private static string SliderSampleBanks(string[] values)
+        => values.Length > 10 && !string.IsNullOrEmpty(values[10])
+            ? string.Join(':', values[10].Split(':').Take(2)) : "0:0";
+    private static void FillSliderSamples(string[] values, int spans)
+    {
+        // Present optional columns need explicit values for stable; omitted edges inherit the object samples.
+        if (values.Length > 8 && string.IsNullOrEmpty(values[8])) values[8] = DefaultEdges(spans, values[4]);
+        if (values.Length > 9 && string.IsNullOrEmpty(values[9])) values[9] = DefaultEdges(spans, SliderSampleBanks(values));
+        if (values.Length > 10 && string.IsNullOrEmpty(values[10])) values[10] = "0:0:0:0:";
+    }
     private static string ResizeEdges(string? source, int spans, string fallback)
     {
         string[] values = Enumerable.Repeat(fallback, checked(spans + 1)).ToArray();
