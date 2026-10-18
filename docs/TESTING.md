@@ -437,7 +437,10 @@ The same native check compares the 1000 Hz timer-only baseline with the 2000 Hz
 bounded-tail worker, reporting actual median and P95 update intervals separately
 from message dispatch latency. These rates do not measure hardware input or scanout.
 Autoplay regressions cover Tab repeat/release, live judgement and sounds, return to
-manual movement, and session reset. Visual tests cover deterministic rotation,
+manual movement, and session reset. Held-key regressions cover movement and dash
+at testplay entry, pause and Continue countdown, releases during audio restart,
+focus loss, custom bindings and native startup key sampling with shortcut filtering.
+Visual tests cover deterministic rotation,
 banana arrival transforms, static editor sprites, combo palette offsets, and the
 base-only additive hyperdash layer with independent overlay crop and rotation.
 

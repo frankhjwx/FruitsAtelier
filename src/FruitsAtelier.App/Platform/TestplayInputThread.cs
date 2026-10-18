@@ -50,6 +50,8 @@ internal sealed class TestplayInputThread : IDisposable
             var device = new RawDevice { UsagePage = 1, Usage = 6, Flags = 0x100, Target = window };
             if (!RegisterRawInputDevices([device], 1, (uint)Marshal.SizeOf<RawDevice>())) throw new Win32Exception();
             registered = true;
+            if (!diagnostic && Native.GetForegroundWindow() == owner)
+                InitializeHeldKeys(session, key => GetAsyncKeyState(key) < 0);
             using var pacer = new TestplayFramePacer(updatesPerSecond, updatesPerSecond > 1000 ? .2 : 0);
             ready.Set();
             while (!stopping && !session.Ended)
@@ -150,6 +152,15 @@ internal sealed class TestplayInputThread : IDisposable
         var state = audio();
         session.UpdateAudio(state.PositionMs, state.PositionTimestampMs, state.DurationMs, state.CanPlay,
             state.IsPlaying, state.IsLoading, state.Error is not null, state.OutputBufferAheadMs);
+    }
+    internal static void InitializeHeldKeys(CatchTestplaySession session, Func<int, bool> down)
+    {
+        bool ctrl = down(0x11), alt = down(0x12), shift = down(0x10);
+        for (int key = 1; key < 255; key++)
+            if (session.UsesKey(key) && down(key)
+                && !(ctrl && !alt && (key is 38 or 40 || key == 82 && !shift))
+                && !(alt && key is 13 or 37 or 38 or 39 or 40))
+                session.SetKey(key, true);
     }
     // Retry replaces the worker while Ctrl is held, before the new worker receives a modifier transition.
     private static bool IsTestplayShortcut(int key) => GetAsyncKeyState(0x11) < 0 && GetAsyncKeyState(0x12) >= 0

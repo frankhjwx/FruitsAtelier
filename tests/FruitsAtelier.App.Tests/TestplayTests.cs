@@ -5,6 +5,7 @@ internal static class TestplayTests
 {
     public static void OpeningPreparation()
     {
+        TestplayHeldKeyTests.Run();
         foreach (double first in new[] { 0d, 300, 2000, 5000 })
         foreach (bool audio in new[] { false, true })
         {

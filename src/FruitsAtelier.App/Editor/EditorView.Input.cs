@@ -1480,6 +1480,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        heldEditorKeys.Clear();
         if (drag == DragKind.SnapDivisor) SaveMapEditingPreferences();
         CancelLegacyDropletRefresh();
         CancelOsuInteraction();
@@ -1802,6 +1803,11 @@ public sealed partial class EditorView
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        bool shortcut = ctrl && !altHeld && (virtualKey is 38 or 40 || virtualKey == 82 && !shift)
+            || altHeld && virtualKey is 13 or 37 or 38 or 39 or 40;
+        if (!shortcut) heldEditorKeys.Add(virtualKey);
+        else heldEditorKeys.Remove(virtualKey);
+        if (!shortcut && testplayDriver is null && TestplayPaused) testplay?.SetKey(virtualKey, true);
         var document = Document;
         try { KeyDownCore(virtualKey, ctrl, shift); }
         finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
