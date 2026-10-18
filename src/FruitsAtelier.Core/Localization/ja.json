@@ -6,7 +6,6 @@
   "inspector.pathDisplay": "Legacy 表示：{0} ▾",
   "inspector.pathDrawn": "描画したスライダー",
   "inspector.pathProcessed": "処理後のスライダー",
-  "inspector.pathPreviewOnly": "元のパスのプレビューです。現在の形状を編集するには処理後の表示に切り替えてください。",
   "inspector.selection": "選択オブジェクト数",
   "inspector.type": "種類",
   "inspector.start": "開始",

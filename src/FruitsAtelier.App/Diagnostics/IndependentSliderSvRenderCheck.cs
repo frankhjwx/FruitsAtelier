@@ -17,7 +17,11 @@ internal static class IndependentSliderSvRenderCheck
             foreach (var size in new[] { (980, 620), (1440, 900) })
             {
                 L.SetLanguage(locale);
-                var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500\n0,-50,4,2,1,70,0,1\n[HitObjects]\n100,192,1000,2,0,L|300:192,1,200\n");
+                var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500\n0,-50,4,2,1,70,0,1\n[HitObjects]\n100,192,1000,2,0,P|300:64|100:320,1,400\n");
+                map.ImportedSliders.Single().PreserveNativeGeometry = true;
+                map.DerandomizeFSliderDroplets = true;
+                var processed = SliderRepresentationEditing.RefreshLegacyDroplets(map);
+                if (!processed.Success) throw new InvalidOperationException(string.Join("; ", processed.Diagnostics));
                 var editor = new EditorView(false); editor.LoadDocument(map); editor.ToggleOsuCanvas();
                 editor.UpdateTransport(900, 5000, true, false, false, null, null);
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi); Paint();
@@ -38,13 +42,16 @@ internal static class IndependentSliderSvRenderCheck
                     throw new InvalidOperationException("Native Inspector SV input did not commit.");
                 Paint("value");
                 var before = editor.Document.DeepClone();
-                var from = editor.OsuCanvasScreen(300, 192); var to = editor.OsuCanvasScreen(400, 192);
+                var from = editor.OsuCanvasScreen(300, 64); var to = editor.OsuCanvasScreen(400, 64);
                 editor.PointerDown(from.X, from.Y, 0, false, false); editor.PointerMove(to.X, to.Y, true, false);
                 editor.PointerUp(to.X, to.Y, 0, true); Wait();
                 double duration = ImportedSliderConverter.DurationMs(editor.Document, editor.Document.ImportedSliders.Single());
                 double original = ImportedSliderConverter.DurationMs(before, before.ImportedSliders.Single());
                 if (Math.Abs(duration - original) > .01 || editor.Document.TimingPoints.Count != map.TimingPoints.Count)
                     throw new InvalidOperationException("Native Shift gesture changed duration or added timing.");
+                if (editor.Document.ImportedSliders.Single().RandomizationSource is not { ControlPoints.Count: 3 } authored
+                    || authored.ControlPoints[1].X <= 300)
+                    throw new InvalidOperationException("Native drawn-path control editing did not retain the original arc controls.");
                 Paint("shift");
                 void Wait()
                 {

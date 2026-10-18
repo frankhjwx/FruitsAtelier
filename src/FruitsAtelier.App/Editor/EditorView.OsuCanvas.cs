@@ -377,14 +377,15 @@ public sealed partial class EditorView
         }
         foreach (var slider in Document.ImportedSliders)
         {
-            if (!IsObjectSelected(slider.Id) || IsOsuDrawnPathPreview(slider.Id)) continue;
-            for (int i = 0; i < slider.ControlPoints.Count; i++)
+            if (!IsObjectSelected(slider.Id)) continue;
+            var geometry = OsuControlGeometry(slider);
+            for (int i = 0; i < geometry.ControlPoints.Count; i++)
             {
-                var p = slider.ControlPoints[i]; var at = OsuCanvasScreen(p.X, p.GeometryY);
-                if (i > 0) { var a = slider.ControlPoints[i - 1]; var before = OsuCanvasScreen(a.X, a.GeometryY); c.Line(before.X, before.Y, at.X, at.Y, 0xFFFFFF, .5f, .9f); }
+                var p = geometry.ControlPoints[i]; var at = OsuCanvasScreen(p.X, p.GeometryY);
+                if (i > 0) { var a = geometry.ControlPoints[i - 1]; var before = OsuCanvasScreen(a.X, a.GeometryY); c.Line(before.X, before.Y, at.X, at.Y, 0xFFFFFF, .5f, .9f); }
                 bool active = osuControlSlider == slider.Id && osuSelectedControl == i;
-                bool separator = i > 0 && slider.ControlPoints[i] == slider.ControlPoints[i - 1]
-                    || i + 1 < slider.ControlPoints.Count && slider.ControlPoints[i] == slider.ControlPoints[i + 1];
+                bool separator = i > 0 && geometry.ControlPoints[i] == geometry.ControlPoints[i - 1]
+                    || i + 1 < geometry.ControlPoints.Count && geometry.ControlPoints[i] == geometry.ControlPoints[i + 1];
                 DrawOsuControlPoint(c, at.X, at.Y, separator, active);
             }
         }

@@ -188,11 +188,12 @@ public sealed partial class EditorView
             else BeginOsuDrag(point);
             return true;
         }
-        if (ctrl && SelectedImportedSlider is { } insert && !IsOsuDrawnPathPreview(insert.Id))
+        if (ctrl && SelectedImportedSlider is { } insert)
         {
-            int index = NearestOsuSegment(insert, point);
+            int index = NearestOsuSegment(OsuControlGeometry(insert), point);
             if (Edit(L.Get("editor.command.insertPoint"), () =>
             {
+                RestoreOsuControlGeometry(insert);
                 insert.ControlPoints.Insert(index + 1, new(point.X, point.Y));
                 OsuRecalculateLength(insert, controlCountChanged: true); OsuSyncSliderLine(insert);
             })) { osuControlSlider = insert.Id; osuSelectedControl = index + 1; }
@@ -210,9 +211,22 @@ public sealed partial class EditorView
         return true;
     }
 
+    private ImportedSlider OsuControlGeometry(ImportedSlider slider) =>
+        !osuShowProcessedSliders ? slider.RandomizationSource ?? slider : slider;
+
+    private void RestoreOsuControlGeometry(ImportedSlider slider, ImportedSlider? source = null)
+    {
+        source ??= OsuControlGeometry(slider);
+        if (ReferenceEquals(source, slider)) return;
+        // Controls belong to the displayed path; materialized FX may have a different polygon.
+        slider.X = source.X; slider.Y = source.Y;
+        slider.PathType = source.PathType; slider.PixelLength = source.PixelLength;
+        slider.ControlPoints.Clear(); slider.ControlPoints.AddRange(source.ControlPoints);
+    }
+
     private int? HitOsuControl(ImportedSlider slider, float x, float y)
     {
-        if (IsOsuDrawnPathPreview(slider.Id)) return null;
+        slider = OsuControlGeometry(slider);
         for (int i = slider.ControlPoints.Count - 1; i >= 0; i--)
         {
             var p = OsuCanvasScreen(slider.ControlPoints[i].X, slider.ControlPoints[i].GeometryY);
@@ -238,7 +252,6 @@ public sealed partial class EditorView
     private void BeginOsuDrag((double X, double Y) point)
     {
         if (notesLocked || RejectReadOnlySelection()) return;
-        if (objectSelection.Any(IsOsuDrawnPathPreview)) { StatusMessage = L.Get("inspector.pathPreviewOnly"); return; }
         history.Begin(L.Get("editor.command.moveObjects"));
         osuDragStart = Document.DeepClone(); osuDragOrigin = point;
         osuDragMoved = false;
@@ -285,20 +298,22 @@ public sealed partial class EditorView
         if (osuControlSlider != Guid.Empty && Document.ImportedSliders.FirstOrDefault(s => s.Id == osuControlSlider) is { } controlSlider)
         {
             var source = osuDragStart.ImportedSliders.First(s => s.Id == controlSlider.Id);
-            var original = source.ControlPoints[osuSelectedControl];
+            var geometry = OsuControlGeometry(source);
+            RestoreOsuControlGeometry(controlSlider, geometry);
+            var original = geometry.ControlPoints[osuSelectedControl];
             int first = osuSelectedControl, last = osuSelectedControl;
-            while (first > 0 && source.ControlPoints[first - 1] == original) first--;
-            while (last + 1 < source.ControlPoints.Count && source.ControlPoints[last + 1] == original) last++;
+            while (first > 0 && geometry.ControlPoints[first - 1] == original) first--;
+            while (last + 1 < geometry.ControlPoints.Count && geometry.ControlPoints[last + 1] == original) last++;
             for (int i = first; i <= last; i++) controlSlider.ControlPoints[i] = new(point.X, point.Y);
             if (first == 0) { controlSlider.X = point.X; controlSlider.Y = point.Y; }
             controlSlider.SliderVelocityMultiplier = source.SliderVelocityMultiplier;
             controlSlider.ProcessedSliderVelocityMultiplier = null;
             OsuRecalculateLength(controlSlider, snapLength: !shift);
-            if (shift && source.PixelLength > 0)
+            if (shift && geometry.PixelLength > 0)
             {
-                double oldSv = (source.ProcessedSliderVelocityMultiplier ?? source.SliderVelocityMultiplier)
+                double oldSv = (osuShowProcessedSliders ? source.ProcessedSliderVelocityMultiplier ?? source.SliderVelocityMultiplier : source.SliderVelocityMultiplier)
                     ?? ImportedSliderConverter.SliderVelocityAt(osuDragStart, source);
-                double ratio = source.PixelLength / oldSv;
+                double ratio = geometry.PixelLength / oldSv;
                 controlSlider.PixelLength = Math.Clamp(controlSlider.PixelLength, .1 * ratio, 10 * ratio);
                 controlSlider.SliderVelocityMultiplier = controlSlider.PixelLength / ratio;
             }
@@ -471,6 +486,7 @@ public sealed partial class EditorView
     {
         if (slider.SpanCount == spans) return;
         var before = OsuSliderGeometrySnapshot(slider);
+        RestoreOsuControlGeometry(slider);
         slider.SpanCount = spans; OsuSyncSliderLine(slider);
         RemapOsuRepeatOverrides(before, slider);
     }
@@ -536,9 +552,9 @@ public sealed partial class EditorView
         if (ctrl && !shift && key == 72) { MirrorOsuSelection(); return true; }
         if (ctrl && !shift && key == 71 && SelectedImportedSlider is { } reversed)
         {
-            if (IsOsuDrawnPathPreview(reversed.Id)) { StatusMessage = L.Get("inspector.pathPreviewOnly"); return true; }
             Edit(L.Get("editor.command.reversePath"), () =>
             {
+                RestoreOsuControlGeometry(reversed);
                 reversed.ControlPoints.Reverse();
                 reversed.X = reversed.ControlPoints[0].X; reversed.Y = reversed.ControlPoints[0].GeometryY;
                 OsuSyncSliderLine(reversed);
@@ -552,12 +568,12 @@ public sealed partial class EditorView
     {
         if (notesLocked || RejectReadOnlySelection()) return;
         var ids = ClipboardSelectedParentIds();
-        if (ids.Any(IsOsuDrawnPathPreview)) { StatusMessage = L.Get("inspector.pathPreviewOnly"); return; }
         Edit(L.Get("shortcut.mirror"), () =>
         {
             foreach (var fruit in Document.Fruits.Where(f => ids.Contains(f.Id))) fruit.X = 512 - fruit.X;
             foreach (var slider in Document.ImportedSliders.Where(s => ids.Contains(s.Id)))
             {
+                RestoreOsuControlGeometry(slider);
                 slider.X = 512 - slider.X;
                 for (int i = 0; i < slider.ControlPoints.Count; i++) slider.ControlPoints[i] = new(512 - slider.ControlPoints[i].X, slider.ControlPoints[i].GeometryY);
                 OsuSyncSliderLine(slider);
@@ -569,12 +585,12 @@ public sealed partial class EditorView
     {
         if (notesLocked || RejectReadOnlySelection()) return;
         var ids = ClipboardSelectedParentIds();
-        if (ids.Any(IsOsuDrawnPathPreview)) { StatusMessage = L.Get("inspector.pathPreviewOnly"); return; }
         Edit(L.Get("editor.command.moveObjects"), () =>
         {
             foreach (var fruit in Document.Fruits.Where(f => ids.Contains(f.Id))) { fruit.X += dx; fruit.Y += dy; }
             foreach (var slider in Document.ImportedSliders.Where(s => ids.Contains(s.Id)))
             {
+                RestoreOsuControlGeometry(slider);
                 slider.X += dx; slider.Y += dy;
                 for (int i = 0; i < slider.ControlPoints.Count; i++) slider.ControlPoints[i] = new(slider.ControlPoints[i].X + dx, slider.ControlPoints[i].GeometryY + dy);
                 OsuSyncSliderLine(slider);
@@ -584,14 +600,16 @@ public sealed partial class EditorView
 
     private void DeleteOsuControl(ImportedSlider slider, int index)
     {
-        if (index < 0 || index >= slider.ControlPoints.Count || notesLocked) return;
-        var point = slider.ControlPoints[index];
+        var geometry = OsuControlGeometry(slider);
+        if (index < 0 || index >= geometry.ControlPoints.Count || notesLocked) return;
+        var point = geometry.ControlPoints[index];
         int first = index, last = index;
-        while (first > 0 && slider.ControlPoints[first - 1] == point) first--;
-        while (last + 1 < slider.ControlPoints.Count && slider.ControlPoints[last + 1] == point) last++;
-        if (slider.ControlPoints.Count - (last - first + 1) < 2) { DeleteSelectedObjects(); return; }
+        while (first > 0 && geometry.ControlPoints[first - 1] == point) first--;
+        while (last + 1 < geometry.ControlPoints.Count && geometry.ControlPoints[last + 1] == point) last++;
+        if (geometry.ControlPoints.Count - (last - first + 1) < 2) { DeleteSelectedObjects(); return; }
         Edit(L.Get("editor.command.deletePoint"), () =>
         {
+            RestoreOsuControlGeometry(slider);
             slider.ControlPoints.RemoveRange(first, last - first + 1);
             slider.X = slider.ControlPoints[0].X; slider.Y = slider.ControlPoints[0].GeometryY;
             OsuRecalculateLength(slider, controlCountChanged: true); OsuSyncSliderLine(slider);
@@ -601,11 +619,13 @@ public sealed partial class EditorView
 
     private void MakeOsuControlRed(ImportedSlider slider, int index)
     {
-        if (index <= 0 || index >= slider.ControlPoints.Count - 1 || notesLocked) return;
-        if (slider.ControlPoints[index - 1] == slider.ControlPoints[index]
-            || slider.ControlPoints[index + 1] == slider.ControlPoints[index]) return;
+        var geometry = OsuControlGeometry(slider);
+        if (index <= 0 || index >= geometry.ControlPoints.Count - 1 || notesLocked) return;
+        if (geometry.ControlPoints[index - 1] == geometry.ControlPoints[index]
+            || geometry.ControlPoints[index + 1] == geometry.ControlPoints[index]) return;
         if (Edit(L.Get("editor.command.insertPoint"), () =>
         {
+            RestoreOsuControlGeometry(slider);
             slider.ControlPoints.Insert(index + 1, slider.ControlPoints[index]);
             OsuRecalculateLength(slider, controlCountChanged: true); OsuSyncSliderLine(slider);
         })) osuSelectedControl = index + 1;
@@ -629,12 +649,13 @@ public sealed partial class EditorView
 
     private void ShowOsuSliderMenu(ImportedSlider slider, int index, float x, float y)
     {
+        var geometry = OsuControlGeometry(slider);
         contextItems.Clear();
         contextItems.Add(new(L.Get("editor.command.deletePoint"), () => DeleteOsuControl(slider, index)));
         foreach (char type in new[] { 'L', 'B', 'P', 'C' })
             contextItems.Add(new(L.Get("osu.path." + type), () => Edit(L.Get("editor.command.curveType"), () =>
-            { slider.PathType = type; OsuRecalculateLength(slider); OsuSyncSliderLine(slider); }),
-                Enabled: type != 'P' || slider.ControlPoints.Count == 3, Active: slider.PathType == type));
+            { RestoreOsuControlGeometry(slider); slider.PathType = type; OsuRecalculateLength(slider); OsuSyncSliderLine(slider); }),
+                Enabled: type != 'P' || geometry.ControlPoints.Count == 3, Active: geometry.PathType == type));
         contextItems.Add(new(L.Get("editor.command.addReverse"), () => Edit(L.Get("editor.command.addReverse"), () =>
         { ChangeOsuSpanCount(slider, Math.Min(9000, slider.SpanCount + 1)); })));
         contextItems.Add(new(L.Get("editor.command.removeReverse"), () => Edit(L.Get("editor.command.removeReverse"), () =>
@@ -647,11 +668,13 @@ public sealed partial class EditorView
 
     private void ChangeOsuSliderLength(ImportedSlider slider, int direction)
     {
-        var timing = SnapTiming();
-        double step = ImportedSliderConverter.VelocityAt(Document, slider, timing)
-            * timing.At(slider.TimeMs).BeatLengthMs / divisor;
         Edit(L.Get("inspector.length"), () =>
         {
+            RestoreOsuControlGeometry(slider);
+            if (!osuShowProcessedSliders) slider.ProcessedSliderVelocityMultiplier = null;
+            var timing = SnapTiming();
+            double step = ImportedSliderConverter.VelocityAt(Document, slider, timing)
+                * timing.At(slider.TimeMs).BeatLengthMs / divisor;
             double units = direction > 0 ? Math.Floor(slider.PixelLength / step + 1e-7) + 1
                 : Math.Ceiling(slider.PixelLength / step - 1e-7) - 1;
             slider.PixelLength = snap ? Math.Max(1, units) * step : Math.Max(.01, slider.PixelLength + direction * step);

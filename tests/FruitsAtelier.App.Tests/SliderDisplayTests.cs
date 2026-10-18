@@ -43,13 +43,50 @@ internal static class SliderDisplayTests
                     Check(ui.Canvas.Texts.Any(t => t.Value == L.Get(derandomize ? "droplet.mode.Derandomize" : "droplet.mode.Randomize")),
                         "The inspector reported the wrong effective Legacy droplet mode.");
                     var baseline = ui.View.Document.DeepClone();
+                    Check(Path(ui).SequenceEqual(drawn), "The drawn view must retain the source geometry.");
+                    var raw = baseline.ImportedSliders.Single().RandomizationSource!;
+                    int control = arc ? 1 : raw.ControlPoints.Count - 1;
+                    var anchor = raw.ControlPoints[control];
+                    foreach (var p in raw.ControlPoints)
+                    {
+                        var at = ui.View.OsuCanvasScreen(p.X, p.GeometryY);
+                        Check(ui.Canvas.Fills.Any(f => f.Color == 0xB8B8B8 && f.Bounds.Width == 4 && f.Bounds.Height == 4
+                            && Math.Abs(f.Bounds.X - at.X + 2) < .05 && Math.Abs(f.Bounds.Y - at.Y + 2) < .05),
+                            "Selected drawn slider did not show an original anchor.");
+                    }
+                    var from = ui.View.OsuCanvasScreen(anchor.X, anchor.GeometryY);
+                    var to = ui.View.OsuCanvasScreen(anchor.X + 16, anchor.GeometryY + 16);
+                    ui.View.PointerDown(from.X, from.Y, 0, false, false);
+                    ui.View.PointerMove(to.X, to.Y, false, false);
+                    ui.View.PointerUp(to.X, to.Y, 0); Wait();
+                    var edited = ui.View.Document.ImportedSliders.Single();
+                    Check(edited.RandomizationSource is { } changed
+                        && changed.ControlPoints.Count == raw.ControlPoints.Count
+                        && changed.ControlPoints[control] != anchor,
+                        "The drawn path's original control was not editable: " + ui.View.StatusMessage);
+                    Check(edited.SliderVelocityMultiplier == baseline.ImportedSliders.Single().SliderVelocityMultiplier
+                        && ui.View.Document.TimingPoints.Count == baseline.TimingPoints.Count,
+                        "Editing an original control changed authored SV or inserted timing.");
+                    ui.Key('Z', ctrl: true); Wait();
+                    Check(baseline.ContentEquals(ui.View.Document), "Original control editing did not undo atomically.");
+                    head = ui.View.OsuCanvasScreen(100, 192); ui.Click(head.X, head.Y);
+                    ui.View.ShowSliderInspector(); ui.Paint();
+                    from = ui.View.OsuCanvasScreen(anchor.X, anchor.GeometryY);
+                    to = ui.View.OsuCanvasScreen(anchor.X + 32, anchor.GeometryY + 16);
+                    ui.View.PointerDown(from.X, from.Y, 0, false, false);
+                    ui.View.PointerMove(to.X, to.Y, true, false);
+                    ui.View.PointerUp(to.X, to.Y, 0, true); Wait();
+                    edited = ui.View.Document.ImportedSliders.Single();
+                    Check(edited.RandomizationSource!.ControlPoints[control] != anchor
+                        && Math.Abs(ImportedSliderConverter.DurationMs(ui.View.Document, edited)
+                            - ImportedSliderConverter.DurationMs(baseline, baseline.ImportedSliders.Single())) < .01,
+                        "Shift editing an original control failed to preserve duration: " + ui.View.StatusMessage);
+                    ui.Key('Z', ctrl: true); Wait();
+                    Check(baseline.ContentEquals(ui.View.Document), "Original Shift control editing did not undo atomically.");
+                    head = ui.View.OsuCanvasScreen(100, 192); ui.Click(head.X, head.Y);
+                    ui.View.ShowSliderInspector(); ui.Paint();
                     var conversion = ui.View.Conversion;
                     var exported = typeof(EditorView).GetField("playableExport", Hidden)!.GetValue(ui.View);
-                    Check(Path(ui).SequenceEqual(drawn), "The drawn view must retain the source geometry.");
-                    ui.View.PointerDown(head.X, head.Y, 0, false, false);
-                    ui.View.PointerMove(head.X + 20, head.Y + 20, false, false);
-                    ui.View.PointerUp(head.X + 20, head.Y + 20, 0); ui.Paint();
-                    Check(baseline.ContentEquals(ui.View.Document), "Dragging an original-path preview edited processed geometry.");
                     Switch(true); Check(Path(ui).SequenceEqual(processedPath), "Processed view must match actual exported geometry.");
                     for (int i = 0; i < 5; i++) ui.Paint();
                     Switch(false); Check(Path(ui).SequenceEqual(drawn), "Returning to the drawn view lost the source path.");
@@ -58,6 +95,13 @@ internal static class SliderDisplayTests
                         "A display switch rebuilt conversion or export.");
                     Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty,
                         "A display switch changed content or undo state.");
+
+                    void Wait()
+                    {
+                        var deadline = DateTime.UtcNow.AddSeconds(15);
+                        do { ui.Paint(); Thread.Sleep(2); } while (ui.View.LegacyDropletRefreshBusy && DateTime.UtcNow < deadline);
+                        Check(!ui.View.LegacyDropletRefreshBusy, "Original control processing did not finish.");
+                    }
 
                     void Switch(bool processedView)
                     {

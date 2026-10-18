@@ -6,7 +6,6 @@
   "inspector.pathDisplay": "Vue Legacy : {0} ▾",
   "inspector.pathDrawn": "Slider dessiné",
   "inspector.pathProcessed": "Slider traité",
-  "inspector.pathPreviewOnly": "Aperçu du tracé original. Passez au slider traité pour modifier sa géométrie actuelle.",
   "inspector.selection": "Objets sélectionnés",
   "inspector.type": "Type",
   "inspector.start": "Début",

@@ -6,7 +6,6 @@
   "inspector.pathDisplay": "Legacy 顯示：{0} ▾",
   "inspector.pathDrawn": "繪製的滑條",
   "inspector.pathProcessed": "後處理滑條",
-  "inspector.pathPreviewOnly": "目前為原始路徑預覽。切換至後處理滑條可編輯目前幾何。",
   "inspector.selection": "選取物件數量",
   "inspector.type": "類型",
   "inspector.start": "開始時間",

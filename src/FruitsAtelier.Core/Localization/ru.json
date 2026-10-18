@@ -6,7 +6,6 @@
   "inspector.pathDisplay": "Вид Legacy: {0} ▾",
   "inspector.pathDrawn": "Нарисованный слайдер",
   "inspector.pathProcessed": "Обработанный слайдер",
-  "inspector.pathPreviewOnly": "Просмотр исходного пути. Для редактирования текущей геометрии переключитесь на обработанный слайдер.",
   "inspector.selection": "Выбранные объекты",
   "inspector.type": "Тип",
   "inspector.start": "Начало",

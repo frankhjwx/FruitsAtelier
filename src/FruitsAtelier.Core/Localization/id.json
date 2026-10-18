@@ -6,7 +6,6 @@
   "inspector.pathDisplay": "Tampilan Legacy: {0} ▾",
   "inspector.pathDrawn": "Slider yang digambar",
   "inspector.pathProcessed": "Slider yang diproses",
-  "inspector.pathPreviewOnly": "Pratinjau jalur asli. Beralih ke slider yang diproses untuk mengedit geometri saat ini.",
   "inspector.selection": "Objek terpilih",
   "inspector.type": "Jenis",
   "inspector.start": "Mulai",

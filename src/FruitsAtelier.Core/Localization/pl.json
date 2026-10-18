@@ -6,7 +6,6 @@
   "inspector.pathDisplay": "Widok Legacy: {0} ▾",
   "inspector.pathDrawn": "Narysowany slider",
   "inspector.pathProcessed": "Przetworzony slider",
-  "inspector.pathPreviewOnly": "Podgląd oryginalnej ścieżki. Przełącz na przetworzony slider, aby edytować bieżącą geometrię.",
   "inspector.selection": "Wybrane obiekty",
   "inspector.type": "Typ",
   "inspector.start": "Początek",

@@ -1407,8 +1407,8 @@ sliders capture their original head SV. New Legacy sliders start at 1×. Moving 
 Legacy slider across green timing boundaries retains its own SV. Ordinary control
 dragging retains SV and snaps length; holding Shift during the drag changes length
 and authored SV together to preserve duration, within the legal SV range. The
-whole gesture is one undo step. For a retained original-path preview, switch to
-Processed to edit its current controls.
+whole gesture is one undo step. In Drawn view, these gestures edit the retained
+original controls and regenerate the processed result.
 
 Hand-drawn Legacy Sliders also use Droplet Settings for Catch preview, Testplay
 and export. Their original two-dimensional controls and visible authored SV are retained
@@ -1423,8 +1423,9 @@ between **Drawn slider** and **Processed slider**. Drawn is the default and uses
 the retained original path when available; Processed uses the actual exported
 derandomized or randomized path. Without a retained processing baseline, both
 views show the same geometry. Switching affects only the osu! canvas, preserving
-content, history, Catch preview, Testplay and export. A retained original path is
-a read-only preview; switch to Processed to edit the current materialized geometry.
+content, history, Catch preview, Testplay and export. Selected sliders expose the
+controls of the displayed path. Editing Drawn controls retains the original path
+as the authoring source and regenerates droplet effects in the same undo step.
 
 **Max DS** always includes tiny droplets. **Peak
 horizontal speed** is expressed relative to the map's base SV/DPB, shown directly

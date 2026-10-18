@@ -35,8 +35,6 @@ public sealed partial class EditorView
             Math.Clamp(mouseY + 4, 0, Math.Max(0, height - ContextMenuHeight)), w, ContextMenuHeight);
     }
 
-    private bool IsOsuDrawnPathPreview(Guid id) => IsOsuCanvas && !osuShowProcessedSliders
-        && Document.ImportedSliders.Any(s => s.Id == id && s.RandomizationSource is not null);
     internal double? InspectorPeakRatio { get; private set; }
     internal double? InspectorMaxDs { get; private set; }
     internal Rect SliderInspectorViewport => inspectorBounds;
