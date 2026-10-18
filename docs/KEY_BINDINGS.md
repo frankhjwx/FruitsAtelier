@@ -37,7 +37,6 @@ assignments and Mapping view preferences are preserved when switching modes.
 | Up / Down | Previous / next timing point. Backward navigation while playing allows one second at the current playback rate. |
 | F3 / F4 | Open Timing / Song Setup. |
 | - / = | Compress / expand canvas time spacing without changing its horizontal scale; available in both editing modes. |
-| Shift+Q/W/E/R | Set the normal sampleset to Auto / Normal / Soft / Drum. |
 | Alt+Q/W/E/R | Set the additions sampleset to Auto / Normal / Soft / Drum. |
 | Ctrl+J | Reserved; use the slider's menu action to extend it. |
 | Ctrl+wheel | Cycle beat-divisor presets within the current family. |
@@ -163,12 +162,13 @@ open it. Enter seeks; Esc cancels. Volume shortcuts also work during testplay.
 | Hold Shift | Temporarily invert horizontal Grid Snap, unless Alt is also held. |
 | Q | Toggle New Combo for the selection or placement state. |
 | W / E / R | Toggle Whistle / Finish / Clap for the selection or placement state. |
+| Shift+Q/W/E/R | Set the normal sampleset to Auto / Normal / Soft / Drum for the selection or placement state, in both editing modes. |
+| Ctrl+Q/W/E/R | Set the additions sampleset to Auto / Normal / Soft / Drum for the selection or placement state, in both editing modes. |
 
 The standard Snap choices are 1/1–1/9, 1/12 and 1/16. The last two are accessible from
 the Snap slider or Ctrl+wheel. [Settings → Experimental](EDITOR_UI.md#settings)
 adds 1/24, 1/32 and 1/48; Ctrl+wheel can reach them within their doubling/halving
 families. Beat snapping is independent of Slider Tick Rate.
-Object sampleset selection is not bound to Shift+Q/W/E/R or Ctrl+Q/W/E/R.
 
 ## Slider editing
 

@@ -1349,6 +1349,12 @@ public sealed partial class EditorView
                 AdjustCanvasScrollSpeed(virtualKey == 187);
             return;
         }
+        if (!altHeld && ctrl != shift && virtualKey is 81 or 87 or 69 or 82)
+        {
+            if (drag == DragKind.None && !TimingPageVisible)
+                SetSampleBank(ctrl, virtualKey switch { 81 => 0, 87 => 1, 69 => 2, _ => 3 });
+            return;
+        }
         if (IsLazerEditing && HandleLazerKey(virtualKey, ctrl, shift)) return;
         if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
         if (virtualKey == 70 && shift && !ctrl && !altHeld)
