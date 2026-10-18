@@ -246,7 +246,7 @@ public sealed partial class EditorView
     private enum Tool { Select, Fruit, Slider, Banana }
     private enum DragKind { None, PlaybackLine, Objects, SliderObject, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, OsuDefaultSv, CanvasZoom, LegacyControl, TimelineTail, PreviewResize, DifficultySeek, TimelinePanelResize }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
-    private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
+    private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp, bool Preference = false);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);
     private double MinimumCanvasZoom => IsLazerEditing ? .25 : Math.Min(1, MinimumPlayfieldWidth / Math.Max(1, FullPlayfieldWidth));
     private float PlayfieldScale => IsLazerEditing ? LazerCanvasScale : FullPlayfieldWidth * (float)canvasZoom / 512;
@@ -311,6 +311,12 @@ public sealed partial class EditorView
 
     private void SetCanvasZoom(float x)
     {
+        if (IsOsuCanvas)
+        {
+            double zoom = .25 + Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1) * 3.75;
+            ZoomOsuCanvasAt(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, zoom / osuCanvasZoom);
+            return;
+        }
         if (IsLazerEditing)
         {
             SetLazerCanvasZoom(MinimumCanvasZoom + (MaximumCanvasZoom - MinimumCanvasZoom)

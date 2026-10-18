@@ -172,7 +172,7 @@ public sealed partial class EditorView
         float snapLeft = toolbarRight - 158;
         bool compactToolbar = CanvasToolbarBounds.Width < 900;
         bool narrowZoom = compactToolbar;
-        if (!IsOsuCanvas && (UniformCanvasScale || !narrowZoom)) c.Text(L.Get("ui.canvasZoom"), toolbarLeft + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
+        if (IsOsuCanvas || UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), toolbarLeft + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
         float breakWidth = compactToolbar ? 115 : 140;
         float breakX = snapLeft - breakWidth - 5;
         float toggleWidth = compactToolbar ? CanvasToolbarBounds.Width < 700 ? 75 : 105 : 155;
@@ -200,24 +200,34 @@ public sealed partial class EditorView
             CanvasToggle(0, pathX, () => showTargets = !showTargets, showTargets);
             CanvasToggle(1, selectionX, () => showSelectionRect = !showSelectionRect, showSelectionRect);
             CanvasToggle(2, movementX, () => movementAnalysis = !movementAnalysis, movementAnalysis);
-            void CanvasToggle(int index, float x, Action action, bool active)
-            {
-                var bounds = new Rect(x, canvas.Y + 4, toggleWidth, 29);
-                Button(c, bounds, "", action, active);
-                var text = canvasToggleText[index];
-                float size = text.Size;
-                float lineHeight = size * 1.35f;
-                float y = bounds.Y + (bounds.Height - (text.Second is null ? size + 4 : lineHeight * 2)) / 2;
-                c.Text(text.First, x + 9, y, size, active ? Accent : Foreground, toggleWidth - 15, active);
-                if (text.Second is { } second)
-                    c.Text(second, x + 9, y + lineHeight, size, active ? Accent : Foreground, toggleWidth - 15, active);
-            }
         }
         else
         {
-            zoomSlider = default; CanvasScaleLockBounds = default;
-            Button(c, new(toolbarLeft + 8, canvas.Y + 4, Math.Max(80, movementX + toggleWidth - toolbarLeft - 16), 29),
-                L.Get("osu.switchCanvas"), ToggleOsuCanvas);
+            CanvasScaleLockBounds = default;
+            zoomSlider = new(toolbarLeft + (narrowZoom ? 8 : 74), canvas.Y + 4,
+                Math.Max(30, movementX - toolbarLeft - (narrowZoom ? 60 : 140)), 29);
+            float zoomX = zoomSlider.X + (float)((osuCanvasZoom - .25) / 3.75) * zoomSlider.Width;
+            float zoomY = canvas.Y + (narrowZoom ? 27 : 19);
+            c.Line(zoomSlider.X, zoomY, zoomSlider.Right, zoomY, Grid, 3);
+            c.Line(zoomSlider.X, zoomY, zoomX, zoomY, Accent, 3);
+            c.Circle(zoomX, zoomY, 6, Accent);
+            c.Text(L.Get("ui.zoomPercent", osuCanvasZoom * 100), zoomSlider.Right + 8,
+                canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 40 : 48);
+            PrepareCanvasToggleText(c, compactToolbar, toggleWidth);
+            CanvasToggle(2, movementX, () => movementAnalysis = !movementAnalysis, movementAnalysis);
+        }
+        void CanvasToggle(int index, float x, Action action, bool active)
+        {
+            var bounds = new Rect(x, canvas.Y + 4, toggleWidth, 29);
+            if (index == 2) OsuMovementAnalysisBounds = IsOsuCanvas ? bounds : default;
+            Button(c, bounds, "", action, active);
+            var text = canvasToggleText[index];
+            float size = text.Size;
+            float lineHeight = size * 1.35f;
+            float y = bounds.Y + (bounds.Height - (text.Second is null ? size + 4 : lineHeight * 2)) / 2;
+            c.Text(text.First, x + 9, y, size, active ? Accent : Foreground, toggleWidth - 15, active);
+            if (text.Second is { } second)
+                c.Text(second, x + 9, y + lineHeight, size, active ? Accent : Foreground, toggleWidth - 15, active);
         }
         DrawObjectTimeline(c);
         var breakButton = new Rect(breakX, canvas.Y + 4, breakWidth, 29);

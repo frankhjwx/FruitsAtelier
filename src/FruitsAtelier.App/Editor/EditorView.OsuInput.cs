@@ -117,6 +117,18 @@ public sealed partial class EditorView
             if (button == 2) { contextItems.Clear(); return true; }
             return false;
         }
+        if (button == 0 && OsuSliderDefaultSvValueBounds.Contains(x, y))
+        {
+            int index = fields.FindIndex(f => f.Preference && f.Label == L.Get("osu.sliderDefaultSv"));
+            if (index < 0) return true;
+            if (editField != index)
+            {
+                if (editField >= 0 && !CommitField()) return true;
+                FocusField(index);
+            }
+            FocusInput("numeric:" + index, editBuffer, x);
+            return true;
+        }
         if (editField >= 0 && !CommitField()) return true;
         if (OsuDefaultSvBounds.Contains(x, y))
         {
@@ -142,7 +154,7 @@ public sealed partial class EditorView
             osuPanning = true; osuPanPointer = (x, y); osuPanOrigin = (osuCanvasPanX, osuCanvasPanY);
             drag = DragKind.Pan; return true;
         }
-        var point = OsuInputPoint(x, y, tool == Tool.Fruit, shift);
+        var point = OsuInputPoint(x, y, tool == Tool.Fruit || tool == Tool.Slider && osuDraftSlider is null, shift);
         if (button == 2)
         {
             if (osuDraftSlider is not null) { osuDraftPointer = point; FinishOsuSlider(); return true; }
@@ -724,11 +736,12 @@ public sealed partial class EditorView
     private float osuSpacingLabelWidth = 148, osuDefaultSvLabelWidth = 148;
     private Rect OsuDefaultSvBounds => OsuSpacingBounds with { Y = OsuSpacingBounds.Bottom + 4 };
     internal Rect OsuSliderDefaultSvTrackBounds => new(OsuDefaultSvBounds.X + osuDefaultSvLabelWidth, OsuDefaultSvBounds.Y + 12,
-        Math.Max(24, OsuDefaultSvBounds.Width - osuDefaultSvLabelWidth - 54), 8);
+        Math.Max(24, OsuDefaultSvBounds.Width - osuDefaultSvLabelWidth - 76), 8);
+    internal Rect OsuSliderDefaultSvValueBounds => new(OsuDefaultSvBounds.Right - 70, OsuDefaultSvBounds.Y + 4, 64, 24);
     private void SetOsuDefaultSv(float x, bool shift)
     {
         var track = OsuSliderDefaultSvTrackBounds;
-        double raw = .1 + Math.Clamp((x - track.X) / track.Width, 0, 1) * 9.9;
+        double raw = .1 + Math.Clamp((x - track.X) / track.Width, 0, 1) * 3.1;
         double step = shift ? .01 : .1;
         LibrarySettings.OsuSliderDefaultSv = Math.Round(raw / step) * step;
     }
@@ -740,10 +753,23 @@ public sealed partial class EditorView
         osuDefaultSvLabelWidth = Math.Min(c.MeasureText(label, 12) + 20, bounds.Width * .6f);
         c.Text(label, bounds.X + 8, bounds.Y + 8, 12, Foreground, osuDefaultSvLabelWidth - 16);
         var track = OsuSliderDefaultSvTrackBounds;
-        c.Text(LibrarySettings.OsuSliderDefaultSv.ToString("0.00", CultureInfo.InvariantCulture) + "x",
-            track.Right + 10, bounds.Y + 8, 12, Foreground, 42);
+        var input = OsuSliderDefaultSvValueBounds;
+        int index = fields.Count;
+        bool focused = editField == index;
+        c.Fill(input, focused ? 0x273638u : 0x151B24u, 3);
+        c.Stroke(input, focused ? (fieldError.Length > 0 ? Error : Accent) : Grid, 1, 3);
+        DrawInputText(c, new(input.X + 5, input.Y + 4, input.Width - 10, 18),
+            focused ? editBuffer : LibrarySettings.OsuSliderDefaultSv.ToString("G", CultureInfo.InvariantCulture),
+            12, focused, "numeric:" + index);
+        fields.Add(new(input, label, LibrarySettings.OsuSliderDefaultSv, value =>
+        {
+            if (value is < .1 or > 10) throw new ArgumentException(L.Get("legacySv.range"));
+            if (LibrarySettings.OsuSliderDefaultSv == value) return;
+            LibrarySettings.OsuSliderDefaultSv = value;
+            RequestViewPreference?.Invoke();
+        }, false, Preference: true));
         c.Line(track.X, track.Y + 4, track.Right, track.Y + 4, Grid, 4);
-        c.Circle(track.X + (float)((LibrarySettings.OsuSliderDefaultSv - .1) / 9.9) * track.Width, track.Y + 4, 6, Accent);
+        c.Circle(track.X + (float)Math.Clamp((LibrarySettings.OsuSliderDefaultSv - .1) / 3.1, 0, 1) * track.Width, track.Y + 4, 6, Accent);
     }
 
     private Rect OsuSpacingBounds => new(plot.Right - Math.Min(400, plot.Width - 16) - 10, plot.Y + 8, Math.Min(400, plot.Width - 16), 32);

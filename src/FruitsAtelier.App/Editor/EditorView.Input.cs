@@ -1724,6 +1724,13 @@ public sealed partial class EditorView
         }
         if (!double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) || !double.IsFinite(value))
         { fieldError = L.Get("editor.error.finiteNumberRequired"); return false; }
+        if (field.Preference)
+        {
+            try { field.Apply(value); }
+            catch (ArgumentException error) { fieldError = error.Message; return false; }
+            editField = -1; fieldError = "";
+            return true;
+        }
         history.Begin(L.Get("editor.command.changeField", field.Label));
         try
         {

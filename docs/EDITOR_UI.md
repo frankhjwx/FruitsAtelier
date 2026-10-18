@@ -1404,14 +1404,22 @@ Selecting one Legacy Slider exposes **Legacy SV (×)** in Slider Inspector. This
 edits its independent authored multiplier (0.1–10); it retains path length and
 changes duration without inserting authoring green timing points. Imported
 sliders capture their original head SV. New Legacy sliders use **osu! slider default SV**
-below Distance Snapping in the osu! canvas (0.1–10×, initially 1×). Dragging adjusts
-in 0.1× steps; Shift uses 0.01×. The default saves globally on release and survives
-restarts without changing existing sliders or content history. Moving a
-Legacy slider across green timing boundaries retains its own SV. Ordinary control
-dragging retains SV and snaps length; holding Shift during the drag changes length
-and authored SV together to preserve duration, within the legal SV range. The
-whole gesture is one undo step. In Drawn view, these gestures edit the retained
-original controls and regenerate the processed result.
+below Distance Snapping in the osu! canvas (initially 1×). The slider covers
+0.1–3.2× in 0.1× steps; Shift uses 0.01×. Click its numeric value to enter any SV
+from 0.1–10×, confirm with Enter or by clicking outside, and cancel with Esc.
+Values above 3.2× keep the slider at its right endpoint. The default saves globally
+on release or numeric confirmation and survives restarts without changing existing
+sliders or content history. Moving a Legacy slider across green timing boundaries
+retains its own SV. Ordinary control dragging retains SV and snaps length; holding
+Shift during the drag changes length and authored SV together to preserve duration,
+within the legal SV range. The whole gesture is one undo step. In Drawn view,
+these gestures edit the retained original controls and regenerate the processed result.
+
+Distance Snap places both circles and Legacy slider heads at the configured spacing
+from the preceding object's endpoint; the placement circle shows the same snapped position.
+The osu! canvas toolbar includes geometric Zoom, Movement Analysis, Insert Break Time
+and Snap. Movement Analysis colours connections between successive objects using
+the Catch movement classification; switching it does not change beatmap content.
 
 Hand-drawn Legacy Sliders also use Droplet Settings for Catch preview, Testplay
 and export. Their original two-dimensional controls and visible authored SV are retained

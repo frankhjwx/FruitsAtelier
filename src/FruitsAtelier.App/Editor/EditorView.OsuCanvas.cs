@@ -36,6 +36,8 @@ public sealed partial class EditorView
     private ImportedSlider? osuDraftCandidate;
     private (TimingMap.Lookup? Timing, bool Snap, int Divisor, double Multiplier) osuDraftInputs;
     private double osuCanvasZoom = 1, osuCanvasPanX, osuCanvasPanY;
+    internal Rect OsuToolbarZoomBounds => zoomSlider;
+    internal Rect OsuMovementAnalysisBounds { get; private set; }
     internal Rect OsuCanvasBounds
     {
         get
@@ -218,6 +220,7 @@ public sealed partial class EditorView
         float scale = field.Width / 512, radius = (float)OsuCanvasRadius * scale;
         c.Clip(CanvasRenderBounds);
         DrawOsuCanvasGrid(c);
+        DrawOsuMovementConnections(c);
         c.Stroke(field, 0xFFFFFF, 1);
         double now = LazerPresentationTime;
         int denseBodies = 0;
@@ -322,6 +325,41 @@ public sealed partial class EditorView
         DrawOsuDistanceSpacing(c);
     }
 
+    private IReadOnlyList<ConvertedCatchObject>? osuMovementSource;
+    private double osuMovementCircleSize;
+    private readonly Dictionary<(Guid From, Guid To), CatchMovementMode> osuMovementModes = [];
+
+    private void DrawOsuMovementConnections(ICanvas c)
+    {
+        if (!movementAnalysis) return;
+        if (!ReferenceEquals(osuMovementSource, playableObjects) || osuMovementCircleSize != Document.CircleSize)
+        {
+            EnsureMovementStates(playableObjects);
+            osuMovementModes.Clear();
+            for (int i = 0; i + 1 < movementIndices.Length; i++)
+            {
+                int from = movementIndices[i], to = movementIndices[i + 1];
+                if (playableObjects[from].SourceId != playableObjects[to].SourceId && movementStates[from].Movement is { } movement)
+                    osuMovementModes[(playableObjects[from].SourceId, playableObjects[to].SourceId)] = movement.Mode;
+            }
+            osuMovementSource = playableObjects; osuMovementCircleSize = Document.CircleSize;
+        }
+        var breaks = MovementBreakPeriods();
+        foreach (int index in osuCanvasVisible)
+        {
+            if (index == 0) continue;
+            var from = osuCanvasObjects[index - 1]; var to = osuCanvasObjects[index];
+            if (from.Spinner || to.Spinner || from.End > to.Start || to.Start + 240 < LazerPresentationTime
+                || !osuMovementModes.TryGetValue((from.Id, to.Id), out var mode)
+                || breaks.Any(b => b.StartMs <= to.Start && b.EndMs >= from.End)) continue;
+            var tail = OsuPathPosition(from, from.Spans % 2 == 1 ? 1 : 0);
+            double fromShift = -from.Stack * OsuCanvasRadius / 10, toShift = -to.Stack * OsuCanvasRadius / 10;
+            var a = OsuCanvasScreen(tail.X + fromShift, tail.Y + fromShift);
+            var b = OsuCanvasScreen(to.X + toShift, to.Y + toShift);
+            c.Line(a.X, a.Y, b.X, b.Y, MovementColour(mode), 3, .65f);
+        }
+    }
+
     private uint OsuComboColour(int index)
     {
         var palette = beatmapColours.Length > 0 ? beatmapColours : (skin ?? defaultSkin)?.ComboColours ?? CatchSkin.DefaultComboColours;
@@ -367,7 +405,7 @@ public sealed partial class EditorView
         if (tool is Tool.Fruit or Tool.Slider && osuDraftSlider is null
             && plot.Contains(mouseX, mouseY) && drag == DragKind.None)
         {
-            var point = OsuInputPoint(mouseX, mouseY, useDistance: tool == Tool.Fruit);
+            var point = OsuInputPoint(mouseX, mouseY, useDistance: true);
             var at = OsuCanvasScreen(point.X, point.Y);
             var style = OsuPlacementStyle(OsuPlacementTime);
             DrawOsuCircle(c, at.X, at.Y,

@@ -25,13 +25,38 @@ internal static class IndependentSliderSvRenderCheck
                 var editor = new EditorView(false); editor.LoadDocument(map); editor.ToggleOsuCanvas();
                 editor.UpdateTransport(900, 5000, true, false, false, null, null);
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi); Paint();
+                var zoomTrack = editor.OsuToolbarZoomBounds;
+                double oldWidth = editor.OsuCanvasBounds.Width;
+                editor.PointerDown(zoomTrack.X + zoomTrack.Width * .4f, zoomTrack.Y + 15, 0, false, false);
+                editor.PointerUp(zoomTrack.X + zoomTrack.Width * .4f, zoomTrack.Y + 15, 0); Paint();
+                if (editor.OsuCanvasBounds.Width <= oldWidth) throw new InvalidOperationException("Native osu toolbar zoom did not respond.");
+                editor.PointerDown(zoomTrack.X + zoomTrack.Width * .2f, zoomTrack.Y + 15, 0, false, false);
+                editor.PointerUp(zoomTrack.X + zoomTrack.Width * .2f, zoomTrack.Y + 15, 0); Paint();
+                var analysisButton = editor.OsuMovementAnalysisBounds;
+                bool analysis = editor.MovementAnalysisEnabled;
+                ClickAnalysis();
+                if (editor.MovementAnalysisEnabled == analysis) throw new InvalidOperationException("Native osu Movement Analysis did not respond.");
+                ClickAnalysis();
+                void ClickAnalysis()
+                {
+                    editor.PointerDown(analysisButton.X + 8, analysisButton.Y + 8, 0, false, false);
+                    editor.PointerUp(analysisButton.X + 8, analysisButton.Y + 8, 0); Paint();
+                }
                 var defaultTrack = editor.OsuSliderDefaultSvTrackBounds;
-                float defaultX = defaultTrack.X + (float)((2.5 - .1) / 9.9) * defaultTrack.Width;
+                float defaultX = defaultTrack.X + (float)((2.5 - .1) / 3.1) * defaultTrack.Width;
                 var unchanged = editor.Document.DeepClone();
                 editor.PointerDown(defaultX, defaultTrack.Y + 4, 0, false, false);
                 editor.PointerUp(defaultX, defaultTrack.Y + 4, 0); Paint();
                 if (editor.LibrarySettings.OsuSliderDefaultSv != 2.5 || !unchanged.ContentEquals(editor.Document) || editor.IsDirty)
                     throw new InvalidOperationException("Native default SV control changed content or failed to update.");
+                var defaultInput = editor.OsuSliderDefaultSvValueBounds;
+                editor.PointerDown(defaultInput.X + 8, defaultInput.Y + 8, 0, false, false);
+                editor.PointerUp(defaultInput.X + 8, defaultInput.Y + 8, 0);
+                editor.KeyDown('A', true, false); editor.KeyUp('A');
+                foreach (char ch in "4.25") editor.TextInput(ch);
+                editor.KeyDown(13, false, false); editor.KeyUp(13); Paint();
+                if (editor.LibrarySettings.OsuSliderDefaultSv != 4.25 || !unchanged.ContentEquals(editor.Document) || editor.IsDirty)
+                    throw new InvalidOperationException("Native default SV numeric input did not commit independently.");
                 var head = editor.OsuCanvasScreen(100, 192);
                 editor.PointerDown(head.X, head.Y, 0, false, false); editor.PointerUp(head.X, head.Y, 0);
                 editor.ShowSliderInspector(); Paint();

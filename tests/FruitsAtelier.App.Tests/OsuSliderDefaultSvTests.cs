@@ -30,7 +30,7 @@ internal static class OsuSliderDefaultSvTests
                 var ds = ui.View.OsuDistanceSpacingTrackBounds;
                 Check(label.Y > ds.Bottom, "Default SV control must appear below DS.");
                 var track = ui.View.OsuSliderDefaultSvTrackBounds;
-                float target = track.X + (float)((2.5 - .1) / 9.9) * track.Width;
+                float target = track.X + (float)((2.5 - .1) / 3.1) * track.Width;
                 ui.View.PointerDown(target, track.Y + 4, 0, false, false);
                 ui.View.PointerMove(target, track.Y + 4, false, false); ui.Paint();
                 Check(saves == 0 && ui.View.WantsCapture, "Default SV must defer persistence until release.");
@@ -40,12 +40,28 @@ internal static class OsuSliderDefaultSvTests
                 ui.View.PointerDown(track.Right, track.Y + 4, 0, false, false); ui.View.CancelInteraction(); ui.Paint();
                 Check(ui.View.LibrarySettings.OsuSliderDefaultSv == 2.5 && saves == 1 && !ui.View.WantsCapture,
                     "Cancelled SV drag changed the stored preference.");
+                var input = ui.View.OsuSliderDefaultSvValueBounds;
+                ui.Click(input.X + 10, input.Y + 10);
+                Check(ui.View.IsEditingText, "Default SV number did not focus.");
+                ui.Key('A', ctrl: true); ui.Type("4.25"); ui.Key(13);
+                Check(!ui.View.IsEditingText && saves == 2 && LibrarySettings.Load(path).OsuSliderDefaultSv == 4.25,
+                    "Typed SV above the slider range was not saved.");
+                Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Numeric preference edited map content.");
+                ui.Click(input.X + 10, input.Y + 10); ui.Key('A', ctrl: true); ui.Type("11"); ui.Key(13);
+                Check(ui.View.IsEditingText && ui.View.LibrarySettings.OsuSliderDefaultSv == 4.25 && saves == 2,
+                    "Out-of-range SV must keep the numeric editor open without saving.");
+                ui.Key(27);
+                ui.Click(input.X + 10, input.Y + 10); ui.Key('A', ctrl: true); ui.Type("2.75"); ui.Key(27);
+                Check(ui.View.LibrarySettings.OsuSliderDefaultSv == 4.25 && saves == 2, "Esc did not cancel numeric SV.");
+                ui.Click(track.Right, track.Y + 4);
+                Check(ui.View.LibrarySettings.OsuSliderDefaultSv == 3.2, "SV slider must end at 3.2x.");
+                ui.Click(input.X + 10, input.Y + 10); ui.Key('A', ctrl: true); ui.Type("4.25"); ui.Key(13);
                 var restored = new Ui(false);
                 typeof(EditorView).GetProperty(nameof(EditorView.LibrarySettings))!.SetValue(restored.View, LibrarySettings.Load(path));
                 restored.LoadDocument(before); restored.View.ToggleOsuCanvas();
                 restored.View.UpdateTransport(1000, 5000, true, false, false, null, null); restored.Paint();
                 restored.Key('3'); Click(64, 256); Click(192, 320); restored.Key(13); restored.Paint();
-                Check(restored.View.Document.ImportedSliders.Single().SliderVelocityMultiplier == 2.5
+                Check(restored.View.Document.ImportedSliders.Single().SliderVelocityMultiplier == 4.25
                     && restored.View.Document.TimingPoints.Count == before.TimingPoints.Count, "New Legacy slider did not capture the restored default SV.");
                 var existing = restored.View.Document.DeepClone();
                 restored.View.LibrarySettings.OsuSliderDefaultSv = 4;
@@ -54,7 +70,7 @@ internal static class OsuSliderDefaultSvTests
                 Check(restored.View.Document.ImportedSliders.Count == 0 && restored.View.LibrarySettings.OsuSliderDefaultSv == 4,
                     "Drawing undo changed the global default.");
                 restored.Key('Y', ctrl: true); restored.Paint();
-                Check(restored.View.Document.ImportedSliders.Single().SliderVelocityMultiplier == 2.5,
+                Check(restored.View.Document.ImportedSliders.Single().SliderVelocityMultiplier == 4.25,
                     "Drawing redo replaced the captured SV with the current default.");
                 void Click(double x, double y) { var p = restored.View.OsuCanvasScreen(x, y); restored.Click(p.X, p.Y); }
             }
