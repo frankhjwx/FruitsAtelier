@@ -353,6 +353,11 @@ newly drawn FSliders in both drawing modes, including after restarting; it initi
 uses Follow map. Existing sliders keep their own modes. Legacy Sliders and managed Stream/Stack objects
 are excluded. The effective mode is displayed with the Inspector metrics.
 
+In imported maps and older projects without new-slider randomization enabled,
+new FSliders default to Derandomize when the remembered mode is Follow map and
+the difficulty's derandomization switch is off. Explicit Randomize choices in
+the Inspector and the difficulty's new-slider randomization policy are retained.
+
 **Reset manual droplet adjustments** shows the selected sliders' correction count
 and is enabled only when corrections exist. It clears only those corrections,
 without changing modes. Mode switches preserve corrections; they apply only while

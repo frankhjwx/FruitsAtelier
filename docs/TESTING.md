@@ -26,7 +26,9 @@ See [Running on macOS](MACOS.md) for launch and packaging. Project files and `pa
 
 `App.Tests --droplet-defaults-check` verifies global Droplet Settings and Inspector
 mode persistence, new-project initialization, both FSlider drawing modes after
-reloading preferences, and preservation of existing project values.
+reloading preferences, and preservation of existing project values. Legacy single-
+and multi-difficulty projects and imported maps exercise compatible drawing defaults,
+explicit randomization, cancellation, undo/redo, persistence and exported output.
 
 ### Windows sandbox permissions
 

@@ -197,15 +197,18 @@ strengths above 100 are capped at 100 when loaded. `RandomizeDropletSeed` is a s
 32-bit integer, default 1337. Each ordinary FSlider can retain a
 `DropletRandomization` with its own `Enabled` flag and sorted normalized-time
 `Adjustments`. `CurveTrack.DropletMode` is FollowMap, Derandomize or Randomize. Newly drawn
-FSliders use FollowMap, resolved against `DerandomizeFSliderDroplets` on the current
-difficulty. Explicit modes override that default. A missing mode retains the
+FSliders use the remembered Inspector mode, initially FollowMap, resolved against
+`DerandomizeFSliderDroplets` on the current difficulty. When both that switch and
+`RandomizeNewSliders` are off, drawing resolves the FollowMap preference to an
+explicit Derandomize mode so imported maps and older projects retain their drawing
+default. Explicit modes override that default. A missing mode retains the
 older resolution: the map derandomization switch overrides the stored effect's
 Enabled flag. This preserves old project output without rewriting content on load.
 The Inspector presents old enabled effects as FollowMap and disabled effects as
 Derandomize. The nullable mode is cloned, compared, validated and included in
 conversion-cache identity. Non-null modes require schema 25/26; earlier readers
-reject them. `RandomizeNewSliders` remains persisted for compatibility; new drawing
-uses FollowMap. New projects capture the independent General derandomization
+reject them. `RandomizeNewSliders` retains the difficulty's opt-in to randomization
+for newly drawn FSliders. New projects capture the independent General derandomization
 preference, which defaults to on. Legacy conversion uses its separate saved policy
 and application preference.
 These fields participate in deep cloning, content equality, history, persistence and cache
