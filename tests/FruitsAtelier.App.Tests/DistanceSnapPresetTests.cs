@@ -450,7 +450,7 @@ internal static class DistanceSnapPresetTests
             Check(ui.View.PlayheadMs == start && preview == ui.View.DistanceSnapPreviewBounds && baseline.ContentEquals(ui.View.Document), "Preview navigation or placement modified the map.");
 
             var subdivision = ui.View.DistanceSnapSubdivisionBounds;
-            int[] divisors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
+            int[] divisors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16];
             for (int i = 0; i < divisors.Length; i++)
             {
                 float x = subdivision.X + 7 + (subdivision.Width - 38) * i / (divisors.Length - 1);

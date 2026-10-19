@@ -295,8 +295,10 @@ public sealed partial class EditorView
             IncludeTime(ImportedSliderConverter.EndTimeMs(objectDragStart, slider));
         }
 
-        if (snap && !(objectDragTimeline && shift) && double.IsFinite(minTime) && Math.Abs(deltaTime) > .001)
-            deltaTime = TimingMap.Snap(Document, minTime + deltaTime, divisor) - minTime;
+        bool ownSnap = objectSelection.Count == 1 && EndpointSnap(objectSelection.First()) is not null;
+        if ((snap || ownSnap) && !(objectDragTimeline && shift && !ownSnap) && double.IsFinite(minTime) && Math.Abs(deltaTime) > .001)
+            deltaTime = (ownSnap ? SnapSliderEndpoint(objectSelection.First(), minTime + deltaTime, false)
+                : SnapTiming().Snap(minTime + deltaTime, divisor)) - minTime;
         if (double.IsFinite(minTime)) deltaTime = Math.Clamp(deltaTime, -minTime, EditableDurationMs - maxTime);
         else deltaTime = 0;
         double snappedDeltaX = deltaX;

@@ -1,4 +1,5 @@
 using FruitsAtelier.App.Rendering;
+using FruitsAtelier.Core;
 using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.App.Editor;
@@ -6,6 +7,11 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private bool dropletSettingsFromGeneral;
+
+    // Imported maps and older projects need an opt-in before new sliders randomize.
+    private SliderDropletMode NewSliderDropletMode => LibrarySettings.DefaultDropletMode == SliderDropletMode.FollowMap
+        && !Document.DerandomizeFSliderDroplets && !Document.RandomizeNewSliders
+        ? SliderDropletMode.Derandomize : LibrarySettings.DefaultDropletMode;
 
     private void RememberDropletSettings()
     {

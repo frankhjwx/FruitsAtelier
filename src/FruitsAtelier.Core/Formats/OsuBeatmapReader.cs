@@ -239,6 +239,7 @@ public static class OsuBeatmapReader
         foreach (var track in document.Tracks)
         {
             Id(track.Id);
+            track.EndpointSnap?.Validate();
             if (track.DropletMode is { } mode && !Enum.IsDefined(mode) || track.DropletRandomization is { IsValid: false }) throw new InvalidDataException(L.Get("randomize.invalid"));
             if (track.Stack is { } stack && (track.StreamSnapDivisor is null || !stack.IsValid))
                 throw new InvalidDataException(L.Get("stack.invalid"));
@@ -250,6 +251,7 @@ public static class OsuBeatmapReader
         }
         foreach (var slider in document.ImportedSliders)
         {
+            slider.EndpointSnap?.Validate();
             if (slider.RandomizationBaseVelocity is { } velocity && (!double.IsFinite(velocity) || velocity is < .1 or > 10))
                 throw new InvalidDataException(L.Get("core.reader.importedParameters"));
             if (slider.RandomizationSource is { } source)

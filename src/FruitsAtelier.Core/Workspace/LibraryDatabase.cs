@@ -77,6 +77,8 @@ public sealed class LibrarySettings
     public bool ReverseCanvasScroll { get; set; }
     public bool LockDropletSelection { get; set; } = true;
     public bool LockSlidersToCanvas { get; set; }
+    public bool RotationSelectionCentre { get; set; } = true;
+    public bool RotationClockwise { get; set; } = true;
     private double osuSliderDefaultSv = 1;
     public double OsuSliderDefaultSv
     {
@@ -200,7 +202,7 @@ public sealed class MapEditingPreferences
     public int BeatSnapDivisor
     {
         get => beatSnapDivisor;
-        set => beatSnapDivisor = value is >= 1 and <= 9 or 12 or 16 or 24 or 32 or 48 ? value : 4;
+        set => beatSnapDivisor = value is >= 1 and <= 12 or 16 or 24 or 32 or 48 ? value : 4;
     }
     public bool GridSnap { get; set; }
     public bool DistanceSnap { get; set; }
@@ -214,7 +216,7 @@ public sealed class MapEditingPreferences
 }
 
 public sealed record LibraryMap(string Path, string Directory, string Title, string TitleUnicode, string Artist, string ArtistUnicode,
-    string Creator, string Difficulty, string Tags, string Source, string Audio, string Background, string? ProjectPath = null, bool ExternalMissing = false, int Mode = 2, bool ReferenceSearching = false);
+    string Creator, string Difficulty, string Tags, string Source, string Audio, string Background, string? ProjectPath = null, bool ExternalMissing = false, int Mode = 2, bool ReferenceSearching = false, long BeatmapId = 0, long BeatmapSetId = 0);
 public sealed record LibraryScan(int Count, IReadOnlyList<string> Errors);
 public sealed record LibraryScanProgress(int Files, int Indexed, int Errors);
 
@@ -234,13 +236,15 @@ public sealed class LibraryDatabase
         command.CommandText = "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS external_sources(path TEXT PRIMARY KEY, archive TEXT); CREATE TABLE IF NOT EXISTS project_sources(project TEXT NOT NULL, source TEXT NOT NULL, PRIMARY KEY(project,source));";
         command.ExecuteNonQuery();
         command.CommandText = "PRAGMA user_version";
-        if (Convert.ToInt64(command.ExecuteScalar()) < 4)
+        if (Convert.ToInt64(command.ExecuteScalar()) < 5)
         {
-            // Older catalogs may contain other rulesets; missing Mode predates mixed-mode indexing.
-            command.CommandText = "DELETE FROM maps WHERE COALESCE(json_extract(data,'$.Mode'),2) NOT IN (0,2); PRAGMA user_version=4;";
+            // Rebuild derived metadata so unchanged files acquire online identities.
+            command.CommandText = "DELETE FROM maps WHERE COALESCE(json_extract(data,'$.Mode'),2) NOT IN (0,2); UPDATE maps SET stamp=-1; PRAGMA user_version=5;";
             command.ExecuteNonQuery();
         }
         command.CommandText = "CREATE INDEX IF NOT EXISTS maps_root ON maps(root); CREATE INDEX IF NOT EXISTS maps_directory_nocase ON maps(json_extract(data,'$.Directory') COLLATE NOCASE); CREATE INDEX IF NOT EXISTS project_sources_source ON project_sources(source,project);";
+        command.ExecuteNonQuery();
+        command.CommandText = "CREATE INDEX IF NOT EXISTS maps_identity ON maps(root,json_extract(data,'$.BeatmapId')); CREATE INDEX IF NOT EXISTS maps_song ON maps(root,json_extract(data,'$.Artist'),json_extract(data,'$.Title'));";
         command.ExecuteNonQuery();
     }
     private SqliteConnection Open()
@@ -504,6 +508,36 @@ public sealed class LibraryDatabase
         int mode = int.TryParse(Get("Mode"), out int parsedMode) ? parsedMode : 0;
         if (mode is not (0 or 2)) return null;
         string Resolve(string resource) => resource.Length == 0 ? "" : OsuBeatmapReader.ResolveResource(path, resource.Replace('\\', '/'));
-        return new(path, Path.GetDirectoryName(path)!, Get("Title"), Get("TitleUnicode"), Get("Artist"), Get("ArtistUnicode"), Get("Creator"), Get("Version"), Get("Tags"), Get("Source"), Resolve(Get("AudioFilename")), Resolve(background), Mode: mode);
+        return new(path, Path.GetDirectoryName(path)!, Get("Title"), Get("TitleUnicode"), Get("Artist"), Get("ArtistUnicode"), Get("Creator"), Get("Version"), Get("Tags"), Get("Source"), Resolve(Get("AudioFilename")), Resolve(background), Mode: mode,
+            BeatmapId: long.TryParse(Get("BeatmapID"), out var id) ? id : 0, BeatmapSetId: long.TryParse(Get("BeatmapSetID"), out var setId) ? setId : 0);
+    }
+
+    public IReadOnlyList<LibraryMap> AssociationCandidates(MapDocument document)
+    {
+        string Get(string key) => OsuBeatmapReader.Setting(document, "Metadata", key) ?? "";
+        long.TryParse(Get("BeatmapID"), out long id);
+        long.TryParse(Get("BeatmapSetID"), out long setId);
+        var byId = id > 0 ? Query("json_extract(data,'$.BeatmapId')=$id") : [];
+        if (byId.Count > 0) return byId;
+        var bySet = setId > 0 ? Query("json_extract(data,'$.BeatmapSetId')=$set") : [];
+        if (bySet.Count > 0) return bySet;
+        if (Get("Artist").Length == 0 || Get("Title").Length == 0) return [];
+        return Query("json_extract(data,'$.Artist')=$artist AND json_extract(data,'$.Title')=$title");
+
+        List<LibraryMap> Query(string predicate)
+        {
+            using var db = Open(); using var command = db.CreateCommand();
+            command.CommandText = "SELECT data FROM maps WHERE root=$root AND (" + predicate + ") ORDER BY path";
+            command.Parameters.AddWithValue("$root", songs);
+            command.Parameters.AddWithValue("$id", id); command.Parameters.AddWithValue("$set", setId);
+            command.Parameters.AddWithValue("$artist", Get("Artist")); command.Parameters.AddWithValue("$title", Get("Title"));
+            using var reader = command.ExecuteReader(); var result = new List<LibraryMap>();
+            while (reader.Read())
+            {
+                var map = JsonSerializer.Deserialize<LibraryMap>(reader.GetString(0))!;
+                if (File.Exists(map.Path)) result.Add(map);
+            }
+            return result;
+        }
     }
 }

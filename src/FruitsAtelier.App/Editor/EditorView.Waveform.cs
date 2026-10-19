@@ -139,7 +139,7 @@ public sealed partial class EditorView
         if (nearest != null && Math.Abs(nearest.TimeMs - time) * r.Width / waveformSpanMs <= 7)
         {
             int index = Document.TimingPoints.IndexOf(nearest);
-            OpenTimingSetup(); timingSelected.Clear(); timingSelected.Add(index); timingAnchor = index;
+            OpenTimingSetup(); timingSelected.Clear(); timingSelected.Add(index); timingAnchor = timingCursor = index;
             timingScroll = Math.Max(0, Array.FindIndex(VisibleTimingEntries(), e => e.Id == index) - 3);
         }
         else SeekTo(Math.Clamp(time, 0, TimelineDurationMs));

@@ -7,6 +7,18 @@ internal static class SyncTabsTests
 {
     public static void Run()
     {
+        var id = Guid.NewGuid();
+        ConvertedCatchObject Event(int index, CatchObjectKind kind, double time, double x) => new(id, index, kind, time, x, x, x, 0);
+        var events = new[] { Event(0, CatchObjectKind.Fruit, 1000, 100), Event(1, CatchObjectKind.TinyDroplet, 1050, 110), Event(2, CatchObjectKind.Droplet, 1100, 120) };
+        var changed = new[] { events[0], events[1] with { X = 111.5 }, events[2] with { TimeMs = 1101 } };
+        var playable = SyncObjectDifferences.ComparePlayable("", "", events, changed);
+        Check(playable.Count == 2 && playable[0].Playable is { XChanged: true, TimeChanged: false, KindChanged: false }
+            && playable[1].Playable is { XChanged: false, TimeChanged: true }, "only changed playable attributes are flagged");
+        Check(SyncObjectDifferences.ComparePlayable("", "", events, [events[0], events[1] with { X = 111 }, events[2]]).Count == 0, "one pixel tolerance matches slider conflict detection");
+        var added = SyncObjectDifferences.ComparePlayable("", "", events, [events[0], Event(3, CatchObjectKind.TinyDroplet, 1025, 105), events[1], events[2]]);
+        Check(added.Count == 1 && added[0].Playable is { Local: null, External.TimeMs: 1025 }, "an inserted droplet does not shift later event pairings");
+        Check(SyncObjectDifferences.ComparePlayable("100,192,1000,2,0,L|200:192,1,100", "100,192,1000,2,0,B|300:192,1,200", events, events).Count == 0,
+            "equivalent events never display raw slider paths or lengths");
         Check(SyncObjectDifferences.FormatTime(257090) == "04:17:090" && SyncObjectDifferences.FormatTime(59999.9) == "01:00:000", "millisecond clock format and carry");
         var combo = SyncObjectDifferences.Compare("304,192,257090,1,0,0:0:0:0:", "304,192,257090,5,0,0:0:0:0:");
         Check(combo.Count == 1 && combo[0].Message == "sync.diff.combo", "combo-only difference is explicit");
@@ -53,8 +65,11 @@ internal static class SyncTabsTests
                     Check(ui.Canvas.Texts.Any(t => t.Value.Contains("04:17:090") && t.Value.Contains(L.Get("sync.diff.on"))), "object group explains the New Combo edit");
                     Check(ui.Canvas.Texts.Any(t => System.Text.RegularExpressions.Regex.IsMatch(t.Value, @"^\d{2,}:\d{2}:\d{3}$")), "canvas axis uses three-digit milliseconds");
                     ClickRange(false); Check(TabColour("Objects") == 0xD5A34D, "left rectangle chooses FA and advances to next group");
-                    Check(ui.Canvas.Texts.Any(t => t.Value.Contains("200") && t.Value.Contains("240")), "next group explains X change");
+                    Check(ui.Canvas.Texts.Any(t => t.Value == "200") && ui.Canvas.Texts.Any(t => t.Value == "240"), "next group explains X change");
+                    Check(ui.Canvas.Texts.Any(t => t.Value == "200" && t.Color == 0xED737B)
+                        && ui.Canvas.Texts.Any(t => t.Value == "260000" && t.Color != 0xED737B), "only the changed X attribute is red");
                     ClickRange(true); Check(TabColour("Objects") == 0x70D69B, "right rectangle chooses osu and resolves category");
+                    Check(ui.Canvas.Texts.Any(t => t.Value == "240" && t.Color == 0x70D69B), "resolved X attribute is green");
                     ClickRange(false); Check(TabColour("Objects") == 0x70D69B, "resolved rectangle can switch its choice back to FA");
                     Check(before.ContentEquals(ui.View.Document), "tabs, scrolling and choices do not apply edits early");
                     var previousVersions = WorkspaceVersionHistory.List(ui.View.WorkspaceSession!).Select(v => v.Path).ToHashSet();

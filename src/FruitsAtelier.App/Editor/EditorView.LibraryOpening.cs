@@ -8,26 +8,50 @@ public sealed partial class EditorView
 {
     private Task<WorkspaceSession>? libraryOpenTask;
     private Action? libraryOpenCompleted;
+    private string? libraryOpenDifficultyPath;
+    private string? pendingLibraryDifficultyPath;
     public bool LibraryOpening => libraryOpenTask is not null;
 
-    public void BeginLibraryOpen(LibraryMap map, Action? completed = null)
+    public void BeginLibraryOpen(LibraryMap map, Action? completed = null, bool selectDifficulty = false)
     {
         if (LibraryOpening || !PrepareFileOperation()) return;
         var settings = new LibrarySettings { Workspace = LibrarySettings.Workspace, Songs = LibrarySettings.Songs };
         libraryOpenCompleted = completed;
+        libraryOpenDifficultyPath = selectDifficulty ? map.Path : null;
         // Workspace maintenance owns the same gate as Open; waiting belongs off the UI thread.
         libraryOpenTask = Task.Run(() => LibraryOperations.Open(map, settings));
         hits.Clear(); fields.Clear();
+    }
+
+    private void SelectLibraryDifficulty(string path)
+    {
+        pendingLibraryDifficultyPath = path;
+        int index = FindLibraryDifficulty();
+        if (index < 0) return;
+        pendingLibraryDifficultyPath = null;
+        SwitchDifficulty(index);
+    }
+
+    private int FindLibraryDifficulty()
+    {
+        if (pendingLibraryDifficultyPath is not { } path || WorkspaceSession is not { } session) return -1;
+        var entry = session.Manifest.Difficulties.FirstOrDefault(d =>
+            WorkspaceSynchronization.Paths.Equals(Path.Combine(session.Directory, d.File), path)
+            || WorkspaceSynchronization.Paths.Equals(d.Source, path)
+            || WorkspaceSynchronization.Paths.Equals(d.ExportTarget, path));
+        return entry is null ? -1 : difficulties.FindIndex(d => d.Id == entry.Id);
     }
 
     private void PumpLibraryOpen()
     {
         if (libraryOpenTask is not { IsCompleted: true } task) return;
         libraryOpenTask = null;
+        var path = libraryOpenDifficultyPath; libraryOpenDifficultyPath = null;
         var completed = libraryOpenCompleted; libraryOpenCompleted = null;
         try
         {
             LoadWorkspace(task.GetAwaiter().GetResult(), checkAdditionalDifficulties: true);
+            if (path is not null) SelectLibraryDifficulty(path);
             completed?.Invoke();
         }
         catch (Exception error) { ShowError(L.Reformat(error.Message)); }

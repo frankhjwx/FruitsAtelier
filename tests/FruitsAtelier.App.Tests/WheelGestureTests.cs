@@ -27,7 +27,7 @@ static class WheelGestureTests
 
         ui.Key(114);
         var waveform = ui.View.WaveformBounds;
-        foreach (var family in new[] { new[] { 1, 2, 4, 8, 16 }, new[] { 3, 6, 12 }, new[] { 5 }, new[] { 7 }, new[] { 9 } })
+        foreach (var family in new[] { new[] { 1, 2, 4, 8, 16 }, new[] { 3, 6, 12 }, new[] { 5, 10 }, new[] { 7 }, new[] { 9 }, new[] { 11 } })
         {
             ui.SetSnapDivisor(family[0]);
             foreach (int expected in family.Skip(1))

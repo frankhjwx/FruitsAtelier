@@ -140,7 +140,7 @@ internal static class LazerInputTests
     private static Ui Create()
     {
         var ui = new Ui();
-        ui.LoadDocument(OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Editor]\nBookmarks:2500\n[TimingPoints]\n0,500,4,1,0,100,1,0\n1000,-100,4,1,0,100,0,0\n2000,400,4,1,0,100,1,0\n[HitObjects]\n128,192,1200,1,0,0:0:0:0:\n256,192,1800,1,0,0:0:0:0:\n"));
+        ui.LoadDocument(OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Editor]\nBookmarks:2500\n[TimingPoints]\n0,500,4,1,0,100,1,0\n1000,-100,4,1,0,80,0,0\n2000,400,4,1,0,100,1,0\n[HitObjects]\n128,192,1200,1,0,0:0:0:0:\n256,192,1800,1,0,0:0:0:0:\n"));
         ui.View.LibrarySettings.LazerEditing = true;
         ui.Paint();
         return ui;

@@ -125,7 +125,7 @@ public sealed partial class EditorView
             if (fruit is not null) ObjectFlags.SetStreamNewCombo(Document, fruit.SourceId, fruit.EventIndex, fruit.TimeMs, enabled);
             else foreach (var id in ids) ObjectFlags.SetNewCombo(Document, id, enabled);
         })
-            && conversionCurrent)
+            && conversionCurrent && !IsOsuCanvas)
         {
             // The flag changes combo grouping but not the converted catch object stream.
             convertedSnapshot = Document.DeepClone();

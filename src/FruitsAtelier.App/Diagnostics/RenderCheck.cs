@@ -926,6 +926,20 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--semantic-sync-render-check"))
+        {
+            foreach (var size in new[] { (980, 620), (1440, 900) })
+            {
+                canvas.Resize(size.Item1, size.Item2, 96);
+                SynchronizationRenderCheck.Run(canvas, size.Item1, size.Item2);
+            }
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--slider-endpoint-snap-render-check"))
+        {
+            SliderEndpointSnapRenderCheck.Run(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--synchronization-wait-render-check"))
         {
             string language = FruitsAtelier.Localization.Strings.Language;

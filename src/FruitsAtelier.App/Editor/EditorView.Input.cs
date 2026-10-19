@@ -52,6 +52,11 @@ public sealed partial class EditorView
         ResetTextCaret();
         mouseX = x; mouseY = y;
         timingPointerShift = shift;
+        if (RotationVisible)
+        {
+            RotationPointerDown(x, y, button);
+            return;
+        }
         if (BananaEditVisible)
         {
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
@@ -446,6 +451,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (RotationVisible) { mouseX = x; mouseY = y; RotationPointerMove(x, y); return; }
         if (aimodGesture != AimodGesture.None) { MoveAimodPointer(x, y); return; }
         if (notesSelecting) { PositionNotesCaret(x, y, true); return; }
         if (dockPressed is not null) { MoveDockPointer(x, y); return; }
@@ -546,8 +552,13 @@ public sealed partial class EditorView
             if (drag == DragKind.Anchor)
             {
                 bool endpoint = node == track.Nodes[0] || node == track.Nodes[^1];
-                bool snapTime = endpoint ? snap : anchorSnap;
-                if (snapTime) p = new(Math.Clamp(TimingMap.Snap(Document, raw.TimeMs, divisor), 0, EditableDurationMs), p.X);
+                bool snapTime = endpoint ? snap || track.EndpointSnap is not null : anchorSnap;
+                if (snapTime)
+                {
+                    double time = endpoint ? SnapTrackEndpoint(track, raw.TimeMs, node == track.Nodes[^1])
+                        : SnapTiming().Snap(raw.TimeMs, divisor);
+                    p = new(Math.Clamp(time, 0, EditableDurationMs), p.X);
+                }
                 var start = Point(node);
                 if (!CurveMath.TryMoveAnchor(track, node.Id, p.TimeMs, p.X, out var error))
                 {
@@ -602,6 +613,7 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (RotationVisible) { EndRotationPointer(x, y); return; }
         if (aimodGesture != AimodGesture.None && button == 0) { EndAimodPointer(x, y); return; }
         if (notesSelecting && button == 0) { FinishNotesSelection(x, y); return; }
         if (dockPressed is not null && button == 0) { EndDockPointer(x, y); return; }
@@ -688,7 +700,7 @@ public sealed partial class EditorView
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
         {
             var readOnlyIds = IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id);
-            if (history.TransactionChangesObjects(readOnlyIds))
+            if (history.TransactionChangesSliderGeometry(readOnlyIds))
             { history.Cancel(); drag = DragKind.None; StatusMessage = L.Get("osu.readOnlySlider"); return; }
             try
             {
@@ -780,6 +792,7 @@ public sealed partial class EditorView
         if (IsTestplaying) return;
         if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
+        if (RotationVisible) return;
         if (TimeJumpVisible) { if (TimeJumpInputBounds.Contains(x, y)) SelectInput("time", timeJumpText); return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
@@ -887,6 +900,7 @@ public sealed partial class EditorView
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
+        if (RotationVisible) return;
         if (pendingLanguage is not null) return;
         if (languageMenuOpen)
         {
@@ -1267,6 +1281,7 @@ public sealed partial class EditorView
             return;
         }
         if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl, shift); return; }
+        if (RotationVisible) { RotationKey(virtualKey, ctrl, shift); return; }
         if (SliderDialogVisible)
         {
             if (virtualKey == 27)
@@ -1332,6 +1347,12 @@ public sealed partial class EditorView
             return;
         }
         if (UiScaleKey(virtualKey, ctrl)) return;
+        if (ctrl && !altHeld && !TimingPageVisible && drag == DragKind.None)
+        {
+            if (shift && virtualKey == 'R') { OpenRotation(); return; }
+            if (!shift && virtualKey is 188 or 190)
+            { RotateSelection((virtualKey == 188 ? -1 : 1) * (IsOsuCanvas ? 90 : 5), true); return; }
+        }
         if (OsuEditingKey(virtualKey, ctrl, shift)) return;
         if (virtualKey == 27)
         {
@@ -1441,6 +1462,7 @@ public sealed partial class EditorView
     private void TextInputCore(char value)
     {
         if (AcknowledgementsVisible) return;
+        if (RotationVisible) { if (!char.IsControl(value)) RotationText(value.ToString()); return; }
         if (HitsoundCopierVisible) { if (!ErrorVisible && !DiscardConfirmationVisible && !char.IsControl(value)) PasteHitsoundName(value.ToString()); return; }
 
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
@@ -1486,6 +1508,8 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        CancelRotation();
+        rotationDragging = false;
         heldEditorKeys.Clear();
         if (drag == DragKind.SnapDivisor) SaveMapEditingPreferences();
         CancelLegacyDropletRefresh();
@@ -1572,7 +1596,7 @@ public sealed partial class EditorView
                 Name = L.Get("editor.track.defaultName", Document.Tracks.Count + 1),
                 Kind = CurveKind.Linear,
                 CompensateTinyDroplets = true,
-                DropletMode = LibrarySettings.DefaultDropletMode
+                DropletMode = NewSliderDropletMode
             };
             Document.Tracks.Add(track);
             draftTrack = track.Id;
@@ -1744,7 +1768,7 @@ public sealed partial class EditorView
             var readOnlyIds = field.Label == L.Get("legacySv.label") ? Array.Empty<Guid>()
                 : (IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id)).ToArray();
             field.Apply(value);
-            if (history.TransactionChangesObjects(readOnlyIds))
+            if (history.TransactionChangesSliderGeometry(readOnlyIds))
             { history.Cancel(); fieldError = StatusMessage = L.Get("osu.readOnlySlider"); return false; }
             CommitContentHistory();
             editField = -1;

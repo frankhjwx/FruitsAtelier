@@ -14,8 +14,8 @@ internal static class LibraryDoubleClickTests
             var view = new EditorView(loadDemo: false);
             view.InitializeLibrary(true, new LibrarySettings { Workspace = workspace });
             var canvas = new RecordingCanvas();
-            int opens = 0; LibraryMap? target = null;
-            view.RequestLibraryOpen = map => { opens++; target = map; };
+            int opens = 0; LibraryMap? target = null; bool selectedDifficulty = false;
+            view.RequestLibraryOpen = (map, selectDifficulty) => { opens++; target = map; selectedDifficulty = selectDifficulty; };
             Settle(); Click("library.projects"); Settle();
             var title = canvas.Texts.Single(t => t.Value == "Click project" && t.X < 600);
             float x = title.X + 2, y = title.Y + 2;
@@ -24,6 +24,14 @@ internal static class LibraryDoubleClickTests
             view.PointerDoubleClick(x, y, false, false);
             Check(opens == 1 && target?.ProjectPath == session.Directory, "double click invokes the existing project-open callback exactly once");
             Check(!view.HasEditorProject && !view.IsDirty, "double click leaves project loading to the host");
+            Check(!selectedDifficulty, "card opening does not request a particular difficulty");
+            Settle();
+            var difficulty = canvas.Texts.Single(t => t.X == 692 && t.Y == 337);
+            view.PointerDown(difficulty.X + 2, difficulty.Y + 2, 0, false, false);
+            view.PointerUp(difficulty.X + 2, difficulty.Y + 2, 0);
+            Check(opens == 2 && selectedDifficulty && target?.Path == Path.Combine(session.Directory, session.Manifest.Difficulties[0].File),
+                "single click on a detail row requests its exact difficulty");
+            opens = 1;
             string? openedPath = null;
             view.RequestOpenExternalPath = path => openedPath = path;
             view.PointerDown(x, y, 2, false, false); Settle();

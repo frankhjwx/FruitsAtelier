@@ -6,7 +6,7 @@ internal static class RequestedInteractionTests
     {
         var ui = new Ui();
         Check(ui.View.SnapDivisor == 4, "Default snap remains 1/4.");
-        foreach (int divisor in new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16 })
+        foreach (int divisor in new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16 })
         {
             ui.SetSnapDivisor(divisor);
             Check(ui.View.SnapDivisor == divisor, $"Snap slider did not select 1/{divisor}.");

@@ -174,7 +174,7 @@ public sealed partial class EditorView
         }
         else
         {
-            if (tool == Tool.Fruit) RemoveFruitPlacementConflicts(candidate, point.Value.TimeMs);
+            if (tool == Tool.Fruit && !IsOsuCanvas) RemoveFruitPlacementConflicts(candidate, point.Value.TimeMs);
             candidate.Fruits.Add(new Fruit { Id = placementId, TimeMs = point.Value.TimeMs, X = point.Value.X });
         }
         candidate.Tracks.RemoveAll(t => t.Nodes.Count < 2);
@@ -226,6 +226,16 @@ public sealed partial class EditorView
         {
             if (osuDraftSlider is { } slider) return new(slider.TimeMs, slider.X);
             var position = OsuInputPoint(mouseX, mouseY, useDistance: tool is Tool.Fruit or Tool.Slider && osuDraftSlider is null, useObjects: true);
+            if (tool == Tool.Fruit)
+            {
+                EnsureOsuCanvasObjects();
+                double time = OsuBeatmapWriter.QuantizeTime(OsuPlacementTime);
+                int low = 0, high = osuCanvasObjects.Length;
+                while (low < high) { int middle = low + (high - low) / 2; if (osuCanvasObjects[middle].Start < time) low = middle + 1; else high = middle; }
+                for (int i = low; i < osuCanvasObjects.Length && osuCanvasObjects[i].Start == time; i++)
+                    if (!osuCanvasObjects[i].Spinner && osuCanvasObjects[i].Path.Length == 0
+                        && osuCanvasObjects[i].X == position.X && osuCanvasObjects[i].Y == position.Y) return null;
+            }
             return new(OsuPlacementTime, position.X);
         }
         if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack
@@ -297,7 +307,7 @@ public sealed partial class EditorView
 
     private bool TryPreviewFruitPlacement(MapPoint point)
     {
-        bool replace = tool == Tool.Fruit;
+        bool replace = tool == Tool.Fruit && !IsOsuCanvas;
         if (playableExport is null
             || Document.Tracks.Any(t => t.StreamSnapDivisor is null && t.RandomizesDroplets(Document)
                 && t.Nodes.Count > 0 && t.Nodes[0].TimeMs >= point.TimeMs - 2)

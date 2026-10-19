@@ -7,6 +7,7 @@ The approved identity is an italic FA monogram with a single leaf above the A. V
 - `app-icon.svg` / `.png` / `.icns`: white-on-charcoal macOS icon. ICNS includes 16–1024 px representations.
 - `wordmark-en.svg` / `.png`: mark on the left and FruitsAtelier on the right.
 - `wordmark-zh.svg` / `.png`: mark on the left and 水果工坊 on the right.
+- `faz-file.svg` / `.png` / `.ico` / `.icns`: folded document with the approved FA mark at bottom right, used for portable project archives. Rebuild raster and desktop representations with `scripts/Generate-FazIcon.cjs` and `sharp` on NODE_PATH.
 
 SVG wordmarks adapt their text colour to the browser's light/dark preference. PNG wordmarks use dark text on transparency. The brand names are FruitsAtelier in English and 水果工坊 in Simplified Chinese; do not translate existing user-authored project or song names.
 

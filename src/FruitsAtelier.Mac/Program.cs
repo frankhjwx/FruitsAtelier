@@ -1,11 +1,13 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Themes.Fluent;
+using Avalonia.Platform.Storage;
 
 namespace FruitsAtelier.Mac;
 
 internal static class Program
 {
+    internal static readonly System.Collections.Concurrent.ConcurrentQueue<string> OpenFiles = new();
     internal static string[] Arguments = [];
     [STAThread]
     public static int Main(string[] args)
@@ -21,6 +23,13 @@ internal sealed class MacApplication : Application
     public override void Initialize() { Styles.Add(new FluentTheme()); RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark; }
     public override void OnFrameworkInitializationCompleted()
     {
+        if (TryGetFeature(typeof(IActivatableLifetime)) is IActivatableLifetime activation)
+            activation.Activated += (_, args) =>
+            {
+                if (args is FileActivatedEventArgs files)
+                    foreach (var item in files.Files)
+                        if (item.TryGetLocalPath() is { } path && FruitsAtelier.App.Platform.FazArchive.IsPackage(path)) Program.OpenFiles.Enqueue(path);
+            };
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             desktop.MainWindow = new MacWindow(Program.Arguments.FirstOrDefault(File.Exists), Program.Arguments.Contains("--smoke-check"));
         base.OnFrameworkInitializationCompleted();

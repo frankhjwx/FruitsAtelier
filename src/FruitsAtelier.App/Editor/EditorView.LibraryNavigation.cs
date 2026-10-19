@@ -115,12 +115,12 @@ public sealed partial class EditorView
         QueueLibrarySearch(); RememberLibraryPosition(); SaveLibraryMemory();
     }
 
-    private void OpenSelectedLibraryMap(LibraryMap map)
+    private void OpenSelectedLibraryMap(LibraryMap map, bool selectDifficulty = false)
     {
         libraryBrowser?.SelectMap(map);
         selectedLibraryGroup = (libraryProjectsOnly || libraryFavouritesOnly) ? map.ProjectPath ?? map.Directory : map.Directory;
         libraryField = -1; RememberLibraryPosition(); SaveLibraryMemory();
-        RequestLibraryOpen?.Invoke(map);
+        RequestLibraryOpen?.Invoke(map, selectDifficulty);
     }
     private void DrawLibraryScrollbar(ICanvas c, Rect track, float offset, float total, float visible, bool details)
     {
@@ -176,6 +176,8 @@ public sealed partial class EditorView
                 contextItems.Add(new(L.Get("project.openSongsFolder"), () => RequestOpenExternalPath?.Invoke(songsFolder!), Directory.Exists(songsFolder)));
                 AddContextSeparator();
                 contextItems.Add(new(L.Get("library.exportOsz"), () => RequestLibraryOszExport?.Invoke(map)));
+                contextItems.Add(new(L.Get("faz.exportComplete"), () => RequestLibraryFazExport?.Invoke(map, true)));
+                contextItems.Add(new(L.Get("faz.exportProject"), () => RequestLibraryFazExport?.Invoke(map, false)));
             }
             else
             {

@@ -16,6 +16,20 @@ Moving or reshaping a slider retains its authored SV. Green timing changes do no
 replace this per-object value. The Inspector edits authored SV; export metrics
 report the processed value. Export alone synthesizes required green points.
 
+When a project or difficulty enters the editor, inherited timing is normalized to
+sound, volume and effect transitions with a neutral SV. Imported sliders retain
+their captured SV, and native curves retain their starting SV seed before timing
+is normalized. Red points retain their BPM and meter. The low-level osu reader
+still preserves source timing for lossless format operations.
+
+Synchronization compares this normalized timing, excluding generated SV-only
+points. Slider paths are compared through all converted Catch events, including
+droplets and tiny droplets: kinds and counts must match, times allow at most
+0.000001 ms serialization error, and horizontal positions allow 1 pixel. Object
+sample and combo attributes remain independently significant. Equivalent sliders
+retain native authoring and their association identity. Timing review shows aligned
+attribute columns per timestamp; differing cells are red until resolved, then green.
+
 Older schemas remain readable. A fruit's geometric Y defaults to 192; old saved
 fruits recover Y from their retained source object line when present. Catch editing
 preserves this coordinate. `OsuDistanceSpacing` is independent of Catch spacing,
@@ -36,6 +50,14 @@ Legacy sliders authored or manually edited in the osu! canvas persist `PreserveN
 Their original two-dimensional controls and authored SV remain separate from the
 materialized droplet path and processed SV, including after reopening. Failed
 processing retains the prior committed state. Older objects default to false.
+
+Slider-local endpoint snapping uses schema 31 (single difficulty) or 32 (multiple
+difficulties). `CurveTrack.EndpointSnap` and `ImportedSlider.EndpointSnap` are
+optional immutable start/end divisor settings. A missing setting follows the
+global grid; a missing divisor selects the nearest supported grid. Cloning,
+content equality, history and slider representation conversion retain the settings.
+They are project authoring metadata; `.osu` output contains the resulting timing
+and slider length.
 
 ## Authoritative and derived data
 
@@ -164,7 +186,7 @@ An anchor's optional `OutgoingCurve` takes precedence over its outgoing pen hand
 
 For arcs, `ReferenceScale = 440 / CatchScrollTiming.PreemptMs(creationAR)`. It converts relative milliseconds to playfield units for circle construction, independently of window width and DPI. Subsequent AR edits only affect display. Bezier evaluation remains in time–X coordinates.
 
-`ControlCurveEditing` splits exact segments without changing their shape and converts a single segment to cubic pen form only for a content edit that needs it. Degree elevation is exact for quadratic/cubic input. Higher-degree input uses Bernstein-coefficient error bounds; circular arcs use a fourth-derivative Hermite remainder bound plus any control clamping error. Adaptive subdivision bounds parameter-matched X error to 0.001 playfield units and time error to 0.01 ms, with at most 4096 cubics and the existing minimum anchor spacing. This is not a universal bound on X at equal times near a horizontal time tangent. Conversion failure leaves the gesture's source intact. Approximated cubic controls remain time ordered and within the playfield; exact quadratic/cubic conversion preserves valid endpoint overhangs.
+`ControlCurveEditing` splits exact segments without changing their shape and converts a single segment to cubic pen form only for a content edit that needs it. Degree elevation is exact for quadratic/cubic input. Higher-degree input uses Bernstein-coefficient bounds on parameter-matched X error (0.001 playfield units) and time error (0.01 ms). Circular arcs use tangent-matched cubics with spans of at most 90°. An implicit-circle Bernstein bound limits their X error at equal times to 0.001 playfield units, including vertical endpoint tangents; radial time-coordinate error is at most 0.01 ms. Adaptive subdivision adds anchors only where these bounds require it, with at most 4096 cubics and the existing minimum anchor spacing. Conversion failure leaves the gesture's source intact. Approximated cubic time controls remain ordered; exact quadratic/cubic conversion preserves valid endpoint overhangs.
 
 Batch anchor deletion allows endpoints and preserves surviving IDs, times, and order. Before merging adjacent segments, it clears hidden handles from old linear segments that would become active, then chooses the segment type from remaining usable handles. New endpoints lose unused outward handles. When fewer than two anchors remain, App deletes the parent slider; undo restores all data.
 
@@ -197,15 +219,18 @@ strengths above 100 are capped at 100 when loaded. `RandomizeDropletSeed` is a s
 32-bit integer, default 1337. Each ordinary FSlider can retain a
 `DropletRandomization` with its own `Enabled` flag and sorted normalized-time
 `Adjustments`. `CurveTrack.DropletMode` is FollowMap, Derandomize or Randomize. Newly drawn
-FSliders use FollowMap, resolved against `DerandomizeFSliderDroplets` on the current
-difficulty. Explicit modes override that default. A missing mode retains the
+FSliders use the remembered Inspector mode, initially FollowMap, resolved against
+`DerandomizeFSliderDroplets` on the current difficulty. When both that switch and
+`RandomizeNewSliders` are off, drawing resolves the FollowMap preference to an
+explicit Derandomize mode so imported maps and older projects retain their drawing
+default. Explicit modes override that default. A missing mode retains the
 older resolution: the map derandomization switch overrides the stored effect's
 Enabled flag. This preserves old project output without rewriting content on load.
 The Inspector presents old enabled effects as FollowMap and disabled effects as
 Derandomize. The nullable mode is cloned, compared, validated and included in
 conversion-cache identity. Non-null modes require schema 25/26; earlier readers
-reject them. `RandomizeNewSliders` remains persisted for compatibility; new drawing
-uses FollowMap. New projects capture the independent General derandomization
+reject them. `RandomizeNewSliders` retains the difficulty's opt-in to randomization
+for newly drawn FSliders. New projects capture the independent General derandomization
 preference, which defaults to on. Legacy conversion uses its separate saved policy
 and application preference.
 These fields participate in deep cloning, content equality, history, persistence and cache

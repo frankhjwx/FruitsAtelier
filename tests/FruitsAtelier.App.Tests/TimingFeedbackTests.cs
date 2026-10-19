@@ -101,7 +101,7 @@ internal static class TimingFeedbackTests
     {
         var map = new MapDocument { DurationMs = 20000, IsDemo = false };
         map.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500, Uninherited = true },
-            new() { TimeMs = 500, BeatLengthMs = -100, Uninherited = false }]);
+            new() { TimeMs = 500, BeatLengthMs = -100, Uninherited = false, Volume = 80 }]);
         map.Fruits.Add(new() { TimeMs = 6000, X = 200 });
         return map;
     }

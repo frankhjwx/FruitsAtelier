@@ -7,6 +7,17 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private string SyncMapHeading(WorkspaceMerge merge)
+    {
+        string Value(string key, string fallback)
+            => OsuBeatmapReader.Setting(merge.Local, "Metadata", key) is { } value && !string.IsNullOrWhiteSpace(value) ? value : fallback;
+        string artist = Value("Artist", Value("ArtistUnicode", ""));
+        string title = Value("Title", Value("TitleUnicode", merge.Local.Name));
+        string difficulty = Value("Version", difficulties.FirstOrDefault(d => d.Id == syncDifficulty)?.Name ?? "");
+        string song = string.IsNullOrWhiteSpace(artist) ? title : $"{artist} - {title}";
+        return string.IsNullOrWhiteSpace(difficulty) ? song : $"{song} [{difficulty}]";
+    }
+
     private sealed record SyncPath(Guid Source, MapPoint[] Points, bool Controls = false)
     {
         public double Start { get; } = Points.Length == 0 ? 0 : Points.Min(p => p.TimeMs);
@@ -85,6 +96,10 @@ public sealed partial class EditorView
     private static SyncComparison PrepareSyncComparison(WorkspaceMerge merge, bool compensate, string? authoringPath = null)
     {
         var local = PrepareSyncPane(merge.Local, compensate); var external = PrepareSyncPane(merge.External.Document, compensate);
+        var output = OsuBeatmapWriter.Serialize(merge.Local, compensate);
+        var emitted = CatchStreamConverter.Convert(output.ReadBack, compensate);
+        var emittedSources = WorkspaceSynchronization.SourceIds(output.ReadBack).ToDictionary(p => p.Id, p => output.ObjectSources[p.Order]);
+        var details = new Dictionary<string, IReadOnlyList<SyncObjectDifference>>();
         var focus = new Dictionary<string, SyncFocus>();
         foreach (var conflict in merge.Conflicts)
         {
@@ -92,6 +107,9 @@ public sealed partial class EditorView
             var times = local.Objects.Where(o => ours.Contains(o.SourceId)).Concat(external.Objects.Where(o => theirs.Contains(o.SourceId))).Select(o => o.TimeMs)
                 .Concat(local.Paths.Where(p => ours.Contains(p.Source)).Concat(external.Paths.Where(p => theirs.Contains(p.Source))).SelectMany(p => p.Points.Select(v => v.TimeMs))).ToArray();
             focus[conflict.Key] = new(ours, theirs, times.Length == 0 ? 0 : times.Min(), times.Length == 0 ? 0 : times.Max());
+            if (conflict.Key.StartsWith("$objects:")) details[conflict.Key] = SyncObjectDifferences.ComparePlayable(conflict.Local, conflict.External,
+                emitted.Objects.Where(o => ours.Contains(emittedSources[o.SourceId])).ToArray(),
+                external.Objects.Where(o => theirs.Contains(o.SourceId)).ToArray());
         }
         var rejectedLines = merge.PreviouslyRetained.SelectMany(r => r.ExternalLines).ToHashSet();
         var rejectedOrders = WorkspaceSynchronization.ObjectLines(merge.External.Text).Select((line, order) => (line, order))
@@ -100,7 +118,7 @@ public sealed partial class EditorView
             File.Exists(merge.External.Path) ? File.GetLastWriteTimeUtc(merge.External.Path) : null,
             merge.PreviouslyRetained.SelectMany(r => r.Sources).ToHashSet(),
             WorkspaceSynchronization.SourceIds(merge.External.Document).Where(p => rejectedOrders.Contains(p.Order)).Select(p => p.Id).ToHashSet(),
-            SyncAudioHash(merge.External.Document.AudioPath), PrepareSyncReview(merge));
+            SyncAudioHash(merge.External.Document.AudioPath), PrepareSyncReview(merge, details));
     }
 
     private void DrawSyncComparison(ICanvas c, WorkspaceMerge merge, SyncComparison comparison)
@@ -134,14 +152,15 @@ public sealed partial class EditorView
         c.Fill(new(0, 0, width, height), Background);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
         c.Text(L.Get("sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
-        c.Text(syncStatuses.GetValueOrDefault(syncDifficulty)?.State == WorkspaceSyncState.NeedsBaseline ? L.Get("sync.compareNoBaseline") : L.Get("sync.compareHelp"), x + 20, y + 46, 12, Muted, w - 40);
+        c.Text(SyncMapHeading(merge), x + 20, y + 46, 12, Muted, w - 40);
         string label = !hasConflict ? L.Get("ui.unchanged") : conflict.Key.StartsWith("$objects:") ? L.Get("sync.objects", Array.IndexOf(categoryConflicts, conflict) + 1) : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key;
         string stateLabel = syncRoundChoices.Contains(conflict.Key) ? L.Get("sync.resolvedThisRound")
             : merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.alreadyResolved") : L.Get("sync.unresolvedRange");
         if (hasConflict) label += " · " + stateLabel;
         c.Text(label, x + 20, y + 106, 15, Accent, w - 40);
         float paneWidth = (w - 40 - (syncShowResult ? 24 : 12)) / (syncShowResult ? 3 : 2);
-        if (hasConflict) DrawSyncObjectDetails(c, comparison.Review.Objects[conflict.Key], new(x + 20, y + 130, w - 40, 74));
+        if (hasConflict) DrawSyncObjectDetails(c, comparison.Review.Objects[conflict.Key], new(x + 20, y + 130, w - 40, 74),
+            syncChoices.ContainsKey(conflict.Key) || merge.PreviouslyResolved.Contains(conflict.Key) ? SyncResolvedThisRound : SyncUnresolved);
         else syncObjectDetailBounds = default;
         var left = new Rect(x + 20, y + 214, paneWidth, h - 390);
         var right = left with { X = left.Right + 12 };

@@ -37,16 +37,18 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        foreach (var difficulty in project.Difficulties) WorkspaceTimingSynchronization.NormalizeDocument(difficulty.Document);
         CancelLegacyDropletRefresh();
         if (libraryOpenTask is { } retiredOpen)
             _ = retiredOpen.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
-        libraryOpenTask = null; libraryOpenCompleted = null;
+        libraryOpenTask = null; libraryOpenCompleted = null; libraryOpenDifficultyPath = null; pendingLibraryDifficultyPath = null;
         CloseVersionHistory();
         CloseAimod();
         CloseHitsoundCopier();
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
         TimeJumpVisible = false;
+        RotationVisible = rotationDragging = false;
         CloseBananaEdit(); bananaSegments.Clear();
         StreamDialogVisible = false;
         MergeDialogVisible = false;
@@ -196,6 +198,7 @@ public sealed partial class EditorView
         }
         if (difficulties.Count >= 256) { SetNotice(L.Get("project.invalid")); return false; }
         var document = imported?.DeepClone() ?? Document.DeepClone();
+        WorkspaceTimingSynchronization.NormalizeDocument(document);
         string name = imported is null ? L.Get("project.defaultDifficulty", difficulties.Count + 1)
             : OsuBeatmapReader.Setting(document, "Metadata", "Version") ?? L.Get("project.defaultDifficulty", difficulties.Count + 1);
         if (imported is null)
@@ -236,11 +239,11 @@ public sealed partial class EditorView
         if (LegacyDropletRefreshBusy) return false;
         if (AcknowledgementsVisible) return false;
         if (previousSaveRestore is not null) return false;
-        if (LibraryOpening || AudioProjectCreating) return false;
+        if (FazVisible || LibraryOpening || AudioProjectCreating) return false;
         if (difficultySaveTask is not null && !allowDifficultySave) { NotifySynchronizationBlocked(); return false; }
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (VersionHistoryVisible || SynchronizationVisible) return false;
-        if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
+        if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || RotationVisible) return false;
         if (!CommitTimingField()) return false;
         if (SliderMultiplierValidationBusy)
         { StatusMessage = L.Get("timing.sliderMultiplierChecking"); return false; }

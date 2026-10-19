@@ -216,6 +216,7 @@ public sealed partial class EditorView
 
     private void DrawOsuCanvas(ICanvas c)
     {
+        RefreshSliderSnapLabels();
         RefreshOsuCanvasVisible();
         var field = OsuCanvasBounds;
         float scale = field.Width / 512, radius = (float)OsuCanvasRadius * scale;
@@ -309,6 +310,14 @@ public sealed partial class EditorView
             }
             if (IsObjectSelected(o.Id))
             {
+                if (sliderSnapLabels.TryGetValue(o.Id, out var snapLabels))
+                {
+                    var finalTail = o.Path.Length > 0 ? OsuPathPosition(o, o.Spans % 2 == 0 ? 0 : 1) : (X: o.X, Y: o.Y);
+                    var at = Point(finalTail.X, finalTail.Y);
+                    DrawSliderSnapCaption(c, snapLabels.StartPosition, head.X, head.Y, radius, CanvasRenderBounds);
+                    bool coincident = Math.Abs(at.X - head.X) < radius * 2 && Math.Abs(at.Y - head.Y) < 18;
+                    DrawSliderSnapCaption(c, snapLabels.EndPosition, at.X, at.Y, radius, CanvasRenderBounds, coincident ? 1 : 0);
+                }
                 float ringRadius = radius * 118 / 128;
                 float ringWidth = Math.Max(1, 3 * scale);
                 c.Circle(head.X, head.Y, ringRadius, OsuSelectionColour, false, ringWidth);
@@ -326,41 +335,55 @@ public sealed partial class EditorView
         DrawOsuDistanceSpacing(c);
     }
 
-    private IReadOnlyList<ConvertedCatchObject>? osuMovementSource;
-    private double osuMovementCircleSize;
-    private readonly Dictionary<(Guid From, Guid To), CatchMovementMode> osuMovementModes = [];
-
     private void DrawOsuMovementConnections(ICanvas c)
     {
         if (!movementAnalysis) return;
         EnsureOsuDistanceReferences();
-        if (!ReferenceEquals(osuMovementSource, playableObjects) || osuMovementCircleSize != Document.CircleSize)
-        {
-            EnsureMovementStates(playableObjects);
-            osuMovementModes.Clear();
-            for (int i = 0; i + 1 < movementIndices.Length; i++)
-            {
-                int from = movementIndices[i], to = movementIndices[i + 1];
-                if (playableObjects[from].SourceId != playableObjects[to].SourceId && movementStates[from].Movement is { } movement)
-                    osuMovementModes[(playableObjects[from].SourceId, playableObjects[to].SourceId)] = movement.Mode;
-            }
-            osuMovementSource = playableObjects; osuMovementCircleSize = Document.CircleSize;
-        }
+        var objects = placementMovementObjects ?? playableObjects;
+        EnsureMovementStates(objects);
         var breaks = MovementBreakPeriods();
+        var timing = SnapTiming();
+        OsuCanvasObject? ghost = null;
+        if (placementGhost is { } candidate && PlacementGhostPoint() is not null && osuDraftSlider is null)
+        {
+            var p = OsuInputPoint(mouseX, mouseY, useDistance: true, useObjects: true);
+            var state = timing.At(candidate.TimeMs);
+            ghost = new() { Id = candidate.SourceId, Start = candidate.TimeMs, End = candidate.TimeMs,
+                X = p.X, Y = p.Y, DistanceVelocity = 100 * Document.EffectiveSliderMultiplier * state.SliderVelocityMultiplier / state.BeatLengthMs };
+            int low = 0, high = osuCanvasObjects.Length;
+            while (low < high) { int middle = low + (high - low) / 2; if (osuCanvasObjects[middle].Start <= ghost.Start) low = middle + 1; else high = middle; }
+            int next = low < osuCanvasObjects.Length ? low : -1;
+            int previous = low - 1;
+            if (previous >= 0) Connection(osuCanvasObjects[previous], ghost);
+            if (next >= 0) Connection(ghost, osuCanvasObjects[next]);
+        }
         foreach (int index in osuCanvasVisible)
         {
             if (index == 0) continue;
             var from = osuCanvasObjects[index - 1]; var to = osuCanvasObjects[index];
-            if (from.Spinner || to.Spinner || from.End > to.Start || to.Start + 240 < LazerPresentationTime
-                || !osuMovementModes.TryGetValue((from.Id, to.Id), out var mode)
-                || breaks.Any(b => b.StartMs <= to.Start && b.EndMs >= from.End)) continue;
+            if (ghost is not null && from.Start <= ghost.Start && to.Start > ghost.Start) continue;
+            Connection(from, to);
+        }
+
+        void Connection(OsuCanvasObject from, OsuCanvasObject to)
+        {
+            if (from.Spinner || to.Spinner || from.End > to.Start || !WithinOsuMovementRange(from.End, to.Start, timing) || to.Start + 240 < LazerPresentationTime
+                || breaks.Any(b => b.StartMs <= to.Start && b.EndMs >= from.End)) return;
+            int low = 0, high = movementIndices.Length;
+            while (low < high) { int middle = low + (high - low) / 2; if (objects[movementIndices[middle]].TimeMs < to.Start) low = middle + 1; else high = middle; }
+            while (low < movementIndices.Length && objects[movementIndices[low]].TimeMs <= to.Start + .001
+                && objects[movementIndices[low]].SourceId != to.Id) low++;
+            if (low == 0 || low >= movementIndices.Length || objects[movementIndices[low]].SourceId != to.Id
+                || objects[movementIndices[low]].TimeMs > to.Start + .001
+                || objects[movementIndices[low - 1]].SourceId != from.Id
+                || movementStates[movementIndices[low - 1]].Movement is not { } movement) return;
             var tail = OsuPathPosition(from, from.Spans % 2 == 1 ? 1 : 0);
             double fromShift = -from.Stack * OsuCanvasRadius / 10, toShift = -to.Stack * OsuCanvasRadius / 10;
             var a = OsuCanvasScreen(tail.X + fromShift, tail.Y + fromShift);
             var b = OsuCanvasScreen(to.X + toShift, to.Y + toShift);
-            c.Line(a.X, a.Y, b.X, b.Y, MovementColour(mode), 3, .65f);
+            c.Line(a.X, a.Y, b.X, b.Y, MovementColour(movement.Mode), 3, .65f);
             double unit = (to.Start - from.End) * from.DistanceVelocity;
-            if (!(unit > 0) || !double.IsFinite(unit)) continue;
+            if (!(unit > 0) || !double.IsFinite(unit)) return;
             double ratio = Distance(tail.X, tail.Y, to.X, to.Y) / unit;
             string label = L.Get("assist.ratio", ratio);
             float labelWidth = c.MeasureText(label, 11) + 10;

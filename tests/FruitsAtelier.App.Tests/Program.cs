@@ -1,12 +1,25 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--dirty-exit-check")) { DirtyExitTests.Run(); DiscardConfirmationTests.Run(); Console.WriteLine("PASS dirty exit choices and nonblocking background checks"); return 0; }
+if (args.Contains("--sync-details-check")) { SyncTabsTests.Run(); Console.WriteLine("PASS playable object details and synchronization tabs"); return 0; }
+if (args.Contains("--faz-check")) { FazTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--legacy-edit-map") { LegacyDropletWorkerTests.FirstEdits(ProjectSerializer.ReadFile(args[1])); Console.WriteLine("PASS first note placement and deletion without conversion dialogs"); return 0; }
 if (args.Contains("--synchronization-wait-check")) { SynchronizationWaitTests.Run(); Console.WriteLine("PASS background input and explicit synchronization waits"); return 0; }
 if (args.Contains("--difficulty-save-check")) { DifficultySaveTests.Run(); Console.WriteLine("PASS current difficulty background saves and recovery"); return 0; }
 if (args.Contains("--difficulty-save-performance")) { DifficultySavePerformance.Run(); return 0; }
 
 if (args.Contains("--movement-overlay-check")) { AssistToolsTests.MovementOverlay(); Console.WriteLine("PASS Movement overlay fractional bounds and input"); return 0; }
+if (args.Contains("--canvas-feedback-check")) { CanvasFeedbackTests.Run(); Console.WriteLine("PASS Canvas rotation, metadata, native streams, placement and timing feedback"); return 0; }
+if (args.Contains("--curve-edit-check")) { SliderModeInteractionTests.SwitchArAndLocalPenEdit(); SliderModeInteractionTests.InsertDeleteAndBoundary(); SliderModeInteractionTests.GlobalModeMenu(); Console.WriteLine("PASS Local curve editing, mode switching and undo"); return 0; }
+if (args.Contains("--canvas-feedback-performance")) { CanvasFeedbackPerformance.Run(); return 0; }
+if (args.Contains("--rotation-preview-performance")) { CanvasFeedbackPerformance.RunRotation(); return 0; }
+if (args.Contains("--timing-feedback-check")) { TimingEditorTests.Run(); TimingFeedbackTests.Run(); Console.WriteLine("PASS Timing setup, shortcuts, precision and range selection"); return 0; }
+
+if (args.Contains("--note-snap-check")) { NoteSnapTests.InspectBeatPosition(); Console.WriteLine("PASS nearest note beat snap recognition"); return 0; }
+
+if (args.Contains("--slider-endpoint-snap-check")) { SliderEndpointSnapTests.Run(); Console.WriteLine("PASS independent slider endpoint snapping"); return 0; }
+if (args.Contains("--slider-endpoint-snap-performance")) { SliderEndpointSnapTests.Performance(); return 0; }
 
 if (args.Contains("--independent-sv-check")) { IndependentSliderSvTests.Run(); Console.WriteLine("PASS Independent Legacy SV, overlap and editing"); return 0; }
 
@@ -57,7 +70,7 @@ if (args.Contains("--aimod-check")) { AimodTests.Run(); AimodTests.TableAndDock(
 
 if (args.Contains("--group-drag-boundary-check")) { GroupDragBoundaryTests.Run(); Console.WriteLine("PASS Group drag boundaries, conversion, export and undo"); return 0; }
 
-if (args.Contains("--inspector-panels-check")) { InspectorPanelsTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS Inspector metrics, live panel edits and Song Setup categories"); return 0; }
+if (args.Contains("--inspector-panels-check")) { InspectorSectionTests.Run(); InspectorPanelsTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS Inspector sections, endpoint labels, metrics and Song Setup categories"); return 0; }
 
 if (args.Contains("--song-dock-check")) { SongDockTests.Run(); SongSetupTests.Run(); DropletRandomizationTests.Run(); Console.WriteLine("PASS Song Setup dock, metadata, colours and randomization"); return 0; }
 
@@ -105,7 +118,7 @@ if (args.Contains("--banana-edit-check")) { BananaEditTests.Run(); StackDockTest
 
 if (args.Contains("--library-opening-check"))
 {
-    try { LibraryOpeningTests.Run(); Console.WriteLine("PASS Library opening responsiveness, publication and failure checks"); return 0; }
+    try { LibraryOpeningTests.Run(); LibraryDoubleClickTests.Run(); LibraryNavigationTests.Run(); Console.WriteLine("PASS Library opening responsiveness, publication and failure checks"); return 0; }
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 
@@ -265,7 +278,7 @@ var tests = new (string Name, Action Run)[]
     ("Current difficulty saves retain other edits, navigation and recoverable publication", DifficultySaveTests.Run),
     ("Blocked operations show synchronization progress only on demand", SynchronizationWaitTests.Run),
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
-    ("Stale synchronization waits for stable edits and archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),
+    ("Background synchronization retries retain dirty edits and explicit publication archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),
     ("Version history previews and restores changed and deleted difficulties with undo and modal isolation", VersionHistoryUiTests.Run),
 
     ("Playback note saves keep input responsive and retain edits made during publication", SynchronizationUiTests.PlaybackSave),
@@ -303,6 +316,7 @@ var tests = new (string Name, Action Run)[]
     ("Paused arrows align off-grid positions and cross timing boundaries", ShortcutRoutingTests.PausedSeekingSnaps),
     ("Compose pauses align with Snap while Timing pauses retain exact transport time", PauseSnapTests.UserPause),
     ("Timing current-time offsets use integer milliseconds and taps apply after ten samples", TimingFeedbackTests.Run),
+    ("Canvas rotation, metadata, native streams, placement and timing feedback", CanvasFeedbackTests.Run),
     ("Pause snapping waits for confirmation and isolates other transport operations", PauseSnapTests.PauseIsolation),
     ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
@@ -328,6 +342,7 @@ var tests = new (string Name, Action Run)[]
     ("Song Setup docks, scrolls and applies cancellable drafts", SongDockTests.Run),
     ("Dock layout settings restore across editor restarts", DockPersistenceTests.Run),
     ("Slider Inspector metrics and immediate randomization edits", InspectorPanelsTests.Run),
+    ("Inspector sections collapse without edits and endpoint labels avoid NC", InspectorSectionTests.Run),
     ("Conversion dock shortcuts, object action menus and merge undo", ConversionDockShortcutTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace saves and linked synchronization persist before optional Songs export", WorkspaceSaveTests.Run),
@@ -503,12 +518,14 @@ var tests = new (string Name, Action Run)[]
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
     ("Library opening keeps UI responsive while workspace maintenance holds the project gate", LibraryOpeningTests.Run),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
+    ("FAZ archives preserve native projects and explicit local associations", FazTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
     ("Library favourites persist, filter songs and projects, and toggle from the first context action", LibraryFavouriteTests.Run),
     ("Library pages sets and difficulties and reaches uncached scrollbar positions", LibraryScaleTests.Pagination),
     ("Library remains responsive while SQLite is write-locked", LibraryResponsivenessTests.Run),
     ("Library progress survives oversized maps", LibraryScanProgressTests.Run),
     ("In-window save confirmation blocks editing and supports cancellation", DiscardConfirmationTests.Run),
+    ("Dirty exits retain choices and background checks never publish unsaved edits", DirtyExitTests.Run),
     ("Library double-click opens only visible project cards through the host", LibraryDoubleClickTests.Run),
     ("Library double-click replaces the demo with an unassociated imported map", LibraryOpenTests.Run),
     ("External folders and full OSZ resources persist across restarts", ExternalResourceTests.Run),
@@ -527,6 +544,7 @@ var tests = new (string Name, Action Run)[]
     ("Timeline background clicks seek and drag limits preserve the origin", TimelineDragTests.ClickAndLimits),
     ("Fruit tools place quarters and sixths without moving existing objects", PlaceOnBothGrids),
     ("Beat snap slider exposes every requested divisor through one drag control", RequestedInteractionTests.SnapDivisors),
+    ("Slider endpoints snap independently and retain history, persistence and export", SliderEndpointSnapTests.Run),
     ("Centred controls and timestamp clipboard dialog preserve editor content", TimeJumpTests.Run),
     ("Double-click enters one Slider and other clicks leave its edit mode", RequestedInteractionTests.DoubleClickEditing),
     ("Long press reports note beat position and temporarily uses its snap", NoteSnapTests.InspectBeatPosition),
@@ -679,13 +697,14 @@ static void MultiTimingEditing()
     doc.TimingPoints.Add(new() { TimeMs = 1100, BeatLengthMs = 400, Uninherited = true });
     doc.TimingPoints.Add(new() { TimeMs = 1180, BeatLengthMs = -50, Uninherited = false });
     ui.LoadDocument(doc); ui.Paint();
+    var normalized = ui.View.Document.DeepClone();
     ui.SetSnapDivisor(6); ui.Key('F'); ui.ClickMap(1210, 100);
     Near(1233.333333333333, ui.View.Document.Fruits.Single().TimeMs);
     ui.SetSnapDivisor(4); ui.ClickMap(1490, 400);
     Near(1500, ui.View.Document.Fruits.Last().TimeMs);
     True(ui.Canvas.Lines.Any(l => l.Color == 0xEEEEEE && l.Width == 2.5f && Math.Abs(l.Y1 - (ui.Plot.Bottom - (1100 - ui.View.ViewStartMs) * ui.View.PixelsPerMs)) < .01), "The red timing boundary is absent from the painted grid.");
     ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
-    True(!ui.View.IsDirty && ui.View.Document.TimingPoints.Count == 3, "Timing was changed by fruit editing.");
+    True(!ui.View.IsDirty && ui.View.Document.ContentEquals(normalized), "Timing was changed by fruit editing.");
 }
 
 static void TransportIntegration()
@@ -1315,7 +1334,7 @@ sealed class Ui
     public void Key(int key, bool ctrl = false, bool shift = false) { View.KeyDown(key, ctrl, shift); Paint(); }
     public void SetSnapDivisor(int divisor)
     {
-        int[] values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
+        int[] values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16];
         int index = Array.IndexOf(values, divisor);
         if (index < 0) throw new ArgumentOutOfRangeException(nameof(divisor));
         var slider = View.SnapSliderBounds;
@@ -1367,7 +1386,7 @@ sealed class Ui
     }
     public void StreamSnap(int divisor)
     {
-        int[] values = View.LibrarySettings.ExperimentalSnapDivisions ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16, 24, 32, 48] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
+        int[] values = View.LibrarySettings.ExperimentalSnapDivisions ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 24, 32, 48] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16];
         var r = View.StreamSnapBounds;
         Click(r.X + 7 + Array.IndexOf(values, divisor) / (float)(values.Length - 1) * (r.Width - 62), r.Y + r.Height / 2);
     }

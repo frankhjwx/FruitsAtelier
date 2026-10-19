@@ -49,6 +49,9 @@ internal sealed partial class MacWindow
     }
     private void ConfigureLibrary(bool show, bool smokeCheck)
     {
+        View.RequestFazOpen = path => RunFile(async () => { if (await ConfirmDiscard()) await OpenPath(path); });
+        View.RequestFazExport = complete => ExportFaz(complete);
+        View.RequestLibraryFazExport = (map, complete) => ExportFaz(complete, map);
         View.RequestAudioProject = path => RunFile(async () => { if (await ConfirmDiscard()) View.BeginAudioProject(path); });
         View.RequestLibraryDrop = paths => RunFile(async () =>
         {
@@ -92,27 +95,27 @@ internal sealed partial class MacWindow
             else
             {
                 if (!await ConfirmDiscard()) return;
-                var path = await Pick(L.Get("library.importFile"), ["*.osz", "*.osu", "*.catchproj", "*.catchdiff"]);
+                var path = await Pick(L.Get("library.importFile"), ["*.faz", "*.osz", "*.osu", "*.catchproj", "*.catchdiff"]);
                 if (path is not null) await OpenPath(path);
             }
         });
-        View.RequestLibraryOpen = map => RunFile(async () =>
+        View.RequestLibraryOpen = (map, selectDifficulty) => RunFile(async () =>
         {
-            if (View.TryResumeLibraryProject(map)) return;
+            if (View.TryResumeLibraryProject(map, selectDifficulty)) return;
             if (!await ConfirmDiscard()) return;
             View.BeginLibraryOpen(map, () => RunFile(async () =>
             {
                 await audio.LoadAsync(View.Document.AudioPath); PollAudio();
-            }));
+            }), selectDifficulty);
         });
         View.RequestLibraryDelete = map =>
         {
             if (map.ProjectPath is not { } project) return;
-            View.ShowDeleteProjectConfirmation(confirmed =>
+            View.ShowDeleteProjectConfirmation((confirmed, keepBackup) =>
             {
                 if (confirmed) RunFile(async () =>
                 {
-                    await Task.Run(() => LibraryOperations.DeleteProject(project, View.LibrarySettings));
+                    await Task.Run(() => LibraryOperations.DeleteProject(project, View.LibrarySettings, keepBackup));
                     View.RefreshLibrary();
                 });
             });
@@ -154,4 +157,10 @@ internal sealed partial class MacWindow
             View.LibraryExportFinished(plan); View.SetNotice(L.Get("library.exported", plan.Target));
         });
     }
+    private void ExportFaz(bool complete, LibraryMap? map = null) => RunFile(async () =>
+    {
+        if (!View.PrepareFileOperation()) return;
+        var path = await SavePicker(L.Get(complete ? "faz.exportComplete" : "faz.exportProject"), "faz", WorkspaceProject.SafeName(map?.Title ?? View.CaptureProject().Name) + ".faz");
+        if (path is not null) View.BeginFazExport(path, complete, map);
+    });
 }

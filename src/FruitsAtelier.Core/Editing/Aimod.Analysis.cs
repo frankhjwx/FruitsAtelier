@@ -97,7 +97,7 @@ public static partial class Aimod
         int integerTime = (int)time;
         if (Math.Abs(integerTime - SnappedTime(state, integerTime, 8)) <= tolerance
             || Math.Abs(integerTime - SnappedTime(state, integerTime, 6)) <= tolerance) return 1;
-        foreach (int divisor in new[] { 5, 7, 9, 12, 16 })
+        foreach (int divisor in new[] { 5, 7, 9, 10, 11, 12, 16 })
             if (Math.Abs(integerTime - SnappedTime(state, integerTime, divisor)) <= 1) return divisor;
         return 0;
     }

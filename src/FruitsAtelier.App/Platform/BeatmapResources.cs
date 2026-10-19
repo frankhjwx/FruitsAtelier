@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Platform;
 public static class BeatmapResources
 {
     private static readonly HashSet<string> extensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".mp3", ".ogg", ".wav", ".jpg", ".jpeg", ".png" };
+        { ".mp3", ".ogg", ".wav", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp" };
 
     public static void Copy(MapDocument document, string destinationDirectory, MapDocument exportedDocument)
     {

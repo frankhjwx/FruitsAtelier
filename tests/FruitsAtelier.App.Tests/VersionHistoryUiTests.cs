@@ -95,7 +95,7 @@ internal static class VersionHistoryUiTests
                 Check(ui.Canvas.Texts.Any(t => t.Value.Contains(",400,")) && ui.Canvas.Texts.Any(t => t.Value.Contains(",500,")),
                     "history shows timing changes as text");
                 Tab("Objects");
-                Check(ui.Canvas.Texts.Any(t => t.Value.Contains("300") && t.Value.Contains("100")), "history describes current and historical object positions");
+                Check(ui.Canvas.Texts.Any(t => t.Value == "300") && ui.Canvas.Texts.Any(t => t.Value == "100"), "history describes current and historical object positions");
                 Check(ui.Canvas.Texts.Any(t => t.Value == "Objects" && t.Color == 0xED737B), "history marks changed categories");
                 ui.ClickText(L.Get("history.restore")); Wait(ui);
                 Check(ui.View.Document.Fruits[0].X == 100 && ui.View.DifficultyCount == 2, "existing restore changes only the selected difficulty");

@@ -46,6 +46,7 @@ public sealed partial class EditorView
         PumpSynchronizationWait();
         PumpAudioProject();
         PumpLibraryOpen();
+        PumpFaz();
         PumpLegacyDropletRefresh();
         if (ConversionNeedsRedraw) PumpDeferredConversion();
         CompleteSliderMultiplierValidation();
@@ -133,6 +134,8 @@ public sealed partial class EditorView
         DrawSliderDialog(c);
         DrawExportOverlay(c);
         DrawTimeJump(c);
+        DrawStreamDialog(c);
+        DrawRotation(c);
         DrawBananaEdit(c);
         DrawVolumeDialog(c);
         DrawVolumePopover(c);
@@ -447,6 +450,7 @@ public sealed partial class EditorView
 
     private void DrawCanvasCatchObjects(ICanvas c)
     {
+        RefreshSliderSnapLabels();
         if (IsLazerEditing) EnsureLazerCanvasVisuals();
         var playfield = Playfield;
         const string comboLabel = "NC";
@@ -468,7 +472,8 @@ public sealed partial class EditorView
                 animated: IsLazerEditing, presentationTime: LazerPresentationTime, approachRate: Document.ApproachRate);
             if (IsObjectSelected(item.SourceId))
                 c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * CanvasObjectWidth / 512 + 3, SelectionHighlightColour, false, 1.5f);
-            if (item.Kind == CatchObjectKind.Fruit && newComboEvents.Contains((item.SourceId, item.EventIndex)))
+            bool hasNewCombo = item.Kind == CatchObjectKind.Fruit && newComboEvents.Contains((item.SourceId, item.EventIndex));
+            if (hasNewCombo)
             {
                 if (comboLabelWidth == 0)
                     comboLabelWidth = c.MeasureText(comboLabel, 11);
@@ -476,6 +481,15 @@ public sealed partial class EditorView
                 float left = p.X - radius - 6 - comboLabelWidth;
                 float x = right + comboLabelWidth <= plot.Right || left < plot.X ? right : left;
                 c.Text(comboLabel, x, p.Y - 7, 11, Gold, Math.Max(0, plot.Right - x));
+            }
+            if (item.Kind == CatchObjectKind.Fruit && IsObjectSelected(item.SourceId)
+                && sliderSnapLabels.TryGetValue(item.SourceId, out var snapLabels))
+            {
+                int line = hasNewCombo ? 1 : 0;
+                if (item.EventIndex == snapLabels.StartEvent)
+                    DrawSliderSnapCaption(c, snapLabels.StartPosition, p.X, p.Y, radius, plot, line++);
+                if (item.EventIndex == snapLabels.EndEvent)
+                    DrawSliderSnapCaption(c, snapLabels.EndPosition, p.X, p.Y, radius, plot, line);
             }
         }
     }
@@ -699,6 +713,8 @@ public sealed partial class EditorView
             Item(L.Get("ui.saveMenu"), () => RequestSave?.Invoke());
             Item(L.Get("ui.exportMenu"), () => RequestExport?.Invoke());
             Item(L.Get("library.exportOsz"), () => RequestOszExport?.Invoke());
+            Item(L.Get("faz.exportComplete"), () => RequestFazExport?.Invoke(true));
+            Item(L.Get("faz.exportProject"), () => RequestFazExport?.Invoke(false));
             Item(L.Get("ui.exitMenu"), () => RequestClose?.Invoke());
         }
         else if (menu == 3)
@@ -715,6 +731,7 @@ public sealed partial class EditorView
             Item(L.Get("history.togglePointCurve"), TogglePointCurve, SelectedTrack is not null && anchorSelection.Count == 1 && draftTrack == Guid.Empty && !notesLocked);
             Item(L.Get("ui.deleteMenu"), DeleteSelection, selection != Guid.Empty);
             Item(L.Get("editor.command.reverseSelection") + "  Ctrl+G", ReverseSelection, CanCopySelection && !notesLocked);
+            Item(L.Get("rotation.title") + "  Ctrl+Shift+R", OpenRotation, CanCopySelection && !notesLocked);
             Item(L.Get("editor.command.reversePath"), ReverseSelectedPath, SelectedTrack is not null && ClipboardInteractionReady && !notesLocked);
             Item(L.Get("ui.splitMenu"), SplitSelected, SelectedTrack is not null && draftTrack == Guid.Empty);
             Item(L.Get("ui.cutMenu"), () => CutSelection(), CanCopySelection);

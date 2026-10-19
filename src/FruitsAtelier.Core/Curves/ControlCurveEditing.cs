@@ -56,6 +56,8 @@ public static class ControlCurveEditing
             }
             return [new(points[0], points[1], points[2], points[3])];
         }
+        ControlCurveMath.Arc arc = default;
+        bool isArc = curve.Kind == ControlCurveKind.CircularArc && ControlCurveMath.TryArc(points, curve.ReferenceScale, out arc);
         var output = new List<Cubic>();
         Fit(0, 1, 0);
         return output;
@@ -64,7 +66,7 @@ public static class ControlCurveEditing
         {
             if (curve.Kind == ControlCurveKind.CircularArc)
             {
-                if (!ControlCurveMath.TryArc(points, curve.ReferenceScale, out var arc)) return points[^1] - points[0];
+                if (!isArc) return points[^1] - points[0];
                 double angle = arc.Angle + arc.Sweep * u;
                 return new(arc.Radius * Math.Cos(angle) * arc.Sweep / arc.Scale, -arc.Radius * Math.Sin(angle) * arc.Sweep);
             }
@@ -76,19 +78,28 @@ public static class ControlCurveEditing
         {
             if (output.Count >= 4096) throw new ArgumentException(L.Get("core.controlCurve.fitLimit"));
             var start = CurveMath.Evaluate(track, segment, from); var end = CurveMath.Evaluate(track, segment, to);
-            var p1 = start + Derivative(from) * ((to - from) / 3);
-            var p2 = end - Derivative(to) * ((to - from) / 3);
+            double tangent = isArc ? 4.0 / 3 * Math.Tan(arc.Sweep * (to - from) / 4) / arc.Sweep : (to - from) / 3;
+            var p1 = start + Derivative(from) * tangent;
+            var p2 = end - Derivative(to) * tangent;
             var original1 = p1; var original2 = p2;
             p1 = new(Math.Clamp(p1.TimeMs, start.TimeMs, end.TimeMs), p1.X);
             p2 = new(Math.Clamp(p2.TimeMs, p1.TimeMs, end.TimeMs), p2.X);
             double errorTime = 0, errorX = 0;
             if (curve.Kind == ControlCurveKind.CircularArc)
             {
-                // Cubic Hermite remainder: max |f''''| * interval^4 / 384.
-                if (ControlCurveMath.TryArc(points, curve.ReferenceScale, out var arc))
+                if (isArc)
                 {
-                    errorX = arc.Radius * Math.Pow(arc.Sweep * (to - from), 4) / 384;
-                    errorTime = errorX / arc.Scale;
+                    double sweep = arc.Sweep * (to - from);
+                    double half = sweep / 2, k = 4.0 / 3 * Math.Tan(sweep / 4);
+                    double coefficient = Math.Pow(3 * k * Math.Cos(half) - 2 * Math.Sin(half), 2);
+                    // Squared radial excess is C*t²*(1-t)²*(2t-1)², whose maximum is C/108.
+                    double excess = coefficient / 108;
+                    double radialError = arc.Radius * excess / (Math.Sqrt(1 + excess) + 1);
+                    errorTime = radialError / arc.Scale;
+                    double side = Math.Sign(Math.Cos(arc.Angle + arc.Sweep * (from + to) / 2));
+                    double[] x = [side * (start.X - arc.X) / arc.Radius, side * (p1.X - arc.X) / arc.Radius,
+                        side * (p2.X - arc.X) / arc.Radius, side * (end.X - arc.X) / arc.Radius];
+                    errorX = Math.Abs(sweep) <= Math.PI / 2 + 1e-12 && ArcPositionErrorFits(x, coefficient, .001 / arc.Radius) ? 0 : double.PositiveInfinity;
                 }
                 errorX += Math.Max(Math.Abs(original1.X - p1.X), Math.Abs(original2.X - p2.X));
                 errorTime += Math.Max(Math.Abs(original1.TimeMs - p1.TimeMs), Math.Abs(original2.TimeMs - p2.TimeMs));
@@ -117,6 +128,45 @@ public static class ControlCurveEditing
             if (depth >= 24 || middleTime - start.TimeMs < CurveMath.MinimumAnchorSpacingMs || end.TimeMs - middleTime < CurveMath.MinimumAnchorSpacingMs)
                 throw new ArgumentException(L.Get("core.controlCurve.fitLimit"));
             Fit(from, middle, depth + 1); Fit(middle, to, depth + 1);
+        }
+    }
+
+    private static bool ArcPositionErrorFits(double[] x, double radialCoefficient, double tolerance)
+    {
+        // At the same time coordinate, |delta X| = radial excess / (|Xcubic| + |Xcircle|).
+        // A relative excess bound gives a lower bound for |Xcircle| without dividing at endpoint tangents.
+        for (int i = 0; i < x.Length; i++) x[i] = Math.Max(0, x[i]);
+        ReadOnlySpan<double> cubicWeights = [1, 3, 3, 1], squaredWeights = [1, 6, 15, 20, 15, 6, 1];
+        var relative = new double[7];
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j < 4; j++)
+                relative[i + j] += .01 * x[i] * x[j] * cubicWeights[i] * cubicWeights[j] / squaredWeights[i + j];
+        relative[2] -= radialCoefficient / 15; relative[3] += radialCoefficient / 10; relative[4] -= radialCoefficient / 15;
+        if (Nonnegative(relative, 0)) tolerance *= 1 + Math.Sqrt(.99);
+        while (x.Length < 7)
+        {
+            var elevated = new double[x.Length + 1]; elevated[0] = x[0]; elevated[^1] = x[^1];
+            for (int i = 1; i < x.Length; i++) elevated[i] = x[i] * (1 - (double)i / x.Length) + x[i - 1] * i / x.Length;
+            x = elevated;
+        }
+        for (int i = 0; i < x.Length; i++) x[i] *= tolerance;
+        x[2] -= radialCoefficient / 15; x[3] += radialCoefficient / 10; x[4] -= radialCoefficient / 15;
+        return Nonnegative(x, 0);
+
+        static bool Nonnegative(ReadOnlySpan<double> coefficients, int depth)
+        {
+            bool positive = true;
+            foreach (double value in coefficients) positive &= value >= 0;
+            if (positive) return true;
+            if (depth == 8) return false;
+            Span<double> work = stackalloc double[7], left = stackalloc double[7], right = stackalloc double[7];
+            coefficients.CopyTo(work); left[0] = work[0]; right[^1] = work[^1];
+            for (int n = 6; n > 0; n--)
+            {
+                for (int i = 0; i < n; i++) work[i] = (work[i] + work[i + 1]) / 2;
+                left[7 - n] = work[0]; right[n - 1] = work[n - 1];
+            }
+            return Nonnegative(left, depth + 1) && Nonnegative(right, depth + 1);
         }
     }
 

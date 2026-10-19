@@ -9,6 +9,8 @@ public sealed class WorkspaceManifest
 {
     public int SchemaVersion { get; set; } = 1;
     public Guid Id { get; set; } = Guid.NewGuid();
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ArchiveFingerprint { get; set; }
     public string Name { get; set; } = "";
     public string Notes { get; set; } = "";
     public string? SongsRoot { get; set; }
@@ -46,7 +48,7 @@ public static partial class WorkspaceProject
     public const string ManifestName = "project.catchdiff";
     public static WorkspaceManifest SnapshotManifest(WorkspaceManifest manifest) => new()
     {
-        SchemaVersion = manifest.SchemaVersion, Id = manifest.Id, Name = manifest.Name, Notes = manifest.Notes, SongsRoot = manifest.SongsRoot,
+        SchemaVersion = manifest.SchemaVersion, ArchiveFingerprint = manifest.ArchiveFingerprint, Id = manifest.Id, Name = manifest.Name, Notes = manifest.Notes, SongsRoot = manifest.SongsRoot,
         SourceDirectory = manifest.SourceDirectory, ExternalSourceDirectory = manifest.ExternalSourceDirectory,
         SongsExportOfferShown = manifest.SongsExportOfferShown,
         Difficulties = manifest.Difficulties.Select(e => new WorkspaceDifficulty
@@ -227,10 +229,10 @@ public static partial class WorkspaceProject
                 // Encode relative paths against the final location, not the staging folder.
                 AtomicFile.Write(Path.Combine(staging, name), ProjectSerializer.Serialize(diff.Document, Path.Combine(directory, name)));
             }
-            var manifest = new WorkspaceManifest { Id = session.Manifest.Id, Name = project.Name, Notes = project.Notes, SongsRoot = session.Manifest.SongsRoot,
+            var manifest = new WorkspaceManifest { ArchiveFingerprint = session.Manifest.ArchiveFingerprint, Id = session.Manifest.Id, Name = project.Name, Notes = project.Notes, SongsRoot = session.Manifest.SongsRoot,
                 SongsExportOfferShown = session.Manifest.SongsExportOfferShown,
                 SourceDirectory = session.Manifest.SourceDirectory, ExternalSourceDirectory = session.Manifest.ExternalSourceDirectory, Difficulties = entries };
-            var persisted = new WorkspaceManifest { Id = manifest.Id, Name = manifest.Name, Notes = manifest.Notes, SongsRoot = manifest.SongsRoot,
+            var persisted = new WorkspaceManifest { ArchiveFingerprint = manifest.ArchiveFingerprint, Id = manifest.Id, Name = manifest.Name, Notes = manifest.Notes, SongsRoot = manifest.SongsRoot,
                 SongsExportOfferShown = manifest.SongsExportOfferShown,
                 SourceDirectory = manifest.SourceDirectory, ExternalSourceDirectory = manifest.ExternalSourceDirectory,
                 Difficulties = entries.Select(e => new WorkspaceDifficulty { Id = e.Id, Name = e.Name, File = e.File,

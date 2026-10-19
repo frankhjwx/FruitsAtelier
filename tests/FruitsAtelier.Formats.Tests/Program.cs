@@ -2,6 +2,12 @@ using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 
+if (args.Contains("--semantic-sync-check"))
+{
+    foreach (var (name, run) in SynchronizationTests.Cases()) { run(); Console.WriteLine("PASS " + name); }
+    return 0;
+}
+
 if (args.Contains("--reference-discovery-check"))
 {
     foreach (var (name, run) in SynchronizationTests.Cases().Where(c => new[] { "discovery", "missing", "relocat", "candidate", "rename", "unavailable", "duplicate" }

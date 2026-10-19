@@ -1,11 +1,58 @@
 using System.Globalization;
+using FruitsAtelier.Core;
 
 namespace FruitsAtelier.App.Editor;
 
-internal sealed record SyncObjectDifference(string Message, params object[] Arguments);
+internal sealed record SyncObjectDifference(string Message, params object[] Arguments)
+{
+    internal SyncPlayableDifference? Playable { get; init; }
+}
+
+internal sealed record SyncPlayableDifference(ConvertedCatchObject? Local, ConvertedCatchObject? External)
+{
+    internal bool KindChanged => Local?.Kind != External?.Kind;
+    internal bool TimeChanged => Local is null || External is null || Math.Abs(Local.TimeMs - External.TimeMs) > .000001;
+    internal bool XChanged => Local is null || External is null
+        || Math.Abs(Local.X - External.X) > (Local.IsStandalone && External.IsStandalone ? .000001 : 1.000001);
+}
 
 internal static class SyncObjectDifferences
 {
+    internal static IReadOnlyList<SyncObjectDifference> ComparePlayable(string local, string external,
+        IReadOnlyList<ConvertedCatchObject> localEvents, IReadOnlyList<ConvertedCatchObject> externalEvents)
+    {
+        var result = new List<SyncObjectDifference>();
+        var left = localEvents.ToList(); var right = externalEvents.ToList();
+        var leftTimes = left.GroupBy(o => (o.Kind, Time: Math.Round(o.TimeMs, 6))).ToDictionary(g => g.Key, g => g.ToArray());
+        var rightTimes = right.GroupBy(o => (o.Kind, Time: Math.Round(o.TimeMs, 6))).ToDictionary(g => g.Key, g => g.ToArray());
+        var matchedLeft = new HashSet<ConvertedCatchObject>(); var matchedRight = new HashSet<ConvertedCatchObject>();
+        foreach (var group in leftTimes)
+            if (group.Value.Length == 1 && rightTimes.TryGetValue(group.Key, out var matches) && matches.Length == 1)
+            { Add(group.Value[0], matches[0]); matchedLeft.Add(group.Value[0]); matchedRight.Add(matches[0]); }
+        left.RemoveAll(matchedLeft.Contains); right.RemoveAll(matchedRight.Contains);
+        if (left.Count == right.Count)
+            for (int i = 0; i < left.Count; i++) Add(left[i], right[i]);
+        else
+        {
+            foreach (var item in left) Add(item, null);
+            foreach (var item in right) Add(null, item);
+        }
+        result.Sort((a, b) => (a.Playable!.Local?.TimeMs ?? a.Playable.External!.TimeMs)
+            .CompareTo(b.Playable!.Local?.TimeMs ?? b.Playable.External!.TimeMs));
+        // Geometry, count and lifetime differences are represented by playable events.
+        // Explicit sound and combo attributes remain separate from those events.
+        result.AddRange(Compare(local, external).Where(d => d.Message is "sync.diff.sound" or "sync.diff.combo"
+            or "sync.diff.colour" or "sync.diff.edgeSounds" or "sync.diff.edgeSamples" or "sync.diff.samples" or "sync.diff.y"));
+        return result;
+
+        void Add(ConvertedCatchObject? a, ConvertedCatchObject? b)
+        {
+            var difference = new SyncPlayableDifference(a, b);
+            if (difference.KindChanged || difference.TimeChanged || difference.XChanged)
+                result.Add(new SyncObjectDifference("") { Playable = difference });
+        }
+    }
+
     internal static IReadOnlyList<SyncObjectDifference> Compare(string local, string external)
     {
         var left = Lines(local); var right = Lines(external);

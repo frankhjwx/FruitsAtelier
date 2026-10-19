@@ -48,11 +48,49 @@ caches when the supported resource set changes.
 Spinners use the owning skin's old or modern composition and native texture
 dimensions, with the fixed centre's tint following the spinner's elapsed time.
 
-Catch edits FSliders; osu! edits Legacy Sliders. The other representation remains
-visible and read-only. Use the explicit conversion action before editing it.
+Catch edits FSlider shapes; osu! edits Legacy Slider shapes. The other
+representation remains visible and selectable for hitsound, sample-bank and NC
+changes. Shape edits require the explicit conversion action.
 Conversion is undoable, validates playback and preserves the original object on
 failure. Global droplet settings can rebuild Legacy paths to match their exported
 fruit targets; this can change their two-dimensional shape.
+
+With Movement Analysis enabled, osu! placement connects the pending note to its
+previous and next objects. Leaving placement restores the committed connections.
+Ctrl+Shift+F in the osu! canvas opens a subdivision picker and converts selected
+sliders into individual notes along their two-dimensional paths, including reverse
+spans. Catch retains its Stream/Stack dock. Both conversions are undoable.
+
+Ctrl+Shift+R opens **Rotate by**, with an angle slider and numeric entry,
+signed angles from −180° to +180°, clockwise/anti-clockwise direction, and
+playfield/selection centre origins. Negative angles reverse the chosen direction.
+Selection centre is the default. Origin and direction choices are global preferences
+saved immediately across maps, canvases and restarts, including when the rotation
+is cancelled. Each newly opened dialog starts at 0°.
+Click the angle slider to the right of its thumb to add 45°, or to the left to
+subtract 45°, clamped to −180° and +180°. Drag the thumb for continuous adjustment.
+For a selected slider, Selection centre uses the current slider's beginning point;
+standalone notes use their selection bounds' centre.
+Changes preview directly on the canvas from the original selection. OK commits
+one undo step; Cancel, Escape or interrupted input restores the original objects.
+Drag the title area to move the window within the editor. Window movement does
+not change the preview. Angle input, slider dragging and clicks stop at the
+selection's feasible Catch rotation boundary; the angle and preview stay in sync.
+Ctrl+comma and Ctrl+period rotate the selection by −90°/+90° in osu! and
+−5°/+5° in Catch. osu! uses Selection centre, including the current slider's
+beginning point in both canvases. Standalone notes use their selection bounds' centre.
+Catch angles use the current time-to-X
+display ratio; its playfield origin is the centre of the visible time range.
+Catch rotates anchors, handles and explicit controls together. Circular arcs
+whose stored aspect ratio differs from the rotation plane use the existing bounded
+Bezier fitting before rotation. The operation rejects reversed time, coincident
+exported note times and out-of-range endpoints atomically. Catch rotation requires
+single-span curves without Stack or droplet adjustments. Native osu! rotation uses
+stable integer coordinates while retaining slider length, timing and repeat count.
+Each Catch curve keeps its exact start and end timestamps. After rotation, a
+uniform scale fits its duration back into the original interval while preserving
+the new leaning angle. A selection of standalone notes similarly retains its
+first and last timestamps; intermediate times remain strictly ordered.
 
 In osu! view the Fruit and Banana tools place circles and spinners. The Slider
 tool places Legacy controls and preserves their original two-dimensional path
@@ -315,6 +353,11 @@ newly drawn FSliders in both drawing modes, including after restarting; it initi
 uses Follow map. Existing sliders keep their own modes. Legacy Sliders and managed Stream/Stack objects
 are excluded. The effective mode is displayed with the Inspector metrics.
 
+In imported maps and older projects without new-slider randomization enabled,
+new FSliders default to Derandomize when the remembered mode is Follow map and
+the difficulty's derandomization switch is off. Explicit Randomize choices in
+the Inspector and the difficulty's new-slider randomization policy are retained.
+
 **Reset manual droplet adjustments** shows the selected sliders' correction count
 and is enabled only when corrections exist. It clears only those corrections,
 without changing modes. Mode switches preserve corrections; they apply only while
@@ -437,7 +480,8 @@ samples show only the bank abbreviation in the list. Imported velocity and
 unrelated effect bits are preserved, while green-point BPM cells remain empty. Kiai updates the editor's existing Kiai indication and exports.
 
 Ctrl+P adds a red point at the playhead; Ctrl+Shift+P adds a green point, opening
-the draft window. New red and green points truncate the playhead to integer
+the draft window on its Audio tab for green points. Shift+arrows extends or shrinks
+the timing-row selection from its moving end. New red and green points truncate the playhead to integer
 milliseconds. Pasted or edited green offsets also truncate fractional parts.
 Ctrl+I deletes the current section outside the window, or the
 selected rows inside it. Ordinary deletion protects the first red point. The
@@ -765,8 +809,41 @@ size and skin artwork.
 
 The left palette has equally sized Select, Fruit, FSlider, and Banana buttons with transparent outer margins. The four-button group is vertically centred beside the canvas plot. The active icon is fully opaque; the other three use 45% opacity. Labels share one font size. Clicking FSlider starts placement; B also enters control editing for a selected slider. Finishing placement keeps the current tool active.
 
-Snap offers 1/1, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, 1/12 and 1/16; the default is 1/4.
+Snap offers 1/1, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, 1/10, 1/11, 1/12 and 1/16; the default is 1/4.
 Enable **Settings → Experimental** to add 1/24, 1/32 and 1/48.
+
+### Slider Inspector sections
+
+Slider Inspector groups its actions into compact **Timing & snapping**,
+**Conversion**, **Droplets** and **Structure** tabs. Click a section title to
+collapse or expand its controls. The editor retains these choices during the
+session, including when selection changes. Collapsing a section does not edit
+the document or create an undo step. Merge shortcuts expand Structure so the
+requested controls remain visible.
+
+### Independent slider endpoint snapping
+
+The global beat-snap control includes 1/10 and 1/11. For one selected slider,
+**Slider Inspector → Independent endpoint snapping** enables a slider-local
+start and end grid. Each endpoint offers **Auto (nearest grid)** or a fixed
+1/1–1/12, 1/16, 1/24 or 1/32 division, including when experimental divisions
+are disabled. Auto chooses the nearest position across those grids. Choosing
+a fixed division snaps that endpoint immediately and retains the other endpoint.
+The setting is saved with the slider and can be undone.
+Inspector also reports each endpoint's actual reduced fraction within its beat.
+Selected sliders show these start/end positions beside their canvas endpoints,
+with NC and snap labels on separate lines. Coincident osu! slider endpoints use
+separate lines for their start and end labels. Positions refresh after edits,
+undo/redo and timing changes; a position over 2 ms from every supported grid is
+shown as **Off grid**. Whole beats are displayed as 0/1.
+
+Endpoint dragging uses the slider's own grid independently of global beat snap.
+Dragging the whole slider uses its start grid while preserving its duration.
+Dragging its upper-timeline tail changes duration while retaining the repeat count;
+the end grid refers to the final traversal's end. Ordinary sliders retain their
+existing global-snap and repeat-tail controls. FSliders are edited in Catch and
+Legacy sliders in the osu! canvas. Disabling independent snapping returns the
+slider to the global grid without moving its endpoints.
 
 Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with its time snapped to the current beat subdivision. Hover previews recalculate incoming and outgoing hyperdash markers, including the unconfirmed slider endpoint in both editing modes. This temporary calculation affects canvas markers only; it does not add playback sounds, change saved content, or enter undo history. Fruit left-click places immediately, replacing all existing parent objects whose start times are within ±2 ms of the new fruit, regardless of horizontal position. Slider tails and nested fruits do not independently trigger replacement. Replacement and placement form one undo step; hover hyperdash previews use the same replacement rule. In Fruit or FSlider mode, right-click empty canvas toggles **New combo** for the next object. While drawing an FSlider, right-click retains its point-removal and curve-completion actions. In Fruit mode during playback, right-click arms/toggles New combo even over a note; when paused, right-click on a note deletes it. The combo flag survives project saving, `.osu` export, copying, and undo/redo. It resets after placement or changing difficulty.
 
@@ -797,7 +874,9 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Up / Down | Seek next / previous timing point |
 | Ctrl+Up / Down | Increase / decrease playback speed by 25 percentage points, within 10%–150% |
 | Ctrl+Shift+Up / Down | Increase / decrease playback speed by 5 percentage points |
-| Ctrl+Shift+F | Open and focus the Stream/Stack dock |
+| Ctrl+Shift+F | Catch: Stream/Stack dock; osu!: convert slider to notes with X/Y |
+| Ctrl+Shift+R | Open Rotate by |
+| Ctrl+comma / Ctrl+period | Rotate selection −90°/+90° in osu!, −5°/+5° in Catch |
 | Ctrl+= / Ctrl+− | Increase / decrease UI scale |
 | Ctrl+J | Extend the selected FSlider to the pointer |
 | Esc | Cancel an active drag, box selection, draft, or text input |
@@ -980,7 +1059,7 @@ Circular arcs retain a reference ratio derived from the map AR at creation (`440
 
 ### Editing shared curves with the pen
 
-A cubic Bezier exposes exactly the same controls in either tool. Arcs and higher-degree Beziers remain exact when selecting or switching modes. Pen mode displays endpoint handles from a bounded cubic approximation; provisional handles have a minimum 18-DIP display length so they remain clickable. Their stored offsets remain in map coordinates. The first actual handle movement converts only its affected segment, potentially adding anchors. The conversion and gesture share one undo step. Pen corner conversion/deletion and ordinary pen insertion may likewise require local conversion. Undo restores the exact original controls and AR reference. Shape-preserving splitting retains exact custom segment geometry.
+A cubic Bezier exposes exactly the same controls in either tool. Arcs and higher-degree Beziers remain exact when selecting or switching modes. Pen mode displays endpoint handles from a bounded cubic approximation; provisional handles have a minimum 18-DIP display length so they remain clickable. Their stored offsets remain in map coordinates. The first actual handle movement converts only its affected segment, potentially adding anchors. Circular arcs use compact tangent-matched cubic segments, subdividing only when required for trajectory accuracy. The conversion and gesture share one undo step. Pen corner conversion/deletion and ordinary pen insertion may likewise require local conversion. Undo restores the exact original controls and AR reference. Shape-preserving splitting retains exact custom segment geometry.
 
 ### Clearing internal nodes
 
@@ -1444,6 +1523,10 @@ its reference snapshot until release or cancellation.
 The osu! canvas toolbar includes geometric Zoom, Movement Analysis, Insert Break Time
 and Snap. Movement Analysis colours connections between successive objects using
 the Catch movement classification and labels each connection with its DS ratio.
+Connections and the floating panel's corresponding previous/next values are hidden
+when the gap from the preceding object's end to the next object's head exceeds
+two beats, including placement previews. Beat lengths follow BPM changes across
+the gap; exactly two beats remains visible.
 The osu! DS ratio uses two-dimensional endpoint-to-head distance and the preceding
 object's SV, matching placement spacing independently of canvas zoom. Switching
 analysis does not change beatmap content.

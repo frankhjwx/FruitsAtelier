@@ -56,11 +56,12 @@ public static class WorkspaceAssociations
             throw new InvalidOperationException(L.Get("sync.duplicate", path));
     }
 
-    public static void DeleteLocalProject(string directory)
+    public static void DeleteLocalProject(string directory, bool keepBackup = false)
     {
         lock (WorkspaceProject.Gate)
         {
             var session = WorkspaceProject.Open(directory);
+            if (!keepBackup) { WorkspaceProjectDeletion.Delete(session); return; }
             string backup = WorkspaceSynchronization.Archive(session, "delete-local-project");
             Directory.Move(session.Directory, Path.Combine(backup, "retired-project"));
         }

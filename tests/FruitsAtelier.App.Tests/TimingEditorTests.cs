@@ -34,6 +34,10 @@ internal static class TimingEditorTests
                 ui.Key('Z', ctrl: true);
                 ui.View.UpdateTransport(1000.9, 10000, true, false, false, null, null);
                 ui.Key('P', ctrl: true, shift: true); Check(ui.View.TimingSetupVisible, "Green shortcut opens setup");
+                Check(ui.View.TimingFields.Any(f => f.Key == "volume"), "Green shortcut opens Audio");
+                var timingTab = ui.Canvas.Texts.Single(t => t.Value == L.Get("timing.timing")
+                    && t.Y >= ui.View.TimingSetupBounds.Y + 52 && t.Y <= ui.View.TimingSetupBounds.Y + 82);
+                ui.Click(timingTab.X + 4, timingTab.Y + 5);
                 Check(ui.View.TimingFields.All(f => f.Key is "offset" or "shift"), "Green timing page exposes offset and batch shift");
                 Check(ui.View.TimingFields.Single(f => f.Key == "offset").Value == "1000", "Green creation truncates fractional milliseconds");
                 ui.ClickText(L.Get("timing.audio")); Set(ui, "volume", "35");
@@ -154,7 +158,7 @@ internal static class TimingEditorTests
     private static void Scrollbar()
     {
         var map = Map();
-        for (int i = 1; i < 200; i++) map.TimingPoints.Add(new TimingPoint { TimeMs = i * 1000, BeatLengthMs = -100, Uninherited = false });
+        for (int i = 1; i < 200; i++) map.TimingPoints.Add(new TimingPoint { TimeMs = i * 1000, BeatLengthMs = -100, Uninherited = false, Volume = i % 2 == 0 ? 100 : 80 });
         var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(980, 620); ui.Key(117);
         var (track, thumb, maximum) = ui.View.TimingScrollbar;
         Check(maximum > 0, "Dense timing list has a scrollbar");

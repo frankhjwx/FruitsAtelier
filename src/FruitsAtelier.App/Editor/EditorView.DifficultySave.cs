@@ -46,9 +46,11 @@ public sealed partial class EditorView
                 var merge = WorkspaceSynchronization.Merge(target, document, status.Candidate!, session.Directory, compensate);
                 if (merge.RequiresResolution || !merge.CanExportLocalChanges && status.State != WorkspaceSyncState.Current)
                     throw new DifficultySaveReviewRequired();
-                if (merge.CanExportLocalChanges)
+                if (merge.CanExportLocalChanges || target.Sync.LocalOverrides.Count > 0 || target.Sync.RetainedObjects.Count > 0)
                 {
-                    var plan = WorkspaceSynchronization.PlanLocalChanges(session, target, merge, new OsuWriteCache());
+                    var plan = merge.CanExportLocalChanges
+                        ? WorkspaceSynchronization.PlanLocalChanges(session, target, merge, new OsuWriteCache())
+                        : WorkspaceSynchronization.PlanResolvedChanges(session, target, document, status.Candidate!, compensate, new OsuWriteCache());
                     if (WorkspaceSynchronization.AudioHash(merge.External.Document.AudioPath) != target.Sync.AudioHash)
                         throw new DifficultySaveReviewRequired();
                     WorkspaceVersionHistory.ArchiveCurrentDifficulty(session, project, id);

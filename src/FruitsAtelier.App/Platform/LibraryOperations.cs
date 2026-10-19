@@ -102,7 +102,7 @@ public static class LibraryOperations
         finally { Directory.Delete(staging, true); }
     }
 
-    private static void CopyArchiveExtras(MapDocument document, string staging)
+    internal static void CopyArchiveExtras(MapDocument document, string staging)
     {
         if (document.SourcePath is not { } source) return;
         string root = Path.GetDirectoryName(Path.GetFullPath(source))!;
@@ -136,14 +136,14 @@ public static class LibraryOperations
         return BeatmapProject.FromDocuments(documents);
     }
 
-    public static void DeleteProject(string projectPath, LibrarySettings settings)
+    public static void DeleteProject(string projectPath, LibrarySettings settings, bool keepBackup = false)
     {
         string projects = settings.Workspace;
         string project = Path.GetFullPath(projectPath);
         if (!WorkspaceProject.Within(projects, project) || project == Path.GetFullPath(projects))
             throw new IOException(FruitsAtelier.Localization.Strings.Get("library.deleteUnavailable"));
         WorkspaceProject.RejectLinks(project);
-        WorkspaceAssociations.DeleteLocalProject(project);
+        WorkspaceAssociations.DeleteLocalProject(project, keepBackup);
         new LibraryDatabase(settings.Workspace, settings.Songs).ReindexProjects();
     }
     public static void OpenExternalPath(string path)

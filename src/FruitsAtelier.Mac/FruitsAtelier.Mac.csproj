@@ -9,7 +9,7 @@
     <Content Include="../../assets/setup/*.wav;../../assets/setup/*.png" Link="assets/setup/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <InternalsVisibleTo Include="FruitsAtelier.Mac.Tests" />
     <InternalsVisibleTo Include="FruitsAtelier.App.Tests" />
-    <Content Include="../../assets/branding/app-icon.*;../../assets/branding/mark.png" Link="assets/branding/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../assets/branding/faz-file.*;../../assets/branding/app-icon.*;../../assets/branding/mark.png" Link="assets/branding/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../FruitsAtelier.Core/Workspace/Licenses/*.txt" Link="Licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <ProjectReference Include="../FruitsAtelier.Core/FruitsAtelier.Core.csproj" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.7" />
@@ -21,6 +21,8 @@
     <Compile Include="../FruitsAtelier.App/Rendering/ThumbnailCache.cs" Link="Rendering/ThumbnailCache.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/BeatmapArchive.cs" Link="Platform/BeatmapArchive.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/LibraryOperations.cs" Link="Platform/LibraryOperations.cs" />
+    <Compile Include="../FruitsAtelier.App/Platform/FazArchive.cs" Link="Platform/FazArchive.cs" />
+    <Compile Include="../FruitsAtelier.App/Platform/FazStaging.cs" Link="Platform/FazStaging.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/BeatmapResources.cs" Link="Platform/BeatmapResources.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/SkinArchive.cs" Link="Platform/SkinArchive.cs" />
     <Content Include="../../assets/icons/tools/*.png" Link="assets/icons/tools/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

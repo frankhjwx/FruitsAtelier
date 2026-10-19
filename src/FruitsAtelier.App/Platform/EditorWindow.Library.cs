@@ -6,6 +6,9 @@ internal sealed partial class EditorWindow
 {
     private void ConfigureLibrary()
     {
+        view.RequestFazOpen = path => ConfirmDiscard(() => OpenPath(path));
+        view.RequestFazExport = complete => ExportFaz(complete);
+        view.RequestLibraryFazExport = (map, complete) => ExportFaz(complete, map);
         view.RequestAudioProject = path => ConfirmDiscard(() => view.BeginAudioProject(path));
         view.RequestLibraryDrop = paths => FileOperation(() =>
         {
@@ -44,24 +47,24 @@ internal sealed partial class EditorWindow
                 });
             }
         });
-        view.RequestLibraryOpen = map => FileOperation(() =>
+        view.RequestLibraryOpen = (map, selectDifficulty) => FileOperation(() =>
         {
-            if (view.TryResumeLibraryProject(map)) return;
+            if (view.TryResumeLibraryProject(map, selectDifficulty)) return;
             ConfirmDiscard(() =>
             {
                 view.BeginLibraryOpen(map, () =>
                 {
                     ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath);
-                });
+                }, selectDifficulty);
             });
         });
         view.RequestLibraryDelete = map =>
         {
             if (map.ProjectPath is not { } project) return;
-            view.ShowDeleteProjectConfirmation(confirmed =>
+            view.ShowDeleteProjectConfirmation((confirmed, keepBackup) =>
             {
                 if (!confirmed) return;
-                FileOperation(() => { LibraryOperations.DeleteProject(project, view.LibrarySettings); view.RefreshLibrary(); });
+                FileOperation(() => { LibraryOperations.DeleteProject(project, view.LibrarySettings, keepBackup); view.RefreshLibrary(); });
             });
         };
         view.RequestLibraryOszExport = map => FileOperation(() =>
@@ -106,4 +109,12 @@ internal sealed partial class EditorWindow
             }
         });
     }
+
+    private void ExportFaz(bool complete, LibraryMap? map = null) => FileOperation(() =>
+    {
+        if (!view.PrepareFileOperation()) return;
+        var path = MapFileDialog.Select(hwnd, true, L.Get(complete ? "faz.exportComplete" : "faz.exportProject"), MapFileDialog.FazFilter,
+            WorkspaceProject.SafeName(map?.Title ?? view.CaptureProject().Name) + ".faz", "faz");
+        if (path is not null) view.BeginFazExport(path, complete, map);
+    });
 }

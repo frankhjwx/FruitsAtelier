@@ -108,6 +108,7 @@ internal static class DropletDefaultsTests
             libraryUi.Paint(); Check(libraryUi.Canvas.Texts.Any(t => t.Value == L.Get("settings.openDropletSettings")), "dialog returns to General");
             RememberSettings(root);
             RandomizationRoundTrip();
+            CompatibleDrawingDefaults();
         }
         finally { L.SetLanguage(language); }
     }
@@ -182,6 +183,65 @@ internal static class DropletDefaultsTests
                 }
                 current = next;
             }
+        }
+    }
+
+    private static void CompatibleDrawingDefaults()
+    {
+        var old = new MapDocument { IsDemo = false, DurationMs = 5000 };
+        var existing = new CurveTrack { Kind = CurveKind.Linear, DropletRandomization = new() { Enabled = true } };
+        existing.Nodes.AddRange([new() { TimeMs = 0, X = 128 }, new() { TimeMs = 500, X = 128 }]);
+        old.Tracks.Add(existing);
+        string single = ProjectSerializer.Serialize(old);
+        string multi = ProjectSerializer.Serialize(BeatmapProject.FromDocuments([old]));
+        Check(!single.Contains("\"DropletMode\"") && !single.Contains("\"RandomizeNewSliders\"")
+            && !single.Contains("\"DerandomizeFSliderDroplets\""), "Legacy fixture omits new drawing policy and map derandomization");
+        var imported = OsuBeatmapReader.Read("""
+            osu file format v14
+            [General]
+            Mode:2
+            [Difficulty]
+            SliderMultiplier:1.4
+            SliderTickRate:1
+            [TimingPoints]
+            0,500,4,1,0,100,1,0
+            [HitObjects]
+            128,192,0,2,0,L|128:292,1,140
+            """);
+        foreach (var document in new[] { ProjectSerializer.Read(single), ProjectSerializer.ReadProject(multi).Difficulties.Single().Document, imported })
+        foreach (bool randomizeNew in new[] { false, true })
+        foreach (var preference in Enum.GetValues<SliderDropletMode>())
+        foreach (var drawingMode in Enum.GetValues<SliderEditingMode>())
+        {
+            var source = document.DeepClone(); source.RandomizeNewSliders = randomizeNew;
+            var ui = new Ui(); ui.LoadDocument(source);
+            ui.View.LibrarySettings.DefaultDropletMode = preference;
+            ui.View.LibrarySettings.DerandomizeNewProjects = false;
+            ui.View.SetSliderEditingMode(drawingMode); ui.Paint();
+            var before = ui.View.Document.DeepClone();
+            var beforeEvents = CatchStreamConverter.Convert(before).Objects.ToArray();
+            ui.Key('B'); ui.ClickMap(1000, 256); ui.Key(27); Wait(ui);
+            Check(ui.View.Document.ContentEquals(before), "Cancelling a compatible slider draft preserves the source");
+            ui.Key('B'); ui.ClickMap(1000, 256); ui.ClickMap(3000, 256, ctrl: true); ui.Key(13); Wait(ui);
+            var added = ui.View.Document.Tracks.Single(t => before.Tracks.All(previous => previous.Id != t.Id));
+            var expected = preference == SliderDropletMode.FollowMap && !randomizeNew
+                ? SliderDropletMode.Derandomize : preference;
+            Check(added.DropletMode == expected, "Old projects and imports retain safe drawing defaults and explicit randomization choices");
+            var converted = CatchStreamConverter.Convert(ui.View.Document);
+            Check(converted.Success && beforeEvents.SequenceEqual(converted.Objects.Where(o => o.SourceId != added.Id)),
+                "Drawing preserves existing randomized and imported object output");
+            var exported = OsuBeatmapWriter.Serialize(ui.View.Document);
+            Check(exported.ObjectSequenceMatches, "Compatible drawing exports the validated object sequence");
+            var tinies = converted.Objects.Where(o => o.SourceId == added.Id && o.Kind == CatchObjectKind.TinyDroplet).ToArray();
+            bool random = preference == SliderDropletMode.Randomize || preference == SliderDropletMode.FollowMap && randomizeNew;
+            Check(tinies.Length > 0 && (random ? tinies.Any(o => Math.Abs(o.TargetX - 256) > .1) : tinies.All(o => o.TargetX == 256)),
+                "Drawn tiny droplets follow the compatible policy");
+            var after = ui.View.Document.DeepClone();
+            Check(after.ContentEquals(ProjectSerializer.Read(ProjectSerializer.Serialize(after))), "Drawing policy survives project reopening");
+            ui.Key('Z', ctrl: true); Wait(ui);
+            Check(ui.View.Document.ContentEquals(before), "Drawing undo restores legacy content and policy");
+            ui.Key('Y', ctrl: true); Wait(ui);
+            Check(ui.View.Document.ContentEquals(after), "Drawing redo restores the resolved mode");
         }
     }
 

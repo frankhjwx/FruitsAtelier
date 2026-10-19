@@ -64,6 +64,13 @@ public sealed partial class EditorView
             Document.DurationMs = Math.Max(Document.DurationMs, shower.EndTimeMs);
             return;
         }
+        if (EndpointSnap(tailId) is not null)
+        {
+            end = SnapSliderEndpoint(tailId, end, true);
+            try { SetSliderEndpointTime(tailId, true, end); }
+            catch (ArgumentException error) { StatusMessage = error.Message; }
+            return;
+        }
         int spans = (int)Math.Clamp(Math.Round((end - tailStart) / tailSpanDuration, MidpointRounding.AwayFromZero),
             1, Math.Max(1, Math.Min(9000, Math.Floor((int.MaxValue - tailStart) / tailSpanDuration))));
         if (Document.Tracks.FirstOrDefault(t => t.Id == tailId) is { } track) track.SpanCount = spans;

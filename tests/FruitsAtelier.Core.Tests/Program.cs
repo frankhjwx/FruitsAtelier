@@ -1,4 +1,5 @@
 using FruitsAtelier.Core;
+if (args.Contains("--compact-arc-check")) { SliderModeTests.CompactArcConversion(); SliderModeTests.PenConversionAndHistory(); return 0; }
 if (args.Contains("--packed-slider-points-check")) { SliderControlPointsTests.Run(); return 0; }
 if (args.Contains("--hitsound-snapshot-check")) { HitsoundSnapshotTests.Run(); return 0; }
 if (args.Contains("--imported-geometry-memo-check")) { ImportedGeometryMemoTests.Run(); return 0; }
@@ -37,6 +38,7 @@ if (args.Length == 2 && args[0] == "--benchmark-history")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Compact arc editing preserves trajectory, endpoint identity, export and history", SliderModeTests.CompactArcConversion),
     ("Imported geometry follows snapshot inputs and shares readonly derived paths", ImportedGeometryMemoTests.Run),
     ("Hitsound snapshots retain sample fields without copying large path text", HitsoundSnapshotTests.Run),
     ("Packed slider points preserve snapshot ownership, exact values and project arrays", SliderControlPointsTests.Run),

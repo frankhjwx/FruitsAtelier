@@ -468,7 +468,14 @@ public sealed partial class EditorView
         var path = ImportedSliderConverter.Path(slider);
         for (int i = 1; i < path.Count; i++)
             slider.PixelLength += Math.Sqrt(Math.Pow(path[i].X - path[i - 1].X, 2) + Math.Pow(path[i].GeometryY - path[i - 1].GeometryY, 2));
-        if (snapLength && snap && slider.PixelLength > .001)
+        if (snapLength && slider.EndpointSnap is { } own && slider.PixelLength > .001)
+        {
+            var timing = SnapTiming();
+            double velocity = ImportedSliderConverter.VelocityAt(Document, slider, timing);
+            double end = own.Snap(timing, slider.TimeMs + slider.PixelLength / velocity * slider.SpanCount, true);
+            if (end > slider.TimeMs) slider.PixelLength = (end - slider.TimeMs) / slider.SpanCount * velocity;
+        }
+        else if (snapLength && snap && slider.PixelLength > .001)
         {
             var timing = SnapTiming();
             double step = ImportedSliderConverter.VelocityAt(Document, slider, timing)
@@ -511,7 +518,7 @@ public sealed partial class EditorView
 
     private static ImportedSlider OsuSliderGeometrySnapshot(ImportedSlider slider)
     {
-        var copy = new ImportedSlider { Id = slider.Id, X = slider.X, Y = slider.Y, TimeMs = slider.TimeMs,
+        var copy = new ImportedSlider { Id = slider.Id, EndpointSnap = slider.EndpointSnap, X = slider.X, Y = slider.Y, TimeMs = slider.TimeMs,
             PathType = slider.PathType, PixelLength = slider.PixelLength, SpanCount = slider.SpanCount,
             SourceOrder = slider.SourceOrder, OriginalLine = slider.OriginalLine, RandomizationSource = slider.RandomizationSource,
             RandomizationTrack = slider.RandomizationTrack, RandomizationBaseVelocity = slider.RandomizationBaseVelocity,

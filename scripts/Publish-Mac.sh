@@ -7,6 +7,7 @@ FA_APP="$FA_ROOT/artifacts/macos/FruitsAtelier.app"
 FA_VERSION="$("$FA_DOTNET" msbuild "$FA_ROOT/src/FruitsAtelier.Mac/FruitsAtelier.Mac.csproj" -getProperty:Version)"
 mkdir -p "$FA_APP/Contents/MacOS" "$FA_APP/Contents/Resources"
 cp "$FA_ROOT/assets/branding/app-icon.icns" "$FA_APP/Contents/Resources/AppIcon.icns"
+cp "$FA_ROOT/assets/branding/faz-file.icns" "$FA_APP/Contents/Resources/FazFile.icns"
 "$FA_DOTNET" publish "$FA_ROOT/src/FruitsAtelier.Mac" -c Release -r "$FA_RID" --self-contained true -o "$FA_APP/Contents/MacOS" -p:NuGetLockFilePath=packages.publish.lock.json
 cat > "$FA_APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -21,6 +22,19 @@ cat > "$FA_APP/Contents/Info.plist" <<PLIST
 <key>CFBundleVersion</key><string>$FA_VERSION</string>
 <key>LSMinimumSystemVersion</key><string>12.0</string>
 <key>NSHighResolutionCapable</key><true/>
+<key>CFBundleDocumentTypes</key><array><dict>
+<key>CFBundleTypeName</key><string>Fruits Atelier Project</string>
+<key>CFBundleTypeRole</key><string>Editor</string>
+<key>LSHandlerRank</key><string>Owner</string>
+<key>CFBundleTypeIconFile</key><string>FazFile.icns</string>
+<key>LSItemContentTypes</key><array><string>io.github.frankhjwx.fruitsatelier.faz</string></array>
+</dict></array>
+<key>UTExportedTypeDeclarations</key><array><dict>
+<key>UTTypeIdentifier</key><string>io.github.frankhjwx.fruitsatelier.faz</string>
+<key>UTTypeConformsTo</key><array><string>public.zip-archive</string></array>
+<key>UTTypeDescription</key><string>Fruits Atelier Project</string>
+<key>UTTypeTagSpecification</key><dict><key>public.filename-extension</key><array><string>faz</string></array><key>public.mime-type</key><string>application/x-fruitsatelier</string></dict>
+</dict></array>
 </dict></plist>
 PLIST
 mkdir -p "$FA_APP/Contents/Resources/zh-Hans.lproj" "$FA_APP/Contents/Resources/en.lproj"

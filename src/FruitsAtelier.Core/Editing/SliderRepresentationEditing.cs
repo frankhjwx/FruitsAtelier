@@ -108,6 +108,7 @@ public static class SliderRepresentationEditing
                 TimingEditing.TransformTrack(baseline, baseline.Nodes[0].TimeMs, slider.TimeMs, timeScales.GetValueOrDefault(slider.Id, 1));
                 baseline.OriginalLine = slider.OriginalLine;
                 baseline.SourceOrder = slider.SourceOrder;
+                baseline.EndpointSnap = slider.EndpointSnap;
                 candidate.Tracks.Add(baseline);
             }
             var fitted = ImportedSliderEditing.Convert(candidate,
@@ -159,6 +160,7 @@ public static class SliderRepresentationEditing
             {
                 var slider = materialized[source.Id].DeepClone();
                 slider.SourceOrder = source.SourceOrder;
+                slider.EndpointSnap = source.EndpointSnap;
                 slider.PreserveNativeGeometry = source.PreserveNativeGeometry;
                 slider.ProcessedSliderVelocityMultiplier = source.SliderVelocityMultiplier is null ? null
                     : slider.SliderVelocityMultiplier * document.EffectiveSliderMultiplier / document.SliderMultiplier;
@@ -209,6 +211,7 @@ public static class SliderRepresentationEditing
             var candidate = document.DeepClone();
             var slider = before.ReadBack.ImportedSliders.Single(s => s.Id == id).DeepClone();
             slider.SourceOrder = track.SourceOrder;
+            slider.EndpointSnap = track.EndpointSnap;
             candidate.Tracks.RemoveAll(t => t.Id == id);
             candidate.ImportedSliders.Add(slider);
             // Compatibility objects without independent SV still depend on emitted timing.

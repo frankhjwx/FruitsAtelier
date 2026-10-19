@@ -43,15 +43,30 @@ public sealed class EditorHistory
     }
     public bool TransactionNeedsLegacyDropletRefresh => transactionStart is not null
         && SliderRepresentationEditing.NeedsLegacyDropletRefresh(transactionStart, Document);
-    public bool TransactionChangesObjects(IEnumerable<Guid> ids)
+    public bool TransactionChangesSliderGeometry(IEnumerable<Guid> ids)
     {
         if (transactionStart is null) return false;
         var protectedIds = ids.ToHashSet();
         if (protectedIds.Count == 0) return false;
-        var unchanged = transactionStart.UnchangedObjectIds(Document).ToHashSet();
-        return protectedIds.Any(id => !unchanged.Contains(id))
-            || !transactionStart.HitsoundOverrides.Where(h => protectedIds.Contains(h.SourceId))
-                .SequenceEqual(Document.HitsoundOverrides.Where(h => protectedIds.Contains(h.SourceId)));
+        var tracks = Document.Tracks.ToDictionary(t => t.Id);
+        var sliders = Document.ImportedSliders.ToDictionary(s => s.Id);
+        foreach (var track in transactionStart.Tracks.Where(t => protectedIds.Contains(t.Id)))
+        {
+            if (!tracks.TryGetValue(track.Id, out var current)) return true;
+            if (track.ContentEquals(current)) continue;
+            var shape = current.DeepClone();
+            shape.OriginalLine = track.OriginalLine;
+            shape.StreamNewComboOffsets.Clear(); shape.StreamNewComboOffsets.AddRange(track.StreamNewComboOffsets);
+            if (!track.ContentEquals(shape)) return true;
+        }
+        foreach (var slider in transactionStart.ImportedSliders.Where(s => protectedIds.Contains(s.Id)))
+        {
+            if (!sliders.TryGetValue(slider.Id, out var current)) return true;
+            if (slider.ContentEquals(current)) continue;
+            var shape = current.DeepClone(); shape.OriginalLine = slider.OriginalLine;
+            if (!slider.ContentEquals(shape)) return true;
+        }
+        return false;
     }
     public SliderRepresentationResult RefreshLegacyDroplets(bool compensateTinyDroplets = true)
         => transactionStart is not null && SliderRepresentationEditing.NeedsLegacyDropletRefresh(transactionStart, Document)

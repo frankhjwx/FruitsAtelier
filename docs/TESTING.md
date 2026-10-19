@@ -26,7 +26,9 @@ See [Running on macOS](MACOS.md) for launch and packaging. Project files and `pa
 
 `App.Tests --droplet-defaults-check` verifies global Droplet Settings and Inspector
 mode persistence, new-project initialization, both FSlider drawing modes after
-reloading preferences, and preservation of existing project values.
+reloading preferences, and preservation of existing project values. Legacy single-
+and multi-difficulty projects and imported maps exercise compatible drawing defaults,
+explicit randomization, cancellation, undo/redo, persistence and exported output.
 
 ### Windows sandbox permissions
 
@@ -61,6 +63,28 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --dirty-exit-check` verifies Save / Discard / Cancel on leaving a linked
+project, read-only background checks while dirty, and uninterrupted object placement
+when an external conflict is detected.
+
+`Formats.Tests --semantic-sync-check` runs the synchronization regressions, including
+playable slider equivalence, position tolerance, independent SV capture and
+normalized timing choices. `FruitsAtelier.App.exe --render-check
+--semantic-sync-render-check` exercises the English and Chinese timing and playable-object tables at
+two window sizes and captures unresolved/resolved cells under
+`artifacts/tests/semantic-sync-native`.
+
+`App.Tests --sync-details-check` checks playable event matching, position tolerance,
+insertions and per-property unresolved/resolved colours.
+
+`App.Tests --faz-check` checks portable project modes, native roundtrips, exact
+identity/metadata matching, complete-folder coverage, resource isolation, ownership,
+repeated imports, automatic file registration, archive validation and modal entry points.
+`FruitsAtelier.App.exe --render-check
+--faz-render-check` checks the native import dialog in English and Chinese at two
+window sizes and DPI levels, including project-card selection and pagination,
+saving captures under `artifacts/tests/faz-native`.
+
 `App.Tests --difficulty-save-check` covers six-difficulty local and linked saves,
 unchanged file timestamps, navigation and edits during saving, per-difficulty undo,
 compressed history reconstruction and interrupted publication recovery.
@@ -77,6 +101,21 @@ CPU/allocation measurements on a 10,000-circle fixture; its recording canvas
 excludes native GPU rendering. `Formats.Tests --osu-model-check` verifies Mode=0
 import/Catch export, coordinates and project compatibility, both slider conversion
 directions, Legacy droplet effects, timing changes, failure atomicity and undo.
+
+`App.Tests --canvas-feedback-check` covers cross-canvas hitsounds/NC/sample banks,
+rotation shortcuts, live preview, cancellation, single-step undo and dialog dragging,
+fixed Catch start/end times, curve constraints and rollback, two-dimensional
+Stream conversion, placement movement connections and Timing range navigation.
+Native `--render-check --osu-canvas-render-check --canvas-feedback-render-check`
+captures the rotation preview, moved dialog, Catch preview and Stream dialog,
+their results and inherited Timing Audio
+entry in both languages, two window sizes and three DPI settings under
+`artifacts/tests/osu-canvas-native/feedback`.
+
+`App.Tests --rotation-preview-performance` measures cold input plus paint and warm
+pointer/paint median and p95 for both canvases on a mixed 3,000-note fixture. It
+also reports allocation and verifies cancellation restores the document. Its
+recording canvas excludes native GPU rendering.
 
 `App.Tests --legacy-droplet-worker-check` verifies responsive submission, prepared
 export publication, failure rollback, save blocking, cancellation, undo/redo and
@@ -207,7 +246,9 @@ both setup and editor paths, including low-latency and fullscreen preferences.
 `App.Tests --library-opening-check` verifies that opening a library project while
 the workspace gate is held leaves rendering responsive, blocks duplicate opens
 and competing operations, publishes once, retains the document on failure, and
-retires results after a project replacement.
+retires results after a project replacement. It also checks direct difficulty-row
+opening, exact difficulty selection for saved projects and source imports, and
+selection after synchronization adds a new source difficulty.
 
 `App.Tests --mapping-canvas-check` verifies zoom-independent background bounds,
 independent dim drafts and persistence, image-drop replacement confirmation,
@@ -346,8 +387,8 @@ and Chinese at two window sizes. Its workspace fixtures stay under `artifacts/`.
 
 `FruitsAtelier.App.exe --render-check --library-opening-render-check` holds the
 workspace project gate while a library open is pending. It verifies native
-loading frames, input isolation and UI-thread publication in English and Chinese
-at two window sizes and 96/144/192 DPI. Fixtures stay under
+loading frames, difficulty-row input, target selection and UI-thread publication in English and Chinese
+at two window sizes and 96/144/192 DPI. High-star detail-list captures and fixtures stay under
 `artifacts/tests/library-opening`.
 
 `FruitsAtelier.App.exe --render-check --sample-banks-render-check` runs the focused
@@ -462,6 +503,12 @@ base-only additive hyperdash layer with independent overlay crop and rotation.
 This opens a Mac window, checks fruit placement, undo, project round trips, both slider editing modes, and English/Chinese screenshots, then exits. Slider screenshots also cover narrow and scrolled properties panels. Screenshots go to `artifacts/macos-check` and logs to `artifacts/logs/macos.log`.
 
 Shared Core and App regressions cover exact control-curve persistence, fixed AR reference ratios, bidirectional editing, local pen conversion and undo, control insertion/deletion, segment boundaries, global mode switching, and repeated-slider export. Switching editing modes must leave the document and history unchanged.
+
+`Core.Tests --compact-arc-check` checks anchor counts and fixed-time trajectory
+error against analytic circles across radii, arc spans, reference scales and both
+directions, plus project round trips, endpoint identity, export and undo/redo.
+`App.Tests --curve-edit-check` verifies local handle editing, unchanged mode
+switches, control insertion/deletion and undo through editor input.
 
 After changing input or drawing, manually check affected operations, language switching, window resizing, and file dialogs. Additional coverage is still needed for physical Windows window/audio behavior, Intel Mac, cross-display DPI, Mac MP3, and stable-client comparisons.
 
@@ -835,3 +882,24 @@ project persistence and compatible/incompatible coincident FSlider heads. Native
 `--render-check --osu-canvas-render-check --independent-sv-render-check` exercises
 Inspector input and Shift dragging in English/Chinese at both window sizes and
 96/144/192 DPI. `Formats.Tests --sv-timing-sync-check` checks timing/SV sync.
+
+## Slider endpoint snapping
+
+`App.Tests --slider-endpoint-snap-check` checks per-slider Inspector settings,
+independent head/tail dragging, repeated Legacy slider length, undo/redo,
+project persistence, representation conversion, timing boundaries and export.
+`App.Tests --slider-endpoint-snap-performance` compares cold and warm endpoint
+pointer dispatch and painting with global and independent snapping on the same
+mixed fixture, reporting CPU time and per-thread allocation separately.
+`App.Tests --experimental-snap-check` checks the global division control and
+Stream/Stack conversion with experimental divisions enabled.
+`FruitsAtelier.App.exe --render-check --slider-endpoint-snap-render-check`
+checks Inspector input and endpoint menus in English and Chinese at two window
+sizes and three DPI settings. Captures are stored under
+`artifacts/tests/slider-endpoint-snap/native`.
+
+`App.Tests --inspector-panels-check` also checks section collapse/expand, content
+and conversion isolation, selection changes, actual endpoint fractions and NC
+label separation in English and Chinese at narrow and standard widths. Native
+`--slider-endpoint-snap-render-check` captures expanded/collapsed sections and
+Catch endpoint labels alongside NC.

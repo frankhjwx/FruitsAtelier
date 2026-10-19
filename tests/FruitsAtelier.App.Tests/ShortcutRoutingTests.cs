@@ -302,6 +302,6 @@ internal static class ShortcutRoutingTests
         finally { L.SetLanguage(previous); }
     }
 
-    private static MapDocument Map() => OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Editor]\nBookmarks:500,2000\n[TimingPoints]\n0,500,4,1,0,100,1,0\n1000,-100,4,1,0,100,0,0\n[HitObjects]\n128,192,1200,1,0,0:0:0:0:\n");
+    private static MapDocument Map() => OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Editor]\nBookmarks:500,2000\n[TimingPoints]\n0,500,4,1,0,100,1,0\n1000,-100,4,1,0,80,0,0\n[HitObjects]\n128,192,1200,1,0,0:0:0:0:\n");
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
 }

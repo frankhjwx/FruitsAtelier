@@ -93,7 +93,11 @@ internal static class MappingSessionTests
             ui.SetSnapDivisor(3);
             foreach (int expected in new[] { 6, 12, 12 }) { ui.View.Wheel(point.Item1, point.Item2, 120, true); Check(ui.View.SnapDivisor == expected, "Triplet Snap progression failed."); }
             foreach (int expected in new[] { 6, 3, 3 }) { ui.View.Wheel(point.Item1, point.Item2, -120, true); Check(ui.View.SnapDivisor == expected, "Triplet Snap lower boundary failed."); }
-            foreach (int odd in new[] { 5, 7, 9 }) { ui.SetSnapDivisor(odd); ui.View.Wheel(point.Item1, point.Item2, 120, true); Check(ui.View.SnapDivisor == odd, "Unsupported doubling changed Snap family."); }
+            ui.SetSnapDivisor(5); ui.View.Wheel(point.Item1, point.Item2, 120, true);
+            Check(ui.View.SnapDivisor == 10, "Fifths double to tenths.");
+            ui.View.Wheel(point.Item1, point.Item2, -120, true);
+            Check(ui.View.SnapDivisor == 5, "Tenths halve to fifths.");
+            foreach (int odd in new[] { 7, 9, 11 }) { ui.SetSnapDivisor(odd); ui.View.Wheel(point.Item1, point.Item2, 120, true); Check(ui.View.SnapDivisor == odd, "Unsupported doubling changed Snap family."); }
             ui.SetSnapDivisor(4); ui.View.Wheel(point.Item1, point.Item2, 60, true); Check(ui.View.SnapDivisor == 4, "Partial wheel changed Snap.");
             ui.View.Wheel(point.Item1, point.Item2, 60, true); Check(ui.View.SnapDivisor == 8, "Partial wheel did not accumulate.");
         }

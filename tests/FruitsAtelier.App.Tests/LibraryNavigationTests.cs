@@ -36,7 +36,7 @@ internal static class LibraryNavigationTests
             view.PointerDown(647, 560, 0, false, false); view.PointerMove(647, 570, false, false); view.PointerUp(647, 570, 0); Paint();
             Check(Titles().Any(t => t.Value == "Navigation 23"), "scrollbar reaches last set");
             var selected = Titles().First(t => t.Y >= 180 && t.Y < 480);
-            view.RequestLibraryOpen = map => view.LoadWorkspace(WorkspaceProject.Open(map.ProjectPath!));
+            view.RequestLibraryOpen = (map, selectDifficulty) => view.LoadWorkspace(WorkspaceProject.Open(map.ProjectPath!));
             view.PointerDown(selected.X + 2, selected.Y + 2, 0, false, false); view.PointerUp(selected.X + 2, selected.Y + 2, 0);
             Paint(); var position = Titles();
             view.PointerDoubleClick(selected.X + 2, selected.Y + 2, false, false); Paint();

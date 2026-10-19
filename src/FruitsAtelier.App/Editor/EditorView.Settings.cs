@@ -398,6 +398,8 @@ public sealed partial class EditorView
             settings.LazerSpeedDistanceSnap = LibrarySettings.LazerSpeedDistanceSnap;
             settings.LazerDistanceCustomSpeeds = LibrarySettings.LazerDistanceCustomSpeeds;
             settings.LazerDistanceGuidesVisible = LibrarySettings.LazerDistanceGuidesVisible;
+            settings.RotationSelectionCentre = LibrarySettings.RotationSelectionCentre;
+            settings.RotationClockwise = LibrarySettings.RotationClockwise;
             settings.CatchHitLighting = draftCatchHitLighting;
             settings.ReverseCanvasScroll = draftReverseCanvasScroll;
             settings.StandIndicatorColour = draftSettingsColours[0]; settings.WalkIndicatorColour = draftSettingsColours[1];

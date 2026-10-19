@@ -250,19 +250,22 @@ internal static class SynchronizationUiTests
             ui.View.LoadWorkspace(session); Wait(ui);
             try
             {
-                const string green = "500,-100,4,1,0,100,0,0";
+                const string green = "500,-100,4,1,0,80,0,0";
                 var before = ui.View.Document.DeepClone();
                 File.WriteAllText(source, output.Text.Replace("0,500,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\r\n" + green));
                 ui.View.RefreshSynchronization(); Wait(ui);
-                Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingHelp")), "timing review explains the changed rows");
-                var highlighted = ui.Canvas.Texts.Where(t => t.Color == 0xED737B && t.Value.Contains(',')).ToArray();
-                Check(highlighted.Length == 1 && highlighted[0].Value == green, "only the single changed green is highlighted");
-                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.emptyValue")) && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.textPage", 1, 1)),
-                    "addition has an empty local side and needs one text page");
+                Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.offset"))
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.bpm")), "timing review labels its attribute columns");
+                Check(ui.Canvas.Texts.Any(t => t.Color == 0xED737B && t.Value == "80%")
+                    && ui.Canvas.Texts.Any(t => t.Color == 0xED737B && t.Value == "500"), "added timing row highlights its time and volume");
+                Check(ui.Canvas.Texts.Any(t => t.Value == "—") && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.volumeShort")),
+                    "addition has an empty local counterpart and attribute headings");
                 Check(ui.View.Document.ContentEquals(before), "reading timing differences preserves authoring");
                 ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
-                Check(!ui.View.SynchronizationVisible && ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 1
-                    && ui.View.Document.Tracks.Single().Id == track.Id, "apply transfers one timing addition and keeps editable curves");
+                Check(!ui.View.SynchronizationVisible && ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 2
+                    && ui.View.Document.TimingPoints.Single(p => p.TimeMs == 500).Volume == 80
+                    && ui.View.Document.TimingPoints.Single(p => p.TimeMs == 3000).Volume == 100
+                    && ui.View.Document.Tracks.Single().Id == track.Id, "apply retains the volume change and restoration at the slider head with editable curves");
                 var shifted = OsuBeatmapReader.ReadFile(source);
                 // Shift the timing section directly so exporting does not regenerate SV at unchanged slider heads.
                 string shiftedText = File.ReadAllText(source);
@@ -276,12 +279,13 @@ internal static class SynchronizationUiTests
                 }));
                 File.WriteAllText(source, shiftedText.Replace(timingText, shiftedTiming));
                 ui.View.RefreshSynchronization(); Wait(ui);
-                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingOffsetSummary", shifted.TimingPoints.Count, 12))
-                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingOffsetSummary", shifted.TimingPoints.Count, 0)),
-                    "uniform offset shows one localized summary per side");
-                Check(!ui.Canvas.Texts.Any(t => System.Text.RegularExpressions.Regex.IsMatch(t.Value, @"^-?\d+(?:\.\d+)?,")), "pure offset does not fill the panes with green lines");
+                Check(ui.Canvas.Texts.Any(t => t.Color == 0xED737B && t.Value == "12")
+                    && ui.Canvas.Texts.Any(t => t.Color == 0xED737B && t.Value == "512"),
+                    "shifted timing rows show their new offsets in the attribute table");
                 ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
-                Check(ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 1, "offset summary retains the FA choice");
+                Check(ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 2
+                    && ui.View.Document.TimingPoints.Any(p => p.TimeMs == 500 && p.Volume == 80)
+                    && ui.View.Document.TimingPoints.Any(p => p.TimeMs == 3000 && p.Volume == 100), "timing review retains the FA offsets and volume transitions");
             }
             finally { ui.View.StopFileMonitoring(); }
         }
@@ -567,8 +571,11 @@ internal static class SynchronizationUiTests
                 legacy = WorkspaceProject.Open(session.Directory); legacy.Manifest.Difficulties[0].Sync = null;
                 WorkspaceProject.Save(legacy, legacy.Project);
                 ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory), checkAdditionalDifficulties: true); Wait(ui);
-                Check(!ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].Id == original && ui.View.Document.Fruits[0].X == 123,
-                    "unchanged legacy fingerprint establishes baseline while retaining local differences");
+                Check(ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].Id == original && ui.View.Document.Fruits[0].X == 123,
+                    "missing baseline requires review even with an unchanged external fingerprint");
+                ui.ClickText(L.Get("sync.allLocal")); Wait(ui);
+                Check(!ui.View.SynchronizationVisible && ui.View.WorkspaceSession!.Manifest.Difficulties[0].Sync is not null,
+                    "explicit local resolution establishes the baseline");
                 ui.View.ShowDeleteDifficulty(0); ui.Paint();
                 Check(ui.Canvas.Texts.Any(t => t.Value == source), "deletion shows external target");
                 ui.ClickText(L.Get("sync.delete")); Wait(ui);
@@ -594,7 +601,9 @@ internal static class SynchronizationUiTests
         {
             Guid identity = ui.View.Document.Fruits[0].Id;
             File.WriteAllText(source, Fixture.Replace("Mode:2", "Mode:2\nPreviewTime:1000"));
-            Until(() => ui.View.SynchronizationVisible && !ui.View.SynchronizationBusy, "file notification opens field text review");
+            Until(() => ui.View.DifficultySyncState(0) == WorkspaceSyncState.Changed && !ui.View.SynchronizationBusy, "file notification detects field changes");
+            Check(!ui.View.SynchronizationVisible, "background field detection preserves editing");
+            ui.View.RefreshSynchronization(); Wait(ui);
             Check(OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") is null, "field review waits for a choice");
             SelectSyncField(ui, "PreviewTime", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
             Check(ui.View.Document.Fruits[0].Id == identity && OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") == "1000", "field synchronization preserves authoring");
@@ -617,7 +626,9 @@ internal static class SynchronizationUiTests
             while (DateTime.UtcNow < pauseUntil) { ui.Paint(); Thread.Sleep(20); }
             Check(!ui.View.SynchronizationVisible, "notification waits for pointer release");
             capture.SetValue(ui.View, false);
-            Until(() => ui.View.SynchronizationVisible, "active conflict opens after interaction");
+            Until(() => ui.View.DifficultySyncState(0) == WorkspaceSyncState.Changed && !ui.View.SynchronizationBusy, "active conflict detected after interaction");
+            Check(!ui.View.SynchronizationVisible, "background object detection preserves editing");
+            ui.View.RefreshSynchronization(); Wait(ui);
             ui.ClickText(L.Get("sync.chooseLocal"));
             File.WriteAllText(source, File.ReadAllText(source).Replace("321,192", "400,192"));
             pauseUntil = DateTime.UtcNow.AddMilliseconds(1200);
@@ -635,8 +646,9 @@ internal static class SynchronizationUiTests
                 while (DateTime.UtcNow < pauseUntil) { ui.Paint(); Thread.Sleep(20); }
                 Check(!ui.View.SynchronizationVisible, "temporarily locked source retries without opening merge");
             }
-            Until(() => ui.View.SynchronizationVisible && !ui.View.SynchronizationBusy,
-                "locked source synchronizes after writer closes without another write notification");
+            Until(() => ui.View.DifficultySyncState(0) == WorkspaceSyncState.Changed && !ui.View.SynchronizationBusy,
+                "locked source changes are detected after writer closes without another write notification");
+            ui.View.RefreshSynchronization(); Wait(ui);
             SelectSyncField(ui, "PreviewTime", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
             Check(OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") == "2000", "retried field applies after review");
             ui.View.ShowLibrary(); ui.Paint();

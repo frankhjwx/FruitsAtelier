@@ -153,12 +153,13 @@ that AR scale and locates its start; long groups remain scrollable rather than
 being compressed to fit. Current conflicting objects and related curve controls are
 highlighted; missing counterparts are labelled. Mouse wheel scrolls both maps and
 Ctrl+wheel zooms them together. Other field differences use side-by-side text.
-The Objects tab describes the changed properties in each group with explicit left
-and right values: time, position, New Combo, colour skip, hitsounds, sample settings,
-slider path, span count and length, or banana shower end time. Unmatched entries
-are identified by side rather than assuming an ambiguous replacement is a move.
-The detail box scrolls independently of the canvases. Canvas time labels and
-object references use `mm:ss:ms`, with three millisecond digits.
+The Objects tab lists differing playable fruits, droplets, tiny droplets and bananas
+with side-by-side time (milliseconds) and X position (pixels). Slider-generated
+positions tolerate one pixel; sub-millisecond time differences remain visible.
+Only changed properties are red, turning green after a choice. Explicit sound,
+sample and combo differences remain separate property descriptions. Missing events
+show an empty counterpart. The detail box scrolls independently of the canvases.
+Canvas time labels use `mm:ss:ms`, with three millisecond digits.
 The optional result pane previews chosen resolutions, using FA for unresolved items;
 it does not save or export. File timestamps identify the more recently saved version,
 and unsaved FA edits are labelled separately. A newer timestamp does not resolve
@@ -189,13 +190,16 @@ anchors keeps related unmatched removals and insertions in one review group.
 Local saving preserves the baseline. Synchronization compares the current external
 text and audio content with the last resolved external version, and FA authoring
 with the corresponding authoring snapshot. Automatic publication requires an
-explicitly confirmed Songs export for that difficulty. Imported sources and older
+explicitly confirmed Songs export or FAZ Link import for that difficulty. Imported sources and older
 projects without a recorded confirmation remain read-only during synchronization;
 Save opens export choices before their first overwrite. Cancelling keeps the source
 file unchanged. An export on one difficulty does not authorize other difficulties.
 While the external version is unchanged and export is confirmed,
-any new FA content edit automatically exports the complete difficulty when
-synchronization runs. This includes metadata such as Tags, settings, sections,
+an explicit save or synchronization request can export the complete difficulty.
+Background checks do not publish unsaved edits or save a dirty project, and do not
+open conflict review during normal editing. Leaving a dirty project for Library or
+closing the application retains the Save / Discard / Cancel confirmation; cancellation
+keeps editing active and discarding leaves the saved files unchanged. This includes metadata such as Tags, settings, sections,
 notes, curves, timing, break reconciliation and undo/redo. Generated objects and SV
 are exported together. Source-path discovery and derived audio duration refreshes
 do not count as authoring edits.
@@ -218,11 +222,19 @@ Conflict resolution and external changes retain their guarded apply boundary.
 An automatically completed save does not repeat the export on the UI thread.
 
 A changed external version returns to field/object comparison and resolution.
-Without a baseline, differences still require explicit choices. An unchanged
-retained choice remains available for review; a subsequent FA content edit exports
-the resulting complete FA version against the resolved external version. Timing
-comparison includes inherited points. Applying external context retains authoring
-objects and rebases that context through local undo snapshots.
+Without a baseline, differences still require explicit choices. Applying a resolution
+for a difficulty with confirmed write-back publishes the selected complete result
+to its associated `.osu` before saving the new baseline. It uses the same external
+fingerprint checks, backup and recovery receipt as ordinary exports. Explicit Save
+also publishes pending retained choices from earlier local-only resolutions without
+requiring another content edit. Unconfirmed references retain choices locally and
+remain available for review. Timing
+comparison includes inherited points. After a retained timing choice, new external
+timing edits are replayed from the last accepted external snapshot onto the accepted
+FA timing. Unchanged retained differences are not reopened or overwritten by that
+review. A volume restoration boundary remains part of the incoming change; editing
+an earlier retained difference again makes that change reviewable. Applying external
+context retains authoring objects and rebases it through local undo snapshots.
 
 General, Editor, Metadata, Difficulty and Colours show every field present on
 either side, including unchanged context, in fixed format-field order. Additional
@@ -289,8 +301,11 @@ local data. Cancelling the confirmation also preserves the current edits.
 
 The library's **Delete local project** action removes the workspace project and
 its source association from My projects, while keeping the source maps in All
-songs. Opening a source map again creates a new workspace project. Both local
-deletion actions retain recovery copies under `.sync-history`.
+songs. Opening a source map again creates a new workspace project. Project deletion
+removes local files and version history by default; **Keep a recovery backup** is
+unchecked initially. Selecting it retains a recovery copy under `.sync-history`.
+Unreferenced FAZ and audio-import resource directories are removed with permanent
+project deletion. Individual difficulty deletion retains recovery copies.
 
 Deletion archives saved and current authoring and the external file first. A
 deletion journal permits rollback of an interrupted external removal. Empty

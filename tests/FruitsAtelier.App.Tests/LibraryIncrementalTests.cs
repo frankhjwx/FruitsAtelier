@@ -47,7 +47,7 @@ internal static class LibraryIncrementalTests
         Check(view.LibrarySetTotal == 2, "Library cached rows available");
         var pending = new TaskCompletionSource<(LibraryDatabase Database, LibraryScan Scan)>();
         typeof(EditorView).GetField("scanTask", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(view, pending.Task);
-        bool opened = false; view.RequestLibraryOpen = _ => opened = true;
+        bool opened = false; view.RequestLibraryOpen = (_, _) => opened = true;
         canvas.Clear(); view.Render(canvas, 980, 620);
         view.PointerDown(240, 190, 0, false, false); view.PointerUp(240, 190, 0);
         view.PointerDoubleClick(240, 190, false, false);
