@@ -37,6 +37,14 @@ Their original two-dimensional controls and authored SV remain separate from the
 materialized droplet path and processed SV, including after reopening. Failed
 processing retains the prior committed state. Older objects default to false.
 
+Slider-local endpoint snapping uses schema 31 (single difficulty) or 32 (multiple
+difficulties). `CurveTrack.EndpointSnap` and `ImportedSlider.EndpointSnap` are
+optional immutable start/end divisor settings. A missing setting follows the
+global grid; a missing divisor selects the nearest supported grid. Cloning,
+content equality, history and slider representation conversion retain the settings.
+They are project authoring metadata; `.osu` output contains the resulting timing
+and slider length.
+
 ## Authoritative and derived data
 
 | Category | Contents | Rule |

@@ -1532,5 +1532,12 @@
   "rotation.angleRange": "請輸入 -180 到 180 度之間的角度。",
   "rotation.catchLimit": "此次旋轉超出 Catch 可實現範圍，或會產生同時間的 note。",
   "rotation.catchPattern": "Catch 旋轉需要單程曲線，且不含 Stack 或水滴調整。",
-  "stream.osuDescription": "沿滑條產生獨立 note，保留 X 和 Y 座標。"
+  "stream.osuDescription": "沿滑條產生獨立 note，保留 X 和 Y 座標。",
+  "sliderSnap.toggle": "獨立起止吸附：{0}",
+  "sliderSnap.start": "起點吸附：{0}",
+  "sliderSnap.end": "終點吸附：{0}",
+  "sliderSnap.auto": "自動（最近分拍）",
+  "sliderSnap.command": "修改 slider 起止吸附",
+  "sliderSnap.invalid": "Slider 起止吸附分拍無效。",
+  "sliderSnap.range": "Slider 終點必須晚於起點。"
 }

@@ -1532,5 +1532,12 @@
   "rotation.angleRange": "Voer een hoek van -180 tot 180 graden in.",
   "rotation.catchLimit": "Deze rotatie overschrijdt de Catch-grenzen of maakt gelijktijdige noten.",
   "rotation.catchPattern": "Catch-rotatie vereist een curve zonder herhalingen, Stack of druppelaanpassingen.",
-  "stream.osuDescription": "Maak afzonderlijke noten langs de slider met behoud van X en Y."
+  "stream.osuDescription": "Maak afzonderlijke noten langs de slider met behoud van X en Y.",
+  "sliderSnap.toggle": "Onafhankelijke eindpuntsnap: {0}",
+  "sliderSnap.start": "Beginsnap: {0}",
+  "sliderSnap.end": "Eindsnap: {0}",
+  "sliderSnap.auto": "Auto (dichtstbijzijnde raster)",
+  "sliderSnap.command": "Eindpuntsnap van slider wijzigen",
+  "sliderSnap.invalid": "Ongeldige deler voor eindpuntsnap van slider.",
+  "sliderSnap.range": "Het einde van de slider moet na het begin liggen."
 }

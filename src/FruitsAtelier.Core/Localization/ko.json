@@ -1532,5 +1532,12 @@
   "rotation.angleRange": "-180~180도 사이의 각도를 입력하세요.",
   "rotation.catchLimit": "Catch 범위를 벗어나거나 같은 시각의 노트가 생기는 회전입니다.",
   "rotation.catchPattern": "Catch 회전은 Stack이나 드롭렛 조정이 없는 단일 구간 곡선에 적용됩니다.",
-  "stream.osuDescription": "슬라이더를 따라 X/Y 좌표를 유지하는 개별 노트를 만듭니다."
+  "stream.osuDescription": "슬라이더를 따라 X/Y 좌표를 유지하는 개별 노트를 만듭니다.",
+  "sliderSnap.toggle": "시작·끝 개별 스냅: {0}",
+  "sliderSnap.start": "시작 스냅: {0}",
+  "sliderSnap.end": "끝 스냅: {0}",
+  "sliderSnap.auto": "자동 (가장 가까운 그리드)",
+  "sliderSnap.command": "슬라이더 끝점 스냅 변경",
+  "sliderSnap.invalid": "슬라이더 끝점 스냅 분할 값이 잘못되었습니다.",
+  "sliderSnap.range": "슬라이더 끝은 시작보다 뒤에 있어야 합니다."
 }

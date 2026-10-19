@@ -1532,5 +1532,12 @@
   "rotation.angleRange": "Maglagay ng anggulong -180 hanggang 180 digri.",
   "rotation.catchLimit": "Lalampas sa hangganan ng Catch o lilikha ng magkakasabay na note ang pag-ikot.",
   "rotation.catchPattern": "Kailangan ng Catch rotation ang kurbang walang ulit, Stack o droplet adjustment.",
-  "stream.osuDescription": "Gumawa ng magkakahiwalay na note sa slider habang pinapanatili ang X at Y."
+  "stream.osuDescription": "Gumawa ng magkakahiwalay na note sa slider habang pinapanatili ang X at Y.",
+  "sliderSnap.toggle": "Hiwalay na snap ng mga dulo: {0}",
+  "sliderSnap.start": "Snap ng simula: {0}",
+  "sliderSnap.end": "Snap ng dulo: {0}",
+  "sliderSnap.auto": "Auto (pinakamalapit na grid)",
+  "sliderSnap.command": "Baguhin ang snap ng mga dulo ng slider",
+  "sliderSnap.invalid": "Hindi wastong divisor ng snap ng mga dulo ng slider.",
+  "sliderSnap.range": "Dapat mas huli ang dulo ng slider kaysa simula nito."
 }

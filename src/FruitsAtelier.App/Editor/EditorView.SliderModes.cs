@@ -212,8 +212,11 @@ public sealed partial class EditorView
         if (legacyDragStart is null || SelectedTrack is not { } track) return;
         var raw = Transform.ToMap(x, y) - dragOffset;
         bool endpoint = anchorSelection.Contains(legacyDragStart[0].Id) || anchorSelection.Contains(legacyDragStart[^1].Id);
-        bool snapped = endpoint ? snap : anchorSnap;
-        var point = new MapPoint(snapped ? TimingMap.Snap(Document, raw.TimeMs, divisor) : raw.TimeMs, SnapX(raw.X));
+        bool snapped = endpoint ? snap || track.EndpointSnap is not null : anchorSnap;
+        double time = raw.TimeMs;
+        if (snapped) time = endpoint ? SnapTrackEndpoint(track, time, anchorSelection.Contains(legacyDragStart[^1].Id))
+            : SnapTiming().Snap(time, divisor);
+        var point = new MapPoint(time, SnapX(raw.X));
         var delta = point - legacyDragPoint;
         bool Try(MapPoint offset)
         {

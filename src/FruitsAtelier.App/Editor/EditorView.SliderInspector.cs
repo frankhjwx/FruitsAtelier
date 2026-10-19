@@ -171,6 +171,7 @@ public sealed partial class EditorView
             actions.Add((L.Get("inspector.pathDisplay", L.Get(osuShowProcessedSliders ? "inspector.pathProcessed" : "inspector.pathDrawn")),
                 OpenOsuSliderDisplayMenu, drag == DragKind.None && osuDraftSlider is null, 0));
         bool enabled = ClipboardInteractionReady && !notesLocked;
+        AddEndpointSnapActions(actions, enabled);
         if (inspectorTargets.Length == 1 && Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0]))
             actions.Add((L.Get("legacySv.label"), () => { }, !notesLocked && drag == DragKind.None
                 && draftTrack == Guid.Empty && draftBanana == Guid.Empty && !LegacyDropletRefreshBusy, 3));
@@ -242,6 +243,7 @@ public sealed partial class EditorView
 
     private void DrawSliderInspector(ICanvas c, Rect bounds)
     {
+        SliderEndpointToggleBounds = SliderEndpointStartBounds = SliderEndpointEndBounds = default;
         if (!DockContentInputAvailable) return;
         inspectorBounds = bounds; RefreshSliderInspector();
         if (inspectorRows.Count == 0) { c.Text(L.Get("inspector.select"), bounds.X, bounds.Y + 12, 12, Muted, bounds.Width); return; }
@@ -276,6 +278,12 @@ public sealed partial class EditorView
             var action = actions[i]; var box = new Rect(x, y + metricsHeight + 10 + i * 38, contentWidth, 32);
             if (action.Kind == 1) LegacyConversionBounds = box;
             if (action.Kind == 2) StreamConversionBounds = box;
+            if (box.Y >= viewport.Y && box.Bottom <= viewport.Bottom)
+            {
+                if (action.Kind == 4) SliderEndpointToggleBounds = box;
+                if (action.Kind == 5) SliderEndpointStartBounds = box;
+                if (action.Kind == 6) SliderEndpointEndBounds = box;
+            }
             if (action.Kind == 3 && action.Enabled)
             {
                 var slider = Document.ImportedSliders.Single(s => s.Id == inspectorTargets[0]);

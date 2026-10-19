@@ -10,7 +10,7 @@ public sealed record BananaShowerPattern(int LengthNumerator = 1, int LengthDivi
     {
         if (LengthNumerator < 1 || GapNumerator < 0 || !Supported(LengthDivisor) || !Supported(GapDivisor))
             throw new InvalidDataException(L.Get("bananaEdit.invalid"));
-        static bool Supported(int value) => value is 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 12 or 16 or 24 or 32 or 48;
+        static bool Supported(int value) => value is >= 1 and <= 12 or 16 or 24 or 32 or 48;
     }
 
     public static IReadOnlyList<BananaShower> Segments(BananaShower shower, TimingMap.Lookup timing)

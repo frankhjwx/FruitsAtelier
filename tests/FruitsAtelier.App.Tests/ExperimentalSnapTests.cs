@@ -29,9 +29,9 @@ internal static class ExperimentalSnapTests
             Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Snap preference preserves map content");
             void SetSnap(int value)
             {
-                int[] values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16, 24, 32, 48];
+                int[] values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 24, 32, 48];
                 var r = ui.View.SnapSliderBounds;
-                float x = r.X + 7 + Array.IndexOf(values, value) / 13f * (r.Width - 38);
+                float x = r.X + 7 + Array.IndexOf(values, value) / 15f * (r.Width - 38);
                 ui.Click(x, r.Y + r.Height / 2);
                 Check(ui.View.SnapDivisor == value, "Snap slider selects " + value);
             }
@@ -57,8 +57,8 @@ internal static class ExperimentalSnapTests
                 Check(!ui.View.StreamDialogVisible && ui.View.StreamSnapBounds.Width > 0 && ui.View.StreamSnapDivisor == division, $"Stream retains extended division: {division}, visible={ui.View.StreamDialogVisible}, snap={ui.View.StreamSnapDivisor}, selected={ui.View.SelectedObjectIds.Count}, status={ui.View.StatusMessage}");
                 if (stack) ui.ConversionMode(true);
                 var r = ui.View.StreamSnapBounds;
-                int index = division == 24 ? 11 : division == 32 ? 12 : 13;
-                ui.Click(r.X + 7 + index / 13f * (r.Width - 62), r.Y + r.Height / 2);
+                int index = division == 24 ? 13 : division == 32 ? 14 : 15;
+                ui.Click(r.X + 7 + index / 15f * (r.Width - 62), r.Y + r.Height / 2);
                 Check(!ui.View.StreamDialogVisible && ui.View.Document.Tracks.Single().StreamSnapDivisor == division, "Extended conversion commits");
                 Check((ui.View.Document.Tracks.Single().Stack is not null) == stack, "Conversion mode preserved");
                 var conversion = CatchStreamConverter.Convert(ui.View.Document);

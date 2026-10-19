@@ -145,6 +145,7 @@ public static class OsuBeatmapWriter
                 original.ImportedSliders[0].RandomizationTrack = slider.RandomizationTrack;
                 original.ImportedSliders[0].RandomizationBaseVelocity = slider.RandomizationBaseVelocity;
                 original.ImportedSliders[0].PreserveNativeGeometry = slider.PreserveNativeGeometry;
+                original.ImportedSliders[0].EndpointSnap = slider.EndpointSnap;
                 original.ImportedSliders[0].SliderVelocityMultiplier = slider.SliderVelocityMultiplier;
                 original.ImportedSliders[0].ProcessedSliderVelocityMultiplier = slider.ProcessedSliderVelocityMultiplier;
                 if (!slider.ContentEquals(original.ImportedSliders[0])) throw new InvalidDataException(L.Get("core.writer.importedChanged"));

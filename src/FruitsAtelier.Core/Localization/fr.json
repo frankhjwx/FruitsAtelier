@@ -1532,5 +1532,12 @@
   "rotation.angleRange": "Saisissez un angle de -180 à 180 degrés.",
   "rotation.catchLimit": "Cette rotation dépasse les limites de Catch ou crée des notes simultanées.",
   "rotation.catchPattern": "La rotation Catch nécessite une courbe sans répétitions, Stack ni ajustements de gouttes.",
-  "stream.osuDescription": "Crée des notes individuelles le long du slider en conservant X et Y."
+  "stream.osuDescription": "Crée des notes individuelles le long du slider en conservant X et Y.",
+  "sliderSnap.toggle": "Alignement indépendant des extrémités : {0}",
+  "sliderSnap.start": "Alignement du début : {0}",
+  "sliderSnap.end": "Alignement de la fin : {0}",
+  "sliderSnap.auto": "Auto (grille la plus proche)",
+  "sliderSnap.command": "Modifier l’alignement des extrémités du slider",
+  "sliderSnap.invalid": "Diviseur d’alignement des extrémités du slider invalide.",
+  "sliderSnap.range": "La fin du slider doit suivre son début."
 }

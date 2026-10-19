@@ -1532,5 +1532,12 @@
   "rotation.angleRange": "Podaj kąt od -180 do 180 stopni.",
   "rotation.catchLimit": "Ten obrót przekracza granice Catch lub tworzy jednoczesne nuty.",
   "rotation.catchPattern": "Obrót Catch wymaga krzywej bez powtórzeń, Stack i korekt kropli.",
-  "stream.osuDescription": "Tworzy osobne nuty wzdłuż slidera z zachowaniem X i Y."
+  "stream.osuDescription": "Tworzy osobne nuty wzdłuż slidera z zachowaniem X i Y.",
+  "sliderSnap.toggle": "Niezależne przyciąganie końców: {0}",
+  "sliderSnap.start": "Przyciąganie początku: {0}",
+  "sliderSnap.end": "Przyciąganie końca: {0}",
+  "sliderSnap.auto": "Auto (najbliższa siatka)",
+  "sliderSnap.command": "Zmień przyciąganie końców slidera",
+  "sliderSnap.invalid": "Nieprawidłowy dzielnik przyciągania końców slidera.",
+  "sliderSnap.range": "Koniec slidera musi następować po początku."
 }

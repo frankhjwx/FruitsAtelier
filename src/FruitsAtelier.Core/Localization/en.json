@@ -1532,5 +1532,12 @@
   "rotation.angleRange": "Enter an angle from -180 to 180 degrees.",
   "rotation.catchLimit": "This rotation exceeds Catch geometry or creates simultaneous notes.",
   "rotation.catchPattern": "Catch rotation requires a single-span curve without Stack or droplet adjustments.",
-  "stream.osuDescription": "Create individual notes along the slider, preserving X and Y."
+  "stream.osuDescription": "Create individual notes along the slider, preserving X and Y.",
+  "sliderSnap.toggle": "Independent endpoint snapping: {0}",
+  "sliderSnap.start": "Start snap: {0}",
+  "sliderSnap.end": "End snap: {0}",
+  "sliderSnap.auto": "Auto (nearest grid)",
+  "sliderSnap.command": "Change slider endpoint snapping",
+  "sliderSnap.invalid": "Invalid slider endpoint snap divisor.",
+  "sliderSnap.range": "The slider end must follow its start."
 }

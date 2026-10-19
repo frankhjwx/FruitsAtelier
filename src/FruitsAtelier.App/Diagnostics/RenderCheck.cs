@@ -926,6 +926,11 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--slider-endpoint-snap-render-check"))
+        {
+            SliderEndpointSnapRenderCheck.Run(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--synchronization-wait-render-check"))
         {
             string language = FruitsAtelier.Localization.Strings.Language;

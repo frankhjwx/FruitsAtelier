@@ -809,8 +809,26 @@ size and skin artwork.
 
 The left palette has equally sized Select, Fruit, FSlider, and Banana buttons with transparent outer margins. The four-button group is vertically centred beside the canvas plot. The active icon is fully opaque; the other three use 45% opacity. Labels share one font size. Clicking FSlider starts placement; B also enters control editing for a selected slider. Finishing placement keeps the current tool active.
 
-Snap offers 1/1, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, 1/12 and 1/16; the default is 1/4.
+Snap offers 1/1, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, 1/10, 1/11, 1/12 and 1/16; the default is 1/4.
 Enable **Settings → Experimental** to add 1/24, 1/32 and 1/48.
+
+### Independent slider endpoint snapping
+
+The global beat-snap control includes 1/10 and 1/11. For one selected slider,
+**Slider Inspector → Independent endpoint snapping** enables a slider-local
+start and end grid. Each endpoint offers **Auto (nearest grid)** or a fixed
+1/1–1/12, 1/16, 1/24 or 1/32 division, including when experimental divisions
+are disabled. Auto chooses the nearest position across those grids. Choosing
+a fixed division snaps that endpoint immediately and retains the other endpoint.
+The setting is saved with the slider and can be undone.
+
+Endpoint dragging uses the slider's own grid independently of global beat snap.
+Dragging the whole slider uses its start grid while preserving its duration.
+Dragging its upper-timeline tail changes duration while retaining the repeat count;
+the end grid refers to the final traversal's end. Ordinary sliders retain their
+existing global-snap and repeat-tail controls. FSliders are edited in Catch and
+Legacy sliders in the osu! canvas. Disabling independent snapping returns the
+slider to the global grid without moving its endpoints.
 
 Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with its time snapped to the current beat subdivision. Hover previews recalculate incoming and outgoing hyperdash markers, including the unconfirmed slider endpoint in both editing modes. This temporary calculation affects canvas markers only; it does not add playback sounds, change saved content, or enter undo history. Fruit left-click places immediately, replacing all existing parent objects whose start times are within ±2 ms of the new fruit, regardless of horizontal position. Slider tails and nested fruits do not independently trigger replacement. Replacement and placement form one undo step; hover hyperdash previews use the same replacement rule. In Fruit or FSlider mode, right-click empty canvas toggles **New combo** for the next object. While drawing an FSlider, right-click retains its point-removal and curve-completion actions. In Fruit mode during playback, right-click arms/toggles New combo even over a note; when paused, right-click on a note deletes it. The combo flag survives project saving, `.osu` export, copying, and undo/redo. It resets after placement or changing difficulty.
 

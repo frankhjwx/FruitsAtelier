@@ -202,7 +202,7 @@ public sealed class MapEditingPreferences
     public int BeatSnapDivisor
     {
         get => beatSnapDivisor;
-        set => beatSnapDivisor = value is >= 1 and <= 9 or 12 or 16 or 24 or 32 or 48 ? value : 4;
+        set => beatSnapDivisor = value is >= 1 and <= 12 or 16 or 24 or 32 or 48 ? value : 4;
     }
     public bool GridSnap { get; set; }
     public bool DistanceSnap { get; set; }

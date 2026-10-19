@@ -1532,5 +1532,12 @@
   "rotation.angleRange": "Masukkan sudut dari -180 hingga 180 derajat.",
   "rotation.catchLimit": "Putaran ini melewati batas Catch atau membuat not bersamaan.",
   "rotation.catchPattern": "Putaran Catch memerlukan kurva tanpa pengulangan, Stack, atau penyesuaian droplet.",
-  "stream.osuDescription": "Buat not terpisah di sepanjang slider dengan mempertahankan X dan Y."
+  "stream.osuDescription": "Buat not terpisah di sepanjang slider dengan mempertahankan X dan Y.",
+  "sliderSnap.toggle": "Snap ujung independen: {0}",
+  "sliderSnap.start": "Snap awal: {0}",
+  "sliderSnap.end": "Snap akhir: {0}",
+  "sliderSnap.auto": "Otomatis (kisi terdekat)",
+  "sliderSnap.command": "Ubah snap ujung slider",
+  "sliderSnap.invalid": "Pembagi snap ujung slider tidak valid.",
+  "sliderSnap.range": "Akhir slider harus setelah awalnya."
 }

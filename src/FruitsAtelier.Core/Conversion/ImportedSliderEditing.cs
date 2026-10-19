@@ -45,7 +45,7 @@ public static class ImportedSliderEditing
                     throw new InvalidOperationException(L.Get("core.importEditing.invalidPath"));
                 var track = new CurveTrack
                 {
-                    Id = source.Id, SourceOrder = source.SourceOrder, OriginalLine = source.OriginalLine,
+                    Id = source.Id, EndpointSnap = source.EndpointSnap, SourceOrder = source.SourceOrder, OriginalLine = source.OriginalLine,
                     Name = L.Get("core.names.importedSlider", source.PathType, source.TimeMs),
                     SpanCount = source.SpanCount, Kind = CurveKind.Linear, CompensateTinyDroplets = true
                 };
@@ -124,7 +124,7 @@ public static class ImportedSliderEditing
                 if (path.Distance / velocity < .001) throw new InvalidOperationException(L.Get("core.importEditing.zeroDuration"));
                 var track = new CurveTrack
                 {
-                    Id = slider.Id, SourceOrder = slider.SourceOrder, OriginalLine = slider.OriginalLine,
+                    Id = slider.Id, EndpointSnap = slider.EndpointSnap, SourceOrder = slider.SourceOrder, OriginalLine = slider.OriginalLine,
                     Name = L.Get("core.names.importedSlider", slider.PathType, slider.TimeMs),
                     SpanCount = slider.SpanCount, CompensateTinyDroplets = true
                 };

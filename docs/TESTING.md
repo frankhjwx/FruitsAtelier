@@ -866,3 +866,18 @@ project persistence and compatible/incompatible coincident FSlider heads. Native
 `--render-check --osu-canvas-render-check --independent-sv-render-check` exercises
 Inspector input and Shift dragging in English/Chinese at both window sizes and
 96/144/192 DPI. `Formats.Tests --sv-timing-sync-check` checks timing/SV sync.
+
+## Slider endpoint snapping
+
+`App.Tests --slider-endpoint-snap-check` checks per-slider Inspector settings,
+independent head/tail dragging, repeated Legacy slider length, undo/redo,
+project persistence, representation conversion, timing boundaries and export.
+`App.Tests --slider-endpoint-snap-performance` compares cold and warm endpoint
+pointer dispatch and painting with global and independent snapping on the same
+mixed fixture, reporting CPU time and per-thread allocation separately.
+`App.Tests --experimental-snap-check` checks the global division control and
+Stream/Stack conversion with experimental divisions enabled.
+`FruitsAtelier.App.exe --render-check --slider-endpoint-snap-render-check`
+checks Inspector input and endpoint menus in English and Chinese at two window
+sizes and three DPI settings. Captures are stored under
+`artifacts/tests/slider-endpoint-snap/native`.

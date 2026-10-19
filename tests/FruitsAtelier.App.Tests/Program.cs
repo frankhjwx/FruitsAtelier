@@ -14,6 +14,9 @@ if (args.Contains("--canvas-feedback-performance")) { CanvasFeedbackPerformance.
 if (args.Contains("--rotation-preview-performance")) { CanvasFeedbackPerformance.RunRotation(); return 0; }
 if (args.Contains("--timing-feedback-check")) { TimingEditorTests.Run(); TimingFeedbackTests.Run(); Console.WriteLine("PASS Timing setup, shortcuts, precision and range selection"); return 0; }
 
+if (args.Contains("--slider-endpoint-snap-check")) { SliderEndpointSnapTests.Run(); Console.WriteLine("PASS independent slider endpoint snapping"); return 0; }
+if (args.Contains("--slider-endpoint-snap-performance")) { SliderEndpointSnapTests.Performance(); return 0; }
+
 if (args.Contains("--independent-sv-check")) { IndependentSliderSvTests.Run(); Console.WriteLine("PASS Independent Legacy SV, overlap and editing"); return 0; }
 
 if (args.Contains("--droplet-defaults-check")) { DropletDefaultsTests.Run(); Console.WriteLine("PASS Global droplet defaults and restart restoration"); return 0; }
@@ -535,6 +538,7 @@ var tests = new (string Name, Action Run)[]
     ("Timeline background clicks seek and drag limits preserve the origin", TimelineDragTests.ClickAndLimits),
     ("Fruit tools place quarters and sixths without moving existing objects", PlaceOnBothGrids),
     ("Beat snap slider exposes every requested divisor through one drag control", RequestedInteractionTests.SnapDivisors),
+    ("Slider endpoints snap independently and retain history, persistence and export", SliderEndpointSnapTests.Run),
     ("Centred controls and timestamp clipboard dialog preserve editor content", TimeJumpTests.Run),
     ("Double-click enters one Slider and other clicks leave its edit mode", RequestedInteractionTests.DoubleClickEditing),
     ("Long press reports note beat position and temporarily uses its snap", NoteSnapTests.InspectBeatPosition),
@@ -1323,7 +1327,7 @@ sealed class Ui
     public void Key(int key, bool ctrl = false, bool shift = false) { View.KeyDown(key, ctrl, shift); Paint(); }
     public void SetSnapDivisor(int divisor)
     {
-        int[] values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
+        int[] values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16];
         int index = Array.IndexOf(values, divisor);
         if (index < 0) throw new ArgumentOutOfRangeException(nameof(divisor));
         var slider = View.SnapSliderBounds;
@@ -1375,7 +1379,7 @@ sealed class Ui
     }
     public void StreamSnap(int divisor)
     {
-        int[] values = View.LibrarySettings.ExperimentalSnapDivisions ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16, 24, 32, 48] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
+        int[] values = View.LibrarySettings.ExperimentalSnapDivisions ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 24, 32, 48] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16];
         var r = View.StreamSnapBounds;
         Click(r.X + 7 + Array.IndexOf(values, divisor) / (float)(values.Length - 1) * (r.Width - 62), r.Y + r.Height / 2);
     }

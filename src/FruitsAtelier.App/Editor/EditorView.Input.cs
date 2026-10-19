@@ -552,8 +552,13 @@ public sealed partial class EditorView
             if (drag == DragKind.Anchor)
             {
                 bool endpoint = node == track.Nodes[0] || node == track.Nodes[^1];
-                bool snapTime = endpoint ? snap : anchorSnap;
-                if (snapTime) p = new(Math.Clamp(TimingMap.Snap(Document, raw.TimeMs, divisor), 0, EditableDurationMs), p.X);
+                bool snapTime = endpoint ? snap || track.EndpointSnap is not null : anchorSnap;
+                if (snapTime)
+                {
+                    double time = endpoint ? SnapTrackEndpoint(track, raw.TimeMs, node == track.Nodes[^1])
+                        : SnapTiming().Snap(raw.TimeMs, divisor);
+                    p = new(Math.Clamp(time, 0, EditableDurationMs), p.X);
+                }
                 var start = Point(node);
                 if (!CurveMath.TryMoveAnchor(track, node.Id, p.TimeMs, p.X, out var error))
                 {

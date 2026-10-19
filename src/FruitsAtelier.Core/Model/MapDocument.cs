@@ -60,7 +60,7 @@ public sealed class CurveTrack
         var a = this; var b = other;
         if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
             || a.DropletMode != b.DropletMode || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
-            || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
+            || a.EndpointSnap != b.EndpointSnap || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
             || a.StreamNewComboOffsets.Count != b.StreamNewComboOffsets.Count
             || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization)) return false;
         for (int j = 0; j < a.StreamNewComboOffsets.Count; j++)
@@ -100,6 +100,8 @@ public sealed class CurveTrack
     public DropletRandomization? DropletRandomization { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SliderDropletMode? DropletMode { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SliderEndpointSnap? EndpointSnap { get; set; }
 
     internal double? SliderVelocitySeed { get; set; }
     internal double? FixedSliderVelocityMultiplier { get; set; }
@@ -136,6 +138,8 @@ public sealed class TimingPoint
 
 public sealed class ImportedSlider
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SliderEndpointSnap? EndpointSnap { get; set; }
     private sealed record GeometryMemo(WeakReference<ImportedSliderGeometry> Geometry, SliderControlPoints Controls,
         long X, long Y, long Length, char PathType);
     private GeometryMemo? geometryMemo;
@@ -179,7 +183,7 @@ public sealed class ImportedSlider
     {
         var copy = new ImportedSlider
         {
-            Id = Id, SourceOrder = SourceOrder, OriginalLine = OriginalLine, X = X, Y = Y,
+            Id = Id, SourceOrder = SourceOrder, OriginalLine = OriginalLine, X = X, Y = Y, EndpointSnap = EndpointSnap,
             TimeMs = TimeMs, PathType = PathType, SpanCount = SpanCount, PixelLength = PixelLength,
             RandomizationSource = RandomizationSource?.DeepClone(), RandomizationTrack = RandomizationTrack?.DeepClone(),
             RandomizationBaseVelocity = RandomizationBaseVelocity, PreserveNativeGeometry = PreserveNativeGeometry,
@@ -195,7 +199,7 @@ public sealed class ImportedSlider
         && PathType == other.PathType && SpanCount == other.SpanCount && PixelLength == other.PixelLength
         && SliderVelocityMultiplier == other.SliderVelocityMultiplier && ProcessedSliderVelocityMultiplier == other.ProcessedSliderVelocityMultiplier
         && RandomizationBaseVelocity == other.RandomizationBaseVelocity
-        && PreserveNativeGeometry == other.PreserveNativeGeometry
+        && PreserveNativeGeometry == other.PreserveNativeGeometry && EndpointSnap == other.EndpointSnap
         && ControlPoints.ContentEquals(other.ControlPoints)
         && (ReferenceEquals(RandomizationTrack, other.RandomizationTrack)
             || RandomizationTrack is not null && other.RandomizationTrack is not null && RandomizationTrack.ContentEquals(other.RandomizationTrack))
