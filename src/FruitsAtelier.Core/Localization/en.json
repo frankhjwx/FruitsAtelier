@@ -1529,7 +1529,7 @@
   "rotation.anticlockwise": "Anti-clockwise",
   "rotation.playfield": "Playfield centre",
   "rotation.selection": "Selection centre",
-  "rotation.angleRange": "Enter an angle from 0 to 360 degrees.",
+  "rotation.angleRange": "Enter an angle from -180 to 180 degrees.",
   "rotation.catchLimit": "This rotation exceeds Catch geometry or creates simultaneous notes.",
   "rotation.catchPattern": "Catch rotation requires a single-span curve without Stack or droplet adjustments.",
   "stream.osuDescription": "Create individual notes along the slider, preserving X and Y."

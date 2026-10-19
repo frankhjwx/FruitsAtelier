@@ -1529,7 +1529,7 @@
   "rotation.anticlockwise": "Przeciwnie do zegara",
   "rotation.playfield": "Środek pola gry",
   "rotation.selection": "Środek zaznaczenia",
-  "rotation.angleRange": "Podaj kąt od 0 do 360 stopni.",
+  "rotation.angleRange": "Podaj kąt od -180 do 180 stopni.",
   "rotation.catchLimit": "Ten obrót przekracza granice Catch lub tworzy jednoczesne nuty.",
   "rotation.catchPattern": "Obrót Catch wymaga krzywej bez powtórzeń, Stack i korekt kropli.",
   "stream.osuDescription": "Tworzy osobne nuty wzdłuż slidera z zachowaniem X i Y."

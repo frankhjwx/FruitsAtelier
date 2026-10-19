@@ -1529,7 +1529,7 @@
   "rotation.anticlockwise": "Antihorario",
   "rotation.playfield": "Centro del campo",
   "rotation.selection": "Centro de selección",
-  "rotation.angleRange": "Introduce un ángulo de 0 a 360 grados.",
+  "rotation.angleRange": "Introduce un ángulo de -180 a 180 grados.",
   "rotation.catchLimit": "La rotación supera los límites de Catch o crea notas simultáneas.",
   "rotation.catchPattern": "La rotación de Catch requiere una curva sin repeticiones, Stack ni ajustes de gotas.",
   "stream.osuDescription": "Crea notas individuales a lo largo del slider conservando X e Y."

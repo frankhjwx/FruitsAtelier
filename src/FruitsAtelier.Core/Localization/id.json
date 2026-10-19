@@ -1529,7 +1529,7 @@
   "rotation.anticlockwise": "Berlawanan jarum jam",
   "rotation.playfield": "Pusat area bermain",
   "rotation.selection": "Pusat pilihan",
-  "rotation.angleRange": "Masukkan sudut dari 0 hingga 360 derajat.",
+  "rotation.angleRange": "Masukkan sudut dari -180 hingga 180 derajat.",
   "rotation.catchLimit": "Putaran ini melewati batas Catch atau membuat not bersamaan.",
   "rotation.catchPattern": "Putaran Catch memerlukan kurva tanpa pengulangan, Stack, atau penyesuaian droplet.",
   "stream.osuDescription": "Buat not terpisah di sepanjang slider dengan mempertahankan X dan Y."

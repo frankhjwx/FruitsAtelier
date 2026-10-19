@@ -1529,7 +1529,7 @@
   "rotation.anticlockwise": "Pakaliwa",
   "rotation.playfield": "Sentro ng playfield",
   "rotation.selection": "Sentro ng pagpili",
-  "rotation.angleRange": "Maglagay ng anggulong 0 hanggang 360 digri.",
+  "rotation.angleRange": "Maglagay ng anggulong -180 hanggang 180 digri.",
   "rotation.catchLimit": "Lalampas sa hangganan ng Catch o lilikha ng magkakasabay na note ang pag-ikot.",
   "rotation.catchPattern": "Kailangan ng Catch rotation ang kurbang walang ulit, Stack o droplet adjustment.",
   "stream.osuDescription": "Gumawa ng magkakahiwalay na note sa slider habang pinapanatili ang X at Y."

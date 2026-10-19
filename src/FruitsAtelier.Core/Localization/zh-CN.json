@@ -1529,7 +1529,7 @@
   "rotation.anticlockwise": "逆时针",
   "rotation.playfield": "游戏区域中心",
   "rotation.selection": "选区中心",
-  "rotation.angleRange": "请输入 0 到 360 度之间的角度。",
+  "rotation.angleRange": "请输入 -180 到 180 度之间的角度。",
   "rotation.catchLimit": "此次旋转超出 Catch 可实现的几何范围，或会产生同时间的 note。",
   "rotation.catchPattern": "Catch 旋转需要单程曲线，且不含 Stack 或水滴调整。",
   "stream.osuDescription": "沿滑条生成独立 note，保留 X 和 Y 坐标。"

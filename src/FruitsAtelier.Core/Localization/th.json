@@ -1529,7 +1529,7 @@
   "rotation.anticlockwise": "ทวนเข็มนาฬิกา",
   "rotation.playfield": "ศูนย์กลางสนามเล่น",
   "rotation.selection": "ศูนย์กลางส่วนที่เลือก",
-  "rotation.angleRange": "ป้อนมุมตั้งแต่ 0 ถึง 360 องศา",
+  "rotation.angleRange": "ป้อนมุมตั้งแต่ -180 ถึง 180 องศา",
   "rotation.catchLimit": "การหมุนนี้เกินขอบเขตของ Catch หรือทำให้โน้ตมีเวลาเดียวกัน",
   "rotation.catchPattern": "การหมุนใน Catch ต้องใช้เส้นโค้งช่วงเดียวที่ไม่มี Stack หรือการปรับหยด",
   "stream.osuDescription": "สร้างโน้ตแยกตามแนวสไลเดอร์โดยเก็บพิกัด X และ Y"

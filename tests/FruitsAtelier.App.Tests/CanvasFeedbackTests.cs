@@ -68,19 +68,20 @@ internal static class CanvasFeedbackTests
         Check(ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "Zero-degree rotation modified native geometry or source text.");
         ui.Key(190, ctrl: true);
         var slider = ui.View.Document.ImportedSliders[0];
-        Near(slider.X, 200); Near(slider.Y, 100);
-        Near(slider.ControlPoints[1].X, 100); Near(slider.ControlPoints[1].GeometryY, 200);
+        Near(slider.X, 100); Near(slider.Y, 100);
+        Near(slider.ControlPoints[1].X, 0); Near(slider.ControlPoints[1].GeometryY, 200);
         Check(slider.TimeMs == 1000 && slider.PixelLength == map.ImportedSliders[0].PixelLength, "Rotation changed slider timing or length.");
         Check(OsuBeatmapWriter.Serialize(ui.View.Document).ObjectSequenceMatches, "Rotated native slider could not be exported.");
         ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Native rotation did not undo.");
         Select(ui, id); ui.Key('R', ctrl: true, shift: true); Check(ui.View.RotationVisible, "Rotation dialog shortcut did not open.");
         ui.ClickText(L.Get("rotation.selection")); ui.Type("90"); ui.Key(13);
         Check(!ui.View.RotationVisible, "Valid rotation dialog did not apply.");
-        Near(ui.View.Document.ImportedSliders[0].X, 200);
+        Near(ui.View.Document.ImportedSliders[0].X, 100);
         ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Dialog rotation did not undo in one step.");
         Select(ui, id); ui.Key('R', ctrl: true, shift: true); ui.Type("45"); ui.Key(27);
         Check(ui.View.Document.ContentEquals(map), "Cancelling rotation changed content.");
-        ui.Key(188, ctrl: true); Near(ui.View.Document.ImportedSliders[0].X, 100); Near(ui.View.Document.ImportedSliders[0].Y, 200);
+        ui.Key(188, ctrl: true); Near(ui.View.Document.ImportedSliders[0].X, 100); Near(ui.View.Document.ImportedSliders[0].Y, 100);
+        Near(ui.View.Document.ImportedSliders[0].ControlPoints[1].X, 200); Near(ui.View.Document.ImportedSliders[0].ControlPoints[1].GeometryY, 0);
         ui.Key('Z', ctrl: true); Select(ui, id);
         ui.Key('R', ctrl: true, shift: true); ui.Type("45"); ui.Key(13);
         Check(!ui.View.RotationVisible && OsuBeatmapWriter.Serialize(ui.View.Document).ObjectSequenceMatches,
@@ -99,12 +100,14 @@ internal static class CanvasFeedbackTests
             "Catch rotation changed the authored time interval.");
         ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Catch rotation did not undo.");
         Select(ui, track.Id); ui.Key('R', ctrl: true, shift: true);
-        foreach (string angleText in new[] { "5", "8", "5", "0" })
+        ui.ClickText(L.Get("rotation.selection"));
+        foreach (string angleText in new[] { "5", "-5", "8", "5", "0" })
         {
             ui.Key('A', ctrl: true); ui.Type(angleText); ui.Paint();
             var preview = (CatchConversionResult)typeof(EditorView).GetField("conversion", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ui.View)!;
             var uncached = CatchStreamConverter.Convert(ui.View.Document);
             Check(preview.Objects.SequenceEqual(uncached.Objects), "Cached Catch rotation preview differs from fresh conversion.");
+            Near(ui.View.Document.Tracks[0].Nodes[0].X, 180);
         }
         Check(ui.View.Document.ContentEquals(map), "Returning to zero did not restore the rotation baseline.");
         ui.Key(27);
@@ -174,7 +177,7 @@ internal static class CanvasFeedbackTests
         ui.Type("30"); ui.Paint();
         Check(!ui.View.Document.ContentEquals(map), "Rotation was not visible before confirmation.");
         ui.Key('A', ctrl: true); ui.Type("60"); ui.Paint();
-        var expected = map.DeepClone(); SelectionRotation.Apply(expected, new HashSet<Guid> { id }, 60, true, true);
+        var expected = map.DeepClone(); SelectionRotation.Apply(expected, new HashSet<Guid> { id }, 60, true, true, selectionOrigin: (100, 100));
         Near(ui.View.Document.ImportedSliders[0].X, expected.ImportedSliders[0].X);
         Near(ui.View.Document.ImportedSliders[0].Y, expected.ImportedSliders[0].Y);
         var beforeMove = ui.View.Document.DeepClone(); var bounds = ui.View.RotationBounds;
@@ -186,12 +189,35 @@ internal static class CanvasFeedbackTests
         Check(!ui.View.PrepareFileOperation(), "A provisional rotation escaped through saving.");
         ui.ClickText(L.Get("mac.cancel"));
         Check(ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "Cancel did not restore the original rotation state.");
+        ui.Key('R', ctrl: true, shift: true); ui.Type("-90"); ui.Paint();
+        expected = map.DeepClone(); SelectionRotation.Apply(expected, new HashSet<Guid> { id }, -90, true, true, selectionOrigin: (100, 100));
+        Near(ui.View.Document.ImportedSliders[0].X, expected.ImportedSliders[0].X);
+        Near(ui.View.Document.ImportedSliders[0].Y, expected.ImportedSliders[0].Y);
+        ui.ClickText(L.Get("rotation.anticlockwise"));
+        expected = map.DeepClone(); SelectionRotation.Apply(expected, new HashSet<Guid> { id }, 90, true, true, selectionOrigin: (100, 100));
+        Near(ui.View.Document.ImportedSliders[0].ControlPoints[1].X, expected.ImportedSliders[0].ControlPoints[1].X);
+        Near(ui.View.Document.ImportedSliders[0].ControlPoints[1].GeometryY, expected.ImportedSliders[0].ControlPoints[1].GeometryY);
+        ui.ClickText(L.Get("rotation.clockwise"));
+        ui.Key(13); ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.ContentEquals(map), "Negative rotation did not commit and undo exactly.");
+        Select(ui, id);
         ui.Key('R', ctrl: true, shift: true); ui.Type("30"); ui.Paint(); ui.Key(13);
         var committed = ui.View.Document.DeepClone();
         ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Preview confirmation was not one undo step.");
         ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(committed), "Confirmed preview did not redo exactly.");
         Select(ui, id); ui.Key('R', ctrl: true, shift: true); ui.Type("45"); ui.Paint(); ui.View.CancelInteraction(); ui.Paint();
         Check(!ui.View.RotationVisible && ui.View.Document.ContentEquals(committed), "Interrupted preview was not cancelled.");
+        Select(ui, id); ui.Key('R', ctrl: true, shift: true);
+        foreach (string angleText in new[] { "-180", "180" })
+        {
+            ui.Key('A', ctrl: true); ui.Type(angleText); ui.Paint();
+            Near(ui.View.Document.ImportedSliders[0].X, committed.ImportedSliders[0].X);
+            Near(ui.View.Document.ImportedSliders[0].Y, committed.ImportedSliders[0].Y);
+        }
+        ui.Key('A', ctrl: true); ui.Type("181");
+        var lastValid = ui.View.Document.DeepClone(); ui.Key(13);
+        Check(ui.View.RotationVisible && ui.View.Document.ContentEquals(lastValid), "Out-of-range rotation was accepted.");
+        ui.Key(27);
     }
     private static void FixedIntervals()
     {

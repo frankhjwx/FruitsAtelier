@@ -6,7 +6,7 @@ public static class SelectionRotation
 {
     public static CatchConversionResult? Apply(MapDocument map, IReadOnlySet<Guid> ids, double degrees, bool osu,
         bool selectionCentre, double timeScale = 1, double playfieldTime = 0, CatchConversionCache? cache = null,
-        bool compensateTinyDroplets = true)
+        bool compensateTinyDroplets = true, (double X, double Y)? selectionOrigin = null)
     {
         if (!double.IsFinite(degrees) || !double.IsFinite(timeScale) || timeScale <= 0)
             throw new ArgumentException(L.Get("editor.error.finiteNumberRequired"));
@@ -30,6 +30,7 @@ public static class SelectionRotation
         if (points.Count == 0) return null;
         double cx = selectionCentre ? (points.Min(p => p.X) + points.Max(p => p.X)) / 2 : 256;
         double cy = selectionCentre ? (points.Min(p => p.Y) + points.Max(p => p.Y)) / 2 : osu ? 192 : -playfieldTime * timeScale;
+        if (selectionCentre && selectionOrigin is { } origin) { cx = origin.X; cy = origin.Y; }
         double radians = degrees * Math.PI / 180, cos = Math.Cos(radians), sin = Math.Sin(radians);
         (double X, double Y) Rotate(double x, double y) =>
             (cx + (x - cx) * cos - (y - cy) * sin, cy + (x - cx) * sin + (y - cy) * cos);

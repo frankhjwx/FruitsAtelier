@@ -1529,7 +1529,7 @@
   "rotation.anticlockwise": "Tegen de klok in",
   "rotation.playfield": "Midden speelveld",
   "rotation.selection": "Midden selectie",
-  "rotation.angleRange": "Voer een hoek van 0 tot 360 graden in.",
+  "rotation.angleRange": "Voer een hoek van -180 tot 180 graden in.",
   "rotation.catchLimit": "Deze rotatie overschrijdt de Catch-grenzen of maakt gelijktijdige noten.",
   "rotation.catchPattern": "Catch-rotatie vereist een curve zonder herhalingen, Stack of druppelaanpassingen.",
   "stream.osuDescription": "Maak afzonderlijke noten langs de slider met behoud van X en Y."

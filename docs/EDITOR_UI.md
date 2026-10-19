@@ -62,14 +62,18 @@ sliders into individual notes along their two-dimensional paths, including rever
 spans. Catch retains its Stream/Stack dock. Both conversions are undoable.
 
 Ctrl+Shift+R opens **Rotate by**, with an angle slider and numeric entry,
-clockwise/anti-clockwise direction, and playfield/selection centre origins.
+signed angles from −180° to +180°, clockwise/anti-clockwise direction, and
+playfield/selection centre origins. Negative angles reverse the chosen direction.
+For a selected slider, Selection centre uses the current slider's beginning point;
+standalone notes use their selection bounds' centre.
 Changes preview directly on the canvas from the original selection. OK commits
 one undo step; Cancel, Escape or interrupted input restores the original objects.
 Drag the title area to move the window within the editor. Window movement does
 not change the preview. Invalid angles retain the last valid preview and cannot
 be confirmed.
 Ctrl+comma and Ctrl+period rotate the selection by −90°/+90° in osu! and
-−5°/+5° in Catch, around its centre. Catch angles use the current time-to-X
+−5°/+5° in Catch. osu! uses Selection centre, including the current slider's
+beginning point; Catch uses the selection bounds' centre. Catch angles use the current time-to-X
 display ratio; its playfield origin is the centre of the visible time range.
 Catch rotates anchors, handles and explicit controls together. Circular arcs
 whose stored aspect ratio differs from the rotation plane use the existing bounded

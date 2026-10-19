@@ -1529,7 +1529,7 @@
   "rotation.anticlockwise": "反時計回り",
   "rotation.playfield": "プレイフィールドの中心",
   "rotation.selection": "選択範囲の中心",
-  "rotation.angleRange": "0～360 度の角度を入力してください。",
+  "rotation.angleRange": "-180～180 度の角度を入力してください。",
   "rotation.catchLimit": "Catch の範囲を超えるか、同時刻のノーツが発生するため回転できません。",
   "rotation.catchPattern": "Catch の回転には Stack やドロップレット調整のない単一スパンの曲線が必要です。",
   "stream.osuDescription": "スライダーに沿って X/Y 座標を保持した個別のノーツを生成します。"
