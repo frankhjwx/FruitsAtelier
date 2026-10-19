@@ -1398,7 +1398,7 @@
   "bananaEdit.tooShort": "所选范围内无法生成长度至少为 2 ms 的香蕉雨。",
   "settings.experimental": "实验性功能",
   "settings.experimentalSnapDivisions": "[Experimental] 开放支持 1/24、1/32 以及 1/48 snap",
-  "settings.preserveSameTimeObjects": "放置时保留同时间元素（2ms 范围内）",
+  "settings.preserveSameTimeObjects": "启用同时间元素放置",
   "ui.uniformScale": "等比缩放（点击解锁）",
   "ui.independentScale": "独立 X/Y 缩放",
   "dock.layout": "布局",
