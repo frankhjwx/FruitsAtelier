@@ -76,6 +76,7 @@ public sealed partial class EditorView
 
     private void InitializeStreamEditor()
     {
+        osuStreamDialog = false;
         if (CanEditBananas) { OpenBananaEdit(); return; }
         if (notesLocked) { StatusMessage = L.Get("assist.locked"); return; }
         if (!CanConvertStream) { StatusMessage = L.Get("stream.selectSlider"); return; }
@@ -110,6 +111,7 @@ public sealed partial class EditorView
 
     private void ApplyStream()
     {
+        if (osuStreamDialog) { ApplyOsuStream(); return; }
         if (stackMode && !CommitStackNumeric()) return;
         Guid[] selected = streamTargets;
         if (EditSliderRepresentation(L.Get(stackMode ? "stack.title" : changingStreamSnap ? "stream.changeSnap" : "stream.title"), () =>
@@ -135,6 +137,13 @@ public sealed partial class EditorView
 
     private void StreamKey(int key, bool ctrl, bool shift)
     {
+        if (osuStreamDialog)
+        {
+            if (key == 27) StreamDialogVisible = false;
+            else if (key == 13) ApplyOsuStream();
+            else if (!ctrl && key is 37 or 38 or 39 or 40) ChangeOsuStreamSnap(key is 37 or 38 ? -1 : 1);
+            return;
+        }
         if (stackMode && StackHistoryKey(key, ctrl, shift)) return;
         if (stackMode && StackNumericKey(key, ctrl, shift)) return;
         if (key == 27) { StreamDialogVisible = false; streamSnapDragging = false; stackPointDragging = stackFruitDragging = -1; }
@@ -171,6 +180,7 @@ public sealed partial class EditorView
     private void DrawStreamDialog(ICanvas c)
     {
         if (!StreamDialogVisible) return;
+        if (osuStreamDialog) { DrawOsuStream(c); return; }
         DrawStackDialog(c);
     }
 }

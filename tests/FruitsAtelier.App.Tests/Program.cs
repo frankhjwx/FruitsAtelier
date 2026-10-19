@@ -8,6 +8,9 @@ if (args.Contains("--difficulty-save-check")) { DifficultySaveTests.Run(); Conso
 if (args.Contains("--difficulty-save-performance")) { DifficultySavePerformance.Run(); return 0; }
 
 if (args.Contains("--movement-overlay-check")) { AssistToolsTests.MovementOverlay(); Console.WriteLine("PASS Movement overlay fractional bounds and input"); return 0; }
+if (args.Contains("--canvas-feedback-check")) { CanvasFeedbackTests.Run(); Console.WriteLine("PASS Canvas rotation, metadata, native streams, placement and timing feedback"); return 0; }
+if (args.Contains("--canvas-feedback-performance")) { CanvasFeedbackPerformance.Run(); return 0; }
+if (args.Contains("--timing-feedback-check")) { TimingEditorTests.Run(); TimingFeedbackTests.Run(); Console.WriteLine("PASS Timing setup, shortcuts, precision and range selection"); return 0; }
 
 if (args.Contains("--independent-sv-check")) { IndependentSliderSvTests.Run(); Console.WriteLine("PASS Independent Legacy SV, overlap and editing"); return 0; }
 
@@ -304,6 +307,7 @@ var tests = new (string Name, Action Run)[]
     ("Paused arrows align off-grid positions and cross timing boundaries", ShortcutRoutingTests.PausedSeekingSnaps),
     ("Compose pauses align with Snap while Timing pauses retain exact transport time", PauseSnapTests.UserPause),
     ("Timing current-time offsets use integer milliseconds and taps apply after ten samples", TimingFeedbackTests.Run),
+    ("Canvas rotation, metadata, native streams, placement and timing feedback", CanvasFeedbackTests.Run),
     ("Pause snapping waits for confirmation and isolates other transport operations", PauseSnapTests.PauseIsolation),
     ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),

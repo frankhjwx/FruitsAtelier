@@ -40,7 +40,7 @@ public sealed partial class EditorView
     public void StartTestplay()
     {
         if (IsTestplaying || !HasEditorProject || LibraryVisible || ExportVisible || ErrorVisible ||
-            DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
+            DiscardConfirmationVisible || SliderDialogVisible || (RotationVisible || TimeJumpVisible) || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
             drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading) return;
         EnsureConversion();
         if (deferredConversion)

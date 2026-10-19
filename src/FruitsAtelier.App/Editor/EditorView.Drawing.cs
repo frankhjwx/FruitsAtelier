@@ -134,6 +134,8 @@ public sealed partial class EditorView
         DrawSliderDialog(c);
         DrawExportOverlay(c);
         DrawTimeJump(c);
+        DrawStreamDialog(c);
+        DrawRotation(c);
         DrawBananaEdit(c);
         DrawVolumeDialog(c);
         DrawVolumePopover(c);
@@ -718,6 +720,7 @@ public sealed partial class EditorView
             Item(L.Get("history.togglePointCurve"), TogglePointCurve, SelectedTrack is not null && anchorSelection.Count == 1 && draftTrack == Guid.Empty && !notesLocked);
             Item(L.Get("ui.deleteMenu"), DeleteSelection, selection != Guid.Empty);
             Item(L.Get("editor.command.reverseSelection") + "  Ctrl+G", ReverseSelection, CanCopySelection && !notesLocked);
+            Item(L.Get("rotation.title") + "  Ctrl+Shift+R", OpenRotation, CanCopySelection && !notesLocked);
             Item(L.Get("editor.command.reversePath"), ReverseSelectedPath, SelectedTrack is not null && ClipboardInteractionReady && !notesLocked);
             Item(L.Get("ui.splitMenu"), SplitSelected, SelectedTrack is not null && draftTrack == Guid.Empty);
             Item(L.Get("ui.cutMenu"), () => CutSelection(), CanCopySelection);

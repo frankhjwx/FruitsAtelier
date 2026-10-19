@@ -1491,7 +1491,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Convert this slider to the canvas's slider type before editing it.",
+  "osu.readOnlySlider": "Ubah slider ke jenis kanvas ini untuk mengedit bentuknya. Hitsound dan NC tetap dapat diedit.",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",
@@ -1520,5 +1520,17 @@
   "faz.fileType": "Fruits Atelier Project",
   "faz.chooseProject": "Choose a local project containing all difficulties",
   "faz.locateProject": "Locate project…",
-  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty."
+  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty.",
+  "rotation.title": "Putar",
+  "rotation.angle": "Masukkan sudut putaran:",
+  "rotation.direction": "Arah",
+  "rotation.origin": "Pusat",
+  "rotation.clockwise": "Searah jarum jam",
+  "rotation.anticlockwise": "Berlawanan jarum jam",
+  "rotation.playfield": "Pusat area bermain",
+  "rotation.selection": "Pusat pilihan",
+  "rotation.angleRange": "Masukkan sudut dari 0 hingga 360 derajat.",
+  "rotation.catchLimit": "Putaran ini melewati batas Catch atau membuat not bersamaan.",
+  "rotation.catchPattern": "Putaran Catch memerlukan kurva tanpa pengulangan, Stack, atau penyesuaian droplet.",
+  "stream.osuDescription": "Buat not terpisah di sepanjang slider dengan mempertahankan X dan Y."
 }

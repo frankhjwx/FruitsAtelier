@@ -1491,7 +1491,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Convert this slider to the canvas's slider type before editing it.",
+  "osu.readOnlySlider": "Aby edytować kształt, przekształć slider na typ tego płótna. Hitsoundy i NC nadal można edytować.",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",
@@ -1520,5 +1520,17 @@
   "faz.fileType": "Fruits Atelier Project",
   "faz.chooseProject": "Choose a local project containing all difficulties",
   "faz.locateProject": "Locate project…",
-  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty."
+  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty.",
+  "rotation.title": "Obrót",
+  "rotation.angle": "Podaj kąt obrotu:",
+  "rotation.direction": "Kierunek",
+  "rotation.origin": "Środek",
+  "rotation.clockwise": "Zgodnie z zegarem",
+  "rotation.anticlockwise": "Przeciwnie do zegara",
+  "rotation.playfield": "Środek pola gry",
+  "rotation.selection": "Środek zaznaczenia",
+  "rotation.angleRange": "Podaj kąt od 0 do 360 stopni.",
+  "rotation.catchLimit": "Ten obrót przekracza granice Catch lub tworzy jednoczesne nuty.",
+  "rotation.catchPattern": "Obrót Catch wymaga krzywej bez powtórzeń, Stack i korekt kropli.",
+  "stream.osuDescription": "Tworzy osobne nuty wzdłuż slidera z zachowaniem X i Y."
 }

@@ -1491,7 +1491,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Convert this slider to the canvas's slider type before editing it.",
+  "osu.readOnlySlider": "Convierte el slider al tipo de este lienzo para editar su forma. Los hitsounds y NC siguen siendo editables.",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",
@@ -1520,5 +1520,17 @@
   "faz.fileType": "Fruits Atelier Project",
   "faz.chooseProject": "Choose a local project containing all difficulties",
   "faz.locateProject": "Locate project…",
-  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty."
+  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty.",
+  "rotation.title": "Rotar",
+  "rotation.angle": "Introduce el ángulo de rotación:",
+  "rotation.direction": "Dirección",
+  "rotation.origin": "Centro",
+  "rotation.clockwise": "Horario",
+  "rotation.anticlockwise": "Antihorario",
+  "rotation.playfield": "Centro del campo",
+  "rotation.selection": "Centro de selección",
+  "rotation.angleRange": "Introduce un ángulo de 0 a 360 grados.",
+  "rotation.catchLimit": "La rotación supera los límites de Catch o crea notas simultáneas.",
+  "rotation.catchPattern": "La rotación de Catch requiere una curva sin repeticiones, Stack ni ajustes de gotas.",
+  "stream.osuDescription": "Crea notas individuales a lo largo del slider conservando X e Y."
 }

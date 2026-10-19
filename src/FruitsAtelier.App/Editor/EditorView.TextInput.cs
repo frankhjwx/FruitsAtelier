@@ -71,6 +71,7 @@ public sealed partial class EditorView
     private void PasteFieldTextCore(string text, string? expectedField = null)
     {
         if (expectedField is not null && textEditor.Field != expectedField) return;
+        if (RotationVisible) { RotationText(text); return; }
         if (NotesFocused) { InsertNotes(text); return; }
         if (RandomDockFocused) { RandomDockText(text); return; }
         if (PatternDockEditing && patternDockKind == 2 && bananaEditField >= 0) { BananaEditText(text); return; }

@@ -1491,7 +1491,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Convert this slider to the canvas's slider type before editing it.",
+  "osu.readOnlySlider": "Для изменения формы преобразуйте слайдер в тип этого холста. Хитсаунды и NC можно редактировать.",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",
@@ -1520,5 +1520,17 @@
   "faz.fileType": "Fruits Atelier Project",
   "faz.chooseProject": "Choose a local project containing all difficulties",
   "faz.locateProject": "Locate project…",
-  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty."
+  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty.",
+  "rotation.title": "Поворот",
+  "rotation.angle": "Введите угол поворота:",
+  "rotation.direction": "Направление",
+  "rotation.origin": "Центр",
+  "rotation.clockwise": "По часовой стрелке",
+  "rotation.anticlockwise": "Против часовой стрелки",
+  "rotation.playfield": "Центр игрового поля",
+  "rotation.selection": "Центр выделения",
+  "rotation.angleRange": "Введите угол от 0 до 360 градусов.",
+  "rotation.catchLimit": "Поворот выходит за пределы Catch или создаёт одновременные ноты.",
+  "rotation.catchPattern": "Для поворота Catch нужна кривая без повторов, Stack и корректировок капель.",
+  "stream.osuDescription": "Создать отдельные ноты вдоль слайдера, сохранив X и Y."
 }

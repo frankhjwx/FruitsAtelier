@@ -86,6 +86,14 @@ excludes native GPU rendering. `Formats.Tests --osu-model-check` verifies Mode=0
 import/Catch export, coordinates and project compatibility, both slider conversion
 directions, Legacy droplet effects, timing changes, failure atomicity and undo.
 
+`App.Tests --canvas-feedback-check` covers cross-canvas hitsounds/NC/sample banks,
+rotation shortcuts and dialog, Catch curve constraints and rollback, two-dimensional
+Stream conversion, placement movement connections and Timing range navigation.
+Native `--render-check --osu-canvas-render-check --canvas-feedback-render-check`
+captures the rotation and Stream dialogs, their results and inherited Timing Audio
+entry in both languages, two window sizes and three DPI settings under
+`artifacts/tests/osu-canvas-native/feedback`.
+
 `App.Tests --legacy-droplet-worker-check` verifies responsive submission, prepared
 export publication, failure rollback, save blocking, cancellation, undo/redo and
 rejection of stale content or history transactions.

@@ -16,7 +16,7 @@ public sealed partial class EditorView
     private readonly List<TimingEntry> timingEntries = [];
     private readonly HashSet<int> timingSelected = [];
     private readonly Stack<TimingEntry[]> timingUndo = [], timingRedo = [];
-    private int timingTab, timingFilter, timingScroll, timingAnchor, timingNextId, timingSnap = 4, timingSort;
+    private int timingTab, timingFilter, timingScroll, timingAnchor, timingCursor, timingNextId, timingSnap = 4, timingSort;
     private double timingShiftMs;
     private bool timingScale, timingResnap, timingLengths, timingBookmarks, timingMoveNotes, timingMoveMarkers, metronomeEnabled = true;
     private string timingField = "", timingText = "", timingError = "", timingCommand = "";
@@ -74,7 +74,8 @@ public sealed partial class EditorView
         foreach (var point in Document.TimingPoints) timingEntries.Add(new(timingNextId++, TimingEditing.Copy(point), TimingEditing.Copy(point)));
         var active = TimingEditing.Current(Document, playhead);
         int index = active is null ? -1 : Document.TimingPoints.IndexOf(active);
-        if (index >= 0) { timingSelected.Add(index); timingAnchor = index; }
+        timingCursor = timingAnchor = index;
+        if (index >= 0) timingSelected.Add(index);
         timingScroll = Math.Max(0, Array.FindIndex(VisibleTimingEntries(), e => e.Id == index) - 3);
         timingSnap = divisor; timingScale = timingResnap = timingLengths = timingBookmarks = false;
         TimingInputSession++; hits.Clear(); fields.Clear();
@@ -152,19 +153,21 @@ public sealed partial class EditorView
             timingAnchor = id;
         }
         TimingInputSession++;
+        timingCursor = id;
     }
 
     private void AddTimingPoint(bool inherited)
     {
         if (!TimingSetupVisible) OpenTimingSetup();
         if (!TimingSetupVisible || !CommitTimingField()) return;
+        if (inherited) timingTab = 1;
         ChangeTimingDraft(() =>
         {
             var map = Document.DeepClone(); map.TimingPoints.Clear(); map.TimingPoints.AddRange(timingEntries.Select(e => e.Point));
             var point = TimingEditing.Create(map, playhead, inherited);
             point.SourceOrder = timingEntries.Select(e => e.Point.SourceOrder).Where(v => v < int.MaxValue).DefaultIfEmpty(-1).Max() + 1;
             int id = timingNextId++;
-            timingEntries.Add(new(id, null, point)); timingSelected.Clear(); timingSelected.Add(id); timingAnchor = id;
+            timingEntries.Add(new(id, null, point)); timingSelected.Clear(); timingSelected.Add(id); timingAnchor = timingCursor = id;
             timingFilter = 0;
             timingScroll = Math.Max(0, Array.FindIndex(VisibleTimingEntries(), e => e.Id == id) - 3);
         });
@@ -311,7 +314,7 @@ public sealed partial class EditorView
                 foreach (var point in points)
                 {
                     point.SourceOrder = order++; int id = timingNextId++;
-                    timingEntries.Add(new(id, null, point)); timingSelected.Add(id); timingAnchor = id;
+                    timingEntries.Add(new(id, null, point)); timingSelected.Add(id); timingAnchor = timingCursor = id;
                 }
                 timingFilter = 0;
             });
@@ -354,7 +357,7 @@ public sealed partial class EditorView
             else if (key is 38 or 40 or 33 or 34 or 36 or 35)
             {
                 var entries = VisibleTimingEntries(); if (entries.Length == 0) return true;
-                int index = Array.FindIndex(entries, e => e.Id == timingAnchor);
+                int index = Array.FindIndex(entries, e => e.Id == timingCursor);
                 index = key switch { 36 => 0, 35 => entries.Length - 1, _ => Math.Clamp(index + (key is 38 or 33 ? -1 : 1) * (key is 33 or 34 ? 8 : 1), 0, entries.Length - 1) };
                 SelectTimingEntry(entries[index].Id, ctrl, shift); timingScroll = Math.Max(0, index - 3);
             }

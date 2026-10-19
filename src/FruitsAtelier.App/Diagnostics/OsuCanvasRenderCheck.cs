@@ -14,6 +14,11 @@ internal static class OsuCanvasRenderCheck
         string folder = Path.GetFullPath("artifacts/tests/osu-canvas-native");
         Directory.CreateDirectory(folder);
         string[] arguments = Environment.GetCommandLineArgs();
+        if (arguments.Contains("--canvas-feedback-render-check"))
+        {
+            CanvasFeedbackRenderCheck.Run(canvas, folder);
+            return;
+        }
         if (arguments.Contains("--independent-sv-render-check"))
         {
             IndependentSliderSvRenderCheck.Run(canvas, folder);

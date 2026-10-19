@@ -1491,7 +1491,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Convert this slider to the canvas's slider type before editing it.",
+  "osu.readOnlySlider": "Converteer de slider naar het type van dit canvas om de vorm te bewerken. Hitsounds en NC blijven bewerkbaar.",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",
@@ -1520,5 +1520,17 @@
   "faz.fileType": "Fruits Atelier Project",
   "faz.chooseProject": "Choose a local project containing all difficulties",
   "faz.locateProject": "Locate project…",
-  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty."
+  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty.",
+  "rotation.title": "Draaien",
+  "rotation.angle": "Voer een draaihoek in:",
+  "rotation.direction": "Richting",
+  "rotation.origin": "Middelpunt",
+  "rotation.clockwise": "Met de klok mee",
+  "rotation.anticlockwise": "Tegen de klok in",
+  "rotation.playfield": "Midden speelveld",
+  "rotation.selection": "Midden selectie",
+  "rotation.angleRange": "Voer een hoek van 0 tot 360 graden in.",
+  "rotation.catchLimit": "Deze rotatie overschrijdt de Catch-grenzen of maakt gelijktijdige noten.",
+  "rotation.catchPattern": "Catch-rotatie vereist een curve zonder herhalingen, Stack of druppelaanpassingen.",
+  "stream.osuDescription": "Maak afzonderlijke noten langs de slider met behoud van X en Y."
 }

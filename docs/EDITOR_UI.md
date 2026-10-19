@@ -48,11 +48,30 @@ caches when the supported resource set changes.
 Spinners use the owning skin's old or modern composition and native texture
 dimensions, with the fixed centre's tint following the spinner's elapsed time.
 
-Catch edits FSliders; osu! edits Legacy Sliders. The other representation remains
-visible and read-only. Use the explicit conversion action before editing it.
+Catch edits FSlider shapes; osu! edits Legacy Slider shapes. The other
+representation remains visible and selectable for hitsound, sample-bank and NC
+changes. Shape edits require the explicit conversion action.
 Conversion is undoable, validates playback and preserves the original object on
 failure. Global droplet settings can rebuild Legacy paths to match their exported
 fruit targets; this can change their two-dimensional shape.
+
+With Movement Analysis enabled, osu! placement connects the pending note to its
+previous and next objects. Leaving placement restores the committed connections.
+Ctrl+Shift+F in the osu! canvas opens a subdivision picker and converts selected
+sliders into individual notes along their two-dimensional paths, including reverse
+spans. Catch retains its Stream/Stack dock. Both conversions are undoable.
+
+Ctrl+Shift+R opens **Rotate by**, with an angle slider and numeric entry,
+clockwise/anti-clockwise direction, and playfield/selection centre origins.
+Ctrl+comma and Ctrl+period rotate the selection by −90°/+90° in osu! and
+−5°/+5° in Catch, around its centre. Catch angles use the current time-to-X
+display ratio; its playfield origin is the centre of the visible time range.
+Catch rotates anchors, handles and explicit controls together. Circular arcs
+whose stored aspect ratio differs from the rotation plane use the existing bounded
+Bezier fitting before rotation. The operation rejects reversed time, coincident
+exported note times and out-of-range endpoints atomically. Catch rotation requires
+single-span curves without Stack or droplet adjustments. Native osu! rotation uses
+stable integer coordinates while retaining slider length, timing and repeat count.
 
 In osu! view the Fruit and Banana tools place circles and spinners. The Slider
 tool places Legacy controls and preserves their original two-dimensional path
@@ -437,7 +456,8 @@ samples show only the bank abbreviation in the list. Imported velocity and
 unrelated effect bits are preserved, while green-point BPM cells remain empty. Kiai updates the editor's existing Kiai indication and exports.
 
 Ctrl+P adds a red point at the playhead; Ctrl+Shift+P adds a green point, opening
-the draft window. New red and green points truncate the playhead to integer
+the draft window on its Audio tab for green points. Shift+arrows extends or shrinks
+the timing-row selection from its moving end. New red and green points truncate the playhead to integer
 milliseconds. Pasted or edited green offsets also truncate fractional parts.
 Ctrl+I deletes the current section outside the window, or the
 selected rows inside it. Ordinary deletion protects the first red point. The
@@ -797,7 +817,9 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Up / Down | Seek next / previous timing point |
 | Ctrl+Up / Down | Increase / decrease playback speed by 25 percentage points, within 10%–150% |
 | Ctrl+Shift+Up / Down | Increase / decrease playback speed by 5 percentage points |
-| Ctrl+Shift+F | Open and focus the Stream/Stack dock |
+| Ctrl+Shift+F | Catch: Stream/Stack dock; osu!: convert slider to notes with X/Y |
+| Ctrl+Shift+R | Open Rotate by |
+| Ctrl+comma / Ctrl+period | Rotate selection −90°/+90° in osu!, −5°/+5° in Catch |
 | Ctrl+= / Ctrl+− | Increase / decrease UI scale |
 | Ctrl+J | Extend the selected FSlider to the pointer |
 | Esc | Cancel an active drag, box selection, draft, or text input |

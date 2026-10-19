@@ -34,6 +34,10 @@ internal static class TimingEditorTests
                 ui.Key('Z', ctrl: true);
                 ui.View.UpdateTransport(1000.9, 10000, true, false, false, null, null);
                 ui.Key('P', ctrl: true, shift: true); Check(ui.View.TimingSetupVisible, "Green shortcut opens setup");
+                Check(ui.View.TimingFields.Any(f => f.Key == "volume"), "Green shortcut opens Audio");
+                var timingTab = ui.Canvas.Texts.Single(t => t.Value == L.Get("timing.timing")
+                    && t.Y >= ui.View.TimingSetupBounds.Y + 52 && t.Y <= ui.View.TimingSetupBounds.Y + 82);
+                ui.Click(timingTab.X + 4, timingTab.Y + 5);
                 Check(ui.View.TimingFields.All(f => f.Key is "offset" or "shift"), "Green timing page exposes offset and batch shift");
                 Check(ui.View.TimingFields.Single(f => f.Key == "offset").Value == "1000", "Green creation truncates fractional milliseconds");
                 ui.ClickText(L.Get("timing.audio")); Set(ui, "volume", "35");

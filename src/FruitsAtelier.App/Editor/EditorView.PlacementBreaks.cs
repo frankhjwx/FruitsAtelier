@@ -29,7 +29,7 @@ public sealed partial class EditorView
         }
         var current = new Dictionary<Guid, (double Start, double End)>(placementBreakIntervals);
         bool removedParents = false;
-        if (tool == Tool.Fruit)
+        if (tool == Tool.Fruit && !IsOsuCanvas)
         {
             var removed = current.Where(pair => Math.Abs(pair.Value.Start - point.TimeMs) <= 2).Select(pair => pair.Key).ToHashSet();
             foreach (var id in removed) current.Remove(id);

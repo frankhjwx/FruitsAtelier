@@ -5,6 +5,7 @@ namespace FruitsAtelier.Core;
 
 public static class SliderFruitStream
 {
+    public const int MaximumObjects = LegacyCatchRules.MaximumNestedObjects;
     public static IReadOnlyList<ConvertedCatchObject> Convert(MapDocument document, CurveTrack track)
         => Convert(document, track, new TimingMap.Lookup(document));
 

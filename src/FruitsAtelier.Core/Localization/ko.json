@@ -1491,7 +1491,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Convert this slider to the canvas's slider type before editing it.",
+  "osu.readOnlySlider": "모양을 편집하려면 이 캔버스의 슬라이더 형식으로 변환하세요. 히트사운드와 NC는 편집할 수 있습니다.",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",
@@ -1520,5 +1520,17 @@
   "faz.fileType": "Fruits Atelier Project",
   "faz.chooseProject": "Choose a local project containing all difficulties",
   "faz.locateProject": "Locate project…",
-  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty."
+  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty.",
+  "rotation.title": "회전",
+  "rotation.angle": "회전할 각도를 입력하세요:",
+  "rotation.direction": "방향",
+  "rotation.origin": "중심",
+  "rotation.clockwise": "시계 방향",
+  "rotation.anticlockwise": "반시계 방향",
+  "rotation.playfield": "플레이필드 중심",
+  "rotation.selection": "선택 영역 중심",
+  "rotation.angleRange": "0~360도 사이의 각도를 입력하세요.",
+  "rotation.catchLimit": "Catch 범위를 벗어나거나 같은 시각의 노트가 생기는 회전입니다.",
+  "rotation.catchPattern": "Catch 회전은 Stack이나 드롭렛 조정이 없는 단일 구간 곡선에 적용됩니다.",
+  "stream.osuDescription": "슬라이더를 따라 X/Y 좌표를 유지하는 개별 노트를 만듭니다."
 }

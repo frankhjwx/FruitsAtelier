@@ -378,7 +378,7 @@
   "core.reader.incompleteCurve": "不能保存未完成或未知类型的曲线。",
   "core.reader.lineError": "谱面第 {0} 行无效：{1}",
   "core.reader.mode": "仅支持 osu!standard（Mode: 0）和 Catch（Mode: 2）谱面。",
-  "osu.readOnlySlider": "请先将此滑条转换为当前画布的滑条类型，再进行编辑。",
+  "osu.readOnlySlider": "修改形状前，请先将此滑条转换为当前画布的滑条类型。音效和 NC 仍可编辑。",
   "osu.canvasActive": "osu! 画布 — Legacy Slider 编辑",
   "osu.catchCanvasActive": "Catch 画布 — FSlider 编辑",
   "osu.spinnerEnd": "请选择转盘的结束时间。",
@@ -1520,5 +1520,17 @@
   "faz.fileType": "Fruits Atelier Project",
   "faz.chooseProject": "选择包含全部难度的本地项目",
   "faz.locateProject": "手动选择项目…",
-  "faz.incompleteProject": "所选 Songs 文件夹必须包含 FA 项目的全部难度，且每个难度须唯一对应。"
+  "faz.incompleteProject": "所选 Songs 文件夹必须包含 FA 项目的全部难度，且每个难度须唯一对应。",
+  "rotation.title": "旋转",
+  "rotation.angle": "请输入旋转角度：",
+  "rotation.direction": "方向",
+  "rotation.origin": "旋转中心",
+  "rotation.clockwise": "顺时针",
+  "rotation.anticlockwise": "逆时针",
+  "rotation.playfield": "游戏区域中心",
+  "rotation.selection": "选区中心",
+  "rotation.angleRange": "请输入 0 到 360 度之间的角度。",
+  "rotation.catchLimit": "此次旋转超出 Catch 可实现的几何范围，或会产生同时间的 note。",
+  "rotation.catchPattern": "Catch 旋转需要单程曲线，且不含 Stack 或水滴调整。",
+  "stream.osuDescription": "沿滑条生成独立 note，保留 X 和 Y 坐标。"
 }

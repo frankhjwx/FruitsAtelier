@@ -1491,7 +1491,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Convert this slider to the canvas's slider type before editing it.",
+  "osu.readOnlySlider": "แปลงสไลเดอร์เป็นชนิดของแคนวาสนี้ก่อนแก้ไขรูปร่าง โดยยังแก้ไขเสียงและ NC ได้",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",
@@ -1520,5 +1520,17 @@
   "faz.fileType": "Fruits Atelier Project",
   "faz.chooseProject": "Choose a local project containing all difficulties",
   "faz.locateProject": "Locate project…",
-  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty."
+  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty.",
+  "rotation.title": "หมุน",
+  "rotation.angle": "ป้อนมุมที่ต้องการหมุน:",
+  "rotation.direction": "ทิศทาง",
+  "rotation.origin": "จุดศูนย์กลาง",
+  "rotation.clockwise": "ตามเข็มนาฬิกา",
+  "rotation.anticlockwise": "ทวนเข็มนาฬิกา",
+  "rotation.playfield": "ศูนย์กลางสนามเล่น",
+  "rotation.selection": "ศูนย์กลางส่วนที่เลือก",
+  "rotation.angleRange": "ป้อนมุมตั้งแต่ 0 ถึง 360 องศา",
+  "rotation.catchLimit": "การหมุนนี้เกินขอบเขตของ Catch หรือทำให้โน้ตมีเวลาเดียวกัน",
+  "rotation.catchPattern": "การหมุนใน Catch ต้องใช้เส้นโค้งช่วงเดียวที่ไม่มี Stack หรือการปรับหยด",
+  "stream.osuDescription": "สร้างโน้ตแยกตามแนวสไลเดอร์โดยเก็บพิกัด X และ Y"
 }

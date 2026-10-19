@@ -1491,7 +1491,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Convert this slider to the canvas's slider type before editing it.",
+  "osu.readOnlySlider": "I-convert ang slider sa uri ng canvas na ito para i-edit ang hugis. Maaari pa ring i-edit ang hitsound at NC.",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",
@@ -1520,5 +1520,17 @@
   "faz.fileType": "Fruits Atelier Project",
   "faz.chooseProject": "Choose a local project containing all difficulties",
   "faz.locateProject": "Locate project…",
-  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty."
+  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty.",
+  "rotation.title": "Paikutin",
+  "rotation.angle": "Ilagay ang anggulo ng pag-ikot:",
+  "rotation.direction": "Direksiyon",
+  "rotation.origin": "Sentro",
+  "rotation.clockwise": "Pakanan",
+  "rotation.anticlockwise": "Pakaliwa",
+  "rotation.playfield": "Sentro ng playfield",
+  "rotation.selection": "Sentro ng pagpili",
+  "rotation.angleRange": "Maglagay ng anggulong 0 hanggang 360 digri.",
+  "rotation.catchLimit": "Lalampas sa hangganan ng Catch o lilikha ng magkakasabay na note ang pag-ikot.",
+  "rotation.catchPattern": "Kailangan ng Catch rotation ang kurbang walang ulit, Stack o droplet adjustment.",
+  "stream.osuDescription": "Gumawa ng magkakahiwalay na note sa slider habang pinapanatili ang X at Y."
 }

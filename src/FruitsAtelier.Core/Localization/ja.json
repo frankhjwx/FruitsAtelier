@@ -1491,7 +1491,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Convert this slider to the canvas's slider type before editing it.",
+  "osu.readOnlySlider": "形状を編集するには、このキャンバスのスライダー形式に変換してください。ヒットサウンドと NC は編集できます。",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",
@@ -1520,5 +1520,17 @@
   "faz.fileType": "Fruits Atelier Project",
   "faz.chooseProject": "Choose a local project containing all difficulties",
   "faz.locateProject": "Locate project…",
-  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty."
+  "faz.incompleteProject": "The Songs folder must contain a unique match for every FA project difficulty.",
+  "rotation.title": "回転",
+  "rotation.angle": "回転する角度を入力：",
+  "rotation.direction": "方向",
+  "rotation.origin": "中心",
+  "rotation.clockwise": "時計回り",
+  "rotation.anticlockwise": "反時計回り",
+  "rotation.playfield": "プレイフィールドの中心",
+  "rotation.selection": "選択範囲の中心",
+  "rotation.angleRange": "0～360 度の角度を入力してください。",
+  "rotation.catchLimit": "Catch の範囲を超えるか、同時刻のノーツが発生するため回転できません。",
+  "rotation.catchPattern": "Catch の回転には Stack やドロップレット調整のない単一スパンの曲線が必要です。",
+  "stream.osuDescription": "スライダーに沿って X/Y 座標を保持した個別のノーツを生成します。"
 }

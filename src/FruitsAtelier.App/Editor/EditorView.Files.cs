@@ -47,6 +47,7 @@ public sealed partial class EditorView
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
         TimeJumpVisible = false;
+        RotationVisible = rotationDragging = false;
         CloseBananaEdit(); bananaSegments.Clear();
         StreamDialogVisible = false;
         MergeDialogVisible = false;

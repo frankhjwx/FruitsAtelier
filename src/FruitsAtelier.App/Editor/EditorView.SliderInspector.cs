@@ -48,6 +48,7 @@ public sealed partial class EditorView
     }
     private void ShowPatternDock()
     {
+        if (IsOsuCanvas) { OpenOsuStream(); return; }
         if (!ClipboardInteractionReady || notesLocked) return;
         AddDockPanel(DockPanel.PatternEditor, false);
         var group = PanelGroup(DockPanel.PatternEditor); group.Active = DockPanel.PatternEditor; group.Collapsed = false;
