@@ -20,12 +20,12 @@ normal save/discard/cancel prompt. Processing runs in a background worker.
 - **Independent project** installs native data and resources in the workspace.
   No Songs files are written or linked. With Songs configured, the library shows
   the project as **Not in osu! Songs**.
-- **Link existing maps** uses existing `.osu` files in the configured Songs root.
-  Step through difficulties and review recommendations, locate a file manually,
-  or explicitly choose an independent copy for an unmatched difficulty. Only
-  independent difficulties install packaged resources. Linked difficulties use
-  local audio and background references; local samples and other presentation
-  resources remain authoritative. Packaged resources never overwrite Songs assets.
+- **Link existing maps** shows local projects as library-style cards with artwork,
+  metadata and difficulty counts. Choose one Songs folder containing a unique match
+  for every archived difficulty; additional local difficulties are allowed. Incomplete
+  folders and matches spread across folders cannot be linked. Locate a project
+  manually by choosing any `.osu` in its folder; the same completeness check applies.
+  Linked projects use local resources and install no packaged resources.
 - **Install in Songs**, available for complete archives, creates a new uniquely
   named Songs folder and a linked workspace project. To reuse existing maps,
   choose **Link existing maps** instead. Configure Songs in Settings first if absent.
@@ -35,7 +35,7 @@ positive BeatmapSetID, then exact, case-sensitive `Artist` and `Title` fields.
 The artist/title fallback requires both nonempty fields and does not use substring,
 romanisation or fuzzy search. Within a set, BeatmapID or the exact difficulty name
 identifies a difficulty. A source SHA-256 can disambiguate duplicate versions;
-otherwise multiple matches require a choice. Files are rescanned before discovery
+otherwise ambiguous folders are excluded. Files are rescanned before discovery
 and reread before association. IDs establish identity, not content equality.
 
 Associating existing maps preserves native editing data and does not write `.osu`.
@@ -48,11 +48,10 @@ Importing a separate copy gives its project and difficulties new local identitie
 
 ## Desktop integration
 
-Windows portable installations expose File → **Associate .faz files with
-FruitsAtelier**. This registers the current executable and document icon for the
-current user; administrator access is unnecessary. Later launches refresh an
-existing FA association after moving or updating the application. Windows may
-retain a user-selected default application. Double-click opening is forwarded to
+On startup, Windows checks the current user's `.faz` registration and automatically
+registers the current executable and document icon when missing or outdated.
+Administrator access is unnecessary. An unchanged registration is left intact.
+Windows may retain a user-selected default application. Double-click opening is forwarded to
 an already-running FA instance through a pipe restricted to the current user.
 
 macOS bundles declare the document type, `.faz` extension and independent document

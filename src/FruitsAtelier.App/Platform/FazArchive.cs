@@ -15,6 +15,8 @@ public sealed class FazManifest
     public Dictionary<Guid, string> ResourceRoots { get; set; } = [];
 }
 
+public sealed record FazProjectCandidate(LibraryMap Map, string[] Targets, int DifficultyCount);
+
 public sealed class FazPackage : IDisposable
 {
     public required string Directory { get; init; }
@@ -24,6 +26,7 @@ public sealed class FazPackage : IDisposable
     public required IReadOnlyList<LibraryMap>[] Candidates { get; init; }
     public Dictionary<string, string> CandidateHashes { get; init; } = [];
     public Dictionary<string, string> Owners { get; init; } = [];
+    public List<FazProjectCandidate> Projects { get; init; } = [];
     public string? ExistingProject { get; init; }
     public void Dispose() => FazArchive.RemoveDirectory(Directory, Path.GetDirectoryName(Directory)!);
 }
@@ -135,10 +138,13 @@ public static class FazArchive
             var candidates = project.Difficulties.Select(d => db.AssociationCandidates(d.Document)).ToArray();
             var hashes = candidates.SelectMany(c => c).Select(c => c.Path).Distinct(WorkspaceSynchronization.Paths)
                 .ToDictionary(p => p, WorkspaceProject.Hash, WorkspaceSynchronization.Paths);
-            return new FazPackage { Directory = staging, Fingerprint = fingerprint, Manifest = manifest, Project = project,
+            var package = new FazPackage { Directory = staging, Fingerprint = fingerprint, Manifest = manifest, Project = project,
                 Candidates = candidates, CandidateHashes = hashes, ExistingProject = existing,
                 Owners = WorkspaceAssociations.Claims(settings.Workspace).GroupBy(c => c.Target, WorkspaceSynchronization.Paths)
                     .ToDictionary(g => g.Key, g => g.First().Project, WorkspaceSynchronization.Paths) };
+            foreach (string folder in candidates.SelectMany(c => c).Select(c => c.Directory).Distinct(WorkspaceSynchronization.Paths))
+                if (MatchProject(package, settings, folder) is { } match) package.Projects.Add(match);
+            return package;
         }
         catch { RemoveDirectory(staging, Path.GetDirectoryName(staging)!); throw; }
     }
@@ -160,9 +166,38 @@ public static class FazArchive
     {
         lock (ImportGate) return ImportLocked(package, settings, targets, installSongs, compensate);
     }
+
+    public static FazProjectCandidate? MatchProject(FazPackage package, LibrarySettings settings, string folder)
+    {
+        folder = Path.GetFullPath(folder);
+        if (string.IsNullOrWhiteSpace(settings.Songs) || !WorkspaceProject.Within(settings.Songs, folder) || !Directory.Exists(folder)) return null;
+        WorkspaceProject.RejectLinks(folder);
+        var maps = Directory.EnumerateFiles(folder, "*.osu").Select(LibraryDatabase.ReadMetadata).OfType<LibraryMap>().ToArray();
+        var hashes = maps.ToDictionary(m => m.Path, m => WorkspaceProject.Hash(m.Path), WorkspaceSynchronization.Paths);
+        var targets = package.Project.Difficulties.Select(d =>
+        {
+            string Get(string key) => OsuBeatmapReader.Setting(d.Document, "Metadata", key) ?? "";
+            long.TryParse(Get("BeatmapID"), out long id);
+            long.TryParse(Get("BeatmapSetID"), out long setId);
+            var eligible = maps.Where(m => id > 0 && m.BeatmapId == id || setId > 0 && m.BeatmapSetId == setId
+                || Get("Artist").Length > 0 && Get("Title").Length > 0 && m.Artist == Get("Artist") && m.Title == Get("Title")).ToArray();
+            return Recommend(d, eligible, package.Manifest.SourceHashes.GetValueOrDefault(d.Id), hashes);
+        }).ToArray();
+        if (targets.Any(t => t is null) || targets.Distinct(WorkspaceSynchronization.Paths).Count() != targets.Length) return null;
+        return new(maps.First(m => WorkspaceSynchronization.Paths.Equals(m.Path, targets[0])), targets.Select(t => t!).ToArray(), maps.Length);
+    }
+
     private static WorkspaceSession ImportLocked(FazPackage package, LibrarySettings settings, IReadOnlyList<string?> targets, bool installSongs, bool compensate)
     {
         if (targets.Count != package.Project.Difficulties.Count || installSongs && !package.Manifest.Complete) throw Invalid();
+        if (targets.Any(t => t is not null))
+        {
+            if (installSongs || targets.Any(t => t is null)) throw new IOException(L.Get("faz.incompleteProject"));
+            string folder = Path.GetDirectoryName(Path.GetFullPath(targets[0]!))!;
+            var match = MatchProject(package, settings, folder);
+            if (match is null || !targets.Select(t => Path.GetFullPath(t!)).SequenceEqual(match.Targets, WorkspaceSynchronization.Paths))
+                throw new IOException(L.Get("faz.incompleteProject"));
+        }
         WorkspaceProject.ValidateRoots(settings.Workspace, settings.Songs, installSongs);
         if (installSongs && string.IsNullOrWhiteSpace(settings.Songs)) throw new IOException(L.Get("library.bindForExport"));
         var project = ProjectSerializer.ReadProject(ProjectSerializer.Serialize(package.Project));

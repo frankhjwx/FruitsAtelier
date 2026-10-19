@@ -13,23 +13,30 @@ internal static class FazFileAssociation
     private static readonly string Pipe = "FruitsAtelier-" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Environment.UserDomainName + "\\" + Environment.UserName)))[..16];
     internal static readonly ConcurrentQueue<string> Pending = new();
 
-    internal static void Register()
+    internal static void EnsureRegistered()
     {
-        string executable = Environment.ProcessPath!;
-        using var extension = Registry.CurrentUser.CreateSubKey(@"Software\Classes\.faz");
-        extension.SetValue("", ProgId);
-        using var type = Registry.CurrentUser.CreateSubKey(@"Software\Classes\" + ProgId);
-        type.SetValue("", "Fruits Atelier Project");
-        using var icon = type.CreateSubKey("DefaultIcon");
-        icon.SetValue("", "\"" + Path.Combine(AppContext.BaseDirectory, "assets", "branding", "faz-file.ico") + "\"");
-        using var command = type.CreateSubKey(@"shell\open\command");
-        command.SetValue("", "\"" + executable + "\" \"%1\"");
-        SHChangeNotify(0x08000000, 0, 0, 0);
+        using var classes = Registry.CurrentUser.CreateSubKey(@"Software\Classes");
+        if (EnsureRegistered(classes, Environment.ProcessPath!, Path.Combine(AppContext.BaseDirectory, "assets", "branding", "faz-file.ico")))
+            SHChangeNotify(0x08000000, 0, 0, 0);
     }
-    internal static void RefreshRegistered()
+
+    internal static bool EnsureRegistered(RegistryKey classes, string executable, string iconPath)
     {
-        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Classes\.faz");
-        if (key?.GetValue("") as string == ProgId) Register();
+        bool changed = false;
+        Ensure(".faz", ProgId);
+        Ensure(ProgId, "Fruits Atelier Project");
+        Ensure(ProgId + @"\DefaultIcon", "\"" + iconPath + "\"");
+        Ensure(ProgId + @"\shell\open\command", "\"" + executable + "\" \"%1\"");
+        return changed;
+
+        void Ensure(string path, string value)
+        {
+            using (var existing = classes.OpenSubKey(path))
+                if (existing?.GetValue("") as string == value) return;
+            using var key = classes.CreateSubKey(path);
+            key.SetValue("", value);
+            changed = true;
+        }
     }
     internal static bool Forward(string? path, string? channel = null)
     {

@@ -10,14 +10,13 @@ public sealed partial class EditorView
     public Action<bool>? RequestFazExport { get; set; }
     public Action<LibraryMap, bool>? RequestLibraryFazExport { get; set; }
     public Action<string>? RequestFazOpen { get; set; }
-    public Action? RequestRegisterFaz { get; set; }
     private FazPackage? fazPackage;
     private Task? fazTask;
     private Action? fazCompletion;
     private Action? fazOpened;
     private string?[] fazTargets = [];
-    private bool[] fazIndependent = [];
-    private int fazIndex, fazMode;
+    private int fazPage, fazMode;
+    private FazProjectCandidate? fazSelected;
     private bool FazVisible => fazPackage is not null || fazTask is not null;
 
     public void BeginFazOpen(string path, Action opened)
@@ -30,11 +29,10 @@ public sealed partial class EditorView
         StartFazTask(task, () =>
         {
             fazPackage = task.GetAwaiter().GetResult();
-            fazTargets = fazPackage.Project.Difficulties.Select((d, i) => FazArchive.Recommend(d, fazPackage.Candidates[i], fazPackage.Manifest.SourceHashes.GetValueOrDefault(d.Id), fazPackage.CandidateHashes)).ToArray();
-            fazIndependent = new bool[fazTargets.Length];
-            fazIndex = 0;
-            fazMode = fazPackage.Manifest.Complete && Directory.Exists(settings.Songs)
-                ? fazTargets.All(p => p is not null) ? 1 : 2 : 0;
+            fazSelected = fazPackage.Projects.Count == 1 ? fazPackage.Projects[0] : null;
+            fazTargets = fazSelected?.Targets.Cast<string?>().ToArray() ?? new string?[fazPackage.Project.Difficulties.Count];
+            fazPage = 0;
+            fazMode = fazPackage.Projects.Count > 0 ? 1 : fazPackage.Manifest.Complete && Directory.Exists(settings.Songs) ? 2 : 0;
         });
     }
 
@@ -92,36 +90,54 @@ public sealed partial class EditorView
         Button(c, new(x + 16, y + 88, bw, 34), L.Get("faz.independent"), () => fazMode = 0, fazMode == 0);
         Button(c, new(x + 24 + bw, y + 88, bw, 34), L.Get("faz.link"), () => fazMode = 1, fazMode == 1, Directory.Exists(LibrarySettings.Songs));
         Button(c, new(x + 32 + bw * 2, y + 88, bw, 34), L.Get("faz.installSongs"), () => fazMode = 2, fazMode == 2, package.Manifest.Complete && Directory.Exists(LibrarySettings.Songs));
-        c.Text(L.Get(fazMode == 0 ? "faz.independentHelp" : fazMode == 1 ? "faz.linkHelp" : "faz.installHelp"), x + 20, y + 134, 13, Muted, w - 40);
-        c.Text(LibrarySettings.Workspace, x + 20, y + 162, 12, Muted, w - 40);
-        c.Text(string.IsNullOrWhiteSpace(LibrarySettings.Songs) ? L.Get("faz.configureSongs") : LibrarySettings.Songs, x + 20, y + 184, 12, Muted, w - 40);
         if (fazMode == 1)
         {
-            var diff = package.Project.Difficulties[fazIndex];
-            c.Text(L.Get("faz.difficulty", fazIndex + 1, fazTargets.Length, diff.Name), x + 20, y + 222, 16, Foreground, w - 40);
-            c.Text(fazTargets[fazIndex] ?? L.Get(fazIndependent[fazIndex] ? "faz.independent" : "faz.noMatch"), x + 20, y + 252, 12, Foreground, w - 40);
-            Button(c, new(x + 20, y + 285, 90, 32), "←", () => fazIndex--, enabled: fazIndex > 0);
-            Button(c, new(x + 120, y + 285, 90, 32), "→", () => fazIndex++, enabled: fazIndex + 1 < fazTargets.Length);
-            Button(c, new(x + 220, y + 285, w - 240, 32), L.Get("faz.nextCandidate", package.Candidates[fazIndex].Count), () =>
+            c.Text(L.Get("faz.chooseProject"), x + 20, y + 134, 13, Muted, w - 40);
+            if (package.Projects.Count == 0)
+                c.Text(L.Get("faz.noMatch"), x + 20, y + 190, 14, Muted, w - 40);
+            for (int i = fazPage * 2; i < Math.Min(package.Projects.Count, fazPage * 2 + 2); i++)
             {
-                var candidates = package.Candidates[fazIndex];
-                int i = candidates.ToList().FindIndex(m => m.Path == fazTargets[fazIndex]);
-                fazTargets[fazIndex] = candidates[(i + 1) % candidates.Count].Path; fazIndependent[fazIndex] = false;
-            }, enabled: package.Candidates[fazIndex].Count > 0);
-            Button(c, new(x + 20, y + 330, (w - 50) / 2, 34), L.Get("sync.chooseFile"), () =>
-            {
-                int i = fazIndex;
-                RequestSyncFile?.Invoke(path => { if (path is not null && fazPackage == package) { fazTargets[i] = path; fazIndependent[i] = false; } });
-            });
-            Button(c, new(x + 30 + (w - 50) / 2, y + 330, (w - 50) / 2, 34), L.Get("faz.independent"), () => { fazTargets[fazIndex] = null; fazIndependent[fazIndex] = true; });
-            c.Text(L.Get("faz.reviewHelp"), x + 20, y + 379, 12, Muted, w - 40);
+                var candidate = package.Projects[i]; var map = candidate.Map;
+                var rect = new Rect(x + 20, y + 164 + (i % 2) * 86, w - 40, 78);
+                bool selected = ReferenceEquals(fazSelected, candidate);
+                c.Fill(rect, selected ? 0x304445u : Surface, 6);
+                if (selected) c.Stroke(rect, Accent, 2, 6);
+                c.Clip(rect);
+                if (map.Background.Length > 0) c.Thumbnail(map.Background, new(rect.X + 10, rect.Y + 9, 76, 60));
+                float tx = rect.X + 100, tw = rect.Width - 112;
+                c.Text(DisplayMetadata(map.Title, map.TitleUnicode), tx, rect.Y + 8, 16, Foreground, tw, true);
+                c.Text(L.Get("library.artistMapper", DisplayMetadata(map.Artist, map.ArtistUnicode), map.Creator), tx, rect.Y + 31, 12, Muted, tw);
+                c.Text(L.Get("library.diffCount", candidate.DifficultyCount) + " · " + Path.GetFileName(map.Directory), tx, rect.Y + 53, 11, Accent, tw);
+                c.Unclip();
+                hits.Add(new(rect, () => { fazSelected = candidate; fazTargets = candidate.Targets.Cast<string?>().ToArray(); }, true));
+            }
+            Button(c, new(x + 20, y + 344, w - 230, 32), L.Get("faz.locateProject"), () =>
+                RequestSyncFile?.Invoke(path =>
+                {
+                    if (path is null || fazPackage != package) return;
+                    var settings = new LibrarySettings { Workspace = LibrarySettings.Workspace, Songs = LibrarySettings.Songs };
+                    var task = Task.Run(() => FazArchive.MatchProject(package, settings, Path.GetDirectoryName(path)!));
+                    StartFazTask(task, () =>
+                    {
+                        var match = task.GetAwaiter().GetResult();
+                        if (match is null) { ShowError(L.Get("faz.incompleteProject")); return; }
+                        var candidate = package.Projects.FirstOrDefault(p => WorkspaceSynchronization.Paths.Equals(p.Map.Directory, match.Map.Directory));
+                        if (candidate is null) { candidate = match; package.Projects.Add(candidate); }
+                        fazSelected = candidate; fazTargets = candidate.Targets.Cast<string?>().ToArray();
+                        fazPage = package.Projects.IndexOf(candidate) / 2;
+                    });
+                }));
+            Button(c, new(x + w - 200, y + 344, 80, 32), "←", () => fazPage--, enabled: fazPage > 0);
+            Button(c, new(x + w - 110, y + 344, 90, 32), "→", () => fazPage++, enabled: (fazPage + 1) * 2 < package.Projects.Count);
         }
-        string? existing = fazMode == 1 && fazTargets[fazIndex] is { } selected ? package.Owners.GetValueOrDefault(selected) : null;
+        else
+            c.Text(L.Get(fazMode == 0 ? "faz.independentHelp" : "faz.installHelp"), x + 20, y + 150, 13, Muted, w - 40);
+        string? existing = fazMode == 1 ? fazTargets.Where(t => t is not null).Select(t => package.Owners.GetValueOrDefault(t!)).FirstOrDefault(p => p is not null) : null;
         existing ??= package.ExistingProject;
         if (existing is not null)
             Button(c, new(x + 20, y + h - 100, w - 40, 32), L.Get("faz.openExisting"), () => ImportFaz(existing));
         Button(c, new(x + 20, y + h - 52, (w - 50) / 2, 34), L.Get("mac.cancel"), CloseFaz);
         Button(c, new(x + 30 + (w - 50) / 2, y + h - 52, (w - 50) / 2, 34), L.Get("faz.import"), () => ImportFaz(), true,
-            fazMode != 1 || fazTargets.Select((p, i) => p is null ? fazIndependent[i] : !package.Owners.ContainsKey(p)).All(v => v));
+            fazMode != 1 || fazSelected is not null && fazTargets.All(p => p is not null && !package.Owners.ContainsKey(p)));
     }
 }

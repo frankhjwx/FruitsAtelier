@@ -7,7 +7,6 @@ internal sealed partial class EditorWindow
     private void ConfigureLibrary()
     {
         view.RequestFazOpen = path => ConfirmDiscard(() => OpenPath(path));
-        view.RequestRegisterFaz = () => FileOperation(() => { FazFileAssociation.Register(); view.SetNotice(L.Get("faz.registered")); });
         view.RequestFazExport = complete => ExportFaz(complete);
         view.RequestLibraryFazExport = (map, complete) => ExportFaz(complete, map);
         view.RequestAudioProject = path => ConfirmDiscard(() => view.BeginAudioProject(path));

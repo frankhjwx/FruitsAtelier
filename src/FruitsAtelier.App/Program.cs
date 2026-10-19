@@ -31,7 +31,7 @@ internal static class Program
             using var activation = new CancellationTokenSource();
             if (ordinaryLaunch)
             {
-                try { FazFileAssociation.RefreshRegistered(); } catch (Exception e) { AppLog.Write(e.Message); }
+                try { FazFileAssociation.EnsureRegistered(); } catch (Exception e) { AppLog.Write(e.Message); }
                 _ = FazFileAssociation.Listen(activation.Token);
             }
             using var window = new EditorWindow();

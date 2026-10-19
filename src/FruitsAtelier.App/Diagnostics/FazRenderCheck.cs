@@ -16,7 +16,15 @@ internal static class FazRenderCheck
         string archive = Path.Combine(folder, "fixture.faz");
         var settings = new LibrarySettings { Workspace = Path.Combine(folder, "Workspace"), Songs = Path.Combine(folder, "Songs") };
         Directory.CreateDirectory(settings.Songs);
-        FazArchive.Export(BeatmapProject.FromDocuments([new MapDocument { Name = "FA archive fixture", IsDemo = false }]), archive, false, false, settings.Workspace);
+        string? source = null;
+        for (int i = 0; i < 3; i++)
+        {
+            string song = Path.Combine(settings.Songs, "Local project " + (i + 1)); Directory.CreateDirectory(song);
+            string map = Path.Combine(song, "Hard.osu");
+            File.WriteAllText(map, "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:FA archive fixture\nArtist:Artist\nCreator:Mapper\nVersion:Hard\nBeatmapID:123\nBeatmapSetID:456\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n");
+            source ??= map;
+        }
+        FazArchive.Export(BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source!)]), archive, false, false, settings.Workspace);
         var taskField = typeof(EditorView).GetField("fazTask", BindingFlags.Instance | BindingFlags.NonPublic)!;
         foreach (string locale in new[] { "en", "zh-CN" })
         foreach (var size in new[] { (980, 620), (1440, 900) })
@@ -31,7 +39,15 @@ internal static class FazRenderCheck
             if (view.ErrorVisible || !view.DiscardConfirmationVisible) throw new InvalidOperationException("FAZ modal did not open.");
             float x = (size.Item1 - 720) / 2f, y = (size.Item2 - 530) / 2f;
             view.PointerDown(x + 350, y + 100, 0, false, false); view.PointerUp(x + 350, y + 100, 0);
+            Paint();
+            view.PointerDown(x + 350, y + 200, 0, false, false); view.PointerUp(x + 350, y + 200, 0);
+            if (typeof(EditorView).GetField("fazSelected", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view) is null)
+                throw new InvalidOperationException("FAZ project card was not selected.");
             Paint(true);
+            view.PointerDown(x + 650, y + 360, 0, false, false); view.PointerUp(x + 650, y + 360, 0);
+            Paint();
+            if ((int)typeof(EditorView).GetField("fazPage", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view)! != 1)
+                throw new InvalidOperationException("FAZ project cards did not page.");
             view.KeyDown(27, false, false);
             if (view.DiscardConfirmationVisible) throw new InvalidOperationException("FAZ modal did not cancel.");
             void Paint(bool capture = false)

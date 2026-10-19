@@ -89,17 +89,38 @@ internal static class FazTests
         Check(FazArchive.Recommend(project.Difficulties[0], [duplicate, duplicate with { Path = target + "2" }]) is null, "ambiguous identity needs choice");
 
         var partial = Settings("partial"); Directory.CreateDirectory(partial.Songs);
-        string partialMap = Path.Combine(partial.Songs, "local.osu"); File.Copy(map, partialMap);
-        File.Copy(Path.Combine(folder, "audio.wav"), Path.Combine(partial.Songs, "audio.wav"));
+        string partialFolder = Path.Combine(partial.Songs, "Local"); Directory.CreateDirectory(partialFolder);
+        string partialMap = Path.Combine(partialFolder, "local.osu"); File.Copy(map, partialMap);
+        File.Copy(Path.Combine(folder, "audio.wav"), Path.Combine(partialFolder, "audio.wav"));
         var pair = ProjectSerializer.ReadProject(before);
         pair.Difficulties.Add(new ProjectDifficulty { Name = "Second", Document = pair.Difficulties[0].Document.DeepClone() });
+        SongSetup.Set(pair.Difficulties[1].Document, "Metadata", "BeatmapID", "124");
+        SongSetup.Set(pair.Difficulties[1].Document, "Metadata", "Version", "Second");
         string mixed = Path.Combine(root, "mixed.faz"); FazArchive.Export(pair, mixed, false, false, source.Workspace);
         using (var package = FazArchive.Prepare(mixed, partial))
         {
-            var session = FazArchive.Import(package, partial, new string?[] { partialMap, null }, false, false);
-            Check(session.Manifest.Difficulties.Count(d => d.Source is not null) == 1, "partial association has one owner");
-            Check(Directory.GetFiles(Path.Combine(partial.Workspace, "Resources"), "audio.wav", SearchOption.AllDirectories).Length == 1, "partial association installs only independent resources");
+            Check(package.Projects.Count == 0, "incomplete folder is not recommended");
+            Throws(() => FazArchive.Import(package, partial, new string?[] { partialMap, null }, false, false), "partial association rejected");
+            Throws(() => FazArchive.Import(package, partial, new[] { partialMap, partialMap }, false, false), "one map cannot satisfy two difficulties");
+            string second = Path.Combine(partialFolder, "second.osu");
+            File.WriteAllText(second, File.ReadAllText(map).Replace("BeatmapID:123", "BeatmapID:124").Replace("Version:Hard", "Version:Second"));
+            string extra = Path.Combine(partialFolder, "extra.osu");
+            File.WriteAllText(extra, File.ReadAllText(map).Replace("BeatmapID:123", "BeatmapID:125").Replace("Version:Hard", "Version:Extra"));
+            var match = FazArchive.MatchProject(package, partial, partialFolder);
+            Check(match is not null && match.DifficultyCount == 3 && match.Targets.SequenceEqual(new[] { partialMap, second }), "complete folder may contain extra difficulties");
+            string other = Path.Combine(partial.Songs, "Other"); Directory.CreateDirectory(other);
+            string split = Path.Combine(other, "second.osu"); File.Copy(second, split);
+            Throws(() => FazArchive.Import(package, partial, new[] { partialMap, split }, false, false), "cross-folder association rejected");
+            File.Delete(second);
+            Throws(() => FazArchive.Import(package, partial, match!.Targets, false, false), "removed difficulty is revalidated before import");
+            File.Copy(split, second);
+            using var refreshed = FazArchive.Prepare(mixed, partial);
+            Check(refreshed.Projects.Count == 1, "only complete project is recommended");
+            var session = FazArchive.Import(refreshed, partial, refreshed.Projects[0].Targets, false, false);
+            Check(session.Manifest.Difficulties.All(d => d.Source is not null), "whole project is associated");
+            Check(!Directory.Exists(Path.Combine(partial.Workspace, "Resources")), "linked project installs no packaged resources");
         }
+
         string recoveryId = Guid.NewGuid().ToString("N");
         string abandoned = Path.Combine(partial.Workspace, "Abandoned [" + recoveryId[..8] + "]");
         string abandonedResources = Path.Combine(partial.Workspace, "Resources", "FAZ-" + recoveryId);
@@ -134,6 +155,20 @@ internal static class FazTests
 #if WINDOWS
         if (OperatingSystem.IsWindows())
         {
+            Check(MapFileDialog.FazFilter == "Fruits Atelier Project\0*.faz\0\0", "FAZ save filter names the document type");
+            string registryPath = @"Software\FruitsAtelier.Tests\" + Guid.NewGuid().ToString("N");
+            try
+            {
+                using var classes = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(registryPath);
+                Check(FazFileAssociation.EnsureRegistered(classes, @"C:\FA\FA.exe", @"C:\FA\faz.ico"), "missing association is registered");
+                Check(!FazFileAssociation.EnsureRegistered(classes, @"C:\FA\FA.exe", @"C:\FA\faz.ico"), "valid association is unchanged");
+                Check(FazFileAssociation.EnsureRegistered(classes, @"C:\Moved FA\FA.exe", @"C:\Moved FA\faz.ico"), "moved application registration is refreshed");
+                using var command = classes.OpenSubKey(@"FruitsAtelier.ProjectArchive\shell\open\command");
+                Check(command?.GetValue("") as string == "\"C:\\Moved FA\\FA.exe\" \"%1\"", "activation quotes executable and file paths");
+                classes.DeleteSubKeyTree(".faz");
+                Check(FazFileAssociation.EnsureRegistered(classes, @"C:\Moved FA\FA.exe", @"C:\Moved FA\faz.ico"), "missing extension is repaired");
+            }
+            finally { Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(registryPath, false); }
             string channel = "FruitsAtelier-faz-test-" + Guid.NewGuid().ToString("N");
             using var cancellation = new CancellationTokenSource();
             var listener = FazFileAssociation.Listen(cancellation.Token, channel);

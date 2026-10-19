@@ -62,10 +62,12 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 ## Automated regressions
 
 `App.Tests --faz-check` checks portable project modes, native roundtrips, exact
-identity/metadata matching, resource isolation, ownership, repeated imports,
-archive validation and modal entry points. `FruitsAtelier.App.exe --render-check
+identity/metadata matching, complete-folder coverage, resource isolation, ownership,
+repeated imports, automatic file registration, archive validation and modal entry points.
+`FruitsAtelier.App.exe --render-check
 --faz-render-check` checks the native import dialog in English and Chinese at two
-window sizes and DPI levels, saving captures under `artifacts/tests/faz-native`.
+window sizes and DPI levels, including project-card selection and pagination,
+saving captures under `artifacts/tests/faz-native`.
 
 `App.Tests --difficulty-save-check` covers six-difficulty local and linked saves,
 unchanged file timestamps, navigation and edits during saving, per-difficulty undo,
