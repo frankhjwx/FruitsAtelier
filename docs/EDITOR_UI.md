@@ -64,6 +64,8 @@ spans. Catch retains its Stream/Stack dock. Both conversions are undoable.
 Ctrl+Shift+R opens **Rotate by**, with an angle slider and numeric entry,
 signed angles from −180° to +180°, clockwise/anti-clockwise direction, and
 playfield/selection centre origins. Negative angles reverse the chosen direction.
+Click the angle slider to the right of its thumb to add 45°, or to the left to
+subtract 45°, clamped to −180° and +180°. Drag the thumb for continuous adjustment.
 For a selected slider, Selection centre uses the current slider's beginning point;
 standalone notes use their selection bounds' centre.
 Changes preview directly on the canvas from the original selection. OK commits

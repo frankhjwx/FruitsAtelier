@@ -11,6 +11,8 @@ public sealed partial class EditorView
     private string rotationAngle = "0", rotationError = "";
     private bool rotationClockwise = true, rotationSelectionCentre;
     private bool rotationDragging;
+    private bool rotationSliderMoved;
+    private float rotationSliderPointerStart;
     private Rect rotationSlider;
     private MapDocument? rotationSource, rotationPreview;
     private HashSet<Guid> rotationTargets = [];
@@ -163,7 +165,27 @@ public sealed partial class EditorView
         if (rotationWindowDragging)
             rotationWindowPosition = (Math.Clamp(rotationWindowStart.X + x - rotationWindowPointer.X, 0, Math.Max(0, width - RotationBounds.Width)),
                 Math.Clamp(rotationWindowStart.Y + y - rotationWindowPointer.Y, 0, Math.Max(0, height - RotationBounds.Height)));
-        else if (rotationDragging) MoveRotationSlider(x);
+        else if (rotationDragging)
+        {
+            rotationSliderMoved |= Math.Abs(x - rotationSliderPointerStart) >= 3;
+            if (rotationSliderMoved) MoveRotationSlider(x);
+        }
+    }
+
+    private void EndRotationPointer(float x, float y)
+    {
+        RotationPointerMove(x, y);
+        if (rotationDragging && !rotationSliderMoved)
+        {
+            double.TryParse(rotationAngle, NumberStyles.Float, CultureInfo.InvariantCulture, out double angle);
+            float thumb = rotationSlider.X + (float)Math.Clamp((angle + 180) / 360, 0, 1) * rotationSlider.Width;
+            if (Math.Abs(x - thumb) > 7)
+            {
+                rotationAngle = Math.Clamp(angle + (x > thumb ? 45 : -45), -180, 180).ToString(CultureInfo.InvariantCulture);
+                SelectInput("rotation", rotationAngle); PreviewRotation();
+            }
+        }
+        rotationDragging = rotationWindowDragging = false;
     }
 
     private void RotationKey(int key, bool ctrl, bool shift)
@@ -199,7 +221,7 @@ public sealed partial class EditorView
         c.Line(rotationSlider.X, rotationSlider.Y + 13, rotationSlider.Right, rotationSlider.Y + 13, Grid, 4);
         double.TryParse(rotationAngle, NumberStyles.Float, CultureInfo.InvariantCulture, out double angle);
         c.Circle(rotationSlider.X + (float)Math.Clamp((angle + 180) / 360, 0, 1) * rotationSlider.Width, rotationSlider.Y + 13, 7, Accent);
-        hits.Add(new(rotationSlider, () => { rotationDragging = true; MoveRotationSlider(mouseX); }, true));
+        hits.Add(new(rotationSlider, () => { rotationDragging = true; rotationSliderMoved = false; rotationSliderPointerStart = mouseX; }, true));
         var input = new Rect(x + w - 112, y + 82, 78, 30);
         c.Fill(input, Surface, 3); c.Stroke(input, Accent, radius: 3);
         DrawInputText(c, new(input.X + 8, input.Y + 7, input.Width - 16, 18), rotationAngle, 13, true, "rotation");

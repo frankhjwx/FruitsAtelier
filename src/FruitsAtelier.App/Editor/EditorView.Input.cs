@@ -608,7 +608,7 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
-        if (RotationVisible) { RotationPointerMove(x, y); rotationDragging = rotationWindowDragging = false; return; }
+        if (RotationVisible) { EndRotationPointer(x, y); return; }
         if (aimodGesture != AimodGesture.None && button == 0) { EndAimodPointer(x, y); return; }
         if (notesSelecting && button == 0) { FinishNotesSelection(x, y); return; }
         if (dockPressed is not null && button == 0) { EndDockPointer(x, y); return; }

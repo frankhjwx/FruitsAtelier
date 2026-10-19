@@ -66,7 +66,8 @@ internal static class CanvasFeedbackPerformance
             var bounds = ui.View.RotationBounds;
             float left = bounds.X + 24, length = bounds.Width - 162, y = bounds.Y + 97;
             long coldStart = Stopwatch.GetTimestamp();
-            ui.View.PointerDown(left + length * 181 / 360, y, 0, false, false); ui.Paint();
+            ui.View.PointerDown(left + length / 2, y, 0, false, false);
+            ui.View.PointerMove(left + length * 185 / 360, y, false, false); ui.Paint();
             double cold = Stopwatch.GetElapsedTime(coldStart).TotalMilliseconds;
             var dispatch = new List<double>(); var paint = new List<double>(); var allocations = new List<long>();
             for (int i = 0; i < 100; i++)

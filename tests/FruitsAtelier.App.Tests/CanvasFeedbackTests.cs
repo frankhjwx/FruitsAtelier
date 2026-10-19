@@ -218,6 +218,31 @@ internal static class CanvasFeedbackTests
         var lastValid = ui.View.Document.DeepClone(); ui.Key(13);
         Check(ui.View.RotationVisible && ui.View.Document.ContentEquals(lastValid), "Out-of-range rotation was accepted.");
         ui.Key(27);
+        Select(ui, id); ui.Key('R', ctrl: true, shift: true);
+        bounds = ui.View.RotationBounds;
+        float left = bounds.X + 24, right = bounds.X + bounds.Width - 138, y = bounds.Y + 97;
+        foreach (int angle in new[] { 45, 90, 135, 180, 180 })
+        {
+            ui.Click(right - 1, y); CheckAngle(angle);
+        }
+        foreach (int angle in new[] { 135, 90, 45, 0, -45, -90, -135, -180, -180 })
+        {
+            ui.Click(left + 1, y); CheckAngle(angle);
+        }
+        ui.View.PointerDown(left, y, 0, false, false);
+        ui.View.PointerMove(left + (right - left) * 210 / 360, y, false, false);
+        ui.View.PointerUp(left + (right - left) * 210 / 360, y, 0); ui.Paint(); CheckAngle(30);
+        ui.Key(27);
+        Check(ui.View.Document.ContentEquals(committed), "Slider clicks did not cancel exactly.");
+
+        void CheckAngle(int angle)
+        {
+            Check((string)typeof(EditorView).GetField("rotationAngle", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ui.View)! == angle.ToString(),
+                "Rotation slider click did not step or clamp to the expected angle.");
+            var rotated = committed.DeepClone();
+            SelectionRotation.Apply(rotated, new HashSet<Guid> { id }, angle, true, true, selectionOrigin: (committed.ImportedSliders[0].X, committed.ImportedSliders[0].Y));
+            Check(ui.View.Document.ImportedSliders[0].ControlPoints.SequenceEqual(rotated.ImportedSliders[0].ControlPoints), "Slider angle did not update its preview.");
+        }
     }
     private static void FixedIntervals()
     {
