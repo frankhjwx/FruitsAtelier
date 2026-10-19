@@ -55,7 +55,7 @@ public sealed partial class EditorView
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
         c.Text(L.Get("sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
         bool hasConflict = merge.Conflicts.Any(item => item.Key == conflict.Key);
-        c.Text(L.Get(!hasConflict ? "sync.cleanSectionHelp" : conflict.Key == "TimingPoints/" ? "sync.timingHelp" : "sync.sectionHelp"), x + 20, y + 46, 12, Muted, w - 40);
+        c.Text(SyncMapHeading(merge), x + 20, y + 46, 12, Muted, w - 40);
         uint colour = !hasConflict ? Muted : syncRoundChoices.Contains(conflict.Key) ? SyncResolvedThisRound
             : merge.PreviouslyResolved.Contains(conflict.Key) ? SyncPreviouslyResolved : SyncUnresolved;
         c.Text(timing ? L.Get("timing.title") : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key, x + 20, y + 106, 15, colour, w - 400);

@@ -7,6 +7,17 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private string SyncMapHeading(WorkspaceMerge merge)
+    {
+        string Value(string key, string fallback)
+            => OsuBeatmapReader.Setting(merge.Local, "Metadata", key) is { } value && !string.IsNullOrWhiteSpace(value) ? value : fallback;
+        string artist = Value("Artist", Value("ArtistUnicode", ""));
+        string title = Value("Title", Value("TitleUnicode", merge.Local.Name));
+        string difficulty = Value("Version", difficulties.FirstOrDefault(d => d.Id == syncDifficulty)?.Name ?? "");
+        string song = string.IsNullOrWhiteSpace(artist) ? title : $"{artist} - {title}";
+        return string.IsNullOrWhiteSpace(difficulty) ? song : $"{song} [{difficulty}]";
+    }
+
     private sealed record SyncPath(Guid Source, MapPoint[] Points, bool Controls = false)
     {
         public double Start { get; } = Points.Length == 0 ? 0 : Points.Min(p => p.TimeMs);
@@ -134,7 +145,7 @@ public sealed partial class EditorView
         c.Fill(new(0, 0, width, height), Background);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
         c.Text(L.Get("sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
-        c.Text(syncStatuses.GetValueOrDefault(syncDifficulty)?.State == WorkspaceSyncState.NeedsBaseline ? L.Get("sync.compareNoBaseline") : L.Get("sync.compareHelp"), x + 20, y + 46, 12, Muted, w - 40);
+        c.Text(SyncMapHeading(merge), x + 20, y + 46, 12, Muted, w - 40);
         string label = !hasConflict ? L.Get("ui.unchanged") : conflict.Key.StartsWith("$objects:") ? L.Get("sync.objects", Array.IndexOf(categoryConflicts, conflict) + 1) : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key;
         string stateLabel = syncRoundChoices.Contains(conflict.Key) ? L.Get("sync.resolvedThisRound")
             : merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.alreadyResolved") : L.Get("sync.unresolvedRange");

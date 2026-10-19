@@ -18,7 +18,7 @@ public sealed partial class EditorView
         c.Fill(new(0, 0, width, height), Background);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
         c.Text(L.Get("sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
-        c.Text(L.Get("sync.metadataHelp"), x + 20, y + 46, 12, Muted, w - 40);
+        c.Text(SyncMapHeading(merge), x + 20, y + 46, 12, Muted, w - 40);
         float paneWidth = (w - 52) / 2, leftX = x + 20, rightX = leftX + paneWidth + 12;
         bool dirty = difficulties.FirstOrDefault(d => d.Id == syncDifficulty)?.History.IsDirty == true;
         c.Text(L.Get("sync.localHeading"), leftX + 12, y + 108, 14, Foreground, paneWidth, true);
