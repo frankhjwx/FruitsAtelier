@@ -1,5 +1,56 @@
 # Editing Controls
 
+## Collab Mapping
+
+Open **Layout → Collab Mapping** to add the dockable panel, then select its tab.
+The panel follows the active difficulty. Each difficulty independently chooses its
+references and when to synchronize. It lists source difficulties and their ranges,
+and all target difficulties that directly reference the current difficulty.
+Selecting a target opens that difficulty. The panel supports multiple sources and
+multiple targets, including separate non-overlapping ranges from the same source.
+All referenced difficulties must belong to the same project.
+
+Use **Add reference**, select the source, and edit **Start** and **End**. Inputs
+display osu! timestamps such as `01:24:771`; typed or pasted integer milliseconds
+such as `84771` are also accepted. Clipboard timestamps with an osu! object-list
+suffix are accepted. Ctrl/Cmd+A, C, X and V use the normal field selection and
+clipboard controls. Fractional milliseconds are rejected. Enter commits a field;
+Escape discards its draft. References are saved with the target difficulty.
+
+Ranges include Start and exclude End. Overlaps and self-references are rejected;
+adjacent ranges are allowed. Objects belong to the range
+containing their start time, and complete sliders, streams and banana showers are
+retained, including tails beyond End. Removing a reference detaches it and leaves
+the merged content in place.
+
+**Sync references** reads the currently loaded source documents, including unsaved
+edits, and replaces target objects whose starts lie in the configured ranges.
+Source additions, modifications and deletions are applied together. Objects
+starting outside those ranges remain. The source's timing points are copied within
+each range, with boundary points establishing inherited BPM, sample bank, index,
+volume and effects and restoring target state after End. Boundary red points
+establish a beat-grid origin at that boundary. Reference relationships do not
+trigger automatic synchronization or recursively synchronize their sources.
+
+Object identities are mapped independently for each reference and remain stable
+on repeated synchronization. Object sample fields and event overrides are
+retained; boundary inheritance differences are materialized when required to
+preserve audible events. The merged difficulty's SliderTickRate and tick rules
+govern derived output. Changing tick density remaps existing event overrides to
+their matching edges or times; new ticks inherit source sample timing. Random
+positions follow the merged map's RNG traversal.
+
+Sources in other resource folders copy their used samples into the target resource
+folder. Custom files and numbered sample groups receive separate names so existing
+target samples remain intact. Resource copies are part of the same undo step.
+Default skin samples require no file copies. A target receiving actual sample
+files needs an audio/source resource folder.
+
+Validation runs on detached source/target snapshots in a worker. A changed source,
+target or compensation setting invalidates its result. Each
+successful synchronization is one undo step in the target difficulty. Saving or
+switching difficulties waits until validation completes.
+
 ## Remembered window and canvas preferences
 
 Closing the editor saves its normal window size and maximized state for the next

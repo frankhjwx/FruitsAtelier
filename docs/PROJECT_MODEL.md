@@ -59,6 +59,14 @@ content equality, history and slider representation conversion retain the settin
 They are project authoring metadata; `.osu` output contains the resulting timing
 and slider length.
 
+Collaboration references use schema 33 (single difficulty) or 34 (multiple
+difficulties). `MapDocument.CollaborationReferences` stores reference IDs, source
+difficulty IDs and whole-millisecond half-open intervals. An empty collection is
+omitted and keeps the document-derived older schema. References participate in
+cloning, dirty comparison and each difficulty's undo history. Reverse references
+are derived from the loaded project's difficulty IDs rather than stored twice.
+See [Collab Mapping](EDITOR_UI.md#collab-mapping) for synchronization rules.
+
 ## Authoritative and derived data
 
 | Category | Contents | Rule |

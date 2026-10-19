@@ -92,6 +92,7 @@ public sealed partial class EditorView
 
     private void ShowTimingPage(bool visible)
     {
+        if (!CommitCollaborationField()) return;
         if (!PrepareFileOperation()) return;
         dockPressed = null; dockDragging = false;
         TimingPageVisible = visible; panelMenuOpen = false; timingField = timingError = ""; timingTaps.Clear();

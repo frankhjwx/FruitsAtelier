@@ -136,6 +136,7 @@ public sealed partial class EditorView
             return;
         }
         if (SongDockPointer(x, y, button, shift)) return;
+        if (CollaborationPointer(x, y, button)) return;
         if (NotesPointer(x, y, button, shift)) return;
         if (PatternDockPointer(x, y, button)) return;
         if (CanvasScalePointerDown(x, y, button)) return;
@@ -926,6 +927,8 @@ public sealed partial class EditorView
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (HandleVolumePopoverWheel(x, y, delta)) return;
         if (WheelDockHorizontal(x, y, delta, shift)) return;
+        if (DockContentInputAvailable && CollaborationPanelVisible && collaborationBounds.Contains(x, y))
+        { collaborationPanelScroll = Math.Clamp(collaborationPanelScroll - delta / 120 * 48, 0, Math.Max(0, collaborationContentHeight - collaborationBounds.Height)); return; }
         if (RandomDockEditing && randomBounds.Contains(x, y))
         { randomScroll = Math.Clamp(randomScroll - delta / 120 * 48, 0, Math.Max(0, RandomContentHeight - randomBounds.Height)); return; }
         if (DockContentInputAvailable && PanelVisible(DockPanel.SliderInspector) && inspectorBounds.Contains(x, y))
@@ -1256,6 +1259,8 @@ public sealed partial class EditorView
         if (SongSetupVisible) { SongSetupKey(virtualKey, ctrl, shift); return; }
         if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
+        if (CollaborationFocused)
+        { CollaborationKey(virtualKey, ctrl, shift); return; }
         if (AimodKey(virtualKey, ctrl, shift)) return;
         if (BananaEditVisible) { BananaEditKey(virtualKey, ctrl, shift); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
@@ -1462,6 +1467,12 @@ public sealed partial class EditorView
     private void TextInputCore(char value)
     {
         if (AcknowledgementsVisible) return;
+        if (CollaborationFocused)
+        {
+            if (!CollaborationBusy && collaborationField.Length > 0 && !char.IsControl(value))
+                collaborationText = InsertInput(collaborationField, collaborationText, value.ToString(), 128);
+            return;
+        }
         if (RotationVisible) { if (!char.IsControl(value)) RotationText(value.ToString()); return; }
         if (HitsoundCopierVisible) { if (!ErrorVisible && !DiscardConfirmationVisible && !char.IsControl(value)) PasteHitsoundName(value.ToString()); return; }
 

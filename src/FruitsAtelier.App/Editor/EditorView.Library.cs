@@ -346,6 +346,7 @@ public sealed partial class EditorView
     private void PumpLibrary()
     {
         PumpStorage();
+        PumpCollaboration();
         PumpVersionHistory();
         PumpFileMonitoring();
         PumpSynchronization();

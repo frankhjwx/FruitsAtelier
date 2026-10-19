@@ -1,6 +1,7 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--collaboration-check")) { CollaborationMappingUiTests.Run(); return 0; }
 if (args.Contains("--cache-lifetime-check")) { CacheLifetimeTests.Run(); Console.WriteLine("PASS closed difficulty data is collectible after both canvases and clipboard use"); return 0; }
 if (args.Contains("--dirty-exit-check")) { DirtyExitTests.Run(); DiscardConfirmationTests.Run(); Console.WriteLine("PASS dirty exit choices and nonblocking background checks"); return 0; }
 if (args.Contains("--sync-details-check")) { SyncTabsTests.Run(); Console.WriteLine("PASS playable object details and synchronization tabs"); return 0; }
@@ -243,6 +244,7 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Collab Mapping panel edits per-difficulty references and synchronizes sources", CollaborationMappingUiTests.Run),
     ("osu canvas renders standard objects and retains source identities", OsuCanvasRenderTests.Run),
     ("osu canvas edits native geometry and enforces slider representations", OsuCanvasInputTests.Run),
     ("Both canvases render beneath tool palettes without changing logical coordinates", CanvasOverscanTests.Run),

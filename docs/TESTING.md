@@ -63,6 +63,21 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`Formats.Tests --collaboration-check` checks same-project reference graphs,
+half-open adjacent ranges, source edits/deletions, timing restoration, boundary
+sample inheritance, repeated sliders, FSliders, streams, banana showers, custom
+samples, target STR precedence, cross-folder sample conflicts, project schemas
+and undo/redo. `App.Tests --collaboration-check` checks
+the dockable panel, active-difficulty configuration, reverse references, osu!
+timestamps, integer milliseconds, clipboard input and manual synchronization.
+On Windows, `FruitsAtelier.App.exe --render-check --collaboration-render-check`
+checks native panel input and synchronization in English and Chinese at two
+window sizes and 96/144/192 DPI. Captures are written under
+`artifacts/tests/collaboration/native`.
+`Formats.Tests --collaboration-map-check <difficulty.catchdiff>` reads a saved
+workspace manifest and its documents directly to check that difficulty's manual
+references without opening a recovery session or changing source files.
+
 `App.Tests --dirty-exit-check` verifies Save / Discard / Cancel on leaving a linked
 project, read-only background checks while dirty, and uninterrupted object placement
 when an external conflict is detected.

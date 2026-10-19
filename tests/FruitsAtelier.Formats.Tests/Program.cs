@@ -2,6 +2,9 @@ using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 
+if (args.Contains("--collaboration-check")) { CollaborationMappingTests.Run(); return 0; }
+if (args.Length == 2 && args[0] == "--collaboration-map-check") { CollaborationMapCheck.Run(args[1]); return 0; }
+if (args.Length == 2 && args[0] == "--collaboration-map-sequence-check") { CollaborationMapCheck.Sequence(args[1]); return 0; }
 if (args.Contains("--semantic-sync-check"))
 {
     foreach (var (name, run) in SynchronizationTests.Cases()) { run(); Console.WriteLine("PASS " + name); }
@@ -80,6 +83,7 @@ var tests = new (string Name, Action Run)[]
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),
     ("Multi-difficulty projects preserve content, history and compatibility", MultiProjectTests.Run),
+    ("Collaboration references preserve range ownership, timing and hitsounds", CollaborationMappingTests.Run),
     ("Pre-rename schema 1 projects preserve user names and editable curves", RenameCompatibilityTests.Run),
     ("Reader preserves original timing order, duplicates, samples and unknown sections", ReadOriginal),
     ("Unedited export retains all object and timing text", OriginalRoundTrip),

@@ -270,7 +270,7 @@ public sealed partial class MapDocument
     {
         var copy = new MapDocument
         {
-            Name = Name, DurationMs = DurationMs,
+            Name = Name, DurationMs = DurationMs, CollaborationReferences = CollaborationReferences?.ToList(),
             BeatLengthMs = BeatLengthMs, TimingOffsetMs = TimingOffsetMs, ApproachRate = ApproachRate,
             CircleSize = CircleSize, SliderMultiplier = SliderMultiplier, OverrideSliderMultiplier = OverrideSliderMultiplier,
             SliderMultiplierOverride = SliderMultiplierOverride,
@@ -318,7 +318,8 @@ public sealed partial class MapDocument
 
     private bool ContentEquals(MapDocument other, bool ignoreMultiplierOverride, bool ignoreOsuDistanceSpacing)
     {
-        if (Name != other.Name || DurationMs != other.DurationMs || BeatLengthMs != other.BeatLengthMs
+        if (!CollaborationReferencesEqual(other)
+            || Name != other.Name || DurationMs != other.DurationMs || BeatLengthMs != other.BeatLengthMs
             || TimingOffsetMs != other.TimingOffsetMs || ApproachRate != other.ApproachRate
             || CircleSize != other.CircleSize || SliderMultiplier != other.SliderMultiplier
             || (!ignoreMultiplierOverride && (OverrideSliderMultiplier != other.OverrideSliderMultiplier

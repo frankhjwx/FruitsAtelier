@@ -48,6 +48,9 @@ public sealed partial class EditorView
         CloseHitsoundCopier();
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
+        collaborationField = collaborationError = "";
+        if (collaborationTask is { } retiredCollaboration) _ = retiredCollaboration.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        collaborationTask = null; collaborationSnapshot = null; collaborationOwner = null;
         TimeJumpVisible = false;
         RotationVisible = rotationDragging = false;
         CloseBananaEdit(); bananaSegments.Clear();
@@ -182,10 +185,12 @@ public sealed partial class EditorView
         }
         if (!syncBypass && WorkspaceSession is not null && ShowSyncProblem(index)) return false;
         if (index == activeDifficulty) return true;
+        if (!CommitCollaborationField()) return false;
         if (!PrepareFileOperation(allowDifficultySave: true)) return false;
         double currentPlayhead = playhead;
         double currentViewStart = viewStart;
         activeDifficulty = index;
+        collaborationField = collaborationError = ""; collaborationPanelScroll = 0;
         RevealDifficultyTab();
         ResetDifficultyView();
         playhead = currentPlayhead;
@@ -215,6 +220,7 @@ public sealed partial class EditorView
         if (imported is null)
         {
             document.HitsoundOverrides.Clear();
+            document.CollaborationReferences = null;
             document.Fruits.Clear(); document.Tracks.Clear(); document.ImportedSliders.Clear(); document.BananaShowers.Clear();
             document.IsDemo = false;
             foreach (var section in document.OriginalSections.Where(s => s.Name == "HitObjects")) section.Lines.Clear();
@@ -246,6 +252,8 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation(bool allowDifficultySave = false)
     {
+        if (CollaborationBusy) return false;
+        if (!CommitCollaborationField()) return false;
         PumpLegacyDropletRefresh();
         if (LegacyDropletRefreshBusy) return false;
         if (AcknowledgementsVisible) return false;

@@ -926,6 +926,11 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--collaboration-render-check"))
+        {
+            CollaborationRenderCheck.Run(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--semantic-sync-render-check"))
         {
             foreach (var size in new[] { (980, 620), (1440, 900) })

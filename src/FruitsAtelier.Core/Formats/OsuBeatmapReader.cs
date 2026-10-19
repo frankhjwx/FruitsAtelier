@@ -202,6 +202,7 @@ public static class OsuBeatmapReader
 
     public static void Validate(MapDocument document)
     {
+        document.ValidateCollaborationReferences();
         if (!double.IsFinite(document.RandomizeDropletStrength) || document.RandomizeDropletStrength is < 0 or > 100)
             throw new InvalidDataException(L.Get("randomize.invalid"));
         if (document.DistanceSnapRatios.Count > DistanceSnap.MaximumPresets || document.DistanceSnapRatios.Any(r => !double.IsFinite(r) || r < 0))
