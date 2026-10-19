@@ -224,11 +224,12 @@ public sealed partial class EditorView
     private void DrawAssistPalette(ICanvas c)
     {
         assistButtons.Clear();
-        float size = Math.Clamp(plot.Height / 7, 64, 96);
-        assistPalette = new(canvas.Right - 26 - size, plot.Y, size, plot.Height);
-        assistScrollLimit = Math.Max(0, size * 7 - plot.Height);
+        float availableHeight = Math.Max(0, plot.Bottom - CanvasCornerBottom);
+        float size = Math.Clamp(availableHeight / 7, 48, 64);
+        assistPalette = new(CanvasCornerRight - 76, CanvasCornerBottom, 76, availableHeight);
+        assistScrollLimit = Math.Max(0, size * 7 - availableHeight);
         assistScroll = Math.Clamp(assistScroll, 0, assistScrollLimit);
-        float top = plot.Y + Math.Max(0, (plot.Height - size * 7) / 2) - assistScroll;
+        float top = assistPalette.Y - assistScroll;
         string[] keys = ["tools.newCombo", "assist.whistle", "assist.finish", "assist.clap", "assist.grid", "assist.distance", "assist.lock"];
         string[] names = ["new-combo", "whistle", "finish", "clap", "grid-snap", "distance-snap", "lock-notes"];
         Rect[] iconSources = [new(155, 125, 944, 1018), new(78, 302, 1128, 628), new(99, 175, 1057, 811),
@@ -248,7 +249,7 @@ public sealed partial class EditorView
         c.Clip(assistPalette);
         for (int i = 0; i < 7; i++)
         {
-            var r = new Rect(assistPalette.X, top + i * size, size, size);
+            var r = new Rect(assistPalette.X, top + i * size, assistPalette.Width, size);
             assistButtons.Add(r);
             if (!Intersects(r, assistPalette)) continue;
             bool enabled = i is 4 or 5 || draftTrack == Guid.Empty && draftBanana == Guid.Empty;
@@ -256,21 +257,19 @@ public sealed partial class EditorView
             if (i is >= 1 and <= 3 && (TimingPageVisible || tool == Tool.Banana || !placement && sounds.Length == 0)) enabled = false;
             float opacity = !enabled ? .25f : active[i] ? 1 : .45f;
             bool mixed = i is >= 1 and <= 3 && !placement && !active[i] && sounds.Any(s => (s & (1 << i)) != 0);
-            float scale = size / 512;
-            var frame = new Rect(r.X + 16 * scale, r.Y + 16 * scale, 480 * scale, 480 * scale);
-            // These dimensions match the generated left palette's 512px button template.
-            c.Fill(frame, Dim(Panel, opacity), 64 * scale);
-            c.Stroke(frame, i == 5 && DistanceSnapEnabled && distanceOutside ? Error : Dim(Accent, opacity), 8 * scale, 64 * scale);
+            var frame = new Rect(r.X + 2, r.Y + 2, r.Width - 4, r.Height - 4);
+            c.Fill(frame, Dim(Panel, opacity), 8);
+            c.Stroke(frame, i == 5 && DistanceSnapEnabled && distanceOutside ? Error : Dim(Accent, opacity), 1, 8);
             var source = iconSources[i];
-            float iconScale = Math.Min(340 / source.Width, 288 / source.Height) * scale;
+            float iconScale = Math.Min(50 / source.Width, (size - 22) / source.Height);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "assist", names[i] + ".png"),
-                new(r.X + 256 * scale - source.Width * iconScale / 2, r.Y + 204 * scale - source.Height * iconScale / 2,
+                new(r.X + r.Width / 2 - source.Width * iconScale / 2, r.Y + 4 + (size - 22 - source.Height * iconScale) / 2,
                     source.Width * iconScale, source.Height * iconScale), source: source, opacity: opacity);
             string label = L.Get(keys[i]);
-            float font = size * 52 / 512;
-            font = Math.Min(font, (size - 12 * scale) / Math.Max(1, c.MeasureText(label, font, true)) * font);
-            c.Text(label, r.X + (size - c.MeasureText(label, font, true)) / 2, r.Y + size * .76f,
-                font, active[i] ? Foreground : 0x747B85, size, true);
+            float font = 8;
+            font = Math.Min(font, (r.Width - 8) / Math.Max(1, c.MeasureText(label, font, true)) * font);
+            c.Text(label, r.X + (r.Width - c.MeasureText(label, font, true)) / 2, r.Bottom - 14,
+                font, active[i] ? Foreground : 0x747B85, r.Width - 8, true);
             if (mixed) c.Line(frame.X + 6, frame.Y + 8, frame.X + 14, frame.Y + 8, Gold, 2);
             var hit = new Rect(r.X, Math.Max(r.Y, assistPalette.Y), r.Width,
                 Math.Min(r.Bottom, assistPalette.Bottom) - Math.Max(r.Y, assistPalette.Y));
@@ -280,8 +279,8 @@ public sealed partial class EditorView
         c.Unclip();
         if (assistScrollLimit > 0)
         {
-            float thumbHeight = plot.Height * plot.Height / (7 * size);
-            c.Fill(new(assistPalette.Right + 2, plot.Y + (plot.Height - thumbHeight) * assistScroll / assistScrollLimit, 3, thumbHeight), Muted, 1);
+            float thumbHeight = availableHeight * availableHeight / (7 * size);
+            c.Fill(new(assistPalette.Right + 2, assistPalette.Y + (availableHeight - thumbHeight) * assistScroll / assistScrollLimit, 3, thumbHeight), Muted, 1);
         }
         DrawDistanceSnapFlyout(c);
         DrawNotesLockFlyout(c);

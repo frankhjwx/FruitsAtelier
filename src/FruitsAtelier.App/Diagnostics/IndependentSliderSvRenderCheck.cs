@@ -13,7 +13,7 @@ internal static class IndependentSliderSvRenderCheck
         try
         {
             foreach (string locale in new[] { "en", "zh-CN" })
-            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (int dpi in new[] { 96, 120, 144, 168, 192 })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             {
                 L.SetLanguage(locale);
@@ -43,6 +43,17 @@ internal static class IndependentSliderSvRenderCheck
                     editor.PointerUp(analysisButton.X + 8, analysisButton.Y + 8, 0); Paint();
                 }
                 var defaultTrack = editor.OsuSliderDefaultSvTrackBounds;
+                if (editor.OsuSliderDefaultSvValueBounds.X <= editor.CanvasPlotBounds.Right
+                    || defaultTrack.Width > 120 || editor.OsuDistanceSpacingTrackBounds.Width > 120
+                    || editor.AssistButtonBounds[0].Y <= editor.OsuSliderDefaultSvValueBounds.Bottom + 26
+                    || editor.AssistButtonBounds[0].Width > 76)
+                    throw new InvalidOperationException("Canvas corner controls overlap or exceed their compact bounds.");
+                var spacingTrack = editor.OsuDistanceSpacingTrackBounds;
+                editor.PointerDown(spacingTrack.Right, spacingTrack.Y + 4, 0, false, false);
+                editor.PointerUp(spacingTrack.Right, spacingTrack.Y + 4, 0); Paint();
+                if (editor.Document.OsuDistanceSpacing != 3.2)
+                    throw new InvalidOperationException("Corner DS track endpoint did not receive input.");
+                editor.KeyDown('Z', true, false); editor.KeyUp('Z'); Paint();
                 float defaultX = defaultTrack.X + (float)((2.5 - .1) / 3.1) * defaultTrack.Width;
                 var unchanged = editor.Document.DeepClone();
                 editor.PointerDown(defaultX, defaultTrack.Y + 4, 0, false, false);
@@ -57,6 +68,7 @@ internal static class IndependentSliderSvRenderCheck
                 editor.KeyDown(13, false, false); editor.KeyUp(13); Paint();
                 if (editor.LibrarySettings.OsuSliderDefaultSv != 4.25 || !unchanged.ContentEquals(editor.Document) || editor.IsDirty)
                     throw new InvalidOperationException("Native default SV numeric input did not commit independently.");
+                Paint("corner-osu");
                 var head = editor.OsuCanvasScreen(100, 192);
                 editor.PointerDown(head.X, head.Y, 0, false, false); editor.PointerUp(head.X, head.Y, 0);
                 editor.ShowSliderInspector(); Paint();
@@ -100,6 +112,16 @@ internal static class IndependentSliderSvRenderCheck
                 if (Math.Abs(snappedFruit.X - 268) > .001 || Math.Abs(snappedFruit.Y - 192) > .001)
                     throw new InvalidOperationException("Native osu DS dragging missed the preceding object.");
                 Paint("ds-drag");
+                editor.ToggleOsuCanvas(); Paint();
+                editor.KeyDown('A', true, false); editor.KeyUp('A'); Paint("corner-catch");
+                if (editor.AssistButtonBounds[0].Y < editor.CanvasPlotBounds.Y + 78)
+                    throw new InvalidOperationException("Catch coordinate rows overlap the assist buttons.");
+                var firstButton = editor.AssistButtonBounds[0];
+                int flagsBefore = ObjectFlags.NewCombo(editor.Document, editor.Document.Fruits[0].Id) ? 1 : 0;
+                editor.PointerDown(firstButton.X + firstButton.Width / 2, firstButton.Y + firstButton.Height / 2, 0, false, false);
+                editor.PointerUp(firstButton.X + firstButton.Width / 2, firstButton.Y + firstButton.Height / 2, 0); Paint();
+                int flagsAfter = ObjectFlags.NewCombo(editor.Document, editor.Document.Fruits[0].Id) ? 1 : 0;
+                if (flagsBefore == flagsAfter) throw new InvalidOperationException("Compact assist button did not receive input.");
                 void Wait()
                 {
                     var deadline = DateTime.UtcNow.AddSeconds(15);

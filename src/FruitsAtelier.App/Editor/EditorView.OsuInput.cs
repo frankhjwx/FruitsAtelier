@@ -111,7 +111,7 @@ public sealed partial class EditorView
 
     private bool OsuPointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
-        if (!IsOsuCanvas || TimingPageVisible || !plot.Contains(x, y)) return false;
+        if (!IsOsuCanvas || TimingPageVisible || !plot.Contains(x, y) && !OsuSpacingBounds.Contains(x, y) && !OsuDefaultSvBounds.Contains(x, y)) return false;
         if (notesLockFlyout && notesLockFlyoutBounds.Contains(x, y)) return false;
         if (distanceSnapFlyout && distanceSnapFlyoutBounds.Contains(x, y)) return false;
         if (menu >= 0) return false;
@@ -152,6 +152,7 @@ public sealed partial class EditorView
             }
             return true;
         }
+        if (!plot.Contains(x, y)) return false;
         if (button == 1)
         {
             osuPanning = true; osuPanPointer = (x, y); osuPanOrigin = (osuCanvasPanX, osuCanvasPanY);
@@ -746,11 +747,11 @@ public sealed partial class EditorView
         finally { osuAllowSliderConversion = false; }
     }
 
-    private float osuSpacingLabelWidth = 148, osuDefaultSvLabelWidth = 148;
+    private const float OsuControlLabelWidth = 34;
     private Rect OsuDefaultSvBounds => OsuSpacingBounds with { Y = OsuSpacingBounds.Bottom + 4 };
-    internal Rect OsuSliderDefaultSvTrackBounds => new(OsuDefaultSvBounds.X + osuDefaultSvLabelWidth, OsuDefaultSvBounds.Y + 12,
-        Math.Max(24, OsuDefaultSvBounds.Width - osuDefaultSvLabelWidth - 76), 8);
-    internal Rect OsuSliderDefaultSvValueBounds => new(OsuDefaultSvBounds.Right - 70, OsuDefaultSvBounds.Y + 4, 64, 24);
+    internal Rect OsuSliderDefaultSvTrackBounds => new(OsuDefaultSvBounds.X + OsuControlLabelWidth, OsuDefaultSvBounds.Y + 12,
+        Math.Max(24, OsuDefaultSvBounds.Width - OsuControlLabelWidth - 62), 8);
+    internal Rect OsuSliderDefaultSvValueBounds => new(OsuDefaultSvBounds.Right - 56, OsuDefaultSvBounds.Y + 4, 50, 24);
     private void SetOsuDefaultSv(float x, bool shift)
     {
         var track = OsuSliderDefaultSvTrackBounds;
@@ -763,8 +764,7 @@ public sealed partial class EditorView
         var bounds = OsuDefaultSvBounds;
         c.Fill(bounds, Panel, 4);
         string label = L.Get("osu.sliderDefaultSv");
-        osuDefaultSvLabelWidth = Math.Min(c.MeasureText(label, 12) + 20, bounds.Width * .6f);
-        c.Text(label, bounds.X + 8, bounds.Y + 8, 12, Foreground, osuDefaultSvLabelWidth - 16);
+        c.Text(label, bounds.X + 8, bounds.Y + 8, 12, Foreground, OsuControlLabelWidth - 10);
         var track = OsuSliderDefaultSvTrackBounds;
         var input = OsuSliderDefaultSvValueBounds;
         int index = fields.Count;
@@ -785,9 +785,9 @@ public sealed partial class EditorView
         c.Circle(track.X + (float)Math.Clamp((LibrarySettings.OsuSliderDefaultSv - .1) / 3.1, 0, 1) * track.Width, track.Y + 4, 6, Accent);
     }
 
-    private Rect OsuSpacingBounds => new(plot.Right - Math.Min(400, plot.Width - 16) - 10, plot.Y + 8, Math.Min(400, plot.Width - 16), 32);
-    private Rect OsuSpacingTrack => new(OsuSpacingBounds.X + osuSpacingLabelWidth, OsuSpacingBounds.Y + 12,
-        Math.Max(24, OsuSpacingBounds.Width - osuSpacingLabelWidth - 54), 8);
+    private Rect OsuSpacingBounds => new(CanvasCornerRight - 200, plot.Y + 8, 200, 32);
+    private Rect OsuSpacingTrack => new(OsuSpacingBounds.X + OsuControlLabelWidth, OsuSpacingBounds.Y + 12,
+        Math.Max(24, OsuSpacingBounds.Width - OsuControlLabelWidth - 54), 8);
     internal Rect OsuDistanceSpacingTrackBounds => OsuSpacingTrack;
     private void SetOsuSpacing(float x, bool shift)
     {
@@ -801,8 +801,7 @@ public sealed partial class EditorView
         DrawOsuDefaultSv(c);
         c.Fill(OsuSpacingBounds, Panel, 4);
         string label = L.Get("osu.distanceSpacing");
-        osuSpacingLabelWidth = Math.Min(c.MeasureText(label, 12) + 20, OsuSpacingBounds.Width * .6f);
-        c.Text(label, OsuSpacingBounds.X + 8, OsuSpacingBounds.Y + 8, 12, Foreground, osuSpacingLabelWidth - 16);
+        c.Text(label, OsuSpacingBounds.X + 8, OsuSpacingBounds.Y + 8, 12, Foreground, OsuControlLabelWidth - 10);
         var track = OsuSpacingTrack;
         c.Text(Document.OsuDistanceSpacing.ToString("0.00", CultureInfo.InvariantCulture) + "x",
             track.Right + 10, OsuSpacingBounds.Y + 8, 12, Foreground, 42);

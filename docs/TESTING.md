@@ -893,7 +893,8 @@ Shift duration locking and unchanged authoring timing. `Formats.Tests
 project persistence and compatible/incompatible coincident FSlider heads. Native
 `--render-check --osu-canvas-render-check --independent-sv-render-check` exercises
 Inspector input and Shift dragging in English/Chinese at both window sizes and
-96/144/192 DPI. `Formats.Tests --sv-timing-sync-check` checks timing/SV sync.
+96/120/144/168/192 DPI, including compact corner controls, slider and button
+input, and Catch coordinate readouts. `Formats.Tests --sv-timing-sync-check` checks timing/SV sync.
 
 ## Slider endpoint snapping
 

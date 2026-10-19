@@ -83,7 +83,7 @@ internal static class CoordinateReadoutTests
                 }
 
                 RecordingCanvas.Label[] Rows() => ui.Canvas.Texts.Where(t =>
-                    t.X > ui.View.CanvasPlotBounds.Right - 180
+                    t.X > ui.View.CanvasRenderBounds.Right - 200
                     && t.Y >= ui.View.CanvasPlotBounds.Y + 13
                     && t.Y <= ui.View.CanvasPlotBounds.Y + 49).ToArray();
                 void Check(int index, string expected)
