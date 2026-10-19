@@ -195,8 +195,11 @@ projects without a recorded confirmation remain read-only during synchronization
 Save opens export choices before their first overwrite. Cancelling keeps the source
 file unchanged. An export on one difficulty does not authorize other difficulties.
 While the external version is unchanged and export is confirmed,
-any new FA content edit automatically exports the complete difficulty when
-synchronization runs. This includes metadata such as Tags, settings, sections,
+an explicit save or synchronization request can export the complete difficulty.
+Background checks do not publish unsaved edits or save a dirty project, and do not
+open conflict review during normal editing. Leaving a dirty project for Library or
+closing the application retains the Save / Discard / Cancel confirmation; cancellation
+keeps editing active and discarding leaves the saved files unchanged. This includes metadata such as Tags, settings, sections,
 notes, curves, timing, break reconciliation and undo/redo. Generated objects and SV
 are exported together. Source-path discovery and derived audio duration refreshes
 do not count as authoring edits.

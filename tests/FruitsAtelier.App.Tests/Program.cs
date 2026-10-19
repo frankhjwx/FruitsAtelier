@@ -1,6 +1,7 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--dirty-exit-check")) { DirtyExitTests.Run(); DiscardConfirmationTests.Run(); Console.WriteLine("PASS dirty exit choices and nonblocking background checks"); return 0; }
 if (args.Contains("--sync-details-check")) { SyncTabsTests.Run(); Console.WriteLine("PASS playable object details and synchronization tabs"); return 0; }
 if (args.Contains("--faz-check")) { FazTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--legacy-edit-map") { LegacyDropletWorkerTests.FirstEdits(ProjectSerializer.ReadFile(args[1])); Console.WriteLine("PASS first note placement and deletion without conversion dialogs"); return 0; }
@@ -523,6 +524,7 @@ var tests = new (string Name, Action Run)[]
     ("Library remains responsive while SQLite is write-locked", LibraryResponsivenessTests.Run),
     ("Library progress survives oversized maps", LibraryScanProgressTests.Run),
     ("In-window save confirmation blocks editing and supports cancellation", DiscardConfirmationTests.Run),
+    ("Dirty exits retain choices and background checks never publish unsaved edits", DirtyExitTests.Run),
     ("Library double-click opens only visible project cards through the host", LibraryDoubleClickTests.Run),
     ("Library double-click replaces the demo with an unassociated imported map", LibraryOpenTests.Run),
     ("External folders and full OSZ resources persist across restarts", ExternalResourceTests.Run),

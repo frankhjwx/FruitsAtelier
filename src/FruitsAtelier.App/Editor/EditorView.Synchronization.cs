@@ -93,7 +93,7 @@ public sealed partial class EditorView
                 merges[entry.Id] = entry.Sync is null
                     ? WorkspaceSynchronization.CompareWithoutBaseline(diff.Document, status.Candidate!, session.Directory, compensate)
                     : WorkspaceSynchronization.Merge(entry, diff.Document, status.Candidate!, session.Directory, compensate);
-                if (merges[entry.Id].CanExportLocalChanges)
+                if (merges[entry.Id].CanExportLocalChanges && (!quiet || continuation is not null))
                 {
                     try
                     {
@@ -257,7 +257,8 @@ public sealed partial class EditorView
                     && s.Candidate!.Hash == (result.Session.Manifest.Difficulties.Single(d => d.Id == s.DifficultyId).ExportHash
                         ?? result.Session.Manifest.Difficulties.Single(d => d.Id == s.DifficultyId).SourceHash)).ToArray();
                 bool canAdd = !result.Scan.Difficulties.Any(s => s.State is WorkspaceSyncState.Ambiguous or WorkspaceSyncState.Duplicate or WorkspaceSyncState.Unavailable);
-                if (automatic.Length > 0 || canAdd && result.Scan.Additions.Count > 0)
+                bool backgroundOnly = result.Quiet && afterSynchronization is null && !reviewResolved;
+                if ((!backgroundOnly || !IsDirty) && (automatic.Length > 0 || canAdd && result.Scan.Additions.Count > 0))
                 {
                     syncCommitPreservesActiveDifficulty = true;
                     syncCommitAllowsEditing = automatic.Length > 0 && automatic.All(s => result.LocalExports.ContainsKey(s.DifficultyId))
@@ -316,7 +317,7 @@ public sealed partial class EditorView
                 int target = syncDifficulty == Guid.Empty ? activeDifficulty : difficulties.FindIndex(d => d.Id == syncDifficulty);
                 if (reviewResolved && target >= 0 && syncMerges.TryGetValue(difficulties[target].Id, out var review) && review.Conflicts.Count > 0)
                 { BeginSyncReview(target); return; }
-                if (target >= 0 && (!LibraryVisible || reviewResolved || afterSynchronization is not null)
+                if (!backgroundOnly && target >= 0 && (!LibraryVisible || reviewResolved || afterSynchronization is not null)
                     && ShowSyncProblem(target, reviewResolved || afterSynchronization is not null)) return;
                 var continuation = afterSynchronization; afterSynchronization = null;
                 syncDifficulty = Guid.Empty;

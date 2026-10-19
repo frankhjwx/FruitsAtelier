@@ -63,6 +63,10 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --dirty-exit-check` verifies Save / Discard / Cancel on leaving a linked
+project, read-only background checks while dirty, and uninterrupted object placement
+when an external conflict is detected.
+
 `Formats.Tests --semantic-sync-check` runs the synchronization regressions, including
 playable slider equivalence, position tolerance, independent SV capture and
 normalized timing choices. `FruitsAtelier.App.exe --render-check
