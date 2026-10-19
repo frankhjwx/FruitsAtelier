@@ -254,15 +254,18 @@ internal static class SynchronizationUiTests
                 var before = ui.View.Document.DeepClone();
                 File.WriteAllText(source, output.Text.Replace("0,500,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\r\n" + green));
                 ui.View.RefreshSynchronization(); Wait(ui);
-                Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingHelp")), "timing review explains the changed rows");
+                Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.offset"))
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.bpm")), "timing review labels its attribute columns");
                 Check(ui.Canvas.Texts.Any(t => t.Color == 0xED737B && t.Value == "80%")
                     && ui.Canvas.Texts.Any(t => t.Color == 0xED737B && t.Value == "500"), "added timing row highlights its time and volume");
                 Check(ui.Canvas.Texts.Any(t => t.Value == "—") && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.volumeShort")),
                     "addition has an empty local counterpart and attribute headings");
                 Check(ui.View.Document.ContentEquals(before), "reading timing differences preserves authoring");
                 ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
-                Check(!ui.View.SynchronizationVisible && ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 1
-                    && ui.View.Document.Tracks.Single().Id == track.Id, "apply transfers one timing addition and keeps editable curves");
+                Check(!ui.View.SynchronizationVisible && ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 2
+                    && ui.View.Document.TimingPoints.Single(p => p.TimeMs == 500).Volume == 80
+                    && ui.View.Document.TimingPoints.Single(p => p.TimeMs == 3000).Volume == 100
+                    && ui.View.Document.Tracks.Single().Id == track.Id, "apply retains the volume change and restoration at the slider head with editable curves");
                 var shifted = OsuBeatmapReader.ReadFile(source);
                 // Shift the timing section directly so exporting does not regenerate SV at unchanged slider heads.
                 string shiftedText = File.ReadAllText(source);
@@ -280,7 +283,9 @@ internal static class SynchronizationUiTests
                     && ui.Canvas.Texts.Any(t => t.Color == 0xED737B && t.Value == "512"),
                     "shifted timing rows show their new offsets in the attribute table");
                 ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
-                Check(ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 1, "timing review retains the FA choice");
+                Check(ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 2
+                    && ui.View.Document.TimingPoints.Any(p => p.TimeMs == 500 && p.Volume == 80)
+                    && ui.View.Document.TimingPoints.Any(p => p.TimeMs == 3000 && p.Volume == 100), "timing review retains the FA offsets and volume transitions");
             }
             finally { ui.View.StopFileMonitoring(); }
         }
