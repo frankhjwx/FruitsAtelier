@@ -12,7 +12,7 @@ internal static class LibraryOpeningTests
         Directory.CreateDirectory(root);
         try
         {
-            var project = BeatmapProject.FromDocuments([new MapDocument { Name = "Open fixture", IsDemo = false }]);
+            var project = BeatmapProject.FromDocuments([new MapDocument { Name = "Open fixture", IsDemo = false }, new MapDocument { Name = "Second", IsDemo = false }]);
             var session = WorkspaceProject.Create(root, project, "");
             var map = new LibraryMap("", "", "", "", "", "", "", "", "", "", "", "", session.Directory);
             var gate = typeof(WorkspaceProject).GetField("Gate", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!;
@@ -36,6 +36,35 @@ internal static class LibraryOpeningTests
             }
             Pump(view, canvas);
             Check(completed == 1 && view.WorkspaceSession?.Directory == session.Directory, "one result publishes and completes once");
+
+            var second = session.Manifest.Difficulties[1];
+            var selectedMap = map with { Path = Path.Combine(session.Directory, second.File) };
+            view.BeginLibraryOpen(selectedMap, selectDifficulty: true);
+            Pump(view, canvas);
+            Check(view.CaptureProject().Difficulties[view.ActiveDifficultyIndex].Id == second.Id,
+                "opening a difficulty selects its identity instead of the first tab");
+            view.TryResumeLibraryProject(map with { Path = Path.Combine(session.Directory, session.Manifest.Difficulties[0].File) }, true);
+            Check(view.ActiveDifficultyIndex == 0, "resuming a project selects the requested difficulty");
+
+            string songs = Path.Combine(root, "Songs");
+            Directory.CreateDirectory(songs);
+            string sourceText = "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Source\nArtist:Artist\nCreator:Mapper\nVersion:{0}\n[Difficulty]\nCircleSize:5\nOverallDifficulty:5\nApproachRate:5\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,2,1,100,1,0\n[HitObjects]\n123,192,1000,1,0,0:0:0:0:\n";
+            foreach (string name in new[] { "First", "Second" })
+                File.WriteAllText(Path.Combine(songs, name + ".osu"), string.Format(sourceText, name));
+            view = new EditorView(false);
+            view.InitializeLibrary(false, new LibrarySettings { Workspace = Path.Combine(root, "Imported"), Songs = songs });
+            view.BeginLibraryOpen(LibraryDatabase.ReadMetadata(Path.Combine(songs, "Second.osu"))!, selectDifficulty: true);
+            Pump(view, canvas);
+            Check(view.CurrentDifficultyName == "Second", "first source import selects the clicked source file");
+            string thirdPath = Path.Combine(songs, "Third.osu");
+            File.WriteAllText(thirdPath, string.Format(sourceText, "Third"));
+            var thirdMap = LibraryDatabase.ReadMetadata(thirdPath)! with { ProjectPath = view.WorkspaceSession!.Directory };
+            view.BeginLibraryOpen(thirdMap, selectDifficulty: true);
+            Pump(view, canvas);
+            var deadline = Stopwatch.StartNew();
+            while (view.SynchronizationBusy && deadline.Elapsed < TimeSpan.FromSeconds(15))
+            { view.Render(canvas, 980, 620); Thread.Sleep(10); }
+            Check(view.CurrentDifficultyName == "Third", "new source difficulty is selected after synchronization imports it");
 
             view = new EditorView(false); before = view.Document;
             view.BeginLibraryOpen(map with { ProjectPath = Path.Combine(root, "missing") }, () => completed++);

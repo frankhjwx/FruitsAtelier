@@ -41,7 +41,7 @@ public sealed partial class EditorView
         CancelLegacyDropletRefresh();
         if (libraryOpenTask is { } retiredOpen)
             _ = retiredOpen.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
-        libraryOpenTask = null; libraryOpenCompleted = null;
+        libraryOpenTask = null; libraryOpenCompleted = null; libraryOpenDifficultyPath = null; pendingLibraryDifficultyPath = null;
         CloseVersionHistory();
         CloseAimod();
         CloseHitsoundCopier();

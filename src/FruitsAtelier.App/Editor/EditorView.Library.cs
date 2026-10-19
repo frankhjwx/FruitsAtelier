@@ -12,7 +12,7 @@ public sealed partial class EditorView
     public bool ExportVisible => exportPage;
     public Action<bool>? RequestLibraryFolder { get; set; }
     public Action<bool>? RequestLibraryImport { get; set; }
-    public Action<LibraryMap>? RequestLibraryOpen { get; set; }
+    public Action<LibraryMap, bool>? RequestLibraryOpen { get; set; }
     public Action<LibraryMap>? RequestLibraryOszExport { get; set; }
     public Action<LibraryMap>? RequestLibraryDelete { get; set; }
     public Action? RequestOszExport { get; set; }
@@ -164,10 +164,11 @@ public sealed partial class EditorView
         libraryField = -1; libraryPointerActive = false; contextItems.Clear(); languageMenuOpen = false;
         if (WorkspaceSession is not null && !syncBypass) ShowSyncProblem(activeDifficulty);
     }
-    public bool TryResumeLibraryProject(LibraryMap map)
+    public bool TryResumeLibraryProject(LibraryMap map, bool selectDifficulty = false)
     {
         if (WorkspaceSession is not { } session || map.ProjectPath is null || session.Directory != map.ProjectPath) return false;
         CloseLibrary();
+        if (selectDifficulty) SelectLibraryDifficulty(map.Path);
         RefreshSynchronization();
         return true;
     }
@@ -554,13 +555,17 @@ public sealed partial class EditorView
             if (diff.Mode == 2 && !libraryRatings.ContainsKey(diff.Path) && (diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
                 || diff.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))) pending.Add(diff);
             float y = 334 + (i - libraryDiffScroll) * 40;
+            var row = new Rect(x - 4, y - 5, 296, 38);
+            if (row.Contains(mouseX, mouseY)) c.Fill(row, 0x2B3542, 4);
+            hits.Add(new(row, () => OpenSelectedLibraryMap(diff, selectDifficulty: true), true));
             libraryRatings.TryGetValue(diff.Path, out var stars);
+            if (stars >= 6.7) c.Circle(x + 11, y + 11, 11, 0xE7EBF2);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "osu", "RulesetCatch.png"), new(x, y, 22, 22), DifficultyColour(stars));
             c.Text(diff.Difficulty, x + 32, y + 3, 13, diff.ExternalMissing || diff.ReferenceSearching ? 0x718092u : Foreground, 200);
             if (diff.ReferenceSearching) c.Text(L.Get("sync.searchingReference"), x + 32, y + 20, 10, Muted, 200);
             else if (diff.ExternalMissing) c.Text(L.Get("sync.missingBadge"), x + 32, y + 20, 10, 0x718092, 200);
             else if (diff.Mode != 2) c.Text(diff.Mode == 0 ? L.Get("sync.readOnlyStandard") : L.Get("sync.readOnlyMode", diff.Mode), x + 32, y + 20, 10, Muted, 200);
-            c.Text(stars is null ? "—" : stars.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "★", x + 238, y + 3, 12, DifficultyColour(stars), 60);
+            c.Text(stars is null ? "—" : stars.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "★", x + 238, y + 3, 12, Foreground, 60);
         }
         DrawLibraryScrollbar(c, new(width - 16, 334, 8, count * 40), libraryDiffScroll, group.Count, count, true);
         if (ratingTask is null && !libraryPointerActive)

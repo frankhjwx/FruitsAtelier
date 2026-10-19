@@ -38,7 +38,7 @@ internal static class LibraryFavouriteTests
                 view = new EditorView(loadDemo: false); view.InitializeLibrary(true, settings); Settle(2);
                 Check(view.LibrarySetTotal == 2, "restart restores favourites category and entries");
                 LibraryMap? opened = null;
-                view.RequestLibraryOpen = map => opened = map;
+                view.RequestLibraryOpen = (map, selectDifficulty) => opened = map;
                 view.PointerDoubleClick(320, 190, false, false);
                 Check(opened is not null, "favourite card opens through host");
                 var imported = LibraryOperations.ImportPath(source, settings);

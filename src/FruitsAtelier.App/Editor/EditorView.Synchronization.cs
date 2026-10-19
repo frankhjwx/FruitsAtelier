@@ -190,7 +190,9 @@ public sealed partial class EditorView
                 }
                 syncPreserveHistory = false;
                 syncBypass = true;
-                int targetDifficulty = Math.Max(0, difficulties.FindIndex(d => d.Id == active));
+                int requestedDifficulty = FindLibraryDifficulty();
+                int targetDifficulty = requestedDifficulty >= 0 ? requestedDifficulty : Math.Max(0, difficulties.FindIndex(d => d.Id == active));
+                if (requestedDifficulty >= 0) pendingLibraryDifficultyPath = null;
                 try { SwitchDifficultyCore(targetDifficulty, reloadAudio: false); }
                 finally { syncBypass = false; }
                 string? audioHash = session.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id)?.Sync?.AudioHash;

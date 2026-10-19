@@ -118,7 +118,7 @@ if (args.Contains("--banana-edit-check")) { BananaEditTests.Run(); StackDockTest
 
 if (args.Contains("--library-opening-check"))
 {
-    try { LibraryOpeningTests.Run(); Console.WriteLine("PASS Library opening responsiveness, publication and failure checks"); return 0; }
+    try { LibraryOpeningTests.Run(); LibraryDoubleClickTests.Run(); LibraryNavigationTests.Run(); Console.WriteLine("PASS Library opening responsiveness, publication and failure checks"); return 0; }
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 

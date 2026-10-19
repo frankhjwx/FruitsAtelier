@@ -47,15 +47,15 @@ internal sealed partial class EditorWindow
                 });
             }
         });
-        view.RequestLibraryOpen = map => FileOperation(() =>
+        view.RequestLibraryOpen = (map, selectDifficulty) => FileOperation(() =>
         {
-            if (view.TryResumeLibraryProject(map)) return;
+            if (view.TryResumeLibraryProject(map, selectDifficulty)) return;
             ConfirmDiscard(() =>
             {
                 view.BeginLibraryOpen(map, () =>
                 {
                     ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath);
-                });
+                }, selectDifficulty);
             });
         });
         view.RequestLibraryDelete = map =>

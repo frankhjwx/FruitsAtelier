@@ -99,14 +99,14 @@ internal sealed partial class MacWindow
                 if (path is not null) await OpenPath(path);
             }
         });
-        View.RequestLibraryOpen = map => RunFile(async () =>
+        View.RequestLibraryOpen = (map, selectDifficulty) => RunFile(async () =>
         {
-            if (View.TryResumeLibraryProject(map)) return;
+            if (View.TryResumeLibraryProject(map, selectDifficulty)) return;
             if (!await ConfirmDiscard()) return;
             View.BeginLibraryOpen(map, () => RunFile(async () =>
             {
                 await audio.LoadAsync(View.Document.AudioPath); PollAudio();
-            }));
+            }), selectDifficulty);
         });
         View.RequestLibraryDelete = map =>
         {

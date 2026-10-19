@@ -246,7 +246,9 @@ both setup and editor paths, including low-latency and fullscreen preferences.
 `App.Tests --library-opening-check` verifies that opening a library project while
 the workspace gate is held leaves rendering responsive, blocks duplicate opens
 and competing operations, publishes once, retains the document on failure, and
-retires results after a project replacement.
+retires results after a project replacement. It also checks direct difficulty-row
+opening, exact difficulty selection for saved projects and source imports, and
+selection after synchronization adds a new source difficulty.
 
 `App.Tests --mapping-canvas-check` verifies zoom-independent background bounds,
 independent dim drafts and persistence, image-drop replacement confirmation,
@@ -385,8 +387,8 @@ and Chinese at two window sizes. Its workspace fixtures stay under `artifacts/`.
 
 `FruitsAtelier.App.exe --render-check --library-opening-render-check` holds the
 workspace project gate while a library open is pending. It verifies native
-loading frames, input isolation and UI-thread publication in English and Chinese
-at two window sizes and 96/144/192 DPI. Fixtures stay under
+loading frames, difficulty-row input, target selection and UI-thread publication in English and Chinese
+at two window sizes and 96/144/192 DPI. High-star detail-list captures and fixtures stay under
 `artifacts/tests/library-opening`.
 
 `FruitsAtelier.App.exe --render-check --sample-banks-render-check` runs the focused
