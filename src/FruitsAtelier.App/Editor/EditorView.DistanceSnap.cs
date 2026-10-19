@@ -64,7 +64,7 @@ public sealed partial class EditorView
     private void DrawDistanceSnapFlyout(ICanvas c)
     {
         var button = assistButtons[5];
-        float y = Math.Clamp(button.Y, assistPalette.Y, assistPalette.Bottom - 34);
+        float y = Math.Clamp(button.Y, plot.Y, Math.Max(plot.Y, assistPalette.Bottom - 34));
         var flyout = new Rect(button.X - 154, y, 154, 34);
         distanceSnapFlyoutBounds = flyout;
         var area = new Rect(flyout.X, y, flyout.Width + button.Width, Math.Max(34, button.Height));

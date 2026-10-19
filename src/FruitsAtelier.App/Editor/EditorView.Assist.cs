@@ -189,7 +189,7 @@ public sealed partial class EditorView
         string label = L.Get("assist.lockDropletSelection");
         string sliderLabel = L.Get("assist.lockSlidersToCanvas");
         float w = Math.Max(180, Math.Max(c.MeasureText(label, 12, true), c.MeasureText(sliderLabel, 12, true)) + 20);
-        float y = Math.Clamp(button.Y, assistPalette.Y, assistPalette.Bottom - 68);
+        float y = Math.Clamp(button.Y, plot.Y, Math.Max(plot.Y, assistPalette.Bottom - 68));
         var flyout = new Rect(button.X - w, y, w, 68);
         notesLockFlyoutBounds = flyout;
         var area = new Rect(flyout.X, y, w + button.Width, Math.Max(68, button.Height));
