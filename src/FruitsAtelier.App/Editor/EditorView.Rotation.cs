@@ -9,7 +9,16 @@ public sealed partial class EditorView
 {
     internal bool RotationVisible { get; private set; }
     private string rotationAngle = "0";
-    private bool rotationClockwise = true, rotationSelectionCentre;
+    private bool rotationClockwise
+    {
+        get => LibrarySettings.RotationClockwise;
+        set { if (LibrarySettings.RotationClockwise != value) { LibrarySettings.RotationClockwise = value; RequestViewPreference?.Invoke(); } }
+    }
+    private bool rotationSelectionCentre
+    {
+        get => LibrarySettings.RotationSelectionCentre;
+        set { if (LibrarySettings.RotationSelectionCentre != value) { LibrarySettings.RotationSelectionCentre = value; RequestViewPreference?.Invoke(); } }
+    }
     private bool rotationDragging;
     private bool rotationSliderMoved;
     private float rotationSliderPointerStart;

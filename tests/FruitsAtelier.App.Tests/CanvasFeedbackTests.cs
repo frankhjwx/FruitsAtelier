@@ -13,7 +13,7 @@ internal static class CanvasFeedbackTests
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(locale);
-                MetadataAcrossCanvases(); NativeRotation(); RotationPreview(); NativeStream(); MovementGhost(); MovementBeatRange(); TimingNavigation(); CatchRotation(); CatchArc(); FixedIntervals();
+                MetadataAcrossCanvases(); NativeRotation(); RotationPreview(); RotationPreferences(); NativeStream(); MovementGhost(); MovementBeatRange(); TimingNavigation(); CatchRotation(); CatchArc(); FixedIntervals();
             }
         }
         finally { L.SetLanguage(language); }
@@ -251,6 +251,29 @@ internal static class CanvasFeedbackTests
             Check(ui.View.Document.ImportedSliders[0].ControlPoints.SequenceEqual(rotated.ImportedSliders[0].ControlPoints), "Slider angle did not update its preview.");
         }
     }
+    private static void RotationPreferences()
+    {
+        var defaults = System.Text.Json.JsonSerializer.Deserialize<LibrarySettings>("{}")!;
+        Check(defaults.RotationSelectionCentre && defaults.RotationClockwise, "Existing settings did not default to selection-centred clockwise rotation.");
+        var map = SliderMap(); var ui = NewUi(map, true); Guid id = map.ImportedSliders[0].Id;
+        string path = Path.GetFullPath(Path.Combine("artifacts", "tests", "rotation-preferences.json"));
+        int saves = 0;
+        ui.View.RequestViewPreference = () => { ui.View.LibrarySettings.Save(path); saves++; };
+        Select(ui, id); ui.Key('R', ctrl: true, shift: true);
+        ui.ClickText(L.Get("rotation.playfield")); ui.ClickText(L.Get("rotation.anticlockwise")); ui.Key(27);
+        var loaded = LibrarySettings.Load(path);
+        Check(saves == 2 && !loaded.RotationSelectionCentre && !loaded.RotationClockwise,
+            "Rotation origin and direction were not saved globally on choice.");
+        Check(ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "Saving rotation preferences changed beatmap content.");
+        var restored = NewUi(map, true);
+        typeof(EditorView).GetProperty("LibrarySettings")!.SetValue(restored.View, loaded);
+        Select(restored, id); restored.Key('R', ctrl: true, shift: true); restored.Type("90");
+        Near(restored.View.Document.ImportedSliders[0].X, 164); Near(restored.View.Document.ImportedSliders[0].Y, 348);
+        restored.Key(27); restored.View.ToggleOsuCanvas(); restored.View.LoadDocument(new MapDocument());
+        Check(!restored.View.LibrarySettings.RotationSelectionCentre && !restored.View.LibrarySettings.RotationClockwise,
+            "Switching maps or canvases reset global rotation preferences.");
+    }
+
     private static void FixedIntervals()
     {
         var map = new MapDocument { DurationMs = 10000 };

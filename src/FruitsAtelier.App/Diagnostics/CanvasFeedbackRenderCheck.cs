@@ -27,7 +27,7 @@ internal static class CanvasFeedbackRenderCheck
                 if (!editor.RotationVisible) throw new InvalidOperationException("Native rotation dialog did not open.");
                 editor.TextInput('9'); editor.TextInput('0');
                 Paint("rotation-preview");
-                if (editor.Document.ImportedSliders[0].X != 348 || !editor.RotationVisible)
+                if (editor.Document.ImportedSliders[0].X != 100 || !editor.RotationVisible)
                     throw new InvalidOperationException("Native rotation was not previewed before confirmation.");
                 var bounds = editor.RotationBounds;
                 editor.PointerDown(bounds.X + 20, bounds.Y + 20, 0, false, false);
@@ -41,7 +41,7 @@ internal static class CanvasFeedbackRenderCheck
                 editor.KeyDown(13, false, false); Paint("rotated");
                 if (editor.RotationVisible || editor.Document.ImportedSliders[0].TimeMs != 1000)
                     throw new InvalidOperationException("Native rotation dialog did not apply.");
-                if (editor.Document.ImportedSliders[0].X != 348 || !OsuBeatmapWriter.Serialize(editor.Document).ObjectSequenceMatches)
+                if (editor.Document.ImportedSliders[0].X != 100 || !OsuBeatmapWriter.Serialize(editor.Document).ObjectSequenceMatches)
                     throw new InvalidOperationException("Native rotation failed geometry publication or export.");
                 editor.KeyDown('Z', true, false); editor.KeyDown(65, true, false);
                 editor.KeyDown('F', true, true); Paint("stream");

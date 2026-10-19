@@ -77,6 +77,8 @@ public sealed class LibrarySettings
     public bool ReverseCanvasScroll { get; set; }
     public bool LockDropletSelection { get; set; } = true;
     public bool LockSlidersToCanvas { get; set; }
+    public bool RotationSelectionCentre { get; set; } = true;
+    public bool RotationClockwise { get; set; } = true;
     private double osuSliderDefaultSv = 1;
     public double OsuSliderDefaultSv
     {
