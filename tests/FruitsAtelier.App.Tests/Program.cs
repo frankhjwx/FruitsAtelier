@@ -9,6 +9,7 @@ if (args.Contains("--difficulty-save-performance")) { DifficultySavePerformance.
 
 if (args.Contains("--movement-overlay-check")) { AssistToolsTests.MovementOverlay(); Console.WriteLine("PASS Movement overlay fractional bounds and input"); return 0; }
 if (args.Contains("--canvas-feedback-check")) { CanvasFeedbackTests.Run(); Console.WriteLine("PASS Canvas rotation, metadata, native streams, placement and timing feedback"); return 0; }
+if (args.Contains("--curve-edit-check")) { SliderModeInteractionTests.SwitchArAndLocalPenEdit(); SliderModeInteractionTests.InsertDeleteAndBoundary(); SliderModeInteractionTests.GlobalModeMenu(); Console.WriteLine("PASS Local curve editing, mode switching and undo"); return 0; }
 if (args.Contains("--canvas-feedback-performance")) { CanvasFeedbackPerformance.Run(); return 0; }
 if (args.Contains("--rotation-preview-performance")) { CanvasFeedbackPerformance.RunRotation(); return 0; }
 if (args.Contains("--timing-feedback-check")) { TimingEditorTests.Run(); TimingFeedbackTests.Run(); Console.WriteLine("PASS Timing setup, shortcuts, precision and range selection"); return 0; }

@@ -70,6 +70,21 @@ internal static class CanvasFeedbackRenderCheck
                     throw new InvalidOperationException("Native rotation control did not stop at valid Catch geometry.");
                 editor.KeyDown(27, false, false); Paint();
                 if (!editor.Document.ContentEquals(catchMap)) throw new InvalidOperationException("Native catch preview did not cancel.");
+                var arcMap = new MapDocument { DurationMs = 10000 };
+                var arcTrack = new CurveTrack { Kind = CurveKind.Bezier };
+                var arcCurve = new ControlCurve { Kind = ControlCurveKind.CircularArc, ReferenceScale = .4 };
+                arcCurve.Controls.Add(new() { Offset = new(250, 40) });
+                arcTrack.Nodes.AddRange([new() { TimeMs = 1000, X = 180, OutgoingCurve = arcCurve }, new() { TimeMs = 1500, X = 180 }]);
+                arcMap.Tracks.Add(arcTrack); editor.LoadDocument(arcMap); Paint();
+                editor.RestoreAudioDiagnosticPosition(1000); editor.SetSliderEditingMode(SliderEditingMode.PenTool); editor.KeyDown('1', false, false); Paint();
+                editor.KeyDown(65, true, false); editor.KeyDown('R', true, true); editor.TextInput('5'); Paint();
+                bounds = editor.RotationBounds;
+                editor.PointerDown(bounds.X + 20, bounds.Y + 20, 0, false, false);
+                editor.PointerMove(30, 60, false, false); editor.PointerUp(30, 60, 0); Paint("compact-arc-rotation");
+                if (editor.Document.Tracks[0].Nodes.Count > 9 || CurveMath.Validate(editor.Document).Count != 0)
+                    throw new InvalidOperationException("Native arc rotation produced excessive or invalid pen anchors.");
+                editor.KeyDown(27, false, false); Paint();
+                if (!editor.Document.ContentEquals(arcMap)) throw new InvalidOperationException("Native compact arc preview did not cancel exactly.");
 
                 void Paint(string? name = null)
                 {

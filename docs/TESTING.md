@@ -486,6 +486,12 @@ This opens a Mac window, checks fruit placement, undo, project round trips, both
 
 Shared Core and App regressions cover exact control-curve persistence, fixed AR reference ratios, bidirectional editing, local pen conversion and undo, control insertion/deletion, segment boundaries, global mode switching, and repeated-slider export. Switching editing modes must leave the document and history unchanged.
 
+`Core.Tests --compact-arc-check` checks anchor counts and fixed-time trajectory
+error against analytic circles across radii, arc spans, reference scales and both
+directions, plus project round trips, endpoint identity, export and undo/redo.
+`App.Tests --curve-edit-check` verifies local handle editing, unchanged mode
+switches, control insertion/deletion and undo through editor input.
+
 After changing input or drawing, manually check affected operations, language switching, window resizing, and file dialogs. Additional coverage is still needed for physical Windows window/audio behavior, Intel Mac, cross-display DPI, Mac MP3, and stable-client comparisons.
 
 ## Editing performance benchmark

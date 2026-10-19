@@ -119,6 +119,47 @@ internal static class SliderModeTests
         }
     }
 
+    public static void CompactArcConversion()
+    {
+        double maximumError = 0; int maximumAnchors = 0;
+        foreach (double radius in new[] { 25d, 100d, 240d })
+        foreach (double scale in new[] { .1, .4, 2 })
+        foreach (int direction in new[] { -1, 1 })
+        foreach (double sweep in new[] { Math.PI / 6, Math.PI / 2, Math.PI })
+        {
+            double extent = radius * Math.Sin(sweep / 2), endpointX = 256 + direction * radius * Math.Cos(sweep / 2);
+            var map = new MapDocument { DurationMs = 10000 };
+            var track = new CurveTrack { Kind = CurveKind.Bezier, CompensateTinyDroplets = false };
+            var curve = new ControlCurve { Kind = ControlCurveKind.CircularArc, ReferenceScale = scale };
+            curve.Controls.Add(new() { Offset = new(extent / scale, 256 + direction * radius - endpointX) });
+            track.Nodes.AddRange([new() { TimeMs = 2000, X = endpointX, OutgoingCurve = curve },
+                new() { TimeMs = 2000 + 2 * extent / scale, X = endpointX }]);
+            map.Tracks.Add(track);
+            var history = new EditorHistory(map); var edited = history.Document.Tracks[0];
+            history.Begin("arc edit"); ControlCurveEditing.ConvertToPen(edited, 0);
+            maximumAnchors = Math.Max(maximumAnchors, edited.Nodes.Count);
+            Check(edited.Nodes.Count <= 9, "A simple circular arc acquired excessive pen anchors.");
+            Check(edited.Nodes[0].Id == track.Nodes[0].Id && edited.Nodes[^1].Id == track.Nodes[^1].Id,
+                "Compact arc conversion replaced authored endpoints.");
+            for (int i = 0; i <= 2000; i++)
+            {
+                double y = extent * (i / 1000d - 1), time = 2000 + (y + extent) / scale;
+                double expected = 256 + direction * Math.Sqrt(Math.Max(0, radius * radius - y * y));
+                double error = Math.Abs(CurveMath.PositionAtTime(edited, time) - expected);
+                maximumError = Math.Max(maximumError, error); Near(CurveMath.PositionAtTime(edited, time), expected, .001);
+            }
+            Check(CurveMath.Validate(history.Document).Count == 0, "Compact arc conversion produced invalid time geometry.");
+            Check(ProjectSerializer.Read(ProjectSerializer.Serialize(history.Document)).ContentEquals(history.Document),
+                "Compact arc geometry did not persist exactly.");
+            if (CatchStreamConverter.Convert(map).Success)
+                Check(OsuBeatmapWriter.Serialize(history.Document).ObjectSequenceMatches, "Compact arc geometry failed export read-back.");
+            history.Commit(); var converted = history.Document.DeepClone();
+            history.Undo(); Check(history.Document.ContentEquals(map), "Arc conversion undo did not restore exact source geometry.");
+            history.Redo(); Check(history.Document.ContentEquals(converted), "Arc conversion redo changed compact geometry.");
+        }
+        Console.WriteLine($"Compact circular arcs: at most {maximumAnchors} anchors; maximum fixed-time X error={maximumError:F7}.");
+    }
+
     public static void SplitReverseAndConversion()
     {
         var map = ArcMap(); var track = map.Tracks[0]; var original = map.DeepClone().Tracks[0];
