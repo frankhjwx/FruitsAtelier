@@ -12,8 +12,68 @@ public sealed partial class EditorView
     private (IReadOnlyList<SyncObjectDifference> Items, float Width, string Language)? syncObjectDetailLayout;
     private SyncTextLine[] syncObjectDetailLines = [];
 
-    private void DrawSyncObjectDetails(ICanvas c, IReadOnlyList<SyncObjectDifference> differences, Rect bounds)
+    private void DrawSyncPlayableDetails(ICanvas c, IReadOnlyList<SyncObjectDifference> differences, Rect bounds, uint colour)
     {
+        syncObjectDetailBounds = bounds;
+        int visible = Math.Max(1, (int)((bounds.Height - 26) / 23));
+        syncObjectDetailMax = Math.Max(0, differences.Count - visible);
+        syncObjectDetailScroll = Math.Clamp(syncObjectDetailScroll, 0, syncObjectDetailMax);
+        c.Fill(bounds, Background); c.Stroke(bounds, Grid); c.Clip(bounds);
+        float cell = (bounds.Width - 24) / 6;
+        string[] headings = [L.Get("sync.localHeading"), L.Get("sync.eventTime"), "X (px)",
+            L.Get("sync.externalHeading"), L.Get("sync.eventTime"), "X (px)"];
+        for (int i = 0; i < headings.Length; i++) c.Text(headings[i], bounds.X + 8 + i * cell, bounds.Y + 3, 11, Muted, cell - 6);
+        for (int row = 0; row < visible && syncObjectDetailScroll + row < differences.Count; row++)
+        {
+            var difference = differences[syncObjectDetailScroll + row];
+            float y = bounds.Y + 25 + row * 23;
+            if (difference.Playable is not { } item)
+            {
+                var arguments = SyncDetailArguments(difference);
+                DrawSyncAttributeText(c, L.Get(difference.Message, arguments), arguments.Skip(1), bounds.X + 8, y, 12, bounds.Width - 24, colour);
+                continue;
+            }
+            var values = Values(item.Local).Concat(Values(item.External)).ToArray();
+            bool[] changed = [item.KindChanged, item.TimeChanged, item.XChanged];
+            for (int i = 0; i < values.Length; i++)
+            {
+                float x = bounds.X + 8 + i * cell;
+                if (changed[i % 3]) c.Fill(new(x - 2, y, cell - 4, 21), colour, opacity: .22f);
+                c.Text(values[i], x, y, 12, changed[i % 3] ? colour : Foreground, cell - 6);
+            }
+        }
+        c.Unclip();
+        if (syncObjectDetailMax > 0) c.Text("↕", bounds.Right - 14, bounds.Y + 4, 12, Muted, 14);
+
+        static string[] Values(ConvertedCatchObject? item) => item is null ? ["—", "—", "—"] :
+            [L.Get(item.Kind switch { CatchObjectKind.Fruit => "tools.fruit", CatchObjectKind.Droplet => "sync.eventDroplet",
+                CatchObjectKind.TinyDroplet => "sync.eventTiny", _ => "tools.banana" }),
+            item.TimeMs.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture),
+            item.X.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)];
+    }
+
+    private static object[] SyncDetailArguments(SyncObjectDifference difference) => difference.Message == "sync.diff.combo"
+        ? [difference.Arguments[0], L.Get((int)difference.Arguments[1] == 0 ? "sync.diff.off" : "sync.diff.on"),
+            L.Get((int)difference.Arguments[2] == 0 ? "sync.diff.off" : "sync.diff.on")] : difference.Arguments;
+
+    private void DrawSyncAttributeText(ICanvas c, string text, IEnumerable<object> values, float x, float y, float size, float width, uint colour)
+    {
+        c.Text(text, x, y, size, Foreground, width);
+        foreach (var value in values)
+        {
+            string token = value.ToString() ?? "";
+            int start = token.Length == 0 ? -1 : text.LastIndexOf(token, StringComparison.Ordinal);
+            if (start < 0) continue;
+            float at = x + c.MeasureText(text[..start], size), length = c.MeasureText(token, size);
+            c.Fill(new(at, y, length, 21), colour, opacity: .22f);
+            c.Text(token, at, y, size, colour, length + 2);
+        }
+    }
+
+    private void DrawSyncObjectDetails(ICanvas c, IReadOnlyList<SyncObjectDifference> differences, Rect bounds, uint colour = SyncUnresolved)
+    {
+        if (differences.Any(d => d.Playable is not null))
+        { DrawSyncPlayableDetails(c, differences, bounds, colour); return; }
         syncObjectDetailBounds = bounds;
         var layout = (differences, bounds.Width, L.Language);
         if (syncObjectDetailLayout != layout)
@@ -35,7 +95,8 @@ public sealed partial class EditorView
         c.Fill(bounds, Background); c.Stroke(bounds, Grid);
         c.Clip(bounds);
         for (int i = 0; i < visible && syncObjectDetailScroll + i < lines.Length; i++)
-            c.Text(lines[syncObjectDetailScroll + i].Text, bounds.X + 8, bounds.Y + 3 + i * 23, 15, Foreground, bounds.Width - 20);
+            DrawSyncAttributeText(c, lines[syncObjectDetailScroll + i].Text, differences.SelectMany(d => SyncDetailArguments(d).Skip(1)),
+                bounds.X + 8, bounds.Y + 3 + i * 23, 15, bounds.Width - 20, colour);
         c.Unclip();
         if (lines.Length > visible) c.Text("↕", bounds.Right - 14, bounds.Y + 4, 12, Muted, 14);
     }
@@ -56,7 +117,7 @@ public sealed partial class EditorView
     private static string SyncCategory(string key) => key.StartsWith("$objects:") ? "Objects"
         : key == "$audio" ? "Audio" : key.StartsWith("TimingPoints/") ? "Timing" : key.Split('/')[0];
 
-    private static SyncReviewData PrepareSyncReview(WorkspaceMerge merge)
+    private static SyncReviewData PrepareSyncReview(WorkspaceMerge merge, Dictionary<string, IReadOnlyList<SyncObjectDifference>> objects)
     {
         var local = Sections(WorkspaceSynchronization.Fields(merge.Local));
         var external = Sections(WorkspaceSynchronization.Fields(merge.External.Document));
@@ -79,8 +140,7 @@ public sealed partial class EditorView
         var tabs = SyncTabOrder.Concat(merge.Conflicts.Select(c => SyncCategory(c.Key)))
             .Concat(local.Keys.Concat(external.Keys).Where(k => k is not ("" or "HitObjects" or "TimingPoints")))
             .Distinct().ToArray();
-        return new(local, external, fields, merge.Conflicts.Where(c => c.Key.StartsWith("$objects:"))
-            .ToDictionary(c => c.Key, c => SyncObjectDifferences.Compare(c.Local, c.External)), tabs);
+        return new(local, external, fields, objects, tabs);
 
         static Dictionary<string, string> Sections(Dictionary<string, string?> fields)
         {

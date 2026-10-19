@@ -153,12 +153,13 @@ that AR scale and locates its start; long groups remain scrollable rather than
 being compressed to fit. Current conflicting objects and related curve controls are
 highlighted; missing counterparts are labelled. Mouse wheel scrolls both maps and
 Ctrl+wheel zooms them together. Other field differences use side-by-side text.
-The Objects tab describes the changed properties in each group with explicit left
-and right values: time, position, New Combo, colour skip, hitsounds, sample settings,
-slider path, span count and length, or banana shower end time. Unmatched entries
-are identified by side rather than assuming an ambiguous replacement is a move.
-The detail box scrolls independently of the canvases. Canvas time labels and
-object references use `mm:ss:ms`, with three millisecond digits.
+The Objects tab lists differing playable fruits, droplets, tiny droplets and bananas
+with side-by-side time (milliseconds) and X position (pixels). Slider-generated
+positions tolerate one pixel; sub-millisecond time differences remain visible.
+Only changed properties are red, turning green after a choice. Explicit sound,
+sample and combo differences remain separate property descriptions. Missing events
+show an empty counterpart. The detail box scrolls independently of the canvases.
+Canvas time labels use `mm:ss:ms`, with three millisecond digits.
 The optional result pane previews chosen resolutions, using FA for unresolved items;
 it does not save or export. File timestamps identify the more recently saved version,
 and unsaved FA edits are labelled separately. A newer timestamp does not resolve

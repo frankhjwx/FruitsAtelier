@@ -72,6 +72,7 @@ internal static class SynchronizationRenderCheck
                 File.WriteAllText(source, text.Replace("100,192", "400,192"));
                 view.RefreshSynchronization(); Wait();
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native object conflict dialog was not shown.");
+                CaptureTiming("objects-unresolved");
                 var before = view.Document.DeepClone(); view.KeyDown(46, false, false); Paint();
                 if (!before.ContentEquals(view.Document)) throw new InvalidOperationException("Native conflict input changed authoring.");
                 float rangeY = 282 + .65f * Math.Max(40, height - 488);
@@ -84,6 +85,7 @@ internal static class SynchronizationRenderCheck
                     if (selected.Count == 0 || selected.Values.Any(value => value != external))
                         throw new InvalidOperationException("Native conflict rectangle did not select its side.");
                 }
+                CaptureTiming("objects-resolved");
                 view.Wheel(200, 260, 120, false); Paint();
                 view.Wheel(200, 260, 120, true); Paint();
                 if (!before.ContentEquals(view.Document)) throw new InvalidOperationException("Native comparison navigation changed authoring.");
@@ -112,6 +114,18 @@ internal static class SynchronizationRenderCheck
                 view.ShowDeleteDifficulty(0, localOnly: true); Paint(); view.KeyDown(27, false, false);
                 view.ShowDeleteProjectConfirmation((_, _) => { }); Paint(); view.KeyDown(27, false, false);
                 VersionHistoryRenderCheck.Run(canvas, width, height);
+                string sliderSource = Path.Combine(set, "slider.osu");
+                string sliderText = text.Replace("100,192,1000,1,0,0:0:0:0:", "100,192,1000,2,0,L|400:192,1,300");
+                File.WriteAllText(sliderSource, sliderText);
+                var sliderSession = WorkspaceProject.Create(Path.Combine(root, "SliderWorkspace"), BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(sliderSource)]), songs);
+                view.LoadWorkspace(sliderSession);
+                File.WriteAllText(sliderSource, sliderText.Replace("L|400:192", "L|450:260"));
+                view.RefreshSynchronization(); Wait();
+                if (!view.SynchronizationVisible) throw new InvalidOperationException("Playable slider comparison was not shown.");
+                CaptureTiming("slider-unresolved");
+                view.PointerDown(100, height - 162, 0, false, false); view.PointerUp(100, height - 162, 0); Paint();
+                CaptureTiming("slider-resolved");
+                view.KeyDown(27, false, false);
                 AppLog.Write($"Synchronization rendering passed: {locale}, {width}x{height}, object conflicts, missing state, deletion confirmation and input isolation.");
 
                 void CaptureTiming(string state)
