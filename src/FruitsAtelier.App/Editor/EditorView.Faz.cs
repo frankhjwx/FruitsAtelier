@@ -130,7 +130,14 @@ public sealed partial class EditorView
         {
             var session = task.GetAwaiter().GetResult();
             CloseFaz(); LoadWorkspace(session); RefreshLibrary(); fazOpened?.Invoke(); fazOpened = null;
+            if (targets.Any(p => p is not null) || existing is not null) RefreshSynchronization(ReviewNextFazDifference);
         });
+    }
+
+    private void ReviewNextFazDifference()
+    {
+        for (int i = 0; i < difficulties.Count; i++)
+            if (ShowSyncProblem(i)) return;
     }
 
     private void DrawFaz(ICanvas c)

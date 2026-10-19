@@ -21,10 +21,13 @@ internal static class FazRenderCheck
         {
             string song = Path.Combine(settings.Songs, "Local project " + (i + 1)); Directory.CreateDirectory(song);
             string map = Path.Combine(song, "Hard.osu");
-            File.WriteAllText(map, "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:FA archive fixture\nArtist:Artist\nCreator:Mapper\nVersion:Hard\nBeatmapID:123\nBeatmapSetID:456\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n");
+            File.WriteAllText(map, "osu file format v14\n[General]\nAudioFilename:audio.wav\nMode:2\n[Metadata]\nTitle:FA archive fixture\nArtist:Artist\nCreator:Mapper\nVersion:Hard\nBeatmapID:123\nBeatmapSetID:456\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n");
+            File.WriteAllBytes(Path.Combine(song, "audio.wav"), new byte[44]);
             source ??= map;
         }
-        FazArchive.Export(BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source!)]), archive, false, false, settings.Workspace);
+        var exported = BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source!)]);
+        SongSetup.Set(exported.Difficulties[0].Document, "Metadata", "Title", "Imported FA title");
+        FazArchive.Export(exported, archive, false, false, settings.Workspace);
         var taskField = typeof(EditorView).GetField("fazTask", BindingFlags.Instance | BindingFlags.NonPublic)!;
         foreach (string locale in new[] { "en", "zh-CN" })
         foreach (var size in new[] { (980, 620), (1440, 900) })
@@ -62,6 +65,17 @@ internal static class FazRenderCheck
             Paint();
             view.PointerDown(deleteX + 350, deleteY + 160, 0, false, false); view.PointerUp(deleteX + 350, deleteY + 160, 0);
             if (retained != true) throw new InvalidOperationException("Deletion must respect the backup checkbox.");
+            view.BeginFazOpen(archive, () => { }); timeout.Restart();
+            while ((taskField.GetValue(view) is not null || typeof(EditorView).GetField("fazSearch", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view) is not null) && timeout.Elapsed < TimeSpan.FromSeconds(20)) { Paint(); Thread.Sleep(10); }
+            view.PointerDown(x + 350, y + 100, 0, false, false); view.PointerUp(x + 350, y + 100, 0); Paint();
+            view.PointerDown(x + 350, y + 200, 0, false, false); view.PointerUp(x + 350, y + 200, 0); Paint();
+            view.PointerDown(x + 550, y + 495, 0, false, false); view.PointerUp(x + 550, y + 495, 0);
+            timeout.Restart();
+            do { Paint(); Thread.Sleep(10); } while ((view.WorkspaceSession is null || view.SynchronizationBusy) && timeout.Elapsed < TimeSpan.FromSeconds(20));
+            if (typeof(EditorView).GetField("syncPage", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view) as string != "resolve")
+                throw new InvalidOperationException("Linked FAZ differences must open the resolve panel.");
+            Paint(); view.StopFileMonitoring();
+            LibraryOperations.DeleteProject(view.WorkspaceSession!.Directory, settings);
             void Paint(bool capture = false)
             {
                 canvas.Begin(); view.Render(canvas, size.Item1, size.Item2);

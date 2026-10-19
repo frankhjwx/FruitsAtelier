@@ -253,7 +253,8 @@ public sealed partial class EditorView
                 var automatic = result.Scan.Difficulties.Where(s => s.State == WorkspaceSyncState.Changed && !result.Merges[s.DifficultyId].RequiresResolution
                     && (!result.Merges[s.DifficultyId].CanExportLocalChanges || result.LocalExports.ContainsKey(s.DifficultyId))
                     && !(reviewResolved && result.Merges[s.DifficultyId].PreviouslyResolved.Count > 0)
-                    || s.State == WorkspaceSyncState.NeedsBaseline && s.Candidate!.Hash == (result.Session.Manifest.Difficulties.Single(d => d.Id == s.DifficultyId).ExportHash
+                    || s.State == WorkspaceSyncState.NeedsBaseline && !result.Merges[s.DifficultyId].RequiresResolution
+                    && s.Candidate!.Hash == (result.Session.Manifest.Difficulties.Single(d => d.Id == s.DifficultyId).ExportHash
                         ?? result.Session.Manifest.Difficulties.Single(d => d.Id == s.DifficultyId).SourceHash)).ToArray();
                 bool canAdd = !result.Scan.Difficulties.Any(s => s.State is WorkspaceSyncState.Ambiguous or WorkspaceSyncState.Duplicate or WorkspaceSyncState.Unavailable);
                 if (automatic.Length > 0 || canAdd && result.Scan.Additions.Count > 0)

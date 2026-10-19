@@ -79,6 +79,47 @@ internal static class FazTests
             Check(comparison.RequiresResolution && !comparison.CanExportLocalChanges, "different authoring cannot automatically overwrite associated map");
             Throws(() => FazArchive.Import(package, linked, new[] { target }, false, false), "duplicate owner rejected");
         }
+        foreach (bool equalFirst in new[] { false, true })
+        {
+            var reviewSettings = Settings("link-review-" + equalFirst);
+            string reviewFolder = Path.Combine(reviewSettings.Songs, "Existing"); Directory.CreateDirectory(reviewFolder);
+            string reviewMap = Path.Combine(reviewFolder, "local.osu");
+            File.Copy(map, reviewMap); File.Copy(Path.Combine(folder, "audio.wav"), Path.Combine(reviewFolder, "audio.wav"));
+            var reviewView = new EditorView(false);
+            reviewView.LibrarySettings.Workspace = reviewSettings.Workspace; reviewView.LibrarySettings.Songs = reviewSettings.Songs;
+            string reviewArchive = native;
+            string[] reviewTargets = [reviewMap];
+            if (equalFirst)
+            {
+                var two = ProjectSerializer.ReadProject(before);
+                two.Difficulties[0].Name = "Second";
+                SongSetup.Set(two.Difficulties[0].Document, "Metadata", "Version", "Second");
+                SongSetup.Set(two.Difficulties[0].Document, "Metadata", "BeatmapID", "124");
+                two.Difficulties.Insert(0, BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(map)]).Difficulties[0]);
+                string second = Path.Combine(reviewFolder, "second.osu");
+                File.WriteAllText(second, File.ReadAllText(map).Replace("BeatmapID:123", "BeatmapID:124").Replace("Version:Hard", "Version:Second"));
+                reviewArchive = Path.Combine(root, "review-two.faz");
+                FazArchive.Export(two, reviewArchive, false, false, source.Workspace);
+                reviewTargets = [reviewMap, second];
+            }
+            var reviewPackage = FazArchive.Prepare(reviewArchive, reviewSettings);
+            var reviewHashes = reviewTargets.ToDictionary(p => p, WorkspaceProject.Hash);
+            typeof(EditorView).GetField("fazPackage", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(reviewView, reviewPackage);
+            typeof(EditorView).GetField("fazTargets", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(reviewView, reviewTargets);
+            typeof(EditorView).GetField("fazMode", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(reviewView, 1);
+            typeof(EditorView).GetMethod("ImportFaz", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(reviewView, new object?[] { null });
+            var watch = System.Diagnostics.Stopwatch.StartNew(); var recording = new RecordingCanvas();
+            do
+            {
+                reviewView.Render(recording, 980, 620); Thread.Sleep(10);
+            } while (watch.Elapsed < TimeSpan.FromSeconds(30) && (reviewView.WorkspaceSession is null || reviewView.SynchronizationBusy));
+            Check(typeof(EditorView).GetField("syncPage", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(reviewView) as string == "resolve", "link import immediately opens resolution for differing authoring");
+            Check(reviewView.WorkspaceSession!.Manifest.Difficulties.Last().Sync is null, "conflicted first association does not silently establish a baseline");
+            Check(reviewHashes.All(p => WorkspaceProject.Hash(p.Key) == p.Value), "review does not write any Songs difficulty before a user choice");
+            Check(reviewView.CaptureProject().Difficulties.Last().Document.Tracks.Count == 1, "review retains imported editable curves before a choice");
+            reviewView.StopFileMonitoring();
+        }
+
         var db = new LibraryDatabase(linked.Workspace, linked.Songs);
         var document = project.Difficulties[0].Document.DeepClone();
         SongSetup.Set(document, "Metadata", "BeatmapID", "0"); SongSetup.Set(document, "Metadata", "BeatmapSetID", "-1");

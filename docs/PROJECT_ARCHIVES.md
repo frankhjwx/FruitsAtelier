@@ -43,8 +43,9 @@ otherwise ambiguous folders are excluded. Recommendations use the library index;
 candidate folders are reread during discovery and before association. IDs establish identity, not content equality.
 
 Associating existing maps preserves native editing data and does not write `.osu`.
-Differences enter the existing synchronization review before editing or subsequent
-publication. Newly installed Songs maps receive a baseline from the same native
+Link imports immediately check every difficulty and open synchronization review
+for differences. An unchanged Songs file hash does not bypass review when the
+imported authoring differs; a shared baseline is established only after resolution. Newly installed Songs maps receive a baseline from the same native
 snapshot that generated the OSZ. Existing target ownership prevents duplicate
 synchronization owners; the import screen offers to open a recommended target's
 existing project. A repeated archive offers the previously imported project.
