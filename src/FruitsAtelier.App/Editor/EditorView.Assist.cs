@@ -225,8 +225,9 @@ public sealed partial class EditorView
     {
         assistButtons.Clear();
         float availableHeight = Math.Max(0, plot.Bottom - CanvasCornerBottom);
-        float size = Math.Clamp(availableHeight / 7, 48, 64);
-        assistPalette = new(CanvasCornerRight - 76, CanvasCornerBottom, 76, availableHeight);
+        float size = IsOsuCanvas ? Math.Clamp(availableHeight / 7, 48, 64) : Math.Clamp(MathF.Floor(availableHeight / 7), 64, 96);
+        float buttonWidth = IsOsuCanvas ? 76 : 96;
+        assistPalette = new(CanvasCornerRight - buttonWidth, CanvasCornerBottom, buttonWidth, availableHeight);
         assistScrollLimit = Math.Max(0, size * 7 - availableHeight);
         assistScroll = Math.Clamp(assistScroll, 0, assistScrollLimit);
         float top = assistPalette.Y - assistScroll;
@@ -261,12 +262,12 @@ public sealed partial class EditorView
             c.Fill(frame, Dim(Panel, opacity), 8);
             c.Stroke(frame, i == 5 && DistanceSnapEnabled && distanceOutside ? Error : Dim(Accent, opacity), 1, 8);
             var source = iconSources[i];
-            float iconScale = Math.Min(50 / source.Width, (size - 22) / source.Height);
+            float iconScale = Math.Min((IsOsuCanvas ? 50 : 68) / source.Width, (size - 22) / source.Height);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "assist", names[i] + ".png"),
                 new(r.X + r.Width / 2 - source.Width * iconScale / 2, r.Y + 4 + (size - 22 - source.Height * iconScale) / 2,
                     source.Width * iconScale, source.Height * iconScale), source: source, opacity: opacity);
             string label = L.Get(keys[i]);
-            float font = 8;
+            float font = IsOsuCanvas ? 8 : 9.5f;
             font = Math.Min(font, (r.Width - 8) / Math.Max(1, c.MeasureText(label, font, true)) * font);
             c.Text(label, r.X + (r.Width - c.MeasureText(label, font, true)) / 2, r.Bottom - 14,
                 font, active[i] ? Foreground : 0x747B85, r.Width - 8, true);

@@ -1502,8 +1502,9 @@ changes duration without inserting authoring green timing points. Imported
 sliders capture their original head SV. New Legacy sliders use **SV** below **DS** in the upper-right corner of the osu!
 canvas (initially 1×). The compact sliders share this corner with the X/Y readout.
 Catch canvas shows X and the selected object’s previous/next distance ratios in
-the same corner. The compact assist buttons sit below these readouts and scroll
-when the canvas is too short to show every button. The slider covers
+the same corner. The assist buttons sit below these readouts and scroll when the canvas is too
+short to show every button. Catch uses larger buttons and icons, while osu! keeps
+a compact palette. The slider covers
 0.1–3.2× in 0.1× steps; Shift uses 0.01×. Click its numeric value to enter any SV
 from 0.1–10×, confirm with Enter or by clicking outside, and cancel with Esc.
 Values above 3.2× keep the slider at its right endpoint. The default saves globally
