@@ -222,8 +222,12 @@ A changed external version returns to field/object comparison and resolution.
 Without a baseline, differences still require explicit choices. An unchanged
 retained choice remains available for review; a subsequent FA content edit exports
 the resulting complete FA version against the resolved external version. Timing
-comparison includes inherited points. Applying external context retains authoring
-objects and rebases that context through local undo snapshots.
+comparison includes inherited points. After a retained timing choice, new external
+timing edits are replayed from the last accepted external snapshot onto the accepted
+FA timing. Unchanged retained differences are not reopened or overwritten by that
+review. A volume restoration boundary remains part of the incoming change; editing
+an earlier retained difference again makes that change reviewable. Applying external
+context retains authoring objects and rebases it through local undo snapshots.
 
 General, Editor, Metadata, Difficulty and Colours show every field present on
 either side, including unchanged context, in fixed format-field order. Additional

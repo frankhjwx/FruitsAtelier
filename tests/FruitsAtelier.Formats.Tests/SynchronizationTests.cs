@@ -535,6 +535,45 @@ internal static class SynchronizationTests
                 Check(deleted.Fruits[0].Id == f.Diff.Document.Fruits[0].Id, key + " preserves authoring identity");
             });
         });
+        yield return ("Sync: retained timing choices survive new volume edits", () =>
+        {
+            foreach (bool takeExternal in new[] { false, true }) Run(f =>
+            {
+                string initial = Fixture().Replace("0,500,4,1,0,100,1,0",
+                    "0,500,4,1,0,100,1,0\n50532,-100,4,2,1,70,0,1\n51401,-50,4,2,1,70,0,1\n83793,-100,4,2,1,5,0,0");
+                File.WriteAllText(f.Source, initial);
+                f.Diff.Document = OsuBeatmapReader.ReadFile(f.Source);
+                WorkspaceTimingSynchronization.NormalizeDocument(f.Diff.Document);
+                var entry = f.Session.Manifest.Difficulties[0];
+                entry.Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory);
+                string retained = initial.Replace("[HitObjects]", "84662,-100,4,2,1,20,0,0\n[HitObjects]");
+                File.WriteAllText(f.Source, retained);
+                var review = f.Merge();
+                var choices = review.Conflicts.ToDictionary(c => c.Key, _ => false);
+                var local = WorkspaceSynchronization.Resolve(review, choices);
+                WorkspaceSynchronization.Accept(f.Session, entry, review.External, local, true, review: review, choices: choices);
+                f.Diff.Document = local;
+                Check(f.Merge().PreviouslyResolved.Contains("TimingPoints/"), "old timing difference is accepted");
+
+                File.WriteAllText(f.Source, retained.Replace("50532,-100,4,2,1,70", "50532,-100,4,2,1,60"));
+                review = f.Merge();
+                var timing = review.Conflicts.Single(c => c.Key == "TimingPoints/");
+                Check(timing.Local.Contains("50532,") && timing.External.Contains("50532,")
+                    && timing.External.Contains("51401,"), "new volume and restoration boundary are reviewed");
+                Check(!timing.Local.Contains("84662,") && !timing.External.Contains("84662,"), "old retained row is not reopened");
+                choices = review.Conflicts.ToDictionary(c => c.Key, _ => takeExternal);
+                var resolved = WorkspaceSynchronization.Resolve(review, choices);
+                Check(resolved.TimingPoints.Single(t => t.TimeMs == 50532).Volume == (takeExternal ? 60 : 70), "chosen volume applies");
+                Check(!resolved.TimingPoints.Any(t => t.TimeMs == 84662), "both choices preserve earlier local deletion");
+                Check(!takeExternal || resolved.TimingPoints.Single(t => t.TimeMs == 51401).Volume == 70, "incoming choice restores volume");
+                WorkspaceSynchronization.Accept(f.Session, entry, review.External, resolved, true, review: review, choices: choices);
+                f.Diff.Document = resolved;
+                Check(!f.Merge().RequiresResolution, "accepted new timing is stable on rescan");
+                File.WriteAllText(f.Source, File.ReadAllText(f.Source).Replace("84662,-100,4,2,1,20", "84662,-100,4,2,1,30"));
+                Check(f.Merge().Conflicts.Any(c => c.Key == "TimingPoints/" && c.External.Contains("84662,")),
+                    "a subsequent edit to the retained row is reviewed");
+            });
+        });
         yield return ("Sync: timing choices preserve ordered inherited and uninherited points", () => Run(f =>
         {
             f.Diff.Document.TimingPoints[0].BeatLengthMs = 600;

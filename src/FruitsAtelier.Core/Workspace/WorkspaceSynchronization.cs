@@ -381,6 +381,17 @@ public static class WorkspaceSynchronization
                 merge.Fields[key] = ours;
                 if (outsideChanged || insideChanged)
                 {
+                    if (outsideChanged && baseline.LocalOverrides.Contains(key))
+                    {
+                        // Replay only edits since the accepted external snapshot. Earlier
+                        // local choices must survive unrelated external timing changes.
+                        var incoming = WorkspaceTimingSynchronization.ProjectChanges(original.TimingPoints,
+                            emittedBaseline.TimingPoints, external.Document.TimingPoints);
+                        merge.ExternalTiming = WorkspaceTimingSynchronization.Text(incoming);
+                        if (WorkspaceTimingSynchronization.Conflict(local.TimingPoints, incoming) is { } changedTiming)
+                            merge.Conflicts.Add(changedTiming);
+                        continue;
+                    }
                     var timingBaseline = baseline.LocalOverrides.Contains(key) ? OsuBeatmapWriter.Serialize(original, compensate).ReadBack.TimingPoints
                         : emittedBaseline.TimingPoints;
                     // Generated SV belongs to the emitted baseline. Transfer only actual
