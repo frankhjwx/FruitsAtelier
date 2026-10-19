@@ -63,6 +63,13 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`Formats.Tests --semantic-sync-check` runs the synchronization regressions, including
+playable slider equivalence, position tolerance, independent SV capture and
+normalized timing choices. `FruitsAtelier.App.exe --render-check
+--semantic-sync-render-check` exercises the English and Chinese timing tables at
+two window sizes and captures unresolved/resolved cells under
+`artifacts/tests/semantic-sync-native`.
+
 `App.Tests --faz-check` checks portable project modes, native roundtrips, exact
 identity/metadata matching, complete-folder coverage, resource isolation, ownership,
 repeated imports, automatic file registration, archive validation and modal entry points.

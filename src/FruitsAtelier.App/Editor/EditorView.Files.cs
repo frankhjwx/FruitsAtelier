@@ -37,6 +37,7 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        foreach (var difficulty in project.Difficulties) WorkspaceTimingSynchronization.NormalizeDocument(difficulty.Document);
         CancelLegacyDropletRefresh();
         if (libraryOpenTask is { } retiredOpen)
             _ = retiredOpen.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
@@ -197,6 +198,7 @@ public sealed partial class EditorView
         }
         if (difficulties.Count >= 256) { SetNotice(L.Get("project.invalid")); return false; }
         var document = imported?.DeepClone() ?? Document.DeepClone();
+        WorkspaceTimingSynchronization.NormalizeDocument(document);
         string name = imported is null ? L.Get("project.defaultDifficulty", difficulties.Count + 1)
             : OsuBeatmapReader.Setting(document, "Metadata", "Version") ?? L.Get("project.defaultDifficulty", difficulties.Count + 1);
         if (imported is null)

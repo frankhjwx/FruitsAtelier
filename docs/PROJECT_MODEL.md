@@ -16,6 +16,20 @@ Moving or reshaping a slider retains its authored SV. Green timing changes do no
 replace this per-object value. The Inspector edits authored SV; export metrics
 report the processed value. Export alone synthesizes required green points.
 
+When a project or difficulty enters the editor, inherited timing is normalized to
+sound, volume and effect transitions with a neutral SV. Imported sliders retain
+their captured SV, and native curves retain their starting SV seed before timing
+is normalized. Red points retain their BPM and meter. The low-level osu reader
+still preserves source timing for lossless format operations.
+
+Synchronization compares this normalized timing, excluding generated SV-only
+points. Slider paths are compared through all converted Catch events, including
+droplets and tiny droplets: kinds and counts must match, times allow at most
+0.000001 ms serialization error, and horizontal positions allow 1 pixel. Object
+sample and combo attributes remain independently significant. Equivalent sliders
+retain native authoring and their association identity. Timing review shows aligned
+attribute columns per timestamp; differing cells are red until resolved, then green.
+
 Older schemas remain readable. A fruit's geometric Y defaults to 192; old saved
 fruits recover Y from their retained source object line when present. Catch editing
 preserves this coordinate. `OsuDistanceSpacing` is independent of Catch spacing,

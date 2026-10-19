@@ -75,7 +75,10 @@ public static class WorkspaceSynchronization
         // Source discovery and audio duration refresh are not authoring edits.
         original.SourcePath = local.SourcePath;
         original.DurationMs = local.DurationMs;
-        return !local.ContentEquals(original);
+        var normalized = local.DeepClone();
+        WorkspaceTimingSynchronization.NormalizeDocument(normalized);
+        WorkspaceTimingSynchronization.NormalizeDocument(original);
+        return !normalized.ContentEquals(original);
     }
     public static bool HasFieldDifferences(MapDocument local, MapDocument external)
     {
@@ -320,7 +323,7 @@ public static class WorkspaceSynchronization
         merge.Conflicts.Clear();
         foreach (string key in ours.Keys.Union(theirs.Keys))
         {
-            merge.Fields[key] = key == "TimingPoints/" ? WorkspaceTimingSynchronization.Text(local.TimingPoints) : ours.GetValueOrDefault(key);
+            merge.Fields[key] = key == "TimingPoints/" ? WorkspaceTimingSynchronization.Text(WorkspaceTimingSynchronization.Normalize(local.TimingPoints)) : ours.GetValueOrDefault(key);
             if (key == "Editor/TimelineZoom") { merge.Fields[key] = theirs.GetValueOrDefault(key); continue; }
             if (!FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key), output.ReadBack, external.Document))
             {
@@ -413,10 +416,24 @@ public static class WorkspaceSynchronization
             return retainedSources.TryGetValue(beforeLines[index], out var retained) ? retained
                 : [index < baseline.ObjectSources.Count ? baseline.ObjectSources[index] : Guid.Empty];
         }
-        if (!beforeLines.SequenceEqual(afterLines))
+        var (beforeKeys, afterKeys) = AnchorKeys(beforeLines, afterLines);
+        var beforePlayable = new WorkspacePlayableComparison(emittedBaseline);
+        var afterPlayable = new WorkspacePlayableComparison(external.Document);
+        var beforeHeads = beforeLines.Select((line, i) => (Key: ObjectKey(line), Index: i))
+            .GroupBy(p => p.Key).Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single().Index);
+        var afterHeads = afterLines.Select((line, i) => (Key: ObjectKey(line), Index: i))
+            .GroupBy(p => p.Key).Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single().Index);
+        foreach (var head in beforeHeads)
+        {
+            if (!head.Key.EndsWith("/2") || !afterHeads.TryGetValue(head.Key, out int j)) continue;
+            int i = head.Value;
+            if (SliderAttributes(beforeLines[i]) == SliderAttributes(afterLines[j]) && beforePlayable.Equivalent(i, afterPlayable, j))
+                beforeKeys[i] = afterKeys[j] = "$playable:" + head.Key;
+            else { beforeKeys[i] += "$before"; afterKeys[j] += "$after"; }
+        }
+        if (!beforeKeys.SequenceEqual(afterKeys))
         {
             // Unique save-equivalent lines anchor ordered runs. Unmatched runs are explicit groups, never guessed identities.
-            var (beforeKeys, afterKeys) = AnchorKeys(beforeLines, afterLines);
             var counts = beforeKeys.GroupBy(x => x).ToDictionary(g => g.Key, g => g.Count());
             var positions = afterKeys.Select((line, index) => (line, index)).GroupBy(x => x.line)
                 .Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single().index);
@@ -513,6 +530,7 @@ public static class WorkspaceSynchronization
         foreach (var conflict in merge.Conflicts)
             if (!externalChoices.ContainsKey(conflict.Key) && !merge.PreviouslyResolved.Contains(conflict.Key)) throw new InvalidOperationException(L.Get("sync.unresolved"));
         var result = merge.Local.DeepClone();
+        WorkspaceTimingSynchronization.NormalizeDocument(result);
         var fields = new Dictionary<string, string?>(merge.Fields);
         var outside = Fields(merge.External.Document);
         foreach (var conflict in merge.Conflicts.Where(c => !c.Key.StartsWith('$')))
@@ -529,8 +547,6 @@ public static class WorkspaceSynchronization
                 .ToDictionary(g => g.Key, g => new Queue<int>(g.Select(p => p.i)));
             foreach (string line in group.Lines) OsuBeatmapReader.ParseObject(result, line, positions[line].Dequeue());
         }
-        bool acceptedTiming = WorkspaceTimingSynchronization.Text(result.TimingPoints)
-            != WorkspaceTimingSynchronization.Text(merge.Local.TimingPoints);
         var incomingSliders = merge.External.Document.ImportedSliders.GroupBy(s => SliderShape(s.OriginalLine ?? ""))
             .Where(g => g.Key is not null).ToDictionary(g => g.Key!, g => g.First());
         foreach (var slider in result.ImportedSliders)
@@ -538,9 +554,7 @@ public static class WorkspaceSynchronization
             if (SliderShape(slider.OriginalLine ?? "") is not { } shape || !incomingSliders.TryGetValue(shape, out var incoming)) continue;
             double incomingSv = ImportedSliderConverter.SliderVelocityAt(merge.External.Document, incoming)
                 * merge.External.Document.EffectiveSliderMultiplier / result.SliderMultiplier;
-            if (slider.SliderVelocityMultiplier is null || acceptedTiming
-                && Math.Abs(ImportedSliderConverter.SliderVelocityAt(result, slider) * result.EffectiveSliderMultiplier
-                    - incomingSv * result.SliderMultiplier) > 1e-9)
+            if (slider.SliderVelocityMultiplier is null)
             {
                 slider.SliderVelocityMultiplier = incomingSv; slider.ProcessedSliderVelocityMultiplier = null;
                 slider.RandomizationSource = null; slider.RandomizationTrack = null; slider.RandomizationBaseVelocity = null;
@@ -566,6 +580,7 @@ public static class WorkspaceSynchronization
     {
         var result = merge.External.Document.DeepClone();
         PreserveCurves(merge, result, merge.Local.Tracks.Select(t => t.Id).ToHashSet());
+        WorkspaceTimingSynchronization.NormalizeDocument(result);
         OsuBeatmapReader.Validate(result);
         return result;
     }
@@ -632,7 +647,7 @@ public static class WorkspaceSynchronization
         var sources = ObjectLines(output.Text).SequenceEqual(ObjectLines(external.Text)) ? output.ObjectSources : MapExternalSources(resolved, external, output, entry.Sync);
         var pending = new List<string>();
         var resolvedFields = Fields(resolved); var externalFields = Fields(external.Document);
-        string emittedTiming = WorkspaceTimingSynchronization.Text(output.ReadBack.TimingPoints);
+        string emittedTiming = WorkspaceTimingSynchronization.Text(WorkspaceTimingSynchronization.Normalize(output.ReadBack.TimingPoints));
         bool MatchesExternal(string key) => FieldEquals(key, key == "TimingPoints/" ? emittedTiming : resolvedFields.GetValueOrDefault(key), externalFields.GetValueOrDefault(key), resolved, external.Document);
         if (entry.Sync is { } previous && !retainLocalFields)
         {
@@ -673,13 +688,21 @@ public static class WorkspaceSynchronization
 
     private static IReadOnlyList<Guid> MapExternalSources(MapDocument document, WorkspaceSyncCandidate external, OsuWriteResult output, WorkspaceSyncBaseline? previous)
     {
+        var outputLines = ObjectLines(output.Text);
+        var currentHeads = outputLines.Select((line, i) => (Key: ObjectKey(line), Index: i))
+            .GroupBy(p => p.Key).Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single().Index);
+        var currentPlayable = new WorkspacePlayableComparison(output.ReadBack);
+        var externalPlayable = new WorkspacePlayableComparison(external.Document);
         var exact = ObjectLines(output.Text).Select((line, i) => (line, Id: output.ObjectSources[i])).GroupBy(p => p.line)
             .Where(g => g.Select(p => p.Id).Distinct().Count() == 1).ToDictionary(g => g.Key, g => g.First().Id);
         var live = SourceIds(document).Select(p => p.Id).ToHashSet();
         var historical = previous is null ? new Dictionary<string, Guid>() : ObjectLines(previous.Text)
             .Select((line, i) => (Key: ObjectKey(line), Id: i < previous.ObjectSources.Count ? previous.ObjectSources[i] : Guid.Empty))
             .GroupBy(p => p.Key).Where(g => g.Count() == 1 && live.Contains(g.First().Id)).ToDictionary(g => g.Key, g => g.First().Id);
-        return ObjectLines(external.Text).Select(line => exact.TryGetValue(line, out var id) ? id : historical.GetValueOrDefault(ObjectKey(line))).ToArray();
+        return ObjectLines(external.Text).Select((line, i) => exact.TryGetValue(line, out var id) ? id
+            : currentHeads.TryGetValue(ObjectKey(line), out int j) && SliderAttributes(outputLines[j]) == SliderAttributes(line)
+                && currentPlayable.Equivalent(j, externalPlayable, i) ? output.ObjectSources[j]
+            : historical.GetValueOrDefault(ObjectKey(line))).ToArray();
     }
 
     public static string Archive(WorkspaceSession session, string operation, bool deferProject = false)
@@ -849,6 +872,12 @@ public static class WorkspaceSynchronization
         return parts.Length > 3 ? parts[2] + "/" + (int.Parse(parts[3], CultureInfo.InvariantCulture) & 11) : line;
     }
 
+    private static string SliderAttributes(string line)
+    {
+        var parts = line.Split(',');
+        return string.Join(',', parts.Where((_, i) => i is 3 or 4 || i >= 8));
+    }
+
     private static (string[] Before, string[] After) AnchorKeys(string[] before, string[] after)
     {
         string WithoutCombo(string line)
@@ -956,7 +985,7 @@ public static class WorkspaceSynchronization
         IEnumerable<TimingPoint> timing = document.TimingPoints;
         if (document.TimingPoints.Count == 0)
             timing = [new TimingPoint { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs }];
-        fields["TimingPoints/"] = WorkspaceTimingSynchronization.Text(timing);
+        fields["TimingPoints/"] = WorkspaceTimingSynchronization.Text(WorkspaceTimingSynchronization.Normalize(timing));
         if (document.LegacySliderTicks) fields["Format/Version"] = "7";
         return fields;
     }

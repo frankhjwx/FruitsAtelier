@@ -58,10 +58,13 @@ internal static class SynchronizationRenderCheck
                 view.KeyDown(27, false, false);
 
                 view.LoadWorkspace(WorkspaceProject.Open(session.Directory));
-                File.WriteAllText(source, text.Replace("0,500,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\n500,-100,4,1,0,100,0,0"));
+                File.WriteAllText(source, text.Replace("0,500,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\n500,-50,4,2,2,70,0,1"));
                 view.RefreshSynchronization(); Wait();
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native timing addition review was not shown.");
                 var timingBefore = view.Document.DeepClone(); Paint();
+                CaptureTiming("unresolved");
+                view.PointerDown(100, height - 162, 0, false, false); view.PointerUp(100, height - 162, 0); Paint();
+                CaptureTiming("resolved");
                 if (!timingBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native timing review changed authoring.");
                 view.KeyDown(27, false, false);
 
@@ -111,6 +114,19 @@ internal static class SynchronizationRenderCheck
                 VersionHistoryRenderCheck.Run(canvas, width, height);
                 AppLog.Write($"Synchronization rendering passed: {locale}, {width}x{height}, object conflicts, missing state, deletion confirmation and input isolation.");
 
+                void CaptureTiming(string state)
+                {
+                canvas.Begin(); view.Render(canvas, width, height);
+                canvas.End(capture: () =>
+                {
+                    string folder = Path.GetFullPath("artifacts/tests/semantic-sync-native"); Directory.CreateDirectory(folder);
+                    var frame = canvas.CapturePixels();
+                    using var writer = new BinaryWriter(File.Create(Path.Combine(folder, $"{locale}-{width}-{state}.bmp")));
+                    writer.Write((ushort)0x4D42); writer.Write(54 + frame.Pixels.Length); writer.Write(0); writer.Write(54);
+                    writer.Write(40); writer.Write(frame.Width); writer.Write(-frame.Height); writer.Write((ushort)1); writer.Write((ushort)32);
+                    writer.Write(0); writer.Write(frame.Pixels.Length); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(frame.Pixels);
+                });
+                }
                 void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
                 void Wait()
                 {

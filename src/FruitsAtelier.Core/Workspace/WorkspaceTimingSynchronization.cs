@@ -2,8 +2,38 @@ using System.Globalization;
 
 namespace FruitsAtelier.Core;
 
-internal static class WorkspaceTimingSynchronization
+public static class WorkspaceTimingSynchronization
 {
+    public static List<TimingPoint> Normalize(IEnumerable<TimingPoint> points)
+    {
+        var result = new List<TimingPoint>();
+        TimingPoint? previous = null;
+        foreach (var source in points.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder))
+        {
+            var point = source.DeepClone();
+            if (!point.Uninherited)
+            {
+                point.BeatLengthMs = -100;
+                point.Meter = previous?.Meter ?? 4;
+                if (previous is not null && point.SampleSet == previous.SampleSet && point.SampleIndex == previous.SampleIndex
+                    && point.Volume == previous.Volume && point.Effects == previous.Effects) continue;
+            }
+            point.OriginalLine = null;
+            result.Add(point); previous = point;
+        }
+        return result;
+    }
+
+    public static void NormalizeDocument(MapDocument document)
+    {
+        LegacySliderVelocityEditing.Capture(document);
+        var timing = new TimingMap.Lookup(document);
+        foreach (var track in document.Tracks.Where(t => t.Nodes.Count > 0))
+            track.SliderVelocitySeed ??= timing.At(track.Nodes[0].TimeMs).SliderVelocityMultiplier;
+        var points = Normalize(document.TimingPoints);
+        document.TimingPoints.Clear(); document.TimingPoints.AddRange(points);
+    }
+
     private static string Key(TimingPoint point) => point.TimeMs.ToString("G15", CultureInfo.InvariantCulture);
 
     internal static string Text(IEnumerable<TimingPoint> points, bool comparison = false) => string.Join('\n', points.Select(point =>
@@ -20,7 +50,8 @@ internal static class WorkspaceTimingSynchronization
 
     internal static List<TimingPoint> ProjectChanges(IEnumerable<TimingPoint> target, IEnumerable<TimingPoint> before, IEnumerable<TimingPoint> after)
     {
-        var oldPoints = before.ToArray(); var newPoints = after.ToArray();
+        target = Normalize(target);
+        var oldPoints = Normalize(before).ToArray(); var newPoints = Normalize(after).ToArray();
         var shift = SummarizeShift(oldPoints, newPoints);
         // A pure offset moves authored points together instead of importing each
         // moved generated SV as a new authoring point.
@@ -72,7 +103,7 @@ internal static class WorkspaceTimingSynchronization
 
     internal static WorkspaceSyncConflict? Conflict(IEnumerable<TimingPoint> local, IEnumerable<TimingPoint> external)
     {
-        var ours = Groups(local); var theirs = Groups(external);
+        var ours = Groups(Normalize(local)); var theirs = Groups(Normalize(external));
         var changed = Changed(ours, theirs);
         if (changed.Count == 0) return null;
         var ordered = changed.OrderBy(key => (ours.GetValueOrDefault(key) ?? theirs[key])[0].TimeMs).ToArray();
