@@ -155,7 +155,7 @@ settings; macOS uses its native display scaling.
 
 ## Same-time object placement
 
-Settings → Experimental → **Keep same-time objects during placement** disables
+Settings → Experimental → **Enable same-time object placements** disables
 the automatic replacement of fruits, FSliders and banana showers starting within
 2 ms of a newly placed fruit in the Catch canvas. In the osu! canvas, placing a
 circle, native slider or spinner replaces same-time circles, native sliders and
