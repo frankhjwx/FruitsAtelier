@@ -89,6 +89,25 @@ public sealed partial class EditorView
         try { task.GetAwaiter().GetResult(); completed?.Invoke(); }
         catch (Exception error) { ShowError(L.Reformat(error.Message)); }
     }
+    public void CleanupFazOnExit()
+    {
+        fazSearchCancellation?.Cancel();
+        var package = fazPackage;
+        var task = fazTask;
+        string workspace = LibrarySettings.Workspace;
+        _ = Task.WhenAll(task ?? Task.CompletedTask, fazSearch ?? Task.CompletedTask).ContinueWith(completed =>
+        {
+            _ = completed.Exception;
+            try
+            {
+                if (package is not null) package.Dispose();
+                else if (task is Task<FazPackage> { IsCompletedSuccessfully: true } prepared) prepared.Result.Dispose();
+            }
+            finally { FazArchive.CleanupTemporaryFiles(workspace); }
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        FazArchive.CleanupTemporaryFiles(workspace);
+    }
+
     private void CloseFaz()
     {
         if (fazTask is not null) return;

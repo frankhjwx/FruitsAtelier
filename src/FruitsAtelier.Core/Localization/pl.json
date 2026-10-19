@@ -1187,7 +1187,6 @@
   "sync.deleteLocal": "Wersja lokalna Delete…",
   "sync.deleteLocalHelp": "Odrzuć tę wersję FA i ponownie zaimportuj jej .osu. Kopia odzyskiwania zostaje zachowana.",
   "library.deleteProjectHelp": "Usuwa go z Moich projektów; Pliki osu! zostaną zachowane.",
-  "library.deleteProjectReopen": "Otwórz we wszystkich utworach, aby zaimportować ponownie. Przechowywana jest kopia odzyskiwania.",
   "storage.cleanHistoryTip": "Usuwa stare wersje odzyskiwania: starsze niż 30 dni, powyżej 100 naboi w zestawie lub powyżej budżetu historycznego wynoszącego 1 GiB.\nZachowuje najnowsze i referencyjne wersje każdego zestawu. Limit 100 nabojów obowiązuje również w ciągu ostatnich 24 godzin; ten okres karencji chroni jedynie przed redukcją wieku/budżetu.\nA usuwa również kopie zapasowe audio bez odniesień i wygasłe pliki porównawcze. Kompresuje zachowane starsze migawki. Bieżące projekty i pliki osu! zostaną zachowane.",
   "storage.clearCacheTip": "Usuwa tymczasowe pliki porównawcze, niepowiązane kopie zapasowe audio i wygenerowane kopie odtwarzania, a następnie odbudowuje indeks biblioteki.\nZachowuje zmiany projektu, wersje odzyskiwania, odniesienia audio, zaimportowane utwory oraz pliki Skórki i osu!. Ostatnio używany dźwięk jest chroniony przez 24 godziny.\nNastępne odświeżenie biblioteki może potrwać dłużej.",
   "stack.title": "Konwertuj / edytuj Stack",
@@ -1539,5 +1538,6 @@
   "sliderSnap.auto": "Auto (najbliższa siatka)",
   "sliderSnap.command": "Zmień przyciąganie końców slidera",
   "sliderSnap.invalid": "Nieprawidłowy dzielnik przyciągania końców slidera.",
-  "sliderSnap.range": "Koniec slidera musi następować po początku."
+  "sliderSnap.range": "Koniec slidera musi następować po początku.",
+  "library.keepDeletedBackup": "Keep a recovery backup"
 }

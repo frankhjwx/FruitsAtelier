@@ -50,6 +50,18 @@ internal static class FazRenderCheck
                 throw new InvalidOperationException("FAZ project cards did not page.");
             view.KeyDown(27, false, false);
             if (view.DiscardConfirmationVisible) throw new InvalidOperationException("FAZ modal did not cancel.");
+            bool? retained = null;
+            view.ShowDeleteProjectConfirmation((confirmed, keep) => { if (confirmed) retained = keep; });
+            Paint();
+            float deleteX = (size.Item1 - 500) / 2f, deleteY = (size.Item2 - 200) / 2f;
+            view.PointerDown(deleteX + 350, deleteY + 160, 0, false, false); view.PointerUp(deleteX + 350, deleteY + 160, 0);
+            if (retained != false) throw new InvalidOperationException("Deletion must default to no backup.");
+            view.ShowDeleteProjectConfirmation((confirmed, keep) => { if (confirmed) retained = keep; });
+            Paint();
+            view.PointerDown(deleteX + 100, deleteY + 115, 0, false, false); view.PointerUp(deleteX + 100, deleteY + 115, 0);
+            Paint();
+            view.PointerDown(deleteX + 350, deleteY + 160, 0, false, false); view.PointerUp(deleteX + 350, deleteY + 160, 0);
+            if (retained != true) throw new InvalidOperationException("Deletion must respect the backup checkbox.");
             void Paint(bool capture = false)
             {
                 canvas.Begin(); view.Render(canvas, size.Item1, size.Item2);

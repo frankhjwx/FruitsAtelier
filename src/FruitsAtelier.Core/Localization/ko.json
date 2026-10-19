@@ -1187,7 +1187,6 @@
   "sync.deleteLocal": "Delete 로컬 버전…",
   "sync.deleteLocalHelp": "이 FA 버전을 폐기하고 .osu를 다시 가져옵니다. 복구 복사본이 유지됩니다.",
   "library.deleteProjectHelp": "내 프로젝트에서 제거합니다. osu! 파일은 유지됩니다.",
-  "library.deleteProjectReopen": "다시 가져오려면 모든 노래에서 엽니다. 복구 복사본이 보관됩니다.",
   "storage.cleanHistoryTip": "이전 복구 버전을 제거합니다(30일 이상, 세트당 100라운드 초과 또는 1GiB 기록 예산 초과).\n각 세트의 최신 및 참조 버전을 유지합니다. 100라운드 한도는 지난 24시간 동안에도 적용됩니다. 해당 유예 기간은 연령/예산 정리로부터만 보호합니다.\n또한 참조되지 않은 오디오 백업 및 만료된 비교 파일을 제거합니다. 보관된 레거시 스냅샷을 압축합니다. 현재 프로젝트와 osu! 파일은 유지됩니다.",
   "storage.clearCacheTip": "임시 비교 파일, 참조되지 않은 오디오 백업 및 생성된 재생 복사본을 지운 다음 라이브러리 인덱스를 다시 작성합니다.\n프로젝트 편집, 복구 버전, 참조 오디오, 가져온 노래 및 스킨 및 osu! 파일을 유지합니다. 최근에 사용한 오디오는 24시간 동안 보호됩니다.\n다음 라이브러리 새로 고침은 더 오래 걸릴 수 있습니다.",
   "stack.title": "Stack 변환/편집",
@@ -1539,5 +1538,6 @@
   "sliderSnap.auto": "자동 (가장 가까운 그리드)",
   "sliderSnap.command": "슬라이더 끝점 스냅 변경",
   "sliderSnap.invalid": "슬라이더 끝점 스냅 분할 값이 잘못되었습니다.",
-  "sliderSnap.range": "슬라이더 끝은 시작보다 뒤에 있어야 합니다."
+  "sliderSnap.range": "슬라이더 끝은 시작보다 뒤에 있어야 합니다.",
+  "library.keepDeletedBackup": "Keep a recovery backup"
 }

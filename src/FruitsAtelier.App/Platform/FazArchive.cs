@@ -30,7 +30,7 @@ public sealed class FazPackage : IDisposable
     public Dictionary<string, string> Owners { get; set; } = [];
     public List<FazProjectCandidate> Projects { get; set; } = [];
     public string? ExistingProject { get; init; }
-    public void Dispose() => FazArchive.RemoveDirectory(Directory, Path.GetDirectoryName(Directory)!);
+    public void Dispose() => FazStaging.Release(Directory);
 }
 
 public static class FazArchive
@@ -39,13 +39,8 @@ public static class FazArchive
     private const long Limit = 1024L * 1024 * 1024;
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow };
     public static bool IsPackage(string path) => Path.GetExtension(path).Equals(".faz", StringComparison.OrdinalIgnoreCase);
-    private static string Temporary(string workspace)
-    {
-        string root = Path.Combine(workspace, ".faz-staging");
-        WorkspaceProject.RejectLinks(root);
-        string path = Path.Combine(root, Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(path); return path;
-    }
+    private static string Temporary(string workspace) => FazStaging.Create(workspace);
+    public static void CleanupTemporaryFiles(string workspace) => FazStaging.Cleanup(workspace);
 
     public static void Export(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace)
     {
@@ -98,7 +93,7 @@ public static class FazArchive
             if (new FileInfo(temporary).Length > Limit) throw new InvalidDataException(L.Get("archive.expansionLimit"));
             File.Move(temporary, destination, true);
         }
-        finally { if (File.Exists(temporary)) File.Delete(temporary); RemoveDirectory(staging, Path.GetDirectoryName(staging)!); }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); FazStaging.Release(staging); }
     }
 
     public static FazPackage Prepare(string path, LibrarySettings settings, bool discoverAssociations = true)
@@ -139,7 +134,7 @@ public static class FazArchive
             if (discoverAssociations) ApplyAssociations(package, FindAssociations(package, settings, refreshLibrary: true));
             return package;
         }
-        catch { RemoveDirectory(staging, Path.GetDirectoryName(staging)!); throw; }
+        catch { FazStaging.Release(staging); throw; }
     }
 
     public static FazAssociations FindAssociations(FazPackage package, LibrarySettings settings, bool refreshLibrary = false)
@@ -305,6 +300,7 @@ public static class FazArchive
     }
     public static void Recover(LibrarySettings settings)
     {
+        CleanupTemporaryFiles(settings.Workspace);
         lock (ImportGate) RecoverLocked(settings);
     }
     private static void RecoverLocked(LibrarySettings settings)

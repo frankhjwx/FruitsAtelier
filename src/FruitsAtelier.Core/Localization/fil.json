@@ -1187,7 +1187,6 @@
   "sync.deleteLocal": "Delete lokal na bersyon…",
   "sync.deleteLocalHelp": "Itapon ang bersyong FA na ito at muling i-import ang .osu nito. Ang isang kopya sa pagbawi ay pinanatili.",
   "library.deleteProjectHelp": "Inaalis ito sa Aking mga proyekto; Ang mga osu! na mga file ay pinapanatili.",
-  "library.deleteProjectReopen": "Buksan mula sa Lahat ng kanta para muling mag-import. Ang isang kopya ng pagbawi ay itinatago.",
   "storage.cleanHistoryTip": "Inaalis ang mga lumang bersyon para sa pagbawi: lampas sa 30 araw, lampas sa 100 round bawat set, o lampas sa 1 GiB na badyet ng history.\nPinananatili ang pinakabago at mga tinutukoy na bersyon ng bawat set. Nalalapat din ang limitasyong 100 round sa huling 24 oras; ang palugit na ito ay proteksiyon lamang laban sa paglilinis batay sa edad o badyet.\nAInaalis din ang mga audio backup na hindi ginagamit at mga nag-expire na file ng paghahambing. Kino-compress ang mga pinananatiling lumang snapshot. Pinananatili ang kasalukuyang mga proyekto at osu! file.",
   "storage.clearCacheTip": "Nililinis ang mga pansamantalang file ng paghahambing, audio backup na hindi ginagamit, at nabuong kopya para sa playback; pagkatapos ay binubuo muli ang index ng library.\nPinananatili ang mga edit ng proyekto, bersyon para sa pagbawi, tinutukoy na audio, na-import na kanta at Mga Skin, at mga osu! file. Protektado nang 24 oras ang kamakailang ginamit na audio.\nMaaaring mas matagal ang susunod na pag-refresh ng library.",
   "stack.title": "I-convert / i-edit ang Stack",
@@ -1539,5 +1538,6 @@
   "sliderSnap.auto": "Auto (pinakamalapit na grid)",
   "sliderSnap.command": "Baguhin ang snap ng mga dulo ng slider",
   "sliderSnap.invalid": "Hindi wastong divisor ng snap ng mga dulo ng slider.",
-  "sliderSnap.range": "Dapat mas huli ang dulo ng slider kaysa simula nito."
+  "sliderSnap.range": "Dapat mas huli ang dulo ng slider kaysa simula nito.",
+  "library.keepDeletedBackup": "Keep a recovery backup"
 }

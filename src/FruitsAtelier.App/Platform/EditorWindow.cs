@@ -611,6 +611,7 @@ internal sealed partial class EditorWindow : IDisposable
         if (disposed) return;
         disposed = true;
         view.StopFileMonitoring();
+        view.CleanupFazOnExit();
         updates?.Dispose();
         view.StopTestplay();
         view.ReleaseWaveform();

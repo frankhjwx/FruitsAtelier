@@ -1187,7 +1187,6 @@
   "sync.deleteLocal": "Delete versión local…",
   "sync.deleteLocalHelp": "Deseche esta versión de FA y vuelva a importar su .osu. Se conserva una copia de recuperación.",
   "library.deleteProjectHelp": "Lo elimina de Mis proyectos; Se conservan los archivos osu!.",
-  "library.deleteProjectReopen": "Abra desde Todas las canciones para importar nuevamente. Se conserva una copia de recuperación.",
   "storage.cleanHistoryTip": "Elimina versiones de recuperación antiguas: anteriores a 30 días, más de 100 rondas por conjunto o más del presupuesto histórico de 1 GiB.\nMantiene las versiones más recientes y a las que se hace referencia de cada conjunto. El límite de 100 balas también se aplica dentro de las últimas 24 horas; ese período de gracia solo protege contra la poda de edad/presupuesto.\nAn también elimina las copias de seguridad de audio sin referencia y los archivos de comparación caducados. Comprime instantáneas heredadas retenidas. Se conservan los proyectos actuales y los archivos osu!.",
   "storage.clearCacheTip": "Borra archivos de comparación temporales, copias de seguridad de audio sin referencia y copias de reproducción generadas, luego reconstruye el índice de la biblioteca.\nMantiene ediciones de proyectos, versiones de recuperación, audio referenciado, canciones importadas y archivos Skins y osu!. El audio usado recientemente está protegido durante 24 horas.\nLa próxima actualización de la biblioteca puede tardar más.",
   "stack.title": "Convertir / editar Stack",
@@ -1539,5 +1538,6 @@
   "sliderSnap.auto": "Auto (cuadrícula más cercana)",
   "sliderSnap.command": "Cambiar ajuste de extremos del slider",
   "sliderSnap.invalid": "Divisor de ajuste de extremos del slider no válido.",
-  "sliderSnap.range": "El final del slider debe ser posterior al inicio."
+  "sliderSnap.range": "El final del slider debe ser posterior al inicio.",
+  "library.keepDeletedBackup": "Keep a recovery backup"
 }

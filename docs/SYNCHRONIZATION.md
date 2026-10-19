@@ -289,8 +289,11 @@ local data. Cancelling the confirmation also preserves the current edits.
 
 The library's **Delete local project** action removes the workspace project and
 its source association from My projects, while keeping the source maps in All
-songs. Opening a source map again creates a new workspace project. Both local
-deletion actions retain recovery copies under `.sync-history`.
+songs. Opening a source map again creates a new workspace project. Project deletion
+removes local files and version history by default; **Keep a recovery backup** is
+unchecked initially. Selecting it retains a recovery copy under `.sync-history`.
+Unreferenced FAZ and audio-import resource directories are removed with permanent
+project deletion. Individual difficulty deletion retains recovery copies.
 
 Deletion archives saved and current authoring and the external file first. A
 deletion journal permits rollback of an interrupted external removal. Empty

@@ -138,6 +138,43 @@ internal static class FazTests
         { zip.GetEntry("project.catchproj")!.Delete(); using var writer = new StreamWriter(zip.CreateEntry("project.catchproj").Open()); writer.Write("{}"); }
         Throws(() => { using var _ = FazArchive.Prepare(corrupt, independent); }, "checksum failure rejected");
 
+        var cleanupSettings = Settings("cleanup");
+        using (var package = FazArchive.Prepare(native, cleanupSettings))
+        {
+            FazArchive.CleanupTemporaryFiles(cleanupSettings.Workspace);
+            Check(Directory.Exists(package.Directory), "cleanup preserves active package staging");
+            var session = FazArchive.Import(package, cleanupSettings, new string?[] { null }, false, false);
+            string resources = Path.Combine(cleanupSettings.Workspace, "Resources", "FAZ-" + session.Manifest.Id.ToString("N"));
+            WorkspaceSynchronization.Archive(session, "test");
+            LibraryOperations.DeleteProject(session.Directory, cleanupSettings);
+            Check(!Directory.Exists(resources), "default delete removes owned resources");
+            Check(!Directory.Exists(Path.Combine(cleanupSettings.Workspace, ".sync-history", session.Manifest.Id.ToString("N"))), "default delete removes recovery history");
+            session = FazArchive.Import(package, cleanupSettings, new string?[] { null }, false, false);
+            resources = Path.Combine(cleanupSettings.Workspace, "Resources", "FAZ-" + session.Manifest.Id.ToString("N"));
+            LibraryOperations.DeleteProject(session.Directory, cleanupSettings, keepBackup: true);
+            Check(Directory.Exists(resources) && Directory.Exists(Path.Combine(cleanupSettings.Workspace, ".sync-history", session.Manifest.Id.ToString("N"))), "opt-in backup retains resources and history");
+            session = FazArchive.Import(package, cleanupSettings, new string?[] { null }, false, false);
+            resources = Path.Combine(cleanupSettings.Workspace, "Resources", "FAZ-" + session.Manifest.Id.ToString("N"));
+            var shared = WorkspaceProject.Create(cleanupSettings.Workspace, session.Project, "");
+            LibraryOperations.DeleteProject(session.Directory, cleanupSettings);
+            Check(Directory.Exists(resources) && File.Exists(shared.Project.Difficulties[0].Document.AudioPath), "another project protects shared resources");
+            LibraryOperations.DeleteProject(shared.Directory, cleanupSettings, keepBackup: true);
+            var dependent = WorkspaceProject.Create(cleanupSettings.Workspace, shared.Project, "");
+            LibraryOperations.DeleteProject(dependent.Directory, cleanupSettings);
+            Check(Directory.Exists(resources), "another project's retained backup protects shared resources");
+        }
+        string stagingRoot = Path.Combine(cleanupSettings.Workspace, ".faz-staging");
+        string abandonedStage = Path.Combine(stagingRoot, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(abandonedStage); File.WriteAllText(Path.Combine(abandonedStage, "payload"), "temporary");
+        string busyStage = Path.Combine(stagingRoot, Guid.NewGuid().ToString("N")); Directory.CreateDirectory(busyStage);
+        using (var lease = new FileStream(busyStage + ".lock", FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None))
+        {
+            FazArchive.CleanupTemporaryFiles(cleanupSettings.Workspace);
+            Check(!Directory.Exists(abandonedStage) && Directory.Exists(busyStage), "cleanup reclaims abandoned staging and preserves externally leased staging");
+        }
+        FazArchive.CleanupTemporaryFiles(cleanupSettings.Workspace);
+        Check(!Directory.Exists(stagingRoot), "cleanup removes released staging and empty cache root");
+
         var view = new EditorView(false); view.InitializeLibrary(true, independent);
         int opened = 0; view.RequestFazOpen = _ => opened++;
         Check(view.CanDropFile(native), "library accepts FAZ"); view.DropLibraryFiles([native]); Check(opened == 1, "FAZ drop dispatched");

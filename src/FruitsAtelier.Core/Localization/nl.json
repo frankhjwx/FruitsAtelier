@@ -1187,7 +1187,6 @@
   "sync.deleteLocal": "Delete lokale versie…",
   "sync.deleteLocalHelp": "Gooi deze FA-versie weg en importeer de .osu opnieuw. Er wordt een herstelkopie bewaard.",
   "library.deleteProjectHelp": "Verwijdert het uit Mijn projecten; osu!-bestanden worden bewaard.",
-  "library.deleteProjectReopen": "Open vanuit Alle nummers om opnieuw te importeren. Er wordt een herstelkopie bewaard.",
   "storage.cleanHistoryTip": "Verwijdert oude herstelversies: ouder dan 30 dagen, meer dan 100 rondes per set, of meer dan het geschiedenisbudget van 1 GiB.\nBehoudt de nieuwste versies van elke set en de versies waarnaar wordt verwezen. De limiet van 100 ronden geldt ook voor de afgelopen 24 uur; die respijtperiode beschermt alleen tegen leeftijds-/budgetsnoei.\nVerwijdert ook niet-gerefereerde audioback-ups en verlopen vergelijkingsbestanden. Comprimeert bewaarde oudere momentopnamen. Lopende projecten en osu!-bestanden blijven behouden.",
   "storage.clearCacheTip": "Wist tijdelijke vergelijkingsbestanden, audioback-ups zonder referentie en gegenereerde afspeelkopieën, en bouwt vervolgens de bibliotheekindex opnieuw op.\nBewaart projectbewerkingen, herstelversies, audio waarnaar wordt verwezen, geïmporteerde nummers en Skins- en osu!-bestanden. Recent gebruikte audio is 24 uur beveiligd.\nDe volgende vernieuwing van de bibliotheek kan langer duren.",
   "stack.title": "Converteer / bewerk Stack",
@@ -1539,5 +1538,6 @@
   "sliderSnap.auto": "Auto (dichtstbijzijnde raster)",
   "sliderSnap.command": "Eindpuntsnap van slider wijzigen",
   "sliderSnap.invalid": "Ongeldige deler voor eindpuntsnap van slider.",
-  "sliderSnap.range": "Het einde van de slider moet na het begin liggen."
+  "sliderSnap.range": "Het einde van de slider moet na het begin liggen.",
+  "library.keepDeletedBackup": "Keep a recovery backup"
 }

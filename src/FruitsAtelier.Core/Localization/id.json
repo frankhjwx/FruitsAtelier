@@ -1187,7 +1187,6 @@
   "sync.deleteLocal": "Delete versi lokal…",
   "sync.deleteLocalHelp": "Buang versi FA ini dan impor kembali .osu-nya. Salinan pemulihan disimpan.",
   "library.deleteProjectHelp": "Menghapusnya dari proyek Saya; File osu! disimpan.",
-  "library.deleteProjectReopen": "Buka dari Semua lagu untuk diimpor lagi. Salinan pemulihan disimpan.",
   "storage.cleanHistoryTip": "Menghapus versi pemulihan lama: lebih lama dari 30 hari, melebihi 100 putaran per set, atau melebihi anggaran riwayat 1 GiB.\nSimpan versi terbaru dan referensi setiap set. Batasan 100 putaran juga berlaku dalam 24 jam terakhir; masa tenggang itu hanya melindungi terhadap pemangkasan usia/anggaran.\nAJuga menghapus cadangan audio yang tidak direferensikan dan file perbandingan yang kedaluwarsa. Mengompresi snapshot lama yang dipertahankan. Proyek saat ini dan file osu! disimpan.",
   "storage.clearCacheTip": "Menghapus file perbandingan sementara, cadangan audio yang tidak direferensikan, dan salinan pemutaran yang dihasilkan, lalu membangun kembali indeks perpustakaan.\nMenyimpan pengeditan proyek, versi pemulihan, audio yang direferensikan, lagu yang diimpor dan Skin, dan file osu!. Audio yang baru-baru ini digunakan dilindungi selama 24 jam.\nPenyegaran perpustakaan berikutnya mungkin memerlukan waktu lebih lama.",
   "stack.title": "Konversi / edit Stack",
@@ -1539,5 +1538,6 @@
   "sliderSnap.auto": "Otomatis (kisi terdekat)",
   "sliderSnap.command": "Ubah snap ujung slider",
   "sliderSnap.invalid": "Pembagi snap ujung slider tidak valid.",
-  "sliderSnap.range": "Akhir slider harus setelah awalnya."
+  "sliderSnap.range": "Akhir slider harus setelah awalnya.",
+  "library.keepDeletedBackup": "Keep a recovery backup"
 }

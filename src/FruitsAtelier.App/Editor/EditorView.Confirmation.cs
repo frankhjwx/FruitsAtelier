@@ -8,6 +8,7 @@ public sealed partial class EditorView
     private Action<int>? discardConfirmation;
     private bool deleteProjectConfirmation, replaceBackgroundConfirmation;
     private bool offerSongsExport;
+    private bool keepDeletedProjectBackup;
     public bool DiscardConfirmationVisible => FazVisible || discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput || previousSaveRestore is not null;
 
     public void ShowDiscardConfirmation(Action<int> answer)
@@ -20,9 +21,10 @@ public sealed partial class EditorView
         hits.Clear(); fields.Clear();
     }
 
-    public void ShowDeleteProjectConfirmation(Action<bool> answer)
+    public void ShowDeleteProjectConfirmation(Action<bool, bool> answer)
     {
-        ShowDiscardConfirmation(value => answer(value == 7));
+        ShowDiscardConfirmation(value => answer(value == 7, keepDeletedProjectBackup));
+        keepDeletedProjectBackup = false;
         deleteProjectConfirmation = true;
     }
 
@@ -97,7 +99,7 @@ public sealed partial class EditorView
             c.Stroke(new(left, top, 500, 200), Accent, 2, 8);
             c.Text(L.Get("library.deleteProjectConfirm"), left + 24, top + 28, 20, Foreground, 452, true);
             c.Text(L.Get("library.deleteProjectHelp"), left + 24, top + 72, 13, Muted, 452);
-            c.Text(L.Get("library.deleteProjectReopen"), left + 24, top + 96, 13, Muted, 452);
+            Button(c, new(left + 24, top + 100, 452, 30), (keepDeletedProjectBackup ? "☑ " : "☐ ") + L.Get("library.keepDeletedBackup"), () => keepDeletedProjectBackup = !keepDeletedProjectBackup, keepDeletedProjectBackup);
             Button(c, new(left + 24, top + 144, 210, 40), L.Get("mac.cancel"), () => AnswerDiscard(2), true);
             Button(c, new(left + 266, top + 144, 210, 40), L.Get("library.deleteProject"), () => AnswerDiscard(7));
             return;

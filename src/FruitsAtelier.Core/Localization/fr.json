@@ -1187,7 +1187,6 @@
   "sync.deleteLocal": "Version locale Delete…",
   "sync.deleteLocalHelp": "Jetez cette version FA et réimportez son .osu. Une copie de récupération est conservée.",
   "library.deleteProjectHelp": "Le supprime de Mes projets ; Les fichiers osu! sont conservés.",
-  "library.deleteProjectReopen": "Ouvrez à partir de Toutes les chansons pour importer à nouveau. Une copie de récupération est conservée.",
   "storage.cleanHistoryTip": "Supprime les anciennes versions de récupération : datant de plus de 30 jours, au-delà de 100 tours par ensemble ou dépassant le budget historique de 1 Gio.\nConserve les versions les plus récentes et référencées de chaque ensemble. Le plafond de 100 cartouches s'applique également au cours des dernières 24 heures ; cette période de grâce ne protège que contre l'élagage de l'âge/du budget.\nsupprime également les sauvegardes audio non référencées et les fichiers de comparaison expirés. Compresse les instantanés hérités conservés. Les projets en cours et les fichiers osu! sont conservés.",
   "storage.clearCacheTip": "Efface les fichiers de comparaison temporaires, les sauvegardes audio non référencées et les copies de lecture générées, puis reconstruit l'index de la bibliothèque.\nConserve les modifications du projet, les versions de récupération, l'audio référencé, les chansons importées et les fichiers Skins et osu!. L'audio récemment utilisé est protégé pendant 24 heures.\nLa prochaine actualisation de la bibliothèque peut prendre plus de temps.",
   "stack.title": "Convertir / modifier Stack",
@@ -1539,5 +1538,6 @@
   "sliderSnap.auto": "Auto (grille la plus proche)",
   "sliderSnap.command": "Modifier l’alignement des extrémités du slider",
   "sliderSnap.invalid": "Diviseur d’alignement des extrémités du slider invalide.",
-  "sliderSnap.range": "La fin du slider doit suivre son début."
+  "sliderSnap.range": "La fin du slider doit suivre son début.",
+  "library.keepDeletedBackup": "Keep a recovery backup"
 }

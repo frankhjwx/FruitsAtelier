@@ -1209,7 +1209,6 @@
   "sync.deleteLocal": "Delete local version…",
   "sync.deleteLocalHelp": "Discard this FA version and reimport its .osu. A recovery copy is retained.",
   "library.deleteProjectHelp": "Removes it from My projects; osu! files are kept.",
-  "library.deleteProjectReopen": "Open from All songs to import again. A recovery copy is kept.",
   "storage.cleanHistoryTip": "Removes old recovery versions: older than 30 days, beyond 100 rounds per set, or over the 1 GiB history budget.\nKeeps each set’s newest and referenced versions. The 100-round cap also applies within the last 24 hours; that grace period only protects against age/budget pruning.\nAlso removes unreferenced audio backups and expired comparison files. Compresses retained legacy snapshots. Current projects and osu! files are kept.",
   "storage.clearCacheTip": "Clears temporary comparison files, unreferenced audio backups and generated playback copies, then rebuilds the library index.\nKeeps project edits, recovery versions, referenced audio, imported songs and skins, and osu! files. Recently used audio is protected for 24 hours.\nThe next library refresh may take longer.",
   "stack.title": "Convert / edit Stack",
@@ -1539,5 +1538,6 @@
   "sliderSnap.auto": "Auto (nearest grid)",
   "sliderSnap.command": "Change slider endpoint snapping",
   "sliderSnap.invalid": "Invalid slider endpoint snap divisor.",
-  "sliderSnap.range": "The slider end must follow its start."
+  "sliderSnap.range": "The slider end must follow its start.",
+  "library.keepDeletedBackup": "Keep a recovery backup"
 }

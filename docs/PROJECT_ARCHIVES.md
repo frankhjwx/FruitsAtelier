@@ -92,3 +92,16 @@ project, resource and optional Songs directories. Recovery rolls back unpublishe
 imports, or retains a published project and its dependencies. Library scans recover
 pending journals before indexing. The project manifest retains `ArchiveFingerprint`
 to identify repeated packages across later saves; it is not a synchronization identity.
+
+## Deletion and temporary storage
+
+Deleting a local project defaults to removing its local files and version history.
+Select **Keep a recovery backup** in the confirmation dialog to retain a restorable
+copy instead. Unreferenced FAZ and audio-import resource directories are removed
+with permanent deletion; resources referenced by other projects or retained
+snapshots are preserved. Songs files are not removed.
+
+The editor reclaims abandoned `.faz-staging` directories on startup and shutdown.
+Active staging directories hold exclusive leases so another running instance's
+import or export is preserved. Interrupted operations are reclaimed on the next
+startup after the operating system releases their leases.

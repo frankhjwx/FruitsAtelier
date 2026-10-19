@@ -111,11 +111,11 @@ internal sealed partial class MacWindow
         View.RequestLibraryDelete = map =>
         {
             if (map.ProjectPath is not { } project) return;
-            View.ShowDeleteProjectConfirmation(confirmed =>
+            View.ShowDeleteProjectConfirmation((confirmed, keepBackup) =>
             {
                 if (confirmed) RunFile(async () =>
                 {
-                    await Task.Run(() => LibraryOperations.DeleteProject(project, View.LibrarySettings));
+                    await Task.Run(() => LibraryOperations.DeleteProject(project, View.LibrarySettings, keepBackup));
                     View.RefreshLibrary();
                 });
             });

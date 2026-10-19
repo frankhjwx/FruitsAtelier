@@ -61,10 +61,10 @@ internal sealed partial class EditorWindow
         view.RequestLibraryDelete = map =>
         {
             if (map.ProjectPath is not { } project) return;
-            view.ShowDeleteProjectConfirmation(confirmed =>
+            view.ShowDeleteProjectConfirmation((confirmed, keepBackup) =>
             {
                 if (!confirmed) return;
-                FileOperation(() => { LibraryOperations.DeleteProject(project, view.LibrarySettings); view.RefreshLibrary(); });
+                FileOperation(() => { LibraryOperations.DeleteProject(project, view.LibrarySettings, keepBackup); view.RefreshLibrary(); });
             });
         };
         view.RequestLibraryOszExport = map => FileOperation(() =>

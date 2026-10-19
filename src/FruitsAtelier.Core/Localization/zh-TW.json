@@ -1187,7 +1187,6 @@
   "sync.deleteLocal": "Delete本地版…",
   "sync.deleteLocalHelp": "放棄此 FA 版本並重新匯入其 .osu。保留恢復副本。",
   "library.deleteProjectHelp": "將其從「我的專案」中刪除；osu! 檔案被保留。",
-  "library.deleteProjectReopen": "從所有歌曲中開啟以再次匯入。保留恢復副本。",
   "storage.cleanHistoryTip": "刪除舊的恢復版本：超過 30 天、每組超過 100 輪或超過 1 GiB 歷史預算。\n保留每組的最新版本和引用版本。 100 輪上限同樣適用於過去 24 小時內；此寬限期僅防止年齡/預算修剪。\n也會刪除未引用的音訊備份和過期的比較檔。壓縮保留的舊快照。目前項目和 osu! 檔案將被保留。",
   "storage.clearCacheTip": "清除臨時比較檔案、未引用的音訊備份和產生的播放副本，然後重建庫索引。\n保留專案編輯、恢復版本、引用的音訊、匯入的歌曲和Skin和osu!檔案。最近使用的音訊受到 24 小時保護。\n下次庫刷新可能需要更長時間。",
   "stack.title": "轉換/編輯 Stack",
@@ -1539,5 +1538,6 @@
   "sliderSnap.auto": "自動（最近分拍）",
   "sliderSnap.command": "修改 slider 起止吸附",
   "sliderSnap.invalid": "Slider 起止吸附分拍無效。",
-  "sliderSnap.range": "Slider 終點必須晚於起點。"
+  "sliderSnap.range": "Slider 終點必須晚於起點。",
+  "library.keepDeletedBackup": "Keep a recovery backup"
 }
