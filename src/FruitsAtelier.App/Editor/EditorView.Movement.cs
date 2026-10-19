@@ -92,6 +92,8 @@ public sealed partial class EditorView
         return low;
     }
 
+    private static bool WithinOsuMovementRange(double from, double to, TimingMap.Lookup timing) => to <= timing.OffsetBeats(from, 2) + 1e-7;
+
     private void DrawMovementConnections(ICanvas c)
     {
         if (!movementAnalysis) return;
@@ -153,6 +155,14 @@ public sealed partial class EditorView
         int last = selectedObject is not null ? first : Array.FindLastIndex(indices, i => sources.Contains(objects[i].SourceId));
         MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
                 movementStates[indices[last]].Movement);
+        if (IsOsuCanvas)
+        {
+            var timing = SnapTiming();
+            bool previousVisible = first > 0 && WithinOsuMovementRange(objects[indices[first - 1]].TimeMs, objects[indices[first]].TimeMs, timing);
+            bool nextVisible = last + 1 < indices.Length && WithinOsuMovementRange(objects[indices[last]].TimeMs, objects[indices[last + 1]].TimeMs, timing);
+            MovementReadout = (previousVisible ? MovementReadout.Previous : null, nextVisible ? MovementReadout.Next : null);
+            DistanceReadout = (previousVisible ? DistanceReadout.Previous : null, nextVisible ? DistanceReadout.Next : null);
+        }
 
         float panelWidth = Math.Min(MovementPanelWidth, plot.Width - 12);
         if (panelWidth < 180 || plot.Height < MovementPanelHeight + 20) return;

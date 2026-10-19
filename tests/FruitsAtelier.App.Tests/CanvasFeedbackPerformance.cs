@@ -82,6 +82,14 @@ internal static class CanvasFeedbackPerformance
             dispatch.Sort(); paint.Sort(); allocations.Sort();
             Console.WriteLine($"{(osu ? "osu" : "Catch")} rotation preview CPU: cold input+paint={cold:F2}ms; pointer p50={dispatch[40]:F3}ms p95={dispatch[76]:F3}ms; "
                 + $"paint p50={paint[40]:F3}ms p95={paint[76]:F3}ms; allocation p50={allocations[40]}B (recording canvas, native GPU excluded).");
+            if (!osu)
+            {
+                long started = Stopwatch.GetTimestamp(); ui.View.PointerMove(left + length, y, false, false); ui.Paint();
+                double boundary = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+                started = Stopwatch.GetTimestamp();
+                for (int i = 0; i < 100; i++) ui.View.PointerMove(left + length - i % 3, y, false, false);
+                Console.WriteLine($"Catch boundary input+paint={boundary:F2}ms; repeated blocked pointer={Stopwatch.GetElapsedTime(started).TotalMilliseconds / 100:F4}ms/dispatch.");
+            }
             ui.Key(27);
             if (!ui.View.Document.ContentEquals(map)) throw new Exception("Rotation benchmark cancellation changed its fixture.");
         }

@@ -13,7 +13,7 @@ internal static class CanvasFeedbackTests
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(locale);
-                MetadataAcrossCanvases(); NativeRotation(); RotationPreview(); NativeStream(); MovementGhost(); TimingNavigation(); CatchRotation(); CatchArc(); FixedIntervals();
+                MetadataAcrossCanvases(); NativeRotation(); RotationPreview(); NativeStream(); MovementGhost(); MovementBeatRange(); TimingNavigation(); CatchRotation(); CatchArc(); FixedIntervals();
             }
         }
         finally { L.SetLanguage(language); }
@@ -98,6 +98,7 @@ internal static class CanvasFeedbackTests
         Check(CurveMath.Validate(ui.View.Document).Count == 0, "Catch rotation produced invalid time geometry.");
         Check(ui.View.Document.Tracks[0].Nodes[0].TimeMs == 1000 && ui.View.Document.Tracks[0].Nodes[^1].TimeMs == 1500,
             "Catch rotation changed the authored time interval.");
+        Near(ui.View.Document.Tracks[0].Nodes[0].X, 180);
         ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Catch rotation did not undo.");
         Select(ui, track.Id); ui.Key('R', ctrl: true, shift: true);
         ui.ClickText(L.Get("rotation.selection"));
@@ -116,10 +117,16 @@ internal static class CanvasFeedbackTests
         vertical.Nodes.AddRange([new() { TimeMs = 1000, X = 256 }, new() { TimeMs = 1500, X = 256 }]); straight.Tracks.Add(vertical);
         ui = NewUi(straight); Select(ui, vertical.Id);
         ui.Key('R', ctrl: true, shift: true); ui.ClickText(L.Get("rotation.selection")); ui.Type("90");
-        var validPreview = ui.View.Document.DeepClone(); ui.Key(13);
-        Check(ui.View.RotationVisible && ui.View.Document.ContentEquals(validPreview), "Catch accepted simultaneous endpoints or partially applied a failed rotation.");
+        var validPreview = ui.View.Document.DeepClone();
+        double limited = double.Parse((string)typeof(EditorView).GetField("rotationAngle", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ui.View)!, System.Globalization.CultureInfo.InvariantCulture);
+        Check(limited > 0 && limited < 90, "Catch rotation control did not stop at a valid boundary.");
+        Check(CurveMath.Validate(ui.View.Document).Count == 0 && ui.View.Document.Tracks[0].Nodes[0].TimeMs == 1000
+            && ui.View.Document.Tracks[0].Nodes[^1].TimeMs == 1500, "Limited rotation changed time bounds or produced invalid geometry.");
         ui.Key(27);
         Check(ui.View.Document.ContentEquals(straight), "Cancelling an invalid catch angle did not restore the original curve.");
+        Select(ui, vertical.Id); ui.Key('R', ctrl: true, shift: true); ui.Type("180"); ui.Key(13);
+        Check(!ui.View.RotationVisible && !ui.View.Document.ContentEquals(straight), "A boundary-clamped rotation could not be confirmed.");
+        ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(straight), "Boundary-clamped rotation did not undo exactly.");
         var collision = new MapDocument { DurationMs = 10000 };
         collision.Fruits.AddRange([new() { TimeMs = 1000.4, X = 256 }, new() { TimeMs = 1000.9, X = 256 }]);
         var simultaneous = NewUi(collision); Select(simultaneous, collision.Fruits.Select(f => f.Id).ToArray()); simultaneous.Key(190, ctrl: true);
@@ -215,8 +222,8 @@ internal static class CanvasFeedbackTests
             Near(ui.View.Document.ImportedSliders[0].Y, committed.ImportedSliders[0].Y);
         }
         ui.Key('A', ctrl: true); ui.Type("181");
-        var lastValid = ui.View.Document.DeepClone(); ui.Key(13);
-        Check(ui.View.RotationVisible && ui.View.Document.ContentEquals(lastValid), "Out-of-range rotation was accepted.");
+        Check((string)typeof(EditorView).GetField("rotationAngle", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ui.View)! == "180",
+            "Rotation input did not clamp at 180 degrees.");
         ui.Key(27);
         Select(ui, id); ui.Key('R', ctrl: true, shift: true);
         bounds = ui.View.RotationBounds;
@@ -282,6 +289,31 @@ internal static class CanvasFeedbackTests
             && ui.Canvas.Lines.Count(l => l.Width == 3 && Math.Abs(l.Opacity - .65f) < .001) == 2,
             "Committed placement retained a duplicate ghost or lost its movement connections.");
     }
+    private static void MovementBeatRange()
+    {
+        foreach (var (previous, next, changing, expected) in new[] { (1000d, 3000d, false, 2), (999d, 3001d, false, 0),
+            (999d, 3000d, false, 1), (1000d, 3001d, false, 1), (1000d, 2250d, true, 2), (999d, 2251d, true, 0) })
+        {
+            double time = changing ? 1750 : 2000;
+            var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500, ApproachRate = 0 };
+            if (changing) map.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 }, new() { TimeMs = 1500, BeatLengthMs = 250 }]);
+            map.Fruits.AddRange([new() { TimeMs = previous, X = 100, Y = 100 }, new() { TimeMs = next, X = 300, Y = 200 }]);
+            var ui = NewUi(map, true);
+            var button = ui.View.OsuMovementAnalysisBounds; ui.Click(button.X + 5, button.Y + 5);
+            ui.View.UpdateTransport(time, 10000, true, false, false, null, null); ui.Key('2');
+            var pointer = ui.View.OsuCanvasScreen(200, 150); ui.View.PointerMove(pointer.X, pointer.Y, false, false); ui.Paint();
+            Check(ui.Canvas.Lines.Count(l => l.Width == 3 && Math.Abs(l.Opacity - .65f) < .001) == expected,
+                "Placement movement connections did not obey the two-beat window.");
+            Check((ui.View.MovementReadout.Previous.HasValue ? 1 : 0) + (ui.View.MovementReadout.Next.HasValue ? 1 : 0) == expected,
+                "Movement panel retained distant neighbours.");
+            Check((ui.View.DistanceReadout.Previous.HasValue ? 1 : 0) + (ui.View.DistanceReadout.Next.HasValue ? 1 : 0) == expected,
+                "Movement panel retained distant ratios.");
+            ui.Click(pointer.X, pointer.Y); ui.Key('1'); Select(ui, ui.View.Document.Fruits.Single(f => f.TimeMs == time).Id);
+            Check(ui.Canvas.Lines.Count(l => l.Width == 3 && Math.Abs(l.Opacity - .65f) < .001) == expected,
+                $"Committed movement connections did not obey the two-beat window: previous={previous}, next={next}, changing={changing}, expected={expected}, actual={ui.Canvas.Lines.Count(l => l.Width == 3 && Math.Abs(l.Opacity - .65f) < .001)}.");
+        }
+    }
+
     private static void TimingNavigation()
     {
         var map = new MapDocument { DurationMs = 10000 };

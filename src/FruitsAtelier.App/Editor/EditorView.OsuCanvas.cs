@@ -333,11 +333,12 @@ public sealed partial class EditorView
         var objects = placementMovementObjects ?? playableObjects;
         EnsureMovementStates(objects);
         var breaks = MovementBreakPeriods();
+        var timing = SnapTiming();
         OsuCanvasObject? ghost = null;
         if (placementGhost is { } candidate && PlacementGhostPoint() is not null && osuDraftSlider is null)
         {
             var p = OsuInputPoint(mouseX, mouseY, useDistance: true, useObjects: true);
-            var state = SnapTiming().At(candidate.TimeMs);
+            var state = timing.At(candidate.TimeMs);
             ghost = new() { Id = candidate.SourceId, Start = candidate.TimeMs, End = candidate.TimeMs,
                 X = p.X, Y = p.Y, DistanceVelocity = 100 * Document.EffectiveSliderMultiplier * state.SliderVelocityMultiplier / state.BeatLengthMs };
             int low = 0, high = osuCanvasObjects.Length;
@@ -357,7 +358,7 @@ public sealed partial class EditorView
 
         void Connection(OsuCanvasObject from, OsuCanvasObject to)
         {
-            if (from.Spinner || to.Spinner || from.End > to.Start || to.Start + 240 < LazerPresentationTime
+            if (from.Spinner || to.Spinner || from.End > to.Start || !WithinOsuMovementRange(from.End, to.Start, timing) || to.Start + 240 < LazerPresentationTime
                 || breaks.Any(b => b.StartMs <= to.Start && b.EndMs >= from.End)) return;
             int low = 0, high = movementIndices.Length;
             while (low < high) { int middle = low + (high - low) / 2; if (objects[movementIndices[middle]].TimeMs < to.Start) low = middle + 1; else high = middle; }

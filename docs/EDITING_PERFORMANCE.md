@@ -290,6 +290,9 @@ objects from its baseline for each new angle. Repeated values reuse the preview.
 Catch validation uses a preview-owned conversion cache; canvas rendering uses the
 content-drag conversion path, deferring full-map export/read-back until confirmation
 or cancellation. Ratings and file operations wait for the preview to finish.
+When an angle exceeds Catch constraints, a bounded angle search finds a valid
+boundary. The dialog retains that boundary for subsequent input with the same
+direction and origin; changing either or reopening the dialog resets the bounds.
 
 Slider Inspector caches rows by committed conversion snapshot, playable-export
 identity and selected parent IDs. It reads existing exported events and timing;

@@ -64,6 +64,10 @@ internal static class CanvasFeedbackRenderCheck
                 if (editor.Document.Tracks[0].Nodes[0].TimeMs != 1000 || editor.Document.Tracks[0].Nodes[^1].TimeMs != 1500)
                     throw new InvalidOperationException("Native catch rotation moved its time interval.");
                 if (editor.Document.ContentEquals(catchMap)) throw new InvalidOperationException("Native catch rotation did not preview a new shape.");
+                editor.KeyDown(65, true, false); editor.TextInput('1'); editor.TextInput('8'); editor.TextInput('0'); Paint("catch-rotation-limit");
+                if (CurveMath.Validate(editor.Document).Count != 0 || editor.Document.Tracks[0].Nodes[0].TimeMs != 1000
+                    || editor.Document.Tracks[0].Nodes[^1].TimeMs != 1500)
+                    throw new InvalidOperationException("Native rotation control did not stop at valid Catch geometry.");
                 editor.KeyDown(27, false, false); Paint();
                 if (!editor.Document.ContentEquals(catchMap)) throw new InvalidOperationException("Native catch preview did not cancel.");
 

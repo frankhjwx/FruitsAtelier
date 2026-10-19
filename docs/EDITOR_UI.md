@@ -71,11 +71,12 @@ standalone notes use their selection bounds' centre.
 Changes preview directly on the canvas from the original selection. OK commits
 one undo step; Cancel, Escape or interrupted input restores the original objects.
 Drag the title area to move the window within the editor. Window movement does
-not change the preview. Invalid angles retain the last valid preview and cannot
-be confirmed.
+not change the preview. Angle input, slider dragging and clicks stop at the
+selection's feasible Catch rotation boundary; the angle and preview stay in sync.
 Ctrl+comma and Ctrl+period rotate the selection by −90°/+90° in osu! and
 −5°/+5° in Catch. osu! uses Selection centre, including the current slider's
-beginning point; Catch uses the selection bounds' centre. Catch angles use the current time-to-X
+beginning point in both canvases. Standalone notes use their selection bounds' centre.
+Catch angles use the current time-to-X
 display ratio; its playfield origin is the centre of the visible time range.
 Catch rotates anchors, handles and explicit controls together. Circular arcs
 whose stored aspect ratio differs from the rotation plane use the existing bounded
@@ -1481,6 +1482,10 @@ its reference snapshot until release or cancellation.
 The osu! canvas toolbar includes geometric Zoom, Movement Analysis, Insert Break Time
 and Snap. Movement Analysis colours connections between successive objects using
 the Catch movement classification and labels each connection with its DS ratio.
+Connections and the floating panel's corresponding previous/next values are hidden
+when the gap from the preceding object's end to the next object's head exceeds
+two beats, including placement previews. Beat lengths follow BPM changes across
+the gap; exactly two beats remains visible.
 The osu! DS ratio uses two-dimensional endpoint-to-head distance and the preceding
 object's SV, matching placement spacing independently of canvas zoom. Switching
 analysis does not change beatmap content.

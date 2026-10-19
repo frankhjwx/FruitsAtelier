@@ -8,7 +8,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     internal bool RotationVisible { get; private set; }
-    private string rotationAngle = "0", rotationError = "";
+    private string rotationAngle = "0";
     private bool rotationClockwise = true, rotationSelectionCentre;
     private bool rotationDragging;
     private bool rotationSliderMoved;
@@ -20,6 +20,7 @@ public sealed partial class EditorView
     private CatchConversionResult? rotationValidation;
     private double rotationTimeScale, rotationPlayfieldTime;
     private (double Angle, bool Clockwise, bool SelectionCentre)? rotationInputs;
+    private double rotationMinimum = -180, rotationMaximum = 180;
     private bool rotationWindowDragging;
     private (float X, float Y)? rotationWindowPosition;
     private (float X, float Y) rotationWindowPointer, rotationWindowStart;
@@ -38,7 +39,7 @@ public sealed partial class EditorView
         rotationValidation = null;
         history.Begin(L.Get("rotation.title"));
         menu = -1; contextItems.Clear(); RotationVisible = true;
-        rotationAngle = "0"; rotationError = "";
+        rotationAngle = "0"; rotationMinimum = -180; rotationMaximum = 180;
         rotationInputs = (0, rotationClockwise, rotationSelectionCentre);
         SelectInput("rotation", rotationAngle);
     }
@@ -54,7 +55,7 @@ public sealed partial class EditorView
             double timeScale = pixelsPerMs * 512 / Playfield.Width;
             SelectionRotation.Apply(Document, ids, degrees, IsOsuCanvas, selectionCentre, timeScale,
                 PresentationViewStart + plot.Height / (2 * pixelsPerMs),
-                selectionOrigin: IsOsuCanvas ? RotationSelectionOrigin(Document, timeScale) : null);
+                selectionOrigin: RotationSelectionOrigin(Document, timeScale));
             if (IsOsuCanvas)
                 foreach (var slider in Document.ImportedSliders.Where(s => ids.Contains(s.Id))) OsuSyncSliderLine(slider);
         });
@@ -108,12 +109,39 @@ public sealed partial class EditorView
     {
         if (!RotationVisible || rotationSource is null) return false;
         if (!double.TryParse(rotationAngle, NumberStyles.Float, CultureInfo.InvariantCulture, out double angle)
-            || !double.IsFinite(angle) || angle < -180 || angle > 180)
-        { rotationInputs = null; rotationError = L.Get("rotation.angleRange"); return false; }
-        var inputs = (angle, rotationClockwise, rotationSelectionCentre);
-        if (rotationInputs == inputs) return rotationError.Length == 0;
-        rotationInputs = inputs;
-        RestoreRotationObjects(rotationSource);
+            || !double.IsFinite(angle)) return false;
+        bool sameOrigin = rotationInputs is { } previous && previous.Clockwise == rotationClockwise
+            && previous.SelectionCentre == rotationSelectionCentre;
+        if (!sameOrigin) { rotationMinimum = -180; rotationMaximum = 180; }
+        double requested = angle;
+        angle = Math.Clamp(angle, rotationMinimum, rotationMaximum);
+        if (rotationInputs != (angle, rotationClockwise, rotationSelectionCentre) && !TryRotationAngle(angle))
+        {
+            double blocked = angle, accepted = sameOrigin ? rotationInputs!.Value.Angle : 0;
+            if (!sameOrigin) TryRotationAngle(0);
+            // Retain the discovered boundary for repeated pointer input in the same direction and origin.
+            while (Math.Abs(blocked - accepted) > 1)
+            {
+                double middle = Math.Truncate((blocked + accepted) / 2);
+                if (middle == accepted) break;
+                if (TryRotationAngle(middle)) accepted = middle; else blocked = middle;
+            }
+            if (angle > accepted) rotationMaximum = accepted; else rotationMinimum = accepted;
+            angle = accepted;
+        }
+        rotationInputs = (angle, rotationClockwise, rotationSelectionCentre);
+        if (requested != angle)
+        {
+            rotationAngle = angle.ToString(CultureInfo.InvariantCulture);
+            if (textEditor.HasSelection) SelectInput("rotation", rotationAngle);
+            else { textEditor.Focus("rotation", rotationAngle, rotationAngle.Length); ResetTextCaret(); }
+        }
+        return true;
+    }
+
+    private bool TryRotationAngle(double angle)
+    {
+        RestoreRotationObjects(rotationSource!);
         try
         {
             CatchConversionResult? validation = null;
@@ -121,17 +149,17 @@ public sealed partial class EditorView
             {
                 validation = SelectionRotation.Apply(Document, rotationTargets, rotationClockwise ? angle : -angle,
                     IsOsuCanvas, rotationSelectionCentre, rotationTimeScale, rotationPlayfieldTime, rotationConversionCache, compensateTinyDroplets,
-                    RotationSelectionOrigin(rotationSource, rotationTimeScale));
+                    RotationSelectionOrigin(rotationSource!, rotationTimeScale));
                 if (IsOsuCanvas)
                     foreach (var slider in Document.ImportedSliders.Where(s => rotationTargets.Contains(s.Id))) OsuSyncSliderLine(slider);
             }
             rotationValidation = validation;
-            rotationPreview = CaptureRotationObjects(); rotationError = "";
+            rotationPreview = CaptureRotationObjects();
             return true;
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or InvalidDataException)
         {
-            RestoreRotationObjects(rotationPreview!); rotationError = error.Message;
+            RestoreRotationObjects(rotationPreview!);
             return false;
         }
     }
@@ -238,7 +266,6 @@ public sealed partial class EditorView
             Button(c, new(x + 26 + half, y + 150 + i * 34, half, 30), L.Get(first ? "rotation.playfield" : "rotation.selection"),
                 () => { rotationSelectionCentre = !first; PreviewRotation(); }, rotationSelectionCentre != first);
         }
-        if (rotationError.Length > 0) c.Text(rotationError, x + 18, y + 220, 11, Error, w - 36);
         Button(c, new(x + 18, y + h - 52, w - 138, 34), L.Get("mac.ok"), ApplyRotation, true);
         Button(c, new(x + w - 110, y + h - 52, 92, 34), L.Get("mac.cancel"), CancelRotation);
     }
