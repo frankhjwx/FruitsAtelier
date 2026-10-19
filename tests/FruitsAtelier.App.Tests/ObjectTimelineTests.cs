@@ -353,7 +353,7 @@ internal static class ObjectTimelineTests
         var ui = new Ui(false);
         var map = new MapDocument { BeatLengthMs = 500, DurationMs = 200000 };
         for (int i = 0; i < 2000; i++)
-            map.TimingPoints.Add(new() { TimeMs = i * 100, BeatLengthMs = -100, Uninherited = false });
+            map.TimingPoints.Add(new() { TimeMs = i * 100, BeatLengthMs = -100, Uninherited = false, Volume = i % 2 == 0 ? 100 : 80 });
         ui.LoadDocument(map);
         ui.SetSnapDivisor(16); ui.Paint();
         long bytes = GC.GetAllocatedBytesForCurrentThread();

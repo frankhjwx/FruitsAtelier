@@ -278,7 +278,7 @@ var tests = new (string Name, Action Run)[]
     ("Current difficulty saves retain other edits, navigation and recoverable publication", DifficultySaveTests.Run),
     ("Blocked operations show synchronization progress only on demand", SynchronizationWaitTests.Run),
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
-    ("Stale synchronization waits for stable edits and archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),
+    ("Background synchronization retries retain dirty edits and explicit publication archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),
     ("Version history previews and restores changed and deleted difficulties with undo and modal isolation", VersionHistoryUiTests.Run),
 
     ("Playback note saves keep input responsive and retain edits made during publication", SynchronizationUiTests.PlaybackSave),
@@ -697,13 +697,14 @@ static void MultiTimingEditing()
     doc.TimingPoints.Add(new() { TimeMs = 1100, BeatLengthMs = 400, Uninherited = true });
     doc.TimingPoints.Add(new() { TimeMs = 1180, BeatLengthMs = -50, Uninherited = false });
     ui.LoadDocument(doc); ui.Paint();
+    var normalized = ui.View.Document.DeepClone();
     ui.SetSnapDivisor(6); ui.Key('F'); ui.ClickMap(1210, 100);
     Near(1233.333333333333, ui.View.Document.Fruits.Single().TimeMs);
     ui.SetSnapDivisor(4); ui.ClickMap(1490, 400);
     Near(1500, ui.View.Document.Fruits.Last().TimeMs);
     True(ui.Canvas.Lines.Any(l => l.Color == 0xEEEEEE && l.Width == 2.5f && Math.Abs(l.Y1 - (ui.Plot.Bottom - (1100 - ui.View.ViewStartMs) * ui.View.PixelsPerMs)) < .01), "The red timing boundary is absent from the painted grid.");
     ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
-    True(!ui.View.IsDirty && ui.View.Document.TimingPoints.Count == 3, "Timing was changed by fruit editing.");
+    True(!ui.View.IsDirty && ui.View.Document.ContentEquals(normalized), "Timing was changed by fruit editing.");
 }
 
 static void TransportIntegration()

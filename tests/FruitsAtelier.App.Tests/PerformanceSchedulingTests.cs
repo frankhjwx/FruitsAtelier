@@ -75,11 +75,16 @@ internal static class PerformanceSchedulingTests
         }
         SynchronizationUiTests.Wait(ui);
         source = ui.View.WorkspaceSession!.Manifest.Difficulties[0].Source!;
+        Check(OsuBeatmapReader.ReadFile(source).Fruits[0].X == 100 && ui.View.IsDirty,
+            "background retry retains unsaved edits without publishing");
+        Check(WorkspaceVersionHistory.List(ui.View.WorkspaceSession).Count == 0,
+            "read-only retry creates no recovery round");
+        ui.View.RefreshSynchronization(); SynchronizationUiTests.Wait(ui);
         Check(OsuBeatmapReader.ReadFile(source).Fruits[0].X == ui.View.Document.Fruits[0].X && !ui.View.IsDirty,
-            "stable retry exports the latest edit");
+            "explicit synchronization exports the latest edit");
         var versions = WorkspaceVersionHistory.List(ui.View.WorkspaceSession);
         Check(versions.Count == 2 && versions.All(v => v.Operation == "before-sync") && versions.Any(v => v.WorkingCopy),
-            "automatic publication keeps saved and working authoring in one recovery round");
+            "explicit publication keeps saved and working authoring in one recovery round");
         ui.Key('Z', ctrl: true);
         Check(ui.View.IsDirty, "retry publication preserves undo");
         ui.View.StopFileMonitoring();

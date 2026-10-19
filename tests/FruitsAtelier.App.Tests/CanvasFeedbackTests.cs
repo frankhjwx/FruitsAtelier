@@ -340,7 +340,7 @@ internal static class CanvasFeedbackTests
     private static void TimingNavigation()
     {
         var map = new MapDocument { DurationMs = 10000 };
-        for (int i = 0; i < 8; i++) map.TimingPoints.Add(new() { TimeMs = i * 500, BeatLengthMs = i == 0 ? 500 : -100, Uninherited = i == 0 });
+        for (int i = 0; i < 8; i++) map.TimingPoints.Add(new() { TimeMs = i * 500, BeatLengthMs = i == 0 ? 500 : -100, Uninherited = i == 0, Volume = 100 - i });
         var ui = NewUi(map); ui.Key(117); ui.Key(36); ui.Key(40, shift: true); ui.Key(40, shift: true); ui.Key(40, shift: true);
         string copied = ""; ui.View.RequestCopyText = value => copied = value; ui.Key('C', ctrl: true);
         Check(TimingEditing.Parse(copied).Length == 4, "Shift+Down did not extend timing selection beyond two rows.");

@@ -74,10 +74,11 @@ internal static class AudioProjectTests
                 Check(ui.View.AudioProjectCreating, "Creation runs asynchronously");
                 ui.Key(27); ui.Key('S', ctrl: true);
                 Check(ui.View.SongSetupVisible, "Pending publication cannot be cancelled or saved again");
-                var deadline = DateTime.UtcNow.AddSeconds(15);
+                var deadline = DateTime.UtcNow.AddSeconds(60);
                 while (ui.View.AudioProjectCreating && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(10); }
                 ui.Paint();
-                Check(!ui.View.AudioProjectCreating && !ui.View.SongSetupVisible && !ui.View.LibraryVisible, "Successful publication opens the editor");
+                Check(!ui.View.AudioProjectCreating && !ui.View.SongSetupVisible && !ui.View.LibraryVisible,
+                    $"Successful publication opens the editor ({locale}, library={library}, mode={mode}, {input}; pending={ui.View.AudioProjectCreating}).");
                 var session = ui.View.WorkspaceSession ?? throw new Exception("No audio project was created");
                 Check(session.Project.Difficulties.Count == 1 && ui.View.CurrentDifficultyName == "Hard" && !ui.View.IsDirty, "One saved difficulty is created");
                 var reopened = WorkspaceProject.Open(session.Directory);

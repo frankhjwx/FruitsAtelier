@@ -158,7 +158,7 @@ internal static class TimingEditorTests
     private static void Scrollbar()
     {
         var map = Map();
-        for (int i = 1; i < 200; i++) map.TimingPoints.Add(new TimingPoint { TimeMs = i * 1000, BeatLengthMs = -100, Uninherited = false });
+        for (int i = 1; i < 200; i++) map.TimingPoints.Add(new TimingPoint { TimeMs = i * 1000, BeatLengthMs = -100, Uninherited = false, Volume = i % 2 == 0 ? 100 : 80 });
         var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(980, 620); ui.Key(117);
         var (track, thumb, maximum) = ui.View.TimingScrollbar;
         Check(maximum > 0, "Dense timing list has a scrollbar");

@@ -27,7 +27,7 @@ internal static class TimelineOverviewTests
         Check(first > faded && next > faded && Math.Abs(first - next) < .001f,
             "Kiai indicator must pulse each full beat and fade between beats");
         Check(PulseAt(2000) is null, "Kiai indicator remained after the interval");
-        ui.View.Document.TimingPoints[3].Effects = 1;
+        ui.View.Document.TimingPoints.Single(p => p.TimeMs == 2000).Effects = 1;
         Check(PulseAt(2000) is not null, "Changing Kiai timing did not refresh the indicator");
     }
 
@@ -189,8 +189,8 @@ internal static class TimelineOverviewTests
     {
         var map = new MapDocument { DurationMs = 5000, IsDemo = false };
         map.TimingPoints.Add(new() { TimeMs = 1500, BeatLengthMs = 500 });
-        map.TimingPoints.Add(new() { TimeMs = 1800, BeatLengthMs = -100, Uninherited = false });
-        map.TimingPoints.Add(new() { TimeMs = 1900, BeatLengthMs = -100, Uninherited = false });
+        map.TimingPoints.Add(new() { TimeMs = 1800, BeatLengthMs = -100, Uninherited = false, Volume = 80 });
+        map.TimingPoints.Add(new() { TimeMs = 1900, BeatLengthMs = -100, Uninherited = false, Volume = 100 });
         map.Fruits.Add(new() { TimeMs = 1800, X = 100 });
         OsuTimeline.AddBreak(map, 1500, 2200);
         SongSetup.Set(map, "General", "PreviewTime", "1800");
