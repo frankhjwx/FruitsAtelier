@@ -1,6 +1,7 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--faz-check")) { FazTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--legacy-edit-map") { LegacyDropletWorkerTests.FirstEdits(ProjectSerializer.ReadFile(args[1])); Console.WriteLine("PASS first note placement and deletion without conversion dialogs"); return 0; }
 if (args.Contains("--synchronization-wait-check")) { SynchronizationWaitTests.Run(); Console.WriteLine("PASS background input and explicit synchronization waits"); return 0; }
 if (args.Contains("--difficulty-save-check")) { DifficultySaveTests.Run(); Console.WriteLine("PASS current difficulty background saves and recovery"); return 0; }
@@ -503,6 +504,7 @@ var tests = new (string Name, Action Run)[]
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
     ("Library opening keeps UI responsive while workspace maintenance holds the project gate", LibraryOpeningTests.Run),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
+    ("FAZ archives preserve native projects and explicit local associations", FazTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
     ("Library favourites persist, filter songs and projects, and toggle from the first context action", LibraryFavouriteTests.Run),
     ("Library pages sets and difficulties and reaches uncached scrollbar positions", LibraryScaleTests.Pagination),

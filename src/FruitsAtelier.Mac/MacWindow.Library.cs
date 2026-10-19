@@ -49,6 +49,9 @@ internal sealed partial class MacWindow
     }
     private void ConfigureLibrary(bool show, bool smokeCheck)
     {
+        View.RequestFazOpen = path => RunFile(async () => { if (await ConfirmDiscard()) await OpenPath(path); });
+        View.RequestFazExport = complete => ExportFaz(complete);
+        View.RequestLibraryFazExport = (map, complete) => ExportFaz(complete, map);
         View.RequestAudioProject = path => RunFile(async () => { if (await ConfirmDiscard()) View.BeginAudioProject(path); });
         View.RequestLibraryDrop = paths => RunFile(async () =>
         {
@@ -92,7 +95,7 @@ internal sealed partial class MacWindow
             else
             {
                 if (!await ConfirmDiscard()) return;
-                var path = await Pick(L.Get("library.importFile"), ["*.osz", "*.osu", "*.catchproj", "*.catchdiff"]);
+                var path = await Pick(L.Get("library.importFile"), ["*.faz", "*.osz", "*.osu", "*.catchproj", "*.catchdiff"]);
                 if (path is not null) await OpenPath(path);
             }
         });
@@ -154,4 +157,10 @@ internal sealed partial class MacWindow
             View.LibraryExportFinished(plan); View.SetNotice(L.Get("library.exported", plan.Target));
         });
     }
+    private void ExportFaz(bool complete, LibraryMap? map = null) => RunFile(async () =>
+    {
+        if (!View.PrepareFileOperation()) return;
+        var path = await SavePicker(L.Get(complete ? "faz.exportComplete" : "faz.exportProject"), "faz", WorkspaceProject.SafeName(map?.Title ?? View.CaptureProject().Name) + ".faz");
+        if (path is not null) View.BeginFazExport(path, complete, map);
+    });
 }

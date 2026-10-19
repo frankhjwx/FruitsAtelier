@@ -236,7 +236,7 @@ public sealed partial class EditorView
         if (LegacyDropletRefreshBusy) return false;
         if (AcknowledgementsVisible) return false;
         if (previousSaveRestore is not null) return false;
-        if (LibraryOpening || AudioProjectCreating) return false;
+        if (FazVisible || LibraryOpening || AudioProjectCreating) return false;
         if (difficultySaveTask is not null && !allowDifficultySave) { NotifySynchronizationBlocked(); return false; }
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (VersionHistoryVisible || SynchronizationVisible) return false;

@@ -46,6 +46,7 @@ public sealed partial class EditorView
         PumpSynchronizationWait();
         PumpAudioProject();
         PumpLibraryOpen();
+        PumpFaz();
         PumpLegacyDropletRefresh();
         if (ConversionNeedsRedraw) PumpDeferredConversion();
         CompleteSliderMultiplierValidation();
@@ -699,6 +700,9 @@ public sealed partial class EditorView
             Item(L.Get("ui.saveMenu"), () => RequestSave?.Invoke());
             Item(L.Get("ui.exportMenu"), () => RequestExport?.Invoke());
             Item(L.Get("library.exportOsz"), () => RequestOszExport?.Invoke());
+            Item(L.Get("faz.exportComplete"), () => RequestFazExport?.Invoke(true));
+            Item(L.Get("faz.exportProject"), () => RequestFazExport?.Invoke(false));
+            if (RequestRegisterFaz is not null) Item(L.Get("faz.register"), () => RequestRegisterFaz?.Invoke());
             Item(L.Get("ui.exitMenu"), () => RequestClose?.Invoke());
         }
         else if (menu == 3)

@@ -97,7 +97,7 @@ internal sealed partial class MacWindow : Window
             var path = await Pick(L.Get("copier.choose"), ["*.osu"]);
             if (path is not null) View.SetHitsoundSource(HitsoundCopier.ReadSource(path));
         });
-        View.RequestOpen = () => RunFile(async () => { if (await ConfirmDiscard()) { var path = await Pick(L.Get("files.open"), ["*.osz", "*.osu", "*.catchproj", "*.catchdiff"]); if (path is not null) await OpenPath(path); } });
+        View.RequestOpen = () => RunFile(async () => { if (await ConfirmDiscard()) { var path = await Pick(L.Get("files.open"), ["*.faz", "*.osz", "*.osu", "*.catchproj", "*.catchdiff"]); if (path is not null) await OpenPath(path); } });
         View.RequestNewProject = () => RunFile(async () =>
         {
             if (!await ConfirmDiscard()) return;
@@ -185,6 +185,11 @@ internal sealed partial class MacWindow : Window
     }
     private void PollAudio()
     {
+        if (View.CanDropAudio && !View.StartupDialogVisible && Program.OpenFiles.TryDequeue(out var path))
+        {
+            Activate();
+            RunFile(async () => { if (await ConfirmDiscard()) await OpenPath(path); });
+        }
         PollSetupAudio();
         var state = audio.State;
         if (!string.Equals(state.FilePath, View.Document.AudioPath, StringComparison.Ordinal))
@@ -268,6 +273,11 @@ internal sealed partial class MacWindow : Window
     }
     private async Task OpenPath(string path)
     {
+        if (FazArchive.IsPackage(path))
+        {
+            View.BeginFazOpen(path, () => RunFile(async () => { projectPath = null; await audio.LoadAsync(View.Document.AudioPath); PollAudio(); }));
+            return;
+        }
         if (Path.GetFileName(path).Equals(WorkspaceProject.ManifestName, StringComparison.OrdinalIgnoreCase))
         {
             View.LoadWorkspace(WorkspaceProject.Open(Path.GetDirectoryName(path)!));

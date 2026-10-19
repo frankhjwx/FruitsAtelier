@@ -8,7 +8,7 @@ public sealed partial class EditorView
     private Action<int>? discardConfirmation;
     private bool deleteProjectConfirmation, replaceBackgroundConfirmation;
     private bool offerSongsExport;
-    public bool DiscardConfirmationVisible => discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput || previousSaveRestore is not null;
+    public bool DiscardConfirmationVisible => FazVisible || discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput || previousSaveRestore is not null;
 
     public void ShowDiscardConfirmation(Action<int> answer)
     {
@@ -28,6 +28,7 @@ public sealed partial class EditorView
 
     private void AnswerDiscard(int answer)
     {
+        if (FazVisible) { CloseFaz(); return; }
         if (previousSaveRestore is not null) return;
         if (pendingLanguage is not null) { AnswerLanguageNotice(answer == 6); return; }
         if (SynchronizationBlocksInput) return;
@@ -45,6 +46,7 @@ public sealed partial class EditorView
 
     private void DrawDiscardConfirmation(ICanvas c)
     {
+        if (FazVisible) { DrawFaz(c); return; }
         if (LibraryOpening) { DrawSynchronizationWait(c); return; }
         if (SynchronizationWaitVisible) { DrawSynchronizationWait(c); return; }
         if (SynchronizationBlocksInput)

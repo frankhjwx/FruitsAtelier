@@ -26,6 +26,14 @@ internal static class Program
                 Audio.AudioDiagnosticCapture.Configure(diagnosticSettings);
             }
             L.SetLanguage(FruitsAtelier.Localization.LanguagePreference.ReadLanguage());
+            bool ordinaryLaunch = !args.Any(a => a.StartsWith("--", StringComparison.Ordinal));
+            if (ordinaryLaunch && FazFileAssociation.Forward(args.FirstOrDefault(File.Exists))) return 0;
+            using var activation = new CancellationTokenSource();
+            if (ordinaryLaunch)
+            {
+                try { FazFileAssociation.RefreshRegistered(); } catch (Exception e) { AppLog.Write(e.Message); }
+                _ = FazFileAssociation.Listen(activation.Token);
+            }
             using var window = new EditorWindow();
             if (difficultySwitchCheck) return window.Run(renderCheck: true, difficultySwitchPath: args[1]);
             if (args.Length is 2 or 3 && args[0] == "--profile-map") return window.Run(profileMap: args[1],

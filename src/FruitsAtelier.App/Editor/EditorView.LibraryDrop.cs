@@ -16,6 +16,7 @@ public sealed partial class EditorView
     public static bool IsBackgroundImage(string path) => Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".bmp";
 
     public bool CanDropFile(string path) => CanDropBackground && IsBackgroundImage(path)
+        || CanDropAudio && Platform.FazArchive.IsPackage(path)
         || CanDropAudio && Platform.LibraryOperations.IsProjectAudio(path)
         || CanDropLibraryFiles && IsLibraryArchive(path);
 
@@ -26,6 +27,12 @@ public sealed partial class EditorView
     public void DropLibraryFiles(IEnumerable<string> paths)
     {
         var files = paths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (CanDropAudio && files.Any(Platform.FazArchive.IsPackage))
+        {
+            if (files.Length != 1) { ShowError(FruitsAtelier.Localization.Strings.Get("faz.oneFile")); return; }
+            if (PrepareFileOperation()) RequestFazOpen?.Invoke(files[0]);
+            return;
+        }
         var images = files.Where(IsBackgroundImage).ToArray();
         if (CanDropBackground && images.Length > 0)
         {

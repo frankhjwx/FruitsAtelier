@@ -194,6 +194,11 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--faz-render-check"))
+            {
+                Diagnostics.FazRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd); return 0;
+            }
             if (difficultySwitchPath is not null)
             {
                 Diagnostics.DifficultySwitchRenderCheck.Run(canvas, view, difficultySwitchPath, uiDpi);
@@ -441,6 +446,12 @@ internal sealed partial class EditorWindow : IDisposable
                 if (painting || failed || NativeModalScope.Active) return 0;
                 long pollStart = view.Performance.Start();
                 PollUpdates(); PollAudio();
+                if (view.CanDropAudio && !view.StartupDialogVisible && FazFileAssociation.Pending.TryDequeue(out var openedFaz))
+                {
+                    Native.ShowWindow(window, Native.IsIconic(window) ? 9 : 5);
+                    Native.SetForegroundWindow(window);
+                    ConfirmDiscard(() => OpenPath(openedFaz)); Invalidate();
+                }
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
                     || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw

@@ -140,6 +140,11 @@ internal sealed partial class EditorWindow
 
     private void OpenPath(string path)
     {
+        if (FazArchive.IsPackage(path))
+        {
+            view.BeginFazOpen(path, () => { projectPath = null; ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath); });
+            return;
+        }
         if (Path.GetExtension(path).Equals(".catchdiff", StringComparison.OrdinalIgnoreCase))
         {
             view.LoadWorkspace(WorkspaceProject.Open(Path.GetDirectoryName(path)!));

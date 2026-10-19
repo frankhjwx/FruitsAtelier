@@ -6,6 +6,10 @@ internal sealed partial class EditorWindow
 {
     private void ConfigureLibrary()
     {
+        view.RequestFazOpen = path => ConfirmDiscard(() => OpenPath(path));
+        view.RequestRegisterFaz = () => FileOperation(() => { FazFileAssociation.Register(); view.SetNotice(L.Get("faz.registered")); });
+        view.RequestFazExport = complete => ExportFaz(complete);
+        view.RequestLibraryFazExport = (map, complete) => ExportFaz(complete, map);
         view.RequestAudioProject = path => ConfirmDiscard(() => view.BeginAudioProject(path));
         view.RequestLibraryDrop = paths => FileOperation(() =>
         {
@@ -106,4 +110,12 @@ internal sealed partial class EditorWindow
             }
         });
     }
+
+    private void ExportFaz(bool complete, LibraryMap? map = null) => FileOperation(() =>
+    {
+        if (!view.PrepareFileOperation()) return;
+        var path = MapFileDialog.Select(hwnd, true, L.Get(complete ? "faz.exportComplete" : "faz.exportProject"), MapFileDialog.FazFilter,
+            WorkspaceProject.SafeName(map?.Title ?? view.CaptureProject().Name) + ".faz", "faz");
+        if (path is not null) view.BeginFazExport(path, complete, map);
+    });
 }

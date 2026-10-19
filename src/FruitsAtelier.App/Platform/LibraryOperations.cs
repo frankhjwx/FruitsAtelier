@@ -102,7 +102,7 @@ public static class LibraryOperations
         finally { Directory.Delete(staging, true); }
     }
 
-    private static void CopyArchiveExtras(MapDocument document, string staging)
+    internal static void CopyArchiveExtras(MapDocument document, string staging)
     {
         if (document.SourcePath is not { } source) return;
         string root = Path.GetDirectoryName(Path.GetFullPath(source))!;

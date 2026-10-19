@@ -328,6 +328,7 @@ public sealed partial class EditorView
             // Schema initialization can wait on another scan's SQLite write lock as well.
             scanTask = Task.Run(() =>
             {
+                Platform.FazArchive.Recover(new LibrarySettings { Workspace = workspace, Songs = songs });
                 var db = existing ?? new LibraryDatabase(workspace, songs);
                 Volatile.Write(ref scanningDatabase, db);
                 return (db, db.ScanDirectories(directories, progress: p => Volatile.Write(ref libraryScanProgress, p)));
