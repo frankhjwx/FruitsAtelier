@@ -350,8 +350,8 @@ internal static class NoteSnapTests
             ui.SetSnapDivisor(4);
             point = ui.ScreenAt(1015, 250);
             Inspect(ui, point.X, point.Y); ui.Paint();
-            Check(ui.View.SnapDivisor == 16,
-                "Recognition chose the first grid within 2 ms instead of the closest grid.");
+            Check(ui.View.SnapDivisor == 10,
+                "Recognition must choose the exact tenth-beat grid over a nearby sixteenth.");
 
             foreach (double time in new[] { 998d, 1002d, 997d, 1003d })
             {

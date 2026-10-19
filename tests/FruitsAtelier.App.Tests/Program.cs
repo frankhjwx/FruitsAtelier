@@ -14,6 +14,8 @@ if (args.Contains("--canvas-feedback-performance")) { CanvasFeedbackPerformance.
 if (args.Contains("--rotation-preview-performance")) { CanvasFeedbackPerformance.RunRotation(); return 0; }
 if (args.Contains("--timing-feedback-check")) { TimingEditorTests.Run(); TimingFeedbackTests.Run(); Console.WriteLine("PASS Timing setup, shortcuts, precision and range selection"); return 0; }
 
+if (args.Contains("--note-snap-check")) { NoteSnapTests.InspectBeatPosition(); Console.WriteLine("PASS nearest note beat snap recognition"); return 0; }
+
 if (args.Contains("--slider-endpoint-snap-check")) { SliderEndpointSnapTests.Run(); Console.WriteLine("PASS independent slider endpoint snapping"); return 0; }
 if (args.Contains("--slider-endpoint-snap-performance")) { SliderEndpointSnapTests.Performance(); return 0; }
 
