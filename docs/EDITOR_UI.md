@@ -812,6 +812,15 @@ The left palette has equally sized Select, Fruit, FSlider, and Banana buttons wi
 Snap offers 1/1, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, 1/10, 1/11, 1/12 and 1/16; the default is 1/4.
 Enable **Settings → Experimental** to add 1/24, 1/32 and 1/48.
 
+### Slider Inspector sections
+
+Slider Inspector groups its actions into compact **Timing & snapping**,
+**Conversion**, **Droplets** and **Structure** tabs. Click a section title to
+collapse or expand its controls. The editor retains these choices during the
+session, including when selection changes. Collapsing a section does not edit
+the document or create an undo step. Merge shortcuts expand Structure so the
+requested controls remain visible.
+
 ### Independent slider endpoint snapping
 
 The global beat-snap control includes 1/10 and 1/11. For one selected slider,
@@ -821,6 +830,12 @@ start and end grid. Each endpoint offers **Auto (nearest grid)** or a fixed
 are disabled. Auto chooses the nearest position across those grids. Choosing
 a fixed division snaps that endpoint immediately and retains the other endpoint.
 The setting is saved with the slider and can be undone.
+Inspector also reports each endpoint's actual reduced fraction within its beat.
+Selected sliders show these start/end positions beside their canvas endpoints,
+with NC and snap labels on separate lines. Coincident osu! slider endpoints use
+separate lines for their start and end labels. Positions refresh after edits,
+undo/redo and timing changes; a position over 2 ms from every supported grid is
+shown as **Off grid**. Whole beats are displayed as 0/1.
 
 Endpoint dragging uses the slider's own grid independently of global beat snap.
 Dragging the whole slider uses its start grid while preserving its duration.

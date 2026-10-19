@@ -895,3 +895,9 @@ Stream/Stack conversion with experimental divisions enabled.
 checks Inspector input and endpoint menus in English and Chinese at two window
 sizes and three DPI settings. Captures are stored under
 `artifacts/tests/slider-endpoint-snap/native`.
+
+`App.Tests --inspector-panels-check` also checks section collapse/expand, content
+and conversion isolation, selection changes, actual endpoint fractions and NC
+label separation in English and Chinese at narrow and standard widths. Native
+`--slider-endpoint-snap-render-check` captures expanded/collapsed sections and
+Catch endpoint labels alongside NC.

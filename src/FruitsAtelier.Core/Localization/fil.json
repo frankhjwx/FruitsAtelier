@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "Baguhin ang snap ng mga dulo ng slider",
   "sliderSnap.invalid": "Hindi wastong divisor ng snap ng mga dulo ng slider.",
   "sliderSnap.range": "Dapat mas huli ang dulo ng slider kaysa simula nito.",
-  "library.keepDeletedBackup": "Keep a recovery backup"
+  "library.keepDeletedBackup": "Keep a recovery backup",
+  "inspector.section.timing": "Oras at snap",
+  "inspector.section.conversion": "Conversion",
+  "inspector.section.droplets": "Mga droplet",
+  "inspector.section.structure": "Istruktura",
+  "sliderSnap.startPosition": "Puwesto ng simula sa beat",
+  "sliderSnap.endPosition": "Puwesto ng dulo sa beat",
+  "sliderSnap.offGrid": "Wala sa grid"
 }

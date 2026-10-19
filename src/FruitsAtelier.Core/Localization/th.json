@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "เปลี่ยนสแนปจุดเริ่มและจุดจบของสไลเดอร์",
   "sliderSnap.invalid": "ตัวหารสแนปจุดเริ่มและจุดจบของสไลเดอร์ไม่ถูกต้อง",
   "sliderSnap.range": "จุดจบของสไลเดอร์ต้องอยู่หลังจุดเริ่ม",
-  "library.keepDeletedBackup": "Keep a recovery backup"
+  "library.keepDeletedBackup": "Keep a recovery backup",
+  "inspector.section.timing": "เวลาและสแนป",
+  "inspector.section.conversion": "การแปลง",
+  "inspector.section.droplets": "หยดน้ำ",
+  "inspector.section.structure": "โครงสร้าง",
+  "sliderSnap.startPosition": "ตำแหน่งเริ่มในจังหวะ",
+  "sliderSnap.endPosition": "ตำแหน่งจบในจังหวะ",
+  "sliderSnap.offGrid": "นอกกริด"
 }

@@ -216,6 +216,7 @@ public sealed partial class EditorView
 
     private void DrawOsuCanvas(ICanvas c)
     {
+        RefreshSliderSnapLabels();
         RefreshOsuCanvasVisible();
         var field = OsuCanvasBounds;
         float scale = field.Width / 512, radius = (float)OsuCanvasRadius * scale;
@@ -309,6 +310,14 @@ public sealed partial class EditorView
             }
             if (IsObjectSelected(o.Id))
             {
+                if (sliderSnapLabels.TryGetValue(o.Id, out var snapLabels))
+                {
+                    var finalTail = o.Path.Length > 0 ? OsuPathPosition(o, o.Spans % 2 == 0 ? 0 : 1) : (X: o.X, Y: o.Y);
+                    var at = Point(finalTail.X, finalTail.Y);
+                    DrawSliderSnapCaption(c, snapLabels.StartPosition, head.X, head.Y, radius, CanvasRenderBounds);
+                    bool coincident = Math.Abs(at.X - head.X) < radius * 2 && Math.Abs(at.Y - head.Y) < 18;
+                    DrawSliderSnapCaption(c, snapLabels.EndPosition, at.X, at.Y, radius, CanvasRenderBounds, coincident ? 1 : 0);
+                }
                 float ringRadius = radius * 118 / 128;
                 float ringWidth = Math.Max(1, 3 * scale);
                 c.Circle(head.X, head.Y, ringRadius, OsuSelectionColour, false, ringWidth);

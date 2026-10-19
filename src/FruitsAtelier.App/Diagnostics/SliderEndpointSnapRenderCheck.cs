@@ -39,6 +39,21 @@ internal static class SliderEndpointSnapRenderCheck
                 if (editor.Document.ImportedSliders.Single().EndpointSnap?.EndDivisor != 7)
                     throw new InvalidOperationException("Native tail snap selection failed.");
                 Paint("sevenths");
+                Reach(() => editor.SliderInspectorSectionBounds(1));
+                var section = editor.SliderInspectorSectionBounds(1); Click(section.X + 10, section.Y + 10);
+                if (editor.SliderEndpointToggleBounds.Width != 0) throw new InvalidOperationException("Native Inspector section did not collapse.");
+                Paint("collapsed");
+                section = editor.SliderInspectorSectionBounds(1); Click(section.X + 10, section.Y + 10);
+                var catchMap = new MapDocument { DurationMs = 10000, BeatLengthMs = 700, DerandomizeFSliderDroplets = true };
+                var track = new CurveTrack { Kind = CurveKind.Linear, EndpointSnap = new() };
+                track.Nodes.Add(new() { TimeMs = 875, X = 100 }); track.Nodes.Add(new() { TimeMs = 2240, X = 350 });
+                catchMap.Tracks.Add(track); ObjectFlags.SetNewCombo(catchMap, track.Id, true);
+                editor.ToggleOsuCanvas(); editor.LoadDocument(catchMap); Paint();
+                editor.Wheel(editor.PlayfieldBounds.X, editor.PlayfieldBounds.Bottom,
+                    (float)(120 * Math.Log(.1 / editor.PixelsPerMs) / Math.Log(1.16)), false, false, true);
+                typeof(EditorView).GetMethod("SelectObjects", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                    .Invoke(editor, [new[] { track.Id }, track.Id]);
+                editor.ShowSliderInspector(); Paint("catch-positions-nc");
                 Console.WriteLine($"PASS endpoint snap native {locale} {size.Item1}x{size.Item2} {dpi} DPI");
 
                 void Reach(Func<Rect> bounds)

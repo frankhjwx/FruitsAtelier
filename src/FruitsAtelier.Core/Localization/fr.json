@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "Modifier l’alignement des extrémités du slider",
   "sliderSnap.invalid": "Diviseur d’alignement des extrémités du slider invalide.",
   "sliderSnap.range": "La fin du slider doit suivre son début.",
-  "library.keepDeletedBackup": "Keep a recovery backup"
+  "library.keepDeletedBackup": "Keep a recovery backup",
+  "inspector.section.timing": "Temps et alignement",
+  "inspector.section.conversion": "Conversion",
+  "inspector.section.droplets": "Gouttelettes",
+  "inspector.section.structure": "Structure",
+  "sliderSnap.startPosition": "Position du début dans le temps",
+  "sliderSnap.endPosition": "Position de fin dans le temps",
+  "sliderSnap.offGrid": "Hors grille"
 }

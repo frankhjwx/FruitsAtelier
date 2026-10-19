@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "Cambiar ajuste de extremos del slider",
   "sliderSnap.invalid": "Divisor de ajuste de extremos del slider no válido.",
   "sliderSnap.range": "El final del slider debe ser posterior al inicio.",
-  "library.keepDeletedBackup": "Keep a recovery backup"
+  "library.keepDeletedBackup": "Keep a recovery backup",
+  "inspector.section.timing": "Tiempo y ajuste",
+  "inspector.section.conversion": "Conversión",
+  "inspector.section.droplets": "Gotas",
+  "inspector.section.structure": "Estructura",
+  "sliderSnap.startPosition": "Posición inicial en el pulso",
+  "sliderSnap.endPosition": "Posición final en el pulso",
+  "sliderSnap.offGrid": "Fuera de cuadrícula"
 }

@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "修改 slider 起止吸附",
   "sliderSnap.invalid": "Slider 起止吸附分拍无效。",
   "sliderSnap.range": "Slider 终点必须晚于起点。",
-  "library.keepDeletedBackup": "保留恢复备份"
+  "library.keepDeletedBackup": "保留恢复备份",
+  "inspector.section.timing": "时间与吸附",
+  "inspector.section.conversion": "转换",
+  "inspector.section.droplets": "水滴",
+  "inspector.section.structure": "结构",
+  "sliderSnap.startPosition": "起点分拍位置",
+  "sliderSnap.endPosition": "终点分拍位置",
+  "sliderSnap.offGrid": "未对齐分拍"
 }

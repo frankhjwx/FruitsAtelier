@@ -70,7 +70,7 @@ if (args.Contains("--aimod-check")) { AimodTests.Run(); AimodTests.TableAndDock(
 
 if (args.Contains("--group-drag-boundary-check")) { GroupDragBoundaryTests.Run(); Console.WriteLine("PASS Group drag boundaries, conversion, export and undo"); return 0; }
 
-if (args.Contains("--inspector-panels-check")) { InspectorPanelsTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS Inspector metrics, live panel edits and Song Setup categories"); return 0; }
+if (args.Contains("--inspector-panels-check")) { InspectorSectionTests.Run(); InspectorPanelsTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS Inspector sections, endpoint labels, metrics and Song Setup categories"); return 0; }
 
 if (args.Contains("--song-dock-check")) { SongDockTests.Run(); SongSetupTests.Run(); DropletRandomizationTests.Run(); Console.WriteLine("PASS Song Setup dock, metadata, colours and randomization"); return 0; }
 
@@ -342,6 +342,7 @@ var tests = new (string Name, Action Run)[]
     ("Song Setup docks, scrolls and applies cancellable drafts", SongDockTests.Run),
     ("Dock layout settings restore across editor restarts", DockPersistenceTests.Run),
     ("Slider Inspector metrics and immediate randomization edits", InspectorPanelsTests.Run),
+    ("Inspector sections collapse without edits and endpoint labels avoid NC", InspectorSectionTests.Run),
     ("Conversion dock shortcuts, object action menus and merge undo", ConversionDockShortcutTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace saves and linked synchronization persist before optional Songs export", WorkspaceSaveTests.Run),

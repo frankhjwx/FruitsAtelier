@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "Zmień przyciąganie końców slidera",
   "sliderSnap.invalid": "Nieprawidłowy dzielnik przyciągania końców slidera.",
   "sliderSnap.range": "Koniec slidera musi następować po początku.",
-  "library.keepDeletedBackup": "Keep a recovery backup"
+  "library.keepDeletedBackup": "Keep a recovery backup",
+  "inspector.section.timing": "Czas i przyciąganie",
+  "inspector.section.conversion": "Konwersja",
+  "inspector.section.droplets": "Kropelki",
+  "inspector.section.structure": "Struktura",
+  "sliderSnap.startPosition": "Pozycja początku w uderzeniu",
+  "sliderSnap.endPosition": "Pozycja końca w uderzeniu",
+  "sliderSnap.offGrid": "Poza siatką"
 }

@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "Change slider endpoint snapping",
   "sliderSnap.invalid": "Invalid slider endpoint snap divisor.",
   "sliderSnap.range": "The slider end must follow its start.",
-  "library.keepDeletedBackup": "Keep a recovery backup"
+  "library.keepDeletedBackup": "Keep a recovery backup",
+  "inspector.section.timing": "Timing & snapping",
+  "inspector.section.conversion": "Conversion",
+  "inspector.section.droplets": "Droplets",
+  "inspector.section.structure": "Structure",
+  "sliderSnap.startPosition": "Start snap position",
+  "sliderSnap.endPosition": "End snap position",
+  "sliderSnap.offGrid": "Off grid"
 }

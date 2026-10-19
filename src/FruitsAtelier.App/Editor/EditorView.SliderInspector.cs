@@ -16,6 +16,9 @@ public sealed partial class EditorView
     private bool inspectorMerge, inspectorHasSliders, inspectorOnlySliders;
     private bool inspectorSpeedMode;
     private bool osuShowProcessedSliders;
+    private readonly HashSet<int> inspectorCollapsedSections = [];
+    private readonly Dictionary<int, Rect> inspectorSectionBounds = [];
+    internal Rect SliderInspectorSectionBounds(int section) => inspectorSectionBounds.GetValueOrDefault(section);
 
     internal void SetOsuSliderDisplay(bool processed)
     {
@@ -119,6 +122,12 @@ public sealed partial class EditorView
             .Concat(imported.Select(_ => "Legacy Slider")).Distinct())));
         inspectorRows.Add(("inspector.start", TimeRange(starts)));
         inspectorRows.Add(("inspector.end", TimeRange(ends)));
+        RefreshSliderSnapLabels();
+        if (inspectorTargets.Length == 1 && sliderSnapLabels.TryGetValue(inspectorTargets[0], out var snapLabels))
+        {
+            inspectorRows.Add(("sliderSnap.startPosition", snapLabels.StartPosition));
+            inspectorRows.Add(("sliderSnap.endPosition", snapLabels.EndPosition));
+        }
         inspectorRows.Add(("inspector.duration", Range(ends.Zip(starts, (end, start) => end - start)) + " ms"));
         inspectorRows.Add(("inspector.spans", Range(tracks.Select(t => (double)t.SpanCount).Concat(imported.Select(t => (double)t.SpanCount)))));
         var derandomization = tracks.Where(t => t.StreamSnapDivisor is null)
@@ -167,14 +176,17 @@ public sealed partial class EditorView
     private List<(string Label, System.Action Action, bool Enabled, int Kind)> SliderInspectorActions()
     {
         var actions = new List<(string Label, System.Action Action, bool Enabled, int Kind)>();
-        if (IsOsuCanvas && Document.ImportedSliders.Any(s => inspectorTargetSet.Contains(s.Id)))
-            actions.Add((L.Get("inspector.pathDisplay", L.Get(osuShowProcessedSliders ? "inspector.pathProcessed" : "inspector.pathDrawn")),
-                OpenOsuSliderDisplayMenu, drag == DragKind.None && osuDraftSlider is null, 0));
         bool enabled = ClipboardInteractionReady && !notesLocked;
+        if (inspectorTargets.Length == 1 && (Document.Tracks.Any(t => t.Id == inspectorTargets[0] && t.StreamSnapDivisor is null)
+            || Document.ImportedSliders.Any(t => t.Id == inspectorTargets[0]))) Section(1, "inspector.section.timing");
         AddEndpointSnapActions(actions, enabled);
         if (inspectorTargets.Length == 1 && Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0]))
             actions.Add((L.Get("legacySv.label"), () => { }, !notesLocked && drag == DragKind.None
                 && draftTrack == Guid.Empty && draftBanana == Guid.Empty && !LegacyDropletRefreshBusy, 3));
+        if (inspectorHasSliders) Section(2, "inspector.section.conversion");
+        if (IsOsuCanvas && Document.ImportedSliders.Any(s => inspectorTargetSet.Contains(s.Id)))
+            actions.Add((L.Get("inspector.pathDisplay", L.Get(osuShowProcessedSliders ? "inspector.pathProcessed" : "inspector.pathDrawn")),
+                OpenOsuSliderDisplayMenu, drag == DragKind.None && osuDraftSlider is null, 0));
         if (inspectorTargets.Length == 1 && Document.Tracks.Any(s => s.Id == inspectorTargets[0] && s.StreamSnapDivisor is null))
             actions.Add((L.Get("osu.convertLegacy"), () => ConvertSelectedSliderRepresentation(inspectorTargets[0]), enabled, 0));
         if (inspectorTargets.Length == 1 && Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0]))
@@ -187,10 +199,10 @@ public sealed partial class EditorView
                 actions.Add((L.Get("stream.breakFruits"), BreakSelectedStreams, enabled, 0));
                 actions.Add((L.Get("stream.convertBack"), ConvertStreamsBack, enabled, 0));
             }
-            actions.Add((L.Get("slider.clearInternal"), ClearSelectedInternalAnchors, CanClearSliderNodes, 0));
             var dropletTracks = InspectorDropletTracks();
             if (dropletTracks.Length > 0)
             {
+                Section(3, "inspector.section.droplets");
                 var modes = dropletTracks.Select(InspectorDropletMode).Distinct().ToArray();
                 string mode = modes.Length == 1 ? L.Get("droplet.mode." + modes[0]) : L.Get("inspector.mixed");
                 actions.Add((L.Get("inspector.dropletMode", mode), OpenInspectorDropletMenu, enabled, 0));
@@ -199,8 +211,16 @@ public sealed partial class EditorView
                     ? "inspector.resetDropletsInactive" : "inspector.resetDroplets", adjustments), ResetInspectorDroplets, enabled && adjustments > 0, 0));
             }
         }
+        Section(4, "inspector.section.structure");
+        if (inspectorHasSliders)
+            actions.Add((L.Get("slider.clearInternal"), ClearSelectedInternalAnchors, CanClearSliderNodes, 0));
         actions.Add((L.Get("merge.title"), ShowMergeInspector, enabled && inspectorMerge, 0));
         return actions;
+
+        void Section(int section, string key) => actions.Add((L.Get(key), () =>
+        {
+            if (!inspectorCollapsedSections.Add(section)) inspectorCollapsedSections.Remove(section);
+        }, true, -section));
     }
     private CurveTrack[] InspectorDropletTracks() => Document.Tracks
         .Where(t => t.StreamSnapDivisor is null && inspectorTargetSet.Contains(t.Id)).ToArray();
@@ -244,6 +264,7 @@ public sealed partial class EditorView
     private void DrawSliderInspector(ICanvas c, Rect bounds)
     {
         SliderEndpointToggleBounds = SliderEndpointStartBounds = SliderEndpointEndBounds = default;
+        inspectorSectionBounds.Clear();
         if (!DockContentInputAvailable) return;
         inspectorBounds = bounds; RefreshSliderInspector();
         if (inspectorRows.Count == 0) { c.Text(L.Get("inspector.select"), bounds.X, bounds.Y + 12, 12, Muted, bounds.Width); return; }
@@ -253,11 +274,17 @@ public sealed partial class EditorView
         int columns = contentWidth < 250 ? 1 : 2;
         float cell = (contentWidth - (columns - 1) * 16) / columns;
         var actions = SliderInspectorActions();
+        bool collapsed = false;
+        actions.RemoveAll(action =>
+        {
+            if (action.Kind < 0) { collapsed = inspectorCollapsedSections.Contains(-action.Kind); return false; }
+            return collapsed;
+        });
         if (inspectorMergeExpanded && inspectorMerge) actions.RemoveAll(a => a.Label == L.Get("merge.title"));
         bool enabled = ClipboardInteractionReady && !notesLocked;
         float metricsHeight = selectionOnly ? 32 : (inspectorRows.Count + columns - 1) / columns * 44;
-        float mergeHeight = inspectorMerge && inspectorMergeExpanded ? MergeControlsHeight(c, contentWidth) : 0;
-        inspectorContentHeight = metricsHeight + 10 + actions.Count * 38 + mergeHeight;
+        float mergeHeight = inspectorMerge && inspectorMergeExpanded && !inspectorCollapsedSections.Contains(4) ? MergeControlsHeight(c, contentWidth) : 0;
+        inspectorContentHeight = metricsHeight + 10 + actions.Sum(a => a.Kind < 0 ? 32 : 38) + mergeHeight;
         inspectorScroll = Math.Clamp(inspectorScroll, 0, Math.Max(0, inspectorContentHeight - viewport.Height));
         float y = bounds.Y - inspectorScroll;
         int firstHit = hits.Count; c.Clip(viewport);
@@ -273,9 +300,22 @@ public sealed partial class EditorView
             c.Text(L.Get(row.Key), px, py, 11, Muted, cell);
             c.Text(row.Value, px, py + 18, 13, Foreground, cell);
         }
+        float actionY = y + metricsHeight + 10;
         for (int i = 0; i < actions.Count; i++)
         {
-            var action = actions[i]; var box = new Rect(x, y + metricsHeight + 10 + i * 38, contentWidth, 32);
+            var action = actions[i];
+            var box = new Rect(x, actionY, contentWidth, action.Kind < 0 ? 26 : 32);
+            actionY += action.Kind < 0 ? 32 : 38;
+            if (action.Kind < 0)
+            {
+                if (box.Y >= viewport.Y && box.Bottom <= viewport.Bottom) inspectorSectionBounds[-action.Kind] = box;
+                bool closed = inspectorCollapsedSections.Contains(-action.Kind);
+                float tabWidth = Math.Min(contentWidth, c.MeasureText(action.Label, 11, true) + 36);
+                Button(c, box with { Width = tabWidth }, (closed ? "▸ " : "▾ ") + action.Label,
+                    action.Action, fontSize: 11, bold: true);
+                c.Line(x + tabWidth, box.Bottom, x + contentWidth, box.Bottom, Grid);
+                continue;
+            }
             if (action.Kind == 1) LegacyConversionBounds = box;
             if (action.Kind == 2) StreamConversionBounds = box;
             if (box.Y >= viewport.Y && box.Bottom <= viewport.Bottom)
@@ -297,7 +337,7 @@ public sealed partial class EditorView
                 Button(c, box, action.Label, action.Action, enabled: action.Enabled, fontSize: 12);
         }
         if (mergeHeight > 0)
-            DrawMergeControls(c, new(x, y + metricsHeight + 10 + actions.Count * 38, contentWidth, mergeHeight), enabled);
+            DrawMergeControls(c, new(x, actionY, contentWidth, mergeHeight), enabled);
         c.Unclip();
         for (int i = hits.Count - 1; i >= firstHit; i--)
         {

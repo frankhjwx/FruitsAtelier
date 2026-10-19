@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "Eindpuntsnap van slider wijzigen",
   "sliderSnap.invalid": "Ongeldige deler voor eindpuntsnap van slider.",
   "sliderSnap.range": "Het einde van de slider moet na het begin liggen.",
-  "library.keepDeletedBackup": "Keep a recovery backup"
+  "library.keepDeletedBackup": "Keep a recovery backup",
+  "inspector.section.timing": "Tijd en snap",
+  "inspector.section.conversion": "Conversie",
+  "inspector.section.droplets": "Druppels",
+  "inspector.section.structure": "Structuur",
+  "sliderSnap.startPosition": "Beginpositie binnen tel",
+  "sliderSnap.endPosition": "Eindpositie binnen tel",
+  "sliderSnap.offGrid": "Buiten raster"
 }

@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "スライダーの端点スナップを変更",
   "sliderSnap.invalid": "スライダーの端点スナップ分割数が無効です。",
   "sliderSnap.range": "スライダーの終点は始点より後にしてください。",
-  "library.keepDeletedBackup": "Keep a recovery backup"
+  "library.keepDeletedBackup": "Keep a recovery backup",
+  "inspector.section.timing": "時間とスナップ",
+  "inspector.section.conversion": "変換",
+  "inspector.section.droplets": "ドロップレット",
+  "inspector.section.structure": "構造",
+  "sliderSnap.startPosition": "始点の拍内位置",
+  "sliderSnap.endPosition": "終点の拍内位置",
+  "sliderSnap.offGrid": "グリッド外"
 }

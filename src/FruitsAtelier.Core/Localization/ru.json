@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "Изменить привязку концов слайдера",
   "sliderSnap.invalid": "Недопустимый делитель привязки концов слайдера.",
   "sliderSnap.range": "Конец слайдера должен быть позже начала.",
-  "library.keepDeletedBackup": "Keep a recovery backup"
+  "library.keepDeletedBackup": "Keep a recovery backup",
+  "inspector.section.timing": "Время и привязка",
+  "inspector.section.conversion": "Преобразование",
+  "inspector.section.droplets": "Капли",
+  "inspector.section.structure": "Структура",
+  "sliderSnap.startPosition": "Позиция начала в доле",
+  "sliderSnap.endPosition": "Позиция конца в доле",
+  "sliderSnap.offGrid": "Вне сетки"
 }

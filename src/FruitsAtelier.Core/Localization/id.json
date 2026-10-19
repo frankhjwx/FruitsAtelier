@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "Ubah snap ujung slider",
   "sliderSnap.invalid": "Pembagi snap ujung slider tidak valid.",
   "sliderSnap.range": "Akhir slider harus setelah awalnya.",
-  "library.keepDeletedBackup": "Keep a recovery backup"
+  "library.keepDeletedBackup": "Keep a recovery backup",
+  "inspector.section.timing": "Waktu dan snap",
+  "inspector.section.conversion": "Konversi",
+  "inspector.section.droplets": "Droplet",
+  "inspector.section.structure": "Struktur",
+  "sliderSnap.startPosition": "Posisi awal dalam ketukan",
+  "sliderSnap.endPosition": "Posisi akhir dalam ketukan",
+  "sliderSnap.offGrid": "Di luar kisi"
 }

@@ -49,6 +49,7 @@ public sealed partial class EditorView
         if (!ClipboardInteractionReady || notesLocked) return;
         ShowSliderInspector(); RefreshSliderInspector();
         inspectorMergeExpanded = true;
+        inspectorCollapsedSections.Remove(4);
         inspectorScroll = float.MaxValue;
     }
     private void ApplyMerge()

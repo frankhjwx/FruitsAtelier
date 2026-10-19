@@ -1544,5 +1544,12 @@
   "sliderSnap.command": "슬라이더 끝점 스냅 변경",
   "sliderSnap.invalid": "슬라이더 끝점 스냅 분할 값이 잘못되었습니다.",
   "sliderSnap.range": "슬라이더 끝은 시작보다 뒤에 있어야 합니다.",
-  "library.keepDeletedBackup": "Keep a recovery backup"
+  "library.keepDeletedBackup": "Keep a recovery backup",
+  "inspector.section.timing": "시간 및 스냅",
+  "inspector.section.conversion": "변환",
+  "inspector.section.droplets": "드롭렛",
+  "inspector.section.structure": "구조",
+  "sliderSnap.startPosition": "시작 박자 위치",
+  "sliderSnap.endPosition": "끝 박자 위치",
+  "sliderSnap.offGrid": "그리드 밖"
 }
