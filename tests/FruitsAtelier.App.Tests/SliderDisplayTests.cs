@@ -121,11 +121,11 @@ internal static class SliderDisplayTests
         finally { L.SetLanguage(language); }
     }
 
-    private static SliderPathPoint[] Path(Ui ui)
+    private static IReadOnlyList<SliderPathPoint> Path(Ui ui)
     {
         var objects = (Array)typeof(EditorView).GetField("osuCanvasObjects", Hidden)!.GetValue(ui.View)!;
         var item = objects.GetValue(0)!;
-        return (SliderPathPoint[])item.GetType().GetField("Path")!.GetValue(item)!;
+        return (IReadOnlyList<SliderPathPoint>)item.GetType().GetField("Path")!.GetValue(item)!;
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
 }

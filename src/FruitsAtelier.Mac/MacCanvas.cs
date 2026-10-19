@@ -102,11 +102,17 @@ internal sealed class ImageCache : IDisposable
         bookmarkToolbar?.Bitmap.Dispose(); bookmarkToolbar = null;
         foreach (var image in images.Values) image.Bitmap.Dispose(); images.Clear(); bytes = 0;
     }
+    internal void ReleaseDifficultyResources()
+    {
+        beatmapBackground?.Bitmap.Dispose(); beatmapBackground = null;
+        paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear();
+    }
     public void Dispose() { ClearImages(); thumbnails.Dispose(); paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear(); }
 }
 
 internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICanvas, IDisposable
 {
+    public void ReleaseDifficultyResources() => images.ReleaseDifficultyResources();
     private readonly Stack<DrawingContext.PushedState> clips = [];
     private static Avalonia.Rect Convert(R r) => new(r.X, r.Y, Math.Max(0, r.Width), Math.Max(0, r.Height));
     private static SolidColorBrush Brush(uint c) => new(Color.FromRgb((byte)(c >> 16), (byte)(c >> 8), (byte)c));

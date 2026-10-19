@@ -41,7 +41,7 @@ public sealed partial class EditorView
         {
             var state = timing.At(o.Start);
             double x = o.X, y = o.Y;
-            if (o.Path.Length > 0 && o.Spans % 2 == 1) { x = o.Path[^1].X; y = o.Path[^1].GeometryY; }
+            if (o.Path.Count > 0 && o.Spans % 2 == 1) { x = o.Path[^1].X; y = o.Path[^1].GeometryY; }
             double sv = state.SliderVelocityMultiplier;
             if (imported.TryGetValue(o.Id, out var slider))
                 sv = !osuShowProcessedSliders && slider.SliderVelocityMultiplier is { } authored
@@ -423,7 +423,7 @@ public sealed partial class EditorView
         }
         if (o.Spinner) return now < o.End + 240 && Contains(o.X, o.Y);
         if (now < o.Start + 700 && Contains(o.X, o.Y)) return true;
-        if (o.Path.Length == 0) return false;
+        if (o.Path.Count == 0) return false;
         if (now < o.End + 240 && Contains(o.X, o.Y)) return true;
         var tail = OsuPathPosition(o, o.Spans % 2 == 0 ? 0 : 1);
         if (Contains(tail.X, tail.Y)) return true;

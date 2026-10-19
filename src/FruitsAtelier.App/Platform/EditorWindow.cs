@@ -118,6 +118,12 @@ internal sealed partial class EditorWindow : IDisposable
             Native.DestroyWindow(hwnd);
             return 0;
         }
+        if (renderCheck && Environment.GetCommandLineArgs().FirstOrDefault(a => a.StartsWith("--project-memory-folder=", StringComparison.Ordinal)) is { } memoryFolder)
+        {
+            Diagnostics.ProjectMemoryCheck.Run(canvas, view, memoryFolder["--project-memory-folder=".Length..]);
+            Native.DestroyWindow(hwnd);
+            return 0;
+        }
         if (renderCheck && initialPath is not null) FileOperation(() => OpenPath(initialPath));
         if (hitsoundCopierCheck)
         {

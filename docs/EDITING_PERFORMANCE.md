@@ -49,12 +49,24 @@ the winning offset; pointer updates do not rebuild DS references from moved cont
 
 ## Full-map work and cache ownership
 
+Replacing a difficulty releases its conversion, export/read-back and presentation
+caches, including when returning to the library. The next frame releases its
+renderer geometry and background resources before drawing the new content.
+Project replacement also clears the project-local clipboard. Retired rating,
+resource and conversion workers cannot publish into the new session.
+After project/difficulty preparation or retirement, a single idle collection
+compacts large-object storage when committed managed memory exceeds 256 MiB.
+It waits for retired workers and difficulty ratings, and is deferred during
+playback and input gestures. Ordinary edits do not request this collection.
+
 Imported control points use copy-on-write buffers: exact integer coordinates occupy
 two 32-bit fields; coordinates requiring double precision retain it. History and
 conversion snapshots share immutable storage, and every mutation detaches first.
 Equality can reuse buffer identity. Derived geometry uses a weak memo keyed by all
 geometry inputs, so inactive imports do not pin their sampled paths. Active
 conversion results retain the geometry they use.
+The standard canvas shares those immutable path samples; it creates renderer
+stroke arrays only for visible slider bodies and retains them until invalidation.
 
 Catch path drawing retains cumulative distances per conversion and binary-searches
 the visible span interval. Screen polylines are reused while the viewport is

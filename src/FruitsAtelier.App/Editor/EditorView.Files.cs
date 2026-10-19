@@ -37,6 +37,7 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        objectClipboard = null; clipboardDifficulty = null; ObjectClipboardText = "";
         foreach (var difficulty in project.Difficulties) WorkspaceTimingSynchronization.NormalizeDocument(difficulty.Document);
         CancelLegacyDropletRefresh();
         if (libraryOpenTask is { } retiredOpen)
@@ -74,9 +75,18 @@ public sealed partial class EditorView
         unreadableSyncRetries = 0;
         syncComparisons.Clear(); syncVisualMerge = null; syncResultPane = null; syncPreviewRevision++;
         resourceSnapshot = null; resourceReferences = null;
+        if (resourceCheckTask is { } retiredResources)
+        {
+            retiredDifficultyWork.Add(retiredResources);
+            _ = retiredResources.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        }
+        resourceCheckTask = null;
         CancelInteraction();
-        foreach (var difficulty in difficulties) difficulty.RatingCancellation.Cancel();
-        editorConversionCache = new();
+        foreach (var difficulty in difficulties)
+        {
+            difficulty.RatingCancellation.Cancel();
+            if (difficulty.RatingTask is { } rating) retiredDifficultyWork.Add(rating);
+        }
         difficulties.Clear();
         difficulties.AddRange(project.Difficulties.Select(d => new DifficultySession(d)));
         activeDifficulty = firstDifficultyTab = 0;
@@ -103,6 +113,7 @@ public sealed partial class EditorView
         nextSounds = 0; soundEdge = null; timelineFruit = null;
         var document = Document;
         convertedSnapshot = null;
+        ReleaseDifficultyCaches();
         Select(Guid.Empty);
         tool = Tool.Select;
         menu = -1;

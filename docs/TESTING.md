@@ -514,6 +514,18 @@ After changing input or drawing, manually check affected operations, language sw
 
 ## Editing performance benchmark
 
+`App.Tests --cache-lifetime-check` verifies that closing after both canvas modes
+and clipboard use releases the document, conversion and exported read-back.
+`App.Tests --project-memory-performance <folder>` opens all sibling `.osu`
+difficulties, waits for ratings and measures memory before and after returning
+to the library. Its final forced collection distinguishes live data from garbage.
+`FruitsAtelier.App.exe --render-check --project-memory-folder=<folder>` repeats
+opening and closing twice in a native Direct2D window with silent audio decoding.
+Each round visits both canvases and renders ten seconds of simulated playback.
+It reports working set, private memory, managed heap and process peak in
+`artifacts/tests/project-memory/native.txt`. Stable measurements use the editor's
+normal lifecycle collection; process peak includes temporary loading allocations.
+
 `App.Tests --difficulty-switch-performance <path.osz>` opens the set three times
 and switches through every difficulty forwards and backwards, entering and leaving
 testplay each time. It records editor switching, testplay frame CPU, allocations,

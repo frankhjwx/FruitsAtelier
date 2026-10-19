@@ -111,7 +111,7 @@ public sealed partial class EditorView
     private double SnapX(double x) => EffectiveGridSnap ? Math.Round(x / gridSize, MidpointRounding.AwayFromZero) * gridSize : x;
 
     private readonly Guid placementId = Guid.NewGuid();
-    private readonly OsuWriteCache placementWriteCache = new();
+    private OsuWriteCache placementWriteCache = new();
     private CatchConversionResult? placementSource;
     private MapPoint? cachedPlacementPoint;
     private Tool cachedPlacementTool;
@@ -233,7 +233,7 @@ public sealed partial class EditorView
                 int low = 0, high = osuCanvasObjects.Length;
                 while (low < high) { int middle = low + (high - low) / 2; if (osuCanvasObjects[middle].Start < time) low = middle + 1; else high = middle; }
                 for (int i = low; i < osuCanvasObjects.Length && osuCanvasObjects[i].Start == time; i++)
-                    if (!osuCanvasObjects[i].Spinner && osuCanvasObjects[i].Path.Length == 0
+                    if (!osuCanvasObjects[i].Spinner && osuCanvasObjects[i].Path.Count == 0
                         && osuCanvasObjects[i].X == position.X && osuCanvasObjects[i].Y == position.Y) return null;
             }
             return new(OsuPlacementTime, position.X);

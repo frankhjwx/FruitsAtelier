@@ -129,7 +129,7 @@ internal static class OsuCanvasRenderTests
         var expected = ImportedSliderConverter.Path(output.ReadBack.ImportedSliders.Single());
         var items = (Array)typeof(FruitsAtelier.App.Editor.EditorView).GetField("osuCanvasObjects", flags)!.GetValue(ui.View)!;
         var item = items.GetValue(0)!;
-        var actual = (SliderPathPoint[])item.GetType().GetField("Path")!.GetValue(item)!;
+        var actual = (IReadOnlyList<SliderPathPoint>)item.GetType().GetField("Path")!.GetValue(item)!;
         if (!actual.SequenceEqual(expected)) throw new Exception("Readonly FSlider canvas did not use exported integer geometry.");
     }
 

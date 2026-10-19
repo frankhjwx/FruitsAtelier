@@ -452,6 +452,7 @@ public sealed partial class D2DCanvas
     private void ClearSliderRasters()
     {
         CancelSliderRaster();
+        sliderRasterPending = null; sliderRasterPendingKey = default; sliderRasterPendingDiscarded = false;
         foreach (var transition in sliderRasterTransitions.Values) transition.Dispose();
         sliderRasterTransitions.Clear();
         foreach (var raster in sliderRasters.Values) raster.Dispose();

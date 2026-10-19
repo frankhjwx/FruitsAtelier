@@ -34,6 +34,8 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        if (difficultyGraphicsReleasePending) { c.ReleaseDifficultyResources(); difficultyGraphicsReleasePending = false; }
+        ReclaimProjectMemory();
         if (AcknowledgementsVisible)
         {
             this.width = width; this.height = height;
