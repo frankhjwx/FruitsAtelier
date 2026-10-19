@@ -916,3 +916,9 @@ and conversion isolation, selection changes, actual endpoint fractions and NC
 label separation in English and Chinese at narrow and standard widths. Native
 `--slider-endpoint-snap-render-check` captures expanded/collapsed sections and
 Catch endpoint labels alongside NC.
+
+`App.Tests --same-time-placement-check` checks optional same-time placement in both canvases,
+native circle/slider/spinner replacement, preview/export equivalence, project
+roundtrips, undo/redo and Experimental setting
+persistence and cancellation. Native `--render-check --experimental-snap-render-check`
+also exercises its toggle in English and Chinese at compact and standard sizes.

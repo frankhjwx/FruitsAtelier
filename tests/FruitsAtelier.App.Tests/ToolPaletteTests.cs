@@ -38,6 +38,59 @@ internal static class ToolPaletteTests
         Check(after.ContentEquals(ui.View.Document), "Replacement redo changed object identities or content.");
     }
 
+    public static void SameTimePlacement()
+    {
+        FruitReplacement();
+        foreach (var mode in Enum.GetValues<SliderEditingMode>())
+        foreach (bool preserve in new[] { false, true })
+        {
+            var ui = Empty(); ui.View.SetSliderEditingMode(mode);
+            var map = new MapDocument { DurationMs = 12000 };
+            map.Fruits.Add(new() { TimeMs = 1000, X = 100 });
+            ui.LoadDocument(map); ui.View.LibrarySettings.PreserveSameTimeObjects = preserve;
+            ui.Key('B'); ui.ClickMap(1000, 100); ui.ClickMap(1500, 200); Right(ui, 2000, 250);
+            Check(ui.View.Document.Tracks.Count == 1 && ui.View.Document.Fruits.Count == (preserve ? 1 : 0),
+                "Catch slider completion ignored same-time preference.");
+            ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Catch slider placement undo failed.");
+        }
+        foreach (bool withParents in new[] { false, true })
+        {
+            var ui = Empty();
+            var map = new MapDocument { DurationMs = 12000 };
+            map.Fruits.AddRange([new() { TimeMs = 1250, X = 100 }, new() { TimeMs = 1252, X = 200 }]);
+            if (withParents)
+            {
+                var track = new CurveTrack { Kind = CurveKind.Linear };
+                track.Nodes.AddRange([new() { TimeMs = 1250, X = 200 }, new() { TimeMs = 1750, X = 300 }]);
+                map.Tracks.Add(track);
+                map.BananaShowers.Add(new() { TimeMs = 1250, EndTimeMs = 1500 });
+            }
+            ui.LoadDocument(map); ui.Key('F'); ui.MoveMap(1250, 450);
+            ui.View.LibrarySettings.PreserveSameTimeObjects = true;
+            ui.Paint();
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var preview = (IReadOnlyList<ConvertedCatchObject>)typeof(EditorView)
+                .GetField("placementMovementObjects", flags)!.GetValue(ui.View)!;
+            Check(map.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Preserving preview modified content.");
+            ui.ClickMap(1250, 450);
+            Check(ui.View.Document.Fruits.Count == 3 && ui.View.Document.Tracks.Count == map.Tracks.Count
+                && ui.View.Document.BananaShowers.Count == map.BananaShowers.Count, "Same-time parents were removed.");
+            Check(ui.View.Document.Fruits.Where(f => f.TimeMs == 1250).Select(f => f.X).Order().SequenceEqual(new double[] { 100, 450 }),
+                "Same-time fruits must retain independent coordinates.");
+            var exported = OsuBeatmapWriter.Serialize(ui.View.Document);
+            Check(exported.ObjectSequenceMatches && preview.Select(o => (o.Kind, o.TimeMs, o.X)).SequenceEqual(
+                exported.PlayableObjects.Select(o => (o.Kind, o.TimeMs, o.X))), "Preserving preview differs from export.");
+            var after = ui.View.Document.DeepClone();
+            Check(ProjectSerializer.Read(ProjectSerializer.Serialize(after)).ContentEquals(after), "Same-time project roundtrip changed content.");
+            ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Preserving placement undo failed.");
+            ui.Key('Y', ctrl: true); Check(after.ContentEquals(ui.View.Document), "Preserving placement redo failed.");
+            ui.View.LibrarySettings.PreserveSameTimeObjects = false;
+            ui.ClickMap(1250, 350);
+            Check(ui.View.Document.Fruits.Count == 1 && ui.View.Document.Tracks.Count == 0
+                && ui.View.Document.BananaShowers.Count == 0, "Disabling preservation did not restore replacement.");
+        }
+    }
+
     public static void PlacementHyperdash()
     {
         GroupedBananaPlacement();

@@ -97,6 +97,8 @@ if (args.Contains("--distance-snap-check"))
 if (args.Contains("--object-snap-check")) { ObjectSnapTests.Run(); Console.WriteLine("PASS Object snap ranges, placement and preferences"); return 0; }
 
 
+if (args.Contains("--same-time-placement-check")) { ToolPaletteTests.SameTimePlacement(); OsuCanvasInputTests.SameTimePlacement(); ExperimentalSnapTests.Run(); Console.WriteLine("PASS same-time placement and experimental settings"); return 0; }
+
 if (args.Contains("--experimental-snap-check")) { ExperimentalSnapTests.Run(); Console.WriteLine("PASS Experimental snap settings, wheel and Stream/Stack"); return 0; }
 
 if (args.Contains("--independent-scale-check")) { IndependentCanvasScaleTests.Run(); Console.WriteLine("PASS Independent canvas scales, pan, persistence and timeline limits"); return 0; }
@@ -466,7 +468,7 @@ var tests = new (string Name, Action Run)[]
     ("Fruit and both slider modes preview incoming and outgoing hyperdash without committing", ToolPaletteTests.PlacementHyperdash),
     ("Fruit New combo survives project/osu round-trips and undo", ToolPaletteTests.FruitCombo),
     ("Empty slider right-click arms New Combo in both modes with atomic undo and export", ToolPaletteTests.SliderCombo),
-    ("Fruit placement replaces same-start parents within 2 ms in one undo step", ToolPaletteTests.FruitReplacement),
+    ("Fruit placement preserves same-time objects optionally with undo and export", ToolPaletteTests.SameTimePlacement),
     ("Canvas labels New Combo fruits with NC in both languages", ToolPaletteTests.ComboLabels),
     ("Both slider modes support straight placement and draft point removal", ToolPaletteTests.DraftRemovalAndStraight),
     ("Repeated points, whole-slider deletion and banana completion", ToolPaletteTests.RepeatedPointAndWholeDelete),

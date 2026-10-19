@@ -153,6 +153,20 @@ the remaining space extends the editing area. Compact startup dialogs fit their
 own layout dimensions. Native title bars and file dialogs follow Windows display
 settings; macOS uses its native display scaling.
 
+## Same-time object placement
+
+Settings → Experimental → **Keep same-time objects during placement** disables
+the automatic replacement of fruits, FSliders and banana showers starting within
+2 ms of a newly placed fruit in the Catch canvas. In the osu! canvas, placing a
+circle, native slider or spinner replaces same-time circles, native sliders and
+spinners; the same toggle preserves them. Sliders that are read-only in the active
+canvas remain unchanged. The toggle defaults to off and is saved as an application
+preference. Enabling it allows fruits at the same time with
+independent X coordinates; previews retain the existing objects too. Changing the
+preference leaves existing content and undo history unchanged. Placement remains
+one undo step, and turning it off restores replacement for subsequent placements.
+Completing a Catch FSlider also retains a fruit at its exact head when enabled.
+
 ## Experimental lazer editing
 
 **Settings → Experimental → lazer editing** enables the alternative Compose

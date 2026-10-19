@@ -21,12 +21,32 @@ internal static class ExperimentalSnapTests
                 var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.experimental") && t.X < ui.View.SettingsBounds.X + 230);
                 ui.Click(label.X + 2, label.Y + 2);
             }
-            Settings(); ui.ClickText(L.Get("settings.romanisedOff")); ui.Key(27);
+            void ToggleSnap()
+            {
+                var label = ui.Canvas.Texts.First(t => t.Value == L.Get(ui.View.LibrarySettings.ExperimentalSnapDivisions
+                    ? "settings.romanisedOn" : "settings.romanisedOff"));
+                ui.Click(label.X + 2, label.Y + 2);
+            }
+            Settings(); ToggleSnap(); ui.Key(27);
             Check(!ui.View.LibrarySettings.ExperimentalSnapDivisions, "Cancel discards experimental snap draft");
-            Settings(); ui.ClickText(L.Get("settings.romanisedOff"));
+            Settings(); ToggleSnap();
             ui.View.ApplySettings(config); ui.Paint(); ui.Key(27);
             Check(LibrarySettings.Load(config).ExperimentalSnapDivisions, "Apply persists experimental snap");
             Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Snap preference preserves map content");
+            Check(!ui.View.LibrarySettings.PreserveSameTimeObjects, "Same-time preservation defaults off");
+            void TogglePreservation()
+            {
+                var r = ui.View.PreserveSameTimeObjectsToggleBounds;
+                Check(r.Bottom < ui.View.SettingsBounds.Bottom - 40, "Same-time toggle overlaps settings footer");
+                ui.Click(r.X + 10, r.Y + r.Height / 2);
+            }
+            Settings(); TogglePreservation(); ui.Key(27);
+            Check(!ui.View.LibrarySettings.PreserveSameTimeObjects, "Cancel discards same-time draft");
+            Settings(); TogglePreservation(); ui.View.ApplySettings(config); ui.Paint(); ui.Key(27);
+            Check(LibrarySettings.Load(config).PreserveSameTimeObjects, "Same-time preference persists");
+            Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Same-time preference changed map");
+            Settings(); TogglePreservation(); ui.View.ApplySettings(config); ui.Paint(); ui.Key(27);
+            Check(!LibrarySettings.Load(config).PreserveSameTimeObjects, "Disabled preference persists");
             void SetSnap(int value)
             {
                 int[] values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 24, 32, 48];
@@ -81,7 +101,7 @@ internal static class ExperimentalSnapTests
                 Check(OsuBeatmapWriter.Serialize(map).ObjectSequenceMatches, "Extended banana pattern exports playable objects");
             }
             SetSnap(48); var unchanged = ui.View.Document.DeepClone();
-            Settings(); ui.ClickText(L.Get("settings.romanisedOn")); ui.View.ApplySettings(config); ui.Paint(); ui.Key(27);
+            Settings(); ToggleSnap(); ui.View.ApplySettings(config); ui.Paint(); ui.Key(27);
             Check(!LibrarySettings.Load(config).ExperimentalSnapDivisions && ui.View.SnapDivisor == 16, "Disable restores standard controls and persists");
             Wheel(120); Check(ui.View.SnapDivisor == 16 && unchanged.ContentEquals(ui.View.Document), "Disabled wheel stops at 16 without content edits");
         }

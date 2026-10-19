@@ -22,6 +22,8 @@ public sealed partial class EditorView
     public Action<bool>? RequestFullscreen { get; set; }
     private bool draftFullscreen, fullscreenShortcutHeld;
     private bool draftExperimentalSnapDivisions;
+    private bool draftPreserveSameTimeObjects;
+    public Rect PreserveSameTimeObjectsToggleBounds { get; private set; }
     private bool draftLazerEditing;
     private CatchHitLightingMode draftCatchHitLighting;
     internal Rect HitLightingSettingsBounds => new(SettingsContentX, SettingsTop + 464, SettingsContentWidth, SettingsControlHeight);
@@ -114,6 +116,7 @@ public sealed partial class EditorView
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
         draftDerandomizeNewProjects = LibrarySettings.DerandomizeNewProjects;
         draftExperimentalSnapDivisions = LibrarySettings.ExperimentalSnapDivisions;
+        draftPreserveSameTimeObjects = LibrarySettings.PreserveSameTimeObjects;
         draftLazerEditing = LibrarySettings.LazerEditing;
         draftCatchHitLighting = LibrarySettings.CatchHitLighting;
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
@@ -158,6 +161,7 @@ public sealed partial class EditorView
         draftSettingsColours[6] != LibrarySettings.SelectionHighlightColour ||
         draftFullscreen != LibrarySettings.Fullscreen ||
         draftExperimentalSnapDivisions != LibrarySettings.ExperimentalSnapDivisions ||
+        draftPreserveSameTimeObjects != LibrarySettings.PreserveSameTimeObjects ||
         draftLazerEditing != LibrarySettings.LazerEditing ||
         draftCatchHitLighting != LibrarySettings.CatchHitLighting ||
         draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
@@ -295,6 +299,11 @@ public sealed partial class EditorView
                 SettingsButton(c, LazerEditingToggleBounds,
                     L.Get("settings.lazerEditing", L.Get(draftLazerEditing ? "settings.romanisedOn" : "settings.romanisedOff")),
                     () => draftLazerEditing = !draftLazerEditing, draftLazerEditing);
+                float preserveToggleTop = SettingsParagraph(c, L.Get("settings.preserveSameTimeObjects"), snapToggleTop + 128, SettingsTextSize);
+                PreserveSameTimeObjectsToggleBounds = new(SettingsContentX, preserveToggleTop + 12, SettingsContentWidth, SettingsControlHeight);
+                SettingsButton(c, PreserveSameTimeObjectsToggleBounds,
+                    L.Get(draftPreserveSameTimeObjects ? "settings.romanisedOn" : "settings.romanisedOff"),
+                    () => draftPreserveSameTimeObjects = !draftPreserveSameTimeObjects, draftPreserveSameTimeObjects);
                 break;
             case SettingsCategory.MappingCanvas:
                 DrawMappingCanvasSettings(c);
@@ -393,6 +402,7 @@ public sealed partial class EditorView
             settings.SelectionHighlightColour = draftSettingsColours[6];
             settings.Fullscreen = draftFullscreen;
             settings.ExperimentalSnapDivisions = draftExperimentalSnapDivisions;
+            settings.PreserveSameTimeObjects = draftPreserveSameTimeObjects;
             settings.LazerEditing = draftLazerEditing;
             settings.MappingSpeedDistanceSnap = LibrarySettings.MappingSpeedDistanceSnap;
             settings.LazerSpeedDistanceSnap = LibrarySettings.LazerSpeedDistanceSnap;

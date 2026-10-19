@@ -165,7 +165,11 @@ public sealed partial class EditorView
             if (osuSpinnerStart is { } start)
             {
                 double end = OsuPlacementTime;
-                if (end > start) Edit(L.Get("editor.command.drawBanana"), () => Document.BananaShowers.Add(new() { TimeMs = start, EndTimeMs = end }));
+                if (end > start) Edit(L.Get("editor.command.drawBanana"), () =>
+                {
+                    RemovePlacementConflicts(Document, start);
+                    Document.BananaShowers.Add(new() { TimeMs = start, EndTimeMs = end });
+                });
                 osuSpinnerStart = null; return true;
             }
             if (SelectedImportedSlider is { } selected && HitOsuControl(selected, x, y) is int index)
@@ -190,7 +194,11 @@ public sealed partial class EditorView
         {
             var fruit = new Fruit { TimeMs = OsuPlacementTime, X = point.X, Y = point.Y };
             if (Edit(L.Get("editor.command.addFruit"), () =>
-            { Document.Fruits.Add(fruit); ApplyPlacementFlags(fruit.Id); Document.DurationMs = Math.Max(Document.DurationMs, fruit.TimeMs); })) SelectObjects([fruit.Id], fruit.Id);
+            {
+                RemovePlacementConflicts(Document, fruit.TimeMs);
+                Document.Fruits.Add(fruit); ApplyPlacementFlags(fruit.Id);
+                Document.DurationMs = Math.Max(Document.DurationMs, fruit.TimeMs);
+            })) SelectObjects([fruit.Id], fruit.Id);
             return true;
         }
         if (tool == Tool.Banana)
@@ -451,6 +459,7 @@ public sealed partial class EditorView
         OsuSyncSliderLine(slider);
         if (!Edit(L.Get("editor.command.drawTrack"), () =>
         {
+            RemovePlacementConflicts(Document, slider.TimeMs);
             Document.ImportedSliders.Add(slider); ApplyPlacementFlags(slider.Id);
             Document.DurationMs = Math.Max(Document.DurationMs, ImportedSliderConverter.EndTimeMs(Document, slider));
         })) return;

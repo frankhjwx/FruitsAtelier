@@ -116,6 +116,7 @@ public sealed partial class EditorView
     private MapPoint? cachedPlacementPoint;
     private Tool cachedPlacementTool;
     private bool placementCtrl, cachedPlacementCtrl;
+    private bool cachedPreserveSameTimeObjects;
     private ConvertedCatchObject? placementGhost;
     private CurveTrack? placementDraftTrack;
     private IReadOnlyList<ConvertedCatchObject> placementDraftEvents = [];
@@ -136,9 +137,11 @@ public sealed partial class EditorView
             return;
         }
         if (ReferenceEquals(placementSource, conversion) && point == cachedPlacementPoint
-            && cachedPlacementTool == tool && cachedPlacementCtrl == placementCtrl) return;
+            && cachedPlacementTool == tool && cachedPlacementCtrl == placementCtrl
+            && cachedPreserveSameTimeObjects == LibrarySettings.PreserveSameTimeObjects) return;
         placementSource = conversion; cachedPlacementPoint = point;
         cachedPlacementTool = tool; cachedPlacementCtrl = placementCtrl;
+        cachedPreserveSameTimeObjects = LibrarySettings.PreserveSameTimeObjects;
         placementGhost = null; placementMovementObjects = null; placementHyperdash = hyperdashObjects;
         placementDraftTrack = null; placementDraftEvents = [];
         placementDistances = (null, null);
@@ -174,7 +177,7 @@ public sealed partial class EditorView
         }
         else
         {
-            if (tool == Tool.Fruit && !IsOsuCanvas) RemoveFruitPlacementConflicts(candidate, point.Value.TimeMs);
+            if (tool == Tool.Fruit && !IsOsuCanvas) RemovePlacementConflicts(candidate, point.Value.TimeMs);
             candidate.Fruits.Add(new Fruit { Id = placementId, TimeMs = point.Value.TimeMs, X = point.Value.X });
         }
         candidate.Tracks.RemoveAll(t => t.Nodes.Count < 2);
@@ -298,7 +301,7 @@ public sealed partial class EditorView
         var fruit = new Fruit { TimeMs = point.TimeMs, X = point.X };
         if (Edit(L.Get("editor.command.addFruit"), () =>
         {
-            RemoveFruitPlacementConflicts(Document, fruit.TimeMs);
+            RemovePlacementConflicts(Document, fruit.TimeMs);
             Document.Fruits.Add(fruit);
             ApplyPlacementFlags(fruit.Id);
             Document.DurationMs = Math.Max(Document.DurationMs, fruit.TimeMs);
@@ -307,7 +310,7 @@ public sealed partial class EditorView
 
     private bool TryPreviewFruitPlacement(MapPoint point)
     {
-        bool replace = tool == Tool.Fruit && !IsOsuCanvas;
+        bool replace = tool == Tool.Fruit && !IsOsuCanvas && !LibrarySettings.PreserveSameTimeObjects;
         if (playableExport is null
             || Document.Tracks.Any(t => t.StreamSnapDivisor is null && t.RandomizesDroplets(Document)
                 && t.Nodes.Count > 0 && t.Nodes[0].TimeMs >= point.TimeMs - 2)
@@ -380,12 +383,14 @@ public sealed partial class EditorView
             next is null ? null : BaseDistanceRatio(target, next));
     }
 
-    private static void RemoveFruitPlacementConflicts(MapDocument document, double timeMs)
+    private void RemovePlacementConflicts(MapDocument document, double timeMs)
     {
+        if (LibrarySettings.PreserveSameTimeObjects) return;
         // Match osu! placement leniency for rounding errors and slightly unsnapped starts.
         bool Replaces(double startTimeMs) => Math.Abs(startTimeMs - timeMs) <= 2;
         document.Fruits.RemoveAll(f => Replaces(f.TimeMs));
-        document.Tracks.RemoveAll(t => t.Nodes.Count > 0 && Replaces(t.Nodes[0].TimeMs));
+        if (IsOsuCanvas) document.ImportedSliders.RemoveAll(s => Replaces(s.TimeMs));
+        else document.Tracks.RemoveAll(t => t.Nodes.Count > 0 && Replaces(t.Nodes[0].TimeMs));
         document.BananaShowers.RemoveAll(s => Replaces(s.TimeMs));
     }
 

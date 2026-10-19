@@ -475,7 +475,8 @@ public sealed partial class EditorView
         if (LegacyMode && legacyDraft is not null && !legacyPreviewValid) { StatusMessage = L.Get("editor.status.needTwoAnchors"); return; }
         if (track.Nodes.Count < 2) { StatusMessage = L.Get("editor.status.needTwoAnchors"); return; }
         var head = track.Nodes[0];
-        Document.Fruits.RemoveAll(fruit => fruit.TimeMs == head.TimeMs && fruit.X == head.X);
+        if (!LibrarySettings.PreserveSameTimeObjects)
+            Document.Fruits.RemoveAll(fruit => fruit.TimeMs == head.TimeMs && fruit.X == head.X);
         Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
         // Completion can append an endpoint after the last render; retain that final draft while validation runs.
         UpdateDraftConversion();
