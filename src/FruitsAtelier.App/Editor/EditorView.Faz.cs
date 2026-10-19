@@ -12,6 +12,8 @@ public sealed partial class EditorView
     public Action<string>? RequestFazOpen { get; set; }
     private FazPackage? fazPackage;
     private Task? fazTask;
+    private Task<FazAssociations>? fazSearch;
+    private CancellationTokenSource? fazSearchCancellation;
     private Action? fazCompletion;
     private Action? fazOpened;
     private string?[] fazTargets = [];
@@ -24,7 +26,7 @@ public sealed partial class EditorView
         if (!PrepareFileOperation() || FazVisible) return;
         RequestPausePlayback?.Invoke();
         var settings = new LibrarySettings { Workspace = LibrarySettings.Workspace, Songs = LibrarySettings.Songs };
-        var task = Task.Run(() => FazArchive.Prepare(path, settings));
+        var task = Task.Run(() => FazArchive.Prepare(path, settings, discoverAssociations: false));
         fazOpened = opened;
         StartFazTask(task, () =>
         {
@@ -32,7 +34,19 @@ public sealed partial class EditorView
             fazSelected = fazPackage.Projects.Count == 1 ? fazPackage.Projects[0] : null;
             fazTargets = fazSelected?.Targets.Cast<string?>().ToArray() ?? new string?[fazPackage.Project.Difficulties.Count];
             fazPage = 0;
-            fazMode = fazPackage.Projects.Count > 0 ? 1 : fazPackage.Manifest.Complete && Directory.Exists(settings.Songs) ? 2 : 0;
+            fazMode = fazPackage.Manifest.Complete && Directory.Exists(settings.Songs) ? 2 : 0;
+            if (Directory.Exists(settings.Songs))
+            {
+                var package = fazPackage;
+                var scan = scanTask;
+                var token = (fazSearchCancellation = new()).Token;
+                fazSearch = Task.Run(async () =>
+                {
+                    if (scan is not null) await scan.WaitAsync(token);
+                    token.ThrowIfCancellationRequested();
+                    return FazArchive.FindAssociations(package, settings);
+                });
+            }
         });
     }
 
@@ -51,6 +65,25 @@ public sealed partial class EditorView
     }
     private void PumpFaz()
     {
+        if (fazSearch is { IsCompleted: true } search)
+        {
+            fazSearch = null;
+            fazSearchCancellation?.Dispose(); fazSearchCancellation = null;
+            try
+            {
+                var result = search.GetAwaiter().GetResult();
+                if (fazPackage is { } package)
+                {
+                    FazArchive.ApplyAssociations(package, result);
+                    if (fazSelected is null && package.Projects.Count == 1)
+                    {
+                        fazSelected = package.Projects[0]; fazTargets = fazSelected.Targets.Cast<string?>().ToArray();
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception error) { ShowError(L.Reformat(error.Message)); }
+        }
         if (fazTask is not { IsCompleted: true } task) return;
         fazTask = null; var completed = fazCompletion; fazCompletion = null;
         try { task.GetAwaiter().GetResult(); completed?.Invoke(); }
@@ -59,7 +92,12 @@ public sealed partial class EditorView
     private void CloseFaz()
     {
         if (fazTask is not null) return;
-        fazPackage?.Dispose(); fazPackage = null; hits.Clear(); fields.Clear();
+        var package = fazPackage;
+        fazSearchCancellation?.Cancel(); fazSearchCancellation?.Dispose(); fazSearchCancellation = null;
+        if (fazSearch is { } search)
+            _ = search.ContinueWith(t => { _ = t.Exception; package?.Dispose(); }, TaskScheduler.Default);
+        else package?.Dispose();
+        fazSearch = null; fazPackage = null; hits.Clear(); fields.Clear();
     }
     private void ImportFaz(string? existing = null)
     {
@@ -94,7 +132,7 @@ public sealed partial class EditorView
         {
             c.Text(L.Get("faz.chooseProject"), x + 20, y + 134, 13, Muted, w - 40);
             if (package.Projects.Count == 0)
-                c.Text(L.Get("faz.noMatch"), x + 20, y + 190, 14, Muted, w - 40);
+                c.Text(fazSearch is not null ? L.Get("library.scanning") : L.Get("faz.noMatch"), x + 20, y + 190, 14, Muted, w - 40);
             for (int i = fazPage * 2; i < Math.Min(package.Projects.Count, fazPage * 2 + 2); i++)
             {
                 var candidate = package.Projects[i]; var map = candidate.Map;
@@ -126,7 +164,7 @@ public sealed partial class EditorView
                         fazSelected = candidate; fazTargets = candidate.Targets.Cast<string?>().ToArray();
                         fazPage = package.Projects.IndexOf(candidate) / 2;
                     });
-                }));
+                }), enabled: fazSearch is null);
             Button(c, new(x + w - 200, y + 344, 80, 32), "←", () => fazPage--, enabled: fazPage > 0);
             Button(c, new(x + w - 110, y + 344, 90, 32), "→", () => fazPage++, enabled: (fazPage + 1) * 2 < package.Projects.Count);
         }

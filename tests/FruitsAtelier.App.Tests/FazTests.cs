@@ -142,6 +142,9 @@ internal static class FazTests
         int opened = 0; view.RequestFazOpen = _ => opened++;
         Check(view.CanDropFile(native), "library accepts FAZ"); view.DropLibraryFiles([native]); Check(opened == 1, "FAZ drop dispatched");
         view.CloseLibrary(); Check(view.CanDropFile(native), "editor accepts FAZ");
+        var pendingScan = new TaskCompletionSource<(LibraryDatabase Database, LibraryScan Scan)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        typeof(EditorView).GetField("scanTask", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(view, pendingScan.Task);
+        Directory.CreateDirectory(independent.Songs);
         view.BeginFazOpen(native, () => { });
         var canvas = new RecordingCanvas();
         var taskField = typeof(EditorView).GetField("fazTask", BindingFlags.NonPublic | BindingFlags.Instance)!;
@@ -149,9 +152,12 @@ internal static class FazTests
         while (taskField.GetValue(view) is not null && timer.Elapsed < TimeSpan.FromSeconds(30)) { view.Render(canvas, 980, 620); Thread.Sleep(10); }
         view.Render(canvas, 980, 620);
         Check(!view.ErrorVisible && view.DiscardConfirmationVisible, "prepared package shows modal");
+        Check(taskField.GetValue(view) is null && !pendingScan.Task.IsCompleted, "archive opens without waiting for library scan");
+        Check(typeof(EditorView).GetField("fazSearch", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(view) is Task { IsCompleted: false }, "association discovery waits for existing scan separately");
         Check(!view.PrepareFileOperation(), "import modal prevents competing file operations");
         view.KeyDown(27, false, false);
-        Check(!view.DiscardConfirmationVisible, "escape cancels import");
+        Check(!view.DiscardConfirmationVisible, "escape cancels import while library scan remains pending");
+        pendingScan.SetCanceled();
 #if WINDOWS
         if (OperatingSystem.IsWindows())
         {

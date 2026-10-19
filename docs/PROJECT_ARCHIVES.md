@@ -16,6 +16,10 @@ Missing required audio stops export; optional resources may be absent.
 
 Open or drop one `.faz` on either the library or editor. Unsaved edits use the
 normal save/discard/cancel prompt. Processing runs in a background worker.
+The import choices appear after archive validation without waiting for a library
+scan. Association recommendations wait for an existing scan in the background,
+then query its index without starting a second full scan. Independent import,
+installation and cancellation remain available while recommendations load.
 
 - **Independent project** installs native data and resources in the workspace.
   No Songs files are written or linked. With Songs configured, the library shows
@@ -35,8 +39,8 @@ positive BeatmapSetID, then exact, case-sensitive `Artist` and `Title` fields.
 The artist/title fallback requires both nonempty fields and does not use substring,
 romanisation or fuzzy search. Within a set, BeatmapID or the exact difficulty name
 identifies a difficulty. A source SHA-256 can disambiguate duplicate versions;
-otherwise ambiguous folders are excluded. Files are rescanned before discovery
-and reread before association. IDs establish identity, not content equality.
+otherwise ambiguous folders are excluded. Recommendations use the library index;
+candidate folders are reread during discovery and before association. IDs establish identity, not content equality.
 
 Associating existing maps preserves native editing data and does not write `.osu`.
 Differences enter the existing synchronization review before editing or subsequent

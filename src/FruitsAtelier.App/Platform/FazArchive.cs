@@ -17,16 +17,18 @@ public sealed class FazManifest
 
 public sealed record FazProjectCandidate(LibraryMap Map, string[] Targets, int DifficultyCount);
 
+public sealed record FazAssociations(IReadOnlyList<LibraryMap>[] Candidates, Dictionary<string, string> Hashes, Dictionary<string, string> Owners, List<FazProjectCandidate> Projects);
+
 public sealed class FazPackage : IDisposable
 {
     public required string Directory { get; init; }
     public required string Fingerprint { get; init; }
     public required FazManifest Manifest { get; init; }
     public required BeatmapProject Project { get; init; }
-    public required IReadOnlyList<LibraryMap>[] Candidates { get; init; }
-    public Dictionary<string, string> CandidateHashes { get; init; } = [];
-    public Dictionary<string, string> Owners { get; init; } = [];
-    public List<FazProjectCandidate> Projects { get; init; } = [];
+    public IReadOnlyList<LibraryMap>[] Candidates { get; set; } = [];
+    public Dictionary<string, string> CandidateHashes { get; set; } = [];
+    public Dictionary<string, string> Owners { get; set; } = [];
+    public List<FazProjectCandidate> Projects { get; set; } = [];
     public string? ExistingProject { get; init; }
     public void Dispose() => FazArchive.RemoveDirectory(Directory, Path.GetDirectoryName(Directory)!);
 }
@@ -99,7 +101,7 @@ public static class FazArchive
         finally { if (File.Exists(temporary)) File.Delete(temporary); RemoveDirectory(staging, Path.GetDirectoryName(staging)!); }
     }
 
-    public static FazPackage Prepare(string path, LibrarySettings settings)
+    public static FazPackage Prepare(string path, LibrarySettings settings, bool discoverAssociations = true)
     {
         Recover(settings);
         string staging = Temporary(settings.Workspace);
@@ -130,23 +132,35 @@ public static class FazArchive
                     || !WorkspaceSynchronization.Paths.Equals(Path.GetDirectoryName(d.SourcePath), root)
                     || d.AudioPath is { } a && (!WorkspaceProject.Within(root, a) || !File.Exists(a))) throw Invalid();
             }
-            var db = new LibraryDatabase(settings.Workspace, settings.Songs);
-            db.Scan();
             string? existing = Directory.EnumerateDirectories(settings.Workspace)
                 .FirstOrDefault(p => File.Exists(Path.Combine(p, WorkspaceProject.ManifestName))
                     && WorkspaceProject.ReadManifest(p, includeSync: false).ArchiveFingerprint == fingerprint);
-            var candidates = project.Difficulties.Select(d => db.AssociationCandidates(d.Document)).ToArray();
-            var hashes = candidates.SelectMany(c => c).Select(c => c.Path).Distinct(WorkspaceSynchronization.Paths)
-                .ToDictionary(p => p, WorkspaceProject.Hash, WorkspaceSynchronization.Paths);
-            var package = new FazPackage { Directory = staging, Fingerprint = fingerprint, Manifest = manifest, Project = project,
-                Candidates = candidates, CandidateHashes = hashes, ExistingProject = existing,
-                Owners = WorkspaceAssociations.Claims(settings.Workspace).GroupBy(c => c.Target, WorkspaceSynchronization.Paths)
-                    .ToDictionary(g => g.Key, g => g.First().Project, WorkspaceSynchronization.Paths) };
-            foreach (string folder in candidates.SelectMany(c => c).Select(c => c.Directory).Distinct(WorkspaceSynchronization.Paths))
-                if (MatchProject(package, settings, folder) is { } match) package.Projects.Add(match);
+            var package = new FazPackage { Directory = staging, Fingerprint = fingerprint, Manifest = manifest, Project = project, ExistingProject = existing };
+            if (discoverAssociations) ApplyAssociations(package, FindAssociations(package, settings, refreshLibrary: true));
             return package;
         }
         catch { RemoveDirectory(staging, Path.GetDirectoryName(staging)!); throw; }
+    }
+
+    public static FazAssociations FindAssociations(FazPackage package, LibrarySettings settings, bool refreshLibrary = false)
+    {
+        var db = new LibraryDatabase(settings.Workspace, settings.Songs);
+        if (refreshLibrary) db.Scan();
+        var candidates = package.Project.Difficulties.Select(d => db.AssociationCandidates(d.Document)).ToArray();
+        var hashes = candidates.SelectMany(c => c).Select(c => c.Path).Distinct(WorkspaceSynchronization.Paths)
+            .ToDictionary(p => p, WorkspaceProject.Hash, WorkspaceSynchronization.Paths);
+        var owners = WorkspaceAssociations.Claims(settings.Workspace).GroupBy(c => c.Target, WorkspaceSynchronization.Paths)
+            .ToDictionary(g => g.Key, g => g.First().Project, WorkspaceSynchronization.Paths);
+        var projects = new List<FazProjectCandidate>();
+        foreach (string folder in candidates.SelectMany(c => c).Select(c => c.Directory).Distinct(WorkspaceSynchronization.Paths))
+            if (MatchProject(package, settings, folder) is { } match) projects.Add(match);
+        return new(candidates, hashes, owners, projects);
+    }
+
+    public static void ApplyAssociations(FazPackage package, FazAssociations associations)
+    {
+        package.Candidates = associations.Candidates; package.CandidateHashes = associations.Hashes;
+        package.Owners = associations.Owners; package.Projects = associations.Projects;
     }
 
     public static string? Recommend(ProjectDifficulty difficulty, IReadOnlyList<LibraryMap> candidates, string? sourceHash = null, IReadOnlyDictionary<string, string>? hashes = null)

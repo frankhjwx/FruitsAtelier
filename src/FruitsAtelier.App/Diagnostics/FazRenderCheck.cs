@@ -35,7 +35,7 @@ internal static class FazRenderCheck
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
             view.BeginFazOpen(archive, () => { });
             var timeout = Stopwatch.StartNew();
-            while (taskField.GetValue(view) is not null && timeout.Elapsed < TimeSpan.FromSeconds(20)) { Paint(); Thread.Sleep(10); }
+            while ((taskField.GetValue(view) is not null || typeof(EditorView).GetField("fazSearch", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view) is not null) && timeout.Elapsed < TimeSpan.FromSeconds(20)) { Paint(); Thread.Sleep(10); }
             if (view.ErrorVisible || !view.DiscardConfirmationVisible) throw new InvalidOperationException("FAZ modal did not open.");
             float x = (size.Item1 - 720) / 2f, y = (size.Item2 - 530) / 2f;
             view.PointerDown(x + 350, y + 100, 0, false, false); view.PointerUp(x + 350, y + 100, 0);
