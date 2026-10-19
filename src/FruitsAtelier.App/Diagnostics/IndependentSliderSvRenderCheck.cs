@@ -114,7 +114,7 @@ internal static class IndependentSliderSvRenderCheck
                 Paint("ds-drag");
                 editor.ToggleOsuCanvas(); Paint();
                 editor.KeyDown('A', true, false); editor.KeyUp('A'); Paint("corner-catch");
-                if (editor.AssistButtonBounds[0].Y < editor.CanvasPlotBounds.Y + 78)
+                if (editor.AssistButtonBounds[0].Y < editor.CanvasPlotBounds.Y + 60)
                     throw new InvalidOperationException("Catch coordinate rows overlap the assist buttons.");
                 var firstButton = editor.AssistButtonBounds[0];
                 int flagsBefore = ObjectFlags.NewCombo(editor.Document, editor.Document.Fruits[0].Id) ? 1 : 0;

@@ -226,7 +226,7 @@ public sealed partial class EditorView
         assistButtons.Clear();
         float availableHeight = Math.Max(0, plot.Bottom - CanvasCornerBottom);
         float size = IsOsuCanvas ? Math.Clamp(availableHeight / 7, 48, 64) : Math.Clamp(MathF.Floor(availableHeight / 7), 64, 96);
-        float buttonWidth = IsOsuCanvas ? 76 : 96;
+        float buttonWidth = IsOsuCanvas ? 76 : size;
         assistPalette = new(CanvasCornerRight - buttonWidth, CanvasCornerBottom, buttonWidth, availableHeight);
         assistScrollLimit = Math.Max(0, size * 7 - availableHeight);
         assistScroll = Math.Clamp(assistScroll, 0, assistScrollLimit);
@@ -258,18 +258,22 @@ public sealed partial class EditorView
             if (i is >= 1 and <= 3 && (TimingPageVisible || tool == Tool.Banana || !placement && sounds.Length == 0)) enabled = false;
             float opacity = !enabled ? .25f : active[i] ? 1 : .45f;
             bool mixed = i is >= 1 and <= 3 && !placement && !active[i] && sounds.Any(s => (s & (1 << i)) != 0);
-            var frame = new Rect(r.X + 2, r.Y + 2, r.Width - 4, r.Height - 4);
-            c.Fill(frame, Dim(Panel, opacity), 8);
-            c.Stroke(frame, i == 5 && DistanceSnapEnabled && distanceOutside ? Error : Dim(Accent, opacity), 1, 8);
+            float scale = size / 512;
+            float inset = IsOsuCanvas ? 2 : 16 * scale, corner = IsOsuCanvas ? 8 : 64 * scale;
+            var frame = new Rect(r.X + inset, r.Y + inset, r.Width - 2 * inset, r.Height - 2 * inset);
+            c.Fill(frame, Dim(Panel, opacity), corner);
+            c.Stroke(frame, i == 5 && DistanceSnapEnabled && distanceOutside ? Error : Dim(Accent, opacity), IsOsuCanvas ? 1 : 8 * scale, corner);
             var source = iconSources[i];
-            float iconScale = Math.Min((IsOsuCanvas ? 50 : 68) / source.Width, (size - 22) / source.Height);
+            float iconScale = IsOsuCanvas ? Math.Min(50 / source.Width, (size - 22) / source.Height)
+                : Math.Min(340 / source.Width, 288 / source.Height) * scale;
+            float iconCenterY = IsOsuCanvas ? 4 + (size - 22) / 2 : 204 * scale;
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "assist", names[i] + ".png"),
-                new(r.X + r.Width / 2 - source.Width * iconScale / 2, r.Y + 4 + (size - 22 - source.Height * iconScale) / 2,
+                new(r.X + r.Width / 2 - source.Width * iconScale / 2, r.Y + iconCenterY - source.Height * iconScale / 2,
                     source.Width * iconScale, source.Height * iconScale), source: source, opacity: opacity);
             string label = L.Get(keys[i]);
-            float font = IsOsuCanvas ? 8 : 9.5f;
+            float font = IsOsuCanvas ? 8 : 52 * scale;
             font = Math.Min(font, (r.Width - 8) / Math.Max(1, c.MeasureText(label, font, true)) * font);
-            c.Text(label, r.X + (r.Width - c.MeasureText(label, font, true)) / 2, r.Bottom - 14,
+            c.Text(label, r.X + (r.Width - c.MeasureText(label, font, true)) / 2, IsOsuCanvas ? r.Bottom - 14 : r.Y + size * .76f,
                 font, active[i] ? Foreground : 0x747B85, r.Width - 8, true);
             if (mixed) c.Line(frame.X + 6, frame.Y + 8, frame.X + 14, frame.Y + 8, Gold, 2);
             var hit = new Rect(r.X, Math.Max(r.Y, assistPalette.Y), r.Width,

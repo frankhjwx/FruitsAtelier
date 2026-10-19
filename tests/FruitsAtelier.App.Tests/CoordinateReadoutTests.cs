@@ -83,12 +83,14 @@ internal static class CoordinateReadoutTests
                 }
 
                 RecordingCanvas.Label[] Rows() => ui.Canvas.Texts.Where(t =>
-                    t.X > ui.View.CanvasRenderBounds.Right - 200
+                    t.X > ui.View.CanvasRenderBounds.Right - 320
                     && t.Y >= ui.View.CanvasPlotBounds.Y + 13
                     && t.Y <= ui.View.CanvasPlotBounds.Y + 49).ToArray();
                 void Check(int index, string expected)
                 {
                     var rows = Rows();
+                    if (rows.Length == 3 && (rows[1].Y != rows[2].Y || rows[2].X <= rows[1].X))
+                        throw new Exception("Previous and next distances must share one horizontal row.");
                     if (rows.Length <= index || rows[index].Value != expected)
                         throw new Exception($"Coordinate readout row {index}: expected {expected}, got {string.Join(", ", rows.Select(t => t.Value))}");
                 }
