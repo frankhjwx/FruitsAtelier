@@ -241,7 +241,7 @@ public sealed partial class EditorView
         if (difficultySaveTask is not null && !allowDifficultySave) { NotifySynchronizationBlocked(); return false; }
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (VersionHistoryVisible || SynchronizationVisible) return false;
-        if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
+        if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || RotationVisible) return false;
         if (!CommitTimingField()) return false;
         if (SliderMultiplierValidationBusy)
         { StatusMessage = L.Get("timing.sliderMultiplierChecking"); return false; }

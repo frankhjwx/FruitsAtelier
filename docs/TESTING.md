@@ -87,12 +87,19 @@ import/Catch export, coordinates and project compatibility, both slider conversi
 directions, Legacy droplet effects, timing changes, failure atomicity and undo.
 
 `App.Tests --canvas-feedback-check` covers cross-canvas hitsounds/NC/sample banks,
-rotation shortcuts and dialog, Catch curve constraints and rollback, two-dimensional
+rotation shortcuts, live preview, cancellation, single-step undo and dialog dragging,
+fixed Catch start/end times, curve constraints and rollback, two-dimensional
 Stream conversion, placement movement connections and Timing range navigation.
 Native `--render-check --osu-canvas-render-check --canvas-feedback-render-check`
-captures the rotation and Stream dialogs, their results and inherited Timing Audio
+captures the rotation preview, moved dialog, Catch preview and Stream dialog,
+their results and inherited Timing Audio
 entry in both languages, two window sizes and three DPI settings under
 `artifacts/tests/osu-canvas-native/feedback`.
+
+`App.Tests --rotation-preview-performance` measures cold input plus paint and warm
+pointer/paint median and p95 for both canvases on a mixed 3,000-note fixture. It
+also reports allocation and verifies cancellation restores the document. Its
+recording canvas excludes native GPU rendering.
 
 `App.Tests --legacy-droplet-worker-check` verifies responsive submission, prepared
 export publication, failure rollback, save blocking, cancellation, undo/redo and

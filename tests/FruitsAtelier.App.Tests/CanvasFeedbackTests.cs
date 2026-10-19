@@ -13,7 +13,7 @@ internal static class CanvasFeedbackTests
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(locale);
-                MetadataAcrossCanvases(); NativeRotation(); NativeStream(); MovementGhost(); TimingNavigation(); CatchRotation(); CatchArc();
+                MetadataAcrossCanvases(); NativeRotation(); RotationPreview(); NativeStream(); MovementGhost(); TimingNavigation(); CatchRotation(); CatchArc(); FixedIntervals();
             }
         }
         finally { L.SetLanguage(language); }
@@ -95,14 +95,28 @@ internal static class CanvasFeedbackTests
         var ui = NewUi(map); Select(ui, track.Id); ui.Key(190, ctrl: true);
         Check(!ui.View.Document.ContentEquals(map), "Catch 5-degree rotation did not edit the curve.");
         Check(CurveMath.Validate(ui.View.Document).Count == 0, "Catch rotation produced invalid time geometry.");
+        Check(ui.View.Document.Tracks[0].Nodes[0].TimeMs == 1000 && ui.View.Document.Tracks[0].Nodes[^1].TimeMs == 1500,
+            "Catch rotation changed the authored time interval.");
         ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Catch rotation did not undo.");
+        Select(ui, track.Id); ui.Key('R', ctrl: true, shift: true);
+        foreach (string angleText in new[] { "5", "8", "5", "0" })
+        {
+            ui.Key('A', ctrl: true); ui.Type(angleText); ui.Paint();
+            var preview = (CatchConversionResult)typeof(EditorView).GetField("conversion", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ui.View)!;
+            var uncached = CatchStreamConverter.Convert(ui.View.Document);
+            Check(preview.Objects.SequenceEqual(uncached.Objects), "Cached Catch rotation preview differs from fresh conversion.");
+        }
+        Check(ui.View.Document.ContentEquals(map), "Returning to zero did not restore the rotation baseline.");
+        ui.Key(27);
         var straight = new MapDocument { DurationMs = 10000 };
         var vertical = new CurveTrack { Kind = CurveKind.Linear };
         vertical.Nodes.AddRange([new() { TimeMs = 1000, X = 256 }, new() { TimeMs = 1500, X = 256 }]); straight.Tracks.Add(vertical);
         ui = NewUi(straight); Select(ui, vertical.Id);
-        ui.Key('R', ctrl: true, shift: true); ui.ClickText(L.Get("rotation.selection")); ui.Type("90"); ui.Key(13);
-        Check(ui.View.RotationVisible && ui.View.Document.ContentEquals(straight), "Catch accepted simultaneous endpoints or partially applied a failed rotation.");
+        ui.Key('R', ctrl: true, shift: true); ui.ClickText(L.Get("rotation.selection")); ui.Type("90");
+        var validPreview = ui.View.Document.DeepClone(); ui.Key(13);
+        Check(ui.View.RotationVisible && ui.View.Document.ContentEquals(validPreview), "Catch accepted simultaneous endpoints or partially applied a failed rotation.");
         ui.Key(27);
+        Check(ui.View.Document.ContentEquals(straight), "Cancelling an invalid catch angle did not restore the original curve.");
         var collision = new MapDocument { DurationMs = 10000 };
         collision.Fruits.AddRange([new() { TimeMs = 1000.4, X = 256 }, new() { TimeMs = 1000.9, X = 256 }]);
         var simultaneous = NewUi(collision); Select(simultaneous, collision.Fruits.Select(f => f.Id).ToArray()); simultaneous.Key(190, ctrl: true);
@@ -111,8 +125,10 @@ internal static class CanvasFeedbackTests
         SelectionRotation.Apply(map, new HashSet<Guid> { track.Id }, 5, false, true);
         var q = CurveMath.Evaluate(map.Tracks[0], 0, .37);
         double angle = 5 * Math.PI / 180;
-        Near(q.X, 220 + (p.X - 220) * Math.Cos(angle) + (p.TimeMs - 1250) * Math.Sin(angle));
-        Near(q.TimeMs, 1250 + (p.TimeMs - 1250) * Math.Cos(angle) - (p.X - 220) * Math.Sin(angle));
+        double factor = 500 / (500 * Math.Cos(angle) - 80 * Math.Sin(angle));
+        Near(q.X, 220 + ((p.X - 220) * Math.Cos(angle) + (p.TimeMs - 1250) * Math.Sin(angle)) * factor);
+        double rotatedStart = 1250 - 250 * Math.Cos(angle) + 40 * Math.Sin(angle);
+        Near(q.TimeMs, 1000 + (1250 + (p.TimeMs - 1250) * Math.Cos(angle) - (p.X - 220) * Math.Sin(angle) - rotatedStart) * factor);
     }
     private static void NativeStream()
     {
@@ -146,10 +162,55 @@ internal static class CanvasFeedbackTests
         for (int i = 1; i < 100; i++)
         {
             var p = CurveMath.Evaluate(original, 0, i / 100d);
-            double time = 1250 + (p.TimeMs - 1250) * Math.Cos(angle) - (p.X - 180) * Math.Sin(angle) / .3;
-            double x = 180 + (p.X - 180) * Math.Cos(angle) + (p.TimeMs - 1250) * .3 * Math.Sin(angle);
+            double time = 1250 + (p.TimeMs - 1250) - (p.X - 180) * Math.Tan(angle) / .3;
+            double x = 180 + (p.X - 180) + (p.TimeMs - 1250) * .3 * Math.Tan(angle);
             Check(Math.Abs(CurveMath.PositionAtTime(track, time) - x) < .005, "Catch arc fitting did not preserve the rotated trajectory.");
         }
+    }
+    private static void RotationPreview()
+    {
+        var map = SliderMap(); var ui = NewUi(map, true); Guid id = map.ImportedSliders[0].Id;
+        Select(ui, id); ui.Key('R', ctrl: true, shift: true); ui.ClickText(L.Get("rotation.selection"));
+        ui.Type("30"); ui.Paint();
+        Check(!ui.View.Document.ContentEquals(map), "Rotation was not visible before confirmation.");
+        ui.Key('A', ctrl: true); ui.Type("60"); ui.Paint();
+        var expected = map.DeepClone(); SelectionRotation.Apply(expected, new HashSet<Guid> { id }, 60, true, true);
+        Near(ui.View.Document.ImportedSliders[0].X, expected.ImportedSliders[0].X);
+        Near(ui.View.Document.ImportedSliders[0].Y, expected.ImportedSliders[0].Y);
+        var beforeMove = ui.View.Document.DeepClone(); var bounds = ui.View.RotationBounds;
+        ui.View.PointerDown(bounds.X + 20, bounds.Y + 20, 0, false, false);
+        ui.View.PointerMove(bounds.X + 60, bounds.Y + 50, false, false);
+        ui.View.PointerUp(bounds.X + 60, bounds.Y + 50, 0); ui.Paint();
+        Near(ui.View.RotationBounds.X, bounds.X + 40); Near(ui.View.RotationBounds.Y, bounds.Y + 30);
+        Check(ui.View.Document.ContentEquals(beforeMove), "Moving the rotation window changed the preview.");
+        Check(!ui.View.PrepareFileOperation(), "A provisional rotation escaped through saving.");
+        ui.ClickText(L.Get("mac.cancel"));
+        Check(ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "Cancel did not restore the original rotation state.");
+        ui.Key('R', ctrl: true, shift: true); ui.Type("30"); ui.Paint(); ui.Key(13);
+        var committed = ui.View.Document.DeepClone();
+        ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Preview confirmation was not one undo step.");
+        ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(committed), "Confirmed preview did not redo exactly.");
+        Select(ui, id); ui.Key('R', ctrl: true, shift: true); ui.Type("45"); ui.Paint(); ui.View.CancelInteraction(); ui.Paint();
+        Check(!ui.View.RotationVisible && ui.View.Document.ContentEquals(committed), "Interrupted preview was not cancelled.");
+    }
+    private static void FixedIntervals()
+    {
+        var map = new MapDocument { DurationMs = 10000 };
+        map.Fruits.AddRange([new() { TimeMs = 1000.25, X = 100 }, new() { TimeMs = 1200.5, X = 180 }, new() { TimeMs = 1500.75, X = 260 }]);
+        foreach (var (start, end, x) in new[] { (3000.125, 3500.875, 180d), (5000.25, 5600.125, 200d) })
+        {
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.AddRange([new() { TimeMs = start, X = x }, new() { TimeMs = end, X = x + 40 }]); map.Tracks.Add(track);
+        }
+        var original = map.DeepClone();
+        SelectionRotation.Apply(map, map.Fruits.Select(f => f.Id).Concat(map.Tracks.Select(t => t.Id)).ToHashSet(), 5, false, true, .3);
+        Check(map.Fruits[0].TimeMs == original.Fruits[0].TimeMs && map.Fruits[^1].TimeMs == original.Fruits[^1].TimeMs,
+            "Catch note rotation changed its first or last timestamp.");
+        for (int i = 0; i < map.Tracks.Count; i++)
+            Check(map.Tracks[i].Nodes[0].TimeMs == original.Tracks[i].Nodes[0].TimeMs && map.Tracks[i].Nodes[^1].TimeMs == original.Tracks[i].Nodes[^1].TimeMs,
+                "Multi-curve rotation changed an individual curve's time interval.");
+        Check(map.DurationMs == original.DurationMs && OsuBeatmapWriter.Serialize(map).ObjectSequenceMatches,
+            "Fixed-time rotation changed map duration or invalidated export.");
     }
     private static void MovementGhost()
     {

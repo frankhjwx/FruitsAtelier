@@ -54,8 +54,7 @@ public sealed partial class EditorView
         timingPointerShift = shift;
         if (RotationVisible)
         {
-            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
-                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            RotationPointerDown(x, y, button);
             return;
         }
         if (BananaEditVisible)
@@ -452,7 +451,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
-        if (RotationVisible) { mouseX = x; mouseY = y; if (rotationDragging) MoveRotationSlider(x); return; }
+        if (RotationVisible) { mouseX = x; mouseY = y; RotationPointerMove(x, y); return; }
         if (aimodGesture != AimodGesture.None) { MoveAimodPointer(x, y); return; }
         if (notesSelecting) { PositionNotesCaret(x, y, true); return; }
         if (dockPressed is not null) { MoveDockPointer(x, y); return; }
@@ -609,7 +608,7 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
-        if (RotationVisible) { if (rotationDragging) MoveRotationSlider(x); rotationDragging = false; return; }
+        if (RotationVisible) { RotationPointerMove(x, y); rotationDragging = rotationWindowDragging = false; return; }
         if (aimodGesture != AimodGesture.None && button == 0) { EndAimodPointer(x, y); return; }
         if (notesSelecting && button == 0) { FinishNotesSelection(x, y); return; }
         if (dockPressed is not null && button == 0) { EndDockPointer(x, y); return; }
@@ -1504,6 +1503,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        CancelRotation();
         rotationDragging = false;
         heldEditorKeys.Clear();
         if (drag == DragKind.SnapDivisor) SaveMapEditingPreferences();

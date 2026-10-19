@@ -26,6 +26,18 @@ internal static class CanvasFeedbackRenderCheck
                 editor.KeyDown(65, true, false); editor.KeyDown('R', true, true); Paint("rotation");
                 if (!editor.RotationVisible) throw new InvalidOperationException("Native rotation dialog did not open.");
                 editor.TextInput('9'); editor.TextInput('0');
+                Paint("rotation-preview");
+                if (editor.Document.ImportedSliders[0].X != 348 || !editor.RotationVisible)
+                    throw new InvalidOperationException("Native rotation was not previewed before confirmation.");
+                var bounds = editor.RotationBounds;
+                editor.PointerDown(bounds.X + 20, bounds.Y + 20, 0, false, false);
+                editor.PointerMove(bounds.X + 60, bounds.Y + 40, false, false);
+                editor.PointerUp(bounds.X + 60, bounds.Y + 40, 0); Paint("rotation-moved");
+                if (editor.RotationBounds.X != bounds.X + 40 || editor.RotationBounds.Y != bounds.Y + 20)
+                    throw new InvalidOperationException("Native rotation window did not move.");
+                editor.KeyDown(27, false, false); Paint();
+                if (!editor.Document.ContentEquals(map)) throw new InvalidOperationException("Native rotation preview did not cancel.");
+                editor.KeyDown('R', true, true); editor.TextInput('9'); editor.TextInput('0');
                 editor.KeyDown(13, false, false); Paint("rotated");
                 if (editor.RotationVisible || editor.Document.ImportedSliders[0].TimeMs != 1000)
                     throw new InvalidOperationException("Native rotation dialog did not apply.");
@@ -42,6 +54,18 @@ internal static class CanvasFeedbackRenderCheck
                     throw new InvalidOperationException("Native inherited timing shortcut did not open Audio.");
                 editor.KeyDown(27, false, false);
                 if (!editor.Document.ContentEquals(map)) throw new InvalidOperationException("Native feedback checks did not restore content.");
+                var catchMap = new MapDocument { DurationMs = 10000 };
+                var track = new CurveTrack { Kind = CurveKind.Bezier };
+                track.Nodes.AddRange([new() { TimeMs = 1000, X = 180, HandleOut = new(150, 30) },
+                    new() { TimeMs = 1500, X = 260, HandleIn = new(-150, -20) }]); catchMap.Tracks.Add(track);
+                editor.LoadDocument(catchMap); if (editor.IsOsuCanvas) editor.ToggleOsuCanvas(); Paint();
+                editor.KeyDown(65, true, false); editor.KeyDown('R', true, true);
+                editor.TextInput('5'); Paint("catch-rotation-preview");
+                if (editor.Document.Tracks[0].Nodes[0].TimeMs != 1000 || editor.Document.Tracks[0].Nodes[^1].TimeMs != 1500)
+                    throw new InvalidOperationException("Native catch rotation moved its time interval.");
+                if (editor.Document.ContentEquals(catchMap)) throw new InvalidOperationException("Native catch rotation did not preview a new shape.");
+                editor.KeyDown(27, false, false); Paint();
+                if (!editor.Document.ContentEquals(catchMap)) throw new InvalidOperationException("Native catch preview did not cancel.");
 
                 void Paint(string? name = null)
                 {

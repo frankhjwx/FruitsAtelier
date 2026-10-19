@@ -63,6 +63,11 @@ spans. Catch retains its Stream/Stack dock. Both conversions are undoable.
 
 Ctrl+Shift+R opens **Rotate by**, with an angle slider and numeric entry,
 clockwise/anti-clockwise direction, and playfield/selection centre origins.
+Changes preview directly on the canvas from the original selection. OK commits
+one undo step; Cancel, Escape or interrupted input restores the original objects.
+Drag the title area to move the window within the editor. Window movement does
+not change the preview. Invalid angles retain the last valid preview and cannot
+be confirmed.
 Ctrl+comma and Ctrl+period rotate the selection by −90°/+90° in osu! and
 −5°/+5° in Catch, around its centre. Catch angles use the current time-to-X
 display ratio; its playfield origin is the centre of the visible time range.
@@ -72,6 +77,10 @@ Bezier fitting before rotation. The operation rejects reversed time, coincident
 exported note times and out-of-range endpoints atomically. Catch rotation requires
 single-span curves without Stack or droplet adjustments. Native osu! rotation uses
 stable integer coordinates while retaining slider length, timing and repeat count.
+Each Catch curve keeps its exact start and end timestamps. After rotation, a
+uniform scale fits its duration back into the original interval while preserving
+the new leaning angle. A selection of standalone notes similarly retains its
+first and last timestamps; intermediate times remain strictly ordered.
 
 In osu! view the Fruit and Banana tools place circles and spinners. The Slider
 tool places Legacy controls and preserves their original two-dimensional path

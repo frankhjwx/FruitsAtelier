@@ -12,12 +12,32 @@ public sealed partial class EditorView
     private bool rotationClockwise = true, rotationSelectionCentre;
     private bool rotationDragging;
     private Rect rotationSlider;
+    private MapDocument? rotationSource, rotationPreview;
+    private HashSet<Guid> rotationTargets = [];
+    private CatchConversionCache rotationConversionCache = new();
+    private CatchConversionResult? rotationValidation;
+    private double rotationTimeScale, rotationPlayfieldTime;
+    private (double Angle, bool Clockwise, bool SelectionCentre)? rotationInputs;
+    private bool rotationWindowDragging;
+    private (float X, float Y)? rotationWindowPosition;
+    private (float X, float Y) rotationWindowPointer, rotationWindowStart;
+    internal Rect RotationBounds => new(
+        Math.Clamp(rotationWindowPosition?.X ?? (width - Math.Min(520, width - 32)) / 2, 0, Math.Max(0, width - Math.Min(520, width - 32))),
+        Math.Clamp(rotationWindowPosition?.Y ?? (height - 322) / 2, 0, Math.Max(0, height - 322)), Math.Min(520, width - 32), 322);
 
     private void OpenRotation()
     {
-        if (!ClipboardInteractionReady || notesLocked || ClipboardSelectedParentIds().Count == 0 || RejectReadOnlySelection()) return;
+        if (!ClipboardInteractionReady || history.HasActiveTransaction || LegacyDropletRefreshBusy || notesLocked || ClipboardSelectedParentIds().Count == 0 || RejectReadOnlySelection()) return;
+        rotationTargets = ClipboardSelectedParentIds().ToHashSet();
+        rotationSource = rotationPreview = CaptureRotationObjects();
+        rotationTimeScale = pixelsPerMs * 512 / Playfield.Width;
+        rotationPlayfieldTime = PresentationViewStart + plot.Height / (2 * pixelsPerMs);
+        rotationConversionCache = new();
+        rotationValidation = null;
+        history.Begin(L.Get("rotation.title"));
         menu = -1; contextItems.Clear(); RotationVisible = true;
         rotationAngle = "0"; rotationError = "";
+        rotationInputs = (0, rotationClockwise, rotationSelectionCentre);
         SelectInput("rotation", rotationAngle);
     }
 
@@ -39,38 +59,123 @@ public sealed partial class EditorView
 
     private void ApplyRotation()
     {
+        if (!PreviewRotation()) return;
+        RotationVisible = rotationDragging = rotationWindowDragging = false;
+        rotationSource = rotationPreview = null;
+        rotationValidation = null;
+        rotationConversionCache = new();
+        CommitContentHistory();
+    }
+
+    private MapDocument CaptureRotationObjects()
+    {
+        var objects = new MapDocument();
+        objects.Fruits.AddRange(Document.Fruits.Where(f => rotationTargets.Contains(f.Id)));
+        objects.Tracks.AddRange(Document.Tracks.Where(t => rotationTargets.Contains(t.Id)));
+        objects.ImportedSliders.AddRange(Document.ImportedSliders.Where(s => rotationTargets.Contains(s.Id)));
+        return objects.DeepClone();
+    }
+
+    private void RestoreRotationObjects(MapDocument source)
+    {
+        var copy = source.DeepClone();
+        var fruits = copy.Fruits.ToDictionary(f => f.Id);
+        var tracks = copy.Tracks.ToDictionary(t => t.Id);
+        var sliders = copy.ImportedSliders.ToDictionary(s => s.Id);
+        for (int i = 0; i < Document.Fruits.Count; i++) if (fruits.TryGetValue(Document.Fruits[i].Id, out var f)) Document.Fruits[i] = f;
+        for (int i = 0; i < Document.Tracks.Count; i++) if (tracks.TryGetValue(Document.Tracks[i].Id, out var t)) Document.Tracks[i] = t;
+        for (int i = 0; i < Document.ImportedSliders.Count; i++) if (sliders.TryGetValue(Document.ImportedSliders[i].Id, out var s)) Document.ImportedSliders[i] = s;
+    }
+
+    private bool PreviewRotation()
+    {
+        if (!RotationVisible || rotationSource is null) return false;
         if (!double.TryParse(rotationAngle, NumberStyles.Float, CultureInfo.InvariantCulture, out double angle)
             || !double.IsFinite(angle) || angle < 0 || angle > 360)
-        { rotationError = L.Get("rotation.angleRange"); return; }
-        if (RotateSelection(rotationClockwise ? angle : -angle, rotationSelectionCentre)) RotationVisible = false;
-        else rotationError = StatusMessage;
+        { rotationInputs = null; rotationError = L.Get("rotation.angleRange"); return false; }
+        var inputs = (angle, rotationClockwise, rotationSelectionCentre);
+        if (rotationInputs == inputs) return rotationError.Length == 0;
+        rotationInputs = inputs;
+        RestoreRotationObjects(rotationSource);
+        try
+        {
+            CatchConversionResult? validation = null;
+            if (Math.Abs(angle % 360) >= 1e-10)
+            {
+                validation = SelectionRotation.Apply(Document, rotationTargets, rotationClockwise ? angle : -angle,
+                    IsOsuCanvas, rotationSelectionCentre, rotationTimeScale, rotationPlayfieldTime, rotationConversionCache, compensateTinyDroplets);
+                if (IsOsuCanvas)
+                    foreach (var slider in Document.ImportedSliders.Where(s => rotationTargets.Contains(s.Id))) OsuSyncSliderLine(slider);
+            }
+            rotationValidation = validation;
+            rotationPreview = CaptureRotationObjects(); rotationError = "";
+            return true;
+        }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException or InvalidDataException)
+        {
+            RestoreRotationObjects(rotationPreview!); rotationError = error.Message;
+            return false;
+        }
+    }
+
+    private void CancelRotation()
+    {
+        if (!RotationVisible) return;
+        history.Cancel();
+        RotationVisible = rotationDragging = rotationWindowDragging = false;
+        rotationSource = rotationPreview = null;
+        rotationValidation = null;
+        rotationConversionCache = new();
+    }
+
+    private bool RotationPointerDown(float x, float y, int button)
+    {
+        if (!RotationVisible) return false;
+        var r = RotationBounds;
+        if (button == 0 && new Rect(r.X, r.Y, r.Width, 44).Contains(x, y))
+        {
+            rotationWindowDragging = true; rotationWindowPointer = (x, y); rotationWindowStart = (r.X, r.Y);
+            return true;
+        }
+        if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+            if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+        return true;
+    }
+
+    private void RotationPointerMove(float x, float y)
+    {
+        if (rotationWindowDragging)
+            rotationWindowPosition = (Math.Clamp(rotationWindowStart.X + x - rotationWindowPointer.X, 0, Math.Max(0, width - RotationBounds.Width)),
+                Math.Clamp(rotationWindowStart.Y + y - rotationWindowPointer.Y, 0, Math.Max(0, height - RotationBounds.Height)));
+        else if (rotationDragging) MoveRotationSlider(x);
     }
 
     private void RotationKey(int key, bool ctrl, bool shift)
     {
-        if (key == 27) { RotationVisible = rotationDragging = false; return; }
+        if (key == 27) { CancelRotation(); return; }
         if (key == 13) { ApplyRotation(); return; }
-        InputKey("rotation", ref rotationAngle, key, ctrl, shift, 16, RequestPasteField);
+        if (InputKey("rotation", ref rotationAngle, key, ctrl, shift, 16, RequestPasteField)) PreviewRotation();
     }
 
     private void RotationText(string text)
     {
         string filtered = new(text.Where(c => char.IsAsciiDigit(c) || c == '.').ToArray());
-        rotationAngle = InsertInput("rotation", rotationAngle, filtered, 16); rotationError = "";
+        rotationAngle = InsertInput("rotation", rotationAngle, filtered, 16); PreviewRotation();
     }
 
     private void MoveRotationSlider(float x)
     {
         rotationAngle = Math.Round(Math.Clamp((x - rotationSlider.X) / rotationSlider.Width, 0, 1) * 360)
             .ToString(CultureInfo.InvariantCulture);
-        SelectInput("rotation", rotationAngle); rotationError = "";
+        SelectInput("rotation", rotationAngle); PreviewRotation();
     }
 
     private void DrawRotation(ICanvas c)
     {
         if (!RotationVisible) return;
         hits.Clear();
-        float w = Math.Min(520, width - 32), h = 322, x = (width - w) / 2, y = (height - h) / 2;
+        var r = RotationBounds;
+        float w = r.Width, h = r.Height, x = r.X, y = r.Y;
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Grid, radius: 8);
         c.Text(L.Get("rotation.title"), x + 18, y + 16, 18, Foreground, w - 36, true);
         c.Text(L.Get("rotation.angle"), x + 18, y + 50, 13, Foreground, w - 36);
@@ -91,12 +196,12 @@ public sealed partial class EditorView
         {
             bool first = i == 0;
             Button(c, new(x + 18, y + 150 + i * 34, half, 30), L.Get(first ? "rotation.clockwise" : "rotation.anticlockwise"),
-                () => rotationClockwise = first, rotationClockwise == first);
+                () => { rotationClockwise = first; PreviewRotation(); }, rotationClockwise == first);
             Button(c, new(x + 26 + half, y + 150 + i * 34, half, 30), L.Get(first ? "rotation.playfield" : "rotation.selection"),
-                () => rotationSelectionCentre = !first, rotationSelectionCentre != first);
+                () => { rotationSelectionCentre = !first; PreviewRotation(); }, rotationSelectionCentre != first);
         }
         if (rotationError.Length > 0) c.Text(rotationError, x + 18, y + 220, 11, Error, w - 36);
         Button(c, new(x + 18, y + h - 52, w - 138, 34), L.Get("mac.ok"), ApplyRotation, true);
-        Button(c, new(x + w - 110, y + h - 52, 92, 34), L.Get("mac.cancel"), () => RotationVisible = false);
+        Button(c, new(x + w - 110, y + h - 52, 92, 34), L.Get("mac.cancel"), CancelRotation);
     }
 }
