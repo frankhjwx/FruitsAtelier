@@ -429,7 +429,16 @@ public sealed partial class EditorView
             var decisions = review?.Conflicts.ToDictionary(c => c.Key, c => useExternal ?? choices.GetValueOrDefault(c.Key));
             WorkspaceSynchronization.Accept(session, entry, external, diff.Document, compensateTinyDroplets, retainLocalFields: useExternal is false, review: review, choices: decisions);
             diff.Name = OsuBeatmapReader.Setting(diff.Document, "Metadata", "Version") ?? diff.Name;
+            string? receipt = null;
+            if (entry.ExportConfirmed)
+            {
+                var plan = WorkspaceSynchronization.PlanResolvedChanges(session, entry, diff.Document, external, compensateTinyDroplets);
+                BeatmapResources.Copy(plan.Document, Path.GetDirectoryName(plan.Target)!, plan.Output.ReadBack);
+                receipt = WorkspaceExportRecovery.Prepare(session, project, plan, entry.Id);
+                WorkspaceExport.Commit(session, plan);
+            }
             WorkspaceProject.Save(session, project, archiveBeforeSave: false);
+            if (receipt is not null) WorkspaceExportRecovery.Complete(receipt);
             return WorkspaceProject.Open(session.Directory);
         });
     }

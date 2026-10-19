@@ -640,12 +640,20 @@ public static class WorkspaceSynchronization
             throw new InvalidOperationException(L.Get("sync.baseline"));
         if (AudioHash(merge.External.Document.AudioPath) != baseline.AudioHash)
             throw new IOException(L.Get("library.exportConflict", merge.External.Path));
-        WorkspaceAssociations.EnsureOwner(session, entry.Id, merge.External.Path);
-        WorkspaceProject.RejectLinks(merge.External.Path);
-        var missing = WorkspaceProject.MissingResources(BeatmapProject.FromDocuments([merge.Local]));
+        return PlanResolvedChanges(session, entry, merge.Local, merge.External, merge.Compensate, cache);
+    }
+
+    public static WorkspaceExportPlan PlanResolvedChanges(WorkspaceSession session, WorkspaceDifficulty entry, MapDocument resolved,
+        WorkspaceSyncCandidate external, bool compensate, OsuWriteCache? cache = null)
+    {
+        if (!entry.ExportConfirmed || !Paths.Equals(Target(entry), external.Path))
+            throw new InvalidOperationException(L.Get("sync.baseline"));
+        WorkspaceAssociations.EnsureOwner(session, entry.Id, external.Path);
+        WorkspaceProject.RejectLinks(external.Path);
+        var missing = WorkspaceProject.MissingResources(BeatmapProject.FromDocuments([resolved]));
         if (missing.Count > 0) throw new IOException(L.Get("library.missingResources", string.Join("\n", missing)));
-        return WorkspaceExport.WithMetadataFileName(new(entry.Id, merge.Local, merge.External.Path, merge.External.Hash,
-            OsuBeatmapWriter.Serialize(merge.Local, merge.Compensate, cache)), merge.External.Document);
+        return WorkspaceExport.WithMetadataFileName(new(entry.Id, resolved, external.Path, external.Hash,
+            OsuBeatmapWriter.Serialize(resolved, compensate, cache)), external.Document);
     }
 
     public static void Accept(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceSyncCandidate external, MapDocument resolved, bool compensate, bool retainLocalFields = false,

@@ -117,7 +117,43 @@ internal static class FazTests
             Check(reviewView.WorkspaceSession!.Manifest.Difficulties.Last().Sync is null, "conflicted first association does not silently establish a baseline");
             Check(reviewHashes.All(p => WorkspaceProject.Hash(p.Key) == p.Value), "review does not write any Songs difficulty before a user choice");
             Check(reviewView.CaptureProject().Difficulties.Last().Document.Tracks.Count == 1, "review retains imported editable curves before a choice");
+            if (equalFirst)
+            {
+                var merges = (Dictionary<Guid, WorkspaceMerge>)typeof(EditorView).GetField("syncMerges", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(reviewView)!;
+                var choices = (Dictionary<string, bool>)typeof(EditorView).GetField("syncChoices", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(reviewView)!;
+                foreach (var conflict in merges[reviewView.WorkspaceSession!.Manifest.Difficulties.Last().Id].Conflicts) choices[conflict.Key] = false;
+            }
+            typeof(EditorView).GetMethod("ResolveSync", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(reviewView, new object?[] { equalFirst ? null : (bool?)false });
+            WaitForReview();
+            Check(!reviewView.SynchronizationVisible, "linked resolution completes");
+            var published = reviewView.WorkspaceSession!;
+            var owner = published.Manifest.Difficulties.Last();
+            Check(WorkspaceProject.Hash(owner.Source!) != reviewHashes[reviewTargets.Last()], "FA resolution writes the linked osu file");
+            Check(OsuBeatmapReader.ReadFile(owner.Source!).ImportedSliders.Count > 0, "linked output contains the chosen FA curve");
+            Check(owner.Sync!.LocalOverrides.Count == 0 && owner.Sync.RetainedObjects.Count == 0, "published baseline has no pending choices");
+            if (equalFirst) Check(WorkspaceProject.Hash(reviewMap) == reviewHashes[reviewMap], "resolution leaves other difficulties unchanged");
+            else
+            {
+                var diff = published.Project.Difficulties.Single();
+                diff.Document.Fruits[0].X = 141;
+                var candidate = WorkspaceSynchronization.ReadStable(owner.Source!);
+                var oldReview = WorkspaceSynchronization.CompareWithoutBaseline(diff.Document, candidate, published.Directory, false);
+                var oldChoices = oldReview.Conflicts.ToDictionary(c => c.Key, _ => false);
+                WorkspaceSynchronization.Accept(published, owner, candidate, diff.Document, false, review: oldReview, choices: oldChoices);
+                WorkspaceProject.Save(published, published.Project);
+                reviewView.LoadWorkspace(WorkspaceProject.Open(published.Directory));
+                reviewView.SaveCurrentDifficulty();
+                WaitForReview();
+                Check(OsuBeatmapReader.ReadFile(owner.Source!).Fruits[0].X == 141, "save publishes an earlier accepted choice without a new edit");
+            }
             reviewView.StopFileMonitoring();
+            void WaitForReview()
+            {
+                watch.Restart();
+                do { reviewView.Render(recording, 980, 620); Thread.Sleep(10); }
+                while (watch.Elapsed < TimeSpan.FromSeconds(30) && (reviewView.SynchronizationBusy
+                    || typeof(EditorView).GetField("difficultySaveTask", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(reviewView) is not null));
+            }
         }
 
         var db = new LibraryDatabase(linked.Workspace, linked.Songs);

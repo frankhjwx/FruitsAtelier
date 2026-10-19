@@ -190,7 +190,7 @@ anchors keeps related unmatched removals and insertions in one review group.
 Local saving preserves the baseline. Synchronization compares the current external
 text and audio content with the last resolved external version, and FA authoring
 with the corresponding authoring snapshot. Automatic publication requires an
-explicitly confirmed Songs export for that difficulty. Imported sources and older
+explicitly confirmed Songs export or FAZ Link import for that difficulty. Imported sources and older
 projects without a recorded confirmation remain read-only during synchronization;
 Save opens export choices before their first overwrite. Cancelling keeps the source
 file unchanged. An export on one difficulty does not authorize other difficulties.
@@ -219,9 +219,13 @@ Conflict resolution and external changes retain their guarded apply boundary.
 An automatically completed save does not repeat the export on the UI thread.
 
 A changed external version returns to field/object comparison and resolution.
-Without a baseline, differences still require explicit choices. An unchanged
-retained choice remains available for review; a subsequent FA content edit exports
-the resulting complete FA version against the resolved external version. Timing
+Without a baseline, differences still require explicit choices. Applying a resolution
+for a difficulty with confirmed write-back publishes the selected complete result
+to its associated `.osu` before saving the new baseline. It uses the same external
+fingerprint checks, backup and recovery receipt as ordinary exports. Explicit Save
+also publishes pending retained choices from earlier local-only resolutions without
+requiring another content edit. Unconfirmed references retain choices locally and
+remain available for review. Timing
 comparison includes inherited points. After a retained timing choice, new external
 timing edits are replayed from the last accepted external snapshot onto the accepted
 FA timing. Unchanged retained differences are not reopened or overwritten by that
