@@ -15,6 +15,8 @@ internal static class OsuLinkTests
                 Check(EditorTimestamp.TryParse("osu://edit/00:13:247%20(2,3)", out var parsed)
                     && parsed!.TimeMs == 13247 && parsed.ComboNumbers!.SequenceEqual([2, 3]), "encoded timestamp");
                 Check(EditorTimestamp.TryParse("osu://edit/00:13.247%20%282%2C3%29", out parsed) && parsed!.TimeMs == 13247, "encoded punctuation");
+                Check(EditorTimestamp.TryParse("osu://edit/01:32:989%20(5,1)", out parsed)
+                    && parsed!.TimeMs == 92989 && parsed.ComboNumbers!.SequenceEqual([5, 1]), "reported editor link");
                 foreach (string invalid in new[] { "osu://dl/123", "osu://edit/00:99:000", "osu://edit/00:00:000%zz", "osu://edit/00:00:000%2520(1)", "osu://edit/00:00:000 (2147483648)", "osu://edit/999999999999999999999999:00:000", "osu://edit/00:00:000?map=1" })
                     Check(!EditorTimestamp.TryParse(invalid, out _), "invalid input: " + invalid);
                 var ui = new Ui();
@@ -40,7 +42,7 @@ internal static class OsuLinkTests
                 ui.View.OpenSettings(); ui.Paint();
                 int choices = 0;
                 string selectedId = "stable"; bool bound = true;
-                var applications = new List<OsuLinkApplication> { new("stable", "osu!stable", "stable.png"), new("lazer", "osu!(lazer)", "lazer.png") };
+                var applications = new List<OsuLinkApplication> { new("stable", "osu!stable", "stable.png", @"E:\osu!\osu!.exe"), new("lazer", "osu!(lazer)", "lazer.png", @"C:\osu lazer\osu!.exe") };
                 ui.View.ReadOsuLinkApplications = () => applications;
                 ui.View.ReadOsuLinkSettings = () => (selectedId, bound, applications.Any(a => a.Id == selectedId));
                 ui.View.RequestSelectOsuLinkFallback = id => { choices++; selectedId = id; };
@@ -51,8 +53,16 @@ internal static class OsuLinkTests
                 Check(ui.Canvas.Images.Any(i => i.Path == "stable.png") && ui.Canvas.Images.Any(i => i.Path == "lazer.png"), "application icons accompany list rows");
                 var firstRow = ui.View.OsuLinkFallbackButtonBounds;
                 ui.Click(firstRow.X + 20, firstRow.Y + 56 + 20);
+                Check(choices == 0 && selectedId == "stable", "row selection remains pending until confirmation");
+                ui.View.RefreshOsuLinkSettings(refreshApplications: true); ui.Paint();
+                ui.ClickText(L.Get("osuLinks.confirm"));
                 Check(choices == 1 && selectedId == "lazer" && ui.Canvas.Texts.Any(t => t.Value == "osu!(lazer)"), "fallback selected by application identity");
                 Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply")), "fallback selection has no unrelated settings action");
+                var pathLabel = ui.Canvas.Texts.Single(t => t.Value == @"C:\osu lazer\osu!.exe");
+                var nameLabel = ui.Canvas.Texts.Single(t => t.Value == "osu!(lazer)");
+                Check(pathLabel.X > nameLabel.X && pathLabel.Size < nameLabel.Size && pathLabel.Color != nameLabel.Color, "application path follows its name in smaller muted text");
+                int clearRequests = 0; ui.View.RequestClearOsuLinkBinding = () => clearRequests++; ui.Paint();
+                ui.ClickText(L.Get("osuLinks.clearBinding")); Check(clearRequests == 1, "settings can clear the FA association");
                 double before = ui.View.PlayheadMs; var selection = ui.View.SelectedObjectIds.ToArray();
                 Check(!ui.View.HandleEditorLink("osu://edit/00:00:000"), "settings is outside editing"); ui.Paint();
                 Check(ui.View.PlayheadMs == before && ui.View.SelectedObjectIds.SequenceEqual(selection)
@@ -89,6 +99,11 @@ internal static class OsuLinkTests
                 ui.Key(27); ui.Key(46); ui.Key('F');
                 Check(ui.View.OsuLinkFallbackRequired && ui.View.Document.ContentEquals(blocked), "setup cannot be dismissed or edit the map");
                 choices = 0; ui.Key(13);
+                Check(choices == 0 && ui.View.OsuLinkFallbackRequired, "confirmation requires an application selection");
+                var requiredRow = ui.View.OsuLinkFallbackButtonBounds;
+                ui.Click(requiredRow.X + 20, requiredRow.Y + 20);
+                Check(choices == 0 && ui.View.OsuLinkFallbackRequired, "required selection waits for confirmation");
+                ui.Key(13);
                 Check(choices == 1 && selectedId == "stable" && !ui.View.OsuLinkFallbackRequired, "registered selection completes required setup");
                 applications.RemoveAt(0); ui.View.RefreshOsuLinkSettings(); ui.Paint();
                 Check(ui.View.OsuLinkFallbackRequired && !ui.Canvas.Texts.Any(t => t.Value == "osu!stable"), "unregistered fallback requires setup again");

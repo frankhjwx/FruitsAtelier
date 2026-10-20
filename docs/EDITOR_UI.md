@@ -5,11 +5,14 @@
 **Settings → osu! Links** contains one fallback application selector. It becomes
 available when the system routes `osu://` to FruitsAtelier. Choose from the
 applications registered to handle osu! links. The list shows application names
-and icons; selection is saved immediately.
+and icons, with executable paths in smaller gray text after the names. Select an
+application and press **Confirm** to save it. **Clear FA binding…** opens Windows
+Default apps to choose another protocol handler; on macOS it restores the selected
+fallback as the protocol handler.
 
 When FruitsAtelier is the system handler and its fallback is missing or invalid,
 a required application list appears automatically. It remains open until a
-registered external application is selected. The system association is checked at
+registered external application is selected and confirmed. The system association is checked at
 startup, on activation and periodically while running. Changing the default
 handler away from FruitsAtelier removes the requirement. Windows protocol
 registration advertises FruitsAtelier as an available application without

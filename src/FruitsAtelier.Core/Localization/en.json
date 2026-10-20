@@ -1583,5 +1583,9 @@
   "osuLinks.invalid": "Could not parse the editor link.",
   "osuLinks.busy": "Finish the current interaction or close the dialog before opening an editor link.",
   "osuLinks.fallback": "Fallback application",
-  "osuLinks.none": "No registered osu! applications found."
+  "osuLinks.none": "No registered osu! applications found.",
+  "osuLinks.setup": "Please setup fallback application for osu:// commands",
+  "osuLinks.confirm": "Confirm",
+  "osuLinks.clearBinding": "Clear FA binding…",
+  "osuLinks.clearFailed": "The system could not change the osu! link association."
 }

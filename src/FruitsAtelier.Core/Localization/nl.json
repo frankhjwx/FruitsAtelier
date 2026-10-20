@@ -1583,5 +1583,9 @@
   "osuLinks.invalid": "De editorkoppeling kan niet worden gelezen.",
   "osuLinks.busy": "Voltooi de huidige handeling of sluit het dialoogvenster voordat je een editorkoppeling opent.",
   "osuLinks.fallback": "Fallback-app",
-  "osuLinks.none": "Geen geregistreerde osu!-apps gevonden."
+  "osuLinks.none": "Geen geregistreerde osu!-apps gevonden.",
+  "osuLinks.setup": "Stel een fallback-app in voor osu://-opdrachten",
+  "osuLinks.confirm": "Bevestigen",
+  "osuLinks.clearBinding": "FA-koppeling verwijderen…",
+  "osuLinks.clearFailed": "Het systeem kon de osu!-koppeling niet wijzigen."
 }

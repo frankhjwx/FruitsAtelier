@@ -1583,5 +1583,9 @@
   "osuLinks.invalid": "无法解析编辑器链接。",
   "osuLinks.busy": "请先完成当前操作或关闭对话框，再打开编辑器链接。",
   "osuLinks.fallback": "Fallback 应用",
-  "osuLinks.none": "未找到已注册的 osu! 应用。"
+  "osuLinks.none": "未找到已注册的 osu! 应用。",
+  "osuLinks.setup": "请为 osu:// 命令设置 fallback 应用",
+  "osuLinks.confirm": "确认",
+  "osuLinks.clearBinding": "解除 FA 绑定…",
+  "osuLinks.clearFailed": "系统无法更改 osu! 链接关联。"
 }

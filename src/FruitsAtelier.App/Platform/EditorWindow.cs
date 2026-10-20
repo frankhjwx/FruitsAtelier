@@ -407,7 +407,7 @@ internal sealed partial class EditorWindow : IDisposable
                         // Continuous repainting can starve WM_TIMER, including update status polling.
                         renderTimer.Restart();
                         long phase = view.Performance.Start();
-                        PollUpdates(); PollAudio();
+                        PollUpdates(); PollAudio(); PollOsuLinks();
                         view.Performance.End(EditorPerformanceStage.Poll, phase);
                         phase = view.Performance.Start();
                         canvas.Resize(rect.Right, rect.Bottom, uiDpi);

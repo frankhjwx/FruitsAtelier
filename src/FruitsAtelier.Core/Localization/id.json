@@ -1583,5 +1583,9 @@
   "osuLinks.invalid": "Tautan editor tidak dapat diurai.",
   "osuLinks.busy": "Selesaikan tindakan saat ini atau tutup dialog sebelum membuka tautan editor.",
   "osuLinks.fallback": "Aplikasi cadangan",
-  "osuLinks.none": "Tidak ditemukan aplikasi osu! terdaftar."
+  "osuLinks.none": "Tidak ditemukan aplikasi osu! terdaftar.",
+  "osuLinks.setup": "Atur aplikasi cadangan untuk perintah osu://",
+  "osuLinks.confirm": "Konfirmasi",
+  "osuLinks.clearBinding": "Hapus asosiasi FA…",
+  "osuLinks.clearFailed": "Sistem tidak dapat mengubah asosiasi tautan osu!."
 }

@@ -16,6 +16,11 @@ internal sealed partial class MacWindow
                 OperatingSystem.IsMacOS() && MacOsuLinks.TargetReady(preferences));
         };
         View.ReadOsuLinkApplications = () => MacOsuLinks.Discover();
+        View.RequestClearOsuLinkBinding = () => RunFile(() =>
+        {
+            MacOsuLinks.ClearBinding(OsuLinkPreferences.Load().TargetId); View.RefreshOsuLinkSettings();
+            return Task.CompletedTask;
+        });
         View.RequestSelectOsuLinkFallback = id => RunFile(() =>
         {
             if (MacOsuLinks.Resolve(id) is null) throw new InvalidOperationException(L.Get("osuLinks.targetInvalid"));

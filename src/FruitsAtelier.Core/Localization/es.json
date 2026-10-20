@@ -1583,5 +1583,9 @@
   "osuLinks.invalid": "No se pudo interpretar el enlace del editor.",
   "osuLinks.busy": "Termina la operación actual o cierra el diálogo antes de abrir un enlace del editor.",
   "osuLinks.fallback": "Aplicación alternativa",
-  "osuLinks.none": "No se encontraron aplicaciones osu! registradas."
+  "osuLinks.none": "No se encontraron aplicaciones osu! registradas.",
+  "osuLinks.setup": "Configura una aplicación alternativa para los comandos osu://",
+  "osuLinks.confirm": "Confirmar",
+  "osuLinks.clearBinding": "Quitar asociación con FA…",
+  "osuLinks.clearFailed": "El sistema no pudo cambiar la asociación de enlaces osu!."
 }

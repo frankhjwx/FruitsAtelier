@@ -71,6 +71,10 @@ internal static class OsuLinkAssociation
     }
 
     internal static void Forward(string url) => Process.Start(ForwardInfo(url, OsuLinkPreferences.Load()));
+    internal static void ClearBinding()
+    {
+        if (IsDefault) Process.Start(new ProcessStartInfo("ms-settings:defaultapps?registeredAppUser=FruitsAtelier") { UseShellExecute = true });
+    }
 
     internal static void RegisterCandidate()
     {

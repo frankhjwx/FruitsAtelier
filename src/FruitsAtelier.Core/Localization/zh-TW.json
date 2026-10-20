@@ -1583,5 +1583,9 @@
   "osuLinks.invalid": "無法解析編輯器連結。",
   "osuLinks.busy": "請先完成目前操作或關閉對話框，再開啟編輯器連結。",
   "osuLinks.fallback": "Fallback 應用程式",
-  "osuLinks.none": "找不到已註冊的 osu! 應用程式。"
+  "osuLinks.none": "找不到已註冊的 osu! 應用程式。",
+  "osuLinks.setup": "請為 osu:// 命令設定 fallback 應用程式",
+  "osuLinks.confirm": "確認",
+  "osuLinks.clearBinding": "解除 FA 綁定…",
+  "osuLinks.clearFailed": "系統無法變更 osu! 連結關聯。"
 }

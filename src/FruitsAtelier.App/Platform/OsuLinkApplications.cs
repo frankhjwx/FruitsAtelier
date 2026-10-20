@@ -33,7 +33,7 @@ internal static class OsuLinkApplications
                     ?? registeredName;
                 if (name == "osu!" && registeredName.Contains("stable", StringComparison.OrdinalIgnoreCase)) name = "osu!stable";
                 string icon = ExtractIcon(target.Path, iconCache);
-                apps[id] = new(id, name, icon);
+                apps[id] = new(id, name, icon, target.Path);
             }
         }
         return apps.Values.OrderBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();

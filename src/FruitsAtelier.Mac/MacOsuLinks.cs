@@ -59,7 +59,7 @@ internal static class MacOsuLinks
                     string icon = Metadata(bundle, "CFBundleIconFile");
                     if (!Path.HasExtension(icon)) icon += ".icns";
                     icon = CacheIcon(Path.Combine(path, "Contents", "Resources", icon));
-                    apps.Add(new(id, name, icon));
+                    apps.Add(new(id, name, icon, path));
                 }
                 finally { if (bundle != 0) CFRelease(bundle); CFRelease(url); }
             }
@@ -101,6 +101,14 @@ internal static class MacOsuLinks
         string path = Resolve(preferences.TargetId) ?? throw new InvalidOperationException(L.Get("osuLinks.targetInvalid"));
         Process.Start(new ProcessStartInfo("/usr/bin/open") { ArgumentList = { "-a", path, link } });
     }
+    internal static void ClearBinding(string fallbackId)
+    {
+        if (!IsDefault) return;
+        if (Resolve(fallbackId) is null) throw new InvalidOperationException(L.Get("osuLinks.targetInvalid"));
+        nint scheme = CFStringCreateWithCString(0, "osu", Utf8), identifier = CFStringCreateWithCString(0, fallbackId, Utf8);
+        try { if (LSSetDefaultHandlerForURLScheme(scheme, identifier) != 0) throw new InvalidOperationException(L.Get("osuLinks.clearFailed")); }
+        finally { CFRelease(scheme); CFRelease(identifier); }
+    }
     private static string ReadString(nint value)
     {
         if (value == 0) return "";
@@ -108,6 +116,7 @@ internal static class MacOsuLinks
         return CFStringGetCString(value, buffer, buffer.Length, Utf8) ? Encoding.UTF8.GetString(buffer, 0, Array.IndexOf(buffer, (byte)0)) : "";
     }
     [DllImport(Services)] private static extern nint LSCopyDefaultHandlerForURLScheme(nint scheme);
+    [DllImport(Services)] private static extern int LSSetDefaultHandlerForURLScheme(nint scheme, nint identifier);
     [DllImport(Services)] private static extern nint LSCopyAllHandlersForURLScheme(nint scheme);
     [DllImport(Services)] private static extern nint LSCopyApplicationURLsForBundleIdentifier(nint bundle, nint error);
     [DllImport(Foundation)] private static extern nint CFArrayGetCount(nint array);

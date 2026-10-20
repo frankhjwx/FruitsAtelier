@@ -1583,5 +1583,9 @@
   "osuLinks.invalid": "編集用リンクを解析できません。",
   "osuLinks.busy": "操作を完了するかダイアログを閉じてから編集用リンクを開いてください。",
   "osuLinks.fallback": "転送先アプリ",
-  "osuLinks.none": "登録済みの osu! アプリが見つかりません。"
+  "osuLinks.none": "登録済みの osu! アプリが見つかりません。",
+  "osuLinks.setup": "osu:// コマンドの転送先アプリを設定してください",
+  "osuLinks.confirm": "確認",
+  "osuLinks.clearBinding": "FA の関連付けを解除…",
+  "osuLinks.clearFailed": "システムが osu! リンクの関連付けを変更できませんでした。"
 }

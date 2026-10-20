@@ -15,6 +15,7 @@ internal sealed partial class EditorWindow
             return (preferences.TargetId, OsuLinkAssociation.IsDefault, OsuLinkAssociation.TargetReady(preferences));
         };
         view.ReadOsuLinkApplications = () => OsuLinkApplications.Discover();
+        view.RequestClearOsuLinkBinding = () => FileOperation(OsuLinkAssociation.ClearBinding);
         view.RequestSelectOsuLinkFallback = id => FileOperation(() =>
         {
             if (OsuLinkAssociation.Resolve(id) is null) throw new InvalidOperationException(L.Get("osuLinks.targetInvalid"));
