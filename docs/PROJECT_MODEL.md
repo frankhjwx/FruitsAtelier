@@ -46,6 +46,9 @@ Legacy sliders can retain detached `RandomizationSource` geometry and a fitted
 repeated strength or seed changes do not compound previous effects. Materialized
 geometry and emitted timing are validated through NM and HR export/read-back
 before replacement. A failure retains the original objects and reports its reason.
+Confirmed compensated imports retain original Legacy geometry for parents whose
+playback cannot be recovered as a baseline. Other parents retain their recovered
+baselines, and source confirmation completes for the difficulty.
 Legacy sliders authored or manually edited in the osu! canvas persist `PreserveNativeGeometry`.
 Their original two-dimensional controls and authored SV remain separate from the
 materialized droplet path and processed SV, including after reopening. Failed

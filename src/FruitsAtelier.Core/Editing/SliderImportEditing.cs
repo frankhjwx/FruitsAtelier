@@ -75,16 +75,18 @@ public static class SliderImportEditing
             var source = candidate.DeepClone();
             var result = ImportedSliderEditing.ConvertPreservingPositions(candidate,
                 candidate.ImportedSliders.Select(s => s.Id).ToArray(), cancellation, tolerance: 1);
-            if (result.Failures.Count > 0) return new(false, result.Failures.Select(f => f.Reason).ToArray());
             var tracks = result.Tracks.ToDictionary(t => t.Id);
             ImportedSliderEditing.FitPlayback(source, tracks, cancellation);
             var timing = new TimingMap.Lookup(source);
             candidate.Tracks.RemoveAll(t => tracks.ContainsKey(t.Id));
+            // Source confirmation also covers mixed maps; unrecoverable parents retain their original geometry.
+            candidate.ImportedSliders.Clear();
             candidate.ImportedSliders.AddRange(source.ImportedSliders);
             foreach (var slider in candidate.ImportedSliders)
             {
+                if (!tracks.TryGetValue(slider.Id, out var track)) continue;
                 slider.RandomizationSource = slider.DeepClone();
-                slider.RandomizationTrack = tracks[slider.Id];
+                slider.RandomizationTrack = track;
                 slider.RandomizationTrack.DropletMode = SliderDropletMode.FollowMap;
                 slider.RandomizationBaseVelocity = ImportedSliderConverter.SliderVelocityAt(source, slider, timing);
             }
