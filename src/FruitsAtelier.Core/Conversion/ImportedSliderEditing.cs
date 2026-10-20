@@ -8,7 +8,7 @@ public sealed record SliderBatchConversionResult(IReadOnlyList<CurveTrack> Track
 public static class ImportedSliderEditing
 {
     public const double ApproximationTolerance = ImportedCurveFitter.Tolerance;
-    private const double PlaybackPositionTolerance = 1;
+    internal const double ExportPositionTolerance = 4;
 
     public static ImportedSliderEditResult ConvertToTrack(MapDocument document, Guid sliderId, CatchConversionCache? cache = null, bool derandomizeDroplets = true)
     {
@@ -228,50 +228,98 @@ public static class ImportedSliderEditing
         var original = CatchStreamConverter.Convert(document).Objects
             .Where(o => candidates.ContainsKey(o.SourceId)).GroupBy(o => o.SourceId)
             .ToDictionary(g => g.Key, g => g.OrderBy(o => o.EventIndex).ToArray());
-        var sources = document.ImportedSliders.ToDictionary(s => s.Id);
-        var fitted = new Dictionary<Guid, CurveTrack>();
-        foreach (var (id, track) in candidates)
+        OsuWriteResult exportedOriginal;
+        try { exportedOriginal = OsuBeatmapWriter.Serialize(document); }
+        catch (Exception error) when (error is InvalidDataException or InvalidOperationException or CatchConversionException)
+        { return; }
+        var exportedNm = exportedOriginal.PlayableObjects.GroupBy(o => o.SourceId).ToDictionary(g => g.Key, g => g.ToArray());
+        var exportedHr = exportedOriginal.PlayableHardRockObjects.GroupBy(o => o.SourceId).ToDictionary(g => g.Key, g => g.ToArray());
+        var writeCache = new OsuWriteCache();
+        var endpoints = document.ImportedSliders.Where(s => candidates.ContainsKey(s.Id)).ToDictionary(s => s.Id, s =>
         {
-            cancellation.ThrowIfCancellationRequested();
-            if (!original.TryGetValue(id, out var events)) continue;
-            var points = events.Select(o => new MapPoint(CurveMath.FirstSpanTime(track, o.TimeMs), o.X))
-                .GroupBy(p => p.TimeMs).OrderBy(g => g.Key)
-                .Select(g => new MapPoint(g.Key, g.Average(p => p.X))).ToArray();
-            if (points.Length < 2) continue;
-            var smooth = track.DeepClone(); smooth.Nodes.Clear();
-            try
+            double end = candidates[s.Id].Nodes[^1].X;
+            // HR seeds following fruit offsets from the last control point, not the playable tail.
+            return s.ControlPoints.Count > 0 && Math.Abs(s.ControlPoints[^1].X - end) <= ExportPositionTolerance
+                ? s.ControlPoints[^1].X : end;
+        });
+        var lines = candidates.ToDictionary(p => p.Key, p =>
+        {
+            var line = p.Value.DeepClone();
+            var start = line.Nodes[0]; var end = line.Nodes[^1];
+            line.Nodes.Clear();
+            line.Nodes.Add(new() { TimeMs = start.TimeMs, X = start.X, OutgoingKind = CurveKind.Linear });
+            line.Nodes.Add(new() { TimeMs = end.TimeMs, X = endpoints[p.Key] });
+            line.Kind = CurveKind.Linear; line.DropletMode = SliderDropletMode.Derandomize;
+            return line;
+        });
+        Accept(lines);
+        // Fruit and regular droplets do not carry random offsets. Try their curve first;
+        // repeat conflicts and edge clamping can make tiny-droplet playback a noisy target.
+        FitSamples(regularOnly: true);
+        FitSamples(regularOnly: false);
+
+        void FitSamples(bool regularOnly)
+        {
+            var fitted = new Dictionary<Guid, CurveTrack>();
+            foreach (var (id, track) in candidates)
             {
-                double velocity = ImportedSliderConverter.VelocityAt(document, sources[id]);
-                var start = points[0]; var end = points[^1];
-                if (points.All(p => Math.Abs(p.X - (start.X + (end.X - start.X)
-                    * (p.TimeMs - start.TimeMs) / (end.TimeMs - start.TimeMs))) <= PlaybackPositionTolerance))
+                cancellation.ThrowIfCancellationRequested();
+                if (track.Nodes.Count == 2 || !original.TryGetValue(id, out var events)) continue;
+                var allPoints = events
+                    .Select(o => new MapPoint(CurveMath.FirstSpanTime(track, o.TimeMs), o.X))
+                    .GroupBy(p => Math.Round(p.TimeMs, 6)).OrderBy(g => g.Key)
+                    .Select(g => new MapPoint(g.First().TimeMs, g.Average(p => p.X))).ToArray();
+                allPoints[^1] = allPoints[^1] with { X = endpoints[id] };
+                var regularTimes = events.Where(o => o.Kind != CatchObjectKind.TinyDroplet)
+                    .Select(o => Math.Round(CurveMath.FirstSpanTime(track, o.TimeMs), 6)).ToHashSet();
+                var corners = PlaybackCurveFitter.Corners(allPoints, .8).ToHashSet();
+                var points = regularOnly ? allPoints.Where((p, i) => regularTimes.Contains(Math.Round(p.TimeMs, 6)) || corners.Contains(i)).ToArray() : allPoints;
+                if (points.Length < (regularOnly ? 4 : 2)) continue;
+                var smooth = track.DeepClone(); smooth.Nodes.Clear();
+                try
                 {
-                    smooth.Kind = CurveKind.Linear;
-                    smooth.Nodes.Add(new Anchor { TimeMs = start.TimeMs, X = start.X, OutgoingKind = CurveKind.Linear });
-                    smooth.Nodes.Add(new Anchor { TimeMs = end.TimeMs, X = end.X, OutgoingKind = CurveKind.Linear });
+                    PlaybackCurveFitter.Fit(smooth, points, tolerance: .8, cancellation);
                 }
-                else ImportedCurveFitter.Fit(smooth, points, velocity, tolerance: .5);
+                catch (InvalidOperationException) { continue; }
+                if (smooth.Nodes.Count >= track.Nodes.Count) continue;
+                smooth.DropletMode = SliderDropletMode.Derandomize;
+                fitted[id] = smooth;
             }
-            catch (InvalidOperationException) { continue; }
-            if (smooth.Nodes.Count >= track.Nodes.Count) continue;
-            smooth.DropletMode = SliderDropletMode.Derandomize;
-            fitted[id] = smooth;
+            Accept(fitted);
         }
-        if (fitted.Count == 0) return;
-        var candidate = document.DeepClone();
-        candidate.ImportedSliders.RemoveAll(s => candidates.ContainsKey(s.Id));
-        candidate.Tracks.AddRange(candidates.Select(p => fitted.GetValueOrDefault(p.Key, p.Value)));
-        var actual = CatchStreamConverter.Convert(candidate).Objects
-            .Where(o => fitted.ContainsKey(o.SourceId)).GroupBy(o => o.SourceId)
-            .ToDictionary(g => g.Key, g => g.OrderBy(o => o.EventIndex).ToArray());
-        foreach (var (id, track) in fitted)
+
+        void Accept(Dictionary<Guid, CurveTrack> proposals)
         {
+            if (proposals.Count == 0) return;
+            var candidate = document.DeepClone();
+            candidate.ImportedSliders.RemoveAll(s => candidates.ContainsKey(s.Id));
+            candidate.Tracks.AddRange(candidates.Select(p => proposals.GetValueOrDefault(p.Key, p.Value)));
+            var actual = writeCache.Convert(candidate).Objects
+                .Where(o => proposals.ContainsKey(o.SourceId)).GroupBy(o => o.SourceId)
+                .ToDictionary(g => g.Key, g => g.OrderBy(o => o.EventIndex).ToArray());
             cancellation.ThrowIfCancellationRequested();
-            if (actual.TryGetValue(id, out var events) && events.Length == original[id].Length
-                && events.Zip(original[id]).All(p => p.First.Kind == p.Second.Kind
-                    && Math.Abs(p.First.TimeMs - p.Second.TimeMs) <= 1e-6
-                    && Math.Abs(p.First.X - p.Second.X) <= PlaybackPositionTolerance)) candidates[id] = track;
+            OsuWriteResult exported;
+            try { exported = OsuBeatmapWriter.Serialize(candidate, cache: writeCache); }
+            catch (Exception error) when (error is InvalidDataException or InvalidOperationException or CatchConversionException)
+            { return; }
+            var nm = exported.PlayableObjects.GroupBy(o => o.SourceId).ToDictionary(g => g.Key, g => g.ToArray());
+            var hr = exported.PlayableHardRockObjects.GroupBy(o => o.SourceId).ToDictionary(g => g.Key, g => g.ToArray());
+            foreach (var (id, track) in proposals)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                if (original.TryGetValue(id, out var expected) && actual.TryGetValue(id, out var events) && events.Length == expected.Length
+                    && events.Zip(expected).All(p => p.First.Kind == p.Second.Kind
+                        && Math.Abs(p.First.TimeMs - p.Second.TimeMs) <= 1e-6
+                        && Math.Abs(p.First.X - p.Second.X) <= ExportPositionTolerance)
+                    && Matches(exportedNm, nm, id) && Matches(exportedHr, hr, id)) candidates[id] = track;
+            }
         }
+
+        static bool Matches(Dictionary<Guid, ConvertedCatchObject[]> expected, Dictionary<Guid, ConvertedCatchObject[]> actual, Guid id)
+            => expected.TryGetValue(id, out var before) && actual.TryGetValue(id, out var after)
+                && before.Length == after.Length && before.Zip(after).All(p => p.First.Kind == p.Second.Kind
+                    && Math.Abs(p.First.TimeMs - p.Second.TimeMs) <= 1e-6
+                    && Math.Abs(p.First.X - p.Second.X) <= ExportPositionTolerance);
     }
 
     private static void Approximate(CurveTrack track, ImportedSlider source, ImportedSliderGeometry path, double velocity)

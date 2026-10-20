@@ -48,7 +48,7 @@ internal static class SliderImportPolicyTests
             Check(saved.ContentEquals(map), "Confirmed source lost its baseline on reload.");
             var refreshed = SliderRepresentationEditing.RefreshLegacyDroplets(map);
             Check(refreshed.Success, string.Join("; ", refreshed.Diagnostics));
-            Equivalent(imported.PlayableObjects, OsuBeatmapWriter.Serialize(map).PlayableObjects, 1);
+            Equivalent(imported.PlayableObjects, OsuBeatmapWriter.Serialize(map).PlayableObjects, 4);
             var once = OsuBeatmapWriter.Serialize(map);
             Check(SliderRepresentationEditing.RefreshLegacyDroplets(map).Success, "Repeated refresh failed.");
             Equivalent(once.PlayableObjects, OsuBeatmapWriter.Serialize(map).PlayableObjects, .001);
@@ -57,7 +57,7 @@ internal static class SliderImportPolicyTests
             var converted = SliderImportEditing.ConvertFollowingMap(history.Document, [map.ImportedSliders[0].Id]);
             Check(converted.Failures.Count == 0 && converted.Tracks.Count == 1, "Compensated conversion failed.");
             history.Commit();
-            Equivalent(imported.PlayableObjects, OsuBeatmapWriter.Serialize(history.Document).PlayableObjects, 1);
+            Equivalent(imported.PlayableObjects, OsuBeatmapWriter.Serialize(history.Document).PlayableObjects, 4);
             history.Undo(); Check(history.Document.ContentEquals(map), "Conversion undo lost the source baseline.");
             history.Redo();
             history.Document.Tracks[0].DropletMode = SliderDropletMode.Randomize;
@@ -65,7 +65,7 @@ internal static class SliderImportPolicyTests
             Check(randomized.PlayableObjects.Zip(imported.PlayableObjects).Any(p => Math.Abs(p.First.X - p.Second.X) > 2),
                 "Randomize did not add offsets around the recovered baseline.");
             history.Document.Tracks[0].DropletMode = SliderDropletMode.Derandomize;
-            Equivalent(imported.PlayableObjects, OsuBeatmapWriter.Serialize(history.Document).PlayableObjects, 1);
+            Equivalent(imported.PlayableObjects, OsuBeatmapWriter.Serialize(history.Document).PlayableObjects, 4);
             history.Document.DerandomizeFSliderDroplets = false;
             var legacy = SliderRepresentationEditing.ConvertToLegacy(history.Document, history.Document.Tracks.Single().Id);
             Check(legacy.Success, string.Join("; ", legacy.Diagnostics));
@@ -73,7 +73,7 @@ internal static class SliderImportPolicyTests
                 "Explicit slider mode failed after converting back to Legacy.");
             Check(history.Document.ImportedSliders.Single().RandomizationTrack!.DropletMode == SliderDropletMode.Derandomize,
                 "Legacy refresh replaced the slider's explicit mode with the map mode.");
-            Equivalent(imported.PlayableObjects, OsuBeatmapWriter.Serialize(history.Document).PlayableObjects, 1);
+            Equivalent(imported.PlayableObjects, OsuBeatmapWriter.Serialize(history.Document).PlayableObjects, 4);
             Console.WriteLine($"PASS compensated import, refresh and modes: spans={spans}, curved={curved}");
         }
     }

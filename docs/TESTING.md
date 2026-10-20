@@ -714,6 +714,29 @@ On Windows, run `FruitsAtelier.App.exe --profile-map <path> [startMs]` in a hidd
 
 ## Imported slider corpus
 
+`Core.Tests --slider-recovery-check` covers compensated export/import round trips
+for straight lines, quadratic/cubic Beziers with nonlinear time controls, circular
+arcs, BPM changes, repeat counts, different tick rates and sharp droplet reversals.
+It checks whole-path samples against original authoring, NM/HR export positions
+within 4 pixels, unchanged event kinds/times, cancellation, undo, persistence and
+safe rejection of an incompatible baseline.
+
+For a read-only authored-map round trip, run:
+
+```powershell
+dotnet run --project tests/FruitsAtelier.Core.Tests -c Release -- --slider-roundtrip "path/to/difficulty.catchdiff" "artifacts/slider-roundtrip/sample"
+```
+
+This exports the source to `.osu`, explicitly treats it as a confirmed compensated
+import, and converts it to FSliders. It reports the independent detection ratio;
+it does not simulate an automatic source-confirmation decision. Stream/Stack
+tracks are excluded from the slider restoration denominator. A restored slider
+uses no more anchors than its original and stays within 4 pixels at 2,001
+normalized first-span times. The report also lists control counts, retained Legacy
+objects, allocation, runtime and actual NM/HR playback errors. Reports, exported
+files and recovered documents go only to the supplied output directory. The source
+file hash and in-memory authoring content must remain unchanged.
+
 The Core test executable accepts `--slider-corpus <workspace>` for opt-in, read-only
 checks against existing `.catchdiff` documents. It never saves or opens a workspace
 recovery session. The report compares fitted anchor counts with the previous 0.001

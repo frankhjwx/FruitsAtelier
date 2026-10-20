@@ -103,6 +103,12 @@ and language may publish the prepared geometry, timing and warmed export cache.
 Failure or cancellation restores the baseline. Worker caches are never shared
 with the UI. Baseline fitting data preserves idempotent strength/seed changes and
 is retimed when authored timing changes.
+Compensated-import curve recovery also runs at this boundary. It fits batches of
+candidate lines, Beziers and arcs with a bounded fitting budget, then shares one
+write cache across candidate export validations. Samples are evaluated without
+allocating control arrays per point. Final conversion validates NM and HR playback
+after any rejected parents return to Legacy. Neither fitting nor its export checks
+run during pointer movement, hover or painting.
 Automatic Legacy droplet refresh reports progress in the status bar without
 opening the slider conversion dialog. The pending transaction still gates further
 content edits and save/export until validation completes; Escape cancels it.

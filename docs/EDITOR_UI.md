@@ -1175,7 +1175,7 @@ In Select mode, the first click selects the whole slider; the second click on a 
 
 Selecting or double-clicking a Legacy Slider in Catch preserves its representation. Editing requires the explicit Convert to FSlider action; the conversion and subsequent edits have separate undo steps. Legacy geometry can instead be edited directly in the osu! canvas. B / 3 selects the current canvas's slider tool.
 
-Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Hold the left mouse button stationary on a Legacy Slider to open its conversion actions beside the pointer. Holding a slider fruit first identifies its beat at 300 ms. Continuing to hold stationary opens conversion actions at 1000 ms; a small progress ring fills during the final 700 ms. Moving at least 2 DIP or releasing before completion cancels the hold; ordinary selection and dragging remain available. The buttons stay open until an action, another click, a key, or focus loss dismisses them. Conversion preserves start time, total duration, and span count. It first fits a small set of straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete the conversion. Exact nested-object positions and sequences are not required to match. Invalid or unrepresentable input retains its original object with a reason.
+Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Hold the left mouse button stationary on a Legacy Slider to open its conversion actions beside the pointer. Holding a slider fruit first identifies its beat at 300 ms. Continuing to hold stationary opens conversion actions at 1000 ms; a small progress ring fills during the final 700 ms. Moving at least 2 DIP or releasing before completion cancels the hold; ordinary selection and dragging remain available. The buttons stay open until an action, another click, a key, or focus loss dismisses them. Conversion preserves start time, total duration, and span count. Ordinary geometric conversion first fits straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete conversion. Its nested-object positions need not match the randomized source. Confirmed compensated imports use the playback-preserving recovery described below. Invalid or unrepresentable input retains its original object with a reason.
 
 Fresh `.osu`/`.osz`, Songs and folder imports capture **Global Derandomize → Imported maps**. Ordinary imports use that mode immediately: Randomize retains native offsets, while Derandomize targets the original slider path and generates compensation for export. In the Catch canvas, ordinary imported Legacy Sliders continue to draw and hit-test their original path after processing; waterdrop positions and export use the effective mode. Changing Global settings does not reinitialize existing workspace difficulties or `.catchproj` files.
 
@@ -1185,6 +1185,21 @@ The import dialog shows each suspected difficulty's name and a page counter, ask
 Disable **Confirm suspected FA / Derandomizer maps** to accept the FA interpretation
 automatically when at least 95% of sliders match. Suspected maps above 80% but below
 95% still require a choice; ordinary maps continue without the source question. Import preparation runs in the background before editing and export. A workspace import saves its resolved initial state locally before offering conversion; existing difficulties are not reinitialized. The saved state and baselines survive reloads, and an interrupted, unresolved import resumes preparation.
+
+Confirmed compensated imports recover straight lines, quadratic/cubic Beziers with
+variable control times, and circular arcs from playback samples. Fruit and regular
+droplets supply an initial fit, followed by all droplet samples. Stable slopes on
+both sides of a sharp corner retain its anchor; smooth reversals can remain one
+curve. Repeated traversals fold onto one shared path. Every accepted simplification
+checks all events, including tiny droplets, through NM and HR export/read-back.
+Final conversion preserves event kinds, counts and times (within 0.000001 ms), with
+at most 4 playfield pixels of position error across the complete map. A replacement
+that fails validation retains its Legacy source. Existing saved workspace baselines
+are not automatically refitted.
+
+The `.osu` file contains sampled and quantized geometry, so recovery cannot promise
+the original control points or the exact shape between samples. Sparse samples,
+clipped curves and partial repeat compensation can retain more detailed paths.
 
 After preparation, the last page offers to keep Legacy Sliders or convert them to FSliders across the imported difficulties.
 In **Settings → General → Map Import**, the default is **Ask before converting imported

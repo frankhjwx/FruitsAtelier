@@ -1,4 +1,6 @@
 using FruitsAtelier.Core;
+if (args.Contains("--slider-recovery-check")) { SliderRecoveryTests.Run(); return 0; }
+if (args.Length == 3 && args[0] == "--slider-roundtrip") return SliderRoundtripCorpus.Run(args[1], args[2]);
 if (args.Contains("--compact-arc-check")) { SliderModeTests.CompactArcConversion(); SliderModeTests.PenConversionAndHistory(); return 0; }
 if (args.Contains("--packed-slider-points-check")) { SliderControlPointsTests.Run(); return 0; }
 if (args.Contains("--hitsound-snapshot-check")) { HitsoundSnapshotTests.Run(); return 0; }
@@ -76,6 +78,7 @@ var tests = new (string Name, Action Run)[]
     ("Shared curve validation rejects invalid arcs, scales and identities", SliderModeTests.RejectBadArcsAndControls),
     ("Incremental conversion matches full output across edits, RNG changes and failures", ConversionCacheTests.EditingMatchesFullConversion),
     ("Sparse curve fitting preserves corners and bounds whole-trajectory error", ImportedCurveFitTests.SparseAndBounded),
+    ("Compensated recovery restores sparse curves with bounded exported playback", SliderRecoveryTests.Run),
     ("Batch conversion completes repeats and preserves duration, export and cancellation", ImportedCurveFitTests.BatchPreservesDurationAndCancellation),
     ("Dense imported corners approximate within editable limits without changing duration", ImportedCurveFitTests.DenseCornerFallback),
     ("Timeline coordinate round trips and bounds", CoordinateRoundTrips),
