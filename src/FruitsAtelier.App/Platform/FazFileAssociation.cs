@@ -28,6 +28,11 @@ internal static class FazFileAssociation
         Ensure(ProgId, "Fruits Atelier Project");
         Ensure(ProgId + @"\DefaultIcon", "\"" + iconPath + "\"");
         Ensure(ProgId + @"\shell\open\command", "\"" + executable + "\" \"%1\"");
+        const string difficultyId = "FruitsAtelier.DifficultyArchive";
+        Ensure(".fad", difficultyId);
+        Ensure(difficultyId, "Fruits Atelier Difficulty");
+        Ensure(difficultyId + @"\DefaultIcon", "\"" + Path.Combine(Path.GetDirectoryName(iconPath)!, "fad-file.ico") + "\"");
+        Ensure(difficultyId + @"\shell\open\command", "\"" + executable + "\" \"%1\"");
         return changed;
 
         void Ensure(string path, string value)
@@ -41,7 +46,7 @@ internal static class FazFileAssociation
     }
     internal static bool Forward(string? path, string? channel = null)
     {
-        if (path is null || !FazArchive.IsPackage(path) && !FruitsAtelier.Core.EditorTimestamp.IsOsuLink(path)) return false;
+        if (path is null || !FazArchive.IsPackage(path) && !FadArchive.IsPackage(path) && !FruitsAtelier.Core.EditorTimestamp.IsOsuLink(path)) return false;
         try
         {
             using var client = new NamedPipeClientStream(".", channel ?? Pipe, PipeDirection.Out, PipeOptions.CurrentUserOnly);
@@ -61,7 +66,7 @@ internal static class FazFileAssociation
                 using var reader = new StreamReader(server);
                 string? line = await reader.ReadLineAsync(cancellation);
                 if (line is { Length: <= 32768 } && FruitsAtelier.Core.EditorTimestamp.IsOsuLink(line) && !line.Any(char.IsControl)) PendingLinks.Enqueue(line);
-                if (line is { Length: <= 32768 } && FazArchive.IsPackage(line) && File.Exists(line)) Pending.Enqueue(line);
+                if (line is { Length: <= 32768 } && (FazArchive.IsPackage(line) || FadArchive.IsPackage(line)) && File.Exists(line)) Pending.Enqueue(line);
             }
         }
         catch (Exception error) when (error is OperationCanceledException or IOException) { }

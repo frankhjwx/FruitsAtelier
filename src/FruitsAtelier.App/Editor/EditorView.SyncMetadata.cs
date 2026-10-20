@@ -17,12 +17,12 @@ public sealed partial class EditorView
         float x = 16, y = 16, w = width - 32, h = height - 32;
         c.Fill(new(0, 0, width, height), Background);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
-        c.Text(L.Get("sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
+        c.Text(L.Get(merge.NativeDifficulty ? "fad.mergeTitle" : "sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
         c.Text(SyncMapHeading(merge), x + 20, y + 46, 12, Muted, w - 40);
         float paneWidth = (w - 52) / 2, leftX = x + 20, rightX = leftX + paneWidth + 12;
         bool dirty = difficulties.FirstOrDefault(d => d.Id == syncDifficulty)?.History.IsDirty == true;
         c.Text(L.Get("sync.localHeading"), leftX + 12, y + 108, 14, Foreground, paneWidth, true);
-        c.Text(L.Get("sync.externalHeading"), rightX + 12, y + 108, 14, Foreground, paneWidth, true);
+        c.Text(L.Get(merge.NativeDifficulty ? "fad.externalHeading" : "sync.externalHeading"), rightX + 12, y + 108, 14, Foreground, paneWidth, true);
         c.Text(SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty), leftX + 12, y + 130, 11, Muted, paneWidth - 24);
         c.Text(SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), rightX + 12, y + 130, 11, Muted, paneWidth - 24);
         syncCanvasBounds = new(leftX, y + 156, w - 40, h - 288);
@@ -147,7 +147,7 @@ public sealed partial class EditorView
         SyncComparisonNavigation(c, merge, x, y + h - 82);
         SyncReviewButton(c, new(x + w - 260, y + h - 82, 240, 32), L.Get("sync.inspect"), () => InspectSync(merge));
         SyncReviewButton(c, new(x + 20, y + h - 42, 200, 34), L.Get("sync.allLocal"), () => ResolveSync(false));
-        SyncReviewButton(c, new(x + 232, y + h - 42, 200, 34), L.Get("sync.allExternal"), () => ResolveSync(true));
+        SyncReviewButton(c, new(x + 232, y + h - 42, 200, 34), L.Get(merge.NativeDifficulty ? "fad.allExternal" : "sync.allExternal"), () => ResolveSync(true));
         SyncReviewButton(c, new(x + w - 360, y + h - 42, 220, 34), L.Get("sync.applyChoices"), () => ResolveSync(null), enabled: merge.Conflicts.All(k => syncChoices.ContainsKey(k.Key)));
         SyncReviewButton(c, new(x + w - 132, y + h - 42, 112, 34), L.Get("mac.cancel"), CancelSynchronization);
     }

@@ -124,6 +124,11 @@ Portable native projects use `.faz`, with complete-project and FA-only modes.
 See [Portable FA projects](PROJECT_ARCHIVES.md) for import, local Songs association,
 resource handling and desktop file registration.
 
+Use **File → Export as .fad…** or a difficulty tab's context menu to share one
+editable difficulty. Import it into an open corresponding project to add a missing
+difficulty or review a merge with an existing one. See
+[Portable individual difficulties](PROJECT_ARCHIVES.md#portable-individual-difficulties).
+
 The editor's File menu also offers **Export .osz…**. It saves every difficulty in the current project, plus available audio, image, video, and storyboard resources, to a location chosen in the native save dialog. This does not change workspace or Songs associations.
 
 Adding difficulties, browsing, and searching do not write to Songs. Save from the File menu or Ctrl/Cmd+S follows the save behavior described above, including the optional Songs export after saving a workspace-only project. Export directly publishes an unassociated local difficulty with its current name when Songs is configured; otherwise it opens the overlay. The map editor stays visible underneath, with canvas input blocked until Cancel or Esc dismisses the overlay. A source directory can belong to only one newly created project; attempts to create another report the existing project path.

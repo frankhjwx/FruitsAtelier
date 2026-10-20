@@ -21,7 +21,7 @@ public sealed partial class EditorView
         c.Fill(bounds, Background); c.Stroke(bounds, Grid); c.Clip(bounds);
         float cell = (bounds.Width - 24) / 6;
         string[] headings = [L.Get("sync.localHeading"), L.Get("sync.eventTime"), "X (px)",
-            L.Get("sync.externalHeading"), L.Get("sync.eventTime"), "X (px)"];
+            L.Get(fadPending is not null ? "fad.externalHeading" : "sync.externalHeading"), L.Get("sync.eventTime"), "X (px)"];
         for (int i = 0; i < headings.Length; i++) c.Text(headings[i], bounds.X + 8 + i * cell, bounds.Y + 3, 11, Muted, cell - 6);
         for (int row = 0; row < visible && syncObjectDetailScroll + row < differences.Count; row++)
         {

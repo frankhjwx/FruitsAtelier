@@ -53,7 +53,7 @@ public sealed partial class EditorView
         float x = 16, y = 16, w = width - 32, h = height - 32;
         c.Fill(new(0, 0, width, height), Background);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
-        c.Text(L.Get("sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
+        c.Text(L.Get(merge.NativeDifficulty ? "fad.mergeTitle" : "sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
         bool hasConflict = merge.Conflicts.Any(item => item.Key == conflict.Key);
         c.Text(SyncMapHeading(merge), x + 20, y + 46, 12, Muted, w - 40);
         uint colour = !hasConflict ? Muted : syncRoundChoices.Contains(conflict.Key) ? SyncResolvedThisRound
@@ -70,7 +70,7 @@ public sealed partial class EditorView
         float paneWidth = (w - 52) / 2;
         bool dirty = difficulties.FirstOrDefault(d => d.Id == syncDifficulty)?.History.IsDirty == true;
         c.Text(L.Get("sync.localHeading"), x + 20, y + 138, 14, Foreground, paneWidth, true);
-        c.Text(L.Get("sync.externalHeading"), x + 32 + paneWidth, y + 138, 14, Foreground, paneWidth, true);
+        c.Text(L.Get(merge.NativeDifficulty ? "fad.externalHeading" : "sync.externalHeading"), x + 32 + paneWidth, y + 138, 14, Foreground, paneWidth, true);
         c.Text(SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty), x + 20, y + 160, 11, Muted, paneWidth);
         c.Text(SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), x + 32 + paneWidth, y + 160, 11, Muted, paneWidth);
         syncCanvasBounds = new(x + 20, y + 186, w - 40, Math.Max(23, h - 368));
@@ -98,7 +98,7 @@ public sealed partial class EditorView
         bool chosen = syncChoices.TryGetValue(conflict.Key, out bool external);
         if (chosen) c.Stroke(new(external ? right.X : left.X, syncCanvasBounds.Y, paneWidth, syncCanvasBounds.Height), Accent, 3);
         SyncReviewButton(c, new(left.X, y + h - 164, paneWidth, 36), L.Get("sync.chooseLocal"), () => ChooseSyncItem(merge, conflict.Key, false), chosen && !external, enabled: hasConflict);
-        SyncReviewButton(c, new(right.X, y + h - 164, paneWidth, 36), L.Get("sync.chooseExternal"), () => ChooseSyncItem(merge, conflict.Key, true), chosen && external, enabled: hasConflict);
+        SyncReviewButton(c, new(right.X, y + h - 164, paneWidth, 36), L.Get(merge.NativeDifficulty ? "fad.chooseExternal" : "sync.chooseExternal"), () => ChooseSyncItem(merge, conflict.Key, true), chosen && external, enabled: hasConflict);
         DrawSyncReviewFooter(c, merge, x, y, w, h, showPreview: false);
     }
 

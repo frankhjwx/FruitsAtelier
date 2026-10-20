@@ -8,6 +8,20 @@ internal sealed partial class EditorWindow
     {
         view.RequestFazOpen = path => ConfirmDiscard(() => OpenPath(path));
         view.RequestFazExport = complete => ExportFaz(complete);
+        view.RequestFadExport = index => FileOperation(() =>
+        {
+            if (!view.PrepareFileOperation()) return;
+            var difficulty = view.CaptureDifficulty(index);
+            var path = MapFileDialog.Select(hwnd, true, L.Get("fad.export"), MapFileDialog.FadFilter,
+                WorkspaceProject.DifficultyFileName(difficulty.Document, difficulty.Name, ".fad"), "fad");
+            if (path is not null) view.BeginFadExport(path, index);
+        });
+        view.RequestFadImport = () => FileOperation(() =>
+        {
+            if (!view.PrepareFileOperation()) return;
+            var path = MapFileDialog.Select(hwnd, false, L.Get("fad.import"), MapFileDialog.FadFilter);
+            if (path is not null) view.BeginFadImport(path);
+        });
         view.RequestLibraryFazExport = (map, complete) => ExportFaz(complete, map);
         view.RequestAudioProject = path => ConfirmDiscard(() => view.BeginAudioProject(path));
         view.RequestLibraryDrop = paths => FileOperation(() =>
@@ -40,11 +54,12 @@ internal sealed partial class EditorWindow
             }
             else
             {
-                ConfirmDiscard(() =>
+                var path = MapFileDialog.Select(hwnd, false, L.Get("library.importFile"), MapFileDialog.OpenFilter);
+                if (path is not null)
                 {
-                    var path = MapFileDialog.Select(hwnd, false, L.Get("library.importFile"), MapFileDialog.OpenFilter);
-                    if (path is not null) OpenPath(path);
-                });
+                    if (FadArchive.IsPackage(path)) OpenPath(path);
+                    else ConfirmDiscard(() => OpenPath(path));
+                }
             }
         });
         view.RequestLibraryOpen = (map, selectDifficulty) => FileOperation(() =>

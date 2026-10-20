@@ -1630,5 +1630,21 @@
   "sliderImport.no": "Nee",
   "sliderImport.conversionMode": "Maak bewerkbare FSliders met de huidige druppelinstellingen.",
   "sliderImport.title": "Beatmaps importeren",
-  "sliderImport.page": "Pagina {0} / {1}"
+  "sliderImport.page": "Pagina {0} / {1}",
+  "fad.export": "Exporteren als .fad…",
+  "fad.import": "Moeilijkheid importeren (.fad)…",
+  "fad.fileType": "Fruits Atelier-moeilijkheid",
+  "fad.openProjectFirst": "Open het bijbehorende project in de editor voordat je een .fad-moeilijkheid importeert.",
+  "fad.invalid": "Ongeldig Fruits Atelier-moeilijkheidspakket.",
+  "fad.wrongProject": "Deze moeilijkheid hoort niet bij het geopende project.",
+  "fad.nameConflict": "Er bestaat al een moeilijkheid met deze naam of het maximum is bereikt.",
+  "fad.imported": "Moeilijkheid geïmporteerd: {0}",
+  "faz.export": "Project exporteren (.faz)…",
+  "faz.completeDescription": "Bewerkbare FA-gegevens en bestanden, plus een osu!-beatmapset.",
+  "faz.projectDescription": "Bewerkbare FA-gegevens en bestanden voor FruitsAtelier.",
+  "fad.chooseExternal": "Gebruik .fad voor dit artikel",
+  "fad.allExternal": "Volledige kaart: .fad-versie",
+  "fad.externalHeading": ".fad",
+  "fad.mergeTitle": "Geïmporteerde moeilijkheid samenvoegen",
+  "fad.authoringGroup": "Objecten en FA-bewerkingsinstellingen"
 }

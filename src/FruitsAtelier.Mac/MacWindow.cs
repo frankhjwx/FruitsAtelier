@@ -98,7 +98,11 @@ internal sealed partial class MacWindow : Window
             var path = await Pick(L.Get("copier.choose"), ["*.osu"]);
             if (path is not null) View.SetHitsoundSource(HitsoundCopier.ReadSource(path));
         });
-        View.RequestOpen = () => RunFile(async () => { if (await ConfirmDiscard()) { var path = await Pick(L.Get("files.open"), ["*.faz", "*.osz", "*.osu", "*.catchproj", "*.catchdiff"]); if (path is not null) await OpenPath(path); } });
+        View.RequestOpen = () => RunFile(async () =>
+        {
+            var path = await Pick(L.Get("files.open"), ["*.faz", "*.fad", "*.osz", "*.osu", "*.catchproj", "*.catchdiff"]);
+            if (path is not null && (FadArchive.IsPackage(path) || await ConfirmDiscard())) await OpenPath(path);
+        });
         View.RequestNewProject = () => RunFile(async () =>
         {
             if (!await ConfirmDiscard()) return;
@@ -190,7 +194,7 @@ internal sealed partial class MacWindow : Window
         if (View.CanDropAudio && !View.StartupDialogVisible && Program.OpenFiles.TryDequeue(out var path))
         {
             Activate();
-            RunFile(async () => { if (await ConfirmDiscard()) await OpenPath(path); });
+            RunFile(async () => { if (FadArchive.IsPackage(path) || await ConfirmDiscard()) await OpenPath(path); });
         }
         PollSetupAudio();
         var state = audio.State;
@@ -275,6 +279,7 @@ internal sealed partial class MacWindow : Window
     }
     private async Task OpenPath(string path)
     {
+        if (FadArchive.IsPackage(path)) { View.BeginFadImport(path); return; }
         if (FazArchive.IsPackage(path))
         {
             View.BeginFazOpen(path, () => RunFile(async () => { projectPath = null; await audio.LoadAsync(View.Document.AudioPath); PollAudio(); }));

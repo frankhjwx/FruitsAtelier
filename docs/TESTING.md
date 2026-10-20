@@ -2,6 +2,13 @@
 
 ## SDKs and builds
 
+`App.Tests --fad-check` verifies portable difficulty packages, local resource
+conflicts, matching, adding difficulties, native merge choices, undo/redo, Library
+rejection and the FAZ export chooser. `FruitsAtelier.App.exe --render-check
+--fad-render-check` captures the File menu, difficulty context menu, FAZ choices,
+native merge review and Library error in English and Chinese at two window sizes
+and 96/144/192 DPI under `artifacts/tests/fad-native`.
+
 The project targets .NET 8 with C# 12. Two `global.json` entry points pin SDK versions:
 
 | Entry point | SDK | Purpose |

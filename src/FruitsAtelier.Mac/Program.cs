@@ -32,7 +32,7 @@ internal sealed class MacApplication : Application
                     Program.OpenLinks.Enqueue(protocol.Uri.OriginalString);
                 if (args is FileActivatedEventArgs files)
                     foreach (var item in files.Files)
-                        if (item.TryGetLocalPath() is { } path && FruitsAtelier.App.Platform.FazArchive.IsPackage(path)) Program.OpenFiles.Enqueue(path);
+                        if (item.TryGetLocalPath() is { } path && (FruitsAtelier.App.Platform.FazArchive.IsPackage(path) || FruitsAtelier.App.Platform.FadArchive.IsPackage(path))) Program.OpenFiles.Enqueue(path);
             };
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             desktop.MainWindow = new MacWindow(Program.Arguments.FirstOrDefault(File.Exists), Program.Arguments.Contains("--smoke-check"));

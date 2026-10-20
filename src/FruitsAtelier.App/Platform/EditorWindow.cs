@@ -210,6 +210,11 @@ internal sealed partial class EditorWindow : IDisposable
                 Diagnostics.FazRenderCheck.Run(canvas);
                 Native.DestroyWindow(hwnd); return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--fad-render-check"))
+            {
+                Diagnostics.FadRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd); return 0;
+            }
             if (difficultySwitchPath is not null)
             {
                 Diagnostics.DifficultySwitchRenderCheck.Run(canvas, view, difficultySwitchPath, uiDpi);
@@ -462,7 +467,9 @@ internal sealed partial class EditorWindow : IDisposable
                 {
                     Native.ShowWindow(window, Native.IsIconic(window) ? 9 : 5);
                     Native.SetForegroundWindow(window);
-                    ConfirmDiscard(() => OpenPath(openedFaz)); Invalidate();
+                    if (FadArchive.IsPackage(openedFaz)) FileOperation(() => OpenPath(openedFaz));
+                    else ConfirmDiscard(() => OpenPath(openedFaz));
+                    Invalidate();
                 }
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw

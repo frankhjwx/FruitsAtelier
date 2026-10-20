@@ -38,6 +38,7 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        ClearFadReview();
         objectClipboard = null; clipboardDifficulty = null; ObjectClipboardText = "";
         foreach (var difficulty in project.Difficulties) WorkspaceTimingSynchronization.NormalizeDocument(difficulty.Document);
         CancelLegacyDropletRefresh();

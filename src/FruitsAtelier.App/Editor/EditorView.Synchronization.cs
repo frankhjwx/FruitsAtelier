@@ -56,7 +56,7 @@ public sealed partial class EditorView
     private void StartSynchronization(Action? continuation, bool quiet, bool reviewResolved, WorkspaceSyncScan? previousScan = null, bool searchMissing = false,
         Dictionary<Guid, OsuWriteCache>? writeCaches = null)
     {
-        if (FazVisible || WorkspaceSession is not { } session) return;
+        if (FazVisible || fadPending is not null || WorkspaceSession is not { } session) return;
         if (SynchronizationBusy)
         {
             if (continuation is not null) afterSynchronization = continuation;
@@ -370,6 +370,7 @@ public sealed partial class EditorView
 
     private void CancelSynchronization()
     {
+        if (fadPending is not null) { ClearFadReview(); return; }
         if (syncPage == "confirm-external") { syncPage = "resolve"; hits.Clear(); fields.Clear(); return; }
         if (syncPage == "checking") return;
         bool activeBlocked = syncPage == "failed" || syncDifficulty == difficulties[activeDifficulty].Id && DifficultySyncState(activeDifficulty) is not (WorkspaceSyncState.Current or WorkspaceSyncState.Local);
@@ -404,6 +405,7 @@ public sealed partial class EditorView
 
     private void ResolveSync(bool? useExternal)
     {
+        if (fadPending is not null) { ResolveFad(useExternal); return; }
         if (useExternal is true)
         {
             syncPage = "confirm-external";
@@ -653,9 +655,9 @@ public sealed partial class EditorView
             var text = new System.Text.StringBuilder();
             foreach (var conflict in merge.Conflicts)
                 text.AppendLine(conflict.Key).AppendLine(L.Get("sync.chooseLocal")).AppendLine(conflict.Local)
-                    .AppendLine(L.Get("sync.chooseExternal")).AppendLine(conflict.External).AppendLine();
+                    .AppendLine(L.Get(merge.NativeDifficulty ? "fad.chooseExternal" : "sync.chooseExternal")).AppendLine(conflict.External).AppendLine();
             text.AppendLine(L.Get("sync.allLocal")).AppendLine(ProjectSerializer.Serialize(merge.Local));
-            text.AppendLine(L.Get("sync.allExternal")).AppendLine(merge.External.Text);
+            text.AppendLine(L.Get(merge.NativeDifficulty ? "fad.allExternal" : "sync.allExternal")).AppendLine(merge.NativeDifficulty ? ProjectSerializer.Serialize(merge.External.Document) : merge.External.Text);
             File.WriteAllText(path, text.ToString()); RequestOpenExternalPath?.Invoke(path);
         }
         catch (Exception e) { ShowError(e.Message); }

@@ -10,6 +10,21 @@ public sealed class HitsoundResourcePlan
     private readonly List<FileChange> changes = [];
     private string? deletionBackup;
     public static HitsoundResourcePlan Empty => new();
+    public static HitsoundResourcePlan CopyFiles(string source, string destination, IEnumerable<string> relativePaths)
+    {
+        var plan = new HitsoundResourcePlan();
+        long total = 0;
+        foreach (string relative in relativePaths)
+        {
+            string input = SafePath(source, relative), output = SafePath(destination, relative);
+            if ((total += new FileInfo(input).Length) > 512L * 1024 * 1024)
+                throw new IOException(L.Get("resource.limit"));
+            byte[] bytes = File.ReadAllBytes(input);
+            if (Directory.Exists(output) || Conflicts(output, bytes)) throw new IOException(L.Get("resource.conflict", output));
+            plan.AddCopy(output, bytes);
+        }
+        return plan;
+    }
     public static HitsoundResourcePlan Combine(IEnumerable<HitsoundResourcePlan> plans)
     {
         var result = new HitsoundResourcePlan();

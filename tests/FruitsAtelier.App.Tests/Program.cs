@@ -11,6 +11,7 @@ if (args.Contains("--fa-only-check")) { FaOnlyUiTests.Run(); SongDockTests.Run()
 if (args.Contains("--full-sync-check")) { FullSynchronizationTests.Run(); SynchronizationUiTests.Run(); VersionHistoryUiTests.Run(); Console.WriteLine("PASS full synchronization confirmation, connections, backups and restoration"); return 0; }
 if (args.Contains("--sync-details-check")) { SyncTabsTests.Run(); Console.WriteLine("PASS playable object details and synchronization tabs"); return 0; }
 if (args.Contains("--faz-check")) { FazTests.Run(); return 0; }
+if (args.Contains("--fad-check")) { FadTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--legacy-edit-map") { LegacyDropletWorkerTests.FirstEdits(ProjectSerializer.ReadFile(args[1])); Console.WriteLine("PASS first note placement and deletion without conversion dialogs"); return 0; }
 if (args.Contains("--synchronization-wait-check")) { SynchronizationWaitTests.Run(); Console.WriteLine("PASS background input and explicit synchronization waits"); return 0; }
 if (args.Contains("--difficulty-save-check")) { DifficultySaveTests.Run(); Console.WriteLine("PASS current difficulty background saves and recovery"); return 0; }

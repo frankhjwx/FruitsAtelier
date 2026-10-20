@@ -1630,5 +1630,21 @@
   "sliderImport.no": "No",
   "sliderImport.conversionMode": "Crea FSliders editables conservando los ajustes de gotas.",
   "sliderImport.title": "Importar mapas",
-  "sliderImport.page": "Página {0} / {1}"
+  "sliderImport.page": "Página {0} / {1}",
+  "fad.export": "Exportar como .fad…",
+  "fad.import": "Importar dificultad (.fad)…",
+  "fad.fileType": "Dificultad de Fruits Atelier",
+  "fad.openProjectFirst": "Abre el proyecto correspondiente en el editor antes de importar una dificultad .fad.",
+  "fad.invalid": "Paquete de dificultad de Fruits Atelier no válido.",
+  "fad.wrongProject": "Esta dificultad no pertenece al proyecto abierto.",
+  "fad.nameConflict": "Ya existe una dificultad con este nombre o se ha alcanzado el límite.",
+  "fad.imported": "Dificultad importada: {0}",
+  "faz.export": "Exportar proyecto (.faz)…",
+  "faz.completeDescription": "Datos editables de FA y recursos, junto con un conjunto de beatmaps de osu!.",
+  "faz.projectDescription": "Datos editables de FA y recursos para FruitsAtelier.",
+  "fad.chooseExternal": "Utilice .fad para este artículo",
+  "fad.allExternal": "Mapa completo: versión .fad",
+  "fad.externalHeading": ".fad",
+  "fad.mergeTitle": "Combinar dificultad importada",
+  "fad.authoringGroup": "Objetos y ajustes de edición de FA"
 }

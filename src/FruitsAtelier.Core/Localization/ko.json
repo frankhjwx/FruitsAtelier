@@ -1630,5 +1630,21 @@
   "sliderImport.no": "아니요",
   "sliderImport.conversionMode": "현재 드롭렛 설정을 유지하며 편집 가능한 FSlider로 변환합니다.",
   "sliderImport.title": "비트맵 가져오기",
-  "sliderImport.page": "{0} / {1} 페이지"
+  "sliderImport.page": "{0} / {1} 페이지",
+  "fad.export": ".fad로 내보내기…",
+  "fad.import": "난이도 가져오기 (.fad)…",
+  "fad.fileType": "Fruits Atelier 난이도",
+  "fad.openProjectFirst": "에디터에서 해당 프로젝트를 연 다음 .fad 난이도를 가져오세요.",
+  "fad.invalid": "잘못된 Fruits Atelier 난이도 패키지입니다.",
+  "fad.wrongProject": "이 난이도는 현재 프로젝트에 속하지 않습니다.",
+  "fad.nameConflict": "같은 이름의 난이도가 있거나 난이도 수 제한에 도달했습니다.",
+  "fad.imported": "가져온 난이도: {0}",
+  "faz.export": "프로젝트 내보내기 (.faz)…",
+  "faz.completeDescription": "FA 편집 데이터와 리소스 및 osu! 비트맵 세트.",
+  "faz.projectDescription": "FruitsAtelier용 FA 편집 데이터와 리소스.",
+  "fad.chooseExternal": "이 항목에 .fad를 사용하십시오.",
+  "fad.allExternal": "전체 맵: .fad 버전",
+  "fad.externalHeading": ".fad",
+  "fad.mergeTitle": "가져온 난이도 병합",
+  "fad.authoringGroup": "오브젝트 및 FA 편집 설정"
 }

@@ -1630,5 +1630,21 @@
   "sliderImport.no": "Нет",
   "sliderImport.conversionMode": "Создать редактируемые FSlider с текущими настройками капель.",
   "sliderImport.title": "Импорт карт",
-  "sliderImport.page": "Страница {0} / {1}"
+  "sliderImport.page": "Страница {0} / {1}",
+  "fad.export": "Экспортировать в .fad…",
+  "fad.import": "Импортировать сложность (.fad)…",
+  "fad.fileType": "Сложность Fruits Atelier",
+  "fad.openProjectFirst": "Перед импортом .fad откройте соответствующий проект в редакторе.",
+  "fad.invalid": "Недопустимый пакет сложности Fruits Atelier.",
+  "fad.wrongProject": "Эта сложность не относится к открытому проекту.",
+  "fad.nameConflict": "Сложность с таким именем уже существует или достигнут предел количества сложностей.",
+  "fad.imported": "Импортирована сложность: {0}",
+  "faz.export": "Экспортировать проект (.faz)…",
+  "faz.completeDescription": "Редактируемые данные FA и ресурсы, а также набор карт osu!.",
+  "faz.projectDescription": "Редактируемые данные FA и ресурсы для FruitsAtelier.",
+  "fad.chooseExternal": "Используйте .fad для этого предмета.",
+  "fad.allExternal": "Вся карта: версия .fad",
+  "fad.externalHeading": ".fad",
+  "fad.mergeTitle": "Объединение импортированной сложности",
+  "fad.authoringGroup": "Объекты и настройки редактирования FA"
 }

@@ -1630,5 +1630,21 @@
   "sliderImport.no": "Tidak",
   "sliderImport.conversionMode": "Buat FSlider yang dapat diedit dengan pengaturan droplet saat ini.",
   "sliderImport.title": "Impor beatmap",
-  "sliderImport.page": "Halaman {0} / {1}"
+  "sliderImport.page": "Halaman {0} / {1}",
+  "fad.export": "Ekspor sebagai .fad…",
+  "fad.import": "Impor tingkat kesulitan (.fad)…",
+  "fad.fileType": "Tingkat Kesulitan Fruits Atelier",
+  "fad.openProjectFirst": "Buka proyek yang sesuai di editor sebelum mengimpor tingkat kesulitan .fad.",
+  "fad.invalid": "Paket tingkat kesulitan Fruits Atelier tidak valid.",
+  "fad.wrongProject": "Tingkat kesulitan ini bukan bagian dari proyek yang terbuka.",
+  "fad.nameConflict": "Nama tingkat kesulitan sudah ada atau batas jumlahnya telah tercapai.",
+  "fad.imported": "Tingkat kesulitan diimpor: {0}",
+  "faz.export": "Ekspor proyek (.faz)…",
+  "faz.completeDescription": "Data FA yang dapat diedit dan sumber daya, beserta set beatmap osu!.",
+  "faz.projectDescription": "Data FA yang dapat diedit dan sumber daya untuk FruitsAtelier.",
+  "fad.chooseExternal": "Gunakan .fad untuk item ini",
+  "fad.allExternal": "Seluruh peta: versi .fad",
+  "fad.externalHeading": ".fad",
+  "fad.mergeTitle": "Gabungkan tingkat kesulitan yang diimpor",
+  "fad.authoringGroup": "Objek dan pengaturan pengeditan FA"
 }

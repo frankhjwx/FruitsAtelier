@@ -1630,5 +1630,21 @@
   "sliderImport.no": "いいえ",
   "sliderImport.conversionMode": "現在のドロップレット設定を保ち、編集可能な FSlider に変換します。",
   "sliderImport.title": "譜面のインポート",
-  "sliderImport.page": "{0} / {1} ページ"
+  "sliderImport.page": "{0} / {1} ページ",
+  "fad.export": ".fad としてエクスポート…",
+  "fad.import": "難易度をインポート (.fad)…",
+  "fad.fileType": "Fruits Atelier 難易度",
+  "fad.openProjectFirst": "対応するプロジェクトをエディターで開いてから .fad をインポートしてください。",
+  "fad.invalid": "無効な Fruits Atelier 難易度パッケージです。",
+  "fad.wrongProject": "この難易度は開いているプロジェクトに属していません。",
+  "fad.nameConflict": "同名の難易度が存在するか、難易度数の上限に達しています。",
+  "fad.imported": "難易度をインポートしました: {0}",
+  "faz.export": "プロジェクトをエクスポート (.faz)…",
+  "faz.completeDescription": "FA の編集データとリソース、および osu! ビートマップセット。",
+  "faz.projectDescription": "FruitsAtelier 用の FA 編集データとリソース。",
+  "fad.chooseExternal": "このアイテムには.fadを使用してください",
+  "fad.allExternal": "全体マップ：.fadバージョン",
+  "fad.externalHeading": ".fad",
+  "fad.mergeTitle": "インポートした難易度をマージ",
+  "fad.authoringGroup": "オブジェクトと FA 編集設定"
 }

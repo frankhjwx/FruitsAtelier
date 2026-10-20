@@ -34,6 +34,7 @@ public sealed record WorkspaceSyncConflict(string Key, string Local, string Exte
 
 public sealed class WorkspaceMerge
 {
+    public bool NativeDifficulty { get; internal set; }
     public required MapDocument Local { get; init; }
     public required WorkspaceSyncCandidate External { get; init; }
     public required MapDocument Baseline { get; init; }
@@ -52,6 +53,8 @@ public sealed class WorkspaceMerge
         && PreviouslyRetained.Any(p => p.ExternalLines.Intersect(before).Any());
     public IReadOnlySet<Guid> ConflictSources(string key, bool external)
     {
+        if (NativeDifficulty && key == "$objects:native")
+            return WorkspaceSynchronization.SourceIds(external ? External.Document : Local).Select(p => p.Id).ToHashSet();
         var group = Objects.FirstOrDefault(g => g.Key == key);
         if (group.Sources is null) return new HashSet<Guid>();
         if (!external) return group.Sources.ToHashSet();
@@ -62,7 +65,7 @@ public sealed class WorkspaceMerge
     }
 }
 
-public static class WorkspaceSynchronization
+public static partial class WorkspaceSynchronization
 {
     public static bool IsMetadataField(string key) => key is "Metadata/Title" or "Metadata/TitleUnicode" or "Metadata/Artist"
         or "Metadata/ArtistUnicode" or "Metadata/Creator" or "Metadata/Version" or "Metadata/Source" or "Metadata/Tags"
@@ -540,6 +543,7 @@ public static class WorkspaceSynchronization
 
     public static MapDocument Resolve(WorkspaceMerge merge, IReadOnlyDictionary<string, bool> externalChoices)
     {
+        if (merge.NativeDifficulty) return ResolveNativeDifficulty(merge, externalChoices);
         if (merge.CanExportLocalChanges) return merge.Local.DeepClone();
         foreach (var conflict in merge.Conflicts)
             if (!externalChoices.ContainsKey(conflict.Key) && !merge.PreviouslyResolved.Contains(conflict.Key)) throw new InvalidOperationException(L.Get("sync.unresolved"));
@@ -592,6 +596,7 @@ public static class WorkspaceSynchronization
 
     public static MapDocument ResolveExternal(WorkspaceMerge merge)
     {
+        if (merge.NativeDifficulty) return merge.External.Document.DeepClone();
         var result = merge.External.Document.DeepClone();
         PreserveCurves(merge, result, merge.Local.Tracks.Select(t => t.Id).ToHashSet());
         PreserveStreams(merge, result);

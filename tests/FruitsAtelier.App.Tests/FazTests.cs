@@ -284,6 +284,11 @@ internal static class FazTests
                 Check(!FazFileAssociation.EnsureRegistered(classes, @"C:\FA\FA.exe", @"C:\FA\faz.ico"), "valid association is unchanged");
                 Check(FazFileAssociation.EnsureRegistered(classes, @"C:\Moved FA\FA.exe", @"C:\Moved FA\faz.ico"), "moved application registration is refreshed");
                 using var command = classes.OpenSubKey(@"FruitsAtelier.ProjectArchive\shell\open\command");
+                using var difficultyExtension = classes.OpenSubKey(".fad");
+                using var difficultyIcon = classes.OpenSubKey(@"FruitsAtelier.DifficultyArchive\DefaultIcon");
+                Check(difficultyExtension?.GetValue("") as string == "FruitsAtelier.DifficultyArchive"
+                    && (difficultyIcon?.GetValue("") as string)?.EndsWith("fad-file.ico\"", StringComparison.Ordinal) == true,
+                    "FAD has an independent file association and icon");
                 Check(command?.GetValue("") as string == "\"C:\\Moved FA\\FA.exe\" \"%1\"", "activation quotes executable and file paths");
                 classes.DeleteSubKeyTree(".faz");
                 Check(FazFileAssociation.EnsureRegistered(classes, @"C:\Moved FA\FA.exe", @"C:\Moved FA\faz.ico"), "missing extension is repaired");

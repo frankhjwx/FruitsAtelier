@@ -1630,5 +1630,21 @@
   "sliderImport.no": "ไม่ใช่",
   "sliderImport.conversionMode": "สร้าง FSlider ที่แก้ไขได้ โดยคงการตั้งค่า droplet ปัจจุบันไว้",
   "sliderImport.title": "นำเข้าบีตแมป",
-  "sliderImport.page": "หน้า {0} / {1}"
+  "sliderImport.page": "หน้า {0} / {1}",
+  "fad.export": "ส่งออกเป็น .fad…",
+  "fad.import": "นำเข้าระดับความยาก (.fad)…",
+  "fad.fileType": "ระดับความยาก Fruits Atelier",
+  "fad.openProjectFirst": "เปิดโปรเจกต์ที่ตรงกันในตัวแก้ไขก่อนนำเข้าไฟล์ระดับความยาก .fad",
+  "fad.invalid": "แพ็กเกจระดับความยาก Fruits Atelier ไม่ถูกต้อง",
+  "fad.wrongProject": "ระดับความยากนี้ไม่ได้อยู่ในโปรเจกต์ที่เปิดอยู่",
+  "fad.nameConflict": "มีระดับความยากชื่อนี้แล้ว หรือถึงจำนวนสูงสุดแล้ว",
+  "fad.imported": "นำเข้าระดับความยากแล้ว: {0}",
+  "faz.export": "ส่งออกโปรเจกต์ (.faz)…",
+  "faz.completeDescription": "ข้อมูล FA ที่แก้ไขได้และทรัพยากร พร้อมชุดบีตแมป osu!",
+  "faz.projectDescription": "ข้อมูล FA ที่แก้ไขได้และทรัพยากรสำหรับ FruitsAtelier",
+  "fad.chooseExternal": "ใช้ .fad สำหรับรายการนี้",
+  "fad.allExternal": "แผนที่ทั้งหมด: เวอร์ชัน .fad",
+  "fad.externalHeading": ".fad",
+  "fad.mergeTitle": "รวมระดับความยากที่นำเข้า",
+  "fad.authoringGroup": "วัตถุและการตั้งค่าการแก้ไข FA"
 }

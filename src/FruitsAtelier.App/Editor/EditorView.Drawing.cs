@@ -730,8 +730,9 @@ public sealed partial class EditorView
             Item(L.Get("ui.saveMenu"), () => RequestSave?.Invoke());
             Item(L.Get("ui.exportMenu"), () => RequestExport?.Invoke());
             Item(L.Get("library.exportOsz"), () => RequestOszExport?.Invoke());
-            Item(L.Get("faz.exportComplete"), () => RequestFazExport?.Invoke(true));
-            Item(L.Get("faz.exportProject"), () => RequestFazExport?.Invoke(false));
+            Item(L.Get("faz.export"), () => ShowFazExportChoice());
+            Item(L.Get("fad.export"), () => RequestFadExport?.Invoke(activeDifficulty));
+            Item(L.Get("fad.import"), () => RequestFadImport?.Invoke());
             Item(L.Get("ui.exitMenu"), () => RequestClose?.Invoke());
         }
         else if (menu == 3)

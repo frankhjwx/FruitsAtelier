@@ -151,9 +151,10 @@ public sealed partial class EditorView
         float x = 16, y = 16, w = width - 32, h = height - 32;
         c.Fill(new(0, 0, width, height), Background);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
-        c.Text(L.Get("sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
+        c.Text(L.Get(merge.NativeDifficulty ? "fad.mergeTitle" : "sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
         c.Text(SyncMapHeading(merge), x + 20, y + 46, 12, Muted, w - 40);
         string label = !hasConflict ? L.Get("ui.unchanged") : conflict.Key.StartsWith("$objects:") ? L.Get("sync.objects", Array.IndexOf(categoryConflicts, conflict) + 1) : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key;
+        if (conflict.Key == "$objects:native") label = L.Get("fad.authoringGroup");
         string stateLabel = syncRoundChoices.Contains(conflict.Key) ? L.Get("sync.resolvedThisRound")
             : merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.alreadyResolved") : L.Get("sync.unresolvedRange");
         if (hasConflict) label += " · " + stateLabel;
@@ -190,7 +191,7 @@ public sealed partial class EditorView
             SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty), localChoices,
             merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.previouslyRejected") : null, PaneRanges(false), conflict.Key,
             selectRange: key => ChooseSyncItem(merge, key, false));
-        DrawSyncPane(c, comparison.External, right, "osu!", focus.External, conflict.Key.StartsWith("$objects:") ? null : conflict.External,
+        DrawSyncPane(c, comparison.External, right, merge.NativeDifficulty ? ".fad" : "osu!", focus.External, conflict.Key.StartsWith("$objects:") ? null : conflict.External,
             SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), externalChoices, ranges: PaneRanges(true), currentKey: conflict.Key,
             selectRange: key => ChooseSyncItem(merge, key, true));
         bool chosen = syncChoices.TryGetValue(conflict.Key, out bool external);
@@ -202,7 +203,7 @@ public sealed partial class EditorView
             else c.Text(L.Get("sync.checking"), result.X + 12, result.Y + 35, 13, Muted, result.Width - 24);
         }
         SyncReviewButton(c, new(left.X, y + h - 164, left.Width, 36), L.Get("sync.chooseLocal"), () => ChooseSyncItem(merge, conflict.Key, false), chosen && !external, enabled: hasConflict);
-        SyncReviewButton(c, new(right.X, y + h - 164, right.Width, 36), L.Get("sync.chooseExternal"), () => ChooseSyncItem(merge, conflict.Key, true), chosen && external, enabled: hasConflict);
+        SyncReviewButton(c, new(right.X, y + h - 164, right.Width, 36), L.Get(merge.NativeDifficulty ? "fad.chooseExternal" : "sync.chooseExternal"), () => ChooseSyncItem(merge, conflict.Key, true), chosen && external, enabled: hasConflict);
         DrawSyncReviewFooter(c, merge, x, y, w, h, showPreview: true);
         DrawSyncTabs(c, merge, comparison);
     }
@@ -278,7 +279,7 @@ public sealed partial class EditorView
             if (highlight) c.Circle(X(item.X), Y(item.TimeMs), (float)CatchSize.FruitRadius(pane.Document.CircleSize) * field.Width / 512 + 4, currentColour, false, 2.5f);
         }
         c.Unclip(); c.Unclip();
-        if (value is null && selected.Count == 0 && currentKey != "$objects:all" && title is "FA" or "osu!") c.Text(absentMessage ?? L.Get("sync.absent"), bounds.X + 10, bounds.Y + 52, 12, Gold, bounds.Width - 20);
+        if (value is null && selected.Count == 0 && currentKey != "$objects:all" && title is "FA" or "osu!" or ".fad") c.Text(absentMessage ?? L.Get("sync.absent"), bounds.X + 10, bounds.Y + 52, 12, Gold, bounds.Width - 20);
     }
 
     private void ScrollSyncComparison(float x, float y, float delta, bool zoom)

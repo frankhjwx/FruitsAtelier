@@ -51,6 +51,19 @@ internal sealed partial class MacWindow
     {
         View.RequestFazOpen = path => RunFile(async () => { if (await ConfirmDiscard()) await OpenPath(path); });
         View.RequestFazExport = complete => ExportFaz(complete);
+        View.RequestFadExport = index => RunFile(async () =>
+        {
+            if (!View.PrepareFileOperation()) return;
+            var difficulty = View.CaptureDifficulty(index);
+            var path = await SavePicker(L.Get("fad.export"), "fad", WorkspaceProject.DifficultyFileName(difficulty.Document, difficulty.Name, ".fad"));
+            if (path is not null) View.BeginFadExport(path, index);
+        });
+        View.RequestFadImport = () => RunFile(async () =>
+        {
+            if (!View.PrepareFileOperation()) return;
+            var path = await Pick(L.Get("fad.import"), ["*.fad"]);
+            if (path is not null) View.BeginFadImport(path);
+        });
         View.RequestLibraryFazExport = (map, complete) => ExportFaz(complete, map);
         View.RequestAudioProject = path => RunFile(async () => { if (await ConfirmDiscard()) View.BeginAudioProject(path); });
         View.RequestLibraryDrop = paths => RunFile(async () =>
@@ -94,9 +107,8 @@ internal sealed partial class MacWindow
             }
             else
             {
-                if (!await ConfirmDiscard()) return;
-                var path = await Pick(L.Get("library.importFile"), ["*.faz", "*.osz", "*.osu", "*.catchproj", "*.catchdiff"]);
-                if (path is not null) await OpenPath(path);
+                var path = await Pick(L.Get("library.importFile"), ["*.faz", "*.fad", "*.osz", "*.osu", "*.catchproj", "*.catchdiff"]);
+                if (path is not null && (FadArchive.IsPackage(path) || await ConfirmDiscard())) await OpenPath(path);
             }
         });
         View.RequestLibraryOpen = (map, selectDifficulty) => RunFile(async () =>

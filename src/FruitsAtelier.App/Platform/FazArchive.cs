@@ -43,13 +43,16 @@ public static class FazArchive
     public static void CleanupTemporaryFiles(string workspace) => FazStaging.Cleanup(workspace);
 
     public static void Export(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace)
+        => ExportPackage(snapshot, destination, complete, compensate, workspace, "FruitsAtelier");
+
+    internal static void ExportPackage(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace, string format)
     {
         string staging = Temporary(workspace);
         string temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             var project = ProjectSerializer.ReadProject(ProjectSerializer.Serialize(snapshot));
-            var manifest = new FazManifest { Complete = complete };
+            var manifest = new FazManifest { Complete = complete, Format = format };
             var resourceGroups = new Dictionary<string, string>(StringComparer.Ordinal);
             if (complete) LibraryOperations.ExportOsz(snapshot, Path.Combine(staging, "beatmap.osz"), compensate);
             foreach (var difficulty in project.Difficulties)
@@ -97,6 +100,9 @@ public static class FazArchive
     }
 
     public static FazPackage Prepare(string path, LibrarySettings settings, bool discoverAssociations = true)
+        => PreparePackage(path, settings, discoverAssociations, "FruitsAtelier");
+
+    internal static FazPackage PreparePackage(string path, LibrarySettings settings, bool discoverAssociations, string format)
     {
         Recover(settings);
         string staging = Temporary(settings.Workspace);
@@ -109,7 +115,7 @@ public static class FazArchive
             string manifestPath = Path.Combine(staging, "manifest.json");
             if (!File.Exists(manifestPath) || new FileInfo(manifestPath).Length > 8 * 1024 * 1024) throw Invalid();
             var manifest = JsonSerializer.Deserialize<FazManifest>(File.ReadAllText(manifestPath), Json) ?? throw Invalid();
-            if (manifest.Format != "FruitsAtelier" || manifest.Version != 1 || manifest.Files is null || manifest.SourceHashes is null || manifest.ResourceRoots is null) throw Invalid();
+            if (manifest.Format != format || manifest.Version != 1 || manifest.Files is null || manifest.SourceHashes is null || manifest.ResourceRoots is null) throw Invalid();
             var files = Directory.EnumerateFiles(staging, "*", SearchOption.AllDirectories)
                 .Select(p => Path.GetRelativePath(staging, p).Replace('\\', '/')).Where(p => p != "manifest.json").ToArray();
             if (files.Length != manifest.Files.Count || files.Any(p => !manifest.Files.ContainsKey(p))) throw Invalid();

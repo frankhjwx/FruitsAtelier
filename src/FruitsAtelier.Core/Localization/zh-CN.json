@@ -1630,5 +1630,21 @@
   "sliderImport.no": "否",
   "sliderImport.conversionMode": "转为可编辑的 FSlider，保留当前水滴设置。",
   "sliderImport.title": "导入谱面",
-  "sliderImport.page": "第 {0} / {1} 页"
+  "sliderImport.page": "第 {0} / {1} 页",
+  "fad.export": "导出为 .fad…",
+  "fad.import": "导入难度 (.fad)…",
+  "fad.fileType": "Fruits Atelier 难度",
+  "fad.openProjectFirst": "请先在编辑器中打开对应谱面工程，再导入 .fad 难度文件。",
+  "fad.invalid": "无效的 Fruits Atelier 难度包。",
+  "fad.wrongProject": "该难度不属于当前打开的谱面工程。",
+  "fad.nameConflict": "已存在同名难度，或工程已达到难度数量上限。",
+  "fad.imported": "已导入难度：{0}",
+  "faz.export": "导出工程 (.faz)…",
+  "faz.completeDescription": "包含 FA 编辑数据、资源及 osu! 谱面集。",
+  "faz.projectDescription": "包含用于 FruitsAtelier 的 FA 编辑数据及资源。",
+  "fad.chooseExternal": "此项采用 .fad",
+  "fad.allExternal": "整张图采用 .fad 版本",
+  "fad.externalHeading": ".fad",
+  "fad.mergeTitle": "合并导入的难度",
+  "fad.authoringGroup": "对象与 FA 编辑设置"
 }

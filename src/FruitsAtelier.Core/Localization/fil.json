@@ -1630,5 +1630,21 @@
   "sliderImport.no": "Hindi",
   "sliderImport.conversionMode": "Gumawa ng nae-edit na FSlider, gamit ang kasalukuyang droplet settings.",
   "sliderImport.title": "Mag-import ng beatmap",
-  "sliderImport.page": "Pahina {0} / {1}"
+  "sliderImport.page": "Pahina {0} / {1}",
+  "fad.export": "I-export bilang .fad…",
+  "fad.import": "Mag-import ng difficulty (.fad)…",
+  "fad.fileType": "Fruits Atelier Difficulty",
+  "fad.openProjectFirst": "Buksan muna ang kaukulang project sa editor bago mag-import ng .fad difficulty.",
+  "fad.invalid": "Hindi wastong Fruits Atelier difficulty package.",
+  "fad.wrongProject": "Hindi kabilang ang difficulty na ito sa bukas na project.",
+  "fad.nameConflict": "May difficulty nang may ganitong pangalan o naabot na ang limitasyon.",
+  "fad.imported": "Na-import na difficulty: {0}",
+  "faz.export": "I-export ang project (.faz)…",
+  "faz.completeDescription": "Nae-edit na FA data at resources, kasama ang osu! beatmap set.",
+  "faz.projectDescription": "Nae-edit na FA data at resources para sa FruitsAtelier.",
+  "fad.chooseExternal": "Gamitin ang .fad para sa item na ito",
+  "fad.allExternal": "Buong mapa: .fad na bersyon",
+  "fad.externalHeading": ".fad",
+  "fad.mergeTitle": "I-merge ang na-import na difficulty",
+  "fad.authoringGroup": "Mga object at setting sa pag-edit ng FA"
 }

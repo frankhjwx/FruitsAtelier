@@ -74,10 +74,14 @@ internal sealed partial class EditorWindow
         view.PreloadProjectHitsounds();
         view.RequestStopHitsounds = hitsounds.Stop;
         view.RequestLanguagePreference = language => FileOperation(() => FruitsAtelier.Localization.LanguagePreference.SaveLanguage(language));
-        view.RequestOpen = () => ConfirmDiscard(() =>
+        view.RequestOpen = () => FileOperation(() =>
         {
             string? path = MapFileDialog.Select(hwnd, false, L.Get("files.open"), MapFileDialog.OpenFilter);
-            if (path is not null) OpenPath(path);
+            if (path is not null)
+            {
+                if (FadArchive.IsPackage(path)) OpenPath(path);
+                else ConfirmDiscard(() => OpenPath(path));
+            }
         });
         view.RequestNewProject = () => ConfirmDiscard(() =>
         {
@@ -140,6 +144,7 @@ internal sealed partial class EditorWindow
 
     private void OpenPath(string path)
     {
+        if (FadArchive.IsPackage(path)) { view.BeginFadImport(path); return; }
         if (FazArchive.IsPackage(path))
         {
             view.BeginFazOpen(path, () => { projectPath = null; ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath); });

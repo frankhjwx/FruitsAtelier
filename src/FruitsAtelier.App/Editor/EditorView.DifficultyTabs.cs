@@ -143,6 +143,7 @@ public sealed partial class EditorView
         contextItems.Add(new(L.Get(IsDifficultyPinned(index) ? "project.unpinDifficulty" : "project.pinDifficulty"), () => ToggleDifficultyPin(index)));
         AddContextSeparator();
         contextItems.Add(new(L.Get("project.openCatchdiff"), () => RequestOpenExternalPath?.Invoke(catchdiff!), File.Exists(catchdiff)));
+        contextItems.Add(new(L.Get("fad.export"), () => RequestFadExport?.Invoke(index)));
         contextItems.Add(new(L.Get("project.openFolder"), () => RequestOpenExternalPath?.Invoke(folder!), Directory.Exists(folder)));
         contextItems.Add(new(L.Get("sync.deleteLocal"), () => ShowDeleteDifficulty(index, localOnly: true), File.Exists(osu)));
         AddContextSeparator();
