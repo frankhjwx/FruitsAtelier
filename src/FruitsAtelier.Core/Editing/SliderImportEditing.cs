@@ -7,11 +7,14 @@ public enum SliderImportState { None, Pending, Native, Compensated }
 public static class SliderImportEditing
 {
     public static bool LooksCompensated(MapDocument document)
+        => CompensatedSliderRatio(document) > .8;
+
+    public static double CompensatedSliderRatio(MapDocument document)
     {
-        if (document.ImportedSliders.Count == 0) return false;
+        if (document.ImportedSliders.Count == 0) return 0;
         var timing = new TimingMap.Lookup(document);
         int matching = document.ImportedSliders.Count(slider => HasDropletAnchors(document, slider, timing));
-        return matching * 5L > document.ImportedSliders.Count * 4L;
+        return matching / (double)document.ImportedSliders.Count;
     }
 
     private static bool HasDropletAnchors(MapDocument document, ImportedSlider slider, TimingMap.Lookup timing)

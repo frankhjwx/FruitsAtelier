@@ -6,6 +6,7 @@ using L = FruitsAtelier.Localization.Strings;
 namespace FruitsAtelier.Core;
 
 public enum CatchHitLightingMode { FollowMode, On, Off }
+public enum ImportSliderConversionMode { Ask, KeepLegacy, ConvertToFSlider }
 
 public sealed class LibrarySettings
 {
@@ -39,6 +40,13 @@ public sealed class LibrarySettings
     public string? DefaultSkin { get; set; }
     public bool UseSkinSounds { get; set; } = true;
     public bool RomanisedMetadata { get; set; } = true;
+    private ImportSliderConversionMode importSliderConversion;
+    public ImportSliderConversionMode ImportSliderConversion
+    {
+        get => importSliderConversion;
+        set => importSliderConversion = Enum.IsDefined(value) ? value : ImportSliderConversionMode.Ask;
+    }
+    public bool ConfirmCompensatedImports { get; set; } = true;
     public bool DerandomizeDroplets { get; set; } = true;
     public bool DerandomizeNewProjects { get; set; } = true;
     public bool DefaultDropletHardRock { get; set; }

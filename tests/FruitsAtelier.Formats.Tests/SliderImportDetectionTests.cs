@@ -44,6 +44,13 @@ internal static class SliderImportDetectionTests
             }
         }
         Check(!SliderImportEditing.LooksCompensated(Map()), "An empty map qualified.");
+        Check(SliderImportEditing.CompensatedSliderRatio(Map()) == 0, "Empty maps have no compensated evidence.");
+        foreach (int matching in new[] { 16, 18, 19, 20 })
+        {
+            var boundary = Map();
+            for (int i = 0; i < 20; i++) boundary.ImportedSliders.Add(Slider('L', i < matching ? [0, 16, 40] : [0, 40], 40));
+            Check(SliderImportEditing.CompensatedSliderRatio(boundary) == matching / 20d, "Exact slider-match ratio at the 80%, 90%, 95% and 100% boundaries.");
+        }
         var curve = Slider('L', [0, 16, 40], 40);
         curve.PathType = 'B';
         Check(!Detect(curve), "Bezier control points were mistaken for straight-segment anchors.");

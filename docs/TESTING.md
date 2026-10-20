@@ -63,6 +63,10 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --map-import-settings-check` checks General import preferences, saved
+defaults, cancelled drafts, remembered Keep/Convert choices and the 95% automatic
+FA decision threshold. Uncertain suspected maps still require a source choice.
+
 `Formats.Tests --slider-import-policy-check` checks ordinary import modes, confirmed
 compensation, one to three traversals, repeated refreshes, conversion, mode toggles,
 project persistence and undo against exported playback. `App.Tests --slider-batch-check`

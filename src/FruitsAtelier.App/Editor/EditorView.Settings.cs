@@ -12,6 +12,8 @@ public sealed partial class EditorView
     private bool draftAudioDiagnostics, draftAudioDiagnosticFrames;
     private string draftAudioDiagnosticProfile = "event-10";
     private bool draftRomanisedMetadata;
+    private ImportSliderConversionMode draftImportSliderConversion;
+    private bool draftConfirmCompensatedImports;
     private bool draftDerandomizeDroplets;
     private bool draftDerandomizeNewProjects;
     public bool SupportsDisplayMode { get; set; }
@@ -114,6 +116,8 @@ public sealed partial class EditorView
         draftOsuRoot = LibrarySettings.OsuRoot;
         draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
+        draftImportSliderConversion = LibrarySettings.ImportSliderConversion;
+        draftConfirmCompensatedImports = LibrarySettings.ConfirmCompensatedImports;
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
         draftDerandomizeNewProjects = LibrarySettings.DerandomizeNewProjects;
         draftExperimentalSnapDivisions = LibrarySettings.ExperimentalSnapDivisions;
@@ -155,6 +159,8 @@ public sealed partial class EditorView
         draftOsuRoot != LibrarySettings.OsuRoot ||
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
+        draftImportSliderConversion != LibrarySettings.ImportSliderConversion ||
+        draftConfirmCompensatedImports != LibrarySettings.ConfirmCompensatedImports ||
         FirstRunSetupVisible && (draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
             draftDerandomizeNewProjects != LibrarySettings.DerandomizeNewProjects) ||
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
@@ -269,6 +275,8 @@ public sealed partial class EditorView
                     c.Text(dropletHint[i].Text, SettingsContentX, dropletsTop + 40 + i * 18, SettingsHintSize, Muted, SettingsContentWidth);
                 SettingsButton(c, new(SettingsContentX, dropletsTop + 46 + dropletHint.Length * 18, SettingsContentWidth, SettingsControlHeight),
                     L.Get("settings.openDropletSettings"), OpenDropletSettingsFromGeneral);
+                float importBottom = DrawMapImportSettings(c, dropletsTop + 100 + dropletHint.Length * 18);
+                generalContentHeight = importBottom - generalTop - 116 + 12;
                 c.Unclip();
                 ClipSettingsHits(generalFirstHit);
                 DrawSettingsScrollbar(c, GeneralContentHeight);
@@ -397,6 +405,8 @@ public sealed partial class EditorView
             settings.CanvasGridOpacity = draftCanvasGridOpacity;
             settings.ForceBackgroundDim = draftForceBackgroundDim;
             settings.RomanisedMetadata = draftRomanisedMetadata;
+            settings.ImportSliderConversion = draftImportSliderConversion;
+            settings.ConfirmCompensatedImports = draftConfirmCompensatedImports;
             settings.DerandomizeDroplets = FirstRunSetupVisible ? draftDerandomizeDroplets : LibrarySettings.DerandomizeDroplets;
             settings.DerandomizeNewProjects = FirstRunSetupVisible ? draftDerandomizeNewProjects : LibrarySettings.DerandomizeNewProjects;
             settings.DefaultDropletMode = LibrarySettings.DefaultDropletMode;

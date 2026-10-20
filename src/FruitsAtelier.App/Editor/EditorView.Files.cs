@@ -70,7 +70,7 @@ public sealed partial class EditorView
         sliderImportTargets = []; sliderBatchErrors = []; sliderDialogHits.Clear();
         if (sliderImportTask is { } retiredImport) _ = retiredImport.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
         sliderImportTask = null; sliderSourceTargets = []; sliderSourceIndex = 0; SliderImportSourcePromptVisible = false;
-        sliderSourceQuestions = null; sliderImportWizard = false;
+        sliderSourceQuestions = null; sliderSourceCompensated = null; sliderImportWizard = false; rememberSliderImportChoice = false;
         WorkspaceSession = null; resourceErrors = [];
         var retiredSyncCancellation = syncCancellation;
         retiredSyncCancellation?.Cancel(); syncCancellation = null;

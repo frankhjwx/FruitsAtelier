@@ -15,6 +15,7 @@ public sealed partial class EditorView
     public bool SliderImportPromptVisible => sliderImportTargets.Length > 0;
     public bool SliderConversionBusy => sliderBatchTask is not null || sliderImportTask is not null || LegacyDropletRefreshBusy;
     private bool SliderDialogVisible => SliderImportPromptVisible || SliderImportSourcePromptVisible || SliderConversionBusy || sliderBatchErrors.Length > 0;
+    private bool rememberSliderImportChoice;
 
     public void OfferSliderConversion(bool allDifficulties)
     {
@@ -26,7 +27,13 @@ public sealed partial class EditorView
     public void AnswerSliderImport(bool convert)
     {
         if (!SliderImportPromptVisible) return;
+        if (sliderImportWizard && rememberSliderImportChoice)
+        {
+            LibrarySettings.ImportSliderConversion = convert ? ImportSliderConversionMode.ConvertToFSlider : ImportSliderConversionMode.KeepLegacy;
+            RequestViewPreference?.Invoke();
+        }
         sliderImportWizard = false;
+        rememberSliderImportChoice = false;
         sliderDialogHits.Clear();
         var targets = sliderImportTargets; sliderImportTargets = [];
         if (!convert) return;
@@ -97,7 +104,7 @@ public sealed partial class EditorView
         if (sliderImportWizard && sliderSourceQuestions is { } questions)
         {
             int page = SliderImportPromptVisible ? questions.Length + 1 : questions.Count(i => i < sliderSourceIndex) + 1;
-            string progress = L.Get("sliderImport.page", page, questions.Length + 1);
+            string progress = L.Get("sliderImport.page", page, Math.Max(1, questions.Length + (LibrarySettings.ImportSliderConversion == ImportSliderConversionMode.Ask ? 1 : 0)));
             c.Text(progress, rect.Right - 22 - c.MeasureText(progress, 12), rect.Y + 24, 12, Muted, 170);
         }
         if (SliderImportSourcePromptVisible)
@@ -116,6 +123,12 @@ public sealed partial class EditorView
             int count = sliderImportTargets.Sum(i => difficulties[i].History.Document.ImportedSliders.Count);
             c.Text(L.Get("sliderBatch.prompt", count, sliderImportTargets.Length), rect.X + 22, rect.Y + 65, 14, Foreground, rect.Width - 44);
             c.Text(L.Get("sliderImport.conversionMode"), rect.X + 22, rect.Y + 150, 12, Foreground, rect.Width - 44);
+            if (sliderImportWizard)
+            {
+                TimingCheck(c, new(rect.X + 22, rect.Y + 180, rect.Width - 44, 28), "sliderImport.remember", rememberSliderImportChoice,
+                    () => rememberSliderImportChoice = !rememberSliderImportChoice);
+                c.Text(L.Get("sliderImport.rememberHint"), rect.X + 22, rect.Y + 214, 11, Muted, rect.Width - 44);
+            }
             Button(c, new(rect.Right - 330, rect.Bottom - 58, 144, 36), L.Get("sliderBatch.keep"), () => AnswerSliderImport(false));
             Button(c, new(rect.Right - 174, rect.Bottom - 58, 152, 36), L.Get("sliderBatch.convert"), () => AnswerSliderImport(true), true);
         }
