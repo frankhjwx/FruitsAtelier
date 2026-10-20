@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "Confirm",
   "osuLinks.clearBinding": "Clear FA binding…",
   "osuLinks.clearFailed": "The system could not change the osu! link association.",
-  "osuLinks.bind": "Rebind to FA…"
+  "osuLinks.bind": "Rebind to FA…",
+  "osuLinks.description": "FA handles editor timestamps only. Other osu:// links open in the fallback application."
 }

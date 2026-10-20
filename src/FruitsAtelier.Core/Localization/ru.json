@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "Подтвердить",
   "osuLinks.clearBinding": "Убрать привязку к FA…",
   "osuLinks.clearFailed": "Системе не удалось изменить ассоциацию ссылок osu!.",
-  "osuLinks.bind": "Снова связать с FA…"
+  "osuLinks.bind": "Снова связать с FA…",
+  "osuLinks.description": "FA обрабатывает только временные метки редактора. Остальные ссылки osu:// открываются в резервном приложении."
 }

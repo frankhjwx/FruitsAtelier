@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "Konfirmasi",
   "osuLinks.clearBinding": "Hapus asosiasi FA…",
   "osuLinks.clearFailed": "Sistem tidak dapat mengubah asosiasi tautan osu!.",
-  "osuLinks.bind": "Tautkan kembali ke FA…"
+  "osuLinks.bind": "Tautkan kembali ke FA…",
+  "osuLinks.description": "FA hanya menangani stempel waktu editor. Tautan osu:// lainnya dibuka di aplikasi cadangan."
 }

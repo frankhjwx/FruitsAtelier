@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "確認",
   "osuLinks.clearBinding": "解除 FA 綁定…",
   "osuLinks.clearFailed": "系統無法變更 osu! 連結關聯。",
-  "osuLinks.bind": "重新綁定至 FA…"
+  "osuLinks.bind": "重新綁定至 FA…",
+  "osuLinks.description": "FA 僅處理編輯器時間戳記，其他 osu:// 連結會由備用應用程式開啟。"
 }

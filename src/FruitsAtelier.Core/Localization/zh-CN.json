@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "确认",
   "osuLinks.clearBinding": "解除 FA 绑定…",
   "osuLinks.clearFailed": "系统无法更改 osu! 链接关联。",
-  "osuLinks.bind": "重新绑定到 FA…"
+  "osuLinks.bind": "重新绑定到 FA…",
+  "osuLinks.description": "FA 仅处理编辑器时间戳，其他 osu:// 链接会由备用应用打开。"
 }

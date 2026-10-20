@@ -191,8 +191,9 @@ public sealed partial class EditorView
 
     private void DrawOsuLinkSettings(ICanvas c)
     {
-        c.Text(L.Get("osuLinks.fallback"), SettingsContentX, SettingsTop + 128, SettingsTextSize, Foreground, SettingsContentWidth);
-        OsuLinkTargetButtonBounds = new(SettingsContentX, SettingsTop + 156, SettingsContentWidth, SettingsControlHeight);
+        float top = SettingsParagraph(c, L.Get("osuLinks.description"), SettingsTop + 128) + 12;
+        c.Text(L.Get("osuLinks.fallback"), SettingsContentX, top, SettingsTextSize, Foreground, SettingsContentWidth);
+        OsuLinkTargetButtonBounds = new(SettingsContentX, top + 28, SettingsContentWidth, SettingsControlHeight);
         var selected = osuLinkApplications.FirstOrDefault(a => a.Id == osuLinkState.Target);
         SettingsButton(c, OsuLinkTargetButtonBounds, "", OpenOsuLinkPicker, enabled: osuLinkState.IsDefault);
         if (selected is not null)
@@ -204,7 +205,7 @@ public sealed partial class EditorView
         else c.Text(L.Get("osuLinks.choose"), OsuLinkTargetButtonBounds.X + 12, OsuLinkTargetButtonBounds.Y + 9, 13,
             Muted, OsuLinkTargetButtonBounds.Width - 48);
         c.Text("▾", OsuLinkTargetButtonBounds.Right - 24, OsuLinkTargetButtonBounds.Y + 9, 13, Muted, 16);
-        OsuLinkClearButtonBounds = new(SettingsContentX, SettingsTop + 204, Math.Min(280, SettingsContentWidth), SettingsControlHeight);
+        OsuLinkClearButtonBounds = new(SettingsContentX, top + 76, Math.Min(280, SettingsContentWidth), SettingsControlHeight);
         SettingsButton(c, OsuLinkClearButtonBounds,
             L.Get(osuLinkState.IsDefault ? "osuLinks.clearBinding" : "osuLinks.bind"),
             () => { if (osuLinkState.IsDefault) RequestClearOsuLinkBinding?.Invoke(); else RequestBindOsuLinks?.Invoke(); },

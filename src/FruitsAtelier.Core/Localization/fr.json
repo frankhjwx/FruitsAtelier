@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "Confirmer",
   "osuLinks.clearBinding": "Retirer l’association à FA…",
   "osuLinks.clearFailed": "Le système n’a pas pu modifier l’association des liens osu!.",
-  "osuLinks.bind": "Réassocier à FA…"
+  "osuLinks.bind": "Réassocier à FA…",
+  "osuLinks.description": "FA traite uniquement les horodatages de l’éditeur. Les autres liens osu:// s’ouvrent dans l’application de secours."
 }

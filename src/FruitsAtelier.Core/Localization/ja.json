@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "確認",
   "osuLinks.clearBinding": "FA の関連付けを解除…",
   "osuLinks.clearFailed": "システムが osu! リンクの関連付けを変更できませんでした。",
-  "osuLinks.bind": "FA に再関連付け…"
+  "osuLinks.bind": "FA に再関連付け…",
+  "osuLinks.description": "FA はエディターのタイムスタンプのみ処理します。その他の osu:// リンクは代替アプリで開きます。"
 }

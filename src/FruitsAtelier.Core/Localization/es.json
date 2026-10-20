@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "Confirmar",
   "osuLinks.clearBinding": "Quitar asociación con FA…",
   "osuLinks.clearFailed": "El sistema no pudo cambiar la asociación de enlaces osu!.",
-  "osuLinks.bind": "Volver a asociar con FA…"
+  "osuLinks.bind": "Volver a asociar con FA…",
+  "osuLinks.description": "FA solo procesa marcas de tiempo del editor. Los demás enlaces osu:// se abren en la aplicación alternativa."
 }

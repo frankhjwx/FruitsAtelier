@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "ยืนยัน",
   "osuLinks.clearBinding": "ยกเลิกการเชื่อมโยงกับ FA…",
   "osuLinks.clearFailed": "ระบบไม่สามารถเปลี่ยนการเชื่อมโยงลิงก์ osu! ได้",
-  "osuLinks.bind": "เชื่อมโยงกับ FA อีกครั้ง…"
+  "osuLinks.bind": "เชื่อมโยงกับ FA อีกครั้ง…",
+  "osuLinks.description": "FA จัดการเฉพาะเวลาประทับของตัวแก้ไข ลิงก์ osu:// อื่นจะเปิดในแอปพลิเคชันสำรอง"
 }

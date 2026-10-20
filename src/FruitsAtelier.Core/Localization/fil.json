@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "Kumpirmahin",
   "osuLinks.clearBinding": "Alisin ang pag-uugnay sa FA…",
   "osuLinks.clearFailed": "Hindi mabago ng system ang association ng mga osu! link.",
-  "osuLinks.bind": "Iugnay muli sa FA…"
+  "osuLinks.bind": "Iugnay muli sa FA…",
+  "osuLinks.description": "Mga timestamp lang ng editor ang pinoproseso ng FA. Ang ibang osu:// link ay bubukas sa fallback na application."
 }

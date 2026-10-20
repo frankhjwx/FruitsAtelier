@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "확인",
   "osuLinks.clearBinding": "FA 연결 해제…",
   "osuLinks.clearFailed": "시스템에서 osu! 링크 연결을 변경하지 못했습니다.",
-  "osuLinks.bind": "FA에 다시 연결…"
+  "osuLinks.bind": "FA에 다시 연결…",
+  "osuLinks.description": "FA는 편집기 타임스탬프만 처리합니다. 다른 osu:// 링크는 대체 앱에서 열립니다."
 }

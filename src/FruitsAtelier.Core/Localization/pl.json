@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "Potwierdź",
   "osuLinks.clearBinding": "Usuń skojarzenie z FA…",
   "osuLinks.clearFailed": "System nie mógł zmienić skojarzenia łączy osu!.",
-  "osuLinks.bind": "Powiąż ponownie z FA…"
+  "osuLinks.bind": "Powiąż ponownie z FA…",
+  "osuLinks.description": "FA obsługuje tylko znaczniki czasu edytora. Pozostałe linki osu:// otwierają się w aplikacji zastępczej."
 }

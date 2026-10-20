@@ -1588,5 +1588,6 @@
   "osuLinks.confirm": "Bevestigen",
   "osuLinks.clearBinding": "FA-koppeling verwijderen…",
   "osuLinks.clearFailed": "Het systeem kon de osu!-koppeling niet wijzigen.",
-  "osuLinks.bind": "Opnieuw koppelen aan FA…"
+  "osuLinks.bind": "Opnieuw koppelen aan FA…",
+  "osuLinks.description": "FA verwerkt alleen tijdstempels van de editor. Andere osu://-links openen in de terugvalapplicatie."
 }
