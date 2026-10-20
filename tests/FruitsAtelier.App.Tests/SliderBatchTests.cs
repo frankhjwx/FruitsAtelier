@@ -57,6 +57,29 @@ internal static class SliderBatchTests
         view.KeyDown(90, true, false);
         Check(view.Document.ImportedSliders.Count == 2 && !view.IsDirty, "Complete batch cannot be undone in one step.");
 
+        var exportedLine = new MapDocument { DurationMs = 10000, DerandomizeFSliderDroplets = true };
+        var line = new CurveTrack { Kind = CurveKind.Linear, DropletMode = SliderDropletMode.Derandomize };
+        line.Nodes.AddRange([new() { TimeMs = 1000, X = 64 }, new() { TimeMs = 2000, X = 448 }]);
+        exportedLine.Tracks.Add(line);
+        var freshImport = OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(exportedLine).Text);
+        var importedPlayback = OsuBeatmapWriter.Serialize(freshImport).PlayableObjects;
+        view.LibrarySettings.DerandomizeDroplets = true;
+        view.LibrarySettings.DerandomizeNewProjects = true;
+        view.NewProject(); Check(view.AddDifficulty(freshImport), "Fresh osu difficulty import failed."); Render();
+        Check(view.Document.DerandomizeFSliderDroplets && canvas.Texts.Any(t => t.Value == L.Get("sliderBatch.derandomizeOn")),
+            "Fresh osu difficulty and conversion did not inherit global Derandomize preferences.");
+        view.AnswerSliderImport(true); Wait();
+        Check(view.Document.Tracks.Single().Nodes.Count == 2 && view.Document.DerandomizeFSliderDroplets,
+            "Reimport conversion did not recover a straight derandomized FSlider.");
+        var convertedPlayback = OsuBeatmapWriter.Serialize(view.Document).PlayableObjects;
+        Check(importedPlayback.Count == convertedPlayback.Count && importedPlayback.Zip(convertedPlayback).All(p =>
+            p.First.Kind == p.Second.Kind && Math.Abs(p.First.TimeMs - p.Second.TimeMs) <= 1e-6
+            && Math.Abs(p.First.X - p.Second.X) <= 1), "Batch conversion displaced reimported droplets.");
+        view.KeyDown(90, true, false);
+        Check(view.Document.ImportedSliders.Count == 1 && view.Document.DerandomizeFSliderDroplets,
+            "Reimport conversion undo lost the imported difficulty mode.");
+        view.LibrarySettings.DerandomizeDroplets = true;
+
         string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-slider-import-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
         try
@@ -66,6 +89,34 @@ internal static class SliderBatchTests
             string source = Path.Combine(root, "External", "source.osu");
             File.WriteAllText(source, "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Test\nArtist:Test\nCreator:Test\nVersion:Rain\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,100,1000,2,0,L|200:100,1,100\n");
             var staleCard = LibraryDatabase.ReadMetadata(source)!;
+            foreach (bool mode in new[] { true, false })
+            foreach (bool conversionMode in new[] { true, false })
+            {
+                var preferences = new LibrarySettings { Workspace = Path.Combine(root, $"preferences-{mode}-{conversionMode}"),
+                    DerandomizeNewProjects = mode, DerandomizeDroplets = conversionMode };
+                var first = LibraryOperations.ImportPath(source, preferences);
+                Check(first.Project.Difficulties.All(d => d.Document.DerandomizeFSliderDroplets == mode
+                    && d.Document.RandomizeNewSliders == !mode && d.Document.DerandomizeDroplets == conversionMode),
+                    "Fresh osu import did not capture the independent global mode and conversion preferences.");
+                view.LibrarySettings.DerandomizeNewProjects = !mode;
+                view.LibrarySettings.DerandomizeDroplets = !conversionMode;
+                view.LoadWorkspace(first); Render();
+                Check(canvas.Texts.Any(t => t.Value == L.Get(conversionMode ? "sliderBatch.derandomizeOn" : "sliderBatch.derandomizeOff")),
+                    "Conversion prompt replaced the imported preference with a later global setting.");
+                view.AnswerSliderImport(false); view.ShowRandomDock(); Render();
+                Check(canvas.Texts.Any(t => t.Value == L.Get(mode ? "randomize.derandomizeOn" : "randomize.derandomizeOff")),
+                    "Current difficulty displayed a different mode from the imported preference.");
+                preferences.DerandomizeNewProjects = !mode; preferences.DerandomizeDroplets = !conversionMode;
+                var again = LibraryOperations.ImportPath(source, preferences);
+                Check(!again.IsNewImport && again.Project.Difficulties.All(d => d.Document.DerandomizeFSliderDroplets == mode
+                    && d.Document.DerandomizeDroplets == conversionMode), "Reopening an existing workspace replaced its saved modes.");
+                var libraryPreferences = new LibrarySettings { Workspace = Path.Combine(root, $"library-{mode}-{conversionMode}"),
+                    DerandomizeNewProjects = mode, DerandomizeDroplets = conversionMode };
+                var cardImport = LibraryOperations.Open(staleCard, libraryPreferences);
+                Check(cardImport.Project.Difficulties.All(d => d.Document.DerandomizeFSliderDroplets == mode
+                    && d.Document.DerandomizeDroplets == conversionMode), "Library import ignored the global preferences.");
+            }
+            view.LibrarySettings.DerandomizeNewProjects = true; view.LibrarySettings.DerandomizeDroplets = true;
             var imported = LibraryOperations.ImportPath(source, settings);
             Check(imported.IsNewImport, "New source import was not identified.");
             view.LoadWorkspace(imported); Check(view.SliderImportPromptVisible, "Workspace import did not offer conversion.");

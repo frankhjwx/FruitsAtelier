@@ -7,7 +7,7 @@ internal static class ImportedCurveFitter
     public const double Tolerance = 0.25;
     private readonly record struct Segment(int Start, int End, bool Curved, double C1, double C2);
 
-    public static void Fit(CurveTrack track, IReadOnlyList<MapPoint> points, double velocity)
+    public static void Fit(CurveTrack track, IReadOnlyList<MapPoint> points, double velocity, double tolerance = Tolerance)
     {
         if (points.Count < 2) throw new InvalidOperationException(L.Get("core.importEditing.zeroDuration"));
         var boundaries = new List<int> { 0 };
@@ -29,7 +29,7 @@ internal static class ImportedCurveFitter
             double c1 = a.X + (b.X - a.X) / 3, c2 = a.X + (b.X - a.X) * 2 / 3;
             var error = Error(range.Start, range.End, c1, c2);
             bool curved = false;
-            if (error.Error > Tolerance)
+            if (error.Error > tolerance)
             {
                 // Least-squares cubic with exact endpoints and a linear time parameter.
                 double aa = 0, ab = 0, bb = 0, ay = 0, by = 0;
@@ -51,7 +51,7 @@ internal static class ImportedCurveFitter
                     error = Error(range.Start, range.End, c1, c2); curved = true;
                 }
             }
-            if (error.Error <= Tolerance)
+            if (error.Error <= tolerance)
                 segments.Add(new(range.Start, range.End, curved, c1, c2));
             else
             {

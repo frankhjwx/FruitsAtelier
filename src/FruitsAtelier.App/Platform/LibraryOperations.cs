@@ -208,8 +208,18 @@ public static class LibraryOperations
             return WorkspaceProject.Open(existing);
         if (Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase) && WorkspaceAssociations.FindProject(settings.Workspace, path) is { } tracked)
             return WorkspaceProject.Open(tracked);
-        return WorkspaceProject.Create(settings.Workspace, project, settings.Songs) with { IsNewImport = !Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase) };
+        bool isNewImport = !Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase);
+        if (isNewImport)
+            foreach (var difficulty in project.Difficulties) ApplyImportDropletDefaults(difficulty.Document, settings);
+        return WorkspaceProject.Create(settings.Workspace, project, settings.Songs) with { IsNewImport = isNewImport };
     }
+    internal static void ApplyImportDropletDefaults(MapDocument document, LibrarySettings settings)
+    {
+        document.DerandomizeFSliderDroplets = settings.DerandomizeNewProjects;
+        document.RandomizeNewSliders = !settings.DerandomizeNewProjects;
+        document.DerandomizeDroplets = settings.DerandomizeDroplets;
+    }
+
     public static void ImportFolder(string directory, LibrarySettings settings)
         => new LibraryDatabase(settings.Workspace, settings.Songs).RegisterSource(directory);
 
@@ -224,6 +234,7 @@ public static class LibraryOperations
         if (WorkspaceAssociations.FindProject(settings.Workspace, supported) is { } tracked) return WorkspaceProject.Open(tracked);
         var documents = Directory.EnumerateFiles(map.Directory).Where(p => Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase)
             .Where(p => LibraryDatabase.ReadMetadata(p) is not null).Select(OsuBeatmapReader.ReadFile).ToArray();
+        foreach (var document in documents) ApplyImportDropletDefaults(document, settings);
         return WorkspaceProject.Create(settings.Workspace, BeatmapProject.FromDocuments(documents), settings.Songs) with { IsNewImport = true };
     }
     public static void Export(WorkspaceSession session, BeatmapProject project, WorkspaceExportPlan plan)

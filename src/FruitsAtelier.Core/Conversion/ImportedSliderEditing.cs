@@ -8,6 +8,7 @@ public sealed record SliderBatchConversionResult(IReadOnlyList<CurveTrack> Track
 public static class ImportedSliderEditing
 {
     public const double ApproximationTolerance = ImportedCurveFitter.Tolerance;
+    private const double PlaybackPositionTolerance = 1;
 
     public static ImportedSliderEditResult ConvertToTrack(MapDocument document, Guid sliderId, CatchConversionCache? cache = null, bool derandomizeDroplets = true)
     {
@@ -188,10 +189,65 @@ public static class ImportedSliderEditing
             if (!changed) break;
         }
         cancellation.ThrowIfCancellationRequested();
+        FitPlayback(document, candidates, cancellation);
         // Publish duration-preserving replacements atomically; invalid sources remain available to repair.
         document.ImportedSliders.RemoveAll(s => candidates.ContainsKey(s.Id));
         document.Tracks.AddRange(candidates.Values);
         return new(candidates.Values.ToArray(), failures);
+    }
+
+    private static void FitPlayback(MapDocument document, Dictionary<Guid, CurveTrack> candidates, CancellationToken cancellation)
+    {
+        if (candidates.Count == 0) return;
+        // Exported compensation bends the osu! path away from the visible tiny droplets.
+        // Prefer a simpler curve fitted to playback only when every event still agrees.
+        var original = CatchStreamConverter.Convert(document).Objects
+            .Where(o => candidates.ContainsKey(o.SourceId)).GroupBy(o => o.SourceId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(o => o.EventIndex).ToArray());
+        var sources = document.ImportedSliders.ToDictionary(s => s.Id);
+        var fitted = new Dictionary<Guid, CurveTrack>();
+        foreach (var (id, track) in candidates)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            if (!original.TryGetValue(id, out var events)) continue;
+            var points = events.Select(o => new MapPoint(CurveMath.FirstSpanTime(track, o.TimeMs), o.X))
+                .GroupBy(p => p.TimeMs).OrderBy(g => g.Key)
+                .Select(g => new MapPoint(g.Key, g.Average(p => p.X))).ToArray();
+            if (points.Length < 2) continue;
+            var smooth = track.DeepClone(); smooth.Nodes.Clear();
+            try
+            {
+                double velocity = ImportedSliderConverter.VelocityAt(document, sources[id]);
+                var start = points[0]; var end = points[^1];
+                if (points.All(p => Math.Abs(p.X - (start.X + (end.X - start.X)
+                    * (p.TimeMs - start.TimeMs) / (end.TimeMs - start.TimeMs))) <= PlaybackPositionTolerance))
+                {
+                    smooth.Kind = CurveKind.Linear;
+                    smooth.Nodes.Add(new Anchor { TimeMs = start.TimeMs, X = start.X, OutgoingKind = CurveKind.Linear });
+                    smooth.Nodes.Add(new Anchor { TimeMs = end.TimeMs, X = end.X, OutgoingKind = CurveKind.Linear });
+                }
+                else ImportedCurveFitter.Fit(smooth, points, velocity, tolerance: .5);
+            }
+            catch (InvalidOperationException) { continue; }
+            if (smooth.Nodes.Count >= track.Nodes.Count) continue;
+            smooth.DropletMode = SliderDropletMode.Derandomize;
+            fitted[id] = smooth;
+        }
+        if (fitted.Count == 0) return;
+        var candidate = document.DeepClone();
+        candidate.ImportedSliders.RemoveAll(s => candidates.ContainsKey(s.Id));
+        candidate.Tracks.AddRange(candidates.Select(p => fitted.GetValueOrDefault(p.Key, p.Value)));
+        var actual = CatchStreamConverter.Convert(candidate).Objects
+            .Where(o => fitted.ContainsKey(o.SourceId)).GroupBy(o => o.SourceId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(o => o.EventIndex).ToArray());
+        foreach (var (id, track) in fitted)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            if (actual.TryGetValue(id, out var events) && events.Length == original[id].Length
+                && events.Zip(original[id]).All(p => p.First.Kind == p.Second.Kind
+                    && Math.Abs(p.First.TimeMs - p.Second.TimeMs) <= 1e-6
+                    && Math.Abs(p.First.X - p.Second.X) <= PlaybackPositionTolerance)) candidates[id] = track;
+        }
     }
 
     private static void Approximate(CurveTrack track, ImportedSlider source, ImportedSliderGeometry path, double velocity)

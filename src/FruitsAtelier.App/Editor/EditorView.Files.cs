@@ -1,5 +1,6 @@
 using L = FruitsAtelier.Localization.Strings;
 using FruitsAtelier.Core;
+using FruitsAtelier.App.Platform;
 
 namespace FruitsAtelier.App.Editor;
 
@@ -214,6 +215,7 @@ public sealed partial class EditorView
         }
         if (difficulties.Count >= 256) { SetNotice(L.Get("project.invalid")); return false; }
         var document = imported?.DeepClone() ?? Document.DeepClone();
+        if (imported is not null) LibraryOperations.ApplyImportDropletDefaults(document, LibrarySettings);
         WorkspaceTimingSynchronization.NormalizeDocument(document);
         string name = imported is null ? L.Get("project.defaultDifficulty", difficulties.Count + 1)
             : OsuBeatmapReader.Setting(document, "Metadata", "Version") ?? L.Get("project.defaultDifficulty", difficulties.Count + 1);
