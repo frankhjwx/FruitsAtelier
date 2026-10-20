@@ -80,7 +80,8 @@ window sizes and 96/144/192 DPI. Captures are stored under
 half-open adjacent ranges, source edits/deletions, timing restoration, boundary
 sample inheritance, repeated sliders, FSliders, streams, banana showers, custom
 samples, target STR precedence, cross-folder sample conflicts, project schemas
-and undo/redo. `App.Tests --collaboration-check` checks
+and undo/redo, bookmark section generation, unassigned section persistence and
+strict overlap validation. `App.Tests --collaboration-check` checks
 the dockable panel, active-difficulty configuration, reverse references, osu!
 timestamps, integer milliseconds, clipboard input and manual synchronization.
 On Windows, `FruitsAtelier.App.exe --render-check --collaboration-render-check`

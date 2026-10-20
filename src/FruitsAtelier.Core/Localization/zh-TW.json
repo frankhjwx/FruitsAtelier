@@ -1560,6 +1560,8 @@
   "collab.start": "Start (inclusive)",
   "collab.end": "End (exclusive)",
   "collab.add": "Add reference",
+  "collab.unassigned": "未設定",
+  "collab.fromBookmarks": "從書籤產生區間",
   "collab.sync": "Sync references",
   "collab.edit": "Edit collaboration references",
   "collab.previous": "Previous",

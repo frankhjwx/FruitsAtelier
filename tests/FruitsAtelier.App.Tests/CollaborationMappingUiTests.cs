@@ -58,9 +58,11 @@ internal static class CollaborationMappingUiTests
                 ui.View.LoadProject(loaded); ui.View.SwitchDifficulty(2); ui.View.ShowCollaborationPanel(); ui.Paint();
                 Check(ui.View.Document.CollaborationReferences!.Count == 2, "Restart retains references");
                 ui.ClickText(L.Get("collab.add")); Check(ui.View.Document.CollaborationReferences!.Count == 3, "Multiple references can be added");
+                Check(ui.View.Document.CollaborationReferences![2].DifficultyId == Guid.Empty, "New references start unassigned");
                 Check(ui.View.SwitchDifficulty(0), "Source navigation"); ui.Paint();
                 Check(ui.Canvas.Texts.Count(t => t.Value == "C") >= 1 && ui.Canvas.Texts.Count(t => t.Value == "D") >= 1, "Reverse graph updates after restart");
                 Console.WriteLine("PASS Collab Mapping UI " + locale);
+                BookmarkSections();
             }
         }
         finally { L.SetLanguage(language); }
@@ -69,6 +71,45 @@ internal static class CollaborationMappingUiTests
         foreach (string text in new[] { "84771.521739", "1e3", "-1", "00:60:000", "00:00:1000", "2147483648" })
             Check(!FruitsAtelier.App.Editor.EditorView.TryParseCollaborationTime(text, out _), "Invalid timestamp " + text);
         ResourceUndo();
+    }
+
+    private static void BookmarkSections()
+    {
+        var source = Difficulty("Source", 250); var target = Difficulty("Target", 1250);
+        SongSetup.Set(target.Document, "Editor", "Bookmarks", "500,1500");
+        target.Document.CollaborationReferences = [new(Guid.NewGuid(), source.Id, 0, 1000)];
+        var ui = new Ui(); ui.View.LoadProject(new() { Name = "sections", Difficulties = [source, target] });
+        ui.View.SwitchDifficulty(1); ui.View.ShowCollaborationPanel(); ui.Resize(1440, 900);
+        ui.View.UpdateTransport(0, 6000, true, false, false, null, null); ui.Paint();
+        var before = ui.View.Document.DeepClone();
+        ui.ClickText(L.Get("collab.fromBookmarks"));
+        var sections = ui.View.Document.CollaborationReferences!;
+        Check(sections.Count == 3 && sections.All(r => r.DifficultyId == Guid.Empty), "Bookmark generation replaces references with empty sources");
+        Check(sections[0].StartMs == 0 && sections[0].EndMs == 500 && sections[1].EndMs == 1500 && sections[2].EndMs == 6000,
+            "Generated sections cover the whole audio timeline");
+        var generated = ui.View.Document.DeepClone();
+        ui.View.SynchronizeCollaboration();
+        Check(!ui.View.CollaborationBusy && ui.View.Document.ContentEquals(generated), "Empty sources skip synchronization");
+        ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(before), "Generation undo restores assigned references");
+        ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(generated), "Generation redo restores empty sections");
+        ui.Paint();
+        void OpenSource()
+        {
+            var input = ui.View.CollaborationStartBounds;
+            ui.Click(ui.View.CollaborationPanelViewport.X + 10, input.Y + 10);
+        }
+        OpenSource(); ui.ClickObjectAction("Source");
+        Check(ui.View.Document.CollaborationReferences![0].DifficultyId == source.Id, "User assigns a generated section source");
+        OpenSource(); ui.ClickObjectAction(L.Get("collab.unassigned"));
+        Check(ui.View.Document.CollaborationReferences![0].DifficultyId == Guid.Empty, "User clears the source without deleting the section");
+        var loaded = ProjectSerializer.ReadProject(ProjectSerializer.Serialize(ui.View.CaptureProject()));
+        Check(loaded.Difficulties[1].Document.CollaborationReferences!.All(r => r.DifficultyId == Guid.Empty), "Empty UI sources survive restart");
+        var first = ui.View.CollaborationStartBounds;
+        ui.Click(first.X + 10, first.Y + 10); ui.Key('A', ctrl: true); ui.Type("501"); ui.Key(13);
+        Check(ui.View.Document.CollaborationReferences![0].StartMs == 0, "Empty section rejects an invalid range"); ui.Key(27);
+        var second = ui.View.CollaborationStartBounds;
+        ui.Click(second.X + 10, second.Y + 50); ui.Key('A', ctrl: true); ui.Type("499"); ui.Key(13);
+        Check(ui.View.Document.CollaborationReferences![1].StartMs == 500, "Empty sections reject overlap in the UI"); ui.Key(27);
     }
     private static void ResourceUndo()
     {

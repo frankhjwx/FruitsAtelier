@@ -55,7 +55,19 @@ Selecting a target opens that difficulty. The panel supports multiple sources an
 multiple targets, including separate non-overlapping ranges from the same source.
 All referenced difficulties must belong to the same project.
 
-Use **Add reference**, select the source, and edit **Start** and **End**. Inputs
+Use **Add reference**, select the source, and edit **Start** and **End** on one row.
+New references start **Unassigned**. The source menu can also clear an existing
+source. Unassigned sections are saved and checked for overlaps, but synchronization
+leaves their objects, timing and hitsounds untouched.
+
+**Generate sections from bookmarks** replaces the current reference list with
+unassigned sections spanning the entire timeline: zero to the first bookmark,
+between bookmarks, and the last bookmark to the timeline end (including loaded
+audio duration). Duplicate and endpoint bookmarks do not create empty sections;
+without bookmarks, one section covers the timeline. Generation is undoable.
+Choose each source manually before synchronizing the sections you want to copy.
+
+Inputs
 display osu! timestamps such as `01:24:771`; typed or pasted integer milliseconds
 such as `84771` are also accepted. Clipboard timestamps with an osu! object-list
 suffix are accepted. Ctrl/Cmd+A, C, X and V use the normal field selection and

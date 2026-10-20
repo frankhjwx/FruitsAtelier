@@ -50,11 +50,53 @@ internal static class CollaborationMappingTests
         CustomSamples();
         TickRateAndResources();
         MultipleRanges();
+        BookmarkSections();
         Console.WriteLine("PASS collaboration objects, samples, timing, graph, schemas, repeated sync and undo");
     }
 
     private static MapDocument Synchronize(BeatmapProject project, Guid target, IReadOnlyList<CollaborationReference> references)
         => CollaborationMapping.Synchronize(project, target, references).Document;
+
+    private static void BookmarkSections()
+    {
+        var source = Difficulty("source", 400, 2, 80, 100, 1100, 2100);
+        var target = Difficulty("target", 600, 1, 40, 200, 1200, 2200);
+        target.Document.DurationMs = 3000;
+        SongSetup.Set(target.Document, "Editor", "Bookmarks", "2000,0,1000,1000,3000,4000");
+        var sections = CollaborationMapping.SectionsFromBookmarks(target.Document);
+        Check(sections.Select(r => (r.StartMs, r.EndMs)).SequenceEqual(new[] { (0d,1000d), (1000d,2000d), (2000d,3000d) }),
+            "Bookmark sections cover the timeline without duplicate or zero-length ranges");
+        Check(sections.All(r => r.DifficultyId == Guid.Empty) && sections.Select(r => r.Id).Distinct().Count() == 3,
+            "Generated sections have independent identities and empty sources");
+        target.Document.CollaborationReferences = sections;
+        var project = new BeatmapProject { Name = "bookmarks", Difficulties = [source, target] };
+        Check(Synchronize(project, target.Id, sections).ContentEquals(target.Document), "All-empty synchronization is content neutral");
+        string single = ProjectSerializer.Serialize(target.Document), multi = ProjectSerializer.Serialize(project);
+        Check(single.Contains("\"SchemaVersion\": 35") && ProjectSerializer.Read(single).ContentEquals(target.Document), "Empty source single-difficulty persistence");
+        Check(multi.Contains("\"SchemaVersion\": 36") && ProjectSerializer.ReadProject(multi).Difficulties[1].Document.ContentEquals(target.Document),
+            "Empty source multi-difficulty persistence");
+        Check(ProjectSerializer.ReadProject(single).Difficulties[0].Document.ContentEquals(target.Document), "Single document opens as project");
+        Throws(() => Synchronize(project, target.Id, [sections[0], sections[1] with { StartMs = 999 }]), "Two empty sources still cannot overlap");
+        sections[0] = sections[0] with { DifficultyId = source.Id };
+        sections[2] = sections[2] with { DifficultyId = source.Id };
+        Throws(() => Synchronize(project, target.Id, [sections[0], sections[1] with { StartMs = 999 }]), "Assigned and empty sources cannot overlap");
+        var merged = Synchronize(project, target.Id, sections);
+        Check(merged.Fruits.Select(f => f.TimeMs).Order().SequenceEqual(new[] { 100d,1200d,2100d }), "Only assigned sections replace objects");
+        Check(merged.Fruits.Single(f => f.TimeMs == 1200).Id == target.Document.Fruits.Single(f => f.TimeMs == 1200).Id, "Empty section retains parent identity");
+        Near(TimingMap.At(merged, 1200).BeatLengthMs, 600, "Timing restores at an adjacent unassigned section");
+        Sounds(merged, [(100,2,80),(1200,1,40),(2100,2,80)]);
+        target.Document = merged;
+        Check(Synchronize(project, target.Id, sections).ContentEquals(merged), "Repeated synchronization with an empty middle section");
+        sections[0] = sections[0] with { DifficultyId = Guid.Empty };
+        source.Document.Fruits.Clear();
+        var cleared = Synchronize(project, target.Id, sections);
+        Check(cleared.Fruits.Select(f => f.TimeMs).Order().SequenceEqual(new[] { 100d,1200d }), "Clearing a source preserves previously merged content");
+        var blank = new MapDocument { DurationMs = 1000.5 };
+        Check(CollaborationMapping.SectionsFromBookmarks(blank).Single().EndMs == 1001, "No bookmarks creates one whole-millisecond section");
+        Check(CollaborationMapping.SectionsFromBookmarks(blank, 5000).Single().EndMs == 5000, "Loaded audio can extend the final section");
+        SongSetup.Set(blank, "Editor", "Bookmarks", string.Join(',', Enumerable.Range(1, 256)));
+        Throws(() => CollaborationMapping.SectionsFromBookmarks(blank), "Section count limit");
+    }
 
     private static void MultipleRanges()
     {

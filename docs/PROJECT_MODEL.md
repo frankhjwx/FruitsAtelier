@@ -61,7 +61,10 @@ and slider length.
 
 Collaboration references use schema 33 (single difficulty) or 34 (multiple
 difficulties). `MapDocument.CollaborationReferences` stores reference IDs, source
-difficulty IDs and whole-millisecond half-open intervals. An empty collection is
+difficulty IDs and whole-millisecond half-open intervals. An unassigned source uses
+`Guid.Empty`; documents containing unassigned sections use schema 35 (single) or
+36 (multiple), while fully assigned references retain schema 33/34. All sections
+participate in overlap validation; only assigned sections synchronize. An empty collection is
 omitted and keeps the document-derived older schema. References participate in
 cloning, dirty comparison and each difficulty's undo history. Reverse references
 are derived from the loaded project's difficulty IDs rather than stored twice.

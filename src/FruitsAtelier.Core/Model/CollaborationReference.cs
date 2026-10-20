@@ -3,6 +3,7 @@ using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.Core;
 
+// Guid.Empty leaves a section unassigned; its interval still participates in validation.
 public sealed record CollaborationReference(Guid Id, Guid DifficultyId, double StartMs, double EndMs);
 
 public sealed partial class MapDocument
@@ -23,7 +24,7 @@ public sealed partial class MapDocument
     {
         if (CollaborationReferences is not { } references) return;
         var ordered = references.OrderBy(r => r?.StartMs).ToArray();
-        if (ordered.Length > 256 || ordered.Any(r => r is null || r.Id == Guid.Empty || r.DifficultyId == Guid.Empty
+        if (ordered.Length > 256 || ordered.Any(r => r is null || r.Id == Guid.Empty
             || !double.IsFinite(r.StartMs) || !double.IsFinite(r.EndMs) || r.StartMs != Math.Truncate(r.StartMs)
             || r.EndMs != Math.Truncate(r.EndMs) || r.StartMs < 0 || r.EndMs > int.MaxValue || r.StartMs >= r.EndMs)
             || ordered.Select(r => r.Id).Distinct().Count() != ordered.Length)

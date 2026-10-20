@@ -1560,6 +1560,8 @@
   "collab.start": "Start (inclusive)",
   "collab.end": "End (exclusive)",
   "collab.add": "Add reference",
+  "collab.unassigned": "Niet toegewezen",
+  "collab.fromBookmarks": "Secties uit bladwijzers maken",
   "collab.sync": "Sync references",
   "collab.edit": "Edit collaboration references",
   "collab.previous": "Previous",

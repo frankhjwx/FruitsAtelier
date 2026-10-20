@@ -1560,6 +1560,8 @@
   "collab.start": "Start (inclusive)",
   "collab.end": "End (exclusive)",
   "collab.add": "Add reference",
+  "collab.unassigned": "Hindi nakatalaga",
+  "collab.fromBookmarks": "Gumawa ng mga seksyon mula sa bookmark",
   "collab.sync": "Sync references",
   "collab.edit": "Edit collaboration references",
   "collab.previous": "Previous",

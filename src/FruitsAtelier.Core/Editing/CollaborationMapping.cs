@@ -7,11 +7,24 @@ public static class CollaborationMapping
 {
     public sealed record Result(MapDocument Document, HitsoundResourcePlan Resources);
 
+    public static List<CollaborationReference> SectionsFromBookmarks(MapDocument document, double? durationMs = null)
+    {
+        double duration = durationMs ?? document.DurationMs;
+        if (!double.IsFinite(duration) || duration <= 0) throw new InvalidDataException(L.Get("collab.invalidRange"));
+        double end = Math.Clamp(Math.Ceiling(duration), 1, int.MaxValue);
+        var boundaries = OsuTimeline.Bookmarks(document).Where(t => t > 0 && t < end)
+            .Select(t => (double)t).Prepend(0).Append(end).Distinct().Order().ToArray();
+        var sections = boundaries.Zip(boundaries.Skip(1), (start, finish) =>
+            new CollaborationReference(Guid.NewGuid(), Guid.Empty, start, finish)).ToList();
+        new MapDocument { CollaborationReferences = sections }.ValidateCollaborationReferences();
+        return sections;
+    }
+
     public static void ValidateReferences(BeatmapProject project, Guid targetId, IReadOnlyList<CollaborationReference> references)
     {
         new MapDocument { CollaborationReferences = references.ToList() }.ValidateCollaborationReferences();
         var ids = project.Difficulties.Select(d => d.Id).ToHashSet();
-        if (!ids.Contains(targetId) || references.Any(r => !ids.Contains(r.DifficultyId)))
+        if (!ids.Contains(targetId) || references.Any(r => r.DifficultyId != Guid.Empty && !ids.Contains(r.DifficultyId)))
             throw new InvalidDataException(L.Get("collab.missing"));
         if (references.Any(r => r.DifficultyId == targetId)) throw new InvalidDataException(L.Get("collab.selfReference"));
     }
@@ -24,10 +37,12 @@ public static class CollaborationMapping
         var target = byId[targetId].Document;
         var result = target.DeepClone();
         result.CollaborationReferences = references.Count == 0 ? null : references.ToList();
-        RemoveParents(result, ParentIds(target, time => references.Any(r => Contains(r, time))).ToHashSet());
-        result.TimingPoints.RemoveAll(p => references.Any(r => Contains(r, p.TimeMs)));
+        var assigned = references.Where(r => r.DifficultyId != Guid.Empty).ToArray();
+        if (assigned.Length == 0) return new(result, HitsoundResourcePlan.Combine([]));
+        RemoveParents(result, ParentIds(target, time => assigned.Any(r => Contains(r, time))).ToHashSet());
+        result.TimingPoints.RemoveAll(p => assigned.Any(r => Contains(r, p.TimeMs)));
         var origins = new Dictionary<Guid, (MapDocument Document, Guid Id, Guid Difficulty)>();
-        foreach (var reference in references.OrderBy(r => r.StartMs))
+        foreach (var reference in assigned.OrderBy(r => r.StartMs))
         {
             var source = byId[reference.DifficultyId].Document;
             var timing = new TimingMap.Lookup(source);
@@ -64,7 +79,7 @@ public static class CollaborationMapping
             {
                 var copy = point.DeepClone(); ExplicitBank(copy, source); result.TimingPoints.Add(copy);
             }
-            if (!references.Any(r => r.StartMs == reference.EndMs)) AddBoundary(target, result, reference.EndMs);
+            if (!assigned.Any(r => r.StartMs == reference.EndMs)) AddBoundary(target, result, reference.EndMs);
             result.DurationMs = Math.Max(result.DurationMs, source.DurationMs);
         }
         var ordered = result.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
