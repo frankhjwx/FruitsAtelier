@@ -1513,7 +1513,9 @@ collection limits and the distinction between software timing and acoustic delay
 The Timing menu separates snap/metronome controls, current timing-section commands,
 setup tools, whole-map commands, and the preview point with dividers.
 
-Open **Timing → Hitsound Copier (Beta)** for a floating dialog. The tabs are external
+Open **Timing → Hitsound Copier (Beta)** for a floating dialog. Copying and clearing
+sounds work for both Legacy Sliders and FSliders in either canvas, preserving their
+geometry and representation. The tabs are external
 copy, same-set copy, and Clear from left to right. Choose Clear,
 an external osu!standard or Catch `.osu`, or another difficulty in the current set. Clear restores
 normal default samples and removes Whistle, Finish, Clap and custom object samples.
