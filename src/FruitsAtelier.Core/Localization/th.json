@@ -1576,7 +1576,7 @@
   "collab.source": "Source difficulty",
   "collab.start": "Start (inclusive)",
   "collab.end": "End (exclusive)",
-  "collab.add": "Add reference",
+  "collab.add": "เพิ่มส่วน",
   "collab.unassigned": "ยังไม่ได้กำหนด",
   "collab.fromBookmarks": "สร้างส่วนจากบุ๊กมาร์ก",
   "collab.syncObjectSounds": "ซิงค์เสียงฮิตซาวด์ของวัตถุ",

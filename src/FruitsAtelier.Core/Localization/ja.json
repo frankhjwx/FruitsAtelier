@@ -1576,7 +1576,7 @@
   "collab.source": "Source difficulty",
   "collab.start": "Start (inclusive)",
   "collab.end": "End (exclusive)",
-  "collab.add": "Add reference",
+  "collab.add": "区間を追加",
   "collab.unassigned": "未設定",
   "collab.fromBookmarks": "ブックマークから区間を生成",
   "collab.syncObjectSounds": "オブジェクトのヒットサウンドを同期",

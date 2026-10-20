@@ -1576,7 +1576,7 @@
   "collab.source": "Source difficulty",
   "collab.start": "Start (inclusive)",
   "collab.end": "End (exclusive)",
-  "collab.add": "Add reference",
+  "collab.add": "新增區間",
   "collab.unassigned": "未設定",
   "collab.fromBookmarks": "從書籤產生區間",
   "collab.syncObjectSounds": "同步物件音效",

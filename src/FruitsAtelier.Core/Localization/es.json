@@ -1576,7 +1576,7 @@
   "collab.source": "Source difficulty",
   "collab.start": "Start (inclusive)",
   "collab.end": "End (exclusive)",
-  "collab.add": "Add reference",
+  "collab.add": "Añadir sección",
   "collab.unassigned": "Sin asignar",
   "collab.fromBookmarks": "Generar secciones desde marcadores",
   "collab.syncObjectSounds": "Sincronizar hitsounds de objetos",
