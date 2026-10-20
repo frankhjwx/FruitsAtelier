@@ -94,7 +94,7 @@ public sealed partial class EditorView
         {
             objectClipboard = snapshot; clipboardDifficulty = difficulties[activeDifficulty];
             playhead = last + timing.BeatLengthMs * timing.Meter;
-            PasteSelection(convertLegacySliders: true);
+            PasteSelection();
         }
         finally { objectClipboard = savedClipboard; clipboardDifficulty = savedDifficulty; playhead = savedHead; }
     }

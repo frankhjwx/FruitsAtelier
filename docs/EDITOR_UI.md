@@ -974,7 +974,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Right-click a note / edited point | Delete an object; a straight point becomes curved, a curved point is deleted; no context menu |
 | Ctrl+L | Confirm restoring the current difficulty to its previous saved version |
 | Ctrl+Shift+I | Insert a control point on the curve under the pointer |
-| Ctrl+D | Clone selected parents one measure after the last selected start; Legacy Slider copies become FSliders using the map's saved Legacy conversion choice, or the global Legacy → FSlider default when unset |
+| Ctrl+D | Clone selected parents one measure after the last selected start; Legacy Slider copies retain their type and follow the current difficulty's Droplet Settings |
 | Ctrl+A | Select all objects |
 | Ctrl+H | Flip selected parents horizontally around X=256 |
 | Ctrl+Left / Right | Seek to the previous / next bookmark |

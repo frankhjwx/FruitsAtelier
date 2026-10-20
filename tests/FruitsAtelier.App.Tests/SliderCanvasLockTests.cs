@@ -102,15 +102,15 @@ internal static class SliderCanvasLockTests
                 "A blocked edit must restart the notice without changing content or history.");
         }
 
-        foreach (bool global in new[] { false, true })
-        foreach (bool? mapChoice in new bool?[] { null, false, true })
+        foreach (bool derandomize in new[] { false, true })
+        foreach (double strength in new[] { 20d, 8d })
         foreach (bool osu in new[] { false, true })
         {
             const string source = "osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n64,64,1000,2,0,L|192:64,1,128\n";
             var map = OsuBeatmapReader.Read(source);
-            map.DurationMs = 5000; map.DerandomizeDroplets = mapChoice;
+            Configure(map);
+            Check(SliderRepresentationEditing.RefreshLegacyDroplets(map).Success, "The Legacy fixture must apply its map settings.");
             var ui = new Ui(false); ui.LoadDocument(map);
-            ui.View.LibrarySettings.DerandomizeDroplets = global;
             ui.Key('1');
             if (osu)
             {
@@ -119,46 +119,87 @@ internal static class SliderCanvasLockTests
                 var point = ui.View.OsuCanvasScreen(64, 64); ui.Click(point.X, point.Y);
             }
             else ui.ClickMap(1000, 64);
-            ui.Key('D', ctrl: true);
-            Check(ui.View.Document.ImportedSliders.Count == 1 && ui.View.Document.Tracks.Count == 1
-                && ui.View.Document.Tracks.Single().Nodes[0].TimeMs == 3000,
-                "Ctrl+D must retain the original Legacy Slider and create an FSlider copy one measure later.");
-            var originals = ui.View.Document.DeepClone(); originals.Tracks.Clear();
-            Check(originals.ContentEquals(map), "Cloning must preserve the original slider and map settings.");
+            ui.Key('D', ctrl: true); Wait(ui);
+            Check(ui.View.Document.ImportedSliders.Count == 2 && ui.View.Document.Tracks.Count == 0
+                && ui.View.Document.ImportedSliders.Max(s => s.TimeMs) == 3000,
+                "Ctrl+D must retain the original and create a Legacy Slider copy one measure later.");
+            var original = ui.View.Document.ImportedSliders.Single(s => s.Id == map.ImportedSliders.Single().Id);
+            var before = map.ImportedSliders.Single();
+            Check((original.TimeMs, original.X, original.Y, original.PathType, original.PixelLength, original.SpanCount)
+                == (before.TimeMs, before.X, before.Y, before.PathType, before.PixelLength, before.SpanCount)
+                && original.ControlPoints.SequenceEqual(before.ControlPoints)
+                && ui.View.Document.DerandomizeFSliderDroplets == map.DerandomizeFSliderDroplets
+                && ui.View.Document.RandomizeDropletStrength == map.RandomizeDropletStrength
+                && ui.View.Document.RandomizeDropletSeed == map.RandomizeDropletSeed,
+                "Cloning must preserve the original slider geometry and map settings.");
             var reference = OsuBeatmapReader.Read(source + "64,64,3000,2,0,L|192:64,1,128\n");
-            var copy = reference.ImportedSliders.Last();
-            var expected = CatchStreamConverter.Convert(reference).Objects.Where(o => o.SourceId == copy.Id).ToArray();
-            var actual = CatchStreamConverter.Convert(ui.View.Document).Objects
-                .Where(o => o.SourceId == ui.View.Document.Tracks.Single().Id).ToArray();
-            bool derandomize = mapChoice ?? global;
-            double duration = ImportedSliderConverter.DurationMs(reference, copy);
-            Check(actual.Length == expected.Length && actual.Zip(expected).All(pair =>
-                pair.First.Kind == pair.Second.Kind && Math.Abs(pair.First.TimeMs - pair.Second.TimeMs) < .001
-                && Math.Abs(pair.First.X - (derandomize ? 64 + 128 * (pair.Second.TimeMs - 3000) / duration : pair.Second.X)) < 1),
-                "The copied slider must use the map conversion choice before falling back to the global default.");
-            Check(OsuBeatmapWriter.Serialize(ui.View.Document).ObjectSequenceMatches,
-                "The copied slider must preserve its playable sequence through export.");
+            Configure(reference);
+            Check(SliderRepresentationEditing.RefreshLegacyDroplets(reference).Success, "Reference Legacy processing must succeed.");
+            var expected = OsuBeatmapWriter.Serialize(reference);
+            var actual = OsuBeatmapWriter.Serialize(ui.View.Document);
+            Compare(expected.PlayableObjects, actual.PlayableObjects);
+            Compare(expected.PlayableHardRockObjects, actual.PlayableHardRockObjects);
+            Check(actual.ObjectSequenceMatches, "The Legacy copy must preserve its playable sequence through export.");
+            Check(ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)).ContentEquals(ui.View.Document),
+                "Legacy copy baselines must survive project serialization.");
+            var copied = ui.View.Document.DeepClone();
             ui.Key('Z', ctrl: true);
             Check(ui.View.Document.ContentEquals(map), "Undo must restore the original slider after cloning.");
             ui.Key('Y', ctrl: true);
-            Check(ui.View.Document.Tracks.Count == 1 && ui.View.Document.ImportedSliders.Count == 1,
-                "Redo must restore the converted copy without duplicating the original.");
+            Check(ui.View.Document.ContentEquals(copied), "Redo must restore the prepared Legacy copy.");
+            if (osu)
+            {
+                ui.View.UpdateTransport(3000, 5000, true, false, false, null, null); ui.Paint();
+                var point = ui.View.OsuCanvasScreen(64, 64); ui.Click(point.X, point.Y);
+            }
+            else ui.ClickMap(3000, 64);
+            Check(ui.View.CopySelection(), "The processed Legacy copy must remain copyable.");
+            ui.View.UpdateTransport(6000, 10000, true, false, false, null, null);
+            Check(ui.View.PasteSelection(), "Pasting a processed Legacy copy must succeed."); Wait(ui);
+            Check(ui.View.Document.ImportedSliders.Count == 3 && ui.View.Document.Tracks.Count == 0
+                && ui.View.Document.ImportedSliders.All(s => (s.RandomizationSource is null || s.RandomizationSource.Id == s.Id)
+                    && (s.RandomizationTrack is null || s.RandomizationTrack.Id == s.Id)),
+                "Every pasted Legacy effect baseline must belong to its new parent.");
+            ui.Key('Z', ctrl: true);
+            Check(ui.View.Document.ContentEquals(copied), "Pasting a processed Legacy copy must remain one undo step.");
+
+            void Configure(MapDocument document)
+            {
+                document.DurationMs = 5000;
+                document.DerandomizeFSliderDroplets = document.DerandomizeDropletsForHardRock = derandomize;
+                document.RandomizeDropletStrength = strength; document.RandomizeDropletSeed = strength == 20 ? 1337 : 99;
+            }
+            void Compare(IReadOnlyList<ConvertedCatchObject> expectedObjects, IReadOnlyList<ConvertedCatchObject> actualObjects)
+            {
+                Check(actualObjects.Count == expectedObjects.Count && actualObjects.Zip(expectedObjects).All(pair =>
+                    pair.First.Kind == pair.Second.Kind && Math.Abs(pair.First.TimeMs - pair.Second.TimeMs) < .001
+                    && Math.Abs(pair.First.X - pair.Second.X) < 1),
+                    "Legacy copies must follow the difficulty's droplet mode, strength and seed in NM and HR.");
+            }
         }
 
         var mixed = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n64,64,1000,2,0,L|192:64,1,128\n256,64,1500,2,0,L|384:64,1,128\n400,192,2000,1,0\n");
         mixed.DurationMs = 10000;
         var batch = new Ui(false); batch.LoadDocument(mixed); batch.Key('1'); batch.ClickMap(2000, 400);
         Check(batch.View.CopySelection(), "The clipboard fixture must contain the standalone fruit.");
-        batch.Key('A', ctrl: true); batch.Key('D', ctrl: true);
-        Check(batch.View.Document.ImportedSliders.Count == 2 && batch.View.Document.Tracks.Count == 2
+        batch.Key('A', ctrl: true); batch.Key('D', ctrl: true); Wait(batch);
+        Check(batch.View.Document.ImportedSliders.Count == 4 && batch.View.Document.Tracks.Count == 0
             && batch.View.Document.Fruits.Count == 2 && batch.View.SelectedObjectIds.Count == 3,
-            "A mixed clone must process only the copied Legacy Sliders and select the complete copied group.");
+            "A mixed clone must retain Legacy Slider types and select the complete copied group.");
         batch.Key('Z', ctrl: true);
         Check(batch.View.Document.ContentEquals(mixed), "One undo must remove the entire mixed clone.");
         batch.View.UpdateTransport(8000, 10000, true, false, false, null, null);
         Check(batch.View.PasteSelection() && batch.View.Document.Fruits.Count == 2
             && batch.View.Document.Tracks.Count == 0 && batch.View.Document.ImportedSliders.Count == 2,
             "Cloning must retain the user's clipboard and ordinary paste behavior.");
+    }
+
+    private static void Wait(Ui ui)
+    {
+        var timeout = System.Diagnostics.Stopwatch.StartNew();
+        while (ui.View.LegacyDropletRefreshBusy && timeout.Elapsed.TotalSeconds < 30)
+        { Thread.Sleep(1); ui.Paint(); }
+        Check(!ui.View.LegacyDropletRefreshBusy, "Legacy copy validation must finish.");
     }
 
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
