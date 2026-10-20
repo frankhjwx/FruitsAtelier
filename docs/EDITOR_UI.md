@@ -120,6 +120,10 @@ navigation and Testplay retain their own key handling. Switching views does not
 convert objects or create a content edit. Catch preview continues to show the
 exported fruits in either view.
 
+Slider shapes are edited in their matching canvas: Legacy Sliders in osu! and
+FSliders in Catch. Clicking a slider in the other canvas or attempting a blocked
+edit shows a three-second notice explaining how to switch with Tab, then fades out.
+
 The osu! canvas draws circles, approach circles, Legacy Slider paths, repeats,
 slider balls and spinners. Circle size, approach rate, combo ordering and stacking
 use standard geometry. Past circles turn white and fade over 700 ms. Seeking and
@@ -970,7 +974,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Right-click a note / edited point | Delete an object; a straight point becomes curved, a curved point is deleted; no context menu |
 | Ctrl+L | Confirm restoring the current difficulty to its previous saved version |
 | Ctrl+Shift+I | Insert a control point on the curve under the pointer |
-| Ctrl+D | Clone selected parents one measure after the last selected start |
+| Ctrl+D | Clone selected parents one measure after the last selected start; Legacy Slider copies become FSliders using the map's saved Legacy conversion choice, or the global Legacy → FSlider default when unset |
 | Ctrl+A | Select all objects |
 | Ctrl+H | Flip selected parents horizontally around X=256 |
 | Ctrl+Left / Right | Seek to the previous / next bookmark |

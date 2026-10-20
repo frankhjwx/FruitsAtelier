@@ -31,6 +31,9 @@ public sealed partial class EditorView
     internal float OsuLinkNoticeOpacity => osuLinkNotice is null ? 0
         : (float)Math.Clamp((3.5 - timeProvider.GetElapsedTime(osuLinkNoticeStarted).TotalSeconds) / .5, 0, 1);
     public void ShowOsuLinkNotice(string key)
+        => ShowEditorNotice(key);
+
+    private void ShowEditorNotice(string key)
     {
         osuLinkNotice = key; osuLinkNoticeStarted = timeProvider.GetTimestamp();
         SetNotice(L.Get(key));

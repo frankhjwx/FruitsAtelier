@@ -1496,7 +1496,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Convierte el slider al tipo de este lienzo para editar su forma. Los hitsounds y NC siguen siendo editables.",
+  "osu.readOnlySlider": "Pulsa Tab para cambiar de lienzo: edita Legacy Sliders en osu! y FSliders en Catch. Los hitsounds y NC siguen siendo editables.",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",

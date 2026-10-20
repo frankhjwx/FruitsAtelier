@@ -179,6 +179,8 @@ internal static class OsuCanvasRenderCheck
                 { editor.PointerDown(preview.X + 10, preview.Y + 10, 0, false, false); editor.PointerUp(preview.X + 10, preview.Y + 10, 0); }
                 Paint("catch-preview");
                 if (!editor.IsOsuCanvas || editor.IsDirty || !map.ContentEquals(editor.Document)) throw new InvalidOperationException("Standard canvas rendering changed content or mode.");
+                editor.ShowOsuLinkNotice("osu.readOnlySlider");
+                Paint("slider-canvas-notice");
                 void Paint(string? name = null)
                 {
                     var wait = System.Diagnostics.Stopwatch.StartNew();

@@ -61,7 +61,7 @@ public sealed partial class EditorView
     private bool RejectReadOnlySelection()
     {
         if (!ClipboardSelectedParentIds().Any(IsReadOnlySlider)) return false;
-        StatusMessage = L.Get("osu.readOnlySlider");
+        ShowEditorNotice("osu.readOnlySlider");
         return true;
     }
 
@@ -242,7 +242,8 @@ public sealed partial class EditorView
             osuMarqueeBounds = new(x, y, 0, 0); drag = DragKind.Marquee; return true;
         }
         PickObject(hit, ctrl);
-        if (!ctrl && !IsReadOnlySlider(hit)) BeginOsuDrag(point);
+        if (IsReadOnlySlider(hit)) ShowEditorNotice("osu.readOnlySlider");
+        else if (!ctrl) BeginOsuDrag(point);
         return true;
     }
 

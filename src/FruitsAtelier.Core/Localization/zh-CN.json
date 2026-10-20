@@ -378,7 +378,7 @@
   "core.reader.incompleteCurve": "不能保存未完成或未知类型的曲线。",
   "core.reader.lineError": "谱面第 {0} 行无效：{1}",
   "core.reader.mode": "仅支持 osu!standard（Mode: 0）和 Catch（Mode: 2）谱面。",
-  "osu.readOnlySlider": "修改形状前，请先将此滑条转换为当前画布的滑条类型。音效和 NC 仍可编辑。",
+  "osu.readOnlySlider": "按 Tab 切换画布：Legacy Slider 在 osu! 画布编辑，FSlider 在 Catch 画布编辑。音效和 NC 仍可编辑。",
   "osu.canvasActive": "osu! 画布 — Legacy Slider 编辑",
   "osu.catchCanvasActive": "Catch 画布 — FSlider 编辑",
   "osu.spinnerEnd": "请选择转盘的结束时间。",

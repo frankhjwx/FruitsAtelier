@@ -127,7 +127,7 @@ public sealed partial class EditorView
     {
         if (!TryCopySnapshot(out var snapshot)) return false;
         var ids = ClipboardParents(snapshot!).Select(p => p.Id).ToHashSet();
-        if (ids.Any(IsReadOnlySlider)) { StatusMessage = L.Get("osu.readOnlySlider"); return false; }
+        if (ids.Any(IsReadOnlySlider)) { ShowEditorNotice("osu.readOnlySlider"); return false; }
         string reference = SelectionReference(snapshot!);
         if (!Edit(L.Get("editor.command.cutObjects"), () =>
         {
@@ -143,6 +143,9 @@ public sealed partial class EditorView
     }
 
     public bool PasteSelection()
+        => PasteSelection(convertLegacySliders: false);
+
+    private bool PasteSelection(bool convertLegacySliders)
     {
         if (!CanPasteSelection)
         {
@@ -207,6 +210,13 @@ public sealed partial class EditorView
             Document.ImportedSliders.AddRange(pasted.ImportedSliders);
             Document.BananaShowers.AddRange(pasted.BananaShowers);
             Document.DurationMs = pasted.DurationMs;
+
+            if (convertLegacySliders)
+            {
+                bool derandomize = Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets;
+                foreach (var slider in pasted.ImportedSliders)
+                    ImportedSliderEditing.ConvertToTrack(Document, slider.Id, editorConversionCache, derandomize);
+            }
 
             void IncludeEnd(double objectEnd)
             {

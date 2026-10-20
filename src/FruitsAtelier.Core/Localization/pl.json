@@ -1496,7 +1496,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Aby edytować kształt, przekształć slider na typ tego płótna. Hitsoundy i NC nadal można edytować.",
+  "osu.readOnlySlider": "Naciśnij Tab, aby zmienić płótno: edytuj Legacy Slidery w osu!, a FSlidery w Catch. Hitsoundy i NC nadal można edytować.",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",

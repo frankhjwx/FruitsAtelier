@@ -40,7 +40,7 @@ public sealed partial class EditorView
 
     private void BeginSliderObjectDrag(ConvertedCatchObject target, float x, float y)
     {
-        if (IsReadOnlySlider(target.SourceId)) { StatusMessage = L.Get("osu.readOnlySlider"); return; }
+        if (IsReadOnlySlider(target.SourceId)) { ShowEditorNotice("osu.readOnlySlider"); return; }
         sliderObjectPointerOriginX = target.X;
         EnsureConversion();
         CaptureLazerGestureDistance();

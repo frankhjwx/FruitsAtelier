@@ -1496,7 +1496,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "Ubah slider ke jenis kanvas ini untuk mengedit bentuknya. Hitsound dan NC tetap dapat diedit.",
+  "osu.readOnlySlider": "Tekan Tab untuk beralih kanvas: edit Legacy Slider di osu! dan FSlider di Catch. Hitsound dan NC tetap dapat diedit.",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",

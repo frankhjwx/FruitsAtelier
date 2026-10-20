@@ -45,7 +45,11 @@ public sealed partial class EditorView
 
     private ImportedSliderEditResult ConvertImportedSlider(Guid id, CatchConversionCache? cache = null)
     {
-        if (!osuAllowSliderConversion) throw new InvalidOperationException(L.Get("osu.readOnlySlider"));
+        if (!osuAllowSliderConversion)
+        {
+            ShowEditorNotice("osu.readOnlySlider");
+            throw new InvalidOperationException(StatusMessage);
+        }
         bool derandomize = Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets;
         var result = ImportedSliderEditing.ConvertToTrack(Document, id, cache ?? editorConversionCache, derandomize);
         if (drag != DragKind.None && Document.DerandomizeDroplets is null) pendingImplicitSliderConversions.Add(id);

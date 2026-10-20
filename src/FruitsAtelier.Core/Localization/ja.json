@@ -1496,7 +1496,7 @@
   "osu.path.C": "Catmull",
   "osu.path.L": "Linear",
   "osu.path.P": "Perfect circle",
-  "osu.readOnlySlider": "形状を編集するには、このキャンバスのスライダー形式に変換してください。ヒットサウンドと NC は編集できます。",
+  "osu.readOnlySlider": "Tab でキャンバスを切り替えてください。Legacy Slider は osu!、FSlider は Catch で編集できます。ヒットサウンドと NC は引き続き編集できます。",
   "osu.sliderDraft": "Click to add controls; right-click to finish the Legacy Slider.",
   "osu.spinnerEnd": "Choose the spinner end time.",
   "osu.circle": "Circle",

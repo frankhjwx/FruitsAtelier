@@ -269,7 +269,7 @@ public sealed partial class EditorView
         {
             PickObject(readOnlyHit.SourceId, ctrl);
             clickedCoordinate = readOnlyHit.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet ? readOnlyHit : null;
-            BeginSliderHold(x, y, ctrl || shift); StatusMessage = L.Get("osu.readOnlySlider"); return;
+            BeginSliderHold(x, y, ctrl || shift); ShowEditorNotice("osu.readOnlySlider"); return;
         }
         timelineFruit = null;
         if (!ctrl && tool == Tool.Select && objectSelection.Count == 1 && SelectedDistanceObject() is { IsStandalone: false } selectedChild
@@ -707,7 +707,7 @@ public sealed partial class EditorView
         {
             var readOnlyIds = IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id);
             if (history.TransactionChangesSliderGeometry(readOnlyIds))
-            { history.Cancel(); drag = DragKind.None; StatusMessage = L.Get("osu.readOnlySlider"); return; }
+            { history.Cancel(); drag = DragKind.None; ShowEditorNotice("osu.readOnlySlider"); return; }
             try
             {
                 if (drag == DragKind.TimelineTail && tailImportedBefore is { } beforeTail
@@ -843,7 +843,7 @@ public sealed partial class EditorView
         if (Document.ImportedSliders.Any(slider => slider.Id == sourceId))
         {
             SelectObjects([sourceId], sourceId);
-            StatusMessage = L.Get("osu.readOnlySlider");
+            ShowEditorNotice("osu.readOnlySlider");
             return;
         }
         if (Document.Tracks.FirstOrDefault(track => track.Id == sourceId) is not { } track) return;
@@ -1796,7 +1796,7 @@ public sealed partial class EditorView
                 : (IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id)).ToArray();
             field.Apply(value);
             if (history.TransactionChangesSliderGeometry(readOnlyIds))
-            { history.Cancel(); fieldError = StatusMessage = L.Get("osu.readOnlySlider"); return false; }
+            { history.Cancel(); ShowEditorNotice("osu.readOnlySlider"); fieldError = StatusMessage; return false; }
             CommitContentHistory();
             editField = -1;
             fieldError = "";

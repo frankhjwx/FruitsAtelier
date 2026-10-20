@@ -437,7 +437,7 @@ public sealed partial class EditorView
             int importedBefore = Document.ImportedSliders.Count;
             change();
             if (!osuAllowSliderConversion && history.TransactionChangesSliderGeometry(readOnlyIds))
-            { history.Cancel(); StatusMessage = L.Get("osu.readOnlySlider"); return false; }
+            { history.Cancel(); ShowEditorNotice("osu.readOnlySlider"); return false; }
             if (before is not null && !PositionsEqual(before, Document))
             { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }
             if (Document.DerandomizeDroplets is null && Document.ImportedSliders.Count < importedBefore)
