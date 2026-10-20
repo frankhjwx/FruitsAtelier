@@ -258,17 +258,15 @@ public sealed partial class EditorView
         c.Line(x, controlsY + 76, x + w, controlsY + 76, Grid);
         Button(c, new(x, controlsY + 88, w, 32), L.Get("collab.fromBookmarks"), GenerateCollaborationSections,
             enabled: !CollaborationBusy && Document.DurationMs > 0);
-        Button(c, new(x, controlsY + 128, w, 32), L.Get("collab.add"), AddCollaborationReference,
-            enabled: !CollaborationBusy && references.Count < 256);
         float timeWidth = 90, sourceWidth = w - timeWidth * 2 - 50;
         if (references.Count > 0)
         {
-            c.Text(L.Get("collab.references"), x, y + 260, 14, Foreground, w, true);
-            c.Text(L.Get("collab.source"), x, y + 294, 11, Muted, sourceWidth);
-            c.Text(L.Get("collab.start"), x + sourceWidth + 6, y + 294, 11, Muted, timeWidth);
-            c.Text(L.Get("collab.end"), x + sourceWidth + timeWidth + 12, y + 294, 11, Muted, timeWidth);
+            c.Text(L.Get("collab.references"), x, y + 220, 14, Foreground, w, true);
+            c.Text(L.Get("collab.source"), x, y + 254, 11, Muted, sourceWidth);
+            c.Text(L.Get("collab.start"), x + sourceWidth + 6, y + 254, 11, Muted, timeWidth);
+            c.Text(L.Get("collab.end"), x + sourceWidth + timeWidth + 12, y + 254, 11, Muted, timeWidth);
         }
-        y += references.Count == 0 ? 202 : 318;
+        y += references.Count == 0 ? 162 : 278;
         if (references.Count == 0)
         {
             c.Text(L.Get("collab.emptyShort"), x, y + 8, 12, Muted, w);
@@ -300,6 +298,9 @@ public sealed partial class EditorView
                     CollaborationStartBounds = input;
             }
         }
+        Button(c, new(x, y, w, 32), L.Get("collab.add"), AddCollaborationReference,
+            enabled: !CollaborationBusy && references.Count < 256);
+        y += 40;
         c.Line(x, y, x + w, y, Grid);
         c.Text(L.Get("collab.targets"), x, y + 16, 14, Foreground, w, true);
         y += 58;

@@ -57,7 +57,7 @@ All referenced difficulties must belong to the same project.
 
 The full-width **Sync references** button and **Sync object hitsounds** option form
 the sync group. A separator divides it from **Generate sections from bookmarks**,
-**Add Section** and the section list. Use **Add Section**, select the source, and
+the section list. **Add Section** sits below all section rows. Use it, select the source, and
 edit **Start** and **End** on one row.
 New references start **Unassigned**. The source menu can also clear an existing
 source. Unassigned sections are saved and checked for overlaps, but synchronization
