@@ -22,6 +22,12 @@ internal static class FaOnlyUiTests
                 session.Manifest.Difficulties[0].ExportConfirmed = true;
                 WorkspaceProject.Save(session, session.Project);
                 var ui = new Ui(false); ui.Resize(size.Item1, size.Item2);
+                void ClickFaSettings()
+                {
+                    if (ui.View.SongSetupVisible) { ui.ClickText(L.Get("song.faSettings")); return; }
+                    var bounds = ui.View.SongDockViewport;
+                    ui.Click(bounds.X + 4 * ((bounds.Width - 12) / 5 + 3) + 5, bounds.Y + 10);
+                }
                 ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
                 ui.View.LoadWorkspace(session); Wait(ui);
                 int exports = 0;
@@ -55,14 +61,14 @@ internal static class FaOnlyUiTests
                     ui.View.SaveCurrentDifficulty(); Wait(ui);
                     Check(ui.View.WorkspaceSession!.Manifest.Difficulties.Single(d => d.Id == local).FaOnly && exports == 1, "saving FA-only writes workspace only");
                     ui.Key(115); ui.Paint();
-                    ui.ClickText(L.Get("song.faSettings"));
+                    ClickFaSettings();
                     ui.ClickText(L.Get("song.syncToOsu")); Wait(ui);
                     Check(!ui.View.CurrentDifficultyFaOnly && exports == 2, "enabling sync in Song Setup generates the previously local difficulty");
                     string external = WorkspaceSynchronization.Target(ui.View.WorkspaceSession!.Manifest.Difficulties.Single(d => d.Id == local))!;
                     string unchanged = File.ReadAllText(external);
                     void Settings()
                     {
-                        ui.View.ShowSongDock(); ui.Paint(); ui.ClickText(L.Get("song.faSettings"));
+                        ui.View.ShowSongDock(); ui.Paint(); ClickFaSettings();
                     }
                     Settings(); ui.ClickText(L.Get("song.syncToOsu"));
                     Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("song.faOnlyPrompt")), "detaching a linked difficulty asks about its osu file");
@@ -83,10 +89,10 @@ internal static class FaOnlyUiTests
                     Check(reopened.Project.Difficulties.Single(d => d.Id == local).FaOnly
                         && reopened.Project.Difficulties.Count(d => !d.FaOnly) == count + 1, "restart retains independent per-difficulty settings");
                     ui.View.LoadWorkspace(reopened); ui.View.SwitchDifficulty(reopened.Project.Difficulties.FindIndex(d => d.Id == local)); Wait(ui);
-                    ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("song.faSettings"));
+                    ui.View.OpenSongSetup(); ui.Paint(); ClickFaSettings();
                     ui.ClickText(L.Get("song.syncToOsu")); ui.ClickText(L.Get("mac.cancel"));
                     Check(ui.View.CurrentDifficultyFaOnly, "modal Song Setup cancellation preserves the saved sync setting");
-                    ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("song.faSettings"));
+                    ui.View.OpenSongSetup(); ui.Paint(); ClickFaSettings();
                     ui.ClickText(L.Get("song.syncToOsu")); ui.ClickText(L.Get("song.ok")); Wait(ui);
                     Check(!ui.View.CurrentDifficultyFaOnly && exports == 3, "modal Song Setup applies sync and recreates the deleted osu file");
                     Console.WriteLine($"PASS FA-only UI {locale} {size.Item1}x{size.Item2}: defaults, creation, settings, keep/delete/cancel and restart");

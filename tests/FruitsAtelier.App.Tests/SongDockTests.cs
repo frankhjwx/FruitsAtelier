@@ -45,7 +45,7 @@ internal static class SongDockTests
                 void Category(int index)
                 {
                     var bounds = ui.View.SongDockViewport;
-                    ui.Click(bounds.X + index * ((bounds.Width - 9) / 4 + 3) + 5, bounds.Y + 10);
+                    ui.Click(bounds.X + index * ((bounds.Width - 12) / 5 + 3) + 5, bounds.Y + 10);
                 }
                 ui.View.ShowSongDock(); ui.Paint();
                 var tab = ui.View.DockTabBounds(EditorView.DockPanel.SongSetup);

@@ -38,7 +38,7 @@ public sealed partial class EditorView
         PrepareSongTags(c);
         string[] tabs = ["song.general", "song.difficulty", "song.colours", "song.design", "song.faSettings"];
         songTab = Math.Clamp(songTab, 0, 4);
-        const float categoryHeight = 82;
+        const float categoryHeight = 44;
         float bodyHeight = songTab switch { 0 => 7 * 72 + Math.Max(64, songTagRows.Count * (songTagSize + 5) + 14) + 38,
             1 => SongDifficulty.Length * 82, 2 => 650, 3 => 320, _ => 470 };
         songDockContentHeight = categoryHeight + bodyHeight + 32;
@@ -47,12 +47,11 @@ public sealed partial class EditorView
         int firstHit = hits.Count;
         c.Clip(bounds);
         float column = (bounds.Width - 6) / 2;
-        float categoryWidth = (bounds.Width - 9) / 4;
+        float categoryWidth = (bounds.Width - 3 * (tabs.Length - 1)) / tabs.Length;
         for (int i = 0; i < tabs.Length; i++)
         {
             int tab = i;
-            var category = i < 4 ? new Rect(bounds.X + i * (categoryWidth + 3), y, categoryWidth, 32)
-                : new Rect(bounds.X, y + 38, bounds.Width, 32);
+            var category = new Rect(bounds.X + i * (categoryWidth + 3), y, categoryWidth, 32);
             Button(c, category,
                 FitTabName(c, L.Get(tabs[i]), Math.Max(1, category.Width - 16)),
                 () => { songTab = tab; songField = songError = ""; songDockScroll = 0; SongSetupInputSession++; }, active: songTab == tab, fontSize: 12);

@@ -73,11 +73,11 @@ internal static class DockingRenderCheck
                     editor.PointerUp(x, y, 0); Paint();
                 }
                 editor.ShowSongDock(); Paint();
-                for (int category = 0; category < 4; category++)
+                for (int category = 0; category < 5; category++)
                 {
                     editor.ShowSongDock(); Paint();
                     var songBounds = editor.SongDockViewport;
-                    Click(new(songBounds.X + category * ((songBounds.Width - 9) / 4 + 3), songBounds.Y, 20, 30));
+                    Click(new(songBounds.X + category * ((songBounds.Width - 12) / 5 + 3), songBounds.Y, 20, 30));
                     Paint($"song-dock-{category}");
                     editor.Wheel(songBounds.X + 20, songBounds.Y + 80, -12000, false, false);
                     Paint($"song-dock-{category}-scrolled");
