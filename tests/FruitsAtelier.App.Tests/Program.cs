@@ -211,7 +211,7 @@ if (args.Contains("--performance-scheduling")) return PerformanceSchedulingTests
 if (args.Length == 2 && args[0] == "--fruit-placement-performance") return EditorPerformance.RunFruitPlacement(args[1]);
 if (args.Length == 2 && args[0] == "--testplay-edit-performance") return EditorPerformance.RunTestplayEditing(args[1]);
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
-if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
+if (args.Length is 2 or 3 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1], startMs: args.Length == 3 ? double.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture) : 89038);
 if (args.Length == 2 && args[0] == "--lazer-map-performance") return EditorPerformance.RunMap(args[1], lazer: true);
 if (args.Length == 2 && args[0] == "--slider-drag-performance") return EditorPerformance.RunSliderDrag(args[1]);
 if (args.Length == 2 && args[0] == "--slider-draft-performance")

@@ -715,7 +715,12 @@ latency are excluded.
 
 ## Playback rendering profile
 
-For a read-only CPU profile of an existing `.osu` or `.catchdiff` file, run the App test executable with `--map-performance <path>`. It measures playback around 89 seconds at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.
+For a read-only CPU profile of an existing `.osu` or `.catchdiff` file, run the App test executable with `--map-performance <path> [startMs]`. It measures playback from the supplied time (default 89038 ms) at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.
+
+`App.Tests --independent-scale-check` also checks allocation-free dense coordinate
+projection after resizing and seeking. On Windows,
+`FruitsAtelier.App.exe --render-check --text-resources-render-check` checks bounded
+native text resources during animation and layout reuse for dense labels.
 
 On Windows, run `FruitsAtelier.App.exe --profile-map <path> [startMs]` in a hidden Direct2D window with the active default skin. It opens an in-memory workspace session for the selected `.osu` or `.catchdiff` and sibling difficulties, including periodic resource checks, then samples 3,600 warmed frames per case from the supplied time (default 70000 ms) at 100% zoom and 1/4 snap with preview closed, NM, HR, and paused fruit hover. Playback advances thirty seconds per case. The report separates drawing submission, total rendering including `EndDraw`/`Present`, and silent transport updates. Per-frame samples include allocations, GC collections, and image decode counts to identify isolated stalls. It also measures document comparison time. The report is written to `artifacts/logs/playback-profile.json` in repository builds, or the application log directory in distributed builds. This is not a visible-screen FPS measurement. Neither profile saves or imports the map into the workspace, plays audio, or changes system volume.
 

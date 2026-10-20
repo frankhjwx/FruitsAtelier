@@ -219,7 +219,15 @@ results; a successful result commits after active history transactions end and
 supplies the next render's export cache. Workers do not share mutable conversion
 caches with the UI.
 
-Windows drawing uses one mutable solid brush and at most 128 cached text formats.
+Coordinate projection reuses the current viewport transform until its origin,
+dimensions, time range or time scale changes; drawing each object must not allocate
+another transform.
+
+Windows drawing uses one mutable solid brush, at most 128 cached text formats and
+256 cached text layouts. Layouts are keyed by text, size, clipping dimensions and
+weight, so dense NC labels and timeline numbers reuse shaping while moving.
+Position, colour and opacity do not invalidate a layout. Eviction and difficulty
+retirement release layouts; continuous animation cannot grow the cache unbounded.
 Animated text sizes keep exact dimensions; evicted formats are disposed, and all
 remaining formats and the brush are released with the canvas.
 

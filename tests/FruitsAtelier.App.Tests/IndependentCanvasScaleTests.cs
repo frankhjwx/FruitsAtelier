@@ -6,6 +6,7 @@ internal static class IndependentCanvasScaleTests
     public static void Run()
     {
         MenuPriority();
+        CanvasZoomTests.DenseCoordinateProjection();
         CanvasZoomTests.DefaultsAndReset(); CanvasZoomTests.SliderAndWheel(); CanvasZoomTests.PlaybackAndLanguages();
         SelectionTransformTests.Run(); MappingSessionTests.Preferences();
         NoteSnapTests.SliderObjectDragging(); MixedSliderTests.Import();

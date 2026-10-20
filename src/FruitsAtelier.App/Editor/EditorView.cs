@@ -260,7 +260,19 @@ public sealed partial class EditorView
             return new(plot.X + margin + (float)(IsLazerEditing ? lazerPanX : canvasPanX), plot.Y, 512 * PlayfieldScale, plot.Height);
         }
     }
-    private TimelineTransform Transform => new(Playfield.X, plot.Bottom, Playfield.Width, PresentationViewStart, pixelsPerMs);
+    private TimelineTransform? canvasTransform;
+    private TimelineTransform Transform
+    {
+        get
+        {
+            var field = Playfield;
+            double start = PresentationViewStart;
+            if (canvasTransform is not { } current || current.Left != field.X || current.Bottom != plot.Bottom
+                || current.Width != field.Width || current.ViewStartMs != start || current.PixelsPerMs != pixelsPerMs)
+                canvasTransform = new(field.X, plot.Bottom, field.Width, start, pixelsPerMs);
+            return canvasTransform;
+        }
+    }
     private Fruit? SelectedFruit => Document.Fruits.FirstOrDefault(f => f.Id == selection);
     private CurveTrack? SelectedTrack => Document.Tracks.FirstOrDefault(t => t.Id == selectedTrack || t.Id == selection);
     private Anchor? SelectedAnchor => SelectedTrack?.Nodes.FirstOrDefault(n => n.Id == selection);

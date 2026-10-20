@@ -259,7 +259,7 @@ internal static class EditorPerformance
         return 0;
     }
 
-    public static int RunMap(string path, bool lazer = false)
+    public static int RunMap(string path, bool lazer = false, double startMs = 89038)
     {
         long initialAllocation = GC.GetTotalAllocatedBytes();
         var watch = Stopwatch.StartNew();
@@ -283,14 +283,14 @@ internal static class EditorPerformance
         view.RequestScheduleHitsound = (_, _) => { };
         view.RequestPrepareHitsound = _ => { };
         view.HitsoundLookaheadMs = 250;
-        view.StartHitsounds(89038);
+        view.StartHitsounds(startMs);
         var frames = new List<double>();
         var transport = new List<double>();
         long allocated = GC.GetAllocatedBytesForCurrentThread();
         for (int i = 0; i < 120; i++)
         {
             watch.Restart();
-            view.UpdateTransport(89038 + i * 1000d / 120, document.DurationMs, true, true, false, null, document.AudioPath);
+            view.UpdateTransport(startMs + i * 1000d / 120, document.DurationMs, true, true, false, null, document.AudioPath);
             if (i >= 20) transport.Add(watch.Elapsed.TotalMilliseconds);
             watch.Restart(); view.Render(canvas, 1440, 900);
             if (i >= 20) frames.Add(watch.Elapsed.TotalMilliseconds);
@@ -299,7 +299,7 @@ internal static class EditorPerformance
         transport.Sort();
         Console.WriteLine($"Transport + hitsound scheduling CPU: median={transport[50]:F3} p95={transport[95]:F3} ms (silent callbacks)");
         Console.WriteLine($"Playback CPU render: median={frames[50]:F3} p95={frames[95]:F3} ms; allocations={(GC.GetAllocatedBytesForCurrentThread() - allocated) / 120 / 1024} KiB/frame");
-        foreach (string phase in new[] { "EnsureConversion", "DrawChrome", "DrawInspector", "DrawCanvas", "DrawObjectTimeline", "DrawTransport", "DrawStatus" })
+        foreach (string phase in new[] { "EnsureConversion", "DrawChrome", "DrawInspector", "DrawCanvas", "DrawCanvasCatchObjects", "DrawObjectTimeline", "DrawTransport", "DrawStatus" })
         {
             var method = typeof(EditorView).GetMethod(phase, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
             Action run = phase == "EnsureConversion" ? method.CreateDelegate<Action>(view) : () => method.Invoke(view, [canvas]);
