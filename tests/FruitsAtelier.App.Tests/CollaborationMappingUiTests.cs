@@ -51,6 +51,7 @@ internal static class CollaborationMappingUiTests
                 var watch = Stopwatch.StartNew();
                 while (ui.View.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { ui.Paint(); Thread.Sleep(1); }
                 Check(!ui.View.CollaborationBusy && ui.View.Document.Fruits.Count == 3, "Sources merged and outside target object retained");
+                Check(!ui.View.CollaborationReportVisible, "No exclusions leave the report closed");
                 Check(ui.View.PlayheadMs == playhead && ui.View.ViewStartMs == viewStart && ui.View.AudioReady, "Sync preserves transport and viewport");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.Fruits.Count == 1, "Synchronization undo");
                 ui.Key('Y', ctrl: true); Check(ui.View.Document.Fruits.Count == 3, "Synchronization redo");
@@ -63,6 +64,7 @@ internal static class CollaborationMappingUiTests
                 Check(ui.Canvas.Texts.Count(t => t.Value == "C") >= 1 && ui.Canvas.Texts.Count(t => t.Value == "D") >= 1, "Reverse graph updates after restart");
                 Console.WriteLine("PASS Collab Mapping UI " + locale);
                 BookmarkSections();
+                ExclusionReport();
             }
         }
         finally { L.SetLanguage(language); }
@@ -131,6 +133,40 @@ internal static class CollaborationMappingUiTests
         Check(ui.View.Document.Fruits.Count == 1 && !File.Exists(copied), "Resource copies follow synchronization undo");
         ui.Key('Y', ctrl: true);
         Check(ui.View.Document.Fruits.Count == 2 && File.Exists(copied), "Resource copies follow synchronization redo");
+    }
+
+    private static void ExclusionReport()
+    {
+        var source = Difficulty("Source", 250); var target = Difficulty("Target", 2200);
+        for (int i = 0; i < 12; i++) source.Document.BananaShowers.Add(new() { TimeMs = 800 + i, EndTimeMs = 1500 + i });
+        target.Document.CollaborationReferences = [new(Guid.NewGuid(), source.Id, 0, 1000)];
+        var ui = new Ui(); ui.View.LoadProject(new() { Name = "exclusions", Difficulties = [source, target] });
+        ui.View.SwitchDifficulty(1); ui.View.ShowCollaborationPanel(); ui.Resize(980, 620);
+        ui.View.SynchronizeCollaboration();
+        var watch = Stopwatch.StartNew();
+        while (ui.View.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { ui.Paint(); Thread.Sleep(1); }
+        Check(ui.View.Document.Fruits.Count == 2 && ui.View.Document.BananaShowers.Count == 0 && ui.View.CollaborationReportVisible,
+            "Successful sync presents partial-object exclusions");
+        var before = ui.View.Document.DeepClone(); var r = ui.View.CollaborationReportBounds;
+        ui.View.PointerDown(r.X + 50, r.Y + 16, 0, false, false);
+        Check(ui.View.WantsCapture, "Report header captures dragging");
+        ui.View.PointerMove(r.X + 90, r.Y + 46, false, false); ui.View.PointerUp(r.X + 90, r.Y + 46, 0); ui.Paint();
+        var moved = ui.View.CollaborationReportBounds;
+        Check(moved.X == r.X + 40 && moved.Y == r.Y + 30 && ui.View.Document.ContentEquals(before), "Report dragging is content neutral");
+        ui.View.PointerDoubleClick(400, 300, false, false);
+        Check(ui.View.Document.ContentEquals(before), "Report blocks double-click edits behind it");
+        ui.View.Wheel(moved.X + 25, moved.Y + 110, -120, false); ui.Paint();
+        ui.Click(moved.X + 25, moved.Y + 110);
+        Check(ui.View.CurrentDifficultyName == "Source" && ui.View.PlayheadMs == 801
+            && ui.View.SelectedObjectIds.Contains(source.Document.BananaShowers[1].Id), "Scrolling and clicking an exclusion locates the source object");
+        ui.Key(27); Check(!ui.View.CollaborationReportVisible, "Escape closes the report");
+        ui.View.SwitchDifficulty(1); ui.Paint(); ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.Fruits.Count == 1, "Navigation and popup do not add undo history");
+        ui.Key('Y', ctrl: true); ui.View.SynchronizeCollaboration();
+        watch.Restart();
+        while (ui.View.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { ui.Paint(); Thread.Sleep(1); }
+        r = ui.View.CollaborationReportBounds; ui.Click(r.Right - 20, r.Y + 16);
+        Check(!ui.View.CollaborationReportVisible, "Report close button");
     }
     private static ProjectDifficulty Difficulty(string name, double time)
     {

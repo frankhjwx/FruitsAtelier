@@ -5,7 +5,9 @@ namespace FruitsAtelier.Core;
 
 public static class CollaborationMapping
 {
-    public sealed record Result(MapDocument Document, HitsoundResourcePlan Resources);
+    public sealed record ExcludedObject(Guid DifficultyId, Guid ObjectId, bool Spinner, double StartMs, double EndMs,
+        double SectionStartMs, double SectionEndMs);
+    public sealed record Result(MapDocument Document, HitsoundResourcePlan Resources, IReadOnlyList<ExcludedObject> ExcludedObjects);
 
     public static List<CollaborationReference> SectionsFromBookmarks(MapDocument document, double? durationMs = null)
     {
@@ -38,7 +40,9 @@ public static class CollaborationMapping
         var result = target.DeepClone();
         result.CollaborationReferences = references.Count == 0 ? null : references.ToList();
         var assigned = references.Where(r => r.DifficultyId != Guid.Empty).ToArray();
-        if (assigned.Length == 0) return new(result, HitsoundResourcePlan.Combine([]));
+        if (assigned.Length == 0) return new(result, HitsoundResourcePlan.Combine([]), []);
+        var excluded = new List<ExcludedObject>();
+        var sliderLengths = new ImportedSliderLengthCache();
         RemoveParents(result, ParentIds(target, time => assigned.Any(r => Contains(r, time))).ToHashSet());
         result.TimingPoints.RemoveAll(p => assigned.Any(r => Contains(r, p.TimeMs)));
         var origins = new Dictionary<Guid, (MapDocument Document, Guid Id, Guid Difficulty)>();
@@ -47,6 +51,18 @@ public static class CollaborationMapping
             var source = byId[reference.DifficultyId].Document;
             var timing = new TimingMap.Lookup(source);
             var selected = ParentIds(source, time => Contains(reference, time)).ToHashSet();
+            foreach (var track in source.Tracks.Where(t => t.StreamSnapDivisor is null))
+                CheckBounds(track.Id, track.Nodes[0].TimeMs, CurveMath.EndTimeMs(track), false);
+            foreach (var slider in source.ImportedSliders.Where(s => s.TimeMs < reference.EndMs))
+                CheckBounds(slider.Id, slider.TimeMs, sliderLengths.EndTimeMs(source, slider, timing), false);
+            foreach (var shower in source.BananaShowers)
+                CheckBounds(shower.Id, shower.TimeMs, shower.EndTimeMs, true);
+            void CheckBounds(Guid id, double start, double end, bool spinner)
+            {
+                if (start >= reference.EndMs || end <= reference.StartMs || start >= reference.StartMs && end <= reference.EndMs) return;
+                selected.Remove(id);
+                excluded.Add(new(reference.DifficultyId, id, spinner, start, end, reference.StartMs, reference.EndMs));
+            }
             Guid Remap(Guid id) => MappedId(reference.Id, reference.DifficultyId, id);
             foreach (var id in selected) origins.Add(Remap(id), (source, id, reference.DifficultyId));
             foreach (var fruit in source.Fruits.Where(f => selected.Contains(f.Id)))
@@ -119,7 +135,7 @@ public static class CollaborationMapping
         }
         var output = OsuBeatmapWriter.Serialize(result, compensateTinyDroplets, outputCache);
         outputCache?.RememberMultiplier(result, output, compensateTinyDroplets);
-        return new(result, HitsoundResourcePlan.Combine(resources));
+        return new(result, HitsoundResourcePlan.Combine(resources), excluded);
     }
 
     private static MapDocument RetargetOverrides(MapDocument source, IReadOnlyList<ConvertedCatchObject> events, MapDocument target, bool compensation)

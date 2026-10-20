@@ -153,6 +153,7 @@ public sealed partial class EditorView
         DrawTimingSetup(c);
         DrawHitsoundCopier(c);
         DrawSettings(c);
+        DrawCollaborationReport(c);
         if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
         DrawDiscardConfirmation(c);

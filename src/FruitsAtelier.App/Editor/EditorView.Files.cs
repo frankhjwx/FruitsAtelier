@@ -50,6 +50,7 @@ public sealed partial class EditorView
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
         collaborationField = collaborationError = "";
+        CloseCollaborationReport();
         if (collaborationTask is { } retiredCollaboration) _ = retiredCollaboration.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
         collaborationTask = null; collaborationSnapshot = null; collaborationOwner = null;
         TimeJumpVisible = false;

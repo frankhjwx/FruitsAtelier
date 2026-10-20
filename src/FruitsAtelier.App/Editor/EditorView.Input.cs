@@ -44,6 +44,10 @@ public sealed partial class EditorView
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
         }
+        if (CollaborationReportVisible)
+        {
+            mouseX = x; mouseY = y; CollaborationReportPointerDown(x, y, button); return;
+        }
         if (HitsoundCopierVisible)
         {
             mouseX = x; mouseY = y;
@@ -457,6 +461,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (CollaborationReportVisible) { mouseX = x; mouseY = y; if (collaborationReportDragging) MoveCollaborationReport(x, y); return; }
         if (RotationVisible) { mouseX = x; mouseY = y; RotationPointerMove(x, y); return; }
         if (aimodGesture != AimodGesture.None) { MoveAimodPointer(x, y); return; }
         if (notesSelecting) { PositionNotesCaret(x, y, true); return; }
@@ -619,6 +624,8 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (collaborationReportDragging) { MoveCollaborationReport(x, y); collaborationReportDragging = false; return; }
+        if (CollaborationReportVisible) return;
         if (RotationVisible) { EndRotationPointer(x, y); return; }
         if (aimodGesture != AimodGesture.None && button == 0) { EndAimodPointer(x, y); return; }
         if (notesSelecting && button == 0) { FinishNotesSelection(x, y); return; }
@@ -754,6 +761,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
@@ -912,6 +920,12 @@ public sealed partial class EditorView
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
+        if (CollaborationReportVisible)
+        {
+            if (CollaborationReportList.Contains(x, y)) collaborationReportScroll = Math.Clamp(collaborationReportScroll - delta / 120 * 58,
+                0, Math.Max(0, collaborationExcluded.Count * 58 - CollaborationReportList.Height));
+            return;
+        }
         if (RotationVisible) return;
         if (pendingLanguage is not null) return;
         if (languageMenuOpen)
@@ -1147,6 +1161,11 @@ public sealed partial class EditorView
 
     private void KeyDownCore(int virtualKey, bool ctrl, bool shift)
     {
+        if (CollaborationReportVisible && !ErrorVisible && !DiscardConfirmationVisible)
+        {
+            if (virtualKey == 27) CloseCollaborationReport();
+            return;
+        }
         if (OsuLinkPickerVisible && !ErrorVisible)
         {
             OsuLinkPickerKey(virtualKey);

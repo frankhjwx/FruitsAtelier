@@ -20,6 +20,7 @@ internal static class CollaborationRenderCheck
                 L.SetLanguage(locale);
                 var a = Difficulty("Mapper A", 500); var b = Difficulty("Mapper B", 1500);
                 var c = Difficulty("Merged C", 2500); var d = Difficulty("Merged D", 3000);
+                a.Document.BananaShowers.Add(new() { TimeMs = 500, EndTimeMs = 1500 });
                 c.Document.CollaborationReferences = [new(Guid.NewGuid(), a.Id, 0, 1000), new(Guid.NewGuid(), b.Id, 1000, 2000),
                     new(Guid.NewGuid(), Guid.Empty, 2000, 5000)];
                 d.Document.CollaborationReferences = [new(Guid.NewGuid(), a.Id, 0, 1000)];
@@ -41,6 +42,17 @@ internal static class CollaborationRenderCheck
                 while (editor.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { Paint(); Thread.Sleep(1); }
                 if (editor.CollaborationBusy || editor.Document.Fruits.Count != 3) throw new InvalidOperationException("Native merge failed.");
                 Paint("synced");
+                if (!editor.CollaborationReportVisible) throw new InvalidOperationException("Native exclusions report missing.");
+                var report = editor.CollaborationReportBounds;
+                editor.PointerDown(report.X + 50, report.Y + 16, 0, false, false);
+                editor.PointerMove(report.X + 80, report.Y + 36, false, false);
+                editor.PointerUp(report.X + 80, report.Y + 36, 0); Paint("report-moved");
+                var moved = editor.CollaborationReportBounds;
+                if (moved.X != report.X + 30 || moved.Y != report.Y + 20) throw new InvalidOperationException("Native report drag failed.");
+                editor.PointerDown(moved.X + 25, moved.Y + 110, 0, false, false);
+                editor.PointerUp(moved.X + 25, moved.Y + 110, 0); Paint("report-source");
+                if (editor.CurrentDifficultyName != "Mapper A" || editor.PlayheadMs != 500) throw new InvalidOperationException("Native report navigation failed.");
+                editor.KeyDown(27, false, false);
                 editor.SwitchDifficulty(0); Paint("source");
                 Console.WriteLine($"PASS collaboration native {locale} {size.Item1}x{size.Item2} {dpi} DPI");
                 void Paint(string? state = null)

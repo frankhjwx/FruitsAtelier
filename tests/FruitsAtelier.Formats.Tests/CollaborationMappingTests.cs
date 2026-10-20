@@ -51,11 +51,41 @@ internal static class CollaborationMappingTests
         TickRateAndResources();
         MultipleRanges();
         BookmarkSections();
+        CompleteSections();
         Console.WriteLine("PASS collaboration objects, samples, timing, graph, schemas, repeated sync and undo");
     }
 
     private static MapDocument Synchronize(BeatmapProject project, Guid target, IReadOnlyList<CollaborationReference> references)
         => CollaborationMapping.Synchronize(project, target, references).Document;
+
+    private static void CompleteSections()
+    {
+        var source = new ProjectDifficulty { Name = "source", Document = OsuBeatmapReader.Read(
+            "osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\n[TimingPoints]\n0,500,4,2,0,70,1,0\n[HitObjects]\n" +
+            "100,192,0,2,0,L|240:192,2,140\n100,192,600,2,0,L|240:192,1,140\n" +
+            "100,192,1000,2,0,L|240:192,2,140\n100,192,1000,2,0,L|240:192,1,140\n" +
+            "180,192,800,1,0,0:0:0:0:\n") };
+        var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = 2 };
+        track.Nodes.AddRange([new() { TimeMs = 600, X = 160 }, new() { TimeMs = 1100, X = 260 }]);
+        source.Document.Tracks.Add(track);
+        source.Document.BananaShowers.AddRange([new() { TimeMs = 300, EndTimeMs = 900 },
+            new() { TimeMs = 1200, EndTimeMs = 1600 }, new() { TimeMs = 1100, EndTimeMs = 1500 }]);
+        var target = Difficulty("target", 600, 1, 40, 750, 2500);
+        var project = new BeatmapProject { Name = "containment", Difficulties = [source, target] };
+        CollaborationReference[] refs = [new(Guid.NewGuid(), source.Id, 500, 1500)];
+        var prepared = CollaborationMapping.Synchronize(project, target.Id, refs);
+        Check(prepared.Document.ImportedSliders.Count == 2 && prepared.Document.Tracks.Count == 0,
+            "Sliders crossing either boundary and repeated FSlider tails are excluded");
+        Check(prepared.Document.BananaShowers.Single().EndTimeMs == 1500, "Spinner ending exactly at the section boundary is included");
+        Check(prepared.Document.Fruits.Select(f => f.TimeMs).Order().SequenceEqual(new[] {800d,2500d}), "Other objects sync normally");
+        Check(prepared.ExcludedObjects.Count == 5 && prepared.ExcludedObjects.Count(o => o.Spinner) == 2,
+            "Partial source intersections are returned as report entries instead of errors");
+        Check(prepared.ExcludedObjects.All(o => o.DifficultyId == source.Id && o.SectionStartMs == 500 && o.SectionEndMs == 1500),
+            "Exclusions retain source identity and section bounds");
+        Near(TimingMap.At(prepared.Document, 800).BeatLengthMs, 500, "Timing still synchronizes after exclusions");
+        target.Document = prepared.Document;
+        Check(Synchronize(project, target.Id, refs).ContentEquals(prepared.Document), "Containment filtering is idempotent");
+    }
 
     private static void BookmarkSections()
     {
@@ -143,7 +173,7 @@ internal static class CollaborationMappingTests
         target.Document.BananaShowers.Add(new() { TimeMs = 4500, EndTimeMs = 4700 });
         refs = [refs[0] with { EndMs = 4000 }];
         merged = Synchronize(project, target.Id, refs);
-        Check(merged.Tracks.Count == 2 && merged.BananaShowers.Count == 2, "FSliders, complete boundary-crossing bananas and outside bananas");
+        Check(merged.Tracks.Count == 2 && merged.BananaShowers.Count == 1, "FSliders and outside bananas retained; boundary-crossing bananas excluded");
         target.Document = merged;
         Check(Synchronize(project, target.Id, refs).ContentEquals(merged), "Mixed-object idempotence");
         var single = ProjectSerializer.Read(ProjectSerializer.Serialize(merged));

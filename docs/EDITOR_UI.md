@@ -76,9 +76,15 @@ Escape discards its draft. References are saved with the target difficulty.
 
 Ranges include Start and exclude End. Overlaps and self-references are rejected;
 adjacent ranges are allowed. Objects belong to the range
-containing their start time, and complete sliders, streams and banana showers are
-retained, including tails beyond End. Removing a reference detaches it and leaves
-the merged content in place.
+containing their start time. Sliders (including FSliders and repeated spans) and
+spinners must fit completely inside one section; an end exactly at the section
+end is allowed. Partially intersecting sliders and spinners are skipped while
+other objects and timing still synchronize. Streams retain start-time ownership.
+After a successful sync with exclusions, a draggable popup lists each skipped
+object and its source difficulty, object time range and section range. Click a row
+to switch to that source and select and seek to the object. Scroll the list for
+more entries; use the close button or Escape to dismiss it. Removing a reference
+detaches it and leaves the merged content in place.
 
 **Sync references** reads the currently loaded source documents, including unsaved
 edits, and replaces target objects whose starts lie in the configured ranges.

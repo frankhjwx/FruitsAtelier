@@ -15,7 +15,8 @@ public sealed partial class EditorView
     internal Rect CollaborationPanelViewport => collaborationBounds;
     internal Rect CollaborationStartBounds { get; private set; }
     public bool CollaborationBusy => collaborationTask is not null;
-    private sealed record CollaborationPrepared(MapDocument Document, HitsoundResourcePlan Resources, OsuWriteCache Cache, CatchConversionResult Conversion, OsuWriteResult Export);
+    private sealed record CollaborationPrepared(MapDocument Document, HitsoundResourcePlan Resources, OsuWriteCache Cache, CatchConversionResult Conversion, OsuWriteResult Export,
+        IReadOnlyList<CollaborationMapping.ExcludedObject> ExcludedObjects);
     private Task<CollaborationPrepared>? collaborationTask;
     private BeatmapProject? collaborationSnapshot;
     private Guid collaborationTarget;
@@ -75,11 +76,12 @@ public sealed partial class EditorView
         collaborationCompensation = compensate;
         collaborationLanguage = L.Language;
         collaborationError = "";
+        CloseCollaborationReport();
         collaborationTask = Task.Run(() =>
         {
             var cache = new OsuWriteCache();
             var candidate = CollaborationMapping.Synchronize(snapshot, target, references, compensate, cache);
-            return new CollaborationPrepared(candidate.Document, candidate.Resources, cache, cache.Convert(candidate.Document, compensate), OsuBeatmapWriter.Serialize(candidate.Document, compensate, cache));
+            return new CollaborationPrepared(candidate.Document, candidate.Resources, cache, cache.Convert(candidate.Document, compensate), OsuBeatmapWriter.Serialize(candidate.Document, compensate, cache), candidate.ExcludedObjects);
         });
     }
 
@@ -121,6 +123,8 @@ public sealed partial class EditorView
             Select(Guid.Empty); renderedTiming = SnapTiming(); RefreshConversionPresentation();
             PreloadProjectHitsounds();
             collaborationError = ""; SetNotice(L.Get("collab.done"));
+            collaborationExcluded = result.ExcludedObjects;
+            collaborationReportPosition = null; collaborationReportScroll = 0;
         }
         catch (Exception error) { collaborationError = error.Message; SetNotice(error.Message); }
         finally { collaborationOwner = null; }
