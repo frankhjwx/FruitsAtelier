@@ -63,6 +63,17 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`Formats.Tests --slider-import-policy-check` checks ordinary import modes, confirmed
+compensation, one to three traversals, repeated refreshes, conversion, mode toggles,
+project persistence and undo against exported playback. `App.Tests --slider-batch-check`
+checks localized source confirmation, Global import defaults, Ctrl+D, conversion,
+cancellation, original Catch path display and existing-workspace isolation.
+`FruitsAtelier.App.exe --render-check --osu-canvas-render-check --slider-import-render-check`
+checks source/representation prompts and Droplet Settings in English/Chinese at two
+window sizes and 96/144/192 DPI, including the original ordinary Legacy Catch path.
+Captures are stored under `artifacts/tests/osu-canvas-native/import-*`.
+
+
 `App.Tests --osu-link-check` verifies encoded timestamps, sequential combo
 selection, source-object roundtrips, playback pausing, content isolation,
 non-editor notifications, URI preservation, loop rejection, named-pipe activation,

@@ -68,6 +68,11 @@ conversion results retain the geometry they use.
 The standard canvas shares those immutable path samples; it creates renderer
 stroke arrays only for visible slider bodies and retains them until invalidation.
 
+Catch path drawing caches the original source path for ordinary imported Legacy
+Sliders, keyed by the committed conversion snapshot. Drawing and hit testing share
+its cumulative distances; processed event positions remain separate. Source paths
+are sampled lazily and retired with the difficulty caches.
+
 Catch path drawing retains cumulative distances per conversion and binary-searches
 the visible span interval. Screen polylines are reused while the viewport is
 unchanged; subpixel screen samples do not change authoring or exported geometry.

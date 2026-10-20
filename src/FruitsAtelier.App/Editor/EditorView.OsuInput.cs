@@ -748,7 +748,7 @@ public sealed partial class EditorView
             {
                 var result = Document.Tracks.Any(t => t.Id == id)
                     ? SliderRepresentationEditing.ConvertToLegacy(Document, id, compensateTinyDroplets)
-                    : SliderRepresentationEditing.ConvertToTrack(Document, id, Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets);
+                    : SliderRepresentationEditing.ConvertToTrack(Document, id);
                 if (!result.Success) throw new InvalidOperationException(string.Join(L.Get("editor.diagnostics.separator"), result.Diagnostics));
             })) return;
             osuControlSlider = Guid.Empty; osuSelectedControl = -1;

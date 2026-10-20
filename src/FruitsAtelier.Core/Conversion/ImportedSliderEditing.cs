@@ -14,18 +14,22 @@ public static class ImportedSliderEditing
     {
         if (!document.ImportedSliders.Any(s => s.Id == sliderId))
             throw new ArgumentException(L.Get("core.importEditing.notFound"), nameof(sliderId));
-        var result = derandomizeDroplets ? Convert(document, [sliderId], cache: cache)
+        var result = document.SliderImportState != SliderImportState.None || document.ImportedSliders.Any(s => s.Id == sliderId && s.RandomizationTrack is not null)
+            ? SliderImportEditing.ConvertFollowingMap(document, [sliderId])
+            : derandomizeDroplets ? Convert(document, [sliderId], cache: cache)
             : ConvertPreservingPositions(document, [sliderId], default, cache);
         if (result.Tracks.Count == 0) throw new InvalidOperationException(result.Failures[0].Reason);
         return new(result.Tracks[0], []);
     }
 
     public static SliderBatchConversionResult ConvertAll(MapDocument document, CancellationToken cancellation = default, bool derandomizeDroplets = true)
-        => derandomizeDroplets ? Convert(document, document.ImportedSliders.Select(s => s.Id).ToArray(), cancellation)
+        => document.SliderImportState != SliderImportState.None || document.ImportedSliders.Any(s => s.RandomizationTrack is not null)
+            ? SliderImportEditing.ConvertFollowingMap(document, document.ImportedSliders.Select(s => s.Id).ToArray(), cancellation)
+            : derandomizeDroplets ? Convert(document, document.ImportedSliders.Select(s => s.Id).ToArray(), cancellation)
             : ConvertPreservingPositions(document, document.ImportedSliders.Select(s => s.Id).ToArray(), cancellation);
 
-    private static SliderBatchConversionResult ConvertPreservingPositions(MapDocument document, IReadOnlyCollection<Guid> ids,
-        CancellationToken cancellation, CatchConversionCache? cache = null)
+    internal static SliderBatchConversionResult ConvertPreservingPositions(MapDocument document, IReadOnlyCollection<Guid> ids,
+        CancellationToken cancellation, CatchConversionCache? cache = null, double tolerance = CatchStreamConverter.AlignmentTolerance)
     {
         cancellation.ThrowIfCancellationRequested();
         var wanted = ids.ToHashSet();
@@ -54,12 +58,15 @@ public static class ImportedSliderEditing
                 track.Nodes.Add(new Anchor { TimeMs = source.TimeMs + duration, X = objects.First(o => o.Kind == CatchObjectKind.Fruit && o.EventIndex > 0).X });
                 var points = objects.Select(o => new MapPoint(CurveMath.FirstSpanTime(track, o.TimeMs), o.X))
                     .OrderBy(p => p.TimeMs).ToArray();
+                if (tolerance > CatchStreamConverter.AlignmentTolerance)
+                    points = points.GroupBy(p => Math.Round(p.TimeMs, 6))
+                        .Select(g => new MapPoint(g.First().TimeMs, (g.Min(p => p.X) + g.Max(p => p.X)) / 2)).ToArray();
                 track.Nodes.Clear();
                 foreach (var point in points)
                 {
                     if (track.Nodes.Count > 0 && point.TimeMs - track.Nodes[^1].TimeMs < CurveMath.MinimumAnchorSpacingMs)
                     {
-                        if (Math.Abs(point.X - track.Nodes[^1].X) > CatchStreamConverter.AlignmentTolerance)
+                        if (Math.Abs(point.X - track.Nodes[^1].X) > tolerance)
                             throw new InvalidOperationException(L.Get("core.conversion.tinyConflict"));
                         continue;
                     }
@@ -72,6 +79,7 @@ public static class ImportedSliderEditing
         }
         var candidate = document.DeepClone();
         cache ??= new CatchConversionCache();
+        var recoveryAttempts = new Dictionary<Guid, int>();
         while (candidates.Count > 0)
         {
             cancellation.ThrowIfCancellationRequested();
@@ -89,8 +97,23 @@ public static class ImportedSliderEditing
                 if (actual.TryGetValue(track.Id, out var items) && items.Length == expected.Length
                     && items.Zip(expected).All(pair => pair.First.Kind == pair.Second.Kind
                         && Math.Abs(pair.First.TimeMs - pair.Second.TimeMs) <= 1e-6
-                        && Math.Abs(pair.First.X - pair.Second.X) <= CatchStreamConverter.AlignmentTolerance
-                        && Math.Abs(pair.First.X - pair.First.TargetX) <= CatchStreamConverter.AlignmentTolerance)) continue;
+                        && Math.Abs(pair.First.X - pair.Second.X) <= tolerance
+                        && (tolerance > CatchStreamConverter.AlignmentTolerance
+                            || Math.Abs(pair.First.X - pair.First.TargetX) <= tolerance))) continue;
+                if (tolerance > CatchStreamConverter.AlignmentTolerance && items is not null && items.Length == expected.Length
+                    && items.Zip(expected).All(p => p.First.Kind == p.Second.Kind && Math.Abs(p.First.TimeMs - p.Second.TimeMs) <= 1e-6)
+                    && recoveryAttempts.GetValueOrDefault(track.Id) < 8)
+                {
+                    // Shared repeat geometry may retain residual offsets. Recover against playback,
+                    // correcting the shared target instead of treating each traversal as another effect.
+                    var corrections = items.Zip(expected).GroupBy(p => Math.Round(CurveMath.FirstSpanTime(track, p.First.TimeMs), 6))
+                        .ToDictionary(g => g.Key, g => g.Average(p => p.Second.X - p.First.X));
+                    foreach (var node in track.Nodes)
+                        node.X = Math.Clamp(node.X + corrections.GetValueOrDefault(Math.Round(node.TimeMs, 6)), 0, 512);
+                    recoveryAttempts[track.Id] = recoveryAttempts.GetValueOrDefault(track.Id) + 1;
+                    removed = true;
+                    continue;
+                }
                 candidates.Remove(track); removed = true;
                 failures.Add(new(track.Id, track.Nodes[0].TimeMs, L.Get("core.importEditing.preservePositionsFailed")));
             }
@@ -103,7 +126,8 @@ public static class ImportedSliderEditing
         return new(candidates, failures);
     }
 
-    internal static SliderBatchConversionResult Convert(MapDocument document, IReadOnlyCollection<Guid> ids, CancellationToken cancellation = default, CatchConversionCache? cache = null)
+    internal static SliderBatchConversionResult Convert(MapDocument document, IReadOnlyCollection<Guid> ids, CancellationToken cancellation = default, CatchConversionCache? cache = null,
+        bool fitPlayback = true)
     {
         ArgumentNullException.ThrowIfNull(document);
         var wanted = ids.ToHashSet();
@@ -189,14 +213,14 @@ public static class ImportedSliderEditing
             if (!changed) break;
         }
         cancellation.ThrowIfCancellationRequested();
-        FitPlayback(document, candidates, cancellation);
+        if (fitPlayback) FitPlayback(document, candidates, cancellation);
         // Publish duration-preserving replacements atomically; invalid sources remain available to repair.
         document.ImportedSliders.RemoveAll(s => candidates.ContainsKey(s.Id));
         document.Tracks.AddRange(candidates.Values);
         return new(candidates.Values.ToArray(), failures);
     }
 
-    private static void FitPlayback(MapDocument document, Dictionary<Guid, CurveTrack> candidates, CancellationToken cancellation)
+    internal static void FitPlayback(MapDocument document, Dictionary<Guid, CurveTrack> candidates, CancellationToken cancellation)
     {
         if (candidates.Count == 0) return;
         // Exported compensation bends the osu! path away from the visible tiny droplets.

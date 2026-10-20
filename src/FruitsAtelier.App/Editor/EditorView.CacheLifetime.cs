@@ -30,6 +30,7 @@ public sealed partial class EditorView
         conversion = null; playableExport = null; playableObjects = [];
         renderedTiming = snapTiming = null;
         importedCurveSnapshot = null; importedCurveDistances.Clear(); importedCurveScreens.Clear();
+        importedCurveSources.Clear(); importedCurvePaths.Clear();
         osuCanvasSource = null; osuCanvasObjects = []; osuCanvasMaximumEnds = []; osuCanvasVisible.Clear();
         osuDraftPathSource = osuDraftCandidate = null; osuDraftPath = []; osuDraftStrokePath = []; osuDraftInputs = default;
         timelineConversion = null; timelineSources = []; timelineMarkers = [];

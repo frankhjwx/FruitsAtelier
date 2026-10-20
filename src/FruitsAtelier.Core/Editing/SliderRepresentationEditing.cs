@@ -112,7 +112,7 @@ public static class SliderRepresentationEditing
                 candidate.Tracks.Add(baseline);
             }
             var fitted = ImportedSliderEditing.Convert(candidate,
-                sources.Where(s => s.RandomizationTrack is null).Select(s => s.Id).ToArray());
+                sources.Where(s => s.RandomizationTrack is null).Select(s => s.Id).ToArray(), fitPlayback: document.SliderImportState == SliderImportState.None);
             if (fitted.Failures.Count > 0)
                 return new(false, fitted.Failures.Select(f => f.Reason).ToArray());
             var tracks = candidate.Tracks.ToDictionary(t => t.Id);
@@ -120,10 +120,10 @@ public static class SliderRepresentationEditing
             {
                 var baseline = tracks[slider.Id];
                 baseline.SliderVelocitySeed = initialVelocities[slider.Id] * document.SliderMultiplier / document.EffectiveSliderMultiplier;
-                baselineTracks[slider.Id] = baseline.DeepClone();
-                baseline.DropletMode = SliderDropletMode.FollowMap;
+                baseline.DropletMode ??= SliderDropletMode.FollowMap;
                 baseline.DropletRandomization ??= new();
                 baseline.DropletRandomization.Enabled = true;
+                baselineTracks[slider.Id] = baseline.DeepClone();
             }
             var sourceIds = sources.Select(s => s.Id).ToHashSet();
             var sharedHeads = candidate.Tracks.Where(t => t.StreamSnapDivisor is null && t.Nodes.Count > 0)
@@ -185,16 +185,19 @@ public static class SliderRepresentationEditing
         { return new(false, [error.Message]); }
     }
 
-    public static SliderRepresentationResult ConvertToTrack(MapDocument document, Guid id, bool derandomize = true)
+    public static SliderRepresentationResult ConvertToTrack(MapDocument document, Guid id)
     {
         try
         {
+            if (!document.ImportedSliders.Any(s => s.Id == id))
+                throw new ArgumentException(L.Get("core.importEditing.notFound"), nameof(id));
             var candidate = document.DeepClone();
-            var result = ImportedSliderEditing.ConvertToTrack(candidate, id, derandomizeDroplets: derandomize);
+            var batch = SliderImportEditing.ConvertFollowingMap(candidate, [id]);
+            if (batch.Tracks.Count == 0) return new(false, batch.Failures.Select(f => f.Reason).ToArray());
             _ = OsuBeatmapWriter.Serialize(candidate);
             document.ImportedSliders.RemoveAll(s => s.Id == id);
-            document.Tracks.Add(result.Track);
-            return new(true, result.Diagnostics);
+            document.Tracks.Add(batch.Tracks[0]);
+            return new(true, []);
         }
         catch (Exception error) when (error is InvalidDataException or InvalidOperationException or ArgumentException or CatchConversionException)
         { return new(false, [error.Message]); }
@@ -212,6 +215,9 @@ public static class SliderRepresentationEditing
             var slider = before.ReadBack.ImportedSliders.Single(s => s.Id == id).DeepClone();
             slider.SourceOrder = track.SourceOrder;
             slider.EndpointSnap = track.EndpointSnap;
+            slider.RandomizationSource = slider.DeepClone();
+            slider.RandomizationTrack = track.DeepClone();
+            slider.RandomizationBaseVelocity = slider.SliderVelocityMultiplier;
             candidate.Tracks.RemoveAll(t => t.Id == id);
             candidate.ImportedSliders.Add(slider);
             // Compatibility objects without independent SV still depend on emitted timing.

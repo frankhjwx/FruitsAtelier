@@ -68,6 +68,9 @@ public sealed partial class EditorView
             _ = retiredTask.ContinueWith(t => { _ = t.Exception; retiredCancellation?.Dispose(); }, TaskScheduler.Default);
         sliderBatchTask = null; sliderBatchCancellation = null;
         sliderImportTargets = []; sliderBatchErrors = []; sliderDialogHits.Clear();
+        if (sliderImportTask is { } retiredImport) _ = retiredImport.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        sliderImportTask = null; sliderSourceTargets = []; sliderSourceIndex = 0; SliderImportSourcePromptVisible = false;
+        sliderSourceQuestions = null; sliderImportWizard = false;
         WorkspaceSession = null; resourceErrors = [];
         var retiredSyncCancellation = syncCancellation;
         retiredSyncCancellation?.Cancel(); syncCancellation = null;
@@ -242,7 +245,7 @@ public sealed partial class EditorView
         projectStructureDirty = true;
         PreloadProjectHitsounds();
         bool switched = SwitchDifficulty(difficulties.Count - 1);
-        if (switched && imported is not null) OfferSliderConversion(false);
+        if (switched && imported is not null) PrepareImportedSliders(false);
         return switched;
     }
 

@@ -283,7 +283,7 @@ public sealed partial class EditorView
     {
         LoadProject(session.Project); WorkspaceSession = session; CheckWorkspaceResources();
         libraryProjectsNeedReindex = true; QueueLibrarySearch(); CloseLibrary();
-        if (session.IsNewImport) OfferSliderConversion(true);
+        if (session.Project.Difficulties.Any(d => d.Document.SliderImportState == SliderImportState.Pending)) PrepareImportedSliders(true);
         else if (checkAdditionalDifficulties) RefreshSynchronization();
         nextSyncCheck = DateTime.UtcNow + SyncCheckInterval;
     }

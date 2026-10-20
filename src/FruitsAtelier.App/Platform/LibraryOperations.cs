@@ -215,8 +215,9 @@ public static class LibraryOperations
     }
     internal static void ApplyImportDropletDefaults(MapDocument document, LibrarySettings settings)
     {
-        document.DerandomizeFSliderDroplets = settings.DerandomizeNewProjects;
-        document.RandomizeNewSliders = !settings.DerandomizeNewProjects;
+        document.SliderImportState = document.ImportedSliders.Count > 0 ? SliderImportState.Pending : SliderImportState.Native;
+        document.DerandomizeFSliderDroplets = settings.DerandomizeDroplets;
+        document.RandomizeNewSliders = !settings.DerandomizeDroplets;
         document.DerandomizeDroplets = settings.DerandomizeDroplets;
     }
 

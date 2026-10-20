@@ -249,6 +249,8 @@ public sealed partial class MapDocument
     public double OsuDistanceSpacing { get; set; } = 1;
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? DerandomizeDroplets { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public SliderImportState SliderImportState { get; set; }
     public bool DistanceSnapCollinear { get; set; } = true;
     public double RandomizeDropletStrength { get; set; } = 20;
     public int RandomizeDropletSeed { get; set; } = 1337;
@@ -275,7 +277,7 @@ public sealed partial class MapDocument
             CircleSize = CircleSize, SliderMultiplier = SliderMultiplier, OverrideSliderMultiplier = OverrideSliderMultiplier,
             SliderMultiplierOverride = SliderMultiplierOverride,
             DistancePerBeatOverride = DistancePerBeatOverride,
-            DistanceSnapCollinear = DistanceSnapCollinear,
+            DistanceSnapCollinear = DistanceSnapCollinear, SliderImportState = SliderImportState,
             RandomizeDropletStrength = RandomizeDropletStrength, RandomizeDropletSeed = RandomizeDropletSeed,
             DerandomizeFSliderDroplets = DerandomizeFSliderDroplets, DerandomizeDropletsForHardRock = DerandomizeDropletsForHardRock, RandomizeNewSliders = RandomizeNewSliders,
             SliderTickRate = SliderTickRate, LegacySliderTicks = LegacySliderTicks, DistanceSpacing = DistanceSpacing, OsuDistanceSpacing = OsuDistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
@@ -331,7 +333,7 @@ public sealed partial class MapDocument
             || DerandomizeFSliderDroplets != other.DerandomizeFSliderDroplets || DerandomizeDropletsForHardRock != other.DerandomizeDropletsForHardRock || RandomizeNewSliders != other.RandomizeNewSliders
             || !DistanceSnapRatios.SequenceEqual(other.DistanceSnapRatios)
             || DistanceSpacing != other.DistanceSpacing || (!ignoreOsuDistanceSpacing && OsuDistanceSpacing != other.OsuDistanceSpacing)
-            || DerandomizeDroplets != other.DerandomizeDroplets
+            || DerandomizeDroplets != other.DerandomizeDroplets || SliderImportState != other.SliderImportState
             || !HitsoundOverrides.SequenceEqual(other.HitsoundOverrides)
             || Fruits.Count != other.Fruits.Count || Tracks.Count != other.Tracks.Count
             || TimingPoints.Count != other.TimingPoints.Count || ImportedSliders.Count != other.ImportedSliders.Count

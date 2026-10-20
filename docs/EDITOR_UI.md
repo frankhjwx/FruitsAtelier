@@ -481,7 +481,7 @@ invalid numeric input leaves the last valid value intact. Strength has a numeric
 field and slider, plus Reset strength to restore 20.
 
 The separate **Global Derandomize** section controls derandomization for new projects
-and Legacy-to-FSlider conversion. These preferences save immediately and do not
+and imported maps. These preferences save immediately and do not
 change the current difficulty or its undo history. New projects default to
 derandomization. Valid current-difficulty edits also save the last used mode, strength,
 seed and NM/HR target as global defaults for new projects. Existing projects retain
@@ -775,15 +775,14 @@ First-time setup also offers both preferences as part of its draft, saved on Fin
 General retains a link and a notice directing randomization and derandomization to
 Droplet Settings. The link preserves unapplied General preferences and returns there
 when the dialog closes. With no open project, it shows only global preferences.
-**Legacy → FSlider** sets the initial conversion choice in maps
-without a saved choice. **New projects** controls projects created
+**Imported maps** sets the droplet mode for ordinary new imports. **New projects** controls projects created
 from scratch or from audio. Both start On. With the new-project option Off,
 new FSliders using Follow map randomize with Strength 20 and Seed 1337; with it
 On, they derandomize. The map default survives reopening and is inherited by
 additional blank difficulties. Imported difficulties retain their own settings.
 Global defaults save immediately, including when the current difficulty is locked;
 Cancel in Song Setup discards map drafts while retaining these global preferences.
-Changing them does not modify existing maps or a saved Legacy conversion choice.
+Changing them does not modify existing workspace difficulties or saved projects.
 
 Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same logical dimensions apply on both desktop platforms and follow their interface scaling. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
@@ -1178,11 +1177,16 @@ Selecting or double-clicking a Legacy Slider in Catch preserves its representati
 
 Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Hold the left mouse button stationary on a Legacy Slider to open its conversion actions beside the pointer. Holding a slider fruit first identifies its beat at 300 ms. Continuing to hold stationary opens conversion actions at 1000 ms; a small progress ring fills during the final 700 ms. Moving at least 2 DIP or releasing before completion cancels the hold; ordinary selection and dragging remain available. The buttons stay open until an action, another click, a key, or focus loss dismisses them. Conversion preserves start time, total duration, and span count. It first fits a small set of straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete the conversion. Exact nested-object positions and sequences are not required to match. Invalid or unrepresentable input retains its original object with a reason.
 
-Fresh `.osu`/`.osz` imports initialize the current difficulty from the global new-project droplet mode and initialize Legacy-to-FSlider conversion from its separate global preference. Both preferences default to Derandomize. Existing FA projects retain their saved mode. For paths containing exported droplet compensation, conversion also fits the actual Catch event positions. It prefers a simpler straight/Bezier curve only when every event keeps its kind and time and stays within one playfield pixel; straight playback can therefore recover two editable endpoints instead of the compensation bends.
+Fresh `.osu`/`.osz`, Songs and folder imports capture **Global Derandomize → Imported maps**. Ordinary imports use that mode immediately: Randomize retains native offsets, while Derandomize targets the original slider path and generates compensation for export. In the Catch canvas, ordinary imported Legacy Sliders continue to draw and hit-test their original path after processing; waterdrop positions and export use the effective mode. Changing Global settings does not reinitialize existing workspace difficulties or `.catchproj` files.
 
-The first workspace import from Songs, an external folder, `.osu`, or `.osz` asks whether to convert sliders in all newly imported difficulties if they contain Legacy Sliders. The prompt offers **Derandomize droplets**. With it off, conversion builds an editable path through the actual legacy fruit and droplet positions, including randomized TinyDroplets. Generated geometry compensates the RNG so objects stay on that path. Conversion preserves their times and positions; incompatible shared repeat targets remain Legacy with a reason. The selected policy is saved per difficulty after a successful conversion and reused for later conversions. Keeping Legacy preserves that representation. Reopening an existing project does not prompt again. Importing one difficulty into a project prompts only for that difficulty.
+Detection requires at least 80% of fruit and slider heads at osu! Y=192, every slider starting at Y=192 with straight segments, and dense anchors consistent with droplet sampling. Straight segments include the exporter's Bezier encoding with repeated internal anchors, as well as linear paths. A dense ordinary Bezier curve alone does not qualify.
 
-**Edit → Convert all sliders to FSliders** opens the droplet choice for the current difficulty and is disabled when it has no Legacy Sliders. Explicit single-slider conversion proceeds without a prompt, using the saved difficulty policy or the global conversion default in Droplet Settings. Batch conversion runs in the background with a cancellable prompt and blocks content editing. Cancellation applies no partial results. Conversions per difficulty can be undone together; valid sliders that previously failed strict alignment now convert approximately. Invalid input and reasons appear in paginated results. Saving persists conversion in the workspace without modifying original Songs/external files; Export is still required to write `.osu`.
+The import dialog shows each suspected difficulty's name and a page counter, asking **Was this beatmap exported by Fruits Atelier or Derandomizer?**. **Yes** initializes Droplet Settings to Derandomize and retains the current playback while recovering a reusable baseline. **No** uses the captured global import mode and the file's geometric path. The heuristic only triggers the question; it does not decide the source. Import preparation runs in the background before editing and export. A workspace import saves its resolved initial state locally before offering conversion; existing difficulties are not reinitialized. The saved state and baselines survive reloads, and an interrupted, unresolved import resumes preparation.
+
+After preparation, the last page offers to keep Legacy Sliders or convert them to FSliders across the imported difficulties. Conversion uses the current map and slider modes and the retained baseline; there is no separate conversion-mode toggle. **Edit → Convert all sliders to FSliders** offers the same representation choice for the current difficulty. Single-slider conversion uses the same policy. Batch conversion is cancellable, checks its source snapshot before publication, and supports one undo step per difficulty. Invalid input retains its source with diagnostics. Saving persists the result in the workspace without modifying the original source files.
+
+Ctrl+D retains the source object and creates a same-type copy with its baseline and effective mode. Generated compensation is recalculated for the copied object's position in the map RNG sequence. This does not apply derandomization again to an already processed path.
+
 
 With Distance Snap disabled, dragging a selected slider fruit, droplet or tiny droplet follows horizontal Grid Snap, including the existing Shift override. Unreachable positions stop at an accepted grid point, or retain the original X when no grid point is reachable. With Distance Snap enabled, the strict event snapping rules above apply; rejected candidates do not leave partial geometry.
 

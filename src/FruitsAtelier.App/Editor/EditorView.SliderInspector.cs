@@ -132,7 +132,7 @@ public sealed partial class EditorView
         inspectorRows.Add(("inspector.spans", Range(tracks.Select(t => (double)t.SpanCount).Concat(imported.Select(t => (double)t.SpanCount)))));
         var derandomization = tracks.Where(t => t.StreamSnapDivisor is null)
             .Select(t => !t.RandomizesDroplets(Document))
-            .Concat(imported.Select(s => s.RandomizationTrack is not null && Document.DerandomizeFSliderDroplets)).Distinct().ToArray();
+            .Concat(imported.Select(s => s.RandomizationTrack is { } track && !track.RandomizesDroplets(Document))).Distinct().ToArray();
         inspectorRows.Add(("inspector.dropletEffective", derandomization.Length == 0 ? "—"
             : derandomization.Length > 1 ? L.Get("inspector.mixed")
             : L.Get(derandomization[0] ? "droplet.mode.Derandomize" : "droplet.mode.Randomize")));

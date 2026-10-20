@@ -185,9 +185,27 @@ See [Timing editing](EDITOR_UI.md#timing-editing).
 
 ## FSliders and Legacy Sliders
 
-`MapDocument.DerandomizeDroplets` stores the per-difficulty Legacy conversion choice. A null value uses the General settings default until conversion. When disabled, conversion samples the original full-map Catch output once and builds a linear target path through every actual event position, including randomized TinyDroplets. Tracks use `CompensateTinyDroplets=true` to keep the generated objects on that path. Acceptance checks every event identity, kind, time, position, and target alignment. Conflicting folded repeat targets or unreachable geometry leave the source Legacy Slider intact.
+New import provenance uses schema 37 (single difficulty) / 38 (multi-difficulty).
+`SliderImportState` is None for existing projects, Pending during a new import,
+Native for ordinary sources, or Compensated after source confirmation. Missing
+state preserves old project behavior and never triggers import preparation.
+Opening a saved workspace or project does not apply global import preferences.
+Pending imports capture their global mode before preparation and can resume after
+reopening. The state participates in cloning, equality, validation and persistence.
 
-Randomized conversion includes nested event positions as exact fitting boundaries and compares TinyDroplet X with the original full-map conversion. If the fitted curve changes a position, conversion uses a linear track through the original path and TinyDroplet positions; dense paths can use just the mandatory event positions.
+Legacy-to-FSlider editor actions resolve the current map/slider droplet mode and
+reuse `RandomizationTrack` when present. Ordinary sources fit the original geometric
+path; confirmed compensated sources recover a baseline from full-map Catch events.
+Recovery retains the original Legacy geometry on import, checks generated event
+kinds/times and positions within one playfield pixel, and can simplify a curve only
+under the same playback check. Shared repeat targets use bounded playback fitting;
+unreachable recovery is reported without publishing a partial import. Subsequent
+refreshes and Ctrl+D reuse the retained baseline rather than fitting the processed
+geometry again. FSlider-to-Legacy conversion also retains its track and mode.
+`MapDocument.DerandomizeDroplets` remains readable for compatibility; editor
+conversion no longer resolves an independent policy from that legacy field.
+The global `LibrarySettings.DerandomizeDroplets` preference initializes ordinary
+imports, independently of the new-project default.
 
 Tracks lie in the `(timeMs, X)` plane, with segment type `Nodes[i].OutgoingKind ?? track.Kind`. Null inherits the track default; a track may mix linear and cubic Bezier segments. Endpoint times increase. Bezier controls may extend beyond either endpoint in time; Bernstein subdivision validates that any time reversal lies outside the authored interval. Time evaluation solves `time(u)` rather than substituting a linear time fraction for u. Anchors are at least 0.001 ms apart, and anchor and control-point X may extend outside 0..512. Gameplay event targets are clamped to the playfield; saved authoring geometry retains its coordinates.
 
@@ -244,8 +262,8 @@ Derandomize. The nullable mode is cloned, compared, validated and included in
 conversion-cache identity. Non-null modes require schema 25/26; earlier readers
 reject them. `RandomizeNewSliders` retains the difficulty's opt-in to randomization
 for newly drawn FSliders. New projects capture the independent General derandomization
-preference, which defaults to on. Legacy conversion uses its separate saved policy
-and application preference.
+preference, which defaults to on. Legacy conversion uses the current difficulty
+and retained slider baseline, as described above.
 These fields participate in deep cloning, content equality, history, persistence and cache
 invalidation. Slider-managed fruit streams retain dormant effects but do not apply
 them; imported Legacy Sliders retain their existing conversion rules.
@@ -349,8 +367,8 @@ Projects using the map derandomization gate or HR mode use single-difficulty
 schema 11 or multi-difficulty schema 12. Readers still accept the earlier schemas;
 absent flags default to false to preserve existing randomization behavior. New
 blank/audio projects initialize the gate from the General new-project preference.
-The nullable `DerandomizeDroplets` field continues to hold the Legacy conversion
-choice independently of these compensation settings.
+The nullable `DerandomizeDroplets` field is retained for older project compatibility;
+new editor conversions use the effective droplet mode.
 
 ## Banana shower patterns
 

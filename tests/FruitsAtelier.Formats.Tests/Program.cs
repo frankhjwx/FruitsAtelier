@@ -1,6 +1,7 @@
 using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
+if (args.Contains("--slider-import-policy-check")) { SliderImportPolicyTests.Run(); Console.WriteLine("PASS unified slider import policy"); return 0; }
 if (args.Contains("--slider-reimport-check")) { SliderReimportTests.Run(); Console.WriteLine("PASS compensated osu reimport and fitted FSlider playback"); return 0; }
 
 if (args.Contains("--collaboration-check")) { CollaborationMappingTests.Run(); return 0; }
@@ -71,6 +72,7 @@ if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Slider import modes and compensated baselines remain stable through conversion", SliderImportPolicyTests.Run),
     ("Reimported compensated sliders recover straight playback", SliderReimportTests.Run),
     ("Independent Legacy SV preserves per-object timing, postprocessing and overlap constraints", IndependentSliderSvTests.Run),
     ("Large imported paths preserve compact project data and capacity limits", LargeImportedPathTests.Run),

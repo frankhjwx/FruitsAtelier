@@ -1,7 +1,7 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
-if (args.Contains("--slider-batch-check")) { SliderBatchTests.Run(); Console.WriteLine("PASS import defaults, fitted batch conversion, scope and undo"); return 0; }
+if (args.Contains("--slider-batch-check")) { SliderBatchTests.Run(); NativeImportedPathTests.Run(); WorkspaceSaveTests.Run(); LegacyReadOnlyEditingTests.Run(); SliderInteractionTests.LegacyContextConversion(); Console.WriteLine("PASS import defaults, fitted batch conversion, scope, paths, saves and undo"); return 0; }
 if (args.Contains("--osu-link-check")) { OsuLinkTests.Run(); TimeJumpTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS osu! editor links, routing, activation and settings"); return 0; }
 if (args.Contains("--collaboration-check")) { CollaborationMappingUiTests.Run(); return 0; }
 if (args.Contains("--cache-lifetime-check")) { CacheLifetimeTests.Run(); Console.WriteLine("PASS closed difficulty data is collectible after both canvases and clipboard use"); return 0; }
@@ -527,6 +527,7 @@ var tests = new (string Name, Action Run)[]
     ("Upper timeline break edges drag, preview, cancel and remove short breaks", TimelineOverviewTests.BreakEdgeEditing),
     ("Bottom transport controls play, pause, stop and test", TimelineOverviewTests.TransportControls),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
+    ("Ordinary Legacy imports retain their Catch paths across droplet modes", NativeImportedPathTests.Run),
     ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
     ("Library opening keeps UI responsive while workspace maintenance holds the project gate", LibraryOpeningTests.Run),

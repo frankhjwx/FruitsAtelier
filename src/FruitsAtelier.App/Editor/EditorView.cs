@@ -442,7 +442,7 @@ public sealed partial class EditorView
             if (before is not null && !PositionsEqual(before, Document))
             { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }
             if (Document.DerandomizeDroplets is null && Document.ImportedSliders.Count < importedBefore)
-                Document.DerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
+                Document.DerandomizeDroplets = Document.DerandomizeFSliderDroplets;
             CommitContentHistory(); return true;
         }
         catch (ArgumentException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }

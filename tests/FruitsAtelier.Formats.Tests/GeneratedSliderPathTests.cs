@@ -73,7 +73,7 @@ internal static class GeneratedSliderPathTests
             var snapshot = map.DeepClone();
             CheckSamples(map, OsuBeatmapWriter.Serialize(map));
             Check(map.ContentEquals(snapshot), "Optional sample repair mutated the imported source.");
-            var result = SliderRepresentationEditing.ConvertToTrack(map, map.ImportedSliders.Single().Id, derandomize: false);
+            var result = SliderRepresentationEditing.ConvertToTrack(map, map.ImportedSliders.Single().Id);
             Check(result.Success, string.Join("; ", result.Diagnostics));
             snapshot = map.DeepClone();
             var output = OsuBeatmapWriter.Serialize(map);

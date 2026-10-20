@@ -724,7 +724,7 @@ public sealed partial class EditorView
             catch (InvalidOperationException error)
             { history.Cancel(); drag = DragKind.None; StatusMessage = error.Message; return; }
             if (Document.DerandomizeDroplets is null && Document.Tracks.Any(track => pendingImplicitSliderConversions.Contains(track.Id)))
-                Document.DerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
+                Document.DerandomizeDroplets = Document.DerandomizeFSliderDroplets;
             CommitContentHistory();
         }
         pendingImplicitSliderConversions.Clear();
