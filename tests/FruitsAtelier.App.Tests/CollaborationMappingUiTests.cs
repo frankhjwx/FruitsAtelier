@@ -99,7 +99,7 @@ internal static class CollaborationMappingUiTests
         void OpenSource()
         {
             var input = ui.View.CollaborationStartBounds;
-            ui.Click(ui.View.CollaborationPanelViewport.X + 10, input.Y + 10);
+            ui.Click(ui.View.CollaborationPanelViewport.X + 40, input.Y + 10);
         }
         OpenSource(); ui.ClickObjectAction("Source");
         Check(ui.View.Document.CollaborationReferences![0].DifficultyId == source.Id, "User assigns a generated section source");

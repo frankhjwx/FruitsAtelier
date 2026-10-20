@@ -139,7 +139,7 @@ public sealed partial class EditorView
         double start = references.Select(r => r.EndMs).DefaultIfEmpty(0).Max();
         references.Add(new(Guid.NewGuid(), Guid.Empty, start, Math.Min(int.MaxValue, Math.Max(start + 1000, Math.Ceiling(Document.DurationMs)))));
         SetCollaborationReferences(references);
-        collaborationPanelScroll = Math.Max(0, 318 + references.Count * 40 - collaborationBounds.Height);
+        collaborationPanelScroll = Math.Max(0, 296 + references.Count * 40 - collaborationBounds.Height);
     }
 
     private void GenerateCollaborationSections()
@@ -236,7 +236,7 @@ public sealed partial class EditorView
         var references = Document.CollaborationReferences ?? [];
         var incoming = difficulties.SelectMany(d => (d.History.Document.CollaborationReferences ?? [])
             .Where(r => r.DifficultyId == difficulties[activeDifficulty].Id).Select(r => (Difficulty: d, Reference: r))).ToArray();
-        collaborationContentHeight = (references.Count == 0 ? 250 : 330 + references.Count * 40)
+        collaborationContentHeight = (references.Count == 0 ? 250 : 308 + references.Count * 40)
             + 60 + Math.Max(1, incoming.Length) * 68 + 60;
         collaborationPanelScroll = Math.Clamp(collaborationPanelScroll, 0, Math.Max(0, collaborationContentHeight - collaborationBounds.Height));
         float x = bounds.X - horizontal.Offset, w = horizontal.ContentWidth;
@@ -247,10 +247,9 @@ public sealed partial class EditorView
         c.Text(CurrentDifficultyName, x, y + 4, 15, Foreground, w, true);
         if (references.Count > 0)
         {
-            c.Text(L.Get("collab.helpShort"), x, y + 34, 12, Muted, w);
-            c.Text(L.Get("collab.completeObjects"), x, y + 56, 12, Muted, w);
+            c.Text(L.Get("collab.completeObjects"), x, y + 34, 12, Muted, w);
         }
-        float controlsY = y + (references.Count == 0 ? 38 : 86);
+        float controlsY = y + (references.Count == 0 ? 38 : 64);
         Button(c, new(x, controlsY, w, 32), L.Get("collab.sync"), SynchronizeCollaboration,
             enabled: !CollaborationBusy && references.Any(r => r.DifficultyId != Guid.Empty));
         TimingCheck(c, new(x, controlsY + 36, w, 28), "collab.syncObjectSounds", collaborationSyncObjectSounds,
@@ -258,33 +257,37 @@ public sealed partial class EditorView
         c.Line(x, controlsY + 76, x + w, controlsY + 76, Grid);
         Button(c, new(x, controlsY + 88, w, 32), L.Get("collab.fromBookmarks"), GenerateCollaborationSections,
             enabled: !CollaborationBusy && Document.DurationMs > 0);
-        float timeWidth = 90, sourceWidth = w - timeWidth * 2 - 50;
+        float timeWidth = 90, numberWidth = 24, sourceX = x + numberWidth + 6;
+        float sourceWidth = w - timeWidth * 2 - 50 - numberWidth - 6;
         if (references.Count > 0)
         {
-            c.Text(L.Get("collab.references"), x, y + 220, 14, Foreground, w, true);
-            c.Text(L.Get("collab.source"), x, y + 254, 11, Muted, sourceWidth);
-            c.Text(L.Get("collab.start"), x + sourceWidth + 6, y + 254, 11, Muted, timeWidth);
-            c.Text(L.Get("collab.end"), x + sourceWidth + timeWidth + 12, y + 254, 11, Muted, timeWidth);
+            c.Text(L.Get("collab.references"), x, y + 198, 14, Foreground, w, true);
+            c.Text("#", x, y + 232, 11, Muted, numberWidth);
+            c.Text(L.Get("collab.source"), sourceX, y + 232, 11, Muted, sourceWidth);
+            c.Text(L.Get("collab.start"), sourceX + sourceWidth + 6, y + 232, 11, Muted, timeWidth);
+            c.Text(L.Get("collab.end"), sourceX + sourceWidth + timeWidth + 12, y + 232, 11, Muted, timeWidth);
         }
-        y += references.Count == 0 ? 162 : 278;
+        y += references.Count == 0 ? 162 : 256;
         if (references.Count == 0)
         {
             c.Text(L.Get("collab.emptyShort"), x, y + 8, 12, Muted, w);
             y += 40;
         }
+        int sectionNumber = 0;
         foreach (var reference in references)
         {
             string name = reference.DifficultyId == Guid.Empty ? L.Get("collab.unassigned")
                 : difficulties.FirstOrDefault(d => d.Id == reference.DifficultyId)?.Name ?? L.Get("collab.missing");
             float rowY = y;
-            Button(c, new(x, y, sourceWidth, 32), name + " ▾", () => PickCollaborationSource(reference.Id, bounds.X, rowY + 34), enabled: !CollaborationBusy);
+            c.Text((++sectionNumber).ToString(CultureInfo.InvariantCulture), x, y + 9, 12, Muted, numberWidth);
+            Button(c, new(sourceX, y, sourceWidth, 32), name + " ▾", () => PickCollaborationSource(reference.Id, bounds.X, rowY + 34), enabled: !CollaborationBusy);
             Button(c, new(x + w - 32, y, 32, 32), "×", () =>
             {
                 collaborationField = "";
                 SetCollaborationReferences((Document.CollaborationReferences ?? []).Where(r => r.Id != reference.Id).ToList());
             }, enabled: !CollaborationBusy);
-            Number(false, new(x + sourceWidth + 6, y, timeWidth, 32));
-            Number(true, new(x + sourceWidth + timeWidth + 12, y, timeWidth, 32));
+            Number(false, new(sourceX + sourceWidth + 6, y, timeWidth, 32));
+            Number(true, new(sourceX + sourceWidth + timeWidth + 12, y, timeWidth, 32));
             y += 40;
             void Number(bool end, Rect input)
             {
