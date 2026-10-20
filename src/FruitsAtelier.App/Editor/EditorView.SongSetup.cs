@@ -39,8 +39,11 @@ public sealed partial class EditorView
         SongSetupVisible = true; hits.Clear(); fields.Clear();
     }
 
+    private bool songFaOnly;
+
     private void InitializeSongSetup()
     {
+        songFaOnly = CurrentDifficultyFaOnly;
         songValues.Clear(); songInitial.Clear(); songField = songError = "";
         songDerandomizeDroplets = Document.DerandomizeFSliderDroplets;
         songDerandomizeHardRock = Document.DerandomizeDropletsForHardRock;
@@ -98,7 +101,7 @@ public sealed partial class EditorView
         c.Fill(r, Panel, 8); c.Stroke(r, Grid, radius: 8);
         c.Text(L.Get("song.title"), r.X + 22, r.Y + 16, 19, Foreground, r.Width - 80, true);
         Button(c, new(r.Right - 54, r.Y + 10, 32, 28), "×", CloseSongSetup);
-        string[] tabs = ["song.general", "song.difficulty", "song.colours", "song.design", "randomize.title"];
+        string[] tabs = ["song.general", "song.difficulty", "song.colours", "song.design", "randomize.title", "song.faSettings"];
         float tabStep = Math.Min(140, (r.Width - 44) / tabs.Length);
         for (int i = 0; i < tabs.Length; i++)
         {
@@ -119,6 +122,7 @@ public sealed partial class EditorView
             }
         }
         else if (songTab == 2) DrawSongColours(c, r);
+        else if (songTab == 5) DrawFaSettings(c, new(r.X + 22, r.Y + 116, r.Width - 44, 200), false);
         else if (songTab == 4)
         {
             c.Text(L.Get("randomize.currentDifficulty"), r.X + 22, r.Y + 90, 12, Foreground, r.Width - 44, true);
@@ -287,7 +291,12 @@ public sealed partial class EditorView
             liveSongColours = [.. songColours]; liveSongCustom = songCustomColours;
             liveSongSnapshot = Document.DeepClone(); songError = "";
         }
-        else CloseSongSetup();
+        else
+        {
+            bool faOnly = songFaOnly;
+            CloseSongSetup();
+            RequestDifficultyFaOnly(faOnly);
+        }
     }
 
     private void SongSetupPointerDown(float x, float y, int button, bool shift)

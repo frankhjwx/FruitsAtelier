@@ -18,8 +18,8 @@ public sealed partial class EditorView
         var current = difficulties[activeDifficulty];
         if (!original.Project.Difficulties.Any(d => d.Id == current.Id)) return false;
         var entry = original.Manifest.Difficulties.Single(d => d.Id == current.Id);
-        if (WorkspaceSynchronization.Target(entry) is not null && !entry.ExportConfirmed) return false;
-        if (WorkspaceSynchronization.Target(entry) is null && !string.IsNullOrWhiteSpace(LibrarySettings.Songs)
+        if (!entry.FaOnly && WorkspaceSynchronization.Target(entry) is not null && !entry.ExportConfirmed) return false;
+        if (!entry.FaOnly && WorkspaceSynchronization.Target(entry) is null && !string.IsNullOrWhiteSpace(LibrarySettings.Songs)
             && !ProjectInSongs && !original.Manifest.SongsExportOfferShown) return false;
         Guid id = current.Id;
         savingDifficultyId = id;
@@ -33,12 +33,12 @@ public sealed partial class EditorView
             {
                 Name = original.Project.Name, Notes = original.Project.Notes,
                 Difficulties = original.Project.Difficulties.Select(d => d.Id == id
-                    ? new ProjectDifficulty { Id = id, Name = name, Document = document } : d).ToList()
+                    ? new ProjectDifficulty { Id = id, Name = name, FaOnly = entry.FaOnly, Document = document } : d).ToList()
             };
             var session = DetachedSession(original, project);
             var target = session.Manifest.Difficulties.Single(d => d.Id == id);
             string? previousSource = document.SourcePath;
-            if (WorkspaceSynchronization.Target(target) is not null)
+            if (!target.FaOnly && WorkspaceSynchronization.Target(target) is not null)
             {
                 var status = WorkspaceSynchronization.Scan(session, songs, searchMissing: false, difficultyId: id).Difficulties.Single();
                 if (status.State is not (WorkspaceSyncState.Current or WorkspaceSyncState.Changed) || target.Sync is null)

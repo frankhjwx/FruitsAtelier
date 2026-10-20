@@ -702,7 +702,14 @@ public sealed partial class EditorView
         string notice = workspaceSaveTask is not null || difficultySaveTask is not null ? L.Get("files.saving") : SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
             : deferredConversion ? L.Get("editor.status.convertingSlider") : conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
         float speedLabelX = DrawPlaybackSpeedSelector(c);
-        c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(0, speedLabelX - 33));
+        float noticeRight = speedLabelX;
+        if (fullSyncBackup is { } backup && WorkspaceSession?.Directory == backup.Directory)
+        {
+            noticeRight -= 218;
+            Button(c, new(noticeRight, height - 25, 210, 22), L.Get("sync.restoreFullBackup"),
+                () => ShowVersionHistory(backup.Version.Path, backup.DifficultyId), enabled: !SynchronizationBusy && !DiscardConfirmationVisible);
+        }
+        c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(0, noticeRight - 33));
         DrawVolumeButton(c);
     }
 
@@ -728,7 +735,7 @@ public sealed partial class EditorView
         }
         else if (menu == 3)
         {
-            Item(L.Get("project.add"), () => AddDifficulty());
+            Item(L.Get("project.add"), ShowAddDifficulty);
             Item(L.Get("project.import"), () => RequestImportDifficulty?.Invoke());
         }
         else if (menu == 1)

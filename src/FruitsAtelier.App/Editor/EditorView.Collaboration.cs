@@ -59,7 +59,7 @@ public sealed partial class EditorView
         var id = difficulties[activeDifficulty].Id;
         return new BeatmapProject { Name = ProjectName, Difficulties = difficulties.Select(d => new ProjectDifficulty
         {
-            Id = d.Id, Name = d.Name, Document = content && d.Id == id ? target.DeepClone() : content && needed.Contains(d.Id) ? d.History.Document.DeepClone()
+            Id = d.Id, Name = d.Name, FaOnly = d.FaOnly, Document = content && d.Id == id ? target.DeepClone() : content && needed.Contains(d.Id) ? d.History.Document.DeepClone()
                 : new MapDocument { CollaborationReferences = (d.Id == id ? target : d.History.Document).CollaborationReferences?.ToList() }
         }).ToList() };
     }

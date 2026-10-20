@@ -103,6 +103,10 @@ normalized timing choices. `FruitsAtelier.App.exe --render-check
 two window sizes and captures unresolved/resolved cells under
 `artifacts/tests/semantic-sync-native`.
 
+`Formats.Tests --fa-only-check` checks default compatibility, per-difficulty persistence, source exclusion, portable snapshots, individual saves, stale export rejection, source-change and deletion-failure isolation, and reenabling generation. `App.Tests --fa-only-check` checks new-difficulty defaults and FA-only selection, Song Setup dock and modal controls, keep/delete/cancel choices, independent policies and restart in English and Chinese at two sizes. Native synchronization checks capture the creation choice, FA Settings and file-removal confirmation.
+
+`Formats.Tests --full-sync-check` runs the focused connection-retention and version-history checks. `App.Tests --full-sync-check` checks full-sync confirmation and cancellation without writes, backup failure isolation, unchanged Stream retention, external object replacement, the named working snapshot, direct recovery, expired recovery points, undo and project isolation in English and Chinese at two window sizes. It also runs the synchronization and version-history UI regressions. Native synchronization rendering captures the full-sync confirmation. `Formats.Tests --semantic-sync-check` additionally verifies complete stream retention, edited/deleted/ambiguous stream rejection, external timing changes and project round trips.
+
 `App.Tests --sync-details-check` checks playable event matching, position tolerance,
 insertions and per-property unresolved/resolved colours.
 

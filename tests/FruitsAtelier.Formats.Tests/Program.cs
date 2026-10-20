@@ -5,8 +5,17 @@ using L = FruitsAtelier.Localization.Strings;
 if (args.Contains("--collaboration-check")) { CollaborationMappingTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--collaboration-map-check") { CollaborationMapCheck.Run(args[1]); return 0; }
 if (args.Length == 2 && args[0] == "--collaboration-map-sequence-check") { CollaborationMapCheck.Sequence(args[1]); return 0; }
+if (args.Contains("--fa-only-check")) { FaOnlyTests.Run(); return 0; }
+if (args.Contains("--full-sync-check"))
+{
+    foreach (var (name, run) in SynchronizationTests.Cases().Where(c => c.Item1.Contains("entire osu version")
+        || c.Item1.Contains("sound and combo") || c.Item1.Contains("exported curves keep") || c.Item1.Contains("uploaded IDs")))
+    { run(); Console.WriteLine("PASS " + name); }
+    VersionHistoryTests.Run(); return 0;
+}
 if (args.Contains("--semantic-sync-check"))
 {
+    FaOnlyTests.Run();
     foreach (var (name, run) in SynchronizationTests.Cases()) { run(); Console.WriteLine("PASS " + name); }
     return 0;
 }
@@ -81,6 +90,7 @@ var tests = new (string Name, Action Run)[]
     ("v8 through v14 preserve inherited SV tick spacing and legacy coordinates", LegacyVersionTiming),
     ("v7 preserves legacy ticks, RNG, project rules and generated slider exports", LegacyV7Tests.Run),
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
+    ("Workspace difficulty FA-only policy controls synchronization, generation and external file removal", FaOnlyTests.Run),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),
     ("Multi-difficulty projects preserve content, history and compatibility", MultiProjectTests.Run),
     ("Collaboration references preserve range ownership, timing and hitsounds", CollaborationMappingTests.Run),

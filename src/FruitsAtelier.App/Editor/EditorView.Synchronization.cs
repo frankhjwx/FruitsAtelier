@@ -38,6 +38,8 @@ public sealed partial class EditorView
     private static string? SyncAudioHash(string? path) => path is not null && File.Exists(path) ? WorkspaceProject.Hash(path) : null;
     private IReadOnlyList<WorkspaceClaim> syncClaims = [];
     private string syncFailure = "";
+    private sealed record FullSyncBackup(string Directory, WorkspaceVersion Version, Guid DifficultyId);
+    private FullSyncBackup? fullSyncBackup;
     public bool SynchronizationVisible => syncPage is not null and not "checking";
     public bool SynchronizationBusy => LibraryOpening || difficultySaveTask is not null || syncRetry is not null || workspaceSaveTask is not null || syncTask is not null || syncCommitTask is not null;
     public bool SynchronizationNeedsRedraw => collaborationTask is { IsCompleted: true } || fazTask is not null || LibraryOpening || acceptedFileCheck is { IsCompleted: true } || difficultySaveTask is { IsCompleted: true } || SynchronizationWaitVisible || syncRetry is { } retry && DateTime.UtcNow >= retry.After || workspaceSaveTask is { IsCompleted: true } || VersionHistoryNeedsRedraw || syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
@@ -164,6 +166,7 @@ public sealed partial class EditorView
                         if (existing is null) difficulties.Add(new DifficultySession(diff));
                         else
                         {
+                            existing.FaOnly = diff.FaOnly;
                             if (localCommit)
                             {
                                 if (existing.History.Document.SourcePath != diff.Document.SourcePath)
@@ -367,6 +370,7 @@ public sealed partial class EditorView
 
     private void CancelSynchronization()
     {
+        if (syncPage == "confirm-external") { syncPage = "resolve"; hits.Clear(); fields.Clear(); return; }
         if (syncPage == "checking") return;
         bool activeBlocked = syncPage == "failed" || syncDifficulty == difficulties[activeDifficulty].Id && DifficultySyncState(activeDifficulty) is not (WorkspaceSyncState.Current or WorkspaceSyncState.Local);
         syncPage = null; afterSynchronization = null; syncDifficulty = Guid.Empty;
@@ -400,6 +404,17 @@ public sealed partial class EditorView
 
     private void ResolveSync(bool? useExternal)
     {
+        if (useExternal is true)
+        {
+            syncPage = "confirm-external";
+            hits.Clear(); fields.Clear();
+            return;
+        }
+        CommitSync(useExternal);
+    }
+
+    private void CommitSync(bool? useExternal)
+    {
         if (WorkspaceSession is not { } session || !syncStatuses.TryGetValue(syncDifficulty, out var status) || status.Candidate is not { } external) return;
         var project = CaptureProject(); var diff = project.Difficulties.Single(d => d.Id == syncDifficulty);
         session = DetachedSession(session, project);
@@ -420,7 +435,10 @@ public sealed partial class EditorView
                     throw new SyncSourceChangedException();
             }
             catch (IOException) { throw new SyncSourceChangedException(); }
-            WorkspaceHistoryFile.WriteProject(project, Path.Combine(WorkspaceSynchronization.Archive(session, "resolution"), "current.catchproj"));
+            string backup = Path.Combine(WorkspaceSynchronization.Archive(session, useExternal is true ? "before-full-sync" : "resolution"), "current.catchproj");
+            WorkspaceHistoryFile.WriteProject(project, backup);
+            if (useExternal is true)
+                fullSyncBackup = new(session.Directory, new(backup, DateTime.UtcNow, "before-full-sync", true), diff.Id);
             if (fieldsOnly) diff.Document = WorkspaceSynchronization.Resolve(fieldReview!,
                 fieldReview!.Conflicts.ToDictionary(c => c.Key, c => useExternal ?? choices.GetValueOrDefault(c.Key)));
             else if (useExternal is true) diff.Document = fieldReview is not null
@@ -525,6 +543,16 @@ public sealed partial class EditorView
             c.Unclip();
             Button(c, new(x + 20, y + h - 58, 220, 36), L.Get("sync.refresh"), () => RefreshSynchronization());
             Button(c, new(x + w - 150, y + h - 58, 130, 36), L.Get("mac.cancel"), CancelSynchronization);
+            return;
+        }
+        if (syncPage == "confirm-external")
+        {
+            c.Text(L.Get("sync.fullConfirmTitle"), x + 20, y + 68, 18, Gold, w - 40, true);
+            var lines = WrapSyncText(c, L.Get("sync.fullConfirmHelp"), w - 40);
+            for (int i = 0; i < lines.Length; i++)
+                c.Text(lines[i].Text, x + 20, y + 108 + i * 23, 14, Foreground, w - 40);
+            Button(c, new(x + 20, y + h - 106, w - 40, 36), L.Get("sync.fullConfirmApply"), () => CommitSync(true));
+            Button(c, new(x + 20, y + h - 58, w - 40, 36), L.Get("sync.fullConfirmBack"), () => syncPage = "resolve");
             return;
         }
         var difficulty = difficulties.FirstOrDefault(d => d.Id == syncDifficulty);
@@ -643,6 +671,6 @@ public sealed partial class EditorView
         Manifest = WorkspaceProject.SnapshotManifest(session.Manifest)
     };
     private static string ManifestStamp(WorkspaceManifest manifest) => string.Join('\n', manifest.Difficulties.Select(e =>
-        string.Join('|', e.Id, e.Source, e.SourceHash, e.ExportTarget, e.ExportHash, e.Sync?.AudioHash, e.Sync?.Path)))
+        string.Join('|', e.Id, e.Source, e.SourceHash, e.ExportTarget, e.ExportHash, e.FaOnly, e.Sync?.AudioHash, e.Sync?.Path)))
         + manifest.SongsRoot + manifest.SourceDirectory + manifest.ExternalSourceDirectory;
 }

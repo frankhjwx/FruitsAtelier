@@ -36,9 +36,9 @@ public sealed partial class EditorView
         songDockBounds = bounds; drawingSongDock = true;
         songFieldBounds.Clear(); songSliders.Clear();
         PrepareSongTags(c);
-        string[] tabs = ["song.general", "song.difficulty", "song.colours", "song.design"];
-        songTab = Math.Clamp(songTab, 0, 3);
-        const float categoryHeight = 44;
+        string[] tabs = ["song.general", "song.difficulty", "song.colours", "song.design", "song.faSettings"];
+        songTab = Math.Clamp(songTab, 0, 4);
+        const float categoryHeight = 82;
         float bodyHeight = songTab switch { 0 => 7 * 72 + Math.Max(64, songTagRows.Count * (songTagSize + 5) + 14) + 38,
             1 => SongDifficulty.Length * 82, 2 => 650, 3 => 320, _ => 470 };
         songDockContentHeight = categoryHeight + bodyHeight + 32;
@@ -51,8 +51,10 @@ public sealed partial class EditorView
         for (int i = 0; i < tabs.Length; i++)
         {
             int tab = i;
-            Button(c, new(bounds.X + i * (categoryWidth + 3), y, categoryWidth, 32),
-                FitTabName(c, L.Get(tabs[i]), Math.Max(1, categoryWidth - 16)),
+            var category = i < 4 ? new Rect(bounds.X + i * (categoryWidth + 3), y, categoryWidth, 32)
+                : new Rect(bounds.X, y + 38, bounds.Width, 32);
+            Button(c, category,
+                FitTabName(c, L.Get(tabs[i]), Math.Max(1, category.Width - 16)),
                 () => { songTab = tab; songField = songError = ""; songDockScroll = 0; SongSetupInputSession++; }, active: songTab == tab, fontSize: 12);
         }
         y += categoryHeight;
@@ -77,6 +79,7 @@ public sealed partial class EditorView
                     () => songValues[key] = enabled ? "0" : "1");
             }
         }
+        else if (songTab == 4) DrawFaSettings(c, new(bounds.X, y, bounds.Width, bodyHeight), true);
         y += bodyHeight;
         c.Text(songError, bounds.X, y + 4, 12, Error, bounds.Width);
         c.Unclip(); drawingSongDock = false;

@@ -18,7 +18,7 @@ public static partial class ProjectSerializer
         {
             // Reuse schema 1's validation and relative resource path handling.
             var document = Read(Serialize(diff.Document, projectPath));
-            copy.Difficulties.Add(new ProjectDifficulty { Id = diff.Id, Name = diff.Name, Document = document });
+            copy.Difficulties.Add(new ProjectDifficulty { Id = diff.Id, Name = diff.Name, Document = document, FaOnly = diff.FaOnly });
         }
         string text = JsonSerializer.Serialize(new MultiProjectFile { SchemaVersion = copy.Difficulties.Any(d => HasUnassignedSections(d.Document)) ? 36 : copy.Difficulties.Any(d => d.Document.CollaborationReferences is { Count: > 0 }) ? 34 : copy.Difficulties.Any(d => HasEndpointSnap(d.Document)) ? 32 : copy.Difficulties.Any(d => HasIndependentSv(d.Document)) ? 30 : copy.Difficulties.Any(d => HasOsuCanvasData(d.Document)) ? 28 : copy.Difficulties.Any(d => HasDropletModes(d.Document)) ? 26 : copy.Notes.Length > 0 ? 24 : copy.Difficulties.Any(d => HasBananaPatterns(d.Document)) ? 22 : copy.Difficulties.Any(d => d.Document.LegacySliderTicks) ? 20 : copy.Difficulties.Any(d => HasStreamCombos(d.Document)) ? 18 : copy.Difficulties.Any(d => d.Document.HitsoundOverrides.Count > 0) ? 16 : copy.Difficulties.Any(d => HasDerandomization(d.Document)) ? 12 : copy.Difficulties.Any(d => HasRandomization(d.Document)) ? 10 : copy.Difficulties.Any(d => HasStacks(d.Document)) ? 8 : copy.Difficulties.Any(d => HasStreams(d.Document)) ? 6 : copy.Difficulties.Any(d => HasControlCurves(d.Document)) ? 4 : 2, Project = copy }, WriteOptions(copy.Difficulties.Select(d => d.Document)));
         if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)

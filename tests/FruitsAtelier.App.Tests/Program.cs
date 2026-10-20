@@ -5,6 +5,8 @@ if (args.Contains("--osu-link-check")) { OsuLinkTests.Run(); TimeJumpTests.Run()
 if (args.Contains("--collaboration-check")) { CollaborationMappingUiTests.Run(); return 0; }
 if (args.Contains("--cache-lifetime-check")) { CacheLifetimeTests.Run(); Console.WriteLine("PASS closed difficulty data is collectible after both canvases and clipboard use"); return 0; }
 if (args.Contains("--dirty-exit-check")) { DirtyExitTests.Run(); DiscardConfirmationTests.Run(); Console.WriteLine("PASS dirty exit choices and nonblocking background checks"); return 0; }
+if (args.Contains("--fa-only-check")) { FaOnlyUiTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS FA-only creation, per-difficulty settings and Songs file policy"); return 0; }
+if (args.Contains("--full-sync-check")) { FullSynchronizationTests.Run(); SynchronizationUiTests.Run(); VersionHistoryUiTests.Run(); Console.WriteLine("PASS full synchronization confirmation, connections, backups and restoration"); return 0; }
 if (args.Contains("--sync-details-check")) { SyncTabsTests.Run(); Console.WriteLine("PASS playable object details and synchronization tabs"); return 0; }
 if (args.Contains("--faz-check")) { FazTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--legacy-edit-map") { LegacyDropletWorkerTests.FirstEdits(ProjectSerializer.ReadFile(args[1])); Console.WriteLine("PASS first note placement and deletion without conversion dialogs"); return 0; }
@@ -287,6 +289,8 @@ var tests = new (string Name, Action Run)[]
     ("Blocked operations show synchronization progress only on demand", SynchronizationWaitTests.Run),
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
     ("Background synchronization retries retain dirty edits and explicit publication archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),
+    ("Difficulty FA-only settings preserve default generation and control external file removal", FaOnlyUiTests.Run),
+    ("Full synchronization confirms replacement, keeps unchanged connections and exposes its backup", FullSynchronizationTests.Run),
     ("Version history previews and restores changed and deleted difficulties with undo and modal isolation", VersionHistoryUiTests.Run),
 
     ("Playback note saves keep input responsive and retain edits made during publication", SynchronizationUiTests.PlaybackSave),

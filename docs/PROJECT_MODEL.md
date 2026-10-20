@@ -95,6 +95,8 @@ and their document title when synchronization reconstructs their context. Snapsh
 without timing points use their stored BPM and offset to reconstruct the initial
 red point, matching export.
 
+`ProjectDifficulty.FaOnly` is an optional difficulty-local workspace policy, also retained by multi-difficulty project snapshots. It defaults to false and is omitted when false, preserving the representation of ordinary projects. It controls Songs synchronization and generation rather than `.osu` metadata or curve authoring. Older readers reject a project containing the new field rather than silently enabling synchronization. See [Workspace behavior](WORKSPACE.md) for creation, settings and external-file handling.
+
 `BeatmapProject` stores a project Name, optional project-wide Notes, and 1–256 `ProjectDifficulty` entries. Each difficulty contains its own Guid, Version display name, and complete `MapDocument`. Schema 2 uses a `Project` outer container and atomically saves all difficulties together. Schema 1's `Document` is automatically wrapped as a single-difficulty project. Each difficulty's resource paths are written and resolved relative to the project directory, retaining the older path safety checks. Project JSON is limited to 256 MiB of UTF-8 data per file, including workspace difficulty files and legacy single- or multi-difficulty projects.
 
 Large imported paths use compact JSON above 65,536 total control points. This changes whitespace only; source text, control points and project schemas remain unchanged.

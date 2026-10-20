@@ -135,7 +135,7 @@ public sealed partial class EditorView
     public BeatmapProject CaptureProject() => new()
     {
         Name = ProjectName, Notes = projectNotes,
-        Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, Document = d.History.Document.DeepClone() }).ToList()
+        Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, FaOnly = d.FaOnly, Document = d.History.Document.DeepClone() }).ToList()
     };
 
     private MapDocument NewAuthoringDocument()
@@ -199,7 +199,7 @@ public sealed partial class EditorView
         return true;
     }
 
-    public bool AddDifficulty(MapDocument? imported = null)
+    public bool AddDifficulty(MapDocument? imported = null, bool faOnly = false)
     {
         if (!PrepareFileOperation()) return false;
         if (imported?.SourcePath is { } source)
@@ -231,10 +231,10 @@ public sealed partial class EditorView
             metadata.Lines.Add("BeatmapID:0");
         }
         OsuBeatmapReader.Validate(document);
-        var added = new ProjectDifficulty { Name = name, Document = document };
+        var added = new ProjectDifficulty { Name = name, Document = document, FaOnly = faOnly };
         difficulties.Add(new DifficultySession(added));
         if (imported is null && WorkspaceSession is { } workspace)
-            workspace.Manifest.Difficulties.Add(new WorkspaceDifficulty { Id = added.Id, Name = name });
+            workspace.Manifest.Difficulties.Add(new WorkspaceDifficulty { Id = added.Id, Name = name, FaOnly = faOnly });
         projectStructureDirty = true;
         PreloadProjectHitsounds();
         bool switched = SwitchDifficulty(difficulties.Count - 1);
