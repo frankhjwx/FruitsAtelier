@@ -28,6 +28,8 @@ internal static class FaOnlyTests
                 Check(!WorkspaceProject.Open(session.Directory).Project.Difficulties[0].FaOnly && File.Exists(source), "a newer source cancels deletion and keeps sync enabled");
                 continue;
             }
+            // Unix permits unlinking an open file; FileShare only prevents deletion on Windows.
+            if (mode == "locked" && !OperatingSystem.IsWindows()) continue;
             if (mode == "locked")
             {
                 using (var file = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read))

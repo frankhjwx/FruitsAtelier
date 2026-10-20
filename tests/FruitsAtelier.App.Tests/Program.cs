@@ -1140,11 +1140,11 @@ static void MainCurveVisibility()
     var previewObjects = ObjectCircles(ui, preview: true);
     True(curves.Length > 0, "Main target curves are not visible by default.");
     AssertObjectKinds(ui, objects, ui.Plot.Width);
-    ui.ClickText("滑条路径");
+    ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
     True(!CurveCommands(ui, preview: false).Any(), "Main target lines remained after hiding curves.");
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Hiding curves changed the main converted object sequence.");
     True(ObjectCircles(ui, preview: true).SequenceEqual(previewObjects), "The main curve toggle changed preview objects.");
-    ui.ClickText("滑条路径");
+    ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
     True(CurveCommands(ui, preview: false).Select(c => c.Segment!.Value).SequenceEqual(curves), "Showing curves did not restore the target geometry.");
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Restoring curves changed converted objects.");
     True(Snapshot(ui) == original && !ui.View.IsDirty, "Curve visibility mutated the document or history.");
@@ -1385,7 +1385,8 @@ sealed class Ui
     public void ClickFruit(Guid id) { var fruit = Fruit(id); ClickMap(fruit.TimeMs, fruit.X); }
     public void ClickText(string text)
     {
-        if ((text == FruitsAtelier.Localization.Strings.Get("ui.resetView") || text == FruitsAtelier.Localization.Strings.Get("ui.anchorSnap")) && !Canvas.Texts.Any(t => t.Value == text))
+        if ((text == FruitsAtelier.Localization.Strings.Get("ui.resetView") || text == FruitsAtelier.Localization.Strings.Get("ui.anchorSnap")
+            || text == FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves")) && !Canvas.Texts.Any(t => t.Value == text))
             ClickText(FruitsAtelier.Localization.Strings.Get("ui.view"));
         string visible = text.Split("  ", 2)[0];
         var label = Canvas.Texts.Single(t => t.Value == (Canvas.Texts.Any(t => t.Value == text) ? text : visible));

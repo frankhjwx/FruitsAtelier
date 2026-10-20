@@ -311,6 +311,10 @@ internal static class DifficultyTabTests
         view.PointerDown(plus.X + 2, plus.Y + 2, 0, false, false); canvas.Clear(); view.Render(canvas, 980, 620);
         var add = canvas.Texts.Single(t => t.Value == L.Get("project.add"));
         view.PointerDown(add.X + 2, add.Y + 2, 0, false, false);
+        canvas.Clear(); view.Render(canvas, 980, 620);
+        Check(view.DifficultyCount == 12, "Adding a difficulty waits for its synchronization choice");
+        add = canvas.Texts.Last(t => t.Value == L.Get("project.add"));
+        view.PointerDown(add.X + 2, add.Y + 2, 0, false, false);
         Check(view.DifficultyCount == 13 && view.ActiveDifficultyIndex == 12, "Plus menu adds and selects a difficulty");
     }
     private static void Check(bool ok, string message) { if (!ok) throw new Exception(message); }
