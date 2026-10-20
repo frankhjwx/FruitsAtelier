@@ -91,6 +91,12 @@ public sealed partial class EditorView
                 int count = Math.Min(low, paragraph.Length - offset);
                 if (count > 1 && char.IsHighSurrogate(paragraph[offset + count - 1])) count--;
                 if (count == 1 && char.IsHighSurrogate(paragraph[offset]) && offset + 1 < paragraph.Length) count = 2;
+                if (count > 0 && offset + count < paragraph.Length
+                    && char.IsAsciiLetterOrDigit(paragraph[offset + count - 1]) && char.IsAsciiLetterOrDigit(paragraph[offset + count]))
+                {
+                    for (int i = count - 1; i > 0; i--)
+                        if (char.IsWhiteSpace(paragraph[offset + i])) { count = i + 1; break; }
+                }
                 wrapped.Add(new(paragraphStart + offset, paragraph.Substring(offset, count))); offset += count;
             } while (offset < paragraph.Length);
             paragraphStart += paragraph.Length + 1;

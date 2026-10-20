@@ -459,7 +459,9 @@ public sealed partial class EditorView
             c.Image(catchIconPath, new(iconX, 52, 20, 20), colour);
             c.Text(names[index], x + 36 + pinPadding[index], 54, 12, missing ? 0x718092u : active ? Foreground : Muted,
                 rect.Width - 101 - pinPadding[index], active);
-            if (missing) c.Text(L.Get(searching ? "sync.searchingReference" : "sync.missingBadge"),
+            if (difficulties[target].FaOnly) c.Text(L.Get("song.faOnly"),
+                x + 36 + pinPadding[index], 69, 9, Muted, rect.Width - 45 - pinPadding[index]);
+            else if (missing) c.Text(L.Get(searching ? "sync.searchingReference" : "sync.missingBadge"),
                 x + 36 + pinPadding[index], 69, 9, 0x718092, rect.Width - 45 - pinPadding[index]);
             c.Text(stars is null ? L.Get("project.starsUnavailable") : L.Get("project.stars", stars.Value),
                 rect.Right - 59, 55, 10, active ? Foreground : Muted, 47);
