@@ -1579,6 +1579,7 @@
   "collab.add": "Add reference",
   "collab.unassigned": "Unassigned",
   "collab.fromBookmarks": "Generate sections from bookmarks",
+  "collab.syncObjectSounds": "Sync object hitsounds",
   "collab.sync": "Sync references",
   "collab.edit": "Edit collaboration references",
   "collab.previous": "Previous",

@@ -1579,6 +1579,7 @@
   "collab.add": "Add reference",
   "collab.unassigned": "Sin asignar",
   "collab.fromBookmarks": "Generar secciones desde marcadores",
+  "collab.syncObjectSounds": "Sincronizar hitsounds de objetos",
   "collab.sync": "Sync references",
   "collab.edit": "Edit collaboration references",
   "collab.previous": "Previous",

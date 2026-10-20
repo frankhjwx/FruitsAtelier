@@ -1579,6 +1579,7 @@
   "collab.add": "Add reference",
   "collab.unassigned": "未設定",
   "collab.fromBookmarks": "ブックマークから区間を生成",
+  "collab.syncObjectSounds": "オブジェクトのヒットサウンドを同期",
   "collab.sync": "Sync references",
   "collab.edit": "Edit collaboration references",
   "collab.previous": "Previous",

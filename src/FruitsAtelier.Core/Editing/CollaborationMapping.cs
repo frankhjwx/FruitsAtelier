@@ -32,7 +32,8 @@ public static class CollaborationMapping
     }
 
     public static Result Synchronize(BeatmapProject project, Guid targetId,
-        IReadOnlyList<CollaborationReference> references, bool compensateTinyDroplets = true, OsuWriteCache? outputCache = null)
+        IReadOnlyList<CollaborationReference> references, bool compensateTinyDroplets = true, OsuWriteCache? outputCache = null,
+        bool synchronizeObjectHitsounds = true)
     {
         ValidateReferences(project, targetId, references);
         var byId = project.Difficulties.ToDictionary(d => d.Id);
@@ -66,10 +67,15 @@ public static class CollaborationMapping
             Guid Remap(Guid id) => MappedId(reference.Id, reference.DifficultyId, id);
             foreach (var id in selected) origins.Add(Remap(id), (source, id, reference.DifficultyId));
             foreach (var fruit in source.Fruits.Where(f => selected.Contains(f.Id)))
-            { var copy = fruit.DeepClone(); copy.Id = Remap(copy.Id); result.Fruits.Add(copy); }
+            {
+                var copy = fruit.DeepClone(); copy.Id = Remap(copy.Id);
+                if (!synchronizeObjectHitsounds) copy.OriginalLine = WithoutObjectSamples(copy.OriginalLine);
+                result.Fruits.Add(copy);
+            }
             foreach (var track in source.Tracks.Where(t => selected.Contains(t.Id)))
             {
                 var copy = track.DeepClone(); RemapTrack(copy, Remap);
+                if (!synchronizeObjectHitsounds) copy.OriginalLine = WithoutObjectSamples(copy.OriginalLine);
                 copy.DropletMode = track.RandomizesDroplets(source) ? SliderDropletMode.Randomize : SliderDropletMode.Derandomize;
                 result.Tracks.Add(copy);
             }
@@ -78,6 +84,12 @@ public static class CollaborationMapping
                 var copy = slider.DeepClone(); copy.Id = Remap(copy.Id);
                 if (copy.RandomizationSource is { } baseline) baseline.Id = copy.Id;
                 if (copy.RandomizationTrack is { } track) RemapTrack(track, Remap);
+                if (!synchronizeObjectHitsounds)
+                {
+                    copy.OriginalLine = WithoutObjectSamples(copy.OriginalLine);
+                    if (copy.RandomizationSource is { } sampleSource) sampleSource.OriginalLine = WithoutObjectSamples(sampleSource.OriginalLine);
+                    if (copy.RandomizationTrack is { } sampleTrack) sampleTrack.OriginalLine = WithoutObjectSamples(sampleTrack.OriginalLine);
+                }
                 copy.SliderVelocityMultiplier = copy.SliderVelocityMultiplier is { } authored
                     ? authored * source.SliderMultiplier / target.SliderMultiplier
                     : timing.At(copy.TimeMs).SliderVelocityMultiplier * source.EffectiveSliderMultiplier / target.SliderMultiplier;
@@ -86,8 +98,12 @@ public static class CollaborationMapping
                 result.ImportedSliders.Add(copy);
             }
             foreach (var shower in source.BananaShowers.Where(s => selected.Contains(s.Id)))
-            { var copy = shower.DeepClone(); copy.Id = Remap(copy.Id); result.BananaShowers.Add(copy); }
-            if (source.SliderTickRate == target.SliderTickRate && source.LegacySliderTicks == target.LegacySliderTicks)
+            {
+                var copy = shower.DeepClone(); copy.Id = Remap(copy.Id);
+                if (!synchronizeObjectHitsounds) copy.OriginalLine = WithoutObjectSamples(copy.OriginalLine);
+                result.BananaShowers.Add(copy);
+            }
+            if (synchronizeObjectHitsounds && source.SliderTickRate == target.SliderTickRate && source.LegacySliderTicks == target.LegacySliderTicks)
                 foreach (var sound in source.HitsoundOverrides.Where(s => selected.Contains(s.SourceId)))
                     result.HitsoundOverrides.Add(sound with { SourceId = Remap(sound.SourceId) });
             AddBoundary(source, result, reference.StartMs);
@@ -101,6 +117,13 @@ public static class CollaborationMapping
         var ordered = result.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
         result.TimingPoints.Clear(); result.TimingPoints.AddRange(ordered);
         var merged = OsuBeatmapWriter.Serialize(result, compensateTinyDroplets, outputCache);
+        if (!synchronizeObjectHitsounds)
+        {
+            PreserveTargetHitsounds(target, result, merged.PlayableObjects, origins.Keys.ToHashSet(), compensateTinyDroplets);
+            var preserved = OsuBeatmapWriter.Serialize(result, compensateTinyDroplets, outputCache);
+            outputCache?.RememberMultiplier(result, preserved, compensateTinyDroplets);
+            return new(result, HitsoundResourcePlan.Combine([]), excluded);
+        }
         var currentResolver = new HitsoundResolver(result, merged.PlayableObjects);
         var edges = merged.PlayableObjects.Where(o => o.Kind == CatchObjectKind.Fruit).GroupBy(o => o.SourceId)
             .SelectMany(g => g.Select((o, i) => (Key: (o.SourceId, o.EventIndex), Edge: o.IsStandalone ? 0 : i)))
@@ -136,6 +159,58 @@ public static class CollaborationMapping
         var output = OsuBeatmapWriter.Serialize(result, compensateTinyDroplets, outputCache);
         outputCache?.RememberMultiplier(result, output, compensateTinyDroplets);
         return new(result, HitsoundResourcePlan.Combine(resources), excluded);
+    }
+
+    private static string? WithoutObjectSamples(string? line)
+    {
+        if (line is null) return null;
+        var fields = line.Split(',');
+        if (fields.Length < 5 || !int.TryParse(fields[3], out int type)) return line;
+        fields[4] = "0";
+        if ((type & 2) != 0)
+        {
+            Array.Resize(ref fields, Math.Max(11, fields.Length));
+            fields[8] = ""; fields[9] = ""; fields[10] = "0:0:0:0:";
+        }
+        else
+        {
+            int index = (type & 8) != 0 ? 6 : 5;
+            Array.Resize(ref fields, Math.Max(index + 1, fields.Length)); fields[index] = "0:0:0:0:";
+        }
+        return string.Join(',', fields);
+    }
+
+    private static void PreserveTargetHitsounds(MapDocument target, MapDocument result, IReadOnlyList<ConvertedCatchObject> events,
+        HashSet<Guid> copiedParents, bool compensation)
+    {
+        var previous = OsuBeatmapWriter.Serialize(target, compensation).PlayableObjects;
+        var resolver = new HitsoundResolver(target, previous);
+        var current = new HitsoundResolver(result, events);
+        var byPosition = previous.Where(HitsoundCopier.Audible).GroupBy(o => (o.TimeMs, o.Kind)).ToDictionary(g => g.Key, g => g.ToArray());
+        var byIdentity = previous.ToDictionary(o => (o.SourceId, o.EventIndex));
+        var updates = result.HitsoundOverrides.ToDictionary(o => (o.SourceId, o.EventIndex));
+        var edges = events.Where(o => o.Kind == CatchObjectKind.Fruit).GroupBy(o => o.SourceId)
+            .SelectMany(g => g.Select((o, i) => (Key: (o.SourceId, o.EventIndex), Edge: o.IsStandalone ? 0 : i)))
+            .ToDictionary(o => o.Key, o => o.Edge);
+        foreach (var item in events.Where(HitsoundCopier.Audible))
+        {
+            bool copied = copiedParents.Contains(item.SourceId);
+            ConvertedCatchObject? original = copied
+                ? byPosition.TryGetValue((item.TimeMs, item.Kind), out var matches) ? matches.MinBy(o => Math.Abs(o.X - item.X)) : null
+                : byIdentity.GetValueOrDefault((item.SourceId, item.EventIndex));
+            // An unknown parent has no object sample fields, so it resolves the merged timeline's defaults.
+            var defaults = current.Describe(item with { SourceId = Guid.Empty });
+            var sample = original is null ? defaults : resolver.Describe(original);
+            var inherited = original is null ? InheritedSampleFields.All : resolver.InheritedFields(original);
+            if (sample.NormalSet != defaults.NormalSet) inherited &= ~InheritedSampleFields.NormalSet;
+            if (sample.AdditionSet != defaults.AdditionSet) inherited &= ~InheritedSampleFields.AdditionSet;
+            if (sample.Index != defaults.Index) inherited &= ~InheritedSampleFields.Index;
+            if (sample.Volume != defaults.Volume) inherited &= ~InheritedSampleFields.Volume;
+            if (!copied && AudibleSample(item, sample) == AudibleSample(item, current.Describe(item))) continue;
+            updates[(item.SourceId, item.EventIndex)] = new(item.SourceId, item.EventIndex, sample,
+                edges.GetValueOrDefault((item.SourceId, item.EventIndex), -1), inherited);
+        }
+        result.HitsoundOverrides.Clear(); result.HitsoundOverrides.AddRange(updates.Values);
     }
 
     private static MapDocument RetargetOverrides(MapDocument source, IReadOnlyList<ConvertedCatchObject> events, MapDocument target, bool compensation)

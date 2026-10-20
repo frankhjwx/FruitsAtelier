@@ -52,11 +52,68 @@ internal static class CollaborationMappingTests
         MultipleRanges();
         BookmarkSections();
         CompleteSections();
+        PreserveTargetSounds();
         Console.WriteLine("PASS collaboration objects, samples, timing, graph, schemas, repeated sync and undo");
     }
 
     private static MapDocument Synchronize(BeatmapProject project, Guid target, IReadOnlyList<CollaborationReference> references)
         => CollaborationMapping.Synchronize(project, target, references).Document;
+
+    private static void PreserveTargetSounds()
+    {
+        string root = Path.GetFullPath("artifacts/tests/collaboration/keep-target-sounds-" + Guid.NewGuid().ToString("N"));
+        string sourceRoot = Path.Combine(root, "source"), targetRoot = Path.Combine(root, "target");
+        Directory.CreateDirectory(sourceRoot); Directory.CreateDirectory(targetRoot);
+        File.WriteAllBytes(Path.Combine(sourceRoot, "source.wav"), [1,2,3]);
+        File.WriteAllBytes(Path.Combine(targetRoot, "target.wav"), [4,5,6]);
+        string header = "osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:2\n[TimingPoints]\n";
+        var source = new ProjectDifficulty { Name = "source", Document = OsuBeatmapReader.Read(header +
+            "0,500,4,3,0,70,1,0\n[HitObjects]\n400,192,500,1,8,3:3:0:90:source.wav\n180,192,750,1,4,3:3:0:90:source.wav\n" +
+            "100,192,1000,2,8,L|240:192,2,140,8|8|8,3:3|3:3|3:3,0:0:0:0:\n", Path.Combine(sourceRoot, "source.osu")) };
+        var target = new ProjectDifficulty { Name = "target", Document = OsuBeatmapReader.Read(header +
+            "0,500,4,1,0,50,1,0\n[HitObjects]\n100,192,500,1,2,1:1:0:35:\n400,192,500,1,4,2:2:0:65:target.wav\n" +
+            "100,192,1000,2,2,L|240:192,2,140,2|4|8,2:2|2:2|2:2,0:0:0:0:\n180,192,2500,1,8,2:2:0:45:\n",
+            Path.Combine(targetRoot, "target.osu")) };
+        var project = new BeatmapProject { Name = "keep sounds", Difficulties = [source,target] };
+        CollaborationReference[] refs = [new(Guid.NewGuid(), source.Id, 0, 2000)];
+        var before = target.Document.DeepClone();
+        var prepared = CollaborationMapping.Synchronize(project, target.Id, refs, synchronizeObjectHitsounds: false);
+        Check(target.Document.ContentEquals(before), "Keeping target sounds does not mutate its input");
+        Check(prepared.Document.Fruits.All(f => f.OriginalLine?.Contains("source.wav") != true)
+            && prepared.Document.ImportedSliders.All(s => s.OriginalLine?.Split(',')[4] == "0"), "Object-only copies clear source sample fields and edge sounds");
+        prepared.Resources.Apply();
+        Check(Directory.EnumerateFiles(targetRoot, "*", SearchOption.AllDirectories).Count() == 1, "Object-only sync copies no source samples");
+        var output = OsuBeatmapWriter.Serialize(prepared.Document); var resolver = new HitsoundResolver(output.ReadBack, CatchStreamConverter.Convert(output.ReadBack).Objects);
+        var events = CatchStreamConverter.Convert(output.ReadBack).Objects;
+        var kept = resolver.Describe(events.Single(o => o.TimeMs == 500));
+        Check(kept is { Additions:4, NormalSet:2, Volume:65, FileName:"target.wav" }, "Same-time target sound wins independently of ID, with nearest X resolving ties");
+        var added = resolver.Describe(events.Single(o => o.TimeMs == 750));
+        Check(added is { Additions:0, NormalSet:3, Volume:70, FileName:"" }, "Unmatched new object uses merged timing defaults without source additions or file");
+        var oldOutput = OsuBeatmapWriter.Serialize(before); var oldResolver = new HitsoundResolver(before, oldOutput.PlayableObjects);
+        foreach (var item in output.PlayableObjects.Where(o => o.TimeMs >= 1000 && o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet))
+        {
+            var old = oldOutput.PlayableObjects.Single(o => o.TimeMs == item.TimeMs && o.Kind == item.Kind);
+            var newResolver = new HitsoundResolver(prepared.Document, output.PlayableObjects);
+            Check(newResolver.Describe(item) == oldResolver.Describe(old), "Slider edge/tick and outside target sounds are retained");
+        }
+        target.Document = prepared.Document;
+        Check(CollaborationMapping.Synchronize(project, target.Id, refs, synchronizeObjectHitsounds: false).Document.ContentEquals(prepared.Document),
+            "Keeping target sounds is idempotent");
+        var targetEvent = output.PlayableObjects.Single(o => o.TimeMs == 500);
+        int index = target.Document.HitsoundOverrides.FindIndex(o => o.SourceId == targetEvent.SourceId && o.EventIndex == targetEvent.EventIndex);
+        target.Document.HitsoundOverrides[index] = target.Document.HitsoundOverrides[index] with { Sample = new(1,1,0,27,2,"target.wav") };
+        var updated = CollaborationMapping.Synchronize(project, target.Id, refs, synchronizeObjectHitsounds: false).Document;
+        var updatedOutput = OsuBeatmapWriter.Serialize(updated);
+        Check(new HitsoundResolver(updated, updatedOutput.PlayableObjects).Describe(updatedOutput.PlayableObjects.Single(o => o.TimeMs == 500)).Volume == 27,
+            "Later target hitsound edits survive the next object-only sync");
+        target.Document = updated; source.Document.TimingPoints[0].Volume = 80;
+        source.Document.Fruits.Add(new() { TimeMs = 850, X = 180 });
+        updated = CollaborationMapping.Synchronize(project, target.Id, refs, synchronizeObjectHitsounds: false).Document;
+        updatedOutput = OsuBeatmapWriter.Serialize(updated); var changedResolver = new HitsoundResolver(updated, updatedOutput.PlayableObjects);
+        Check(changedResolver.Describe(updatedOutput.PlayableObjects.Single(o => o.TimeMs == 750)).Volume == 70
+            && changedResolver.Describe(updatedOutput.PlayableObjects.Single(o => o.TimeMs == 850)).Volume == 80,
+            "Existing target sample timing is preserved while unmatched additions use the current default");
+    }
 
     private static void CompleteSections()
     {

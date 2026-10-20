@@ -1579,6 +1579,7 @@
   "collab.add": "添加引用",
   "collab.unassigned": "未设置",
   "collab.fromBookmarks": "从书签生成区间",
+  "collab.syncObjectSounds": "同步对象音效",
   "collab.sync": "同步引用",
   "collab.edit": "编辑协作引用",
   "collab.previous": "上一页",

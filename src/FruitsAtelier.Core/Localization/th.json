@@ -1579,6 +1579,7 @@
   "collab.add": "Add reference",
   "collab.unassigned": "ยังไม่ได้กำหนด",
   "collab.fromBookmarks": "สร้างส่วนจากบุ๊กมาร์ก",
+  "collab.syncObjectSounds": "ซิงค์เสียงฮิตซาวด์ของวัตถุ",
   "collab.sync": "Sync references",
   "collab.edit": "Edit collaboration references",
   "collab.previous": "Previous",

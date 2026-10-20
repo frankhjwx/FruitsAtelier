@@ -1579,6 +1579,7 @@
   "collab.add": "Add reference",
   "collab.unassigned": "미지정",
   "collab.fromBookmarks": "북마크에서 구간 생성",
+  "collab.syncObjectSounds": "오브젝트 히트사운드 동기화",
   "collab.sync": "Sync references",
   "collab.edit": "Edit collaboration references",
   "collab.previous": "Previous",

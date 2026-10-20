@@ -65,6 +65,7 @@ internal static class CollaborationMappingUiTests
                 Console.WriteLine("PASS Collab Mapping UI " + locale);
                 BookmarkSections();
                 ExclusionReport();
+                ObjectSoundsOption();
             }
         }
         finally { L.SetLanguage(language); }
@@ -133,6 +134,34 @@ internal static class CollaborationMappingUiTests
         Check(ui.View.Document.Fruits.Count == 1 && !File.Exists(copied), "Resource copies follow synchronization undo");
         ui.Key('Y', ctrl: true);
         Check(ui.View.Document.Fruits.Count == 2 && File.Exists(copied), "Resource copies follow synchronization redo");
+    }
+
+    private static void ObjectSoundsOption()
+    {
+        var source = Difficulty("Source", 250); var target = Difficulty("Target", 250);
+        source.Document.Fruits[0].OriginalLine = "180,192,250,1,8,2:2:0:70:";
+        source.Document.Fruits.Add(new() { TimeMs = 500, X = 180, OriginalLine = "180,192,500,1,8,2:2:0:70:" });
+        target.Document.Fruits[0].OriginalLine = "180,192,250,1,2,1:1:0:35:";
+        target.Document.CollaborationReferences = [new(Guid.NewGuid(), source.Id, 0, 1000)];
+        var ui = new Ui(); ui.View.LoadProject(new() { Name = "sound option", Difficulties = [source,target] });
+        ui.View.SwitchDifficulty(1); ui.View.ShowCollaborationPanel(); ui.Resize(980,620);
+        var before = ui.View.Document.DeepClone();
+        ui.ClickText(L.Get("collab.syncObjectSounds"));
+        Check(ui.View.Document.ContentEquals(before) && !ui.View.IsDirty, "Changing the sync sound option is content neutral");
+        Sync();
+        var output = OsuBeatmapWriter.Serialize(ui.View.Document); var resolver = new HitsoundResolver(ui.View.Document, output.PlayableObjects);
+        Check(resolver.Describe(output.PlayableObjects.Single(o => o.TimeMs == 250)) is { Additions:2, Volume:35 }, "Object-only UI sync retains target sound at the same time");
+        Check(resolver.Describe(output.PlayableObjects.Single(o => o.TimeMs == 500)) is { Additions:0, NormalSet:1 }, "Object-only UI sync defaults new objects");
+        ui.Key('Z', ctrl:true); Check(ui.View.Document.ContentEquals(before), "Object-only sync undo restores target audio and objects");
+        ui.Key('Y', ctrl:true); ui.ClickText(L.Get("collab.syncObjectSounds")); Sync();
+        output = OsuBeatmapWriter.Serialize(ui.View.Document); resolver = new HitsoundResolver(ui.View.Document, output.PlayableObjects);
+        Check(resolver.Describe(output.PlayableObjects.Single(o => o.TimeMs == 250)) is { Additions:8, Volume:70, NormalSet:2 }, "Re-enabling object sounds copies the source sound");
+        void Sync()
+        {
+            ui.View.SynchronizeCollaboration(); var watch = Stopwatch.StartNew();
+            while (ui.View.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { ui.Paint(); Thread.Sleep(1); }
+            Check(!ui.View.CollaborationBusy && ui.View.Document.Fruits.Count == 2, "Sound option sync completes");
+        }
     }
 
     private static void ExclusionReport()

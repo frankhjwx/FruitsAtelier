@@ -88,7 +88,13 @@ detaches it and leaves the merged content in place.
 
 **Sync references** reads the currently loaded source documents, including unsaved
 edits, and replaces target objects whose starts lie in the configured ranges.
-Source additions, modifications and deletions are applied together. Objects
+Source additions, modifications and deletions are applied together. **Sync object
+hitsounds** is on by default. Turn it off to copy objects while keeping the target
+difficulty's existing sounds at the same exported time and event kind. If multiple
+target events share that time and kind, the nearest X position wins. New events
+without a match use the merged timeline's default samples, without source custom
+files or additions. This is a sync option and does not edit project content.
+Timing points still synchronize. Objects
 starting outside those ranges remain. The source's timing points are copied within
 each range, with boundary points establishing inherited BPM, sample bank, index,
 volume and effects and restoring target state after End. Boundary red points

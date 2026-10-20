@@ -1579,6 +1579,7 @@
   "collab.add": "Add reference",
   "collab.unassigned": "Не назначено",
   "collab.fromBookmarks": "Создать секции по закладкам",
+  "collab.syncObjectSounds": "Синхронизировать хитсаунды объектов",
   "collab.sync": "Sync references",
   "collab.edit": "Edit collaboration references",
   "collab.previous": "Previous",
