@@ -1587,5 +1587,6 @@
   "osuLinks.setup": "Stel een fallback-app in voor osu://-opdrachten",
   "osuLinks.confirm": "Bevestigen",
   "osuLinks.clearBinding": "FA-koppeling verwijderen…",
-  "osuLinks.clearFailed": "Het systeem kon de osu!-koppeling niet wijzigen."
+  "osuLinks.clearFailed": "Het systeem kon de osu!-koppeling niet wijzigen.",
+  "osuLinks.bind": "Opnieuw koppelen aan FA…"
 }

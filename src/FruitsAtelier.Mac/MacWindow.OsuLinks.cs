@@ -16,6 +16,11 @@ internal sealed partial class MacWindow
                 OperatingSystem.IsMacOS() && MacOsuLinks.TargetReady(preferences));
         };
         View.ReadOsuLinkApplications = () => MacOsuLinks.Discover();
+        View.RequestBindOsuLinks = () => RunFile(() =>
+        {
+            MacOsuLinks.Bind(); View.RefreshOsuLinkSettings(); editor.Refresh();
+            return Task.CompletedTask;
+        });
         View.RequestClearOsuLinkBinding = () => RunFile(() =>
         {
             MacOsuLinks.ClearBinding(OsuLinkPreferences.Load().TargetId); View.RefreshOsuLinkSettings();
@@ -33,8 +38,9 @@ internal sealed partial class MacWindow
         if (Environment.TickCount64 >= nextOsuLinkCheck)
         {
             bool wasRequired = View.OsuLinkFallbackRequired;
+            bool wasDefault = View.IsOsuLinkDefault;
             View.RefreshOsuLinkSettings(); nextOsuLinkCheck = Environment.TickCount64 + 1000;
-            if (wasRequired != View.OsuLinkFallbackRequired) editor.Refresh();
+            if (wasRequired != View.OsuLinkFallbackRequired || wasDefault != View.IsOsuLinkDefault) editor.Refresh();
         }
         if (!View.OsuLinkFallbackRequired && pendingOsuForwards.TryDequeue(out string? waiting))
         { RunFile(() => { MacOsuLinks.Forward(waiting); return Task.CompletedTask; }); return; }

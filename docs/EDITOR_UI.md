@@ -9,6 +9,9 @@ and icons, with executable paths in smaller gray text after the names. Select an
 application and press **Confirm** to save it. **Clear FA binding…** opens Windows
 Default apps to choose another protocol handler; on macOS it restores the selected
 fallback as the protocol handler.
+When FruitsAtelier is not the default handler, this button becomes **Rebind to FA…**.
+Fallback selection is disabled and setup is not required until FruitsAtelier becomes
+the default again. On Windows, rebinding opens Default apps for the user's choice.
 
 When FruitsAtelier is the system handler and its fallback is missing or invalid,
 a required application list appears automatically. It remains open until a
@@ -29,7 +32,8 @@ their event numbers to selectable source objects. Navigation does not edit the
 beatmap or add undo history. The time-jump dialog also accepts a complete editor URL.
 
 Outside editing, including the library, settings, startup and testplay, editor
-links only display a notification. They are discarded rather than deferred until
+links only display a notification, which stays visible for three seconds and fades
+out over half a second. They are discarded rather than deferred until
 a difficulty opens. Active text input, gestures and modal dialogs must finish
 before an external editor link can navigate.
 

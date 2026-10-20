@@ -1587,5 +1587,6 @@
   "osuLinks.setup": "โปรดตั้งค่าแอปสำรองสำหรับคำสั่ง osu://",
   "osuLinks.confirm": "ยืนยัน",
   "osuLinks.clearBinding": "ยกเลิกการเชื่อมโยงกับ FA…",
-  "osuLinks.clearFailed": "ระบบไม่สามารถเปลี่ยนการเชื่อมโยงลิงก์ osu! ได้"
+  "osuLinks.clearFailed": "ระบบไม่สามารถเปลี่ยนการเชื่อมโยงลิงก์ osu! ได้",
+  "osuLinks.bind": "เชื่อมโยงกับ FA อีกครั้ง…"
 }

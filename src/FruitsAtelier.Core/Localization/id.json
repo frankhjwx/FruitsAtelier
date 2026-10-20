@@ -1587,5 +1587,6 @@
   "osuLinks.setup": "Atur aplikasi cadangan untuk perintah osu://",
   "osuLinks.confirm": "Konfirmasi",
   "osuLinks.clearBinding": "Hapus asosiasi FA…",
-  "osuLinks.clearFailed": "Sistem tidak dapat mengubah asosiasi tautan osu!."
+  "osuLinks.clearFailed": "Sistem tidak dapat mengubah asosiasi tautan osu!.",
+  "osuLinks.bind": "Tautkan kembali ke FA…"
 }

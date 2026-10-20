@@ -1587,5 +1587,6 @@
   "osuLinks.setup": "Настройте резервное приложение для команд osu://",
   "osuLinks.confirm": "Подтвердить",
   "osuLinks.clearBinding": "Убрать привязку к FA…",
-  "osuLinks.clearFailed": "Системе не удалось изменить ассоциацию ссылок osu!."
+  "osuLinks.clearFailed": "Системе не удалось изменить ассоциацию ссылок osu!.",
+  "osuLinks.bind": "Снова связать с FA…"
 }

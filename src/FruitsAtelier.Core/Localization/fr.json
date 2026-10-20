@@ -1587,5 +1587,6 @@
   "osuLinks.setup": "Configurez une application de secours pour les commandes osu://",
   "osuLinks.confirm": "Confirmer",
   "osuLinks.clearBinding": "Retirer l’association à FA…",
-  "osuLinks.clearFailed": "Le système n’a pas pu modifier l’association des liens osu!."
+  "osuLinks.clearFailed": "Le système n’a pas pu modifier l’association des liens osu!.",
+  "osuLinks.bind": "Réassocier à FA…"
 }

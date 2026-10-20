@@ -105,7 +105,12 @@ internal static class MacOsuLinks
     {
         if (!IsDefault) return;
         if (Resolve(fallbackId) is null) throw new InvalidOperationException(L.Get("osuLinks.targetInvalid"));
-        nint scheme = CFStringCreateWithCString(0, "osu", Utf8), identifier = CFStringCreateWithCString(0, fallbackId, Utf8);
+        SetDefault(fallbackId);
+    }
+    internal static void Bind() => SetDefault(BundleId);
+    private static void SetDefault(string id)
+    {
+        nint scheme = CFStringCreateWithCString(0, "osu", Utf8), identifier = CFStringCreateWithCString(0, id, Utf8);
         try { if (LSSetDefaultHandlerForURLScheme(scheme, identifier) != 0) throw new InvalidOperationException(L.Get("osuLinks.clearFailed")); }
         finally { CFRelease(scheme); CFRelease(identifier); }
     }

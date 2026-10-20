@@ -1587,5 +1587,6 @@
   "osuLinks.setup": "Ustaw aplikację zapasową dla poleceń osu://",
   "osuLinks.confirm": "Potwierdź",
   "osuLinks.clearBinding": "Usuń skojarzenie z FA…",
-  "osuLinks.clearFailed": "System nie mógł zmienić skojarzenia łączy osu!."
+  "osuLinks.clearFailed": "System nie mógł zmienić skojarzenia łączy osu!.",
+  "osuLinks.bind": "Powiąż ponownie z FA…"
 }

@@ -10,6 +10,7 @@ internal sealed partial class EditorWindow
         string language = L.Language;
         string folder = Path.Combine(Artifacts, "tests", "osu-links", "native"); Directory.CreateDirectory(folder);
         var read = view.ReadOsuLinkSettings; var request = view.RequestSelectOsuLinkFallback; var readApps = view.ReadOsuLinkApplications; var clear = view.RequestClearOsuLinkBinding;
+        var bind = view.RequestBindOsuLinks;
         try
         {
             foreach (string locale in new[] { "en", "zh-CN" })
@@ -39,6 +40,13 @@ internal sealed partial class EditorWindow
                 var clearBounds = view.OsuLinkClearButtonBounds;
                 Click(clearBounds.X + 20, clearBounds.Y + 16);
                 if (!cleared) throw new InvalidOperationException("Clear association action was not reached.");
+                bool rebound = false; view.RequestBindOsuLinks = () => rebound = true;
+                view.ReadOsuLinkSettings = () => ("", false, false);
+                view.RefreshOsuLinkSettings(); Draw("unbound");
+                Click(clearBounds.X + 20, clearBounds.Y + 16);
+                if (!rebound || view.OsuLinkFallbackRequired) throw new InvalidOperationException("Unbound FA did not offer rebinding without fallback setup.");
+                view.ReadOsuLinkSettings = () => (selectedId, true, apps.Any(a => a.Id == selectedId));
+                view.RefreshOsuLinkSettings(); Draw();
                 if (chosen is null) throw new InvalidOperationException("Native osu! target picker action was not reached.");
                 double position = view.PlayheadMs;
                 if (view.HandleEditorLink("osu://edit/00:13:247%20(2,3)") || view.PlayheadMs != position || view.IsDirty)
@@ -72,6 +80,6 @@ internal sealed partial class EditorWindow
             }
             AppLog.Write("osu! link native settings, notice and navigation checks passed.");
         }
-        finally { L.SetLanguage(language); view.ReadOsuLinkSettings = read; view.RequestSelectOsuLinkFallback = request; view.ReadOsuLinkApplications = readApps; view.RequestClearOsuLinkBinding = clear; }
+        finally { L.SetLanguage(language); view.ReadOsuLinkSettings = read; view.RequestSelectOsuLinkFallback = request; view.ReadOsuLinkApplications = readApps; view.RequestClearOsuLinkBinding = clear; view.RequestBindOsuLinks = bind; }
     }
 }

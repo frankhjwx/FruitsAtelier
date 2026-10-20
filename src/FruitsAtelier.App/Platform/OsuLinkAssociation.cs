@@ -76,6 +76,12 @@ internal static class OsuLinkAssociation
         if (IsDefault) Process.Start(new ProcessStartInfo("ms-settings:defaultapps?registeredAppUser=FruitsAtelier") { UseShellExecute = true });
     }
 
+    internal static void Bind()
+    {
+        RegisterCandidate();
+        Process.Start(new ProcessStartInfo("ms-settings:defaultapps?registeredAppUser=FruitsAtelier") { UseShellExecute = true });
+    }
+
     internal static void RegisterCandidate()
     {
         using var classes = Registry.CurrentUser.CreateSubKey(@"Software\Classes");

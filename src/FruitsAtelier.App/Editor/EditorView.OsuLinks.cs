@@ -8,9 +8,11 @@ public sealed partial class EditorView
 {
     public Action<string>? RequestSelectOsuLinkFallback { get; set; }
     public Action? RequestClearOsuLinkBinding { get; set; }
+    public Action? RequestBindOsuLinks { get; set; }
     public Func<IReadOnlyList<OsuLinkApplication>>? ReadOsuLinkApplications { get; set; }
     public Func<(string Target, bool IsDefault, bool TargetValid)>? ReadOsuLinkSettings { get; set; }
     private (string Target, bool IsDefault, bool TargetValid) osuLinkState;
+    public bool IsOsuLinkDefault => osuLinkState.IsDefault;
     internal Rect OsuLinkTargetButtonBounds { get; private set; }
     internal Rect OsuLinkFallbackButtonBounds { get; private set; }
     internal Rect OsuLinkConfirmButtonBounds { get; private set; }
@@ -26,6 +28,8 @@ public sealed partial class EditorView
     private string? osuLinkNotice;
     private long osuLinkNoticeStarted;
     public bool OsuLinkNoticeNeedsRedraw => osuLinkNotice is not null;
+    internal float OsuLinkNoticeOpacity => osuLinkNotice is null ? 0
+        : (float)Math.Clamp((3.5 - timeProvider.GetElapsedTime(osuLinkNoticeStarted).TotalSeconds) / .5, 0, 1);
     public void ShowOsuLinkNotice(string key)
     {
         osuLinkNotice = key; osuLinkNoticeStarted = timeProvider.GetTimestamp();
@@ -34,11 +38,12 @@ public sealed partial class EditorView
     private void DrawOsuLinkNotice(ICanvas c)
     {
         if (osuLinkNotice is null) return;
-        if (timeProvider.GetElapsedTime(osuLinkNoticeStarted).TotalSeconds >= 6) { osuLinkNotice = null; return; }
+        float opacity = OsuLinkNoticeOpacity;
+        if (opacity <= 0) { osuLinkNotice = null; return; }
         float w = Math.Min(900, width - 32);
         var bounds = new Rect((width - w) / 2, 48, w, 48);
-        c.Fill(bounds, Panel, 6); c.Stroke(bounds, Accent, radius: 6);
-        c.Text(L.Get(osuLinkNotice), bounds.X + 16, bounds.Y + 16, 12, Foreground, bounds.Width - 32);
+        c.Fill(bounds, Panel, 6, opacity); c.StrokeOpacity(bounds, Accent, 1, 6, opacity);
+        c.TextOpacity(L.Get(osuLinkNotice), bounds.X + 16, bounds.Y + 16, 12, Foreground, bounds.Width - 32, false, opacity);
     }
     public void RefreshOsuLinkSettings(bool refreshApplications = false)
     {
@@ -201,8 +206,9 @@ public sealed partial class EditorView
         c.Text("▾", OsuLinkTargetButtonBounds.Right - 24, OsuLinkTargetButtonBounds.Y + 9, 13, Muted, 16);
         OsuLinkClearButtonBounds = new(SettingsContentX, SettingsTop + 204, Math.Min(280, SettingsContentWidth), SettingsControlHeight);
         SettingsButton(c, OsuLinkClearButtonBounds,
-            L.Get("osuLinks.clearBinding"), () => RequestClearOsuLinkBinding?.Invoke(),
-            enabled: osuLinkState.IsDefault && RequestClearOsuLinkBinding is not null);
+            L.Get(osuLinkState.IsDefault ? "osuLinks.clearBinding" : "osuLinks.bind"),
+            () => { if (osuLinkState.IsDefault) RequestClearOsuLinkBinding?.Invoke(); else RequestBindOsuLinks?.Invoke(); },
+            enabled: osuLinkState.IsDefault ? RequestClearOsuLinkBinding is not null : RequestBindOsuLinks is not null);
     }
 
     private static void DrawOsuLinkApplicationName(ICanvas c, OsuLinkApplication app, float x, float y, float width, float size)

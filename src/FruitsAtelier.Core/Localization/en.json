@@ -1587,5 +1587,6 @@
   "osuLinks.setup": "Please setup fallback application for osu:// commands",
   "osuLinks.confirm": "Confirm",
   "osuLinks.clearBinding": "Clear FA binding…",
-  "osuLinks.clearFailed": "The system could not change the osu! link association."
+  "osuLinks.clearFailed": "The system could not change the osu! link association.",
+  "osuLinks.bind": "Rebind to FA…"
 }

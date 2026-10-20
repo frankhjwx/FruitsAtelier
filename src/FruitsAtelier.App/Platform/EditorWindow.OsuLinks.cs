@@ -16,6 +16,7 @@ internal sealed partial class EditorWindow
         };
         view.ReadOsuLinkApplications = () => OsuLinkApplications.Discover();
         view.RequestClearOsuLinkBinding = () => FileOperation(OsuLinkAssociation.ClearBinding);
+        view.RequestBindOsuLinks = () => FileOperation(OsuLinkAssociation.Bind);
         view.RequestSelectOsuLinkFallback = id => FileOperation(() =>
         {
             if (OsuLinkAssociation.Resolve(id) is null) throw new InvalidOperationException(L.Get("osuLinks.targetInvalid"));
@@ -29,8 +30,9 @@ internal sealed partial class EditorWindow
         if (Environment.TickCount64 >= nextOsuLinkCheck)
         {
             bool wasRequired = view.OsuLinkFallbackRequired;
+            bool wasDefault = view.IsOsuLinkDefault;
             view.RefreshOsuLinkSettings(); nextOsuLinkCheck = Environment.TickCount64 + 1000;
-            if (wasRequired != view.OsuLinkFallbackRequired) Invalidate();
+            if (wasRequired != view.OsuLinkFallbackRequired || wasDefault != view.IsOsuLinkDefault) Invalidate();
         }
         if (!view.OsuLinkFallbackRequired && pendingOsuForwards.TryDequeue(out string? waiting))
         { FileOperation(() => OsuLinkAssociation.Forward(waiting)); return; }

@@ -1587,5 +1587,6 @@
   "osuLinks.setup": "Mag-set up ng fallback app para sa mga osu:// command",
   "osuLinks.confirm": "Kumpirmahin",
   "osuLinks.clearBinding": "Alisin ang pag-uugnay sa FA…",
-  "osuLinks.clearFailed": "Hindi mabago ng system ang association ng mga osu! link."
+  "osuLinks.clearFailed": "Hindi mabago ng system ang association ng mga osu! link.",
+  "osuLinks.bind": "Iugnay muli sa FA…"
 }

@@ -4,11 +4,25 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class OsuLinkTests
 {
+    private sealed class Clock : TimeProvider
+    {
+        public long Milliseconds;
+        public override long TimestampFrequency => 1000;
+        public override long GetTimestamp() => Milliseconds;
+    }
     public static void Run()
     {
         string language = L.Language;
         try
         {
+            var clock = new Clock(); var noticeUi = new Ui(false, clock);
+            noticeUi.View.ShowOsuLinkNotice("osuLinks.editModeRequired");
+            clock.Milliseconds = 3000; noticeUi.Paint();
+            Check(noticeUi.View.OsuLinkNoticeOpacity == 1, "notice remains opaque for three seconds");
+            clock.Milliseconds = 3250; noticeUi.Paint();
+            Check(noticeUi.View.OsuLinkNoticeOpacity == .5f && noticeUi.View.OsuLinkNoticeNeedsRedraw, "notice fades after three seconds");
+            clock.Milliseconds = 3500; noticeUi.Paint();
+            Check(noticeUi.View.OsuLinkNoticeOpacity == 0 && !noticeUi.View.OsuLinkNoticeNeedsRedraw, "notice disappears after fading");
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(locale);
@@ -63,6 +77,15 @@ internal static class OsuLinkTests
                 Check(pathLabel.X > nameLabel.X && pathLabel.Size < nameLabel.Size && pathLabel.Color != nameLabel.Color, "application path follows its name in smaller muted text");
                 int clearRequests = 0; ui.View.RequestClearOsuLinkBinding = () => clearRequests++; ui.Paint();
                 ui.ClickText(L.Get("osuLinks.clearBinding")); Check(clearRequests == 1, "settings can clear the FA association");
+                int bindRequests = 0; ui.View.RequestBindOsuLinks = () => bindRequests++;
+                bound = false; selectedId = ""; ui.View.RefreshOsuLinkSettings(); ui.Paint();
+                Check(!ui.View.OsuLinkFallbackRequired && !ui.Canvas.Texts.Any(t => t.Value == L.Get("osuLinks.setup")), "unbound FA needs no fallback setup");
+                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("osuLinks.clearBinding")), "unbound action replaces clear binding");
+                ui.ClickText(L.Get("osuLinks.bind"));
+                Check(bindRequests == 1 && clearRequests == 1, "unbound action requests FA binding");
+                bound = true; ui.View.RefreshOsuLinkSettings(); ui.Paint();
+                Check(ui.View.OsuLinkFallbackRequired, "binding FA without fallback requires setup");
+                selectedId = "lazer"; ui.View.RefreshOsuLinkSettings(); ui.Paint();
                 double before = ui.View.PlayheadMs; var selection = ui.View.SelectedObjectIds.ToArray();
                 Check(!ui.View.HandleEditorLink("osu://edit/00:00:000"), "settings is outside editing"); ui.Paint();
                 Check(ui.View.PlayheadMs == before && ui.View.SelectedObjectIds.SequenceEqual(selection)

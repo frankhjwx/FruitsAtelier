@@ -1587,5 +1587,6 @@
   "osuLinks.setup": "Configura una aplicación alternativa para los comandos osu://",
   "osuLinks.confirm": "Confirmar",
   "osuLinks.clearBinding": "Quitar asociación con FA…",
-  "osuLinks.clearFailed": "El sistema no pudo cambiar la asociación de enlaces osu!."
+  "osuLinks.clearFailed": "El sistema no pudo cambiar la asociación de enlaces osu!.",
+  "osuLinks.bind": "Volver a asociar con FA…"
 }

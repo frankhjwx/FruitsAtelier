@@ -1587,5 +1587,6 @@
   "osuLinks.setup": "請為 osu:// 命令設定 fallback 應用程式",
   "osuLinks.confirm": "確認",
   "osuLinks.clearBinding": "解除 FA 綁定…",
-  "osuLinks.clearFailed": "系統無法變更 osu! 連結關聯。"
+  "osuLinks.clearFailed": "系統無法變更 osu! 連結關聯。",
+  "osuLinks.bind": "重新綁定至 FA…"
 }
