@@ -129,7 +129,8 @@ internal static class IndependentCanvasScaleTests
             ui.Click(x, y);
             Check(ui.View.DifficultyCount == 1 && ui.Canvas.Texts.Any(t => t.Value == L.Get("song.faOnly")),
                 "Covered Zoom controls open the difficulty synchronization choice");
-            ui.ClickText(L.Get("project.add"));
+            var confirm = ui.Canvas.Texts.Last(t => t.Value == L.Get("project.add"));
+            ui.Click(confirm.X + 4, confirm.Y + 5);
             Check(ui.View.DifficultyCount == 2, "Covered Zoom controls must let Add blank difficulty handle the click");
             Check(ui.View.UniformCanvasScale == locked && !ui.View.WantsCapture,
                 "Menu clicks preserve the scale lock and do not start a Zoom drag");

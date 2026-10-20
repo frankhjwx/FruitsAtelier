@@ -97,7 +97,7 @@ internal static class SliderBatchTests
         view.ConvertAllSliders(); view.AnswerSliderImport(true); view.NewProject(); Render(); Thread.Sleep(20); Render();
         Check(view.Document.Tracks.Count == 0 && !view.IsDirty, "Retired worker changed replacement project.");
 
-        string root = Path.Combine(Path.GetTempPath(), "atelier-slider-import-" + Guid.NewGuid());
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/slider-import", Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(root);
         try
         {

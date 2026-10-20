@@ -536,6 +536,7 @@ var tests = new (string Name, Action Run)[]
     ("Library opening keeps UI responsive while workspace maintenance holds the project gate", LibraryOpeningTests.Run),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
     ("FAZ archives preserve native projects and explicit local associations", FazTests.Run),
+    ("FAD archives exchange native difficulties through merge review", FadTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
     ("Library favourites persist, filter songs and projects, and toggle from the first context action", LibraryFavouriteTests.Run),
     ("Library pages sets and difficulties and reaches uncached scrollbar positions", LibraryScaleTests.Pagination),
