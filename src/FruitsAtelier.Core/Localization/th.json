@@ -1575,5 +1575,13 @@
   "collab.helpShort": "Use mm:ss:ms or whole milliseconds.",
   "collab.completeObjects": "Complete objects are selected by start time.",
   "collab.emptyShort": "Add a source from this project.",
-  "collab.selfReference": "Choose another difficulty in this project as the source."
+  "collab.selfReference": "Choose another difficulty in this project as the source.",
+  "osuLinks.title": "ลิงก์ osu!",
+  "osuLinks.choose": "เลือกแอป osu!…",
+  "osuLinks.targetInvalid": "แอปที่เลือกไม่พร้อมใช้งาน โปรดเลือกแอปอื่น",
+  "osuLinks.editModeRequired": "ต้องอยู่ในโหมดแก้ไขเพื่อจัดการลิงก์ของตัวแก้ไข!",
+  "osuLinks.invalid": "ไม่สามารถแยกวิเคราะห์ลิงก์ของตัวแก้ไขได้",
+  "osuLinks.busy": "ทำการดำเนินการปัจจุบันให้เสร็จหรือปิดกล่องโต้ตอบก่อนเปิดลิงก์ของตัวแก้ไข",
+  "osuLinks.fallback": "แอปสำรอง",
+  "osuLinks.none": "ไม่พบแอป osu! ที่ลงทะเบียนไว้"
 }

@@ -34,6 +34,13 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        RenderContent(c, width, height);
+        DrawOsuLinkNotice(c);
+        DrawOsuLinkFallback(c);
+    }
+
+    private void RenderContent(ICanvas c, float width, float height)
+    {
         if (difficultyGraphicsReleasePending) { c.ReleaseDifficultyResources(); difficultyGraphicsReleasePending = false; }
         ReclaimProjectMemory();
         if (AcknowledgementsVisible)

@@ -1575,5 +1575,13 @@
   "collab.helpShort": "Use mm:ss:ms or whole milliseconds.",
   "collab.completeObjects": "Complete objects are selected by start time.",
   "collab.emptyShort": "Add a source from this project.",
-  "collab.selfReference": "Choose another difficulty in this project as the source."
+  "collab.selfReference": "Choose another difficulty in this project as the source.",
+  "osuLinks.title": "Ссылки osu!",
+  "osuLinks.choose": "Выбрать приложение osu!…",
+  "osuLinks.targetInvalid": "Выбранное приложение недоступно. Выберите другое приложение.",
+  "osuLinks.editModeRequired": "Для обработки ссылок редактора необходимо находиться в режиме редактирования!",
+  "osuLinks.invalid": "Не удалось разобрать ссылку редактора.",
+  "osuLinks.busy": "Завершите текущее действие или закройте диалог перед открытием ссылки редактора.",
+  "osuLinks.fallback": "Резервное приложение",
+  "osuLinks.none": "Зарегистрированные приложения osu! не найдены."
 }

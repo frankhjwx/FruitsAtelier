@@ -1575,5 +1575,13 @@
   "collab.helpShort": "Use mm:ss:ms or whole milliseconds.",
   "collab.completeObjects": "Complete objects are selected by start time.",
   "collab.emptyShort": "Add a source from this project.",
-  "collab.selfReference": "Choose another difficulty in this project as the source."
+  "collab.selfReference": "Choose another difficulty in this project as the source.",
+  "osuLinks.title": "osu!-koppelingen",
+  "osuLinks.choose": "osu!-app kiezen…",
+  "osuLinks.targetInvalid": "De gekozen app is niet beschikbaar. Kies een andere app.",
+  "osuLinks.editModeRequired": "Je moet in de bewerkingsmodus zijn om editorkoppelingen te openen!",
+  "osuLinks.invalid": "De editorkoppeling kan niet worden gelezen.",
+  "osuLinks.busy": "Voltooi de huidige handeling of sluit het dialoogvenster voordat je een editorkoppeling opent.",
+  "osuLinks.fallback": "Fallback-app",
+  "osuLinks.none": "Geen geregistreerde osu!-apps gevonden."
 }

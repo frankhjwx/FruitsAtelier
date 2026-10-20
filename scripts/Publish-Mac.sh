@@ -22,6 +22,11 @@ cat > "$FA_APP/Contents/Info.plist" <<PLIST
 <key>CFBundleVersion</key><string>$FA_VERSION</string>
 <key>LSMinimumSystemVersion</key><string>12.0</string>
 <key>NSHighResolutionCapable</key><true/>
+<key>CFBundleURLTypes</key><array><dict>
+<key>CFBundleURLName</key><string>osu! links</string>
+<key>CFBundleURLSchemes</key><array><string>osu</string></array>
+<key>CFBundleTypeRole</key><string>Viewer</string>
+</dict></array>
 <key>CFBundleDocumentTypes</key><array><dict>
 <key>CFBundleTypeName</key><string>Fruits Atelier Project</string>
 <key>CFBundleTypeRole</key><string>Editor</string>

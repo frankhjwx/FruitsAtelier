@@ -37,6 +37,7 @@ internal sealed partial class EditorWindow : IDisposable
         view.Performance.Enabled = true;
         AppLog.Performance = view.Performance;
         ConfigureFiles();
+        ConfigureOsuLinks();
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
         view.RequestPasteTime = () => view.PasteTimeJumpText(Native.ReadClipboardText(hwnd), view.TimeJumpSession);
         view.RequestPasteSongSetup = () => view.PasteSongSetupText(Native.ReadClipboardText(hwnd), view.SongSetupInputSession);
@@ -164,6 +165,10 @@ internal sealed partial class EditorWindow : IDisposable
                 Diagnostics.DockingRenderCheck.Run(canvas);
                 Native.DestroyWindow(hwnd);
                 return 0;
+            }
+            if (Environment.GetCommandLineArgs().Contains("--osu-link-render-check"))
+            {
+                CheckOsuLinks(); Native.DestroyWindow(hwnd); return 0;
             }
             if (Environment.GetCommandLineArgs().Contains("--ui-scale-render-check") || Environment.GetCommandLineArgs().Contains("--timeline-layout-render-check"))
             {
@@ -452,6 +457,7 @@ internal sealed partial class EditorWindow : IDisposable
                 if (painting || failed || NativeModalScope.Active) return 0;
                 long pollStart = view.Performance.Start();
                 PollUpdates(); PollAudio();
+                PollOsuLinks();
                 if (view.CanDropAudio && !view.StartupDialogVisible && FazFileAssociation.Pending.TryDequeue(out var openedFaz))
                 {
                     Native.ShowWindow(window, Native.IsIconic(window) ? 9 : 5);
@@ -459,7 +465,7 @@ internal sealed partial class EditorWindow : IDisposable
                     ConfirmDiscard(() => OpenPath(openedFaz)); Invalidate();
                 }
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
-                if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
+                if ((view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
                     || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
                     || canvas?.SliderRasterNeedsRedraw == true) && !Native.IsIconic(window)) Invalidate();
                 return 0;
@@ -571,7 +577,7 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0106: // WM_SYSCHAR
                 if ((int)wParam == 13) return 0;
                 break;
-            case 0x0007: view.SetTextInputFocus(true); view.CheckFilesOnActivation(); Invalidate(); return 0; // WM_SETFOCUS
+            case 0x0007: view.SetTextInputFocus(true); view.CheckFilesOnActivation(); view.RefreshOsuLinkSettings(refreshApplications: true); Invalidate(); return 0; // WM_SETFOCUS
             case 0x0008: // WM_KILLFOCUS
                 view.SetTextInputFocus(false);
                 view.CancelInteraction(preserveTestplay: true);

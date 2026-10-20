@@ -1575,5 +1575,13 @@
   "collab.helpShort": "Use mm:ss:ms or whole milliseconds.",
   "collab.completeObjects": "Complete objects are selected by start time.",
   "collab.emptyShort": "Add a source from this project.",
-  "collab.selfReference": "Choose another difficulty in this project as the source."
+  "collab.selfReference": "Choose another difficulty in this project as the source.",
+  "osuLinks.title": "Tautan osu!",
+  "osuLinks.choose": "Pilih aplikasi osu!…",
+  "osuLinks.targetInvalid": "Aplikasi yang dipilih tidak tersedia. Pilih aplikasi lain.",
+  "osuLinks.editModeRequired": "Harus berada dalam mode edit untuk menangani tautan editor!",
+  "osuLinks.invalid": "Tautan editor tidak dapat diurai.",
+  "osuLinks.busy": "Selesaikan tindakan saat ini atau tutup dialog sebelum membuka tautan editor.",
+  "osuLinks.fallback": "Aplikasi cadangan",
+  "osuLinks.none": "Tidak ditemukan aplikasi osu! terdaftar."
 }

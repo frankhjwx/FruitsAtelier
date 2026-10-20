@@ -1,5 +1,43 @@
 # Editing Controls
 
+## osu! editor links
+
+**Settings → osu! Links** contains one fallback application selector. It becomes
+available when the system routes `osu://` to FruitsAtelier. Choose from the
+applications registered to handle osu! links. The list shows application names
+and icons; selection is saved immediately.
+
+When FruitsAtelier is the system handler and its fallback is missing or invalid,
+a required application list appears automatically. It remains open until a
+registered external application is selected. The system association is checked at
+startup, on activation and periodically while running. Changing the default
+handler away from FruitsAtelier removes the requirement. Windows protocol
+registration advertises FruitsAtelier as an available application without
+changing the user's selected default.
+
+Editor links address the active difficulty, without identifying or opening a
+beatmap. For example, `osu://edit/00:13:247%20(2,3)` pauses playback and selects
+the next objects numbered 2 and 3 from 13,247 ms onward. Numbers are combo-local
+and matched in chronological order, including repeated numbers across combos.
+With a selection suffix, the playback position moves to the first object at or
+after the timestamp; without one it moves directly to the timestamp. Times are
+clamped to the current timeline. Streams and segmented banana showers resolve
+their event numbers to selectable source objects. Navigation does not edit the
+beatmap or add undo history. The time-jump dialog also accepts a complete editor URL.
+
+Outside editing, including the library, settings, startup and testplay, editor
+links only display a notification. They are discarded rather than deferred until
+a difficulty opens. Active text input, gestures and modal dialogs must finish
+before an external editor link can navigate.
+
+Other `osu://` commands are passed unchanged to the configured application,
+directly rather than through the system protocol association. Windows retains
+the registered command arguments and resolves the selected ProgId on each use;
+macOS resolves its bundle identifier. Their behaviour depends on that client's
+support. Missing forwarding targets and self-forwarding
+are rejected. Link preferences are stored in `FruitsAtelier/osu-links.json` under
+the system application-data directory.
+
 ## Collab Mapping
 
 Open **Layout → Collab Mapping** to add the dockable panel, then select its tab.

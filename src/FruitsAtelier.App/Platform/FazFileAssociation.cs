@@ -12,6 +12,7 @@ internal static class FazFileAssociation
     private const string ProgId = "FruitsAtelier.ProjectArchive";
     private static readonly string Pipe = "FruitsAtelier-" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Environment.UserDomainName + "\\" + Environment.UserName)))[..16];
     internal static readonly ConcurrentQueue<string> Pending = new();
+    internal static readonly ConcurrentQueue<string> PendingLinks = new();
 
     internal static void EnsureRegistered()
     {
@@ -40,12 +41,12 @@ internal static class FazFileAssociation
     }
     internal static bool Forward(string? path, string? channel = null)
     {
-        if (path is null || !FazArchive.IsPackage(path)) return false;
+        if (path is null || !FazArchive.IsPackage(path) && !FruitsAtelier.Core.EditorTimestamp.IsOsuLink(path)) return false;
         try
         {
             using var client = new NamedPipeClientStream(".", channel ?? Pipe, PipeDirection.Out, PipeOptions.CurrentUserOnly);
             client.Connect(500);
-            using var writer = new StreamWriter(client); writer.WriteLine(Path.GetFullPath(path)); writer.Flush(); return true;
+            using var writer = new StreamWriter(client); writer.WriteLine(FruitsAtelier.Core.EditorTimestamp.IsOsuLink(path) ? path : Path.GetFullPath(path)); writer.Flush(); return true;
         }
         catch (Exception error) when (error is IOException or TimeoutException) { return false; }
     }
@@ -59,6 +60,7 @@ internal static class FazFileAssociation
                 await server.WaitForConnectionAsync(cancellation);
                 using var reader = new StreamReader(server);
                 string? line = await reader.ReadLineAsync(cancellation);
+                if (line is { Length: <= 32768 } && FruitsAtelier.Core.EditorTimestamp.IsOsuLink(line) && !line.Any(char.IsControl)) PendingLinks.Enqueue(line);
                 if (line is { Length: <= 32768 } && FazArchive.IsPackage(line) && File.Exists(line)) Pending.Enqueue(line);
             }
         }

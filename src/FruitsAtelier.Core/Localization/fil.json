@@ -1575,5 +1575,13 @@
   "collab.helpShort": "Use mm:ss:ms or whole milliseconds.",
   "collab.completeObjects": "Complete objects are selected by start time.",
   "collab.emptyShort": "Add a source from this project.",
-  "collab.selfReference": "Choose another difficulty in this project as the source."
+  "collab.selfReference": "Choose another difficulty in this project as the source.",
+  "osuLinks.title": "Mga link ng osu!",
+  "osuLinks.choose": "Pumili ng osu! app…",
+  "osuLinks.targetInvalid": "Hindi magagamit ang napiling app. Pumili ng ibang app.",
+  "osuLinks.editModeRequired": "Kailangang nasa edit mode upang maproseso ang mga link ng editor!",
+  "osuLinks.invalid": "Hindi mabasa ang link ng editor.",
+  "osuLinks.busy": "Tapusin ang kasalukuyang aksiyon o isara ang dialog bago magbukas ng link ng editor.",
+  "osuLinks.fallback": "Fallback app",
+  "osuLinks.none": "Walang nahanap na nakarehistrong osu! app."
 }

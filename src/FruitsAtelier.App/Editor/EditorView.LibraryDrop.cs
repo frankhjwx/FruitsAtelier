@@ -4,7 +4,7 @@ public sealed partial class EditorView
 {
     public Action<string[]>? RequestLibraryDrop { get; set; }
     public Action<string>? RequestAudioProject { get; set; }
-    public bool CanDropAudio => !AcknowledgementsVisible && !librarySettingsOpen && !resourcePage && !updatesPage && !IsTestplaying
+    public bool CanDropAudio => !OsuLinkFallbackRequired && !AcknowledgementsVisible && !librarySettingsOpen && !resourcePage && !updatesPage && !IsTestplaying
         && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SongSetupVisible
         && !SliderDialogVisible && !SynchronizationVisible && !VersionHistoryVisible && !TimingModal
         && !DistanceSnapDialogVisible && !VolumeDialogVisible && !BananaEditVisible && !StreamDialogVisible

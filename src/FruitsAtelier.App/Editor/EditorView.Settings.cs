@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, Experimental, Updates }
+    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, Experimental, OsuLinks, Updates }
     private SettingsCategory settingsCategory;
     private bool draftAudioDiagnostics, draftAudioDiagnosticFrames;
     private string draftAudioDiagnosticProfile = "event-10";
@@ -95,6 +95,7 @@ public sealed partial class EditorView
         if (librarySettingsOpen || IsTestplaying || !PrepareFileOperation()) return;
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
         ResetSettingsDrafts();
+        RefreshOsuLinkSettings();
         settingsCategory = SettingsCategory.General;
         librarySettingsOpen = true;
         updatesPage = exportPage = resourcePage = false;
@@ -200,7 +201,7 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
         c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "update.title"];
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "osuLinks.title", "update.title"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
@@ -209,6 +210,7 @@ public sealed partial class EditorView
             {
                 FinishVolumeDrag(); FinishBackgroundDimDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
                 settingsCategory = category; workspaceScroll = 0;
+                if (category == SettingsCategory.OsuLinks) { RefreshOsuLinkSettings(); LoadOsuLinkApplications(); }
                 if (category == SettingsCategory.Workspace) { workspaceScroll = 0; StartStorage(); }
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
                     RequestUpdateCheck?.Invoke();
@@ -217,6 +219,9 @@ public sealed partial class EditorView
         c.Text(L.Get(categories[(int)settingsCategory]), SettingsContentX, SettingsTop + 82, 24, Foreground, SettingsContentWidth, true);
         switch (settingsCategory)
         {
+            case SettingsCategory.OsuLinks:
+                DrawOsuLinkSettings(c);
+                break;
             case SettingsCategory.General:
                 workspaceScrollBounds = new(SettingsContentX, SettingsTop + 116, SettingsContentWidth + 12, SettingsBounds.Height - 208);
                 workspaceScroll = Math.Clamp(workspaceScroll, 0, Math.Max(0, GeneralContentHeight - workspaceScrollBounds.Height));
@@ -318,6 +323,7 @@ public sealed partial class EditorView
                 DrawAudioSettings(c);
                 break;
         }
+        if (settingsCategory == SettingsCategory.OsuLinks) return;
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);
         c.Text(libraryError, SettingsContentX, r.Bottom - 116, 13, Error, SettingsContentWidth);
         bool canApply = SettingsChanged && (!SettingsRootsChanged || scanTask is null && searchTask is null);

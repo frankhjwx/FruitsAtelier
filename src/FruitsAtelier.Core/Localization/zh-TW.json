@@ -1575,5 +1575,13 @@
   "collab.helpShort": "Use mm:ss:ms or whole milliseconds.",
   "collab.completeObjects": "Complete objects are selected by start time.",
   "collab.emptyShort": "Add a source from this project.",
-  "collab.selfReference": "Choose another difficulty in this project as the source."
+  "collab.selfReference": "Choose another difficulty in this project as the source.",
+  "osuLinks.title": "osu! 連結",
+  "osuLinks.choose": "選擇 osu! 應用程式…",
+  "osuLinks.targetInvalid": "所選應用程式無法使用，請選擇其他應用程式。",
+  "osuLinks.editModeRequired": "必須處於編輯模式才能處理編輯器連結！",
+  "osuLinks.invalid": "無法解析編輯器連結。",
+  "osuLinks.busy": "請先完成目前操作或關閉對話框，再開啟編輯器連結。",
+  "osuLinks.fallback": "Fallback 應用程式",
+  "osuLinks.none": "找不到已註冊的 osu! 應用程式。"
 }

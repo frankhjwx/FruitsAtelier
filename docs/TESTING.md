@@ -63,6 +63,19 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --osu-link-check` verifies encoded timestamps, sequential combo
+selection, source-object roundtrips, playback pausing, content isolation,
+non-editor notifications, URI preservation, loop rejection, named-pipe activation,
+registered-application discovery, icon rows, the single fallback selector and
+required setup after a system association. It
+also runs the time-jump and settings layout regressions. Windows-specific routing
+checks use isolated preferences and do not
+change the OSU protocol association or launch an osu! client.
+`FruitsAtelier.App.exe --render-check --osu-link-render-check` checks native
+settings actions, notifications and navigation in English and Chinese at two
+window sizes and 96/144/192 DPI. Captures are stored under
+`artifacts/tests/osu-links/native`; protocol actions use test callbacks.
+
 `Formats.Tests --collaboration-check` checks same-project reference graphs,
 half-open adjacent ranges, source edits/deletions, timing restoration, boundary
 sample inheritance, repeated sliders, FSliders, streams, banana showers, custom

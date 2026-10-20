@@ -1575,5 +1575,13 @@
   "collab.helpShort": "Use mm:ss:ms or whole milliseconds.",
   "collab.completeObjects": "Complete objects are selected by start time.",
   "collab.emptyShort": "Add a source from this project.",
-  "collab.selfReference": "Choose another difficulty in this project as the source."
+  "collab.selfReference": "Choose another difficulty in this project as the source.",
+  "osuLinks.title": "Liens osu!",
+  "osuLinks.choose": "Choisir l’application osu!…",
+  "osuLinks.targetInvalid": "L’application sélectionnée est indisponible. Choisissez une autre application.",
+  "osuLinks.editModeRequired": "Le mode édition est requis pour traiter les liens de l’éditeur !",
+  "osuLinks.invalid": "Impossible d’analyser le lien de l’éditeur.",
+  "osuLinks.busy": "Terminez l’opération en cours ou fermez la boîte de dialogue avant d’ouvrir un lien de l’éditeur.",
+  "osuLinks.fallback": "Application de secours",
+  "osuLinks.none": "Aucune application osu! enregistrée trouvée."
 }

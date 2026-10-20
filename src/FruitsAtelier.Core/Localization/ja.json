@@ -1575,5 +1575,13 @@
   "collab.helpShort": "Use mm:ss:ms or whole milliseconds.",
   "collab.completeObjects": "Complete objects are selected by start time.",
   "collab.emptyShort": "Add a source from this project.",
-  "collab.selfReference": "Choose another difficulty in this project as the source."
+  "collab.selfReference": "Choose another difficulty in this project as the source.",
+  "osuLinks.title": "osu! リンク",
+  "osuLinks.choose": "osu! アプリを選択…",
+  "osuLinks.targetInvalid": "選択したアプリは利用できません。別のアプリを選択してください。",
+  "osuLinks.editModeRequired": "編集用リンクを処理するには編集モードに入ってください！",
+  "osuLinks.invalid": "編集用リンクを解析できません。",
+  "osuLinks.busy": "操作を完了するかダイアログを閉じてから編集用リンクを開いてください。",
+  "osuLinks.fallback": "転送先アプリ",
+  "osuLinks.none": "登録済みの osu! アプリが見つかりません。"
 }

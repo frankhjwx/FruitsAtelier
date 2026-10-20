@@ -40,6 +40,7 @@ internal sealed partial class MacWindow : Window
         View.RequestSetupLink = url => RunFile(() => { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("/usr/bin/open") { ArgumentList = { url } }); return Task.CompletedTask; });
         View.RequestAudioPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
         View.RequestViewPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
+        ConfigureOsuLinks();
         View.SupportsFullscreen = true;
         View.RequestScreenshot = CopyScreenshot;
         View.RequestFullscreen = enabled =>
@@ -172,7 +173,7 @@ internal sealed partial class MacWindow : Window
             RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
         };
         Closed += (_, _) => { View.CleanupFazOnExit(); View.SaveLibraryMemory(); View.ReleaseWaveform(); timer.Stop(); setupAudio?.Dispose(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
-        Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); View.CheckFilesOnActivation(); editor.Refresh(); };
+        Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); View.CheckFilesOnActivation(); View.RefreshOsuLinkSettings(refreshApplications: true); editor.Refresh(); };
         Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); editor.Refresh(); };
     }
     private void UpdateTitle() => Title = View.WindowTitle;
@@ -185,6 +186,7 @@ internal sealed partial class MacWindow : Window
     }
     private void PollAudio()
     {
+        PollOsuLinks();
         if (View.CanDropAudio && !View.StartupDialogVisible && Program.OpenFiles.TryDequeue(out var path))
         {
             Activate();
@@ -197,7 +199,7 @@ internal sealed partial class MacWindow : Window
             _ = audio.LoadAsync(View.Document.AudioPath); state = audio.State;
         }
         View.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, state.Error is null ? null : L.Reformat(state.Error), state.FilePath);
-        if (View.SynchronizationNeedsRedraw || View.ConversionNeedsRedraw || View.WaveformNeedsRedraw || View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.SliderMultiplierValidationBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
+        if (View.OsuLinkNoticeNeedsRedraw || View.SynchronizationNeedsRedraw || View.ConversionNeedsRedraw || View.WaveformNeedsRedraw || View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.SliderMultiplierValidationBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
             editor.Refresh();
         lastReady = state.CanPlay; lastPosition = state.PositionMs; lastError = state.Error;
     }

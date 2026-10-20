@@ -25,6 +25,11 @@ public sealed partial class EditorView
 
     private void PointerDownCore(float x, float y, int button, bool shift, bool ctrl)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible)
+        {
+            OsuLinkPickerPointerDown(x, y, button);
+            return;
+        }
         if (AcknowledgementsVisible) { AcknowledgementsPointerDown(x, y, button); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
@@ -851,6 +856,12 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible)
+        {
+            if (osuLinkApplicationList.Contains(x, y))
+                osuLinkFirstApplication = Math.Clamp(osuLinkFirstApplication - (int)(delta / 120), 0, Math.Max(0, osuLinkApplications.Count - osuLinkVisibleRows));
+            return;
+        }
         if (AcknowledgementsVisible)
         {
             if (acknowledgementsTextBounds.Contains(x, y)) { acknowledgementsScroll -= delta / 120 * 66; ClampAcknowledgementsScroll(); }
@@ -1136,6 +1147,11 @@ public sealed partial class EditorView
 
     private void KeyDownCore(int virtualKey, bool ctrl, bool shift)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible)
+        {
+            OsuLinkPickerKey(virtualKey);
+            return;
+        }
         if (dockPressed is not null)
         {
             if (virtualKey == 27) { dockPressed = null; dockDragging = false; }
@@ -1826,24 +1842,28 @@ public sealed partial class EditorView
     }
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible) { PointerDownCore(x, y, button, shift, ctrl); return; }
         var document = Document;
         try { PointerDownCore(x, y, button, shift, ctrl); }
         finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
     }
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible) { mouseX = x; mouseY = y; return; }
         var document = Document;
         try { PointerMoveCore(x, y, shift, ctrl); }
         finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
     }
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible) return;
         var document = Document;
         try { PointerUpCore(x, y, button, shift); }
         finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible) { KeyDownCore(virtualKey, ctrl, shift); return; }
         bool shortcut = ctrl && !altHeld && (virtualKey is 38 or 40 || virtualKey == 82 && !shift)
             || altHeld && virtualKey is 13 or 37 or 38 or 39 or 40;
         if (!shortcut) heldEditorKeys.Add(virtualKey);
@@ -1855,6 +1875,7 @@ public sealed partial class EditorView
     }
     public void TextInput(char value)
     {
+        if (OsuLinkPickerVisible) return;
         var document = Document;
         try { TextInputCore(value); }
         finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }

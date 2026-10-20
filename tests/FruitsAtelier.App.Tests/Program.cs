@@ -1,6 +1,7 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--osu-link-check")) { OsuLinkTests.Run(); TimeJumpTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS osu! editor links, routing, activation and settings"); return 0; }
 if (args.Contains("--collaboration-check")) { CollaborationMappingUiTests.Run(); return 0; }
 if (args.Contains("--cache-lifetime-check")) { CacheLifetimeTests.Run(); Console.WriteLine("PASS closed difficulty data is collectible after both canvases and clipboard use"); return 0; }
 if (args.Contains("--dirty-exit-check")) { DirtyExitTests.Run(); DiscardConfirmationTests.Run(); Console.WriteLine("PASS dirty exit choices and nonblocking background checks"); return 0; }
@@ -553,6 +554,7 @@ var tests = new (string Name, Action Run)[]
     ("Beat snap slider exposes every requested divisor through one drag control", RequestedInteractionTests.SnapDivisors),
     ("Slider endpoints snap independently and retain history, persistence and export", SliderEndpointSnapTests.Run),
     ("Centred controls and timestamp clipboard dialog preserve editor content", TimeJumpTests.Run),
+    ("osu! editor links preserve content and forward other commands", OsuLinkTests.Run),
     ("Double-click enters one Slider and other clicks leave its edit mode", RequestedInteractionTests.DoubleClickEditing),
     ("Long press reports note beat position and temporarily uses its snap", NoteSnapTests.InspectBeatPosition),
     ("Note hold activates at 300 ms, cancels and continues directly into dragging", NoteSnapTests.HoldTimingAndDragging),
