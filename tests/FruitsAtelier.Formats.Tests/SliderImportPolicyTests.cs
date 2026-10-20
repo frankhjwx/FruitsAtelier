@@ -4,6 +4,7 @@ internal static class SliderImportPolicyTests
 {
     public static void Run()
     {
+        SliderImportDetectionTests.Run();
         foreach (bool derandomize in new[] { false, true })
         {
             var map = Native();
@@ -36,26 +37,6 @@ internal static class SliderImportPolicyTests
             var map = OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(authored).Text);
             var imported = OsuBeatmapWriter.Serialize(map);
             Check(SliderImportEditing.LooksCompensated(map), "Generated compensation was not detected.");
-            var standard = map.DeepClone();
-            standard.ImportedSliders[0].PathType = 'B';
-            var denseSlider = standard.ImportedSliders[0];
-            var distinct = denseSlider.ControlPoints.Where((p, i) => i == 0 || p != denseSlider.ControlPoints[i - 1]).ToArray();
-            denseSlider.ControlPoints.Clear(); denseSlider.ControlPoints.AddRange(distinct);
-            Check(!SliderImportEditing.LooksCompensated(standard), "Dense STD Bezier incorrectly detected as compensation.");
-            standard.ImportedSliders[0].PathType = 'P';
-            Check(!SliderImportEditing.LooksCompensated(standard), "Dense STD arc incorrectly detected as compensation.");
-            standard.ImportedSliders[0].PathType = 'L';
-            Check(SliderImportEditing.LooksCompensated(standard), "Equivalent linear export was excluded.");
-            standard.ImportedSliders[0].Y = 64;
-            Check(!SliderImportEditing.LooksCompensated(standard), "Dense off-centre STD slider incorrectly detected as compensation.");
-            standard = map.DeepClone();
-            for (int n = 0; n < 10; n++) standard.Fruits.Add(new() { TimeMs = 3000 + n * 500, X = 100 + n, Y = n % 2 == 0 ? 64 : 320 });
-            Check(!SliderImportEditing.LooksCompensated(standard), "Ordinary STD layout incorrectly detected from one dense centre slider.");
-            standard = map.DeepClone();
-            for (int n = 0; n < 4; n++) standard.Fruits.Add(new() { TimeMs = 3000 + n * 500, X = 100, Y = n == 0 ? 64 : 192 });
-            Check(SliderImportEditing.LooksCompensated(standard), "A mostly centred Catch export was excluded.");
-            standard.Fruits[1].Y = 64;
-            Check(!SliderImportEditing.LooksCompensated(standard), "The majority-centre threshold was ignored.");
             map.SliderImportState = SliderImportState.Pending;
             map.DerandomizeFSliderDroplets = false;
             var initialized = SliderImportEditing.Initialize(map, true);

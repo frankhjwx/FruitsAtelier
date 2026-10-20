@@ -8,27 +8,47 @@ public static class SliderImportEditing
 {
     public static bool LooksCompensated(MapDocument document)
     {
-        if (document.ImportedSliders.Count == 0
-            || document.ImportedSliders.Any(s => s.Y != 192 || !HasLinearSegments(s))) return false;
-        int notes = document.Fruits.Count + document.ImportedSliders.Count;
-        int centered = document.Fruits.Count(f => f.Y == 192) + document.ImportedSliders.Count;
-        // Catch exports place heads on the centre row; dense STD curves alone are not evidence.
-        if (centered < notes * .8) return false;
+        if (document.ImportedSliders.Count == 0) return false;
         var timing = new TimingMap.Lookup(document);
-        foreach (var slider in document.ImportedSliders)
+        int matching = document.ImportedSliders.Count(slider => HasDropletAnchors(document, slider, timing));
+        return matching * 5L > document.ImportedSliders.Count * 4L;
+    }
+
+    private static bool HasDropletAnchors(MapDocument document, ImportedSlider slider, TimingMap.Lookup timing)
+    {
+        if (slider.ControlPoints.Count < 2 || !HasLinearSegments(slider)) return false;
+        double length = slider.GetGeometry().Distance;
+        if (length <= 0) return false;
+        double velocity = ImportedSliderConverter.VelocityAt(document, slider, timing);
+        double tickDistance = LegacyCatchRules.TickDistance(document, velocity, timing.At(slider.TimeMs).BeatLengthMs,
+            ImportedSliderConverter.SliderVelocityAt(document, slider, timing));
+        var events = LegacyCatchRules.CreateNested(slider.TimeMs, length / velocity,
+            velocity, tickDistance, length, slider.SpanCount, legacyImported: true);
+        var anchors = new List<double> { 0 };
+        double distance = 0;
+        for (int i = 1; i < slider.ControlPoints.Count; i++)
         {
-            if (slider.ControlPoints.Count < 8 || slider.PixelLength <= 0) continue;
-            double velocity = ImportedSliderConverter.VelocityAt(document, slider, timing);
-            double tickDistance = LegacyCatchRules.TickDistance(document, velocity, timing.At(slider.TimeMs).BeatLengthMs,
-                ImportedSliderConverter.SliderVelocityAt(document, slider, timing));
-            var events = LegacyCatchRules.CreateNested(slider.TimeMs, slider.PixelLength / velocity,
-                velocity, tickDistance, slider.PixelLength, legacyImported: true);
-            int tiny = events.Count(e => e.Kind == CatchObjectKind.TinyDroplet);
-            // Compensation samples the path at nested events; ordinary short control polygons do not.
-            int points = slider.PathType == 'B' ? slider.ControlPoints.Count / 2 + 1 : slider.ControlPoints.Count;
-            if (tiny >= 3 && points >= events.Count * .8) return true;
+            var a = slider.ControlPoints[i - 1]; var b = slider.ControlPoints[i];
+            distance += new System.Numerics.Vector2((float)(b.X - a.X), (float)(b.GeometryY - a.GeometryY)).Length();
+            if (distance > length) break;
+            if (distance > anchors[^1]) anchors.Add(distance);
         }
-        return false;
+        bool hasDroplet = false;
+        foreach (var item in events)
+        {
+            if (item.Kind == CatchObjectKind.Fruit) continue;
+            hasDroplet = true;
+            // Progress folds every traversal onto the same path, including legacy tail timing.
+            double target = item.Progress * length;
+            int index = anchors.BinarySearch(target);
+            if (index >= 0) continue;
+            index = ~index;
+            double error = Math.Min(index < anchors.Count ? anchors[index] - target : double.PositiveInfinity,
+                index > 0 ? target - anchors[index - 1] : double.PositiveInfinity);
+            // Exported integer coordinates can shift the cumulative distance slightly.
+            if (error > 1.5) return false;
+        }
+        return hasDroplet;
     }
 
     private static bool HasLinearSegments(ImportedSlider slider)
