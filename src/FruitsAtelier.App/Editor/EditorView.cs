@@ -14,6 +14,7 @@ public sealed partial class EditorView
     private sealed class DifficultySession(ProjectDifficulty difficulty)
     {
         public Guid Id { get; } = difficulty.Id;
+        public bool FaOnly { get; set; } = difficulty.FaOnly;
         public MapEditingPreferences EditingPreferences { get; set; } = new();
         public string Name => OsuBeatmapReader.Setting(History.Document, "Metadata", "Version") ?? difficulty.Name;
         public EditorHistory History { get; } = new(PrepareDocument(difficulty.Document));
@@ -119,8 +120,8 @@ public sealed partial class EditorView
     public Action? RequestClose { get; set; }
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectNotes != savedProjectNotes || projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
-    public bool IsEditingText => RandomDockFocused || SongDockFocused || NotesFocused || PatternDockEditing && (stackNumericField >= 0 || bananaEditField >= 0) || BananaEditVisible && bananaEditField >= 0 || HitsoundCopierVisible && copierNewDiff && copierNameFocused || StreamDialogVisible && stackMode && stackNumericField >= 0 || timingField.Length > 0 || SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || RotationVisible || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
-    public bool WantsCapture => rotationWindowDragging || rotationDragging || aimodGesture != AimodGesture.None || dockHorizontalDrag is not null || randomDragging || notesSelecting || dockPressed is not null || acknowledgementsScrollDragging || canvasDimDragging || movementPanelPointer || backgroundDimDragging || workspaceScrollDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || stackPointDragging >= 0 || stackFruitDragging >= 0 || SliderHoldNeedsRedraw || sliderHoldConsumed;
+    public bool IsEditingText => CollaborationFocused || RandomDockFocused || SongDockFocused || NotesFocused || PatternDockEditing && (stackNumericField >= 0 || bananaEditField >= 0) || BananaEditVisible && bananaEditField >= 0 || HitsoundCopierVisible && copierNewDiff && copierNameFocused || StreamDialogVisible && stackMode && stackNumericField >= 0 || timingField.Length > 0 || SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || RotationVisible || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
+    public bool WantsCapture => collaborationReportDragging || rotationWindowDragging || rotationDragging || aimodGesture != AimodGesture.None || dockHorizontalDrag is not null || randomDragging || notesSelecting || dockPressed is not null || acknowledgementsScrollDragging || canvasDimDragging || movementPanelPointer || backgroundDimDragging || workspaceScrollDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || stackPointDragging >= 0 || stackFruitDragging >= 0 || SliderHoldNeedsRedraw || sliderHoldConsumed;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;
@@ -437,11 +438,11 @@ public sealed partial class EditorView
             int importedBefore = Document.ImportedSliders.Count;
             change();
             if (!osuAllowSliderConversion && history.TransactionChangesSliderGeometry(readOnlyIds))
-            { history.Cancel(); StatusMessage = L.Get("osu.readOnlySlider"); return false; }
+            { history.Cancel(); ShowEditorNotice("osu.readOnlySlider"); return false; }
             if (before is not null && !PositionsEqual(before, Document))
             { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }
             if (Document.DerandomizeDroplets is null && Document.ImportedSliders.Count < importedBefore)
-                Document.DerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
+                Document.DerandomizeDroplets = Document.DerandomizeFSliderDroplets;
             CommitContentHistory(); return true;
         }
         catch (ArgumentException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }
@@ -475,7 +476,8 @@ public sealed partial class EditorView
         if (LegacyMode && legacyDraft is not null && !legacyPreviewValid) { StatusMessage = L.Get("editor.status.needTwoAnchors"); return; }
         if (track.Nodes.Count < 2) { StatusMessage = L.Get("editor.status.needTwoAnchors"); return; }
         var head = track.Nodes[0];
-        Document.Fruits.RemoveAll(fruit => fruit.TimeMs == head.TimeMs && fruit.X == head.X);
+        if (!LibrarySettings.PreserveSameTimeObjects)
+            Document.Fruits.RemoveAll(fruit => fruit.TimeMs == head.TimeMs && fruit.X == head.X);
         Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
         // Completion can append an endpoint after the last render; retain that final draft while validation runs.
         UpdateDraftConversion();

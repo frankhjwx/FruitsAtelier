@@ -189,7 +189,7 @@ public sealed partial class EditorView
         string label = L.Get("assist.lockDropletSelection");
         string sliderLabel = L.Get("assist.lockSlidersToCanvas");
         float w = Math.Max(180, Math.Max(c.MeasureText(label, 12, true), c.MeasureText(sliderLabel, 12, true)) + 20);
-        float y = Math.Clamp(button.Y, assistPalette.Y, assistPalette.Bottom - 68);
+        float y = Math.Clamp(button.Y, plot.Y, Math.Max(plot.Y, assistPalette.Bottom - 68));
         var flyout = new Rect(button.X - w, y, w, 68);
         notesLockFlyoutBounds = flyout;
         var area = new Rect(flyout.X, y, w + button.Width, Math.Max(68, button.Height));
@@ -224,11 +224,13 @@ public sealed partial class EditorView
     private void DrawAssistPalette(ICanvas c)
     {
         assistButtons.Clear();
-        float size = Math.Clamp(plot.Height / 7, 64, 96);
-        assistPalette = new(canvas.Right - 26 - size, plot.Y, size, plot.Height);
-        assistScrollLimit = Math.Max(0, size * 7 - plot.Height);
+        float availableHeight = Math.Max(0, plot.Bottom - CanvasCornerBottom);
+        float size = IsOsuCanvas ? Math.Clamp(availableHeight / 7, 48, 64) : Math.Clamp(MathF.Floor(availableHeight / 7), 64, 96);
+        float buttonWidth = IsOsuCanvas ? 76 : size;
+        assistPalette = new(CanvasCornerRight - buttonWidth, CanvasCornerBottom, buttonWidth, availableHeight);
+        assistScrollLimit = Math.Max(0, size * 7 - availableHeight);
         assistScroll = Math.Clamp(assistScroll, 0, assistScrollLimit);
-        float top = plot.Y + Math.Max(0, (plot.Height - size * 7) / 2) - assistScroll;
+        float top = assistPalette.Y - assistScroll;
         string[] keys = ["tools.newCombo", "assist.whistle", "assist.finish", "assist.clap", "assist.grid", "assist.distance", "assist.lock"];
         string[] names = ["new-combo", "whistle", "finish", "clap", "grid-snap", "distance-snap", "lock-notes"];
         Rect[] iconSources = [new(155, 125, 944, 1018), new(78, 302, 1128, 628), new(99, 175, 1057, 811),
@@ -248,7 +250,7 @@ public sealed partial class EditorView
         c.Clip(assistPalette);
         for (int i = 0; i < 7; i++)
         {
-            var r = new Rect(assistPalette.X, top + i * size, size, size);
+            var r = new Rect(assistPalette.X, top + i * size, assistPalette.Width, size);
             assistButtons.Add(r);
             if (!Intersects(r, assistPalette)) continue;
             bool enabled = i is 4 or 5 || draftTrack == Guid.Empty && draftBanana == Guid.Empty;
@@ -257,20 +259,22 @@ public sealed partial class EditorView
             float opacity = !enabled ? .25f : active[i] ? 1 : .45f;
             bool mixed = i is >= 1 and <= 3 && !placement && !active[i] && sounds.Any(s => (s & (1 << i)) != 0);
             float scale = size / 512;
-            var frame = new Rect(r.X + 16 * scale, r.Y + 16 * scale, 480 * scale, 480 * scale);
-            // These dimensions match the generated left palette's 512px button template.
-            c.Fill(frame, Dim(Panel, opacity), 64 * scale);
-            c.Stroke(frame, i == 5 && DistanceSnapEnabled && distanceOutside ? Error : Dim(Accent, opacity), 8 * scale, 64 * scale);
+            float inset = IsOsuCanvas ? 2 : 16 * scale, corner = IsOsuCanvas ? 8 : 64 * scale;
+            var frame = new Rect(r.X + inset, r.Y + inset, r.Width - 2 * inset, r.Height - 2 * inset);
+            c.Fill(frame, Dim(Panel, opacity), corner);
+            c.Stroke(frame, i == 5 && DistanceSnapEnabled && distanceOutside ? Error : Dim(Accent, opacity), IsOsuCanvas ? 1 : 8 * scale, corner);
             var source = iconSources[i];
-            float iconScale = Math.Min(340 / source.Width, 288 / source.Height) * scale;
+            float iconScale = IsOsuCanvas ? Math.Min(50 / source.Width, (size - 22) / source.Height)
+                : Math.Min(340 / source.Width, 288 / source.Height) * scale;
+            float iconCenterY = IsOsuCanvas ? 4 + (size - 22) / 2 : 204 * scale;
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "assist", names[i] + ".png"),
-                new(r.X + 256 * scale - source.Width * iconScale / 2, r.Y + 204 * scale - source.Height * iconScale / 2,
+                new(r.X + r.Width / 2 - source.Width * iconScale / 2, r.Y + iconCenterY - source.Height * iconScale / 2,
                     source.Width * iconScale, source.Height * iconScale), source: source, opacity: opacity);
             string label = L.Get(keys[i]);
-            float font = size * 52 / 512;
-            font = Math.Min(font, (size - 12 * scale) / Math.Max(1, c.MeasureText(label, font, true)) * font);
-            c.Text(label, r.X + (size - c.MeasureText(label, font, true)) / 2, r.Y + size * .76f,
-                font, active[i] ? Foreground : 0x747B85, size, true);
+            float font = IsOsuCanvas ? 8 : 52 * scale;
+            font = Math.Min(font, (r.Width - 8) / Math.Max(1, c.MeasureText(label, font, true)) * font);
+            c.Text(label, r.X + (r.Width - c.MeasureText(label, font, true)) / 2, IsOsuCanvas ? r.Bottom - 14 : r.Y + size * .76f,
+                font, active[i] ? Foreground : 0x747B85, r.Width - 8, true);
             if (mixed) c.Line(frame.X + 6, frame.Y + 8, frame.X + 14, frame.Y + 8, Gold, 2);
             var hit = new Rect(r.X, Math.Max(r.Y, assistPalette.Y), r.Width,
                 Math.Min(r.Bottom, assistPalette.Bottom) - Math.Max(r.Y, assistPalette.Y));
@@ -280,8 +284,8 @@ public sealed partial class EditorView
         c.Unclip();
         if (assistScrollLimit > 0)
         {
-            float thumbHeight = plot.Height * plot.Height / (7 * size);
-            c.Fill(new(assistPalette.Right + 2, plot.Y + (plot.Height - thumbHeight) * assistScroll / assistScrollLimit, 3, thumbHeight), Muted, 1);
+            float thumbHeight = availableHeight * availableHeight / (7 * size);
+            c.Fill(new(assistPalette.Right + 2, assistPalette.Y + (availableHeight - thumbHeight) * assistScroll / assistScrollLimit, 3, thumbHeight), Muted, 1);
         }
         DrawDistanceSnapFlyout(c);
         DrawNotesLockFlyout(c);

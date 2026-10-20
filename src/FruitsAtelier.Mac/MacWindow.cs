@@ -40,6 +40,7 @@ internal sealed partial class MacWindow : Window
         View.RequestSetupLink = url => RunFile(() => { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("/usr/bin/open") { ArgumentList = { url } }); return Task.CompletedTask; });
         View.RequestAudioPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
         View.RequestViewPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
+        ConfigureOsuLinks();
         View.SupportsFullscreen = true;
         View.RequestScreenshot = CopyScreenshot;
         View.RequestFullscreen = enabled =>
@@ -97,7 +98,11 @@ internal sealed partial class MacWindow : Window
             var path = await Pick(L.Get("copier.choose"), ["*.osu"]);
             if (path is not null) View.SetHitsoundSource(HitsoundCopier.ReadSource(path));
         });
-        View.RequestOpen = () => RunFile(async () => { if (await ConfirmDiscard()) { var path = await Pick(L.Get("files.open"), ["*.faz", "*.osz", "*.osu", "*.catchproj", "*.catchdiff"]); if (path is not null) await OpenPath(path); } });
+        View.RequestOpen = () => RunFile(async () =>
+        {
+            var path = await Pick(L.Get("files.open"), ["*.faz", "*.fad", "*.osz", "*.osu", "*.catchproj", "*.catchdiff"]);
+            if (path is not null && (FadArchive.IsPackage(path) || await ConfirmDiscard())) await OpenPath(path);
+        });
         View.RequestNewProject = () => RunFile(async () =>
         {
             if (!await ConfirmDiscard()) return;
@@ -172,7 +177,7 @@ internal sealed partial class MacWindow : Window
             RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
         };
         Closed += (_, _) => { View.CleanupFazOnExit(); View.SaveLibraryMemory(); View.ReleaseWaveform(); timer.Stop(); setupAudio?.Dispose(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
-        Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); View.CheckFilesOnActivation(); editor.Refresh(); };
+        Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); View.CheckFilesOnActivation(); View.RefreshOsuLinkSettings(refreshApplications: true); editor.Refresh(); };
         Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); editor.Refresh(); };
     }
     private void UpdateTitle() => Title = View.WindowTitle;
@@ -185,10 +190,11 @@ internal sealed partial class MacWindow : Window
     }
     private void PollAudio()
     {
+        PollOsuLinks();
         if (View.CanDropAudio && !View.StartupDialogVisible && Program.OpenFiles.TryDequeue(out var path))
         {
             Activate();
-            RunFile(async () => { if (await ConfirmDiscard()) await OpenPath(path); });
+            RunFile(async () => { if (FadArchive.IsPackage(path) || await ConfirmDiscard()) await OpenPath(path); });
         }
         PollSetupAudio();
         var state = audio.State;
@@ -197,7 +203,7 @@ internal sealed partial class MacWindow : Window
             _ = audio.LoadAsync(View.Document.AudioPath); state = audio.State;
         }
         View.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, state.Error is null ? null : L.Reformat(state.Error), state.FilePath);
-        if (View.SynchronizationNeedsRedraw || View.ConversionNeedsRedraw || View.WaveformNeedsRedraw || View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.SliderMultiplierValidationBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
+        if (View.OsuLinkNoticeNeedsRedraw || View.SynchronizationNeedsRedraw || View.ConversionNeedsRedraw || View.WaveformNeedsRedraw || View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.SliderMultiplierValidationBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
             editor.Refresh();
         lastReady = state.CanPlay; lastPosition = state.PositionMs; lastError = state.Error;
     }
@@ -273,6 +279,7 @@ internal sealed partial class MacWindow : Window
     }
     private async Task OpenPath(string path)
     {
+        if (FadArchive.IsPackage(path)) { View.BeginFadImport(path); return; }
         if (FazArchive.IsPackage(path))
         {
             View.BeginFazOpen(path, () => RunFile(async () => { projectPath = null; await audio.LoadAsync(View.Document.AudioPath); PollAudio(); }));

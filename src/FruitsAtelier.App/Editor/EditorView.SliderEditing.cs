@@ -40,19 +40,24 @@ public sealed partial class EditorView
     private void EditImportedSlider(Guid id)
     {
         if (!Document.ImportedSliders.Any(slider => slider.Id == id)) return;
-        ConvertSelectedImportedSlider(id, Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets);
+        ConvertSelectedImportedSlider(id);
     }
 
     private ImportedSliderEditResult ConvertImportedSlider(Guid id, CatchConversionCache? cache = null)
     {
-        if (!osuAllowSliderConversion) throw new InvalidOperationException(L.Get("osu.readOnlySlider"));
-        bool derandomize = Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets;
-        var result = ImportedSliderEditing.ConvertToTrack(Document, id, cache ?? editorConversionCache, derandomize);
+        if (!osuAllowSliderConversion)
+        {
+            ShowEditorNotice("osu.readOnlySlider");
+            throw new InvalidOperationException(StatusMessage);
+        }
+        var batch = SliderImportEditing.ConvertFollowingMap(Document, [id]);
+        if (batch.Tracks.Count == 0) throw new InvalidOperationException(batch.Failures[0].Reason);
+        var result = new ImportedSliderEditResult(batch.Tracks[0], []);
         if (drag != DragKind.None && Document.DerandomizeDroplets is null) pendingImplicitSliderConversions.Add(id);
         return result;
     }
 
-    private void ConvertSelectedImportedSlider(Guid id, bool derandomizeDroplets)
+    private void ConvertSelectedImportedSlider(Guid id)
     {
         string notice = "";
         osuAllowSliderConversion = true;
@@ -60,9 +65,9 @@ public sealed partial class EditorView
         {
             if (!Edit(L.Get("editor.command.editImportedSlider"), () =>
             {
-                var result = SliderRepresentationEditing.ConvertToTrack(Document, id, derandomizeDroplets);
+                var result = SliderRepresentationEditing.ConvertToTrack(Document, id);
                 if (!result.Success) throw new InvalidOperationException(string.Join(L.Get("editor.diagnostics.separator"), result.Diagnostics));
-                Document.DerandomizeDroplets = derandomizeDroplets;
+                Document.DerandomizeDroplets = Document.DerandomizeFSliderDroplets;
                 notice = string.Join(L.Get("editor.diagnostics.separator"), result.Diagnostics);
             })) return;
             if (IsOsuCanvas) SelectObjects([id], id);

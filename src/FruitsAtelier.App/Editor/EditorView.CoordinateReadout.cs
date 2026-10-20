@@ -6,6 +6,9 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private float CanvasCornerRight => canvas.Right - 26;
+    private float CanvasCornerBottom => IsOsuCanvas ? OsuDefaultSvBounds.Bottom + 42 : plot.Y + 60;
+
     private void DrawCoordinateReadout(ICanvas c)
     {
         bool pointerInside = plot.Contains(mouseX, mouseY);
@@ -55,12 +58,13 @@ public sealed partial class EditorView
         string following = L.Get("assist.next", next is { } n ? L.Get("assist.ratio", n) : "—");
         const float font = 12, lineHeight = 18;
         float textWidth = c.MeasureText(coordinate, font);
-        if (selected) textWidth = Math.Max(textWidth, Math.Max(c.MeasureText(prev, font), c.MeasureText(following, font)));
-        var bounds = new Rect(plot.Right - textWidth - 24, IsOsuCanvas ? OsuDefaultSvBounds.Bottom + 8 : plot.Y + 8, textWidth + 16, selected ? 62 : 26);
+        float previousWidth = c.MeasureText(prev, font), nextWidth = c.MeasureText(following, font);
+        if (selected) textWidth = Math.Max(textWidth, previousWidth + 16 + nextWidth);
+        var bounds = new Rect(CanvasCornerRight - textWidth - 16, IsOsuCanvas ? OsuDefaultSvBounds.Bottom + 8 : plot.Y + 8, textWidth + 16, selected ? 44 : 26);
         c.Fill(bounds, Panel, 4, .85f);
         c.Text(coordinate, bounds.X + 8, bounds.Y + 5, font, selected ? Gold : Foreground, textWidth);
         if (!selected) return;
-        c.Text(prev, bounds.X + 8, bounds.Y + 5 + lineHeight, font, Gold, textWidth);
-        c.Text(following, bounds.X + 8, bounds.Y + 5 + lineHeight * 2, font, Gold, textWidth);
+        c.Text(prev, bounds.X + 8, bounds.Y + 5 + lineHeight, font, Gold, previousWidth);
+        c.Text(following, bounds.Right - 8 - nextWidth, bounds.Y + 5 + lineHeight, font, Gold, nextWidth);
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text.Json;
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
@@ -926,6 +926,11 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--collaboration-render-check"))
+        {
+            CollaborationRenderCheck.Run(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--semantic-sync-render-check"))
         {
             foreach (var size in new[] { (980, 620), (1440, 900) })
@@ -1055,7 +1060,14 @@ internal static class RenderCheck
                     editor.PointerUp(r.X + 40, r.Y + 96 + 6 * 48, 0); Paint("off");
                     editor.PointerDown(r.X + 250, r.Y + 175, 0, false, false);
                     editor.PointerUp(r.X + 250, r.Y + 175, 0); Paint("on");
+                    var preserve = editor.PreserveSameTimeObjectsToggleBounds;
+                    if (preserve.Bottom >= editor.SettingsBounds.Bottom - 40)
+                        throw new InvalidOperationException("Same-time toggle overlaps settings footer.");
+                    editor.PointerDown(preserve.X + 10, preserve.Y + preserve.Height / 2, 0, false, false);
+                    editor.PointerUp(preserve.X + 10, preserve.Y + preserve.Height / 2, 0); Paint("preserve");
                     editor.ApplySettings(persist: false); editor.KeyDown(27, false, false); Paint();
+                    if (!editor.LibrarySettings.PreserveSameTimeObjects)
+                        throw new InvalidOperationException("Native same-time toggle failed.");
                     if (!editor.LibrarySettings.ExperimentalSnapDivisions || editor.IsDirty)
                         throw new InvalidOperationException("Native experimental snap toggle failed or changed content.");
                     var snapBounds = editor.SnapSliderBounds;

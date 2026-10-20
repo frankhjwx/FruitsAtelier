@@ -15,11 +15,30 @@ public sealed partial class EditorView
     private Task<FazAssociations>? fazSearch;
     private CancellationTokenSource? fazSearchCancellation;
     private Action? fazCompletion;
+    private Action? fazFailure;
     private Action? fazOpened;
     private string?[] fazTargets = [];
     private int fazPage, fazMode;
     private FazProjectCandidate? fazSelected;
-    private bool FazVisible => fazPackage is not null || fazTask is not null;
+    private Action<bool>? fazExportChoice;
+    private bool FazVisible => fazPackage is not null || fazTask is not null || fazExportChoice is not null;
+
+    public void ShowFazExportChoice(LibraryMap? map = null)
+    {
+        if (!PrepareFileOperation()) return;
+        menu = -1; contextItems.Clear();
+        fazExportChoice = complete =>
+        {
+            if (map is null) RequestFazExport?.Invoke(complete);
+            else RequestLibraryFazExport?.Invoke(map, complete);
+        };
+    }
+
+    private void ChooseFazExport(bool complete)
+    {
+        var choice = fazExportChoice; fazExportChoice = null;
+        hits.Clear(); fields.Clear(); choice?.Invoke(complete);
+    }
 
     public void BeginFazOpen(string path, Action opened)
     {
@@ -58,10 +77,10 @@ public sealed partial class EditorView
         StartFazTask(Task.Run(() => FazArchive.Export(snapshot ?? LibraryOperations.ExportProject(map!), path, complete, compensate, workspace)),
             () => SetNotice(L.Get("library.exported", path)));
     }
-    private void StartFazTask(Task task, Action completion)
+    private void StartFazTask(Task task, Action completion, Action? failure = null)
     {
         CancelInteraction(); menu = -1; contextItems.Clear(); hits.Clear(); fields.Clear();
-        fazTask = task; fazCompletion = completion;
+        fazTask = task; fazCompletion = completion; fazFailure = failure;
     }
     private void PumpFaz()
     {
@@ -86,8 +105,9 @@ public sealed partial class EditorView
         }
         if (fazTask is not { IsCompleted: true } task) return;
         fazTask = null; var completed = fazCompletion; fazCompletion = null;
+        var failed = fazFailure; fazFailure = null;
         try { task.GetAwaiter().GetResult(); completed?.Invoke(); }
-        catch (Exception error) { ShowError(L.Reformat(error.Message)); }
+        catch (Exception error) { failed?.Invoke(); ShowError(L.Reformat(error.Message)); }
     }
     public void CleanupFazOnExit()
     {
@@ -111,6 +131,7 @@ public sealed partial class EditorView
     private void CloseFaz()
     {
         if (fazTask is not null) return;
+        fazExportChoice = null;
         var package = fazPackage;
         fazSearchCancellation?.Cancel(); fazSearchCancellation?.Dispose(); fazSearchCancellation = null;
         if (fazSearch is { } search)
@@ -144,6 +165,18 @@ public sealed partial class EditorView
     {
         hits.Clear(); fields.Clear();
         c.Fill(new(0, 0, width, height), Background, opacity: .8f);
+        if (fazExportChoice is not null)
+        {
+            float cw = Math.Min(640, width - 24), ch = 300, cx = (width - cw) / 2, cy = (height - ch) / 2;
+            c.Fill(new(cx, cy, cw, ch), Panel, 8); c.Stroke(new(cx, cy, cw, ch), Accent, 2, 8);
+            c.Text(L.Get("faz.export"), cx + 20, cy + 18, 20, Foreground, cw - 40, true);
+            Button(c, new(cx + 20, cy + 64, cw - 40, 36), L.Get("faz.exportComplete"), () => ChooseFazExport(true));
+            c.Text(L.Get("faz.completeDescription"), cx + 24, cy + 110, 12, Muted, cw - 48);
+            Button(c, new(cx + 20, cy + 151, cw - 40, 36), L.Get("faz.exportProject"), () => ChooseFazExport(false));
+            c.Text(L.Get("faz.projectDescription"), cx + 24, cy + 197, 12, Muted, cw - 48);
+            Button(c, new(cx + 20, cy + 247, cw - 40, 32), L.Get("mac.cancel"), CloseFaz);
+            return;
+        }
         float w = Math.Min(720, width - 24), h = Math.Min(530, height - 24), x = (width - w) / 2, y = (height - h) / 2;
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
         c.Text(L.Get(fazTask is not null ? "faz.working" : "faz.import"), x + 20, y + 18, 20, Foreground, w - 40, true);

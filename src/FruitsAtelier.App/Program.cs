@@ -27,11 +27,19 @@ internal static class Program
             }
             L.SetLanguage(FruitsAtelier.Localization.LanguagePreference.ReadLanguage());
             bool ordinaryLaunch = !args.Any(a => a.StartsWith("--", StringComparison.Ordinal));
+            string? osuLink = args.FirstOrDefault(FruitsAtelier.Core.EditorTimestamp.IsOsuLink);
+            if (ordinaryLaunch && osuLink is not null)
+            {
+                if (!FruitsAtelier.Core.EditorTimestamp.IsEditorLink(osuLink) && OsuLinkAssociation.TargetReady(FruitsAtelier.Core.OsuLinkPreferences.Load()))
+                { OsuLinkAssociation.Forward(osuLink); return 0; }
+                if (FazFileAssociation.Forward(osuLink)) return 0;
+                FazFileAssociation.PendingLinks.Enqueue(osuLink);
+            }
             if (ordinaryLaunch && FazFileAssociation.Forward(args.FirstOrDefault(File.Exists))) return 0;
             using var activation = new CancellationTokenSource();
             if (ordinaryLaunch)
             {
-                try { FazFileAssociation.EnsureRegistered(); } catch (Exception e) { AppLog.Write(e.Message); }
+                try { FazFileAssociation.EnsureRegistered(); OsuLinkAssociation.RegisterCandidate(); } catch (Exception e) { AppLog.Write(e.Message); }
                 _ = FazFileAssociation.Listen(activation.Token);
             }
             using var window = new EditorWindow();

@@ -50,7 +50,7 @@ public static class WorkspaceVersionHistory
             if (System.IO.Path.GetFileName(entry.File) != entry.File) throw new InvalidDataException(L.Get("project.invalid"));
             string working = System.IO.Path.Combine(directory, "current", entry.File);
             string source = version.WorkingCopy && WorkspaceHistoryFile.Exists(working) ? working : System.IO.Path.Combine(directory, entry.File);
-            project.Difficulties.Add(new() { Id = entry.Id, Name = entry.Name,
+            project.Difficulties.Add(new() { Id = entry.Id, Name = entry.Name, FaOnly = entry.FaOnly,
                 Document = ProjectSerializer.Read(WorkspaceHistoryFile.ReadText(source), System.IO.Path.Combine(origin, entry.File)) });
         }
         project.Validate();
@@ -106,7 +106,7 @@ public static class WorkspaceVersionHistory
                 if (System.IO.Path.GetFileName(saved.File) != saved.File) throw new InvalidDataException(L.Get("project.invalid"));
                 string path = System.IO.Path.Combine(session.Directory, saved.File);
                 WorkspaceProject.RejectLinks(path);
-                if (current.Id != saved.Id || current.Name != saved.Name || !current.Document.ContentEquals(ProjectSerializer.ReadFile(path)))
+                if (current.Id != saved.Id || current.Name != saved.Name || current.FaOnly != saved.FaOnly || !current.Document.ContentEquals(ProjectSerializer.ReadFile(path)))
                 { changed = true; break; }
             }
         if (changed) WorkspaceSynchronization.Archive(session, "save");

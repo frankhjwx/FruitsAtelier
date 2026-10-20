@@ -291,7 +291,7 @@ internal static class AssistToolsTests
         {
             Strings.SetLanguage(language); ui.Resize(980, 620);
             var bounds = ui.View.AssistButtonBounds;
-            Check(bounds.All(b => b.X >= ui.View.CanvasPlotBounds.Right && b.Width == b.Height), "Assist buttons must be square and beside the plot");
+            Check(bounds.All(b => b.X >= ui.View.CanvasPlotBounds.Right && b.Width == b.Height && b.Height <= 96), "Catch assist buttons must scale uniformly beside the plot");
             var first = bounds[0];
             ui.View.Wheel(first.X + 10, first.Y + 10, -1200, false); ui.Paint();
             Check(ui.View.AssistButtonBounds[^1].Bottom <= ui.View.CanvasPlotBounds.Bottom + .01, "Small-window scrolling does not reach Lock Notes");

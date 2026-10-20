@@ -140,12 +140,8 @@ public sealed partial class EditorView
         foreach (var slider in conversion!.Sliders.Where(s => s.IsImported && s.Path.Count >= 2 && (sourceId is null || s.SourceId == sourceId)))
         {
             double duration = slider.DurationMs / slider.SpanCount;
-            double[] distances = new double[slider.Path.Count];
-            for (int i = 1; i < distances.Length; i++)
-            {
-                var a = slider.Path[i - 1]; var b = slider.Path[i];
-                distances[i] = distances[i - 1] + Math.Sqrt(Math.Pow(b.X - a.X, 2) + Math.Pow(b.GeometryY - a.GeometryY, 2));
-            }
+            var path = ImportedCurvePath(slider);
+            var distances = ImportedCurveDistances(slider);
             if (distances[^1] <= 0) continue;
             for (int span = 0; span < slider.SpanCount; span++)
             {
@@ -154,8 +150,8 @@ public sealed partial class EditorView
                 for (int i = 1; i < distances.Length; i++)
                 {
                     double a = distances[i - 1] / distances[^1] * duration, b = distances[i] / distances[^1] * duration;
-                    Consider(slider.SourceId, new(start + (span % 2 == 0 ? a : duration - a), slider.Path[i - 1].X),
-                        new(start + (span % 2 == 0 ? b : duration - b), slider.Path[i].X), slider.StartTimeMs + a, slider.StartTimeMs + b);
+                    Consider(slider.SourceId, new(start + (span % 2 == 0 ? a : duration - a), path[i - 1].X),
+                        new(start + (span % 2 == 0 ? b : duration - b), path[i].X), slider.StartTimeMs + a, slider.StartTimeMs + b);
                 }
             }
         }

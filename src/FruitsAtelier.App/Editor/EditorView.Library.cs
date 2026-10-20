@@ -144,6 +144,7 @@ public sealed partial class EditorView
     public void ShowWorkspaceExport()
     {
         if (!HasEditorProject || ExportVisible) return;
+        if (CurrentDifficultyFaOnly) { SetNotice(L.Get("song.faOnlyExportHelp")); return; }
         if (!PrepareFileOperation()) return;
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
         if (ExportOverwriteTarget is null && !string.IsNullOrWhiteSpace(LibrarySettings.Songs))
@@ -243,6 +244,11 @@ public sealed partial class EditorView
         if (difficultySaveTask is not null || workspaceSaveTask is not null || syncCommitTask is not null) return;
         if (DiscardConfirmationVisible || ExportVisible || !PrepareFileOperation()) return;
         var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);
+        if (CurrentDifficultyFaOnly)
+        {
+            if (!BeginCurrentDifficultySave()) BeginWorkspaceSave();
+            return;
+        }
         bool importedDifficulty = entry?.Source is not null || Document.SourcePath is { } source && Path.GetExtension(source).Equals(".osu", StringComparison.OrdinalIgnoreCase);
         if (!string.IsNullOrWhiteSpace(LibrarySettings.Songs) && ProjectInSongs && entry?.ExportConfirmed != true && importedDifficulty)
         {
@@ -277,7 +283,7 @@ public sealed partial class EditorView
     {
         LoadProject(session.Project); WorkspaceSession = session; CheckWorkspaceResources();
         libraryProjectsNeedReindex = true; QueueLibrarySearch(); CloseLibrary();
-        if (session.IsNewImport) OfferSliderConversion(true);
+        if (session.Project.Difficulties.Any(d => d.Document.SliderImportState == SliderImportState.Pending)) PrepareImportedSliders(true);
         else if (checkAdditionalDifficulties) RefreshSynchronization();
         nextSyncCheck = DateTime.UtcNow + SyncCheckInterval;
     }
@@ -346,6 +352,7 @@ public sealed partial class EditorView
     private void PumpLibrary()
     {
         PumpStorage();
+        PumpCollaboration();
         PumpVersionHistory();
         PumpFileMonitoring();
         PumpSynchronization();

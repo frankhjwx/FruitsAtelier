@@ -4,7 +4,7 @@ public sealed partial class EditorView
 {
     public Action<string[]>? RequestLibraryDrop { get; set; }
     public Action<string>? RequestAudioProject { get; set; }
-    public bool CanDropAudio => !AcknowledgementsVisible && !librarySettingsOpen && !resourcePage && !updatesPage && !IsTestplaying
+    public bool CanDropAudio => !OsuLinkFallbackRequired && !AcknowledgementsVisible && !librarySettingsOpen && !resourcePage && !updatesPage && !IsTestplaying
         && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SongSetupVisible
         && !SliderDialogVisible && !SynchronizationVisible && !VersionHistoryVisible && !TimingModal
         && !DistanceSnapDialogVisible && !VolumeDialogVisible && !BananaEditVisible && !StreamDialogVisible
@@ -16,6 +16,7 @@ public sealed partial class EditorView
     public static bool IsBackgroundImage(string path) => Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".bmp";
 
     public bool CanDropFile(string path) => CanDropBackground && IsBackgroundImage(path)
+        || CanDropAudio && Platform.FadArchive.IsPackage(path)
         || CanDropAudio && Platform.FazArchive.IsPackage(path)
         || CanDropAudio && Platform.LibraryOperations.IsProjectAudio(path)
         || CanDropLibraryFiles && IsLibraryArchive(path);
@@ -27,6 +28,11 @@ public sealed partial class EditorView
     public void DropLibraryFiles(IEnumerable<string> paths)
     {
         var files = paths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (CanDropAudio && files.Any(Platform.FadArchive.IsPackage))
+        {
+            if (files.Length != 1) { ShowError(FruitsAtelier.Localization.Strings.Get("faz.oneFile")); return; }
+            BeginFadImport(files[0]); return;
+        }
         if (CanDropAudio && files.Any(Platform.FazArchive.IsPackage))
         {
             if (files.Length != 1) { ShowError(FruitsAtelier.Localization.Strings.Get("faz.oneFile")); return; }

@@ -34,6 +34,15 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        RenderContent(c, width, height);
+        DrawOsuLinkNotice(c);
+        DrawOsuLinkFallback(c);
+    }
+
+    private void RenderContent(ICanvas c, float width, float height)
+    {
+        if (difficultyGraphicsReleasePending) { c.ReleaseDifficultyResources(); difficultyGraphicsReleasePending = false; }
+        ReclaimProjectMemory();
         if (AcknowledgementsVisible)
         {
             this.width = width; this.height = height;
@@ -144,6 +153,7 @@ public sealed partial class EditorView
         DrawTimingSetup(c);
         DrawHitsoundCopier(c);
         DrawSettings(c);
+        DrawCollaborationReport(c);
         if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
         DrawDiscardConfirmation(c);
@@ -693,7 +703,14 @@ public sealed partial class EditorView
         string notice = workspaceSaveTask is not null || difficultySaveTask is not null ? L.Get("files.saving") : SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
             : deferredConversion ? L.Get("editor.status.convertingSlider") : conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
         float speedLabelX = DrawPlaybackSpeedSelector(c);
-        c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(0, speedLabelX - 33));
+        float noticeRight = speedLabelX;
+        if (fullSyncBackup is { } backup && WorkspaceSession?.Directory == backup.Directory)
+        {
+            noticeRight -= 218;
+            Button(c, new(noticeRight, height - 25, 210, 22), L.Get("sync.restoreFullBackup"),
+                () => ShowVersionHistory(backup.Version.Path, backup.DifficultyId), enabled: !SynchronizationBusy && !DiscardConfirmationVisible);
+        }
+        c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(0, noticeRight - 33));
         DrawVolumeButton(c);
     }
 
@@ -713,13 +730,14 @@ public sealed partial class EditorView
             Item(L.Get("ui.saveMenu"), () => RequestSave?.Invoke());
             Item(L.Get("ui.exportMenu"), () => RequestExport?.Invoke());
             Item(L.Get("library.exportOsz"), () => RequestOszExport?.Invoke());
-            Item(L.Get("faz.exportComplete"), () => RequestFazExport?.Invoke(true));
-            Item(L.Get("faz.exportProject"), () => RequestFazExport?.Invoke(false));
+            Item(L.Get("faz.export"), () => ShowFazExportChoice());
+            Item(L.Get("fad.export"), () => RequestFadExport?.Invoke(activeDifficulty));
+            Item(L.Get("fad.import"), () => RequestFadImport?.Invoke());
             Item(L.Get("ui.exitMenu"), () => RequestClose?.Invoke());
         }
         else if (menu == 3)
         {
-            Item(L.Get("project.add"), () => AddDifficulty());
+            Item(L.Get("project.add"), ShowAddDifficulty);
             Item(L.Get("project.import"), () => RequestImportDifficulty?.Invoke());
         }
         else if (menu == 1)

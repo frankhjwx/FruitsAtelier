@@ -48,7 +48,7 @@ internal static class HitsoundCopierUiTests
                 ui.Key(27);
                 ui.View.OpenHitsoundCopier(); ui.Key(27); Check(!ui.View.HitsoundCopierVisible,"Escape closes");
                 Batch(source,target);
-                ReadOnlyLegacyTarget();
+                SliderTargets();
             }
         }
         finally { L.SetLanguage(language); }
@@ -83,30 +83,53 @@ internal static class HitsoundCopierUiTests
             "Stale batch applies no target changes"); ui.Key(27);
     }
 
-    private static void ReadOnlyLegacyTarget()
+    private static void SliderTargets()
     {
-        var target = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,80,1000,2,0,L|200:80,1,100,0|0,0:0|0:0,0:0:0:0:\n");
-        var source = target.DeepClone();
-        ObjectFlags.SetSound(source, source.ImportedSliders.Single().Id, 2, true);
-        var ui = new Ui(); ui.LoadDocument(target);
-        var before = ui.View.Document.DeepClone();
-        void Preview()
+        foreach (bool fslider in new[] { false, true })
+        foreach (bool osu in new[] { false, true })
+        foreach (bool sameSet in new[] { false, true })
         {
+            var target = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,80,1000,2,0,L|200:80,1,100,0|0,0:0|0:0,0:0:0:0:\n");
+            Guid id = target.ImportedSliders.Single().Id;
+            if (fslider)
+            {
+                target.ImportedSliders.Clear();
+                var track = new CurveTrack { Id = id, Kind = CurveKind.Linear };
+                track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 200 }]);
+                target.Tracks.Add(track);
+            }
+            var source = target.DeepClone();
+            ObjectFlags.SetSound(source, id, 2, true);
+            SongSetup.Set(target, "Metadata", "Version", "Target");
+            SongSetup.Set(source, "Metadata", "Version", "Source");
+            var ui = new Ui();
+            if (sameSet) { ui.View.LoadProject(BeatmapProject.FromDocuments([target, source])); ui.Paint(); }
+            else ui.LoadDocument(target);
+            if (osu) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
+            var before = ui.View.Document.DeepClone();
             ui.View.OpenHitsoundCopier(); ui.Paint();
-            ui.ClickText(L.Get("copier.external")); ui.View.SetHitsoundSource(source); ui.Paint();
+            if (sameSet)
+            {
+                ui.ClickText(L.Get("copier.set")); ui.ClickText(L.Get("copier.chooseDiff"));
+                ui.Click(ui.View.HitsoundCopierBounds.X+32, ui.View.HitsoundCopierBounds.Y+154);
+            }
+            else { ui.ClickText(L.Get("copier.external")); ui.View.SetHitsoundSource(source); ui.Paint(); }
             ui.ClickText(L.Get("copier.preview")); ui.ClickText(L.Get("song.ok"));
+            Check(!ui.View.HitsoundCopierVisible && ui.View.Document.HitsoundOverrides.Any(h => h.SourceId == id && (h.Sample.Additions & 2) != 0),
+                "Slider hitsound copy must apply in either canvas for either representation.");
+            Check(before.UnchangedObjectIds(ui.View.Document).Contains(id)
+                && ui.View.Document.Tracks.Count == before.Tracks.Count && ui.View.Document.ImportedSliders.Count == before.ImportedSliders.Count,
+                "Hitsound copy changed slider geometry or representation.");
+            Check(OsuBeatmapWriter.Serialize(ui.View.Document).ObjectSequenceMatches, "Copied slider samples did not validate on export.");
+            var copied = ui.View.Document.DeepClone();
+            ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Slider hitsound copy did not undo atomically.");
+            ui.Key('Y', ctrl: true); Check(copied.ContentEquals(ui.View.Document), "Slider hitsound copy did not redo atomically.");
+            ui.View.OpenHitsoundCopier(); ui.Paint();
+            ui.ClickText(L.Get("copier.preview")); ui.ClickText(L.Get("song.ok"));
+            Check(!ui.View.HitsoundCopierVisible && ObjectFlags.Sounds(ui.View.Document, id).All(s => s == 0),
+                "Slider hitsound clearing must apply in either canvas for either representation.");
+            ui.Key('Z', ctrl: true); Check(copied.ContentEquals(ui.View.Document), "Slider hitsound clearing did not undo atomically.");
         }
-        Preview();
-        Check(ui.View.HitsoundCopierVisible && before.ContentEquals(ui.View.Document)
-            && ui.Canvas.Texts.Any(t => t.Value == L.Get("osu.readOnlySlider")),
-            "Catch Hitsound Copier overwrote a read-only Legacy Slider or omitted its reason.");
-        ui.Key(27); ui.View.ToggleOsuCanvas(); ui.Paint();
-        Preview();
-        Check(!ui.View.HitsoundCopierVisible && ui.View.Document.ImportedSliders.Count == 1
-            && ui.View.Document.HitsoundOverrides.Any(h => h.SourceId == target.ImportedSliders.Single().Id && (h.Sample.Additions & 2) != 0),
-            "Native Hitsound Copier did not apply sounds to its editable Legacy Slider.");
-        Check(OsuBeatmapWriter.Serialize(ui.View.Document).ObjectSequenceMatches, "Native copied Legacy samples did not validate on export.");
-        ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Native Legacy hitsound copy did not undo atomically.");
     }
 
 }

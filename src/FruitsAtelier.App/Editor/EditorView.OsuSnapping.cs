@@ -25,8 +25,8 @@ public sealed partial class EditorView
             var o = osuCanvasObjects[index];
             if (o.Spinner || now <= o.Start - OsuCanvasPreempt) continue;
             double shift = -o.Stack * OsuCanvasRadius / 10;
-            if (now < o.Start + 700 || o.Path.Length > 0 && now < o.End + 240) Add(o.X, o.Y);
-            if (o.Path.Length > 0 && now < o.End + 240) Add(o.Path[^1].X, o.Path[^1].GeometryY);
+            if (now < o.Start + 700 || o.Path.Count > 0 && now < o.End + 240) Add(o.X, o.Y);
+            if (o.Path.Count > 0 && now < o.End + 240) Add(o.Path[^1].X, o.Path[^1].GeometryY);
             void Add(double x, double y)
             {
                 x += shift; y += shift;
@@ -69,7 +69,7 @@ public sealed partial class EditorView
         if (fruit is not null) { x = fruit.X; y = fruit.Y; }
         osuDragSnapHead = (x, y);
         var last = osuCanvasObjects.Last(o => objectSelection.Contains(o.Id) && !o.Spinner);
-        var endpoint = last.Path.Length > 0 ? last.Path[^1] : new FruitsAtelier.Core.SliderPathPoint(last.X, last.Y);
+        var endpoint = last.Path.Count > 0 ? last.Path[^1] : new FruitsAtelier.Core.SliderPathPoint(last.X, last.Y);
         osuDragSnapTail = (endpoint.X, endpoint.GeometryY);
         var previous = osuCanvasObjects.Where(o => !objectSelection.Contains(o.Id) && !o.Spinner && o.End < first.Start)
             .MaxBy(o => o.End);

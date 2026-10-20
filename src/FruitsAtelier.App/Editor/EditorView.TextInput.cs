@@ -71,6 +71,12 @@ public sealed partial class EditorView
     private void PasteFieldTextCore(string text, string? expectedField = null)
     {
         if (expectedField is not null && textEditor.Field != expectedField) return;
+        if (CollaborationFocused)
+        {
+            if (!CollaborationBusy && collaborationField.Length > 0)
+                collaborationText = InsertInput(collaborationField, collaborationText, text, 128);
+            return;
+        }
         if (RotationVisible) { RotationText(text); return; }
         if (NotesFocused) { InsertNotes(text); return; }
         if (RandomDockFocused) { RandomDockText(text); return; }
@@ -133,6 +139,7 @@ public sealed partial class EditorView
         {
             "copier:name" => copierName,
             "time" => timeJumpText,
+            _ when key.StartsWith("collab:") => collaborationText,
             "distance" => editBuffer,
             "ds:base" => dsBaseText,
             "stack:0" or "stack:1" => stackNumericText,

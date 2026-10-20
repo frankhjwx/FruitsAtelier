@@ -959,6 +959,50 @@ internal static class SynchronizationTests
             var merge = f.Merge(); var result = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true));
             Check(result.Tracks.Count == 0 && result.Fruits.Count == lines.Length, "all stream members retained when accepting external structure");
         }));
+        yield return ("Sync: entire osu version preserves only complete unchanged stream connections", () =>
+        {
+            foreach (string edit in new[] { "unrelated", "first", "member", "delete", "duplicate", "timing" }) Run(f =>
+            {
+                f.Diff.Document.DurationMs = 10000;
+                if (edit == "first") f.Diff.Document.Fruits.Clear();
+                var stream = new CurveTrack { Kind = CurveKind.Bezier, StreamSnapDivisor = 4 };
+                stream.Nodes.AddRange([new() { TimeMs = 3000, X = 100, HandleOut = new(60, 20) },
+                    new() { TimeMs = 4000, X = 250, HandleIn = new(-60, -20) }]);
+                f.Diff.Document.Tracks.Add(stream);
+                var slider = stream.DeepClone(); slider.Id = Guid.NewGuid(); slider.StreamSnapDivisor = null;
+                foreach (var node in slider.Nodes) { node.Id = Guid.NewGuid(); node.TimeMs += 3000; }
+                f.Diff.Document.Tracks.Add(slider);
+                var output = OsuBeatmapWriter.Serialize(f.Diff.Document);
+                File.WriteAllText(f.Source, output.Text);
+                f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document,
+                    f.Session.Directory, output.Text, output.ObjectSources);
+                string[] lines = output.Text.Replace("\r", "").Split("[HitObjects]\n", 2)[1]
+                    .Split('\n', StringSplitOptions.RemoveEmptyEntries).Where(line => !line.TrimStart().StartsWith("//")).ToArray();
+                int first = output.ObjectSources.ToList().IndexOf(stream.Id);
+                string incoming = output.Text.Replace("\r", "");
+                if (edit == "first") incoming += "350,192,9000,1,0,0:0:0:0:\n";
+                else incoming = incoming.Replace(lines[0], "110," + lines[0][(lines[0].IndexOf(',') + 1)..]);
+                if (edit == "member") incoming = incoming.Replace(lines[first], "150," + lines[first][(lines[first].IndexOf(',') + 1)..]);
+                if (edit == "delete") incoming = incoming.Replace(lines[first] + "\n", "");
+                if (edit == "duplicate") incoming = incoming.Replace(lines[first], lines[first] + "\n" + lines[first]);
+                if (edit == "timing") incoming = incoming.Replace("0,500,4", "0,400,4");
+                File.WriteAllText(f.Source, incoming);
+                var merge = f.Merge();
+                var result = WorkspaceSynchronization.ResolveExternal(merge);
+                Check(result.Tracks.Any(t => t.Id == stream.Id) == (edit is "unrelated" or "first"), "retain only complete unambiguous streams under external timing: " + edit);
+                if (edit is "unrelated" or "first")
+                {
+                    var retained = result.Tracks.Single(t => t.Id == stream.Id);
+                    Check(retained.Nodes.Select(n => (n.Id, n.TimeMs, n.X, n.HandleIn, n.HandleOut)).SequenceEqual(
+                        stream.Nodes.Select(n => (n.Id, n.TimeMs, n.X, n.HandleIn, n.HandleOut))), "native stream anchors and handles remain exact");
+                    Check(result.Tracks.Any(t => t.Id == slider.Id), "unrelated slider connection also remains editable");
+                    var reopened = ProjectSerializer.Read(ProjectSerializer.Serialize(result, f.Source), f.Source);
+                    Check(reopened.Tracks.Single(t => t.Id == stream.Id).Nodes[0].Id == stream.Nodes[0].Id, "connection survives saving and reopening");
+                }
+                Check(WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(result).Text).SequenceEqual(
+                    WorkspaceSynchronization.ObjectLines(incoming)), "complete external object edits are respected: " + edit);
+            });
+        });
         yield return ("Sync: interrupted export restores pending authoring without overwriting newer osu content", () => Run(f =>
         {
             f.Diff.Document.Fruits[0].X = 430;

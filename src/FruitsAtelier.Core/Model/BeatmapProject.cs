@@ -37,4 +37,6 @@ public sealed class ProjectDifficulty
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "";
     public MapDocument Document { get; set; } = new();
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool FaOnly { get; set; }
 }

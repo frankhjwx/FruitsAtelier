@@ -1,5 +1,6 @@
 using L = FruitsAtelier.Localization.Strings;
 using FruitsAtelier.Core;
+using FruitsAtelier.App.Platform;
 
 namespace FruitsAtelier.App.Editor;
 
@@ -37,6 +38,8 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        ClearFadReview();
+        objectClipboard = null; clipboardDifficulty = null; ObjectClipboardText = "";
         foreach (var difficulty in project.Difficulties) WorkspaceTimingSynchronization.NormalizeDocument(difficulty.Document);
         CancelLegacyDropletRefresh();
         if (libraryOpenTask is { } retiredOpen)
@@ -47,6 +50,11 @@ public sealed partial class EditorView
         CloseHitsoundCopier();
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
+        collaborationField = collaborationError = "";
+        collaborationSyncObjectSounds = true;
+        CloseCollaborationReport();
+        if (collaborationTask is { } retiredCollaboration) _ = retiredCollaboration.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        collaborationTask = null; collaborationSnapshot = null; collaborationOwner = null;
         TimeJumpVisible = false;
         RotationVisible = rotationDragging = false;
         CloseBananaEdit(); bananaSegments.Clear();
@@ -61,6 +69,9 @@ public sealed partial class EditorView
             _ = retiredTask.ContinueWith(t => { _ = t.Exception; retiredCancellation?.Dispose(); }, TaskScheduler.Default);
         sliderBatchTask = null; sliderBatchCancellation = null;
         sliderImportTargets = []; sliderBatchErrors = []; sliderDialogHits.Clear();
+        if (sliderImportTask is { } retiredImport) _ = retiredImport.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        sliderImportTask = null; sliderSourceTargets = []; sliderSourceIndex = 0; SliderImportSourcePromptVisible = false;
+        sliderSourceQuestions = null; sliderSourceCompensated = null; sliderImportWizard = false; rememberSliderImportChoice = false;
         WorkspaceSession = null; resourceErrors = [];
         var retiredSyncCancellation = syncCancellation;
         retiredSyncCancellation?.Cancel(); syncCancellation = null;
@@ -74,9 +85,18 @@ public sealed partial class EditorView
         unreadableSyncRetries = 0;
         syncComparisons.Clear(); syncVisualMerge = null; syncResultPane = null; syncPreviewRevision++;
         resourceSnapshot = null; resourceReferences = null;
+        if (resourceCheckTask is { } retiredResources)
+        {
+            retiredDifficultyWork.Add(retiredResources);
+            _ = retiredResources.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        }
+        resourceCheckTask = null;
         CancelInteraction();
-        foreach (var difficulty in difficulties) difficulty.RatingCancellation.Cancel();
-        editorConversionCache = new();
+        foreach (var difficulty in difficulties)
+        {
+            difficulty.RatingCancellation.Cancel();
+            if (difficulty.RatingTask is { } rating) retiredDifficultyWork.Add(rating);
+        }
         difficulties.Clear();
         difficulties.AddRange(project.Difficulties.Select(d => new DifficultySession(d)));
         activeDifficulty = firstDifficultyTab = 0;
@@ -103,6 +123,7 @@ public sealed partial class EditorView
         nextSounds = 0; soundEdge = null; timelineFruit = null;
         var document = Document;
         convertedSnapshot = null;
+        ReleaseDifficultyCaches();
         Select(Guid.Empty);
         tool = Tool.Select;
         menu = -1;
@@ -121,7 +142,7 @@ public sealed partial class EditorView
     public BeatmapProject CaptureProject() => new()
     {
         Name = ProjectName, Notes = projectNotes,
-        Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, Document = d.History.Document.DeepClone() }).ToList()
+        Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, FaOnly = d.FaOnly, Document = d.History.Document.DeepClone() }).ToList()
     };
 
     private MapDocument NewAuthoringDocument()
@@ -171,10 +192,12 @@ public sealed partial class EditorView
         }
         if (!syncBypass && WorkspaceSession is not null && ShowSyncProblem(index)) return false;
         if (index == activeDifficulty) return true;
+        if (!CommitCollaborationField()) return false;
         if (!PrepareFileOperation(allowDifficultySave: true)) return false;
         double currentPlayhead = playhead;
         double currentViewStart = viewStart;
         activeDifficulty = index;
+        collaborationField = collaborationError = ""; collaborationPanelScroll = 0;
         RevealDifficultyTab();
         ResetDifficultyView();
         playhead = currentPlayhead;
@@ -183,7 +206,7 @@ public sealed partial class EditorView
         return true;
     }
 
-    public bool AddDifficulty(MapDocument? imported = null)
+    public bool AddDifficulty(MapDocument? imported = null, bool faOnly = false)
     {
         if (!PrepareFileOperation()) return false;
         if (imported?.SourcePath is { } source)
@@ -198,12 +221,14 @@ public sealed partial class EditorView
         }
         if (difficulties.Count >= 256) { SetNotice(L.Get("project.invalid")); return false; }
         var document = imported?.DeepClone() ?? Document.DeepClone();
+        if (imported is not null) LibraryOperations.ApplyImportDropletDefaults(document, LibrarySettings);
         WorkspaceTimingSynchronization.NormalizeDocument(document);
         string name = imported is null ? L.Get("project.defaultDifficulty", difficulties.Count + 1)
             : OsuBeatmapReader.Setting(document, "Metadata", "Version") ?? L.Get("project.defaultDifficulty", difficulties.Count + 1);
         if (imported is null)
         {
             document.HitsoundOverrides.Clear();
+            document.CollaborationReferences = null;
             document.Fruits.Clear(); document.Tracks.Clear(); document.ImportedSliders.Clear(); document.BananaShowers.Clear();
             document.IsDemo = false;
             foreach (var section in document.OriginalSections.Where(s => s.Name == "HitObjects")) section.Lines.Clear();
@@ -214,14 +239,14 @@ public sealed partial class EditorView
             metadata.Lines.Add("BeatmapID:0");
         }
         OsuBeatmapReader.Validate(document);
-        var added = new ProjectDifficulty { Name = name, Document = document };
+        var added = new ProjectDifficulty { Name = name, Document = document, FaOnly = faOnly };
         difficulties.Add(new DifficultySession(added));
         if (imported is null && WorkspaceSession is { } workspace)
-            workspace.Manifest.Difficulties.Add(new WorkspaceDifficulty { Id = added.Id, Name = name });
+            workspace.Manifest.Difficulties.Add(new WorkspaceDifficulty { Id = added.Id, Name = name, FaOnly = faOnly });
         projectStructureDirty = true;
         PreloadProjectHitsounds();
         bool switched = SwitchDifficulty(difficulties.Count - 1);
-        if (switched && imported is not null) OfferSliderConversion(false);
+        if (switched && imported is not null) PrepareImportedSliders(false);
         return switched;
     }
 
@@ -235,6 +260,8 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation(bool allowDifficultySave = false)
     {
+        if (CollaborationBusy) return false;
+        if (!CommitCollaborationField()) return false;
         PumpLegacyDropletRefresh();
         if (LegacyDropletRefreshBusy) return false;
         if (AcknowledgementsVisible) return false;

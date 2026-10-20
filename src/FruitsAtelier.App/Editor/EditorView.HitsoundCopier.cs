@@ -204,19 +204,6 @@ public sealed partial class EditorView
             {
                 if (difficulties[pair.Key].History.HasActiveTransaction) throw new InvalidOperationException(L.Get("copier.stalePreview"));
                 OsuBeatmapReader.Validate(pair.Value);
-                if (!copierNewDiff)
-                {
-                    var before = difficulties[pair.Key].History.Document;
-                    var protectedIds = (IsOsuCanvas ? before.Tracks.Select(t => t.Id) : before.ImportedSliders.Select(s => s.Id)).ToHashSet();
-                    if (protectedIds.Count > 0)
-                    {
-                        var unchanged = before.UnchangedObjectIds(pair.Value).ToHashSet();
-                        if (protectedIds.Any(id => !unchanged.Contains(id))
-                            || !before.HitsoundOverrides.Where(h => protectedIds.Contains(h.SourceId))
-                                .SequenceEqual(pair.Value.HitsoundOverrides.Where(h => protectedIds.Contains(h.SourceId))))
-                            throw new InvalidOperationException(L.Get("osu.readOnlySlider"));
-                    }
-                }
             }
             resources.Apply(); applied = true;
             if (copierNewDiff)

@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod }
+    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping }
     private sealed class DockGroup(DockPanel panel, float width)
     {
         public readonly List<DockPanel> Panels = [panel];
@@ -68,7 +68,7 @@ public sealed partial class EditorView
     private static string DockTitle(DockPanel panel) => L.Get(panel switch
     {
         DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
-        DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title",
+        DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title", DockPanel.CollaborationMapping => "collab.title",
         DockPanel.RandomizeDroplets => "randomize.title", DockPanel.SliderInspector => "inspector.title", _ => "difficulty.curve.title"
     });
 
@@ -232,6 +232,8 @@ public sealed partial class EditorView
                         DrawSliderInspector(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.SongSetup)
                         DrawSongDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                    else if (group.Active == DockPanel.CollaborationMapping)
+                        DrawCollaborationPanel(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.Aimod)
                         DrawAimodPanel(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.Notes)
@@ -261,6 +263,7 @@ public sealed partial class EditorView
         foreach (var tab in dockTabs)
         {
             if (!tab.Bounds.Contains(x, y)) continue;
+            if (!CommitCollaborationField()) return true;
             if (editField >= 0 && !CommitField()) return true;
             dockPressed = tab.Panel; dockDragging = false; dockStartX = x; dockStartY = y;
             dockOriginalTabs.Clear();

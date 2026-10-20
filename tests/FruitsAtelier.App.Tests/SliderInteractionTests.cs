@@ -305,9 +305,10 @@ internal static class SliderInteractionTests
         var track = ui.View.Document.Tracks.Single();
         Check(track.Id == sourceId && track.CompensateTinyDroplets == true && ui.View.Document.ImportedSliders.Count == 0,
             "Context conversion did not replace the Legacy Slider with one FSlider.");
-        var objects = ui.View.Conversion.Objects.Where(item => item.SourceId == sourceId).ToArray();
-        Check(objects.Length > 0 && objects.All(item => Math.Abs(item.X - CurveMath.PositionAtTime(track, item.TimeMs))
-            <= CatchStreamConverter.AlignmentTolerance), "Converted FSlider objects are not aligned to its target path.");
+        Check(track.DropletMode == SliderDropletMode.FollowMap
+            && track.RandomizesDroplets(ui.View.Document) == !ui.View.Document.DerandomizeFSliderDroplets,
+            "Converted FSlider does not follow the difficulty's droplet mode.");
+        Check(OsuBeatmapWriter.Serialize(ui.View.Document).ObjectSequenceMatches, "Converted FSlider failed playback validation.");
         Check(ui.View.ActiveTool == "Select" && ui.View.CanCopySelection,
             "Conversion did not retain an editable selection in Select.");
         ui.Key('Z', ctrl: true);

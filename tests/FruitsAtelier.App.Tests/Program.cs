@@ -1,9 +1,17 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--map-import-settings-check")) { MapImportSettingsTests.Run(); Console.WriteLine("PASS global map import settings, remembered choices and FA confidence thresholds"); return 0; }
+if (args.Contains("--slider-batch-check")) { SliderBatchTests.Run(); NativeImportedPathTests.Run(); WorkspaceSaveTests.Run(); LegacyReadOnlyEditingTests.Run(); SliderInteractionTests.LegacyContextConversion(); Console.WriteLine("PASS import defaults, fitted batch conversion, scope, paths, saves and undo"); return 0; }
+if (args.Contains("--osu-link-check")) { OsuLinkTests.Run(); TimeJumpTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS osu! editor links, routing, activation and settings"); return 0; }
+if (args.Contains("--collaboration-check")) { CollaborationMappingUiTests.Run(); return 0; }
+if (args.Contains("--cache-lifetime-check")) { CacheLifetimeTests.Run(); Console.WriteLine("PASS closed difficulty data is collectible after both canvases and clipboard use"); return 0; }
 if (args.Contains("--dirty-exit-check")) { DirtyExitTests.Run(); DiscardConfirmationTests.Run(); Console.WriteLine("PASS dirty exit choices and nonblocking background checks"); return 0; }
+if (args.Contains("--fa-only-check")) { FaOnlyUiTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS FA-only creation, per-difficulty settings and Songs file policy"); return 0; }
+if (args.Contains("--full-sync-check")) { FullSynchronizationTests.Run(); SynchronizationUiTests.Run(); VersionHistoryUiTests.Run(); Console.WriteLine("PASS full synchronization confirmation, connections, backups and restoration"); return 0; }
 if (args.Contains("--sync-details-check")) { SyncTabsTests.Run(); Console.WriteLine("PASS playable object details and synchronization tabs"); return 0; }
 if (args.Contains("--faz-check")) { FazTests.Run(); return 0; }
+if (args.Contains("--fad-check")) { FadTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--legacy-edit-map") { LegacyDropletWorkerTests.FirstEdits(ProjectSerializer.ReadFile(args[1])); Console.WriteLine("PASS first note placement and deletion without conversion dialogs"); return 0; }
 if (args.Contains("--synchronization-wait-check")) { SynchronizationWaitTests.Run(); Console.WriteLine("PASS background input and explicit synchronization waits"); return 0; }
 if (args.Contains("--difficulty-save-check")) { DifficultySaveTests.Run(); Console.WriteLine("PASS current difficulty background saves and recovery"); return 0; }
@@ -95,6 +103,8 @@ if (args.Contains("--distance-snap-check"))
 }
 if (args.Contains("--object-snap-check")) { ObjectSnapTests.Run(); Console.WriteLine("PASS Object snap ranges, placement and preferences"); return 0; }
 
+
+if (args.Contains("--same-time-placement-check")) { ToolPaletteTests.SameTimePlacement(); OsuCanvasInputTests.SameTimePlacement(); ExperimentalSnapTests.Run(); Console.WriteLine("PASS same-time placement and experimental settings"); return 0; }
 
 if (args.Contains("--experimental-snap-check")) { ExperimentalSnapTests.Run(); Console.WriteLine("PASS Experimental snap settings, wheel and Stream/Stack"); return 0; }
 
@@ -188,6 +198,7 @@ if (args.Contains("--slider-draft-check"))
 if (args.Contains("--difficulty-tabs-check")) { DifficultyTabTests.SortAscending(); DifficultyTabTests.ReorderAndPin(); DifficultyTabTests.Layout(); DifficultyTabTests.Overflow(); ProjectTests.Run(); Console.WriteLine("PASS Difficulty tab sorting, dragging, pins and overflow"); return 0; }
 
 if (args.Contains("--difficulty-sort-check")) { DifficultyTabTests.SortAscending(); Console.WriteLine("PASS Ascending difficulty sorting"); return 0; }
+if (args.Length == 2 && args[0] == "--project-memory-performance") return ProjectMemoryPerformance.Run(args[1]);
 if (args.Length == 2 && args[0] == "--difficulty-switch-performance") return DifficultySwitchPerformance.Run(args[1]);
 if (args.Contains("--first-run-setup-check"))
 {
@@ -239,6 +250,7 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Collab Mapping panel edits per-difficulty references and synchronizes sources", CollaborationMappingUiTests.Run),
     ("osu canvas renders standard objects and retains source identities", OsuCanvasRenderTests.Run),
     ("osu canvas edits native geometry and enforces slider representations", OsuCanvasInputTests.Run),
     ("Both canvases render beneath tool palettes without changing logical coordinates", CanvasOverscanTests.Run),
@@ -275,10 +287,13 @@ var tests = new (string Name, Action Run)[]
     ("AiMod panel checks objects, scopes focused input, navigates errors and preserves undo", AimodTests.Run),
     ("AiMod table resizes, reorders, copies and docks without content edits", AimodTests.TableAndDock),
     ("Background workspace saves isolate input and acknowledge only their snapshot", PerformanceSchedulingTests.Save),
+    ("Closed difficulty caches release document and exported geometry", CacheLifetimeTests.Run),
     ("Current difficulty saves retain other edits, navigation and recoverable publication", DifficultySaveTests.Run),
     ("Blocked operations show synchronization progress only on demand", SynchronizationWaitTests.Run),
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
     ("Background synchronization retries retain dirty edits and explicit publication archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),
+    ("Difficulty FA-only settings preserve default generation and control external file removal", FaOnlyUiTests.Run),
+    ("Full synchronization confirms replacement, keeps unchanged connections and exposes its backup", FullSynchronizationTests.Run),
     ("Version history previews and restores changed and deleted difficulties with undo and modal isolation", VersionHistoryUiTests.Run),
 
     ("Playback note saves keep input responsive and retain edits made during publication", SynchronizationUiTests.PlaybackSave),
@@ -463,7 +478,7 @@ var tests = new (string Name, Action Run)[]
     ("Fruit and both slider modes preview incoming and outgoing hyperdash without committing", ToolPaletteTests.PlacementHyperdash),
     ("Fruit New combo survives project/osu round-trips and undo", ToolPaletteTests.FruitCombo),
     ("Empty slider right-click arms New Combo in both modes with atomic undo and export", ToolPaletteTests.SliderCombo),
-    ("Fruit placement replaces same-start parents within 2 ms in one undo step", ToolPaletteTests.FruitReplacement),
+    ("Fruit placement preserves same-time objects optionally with undo and export", ToolPaletteTests.SameTimePlacement),
     ("Canvas labels New Combo fruits with NC in both languages", ToolPaletteTests.ComboLabels),
     ("Both slider modes support straight placement and draft point removal", ToolPaletteTests.DraftRemovalAndStraight),
     ("Repeated points, whole-slider deletion and banana completion", ToolPaletteTests.RepeatedPointAndWholeDelete),
@@ -514,11 +529,14 @@ var tests = new (string Name, Action Run)[]
     ("Upper timeline break edges drag, preview, cancel and remove short breaks", TimelineOverviewTests.BreakEdgeEditing),
     ("Bottom transport controls play, pause, stop and test", TimelineOverviewTests.TransportControls),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
+    ("Map import preferences persist remembered choices and require uncertain FA decisions", MapImportSettingsTests.Run),
+    ("Ordinary Legacy imports retain their Catch paths across droplet modes", NativeImportedPathTests.Run),
     ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
     ("Library opening keeps UI responsive while workspace maintenance holds the project gate", LibraryOpeningTests.Run),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
     ("FAZ archives preserve native projects and explicit local associations", FazTests.Run),
+    ("FAD archives exchange native difficulties through merge review", FadTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
     ("Library favourites persist, filter songs and projects, and toggle from the first context action", LibraryFavouriteTests.Run),
     ("Library pages sets and difficulties and reaches uncached scrollbar positions", LibraryScaleTests.Pagination),
@@ -546,6 +564,7 @@ var tests = new (string Name, Action Run)[]
     ("Beat snap slider exposes every requested divisor through one drag control", RequestedInteractionTests.SnapDivisors),
     ("Slider endpoints snap independently and retain history, persistence and export", SliderEndpointSnapTests.Run),
     ("Centred controls and timestamp clipboard dialog preserve editor content", TimeJumpTests.Run),
+    ("osu! editor links preserve content and forward other commands", OsuLinkTests.Run),
     ("Double-click enters one Slider and other clicks leave its edit mode", RequestedInteractionTests.DoubleClickEditing),
     ("Long press reports note beat position and temporarily uses its snap", NoteSnapTests.InspectBeatPosition),
     ("Note hold activates at 300 ms, cancels and continues directly into dragging", NoteSnapTests.HoldTimingAndDragging),
@@ -1123,11 +1142,11 @@ static void MainCurveVisibility()
     var previewObjects = ObjectCircles(ui, preview: true);
     True(curves.Length > 0, "Main target curves are not visible by default.");
     AssertObjectKinds(ui, objects, ui.Plot.Width);
-    ui.ClickText("滑条路径");
+    ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
     True(!CurveCommands(ui, preview: false).Any(), "Main target lines remained after hiding curves.");
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Hiding curves changed the main converted object sequence.");
     True(ObjectCircles(ui, preview: true).SequenceEqual(previewObjects), "The main curve toggle changed preview objects.");
-    ui.ClickText("滑条路径");
+    ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
     True(CurveCommands(ui, preview: false).Select(c => c.Segment!.Value).SequenceEqual(curves), "Showing curves did not restore the target geometry.");
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Restoring curves changed converted objects.");
     True(Snapshot(ui) == original && !ui.View.IsDirty, "Curve visibility mutated the document or history.");
@@ -1368,7 +1387,8 @@ sealed class Ui
     public void ClickFruit(Guid id) { var fruit = Fruit(id); ClickMap(fruit.TimeMs, fruit.X); }
     public void ClickText(string text)
     {
-        if ((text == FruitsAtelier.Localization.Strings.Get("ui.resetView") || text == FruitsAtelier.Localization.Strings.Get("ui.anchorSnap")) && !Canvas.Texts.Any(t => t.Value == text))
+        if ((text == FruitsAtelier.Localization.Strings.Get("ui.resetView") || text == FruitsAtelier.Localization.Strings.Get("ui.anchorSnap")
+            || text == FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves")) && !Canvas.Texts.Any(t => t.Value == text))
             ClickText(FruitsAtelier.Localization.Strings.Get("ui.view"));
         string visible = text.Split("  ", 2)[0];
         var label = Canvas.Texts.Single(t => t.Value == (Canvas.Texts.Any(t => t.Value == text) ? text : visible));

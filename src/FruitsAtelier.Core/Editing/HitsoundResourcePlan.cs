@@ -10,6 +10,36 @@ public sealed class HitsoundResourcePlan
     private readonly List<FileChange> changes = [];
     private string? deletionBackup;
     public static HitsoundResourcePlan Empty => new();
+    public static HitsoundResourcePlan CopyFiles(string source, string destination, IEnumerable<string> relativePaths)
+    {
+        var plan = new HitsoundResourcePlan();
+        long total = 0;
+        foreach (string relative in relativePaths)
+        {
+            string input = SafePath(source, relative), output = SafePath(destination, relative);
+            if ((total += new FileInfo(input).Length) > 512L * 1024 * 1024)
+                throw new IOException(L.Get("resource.limit"));
+            byte[] bytes = File.ReadAllBytes(input);
+            if (Directory.Exists(output) || Conflicts(output, bytes)) throw new IOException(L.Get("resource.conflict", output));
+            plan.AddCopy(output, bytes);
+        }
+        return plan;
+    }
+    public static HitsoundResourcePlan Combine(IEnumerable<HitsoundResourcePlan> plans)
+    {
+        var result = new HitsoundResourcePlan();
+        foreach (var change in plans.SelectMany(p => p.changes))
+        {
+            var existing = result.changes.FirstOrDefault(c => c.Path.Equals(change.Path, StringComparison.OrdinalIgnoreCase));
+            if (existing is null) result.changes.Add(change);
+            else if (!Equal(existing.After, change.After)) throw new IOException(L.Get("copier.fileChanged", change.Path));
+        }
+        return result;
+    }
+
+    public static HitsoundResourcePlan CopyCollaboration(MapDocument source, MapDocument result, IReadOnlySet<Guid> scope,
+        string resourceNamespace, IReadOnlyList<ConvertedCatchObject> sourceObjects, IEnumerable<MapDocument> set, bool compensation)
+        => CopyGroup(source, [(result, result)], set, compensation, scope, resourceNamespace, sourceObjects);
     public IReadOnlyList<string> DisplayNames => changes.Select(c => c.Path).ToArray();
 
     public static HitsoundResourcePlan Copy(MapDocument source, MapDocument result, MapDocument target, IEnumerable<MapDocument>? set = null, bool compensateTinyDroplets = true)
@@ -27,16 +57,17 @@ public sealed class HitsoundResourcePlan
     }
 
     private static HitsoundResourcePlan CopyGroup(MapDocument source,
-        (MapDocument Result, MapDocument Target)[] targets, IEnumerable<MapDocument> set, bool compensateTinyDroplets)
+        (MapDocument Result, MapDocument Target)[] targets, IEnumerable<MapDocument> set, bool compensateTinyDroplets,
+        IReadOnlySet<Guid>? scope = null, string? resourceNamespace = null, IReadOnlyList<ConvertedCatchObject>? sourceObjects = null)
     {
         var plan = new HitsoundResourcePlan();
         string destination = Root(targets[0].Target) ?? throw new InvalidOperationException(L.Get("copier.saveFirst"));
         SafePath(destination,".hitsound-root");
-        var sourceEvents = OsuBeatmapWriter.Serialize(source, compensateTinyDroplets).PlayableObjects;
+        var sourceEvents = sourceObjects ?? OsuBeatmapWriter.Serialize(source, compensateTinyDroplets).PlayableObjects;
         var resolver = new HitsoundResolver(source, sourceEvents);
         var times = sourceEvents.Where(HitsoundCopier.Audible).Select(o=>o.TimeMs).Distinct().Order().ToArray();
         var matches = targets.Select(t => OsuBeatmapWriter.Serialize(t.Target, compensateTinyDroplets).PlayableObjects.Where(HitsoundCopier.Audible)
-            .Where(o=>HitsoundCopier.NearestEvent(times,o.TimeMs)>=0).Select(o=>(o.SourceId,o.EventIndex)).ToHashSet()).ToArray();
+            .Where(o => (scope is null || scope.Contains(o.SourceId)) && HitsoundCopier.NearestEvent(times,o.TimeMs)>=0).Select(o=>(o.SourceId,o.EventIndex)).ToHashSet()).ToArray();
         var wanted = targets.SelectMany((t,i) => t.Result.HitsoundOverrides
             .Where(o=>matches[i].Contains((o.SourceId,o.EventIndex))).Select(o => o.Sample)).ToHashSet();
         var used = sourceEvents.Where(HitsoundCopier.Audible).Where(o => wanted.Contains(resolver.Describe(o))).ToArray();
@@ -48,7 +79,10 @@ public sealed class HitsoundResourcePlan
         var customRemap = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
         var indexed = new Regex(@"^(normal|soft|drum)-(hitnormal|hitwhistle|hitfinish|hitclap|slidertick)(\d*)$", RegexOptions.IgnoreCase);
         var numbered = files.Select(p => (Path: p, Match: indexed.Match(Path.GetFileNameWithoutExtension(p))))
-            .Where(p => p.Match.Success).GroupBy(p => p.Match.Groups[3].Value.Length == 0 ? 1 : int.Parse(p.Match.Groups[3].Value));
+            .Where(p => p.Match.Success).GroupBy(p => p.Match.Groups[3].Value.Length == 0 ? 1 : int.Parse(p.Match.Groups[3].Value)).ToArray();
+        if (resourceNamespace is not null)
+            foreach (int index in wanted.Select(s => s.Index).Where(i => i > 0).Distinct())
+                if (!numbered.Any(g => g.Key == index)) indexRemap[index] = 0;
         var reserved = Directory.EnumerateFiles(destination).Select(p => indexed.Match(Path.GetFileNameWithoutExtension(p)))
             .Where(m => m.Success).Select(m => m.Groups[3].Value.Length == 0 ? 1 : int.Parse(m.Groups[3].Value)).ToHashSet();
         reserved.UnionWith(numbered.Select(g => g.Key));
@@ -68,7 +102,14 @@ public sealed class HitsoundResourcePlan
         foreach (var group in numbered)
         {
             int index = group.Key;
-            if (group.Any(p => Conflicts(Path.Combine(destination, Path.GetFileName(p.Path)), File.ReadAllBytes(p.Path))))
+            if (resourceNamespace is not null)
+            {
+                byte[] seed = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(resourceNamespace + ":" + index.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                index = (int)(System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(seed) % 1_000_000_000) + 2;
+                while (group.Any(p => Conflicts(Path.Combine(destination, p.Match.Groups[1].Value + "-" + p.Match.Groups[2].Value + index.ToString(System.Globalization.CultureInfo.InvariantCulture) + Path.GetExtension(p.Path)), File.ReadAllBytes(p.Path)))) index++;
+                indexRemap[group.Key] = index;
+            }
+            if (resourceNamespace is null && group.Any(p => Conflicts(Path.Combine(destination, Path.GetFileName(p.Path)), File.ReadAllBytes(p.Path))))
             {
                 int next = 2; while (reserved.Contains(next)) next++;
                 reserved.Add(next); indexRemap[index] = next; index = next;
@@ -85,9 +126,13 @@ public sealed class HitsoundResourcePlan
             if (Path.GetExtension(item.FileName).ToLowerInvariant() is not (".wav" or ".ogg" or ".mp3"))
                 throw new InvalidDataException(L.Get("copier.audioOnly"));
             string from = SafePath(sourceRoot, item.FileName);
-            if (!File.Exists(from)) throw new FileNotFoundException(L.Get("copier.missingFile", item.FileName));
+            if (!File.Exists(from))
+            {
+                if (resourceNamespace is not null) { customRemap[item.FileName] = ""; continue; }
+                throw new FileNotFoundException(L.Get("copier.missingFile", item.FileName));
+            }
             byte[] bytes = File.ReadAllBytes(from);
-            string name = item.FileName;
+            string name = resourceNamespace is null ? item.FileName : Path.Combine("hitsounds", "collaboration", resourceNamespace, item.FileName).Replace('\\', '/');
             string to = SafePath(destination, name);
             if (Conflicts(to, bytes))
             {
@@ -101,7 +146,7 @@ public sealed class HitsoundResourcePlan
         for (int t = 0; t < targets.Length; t++)
         {
             var result = targets[t].Result; var matched = matches[t];
-            foreach (var point in result.TimingPoints)
+            foreach (var point in result.TimingPoints.Where(_ => scope is null))
                 if (indexRemap.TryGetValue(point.SampleIndex,out int newIndex)) { point.SampleIndex=newIndex; point.OriginalLine=null; }
             for (int i = 0; i < result.HitsoundOverrides.Count; i++)
             {

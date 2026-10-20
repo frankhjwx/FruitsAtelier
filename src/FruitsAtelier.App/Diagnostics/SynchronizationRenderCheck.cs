@@ -73,6 +73,10 @@ internal static class SynchronizationRenderCheck
                 view.RefreshSynchronization(); Wait();
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native object conflict dialog was not shown.");
                 CaptureTiming("objects-unresolved");
+                typeof(EditorView).GetMethod("ResolveSync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                    .Invoke(view, new object?[] { true });
+                CaptureTiming("full-sync-confirm");
+                view.KeyDown(27, false, false); Paint();
                 var before = view.Document.DeepClone(); view.KeyDown(46, false, false); Paint();
                 if (!before.ContentEquals(view.Document)) throw new InvalidOperationException("Native conflict input changed authoring.");
                 float rangeY = 282 + .65f * Math.Max(40, height - 488);
@@ -126,6 +130,17 @@ internal static class SynchronizationRenderCheck
                 view.PointerDown(100, height - 162, 0, false, false); view.PointerUp(100, height - 162, 0); Paint();
                 CaptureTiming("slider-resolved");
                 view.KeyDown(27, false, false);
+                view.LoadWorkspace(WorkspaceProject.Open(sliderSession.Directory)); Paint();
+                typeof(EditorView).GetMethod("ShowAddDifficulty", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                    .Invoke(view, null);
+                CaptureTiming("new-difficulty-sync"); view.KeyDown(27, false, false); Paint();
+                view.ShowSongDock(); Paint();
+                typeof(EditorView).GetField("songTab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(view, 4);
+                CaptureTiming("fa-settings");
+                typeof(EditorView).GetMethod("RequestDifficultyFaOnly", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                    .Invoke(view, new object?[] { true });
+                CaptureTiming("fa-only-file-confirm"); view.KeyDown(27, false, false); Paint();
+                if (view.CurrentDifficultyFaOnly || !File.Exists(sliderSource)) throw new InvalidOperationException("FA-only confirmation changed its source on cancellation.");
                 AppLog.Write($"Synchronization rendering passed: {locale}, {width}x{height}, object conflicts, missing state, deletion confirmation and input isolation.");
 
                 void CaptureTiming(string state)

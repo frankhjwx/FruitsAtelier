@@ -14,7 +14,7 @@ public sealed partial class EditorView
     private bool ResourceSnapshotMatches(BeatmapProject snapshot)
         => snapshot.Difficulties.Count == difficulties.Count && snapshot.Difficulties
             .Zip(difficulties).All(pair => pair.First.Id == pair.Second.Id
-                && pair.First.Document.ContentEquals(pair.Second.History.Document));
+                && pair.First.FaOnly == pair.Second.FaOnly && pair.First.Document.ContentEquals(pair.Second.History.Document));
 
     private BeatmapProject ResourceSnapshot()
     {
@@ -48,12 +48,15 @@ public sealed partial class EditorView
         if (resourceCheckTask is not null || LibraryVisible || WorkspaceSession is not { } session || DateTime.UtcNow < nextResourceCheck) return;
         var snapshot = ResourceSnapshot();
         var references = resourceReferences;
+        var contextSources = snapshot.Difficulties.Where(d => session.Manifest.Difficulties
+            .Any(e => e.Id == d.Id && WorkspaceSynchronization.Target(e) is null))
+            .Select(d => d.Document.SourcePath).OfType<string>().ToHashSet(WorkspaceSynchronization.Paths);
         // The worker owns a frozen document snapshot. Filesystem checks and storyboard
         // parsing must not run in the playback paint loop or read live editing collections.
         resourceCheckTask = Task.Run(() =>
         {
             var resolved = references ?? WorkspaceProject.ResourceReferences(snapshot);
-            return new ResourceCheckResult(session, snapshot, resolved, resolved.FindMissing());
+            return new ResourceCheckResult(session, snapshot, resolved, resolved.FindMissing().Where(path => !contextSources.Contains(path)).ToArray());
         });
         nextResourceCheck = DateTime.UtcNow.AddSeconds(3);
     }

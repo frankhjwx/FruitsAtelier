@@ -41,7 +41,7 @@ public sealed partial class EditorView
         {
             var state = timing.At(o.Start);
             double x = o.X, y = o.Y;
-            if (o.Path.Length > 0 && o.Spans % 2 == 1) { x = o.Path[^1].X; y = o.Path[^1].GeometryY; }
+            if (o.Path.Count > 0 && o.Spans % 2 == 1) { x = o.Path[^1].X; y = o.Path[^1].GeometryY; }
             double sv = state.SliderVelocityMultiplier;
             if (imported.TryGetValue(o.Id, out var slider))
                 sv = !osuShowProcessedSliders && slider.SliderVelocityMultiplier is { } authored
@@ -61,7 +61,7 @@ public sealed partial class EditorView
     private bool RejectReadOnlySelection()
     {
         if (!ClipboardSelectedParentIds().Any(IsReadOnlySlider)) return false;
-        StatusMessage = L.Get("osu.readOnlySlider");
+        ShowEditorNotice("osu.readOnlySlider");
         return true;
     }
 
@@ -111,7 +111,7 @@ public sealed partial class EditorView
 
     private bool OsuPointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
-        if (!IsOsuCanvas || TimingPageVisible || !plot.Contains(x, y)) return false;
+        if (!IsOsuCanvas || TimingPageVisible || !plot.Contains(x, y) && !OsuSpacingBounds.Contains(x, y) && !OsuDefaultSvBounds.Contains(x, y)) return false;
         if (notesLockFlyout && notesLockFlyoutBounds.Contains(x, y)) return false;
         if (distanceSnapFlyout && distanceSnapFlyoutBounds.Contains(x, y)) return false;
         if (menu >= 0) return false;
@@ -152,6 +152,7 @@ public sealed partial class EditorView
             }
             return true;
         }
+        if (!plot.Contains(x, y)) return false;
         if (button == 1)
         {
             osuPanning = true; osuPanPointer = (x, y); osuPanOrigin = (osuCanvasPanX, osuCanvasPanY);
@@ -164,7 +165,11 @@ public sealed partial class EditorView
             if (osuSpinnerStart is { } start)
             {
                 double end = OsuPlacementTime;
-                if (end > start) Edit(L.Get("editor.command.drawBanana"), () => Document.BananaShowers.Add(new() { TimeMs = start, EndTimeMs = end }));
+                if (end > start) Edit(L.Get("editor.command.drawBanana"), () =>
+                {
+                    RemovePlacementConflicts(Document, start);
+                    Document.BananaShowers.Add(new() { TimeMs = start, EndTimeMs = end });
+                });
                 osuSpinnerStart = null; return true;
             }
             if (SelectedImportedSlider is { } selected && HitOsuControl(selected, x, y) is int index)
@@ -189,7 +194,11 @@ public sealed partial class EditorView
         {
             var fruit = new Fruit { TimeMs = OsuPlacementTime, X = point.X, Y = point.Y };
             if (Edit(L.Get("editor.command.addFruit"), () =>
-            { Document.Fruits.Add(fruit); ApplyPlacementFlags(fruit.Id); Document.DurationMs = Math.Max(Document.DurationMs, fruit.TimeMs); })) SelectObjects([fruit.Id], fruit.Id);
+            {
+                RemovePlacementConflicts(Document, fruit.TimeMs);
+                Document.Fruits.Add(fruit); ApplyPlacementFlags(fruit.Id);
+                Document.DurationMs = Math.Max(Document.DurationMs, fruit.TimeMs);
+            })) SelectObjects([fruit.Id], fruit.Id);
             return true;
         }
         if (tool == Tool.Banana)
@@ -233,7 +242,8 @@ public sealed partial class EditorView
             osuMarqueeBounds = new(x, y, 0, 0); drag = DragKind.Marquee; return true;
         }
         PickObject(hit, ctrl);
-        if (!ctrl && !IsReadOnlySlider(hit)) BeginOsuDrag(point);
+        if (IsReadOnlySlider(hit)) ShowEditorNotice("osu.readOnlySlider");
+        else if (!ctrl) BeginOsuDrag(point);
         return true;
     }
 
@@ -423,7 +433,7 @@ public sealed partial class EditorView
         }
         if (o.Spinner) return now < o.End + 240 && Contains(o.X, o.Y);
         if (now < o.Start + 700 && Contains(o.X, o.Y)) return true;
-        if (o.Path.Length == 0) return false;
+        if (o.Path.Count == 0) return false;
         if (now < o.End + 240 && Contains(o.X, o.Y)) return true;
         var tail = OsuPathPosition(o, o.Spans % 2 == 0 ? 0 : 1);
         if (Contains(tail.X, tail.Y)) return true;
@@ -450,6 +460,7 @@ public sealed partial class EditorView
         OsuSyncSliderLine(slider);
         if (!Edit(L.Get("editor.command.drawTrack"), () =>
         {
+            RemovePlacementConflicts(Document, slider.TimeMs);
             Document.ImportedSliders.Add(slider); ApplyPlacementFlags(slider.Id);
             Document.DurationMs = Math.Max(Document.DurationMs, ImportedSliderConverter.EndTimeMs(Document, slider));
         })) return;
@@ -737,7 +748,7 @@ public sealed partial class EditorView
             {
                 var result = Document.Tracks.Any(t => t.Id == id)
                     ? SliderRepresentationEditing.ConvertToLegacy(Document, id, compensateTinyDroplets)
-                    : SliderRepresentationEditing.ConvertToTrack(Document, id, Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets);
+                    : SliderRepresentationEditing.ConvertToTrack(Document, id);
                 if (!result.Success) throw new InvalidOperationException(string.Join(L.Get("editor.diagnostics.separator"), result.Diagnostics));
             })) return;
             osuControlSlider = Guid.Empty; osuSelectedControl = -1;
@@ -746,11 +757,11 @@ public sealed partial class EditorView
         finally { osuAllowSliderConversion = false; }
     }
 
-    private float osuSpacingLabelWidth = 148, osuDefaultSvLabelWidth = 148;
+    private const float OsuControlLabelWidth = 34;
     private Rect OsuDefaultSvBounds => OsuSpacingBounds with { Y = OsuSpacingBounds.Bottom + 4 };
-    internal Rect OsuSliderDefaultSvTrackBounds => new(OsuDefaultSvBounds.X + osuDefaultSvLabelWidth, OsuDefaultSvBounds.Y + 12,
-        Math.Max(24, OsuDefaultSvBounds.Width - osuDefaultSvLabelWidth - 76), 8);
-    internal Rect OsuSliderDefaultSvValueBounds => new(OsuDefaultSvBounds.Right - 70, OsuDefaultSvBounds.Y + 4, 64, 24);
+    internal Rect OsuSliderDefaultSvTrackBounds => new(OsuDefaultSvBounds.X + OsuControlLabelWidth, OsuDefaultSvBounds.Y + 12,
+        Math.Max(24, OsuDefaultSvBounds.Width - OsuControlLabelWidth - 62), 8);
+    internal Rect OsuSliderDefaultSvValueBounds => new(OsuDefaultSvBounds.Right - 56, OsuDefaultSvBounds.Y + 4, 50, 24);
     private void SetOsuDefaultSv(float x, bool shift)
     {
         var track = OsuSliderDefaultSvTrackBounds;
@@ -763,8 +774,7 @@ public sealed partial class EditorView
         var bounds = OsuDefaultSvBounds;
         c.Fill(bounds, Panel, 4);
         string label = L.Get("osu.sliderDefaultSv");
-        osuDefaultSvLabelWidth = Math.Min(c.MeasureText(label, 12) + 20, bounds.Width * .6f);
-        c.Text(label, bounds.X + 8, bounds.Y + 8, 12, Foreground, osuDefaultSvLabelWidth - 16);
+        c.Text(label, bounds.X + 8, bounds.Y + 8, 12, Foreground, OsuControlLabelWidth - 10);
         var track = OsuSliderDefaultSvTrackBounds;
         var input = OsuSliderDefaultSvValueBounds;
         int index = fields.Count;
@@ -785,9 +795,9 @@ public sealed partial class EditorView
         c.Circle(track.X + (float)Math.Clamp((LibrarySettings.OsuSliderDefaultSv - .1) / 3.1, 0, 1) * track.Width, track.Y + 4, 6, Accent);
     }
 
-    private Rect OsuSpacingBounds => new(plot.Right - Math.Min(400, plot.Width - 16) - 10, plot.Y + 8, Math.Min(400, plot.Width - 16), 32);
-    private Rect OsuSpacingTrack => new(OsuSpacingBounds.X + osuSpacingLabelWidth, OsuSpacingBounds.Y + 12,
-        Math.Max(24, OsuSpacingBounds.Width - osuSpacingLabelWidth - 54), 8);
+    private Rect OsuSpacingBounds => new(CanvasCornerRight - 200, plot.Y + 8, 200, 32);
+    private Rect OsuSpacingTrack => new(OsuSpacingBounds.X + OsuControlLabelWidth, OsuSpacingBounds.Y + 12,
+        Math.Max(24, OsuSpacingBounds.Width - OsuControlLabelWidth - 54), 8);
     internal Rect OsuDistanceSpacingTrackBounds => OsuSpacingTrack;
     private void SetOsuSpacing(float x, bool shift)
     {
@@ -801,8 +811,7 @@ public sealed partial class EditorView
         DrawOsuDefaultSv(c);
         c.Fill(OsuSpacingBounds, Panel, 4);
         string label = L.Get("osu.distanceSpacing");
-        osuSpacingLabelWidth = Math.Min(c.MeasureText(label, 12) + 20, OsuSpacingBounds.Width * .6f);
-        c.Text(label, OsuSpacingBounds.X + 8, OsuSpacingBounds.Y + 8, 12, Foreground, osuSpacingLabelWidth - 16);
+        c.Text(label, OsuSpacingBounds.X + 8, OsuSpacingBounds.Y + 8, 12, Foreground, OsuControlLabelWidth - 10);
         var track = OsuSpacingTrack;
         c.Text(Document.OsuDistanceSpacing.ToString("0.00", CultureInfo.InvariantCulture) + "x",
             track.Right + 10, OsuSpacingBounds.Y + 8, 12, Foreground, 42);

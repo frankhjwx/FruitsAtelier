@@ -1,8 +1,9 @@
 # Portable FA projects
 
 `.faz` (Fruits Atelier Zip) carries native authoring data between computers.
-Use File → **Export complete project (.faz)** or **Export FA project (.faz)**,
-or the corresponding library card actions. Editor exports capture all open
+Use File → **Export project (.faz)** or the corresponding library card action,
+then choose the complete or FA project option before selecting a save location.
+Editor exports capture all open
 difficulties, including their unsaved edits, without changing save state or Songs.
 Library exports read the persisted project.
 
@@ -53,15 +54,49 @@ Importing a separate copy gives its project and difficulties new local identitie
 
 ## Desktop integration
 
-On startup, Windows checks the current user's `.faz` registration and automatically
+On startup, Windows checks the current user's `.faz` and `.fad` registrations and automatically
 registers the current executable and document icon when missing or outdated.
 Administrator access is unnecessary. An unchanged registration is left intact.
 Windows may retain a user-selected default application. Double-click opening is forwarded to
 an already-running FA instance through a pipe restricted to the current user.
 
-macOS bundles declare the document type, `.faz` extension and independent document
+macOS bundles declare the `.faz` and `.fad` document types and their independent document
 icon. Finder open events are queued until startup dialogs and other modal operations
 finish. Both hosts retain unsaved-change prompts when replacing an open project.
+
+## Portable individual difficulties
+
+`.fad` (Fruits Atelier Difficulty) carries one difficulty's native authoring data
+and available resources. Use **File → Export as .fad…** for the current difficulty,
+or **Export as .fad…** in a difficulty tab's context menu for that tab. Unsaved edits
+are included; exporting does not change the saved state or local Songs associations.
+
+Open the corresponding project in the editor, then use **File → Import difficulty
+(.fad)…**, open the file, or drop it onto the editor. Library imports, drops and
+desktop activation show an error asking the user to open the corresponding project
+first; a `.fad` never creates a standalone library project.
+
+Matching uses the native difficulty ID first. For copies with different local IDs,
+the song must match by positive BeatmapSetID or nonempty Artist and Title; a unique
+positive BeatmapID, then an exact difficulty name, identifies an existing difficulty.
+A missing difficulty is added. Existing difficulties enter the synchronization
+comparison UI before changes are applied. Cancel and Keep local preserve current
+content. Metadata, timing and section choices are independent of the native object
+and FA settings group, which is reviewed as one unit to preserve exact editable
+curves, handles, streams and other authoring state. Updates form one undo step and
+retain the receiver's native difficulty ID, local audio and Songs associations.
+
+Imported resources are checked before application. Different files with the same
+relative name cause an error; existing resources are never overwritten. Added
+resources remain available after undoing an update because other difficulties may
+use them. The original `.osu` is not written by importing a `.fad`; save and export
+follow the usual workspace rules. After importing a collaborator's difficulty,
+use **Collab Mapping → Sync references** to update the destination difficulty.
+
+The `.fad` ZIP uses the version 1 container described below with
+`Format: FruitsAtelierDifficulty`, `Complete: false`, and exactly one difficulty.
+Package resource paths use relative paths with slash separators. Local source,
+export and synchronization associations are not carried into the receiving project.
 
 ## Version 1 container
 

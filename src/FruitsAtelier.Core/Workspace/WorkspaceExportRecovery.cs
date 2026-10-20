@@ -25,7 +25,7 @@ public static class WorkspaceExportRecovery
             Name = project.Name, Notes = project.Notes,
             Difficulties = project.Difficulties.Where(d => !difficultyOnly || d.Id == owner).Select(d => new ProjectDifficulty
             {
-                Id = d.Id, Name = d.Name, Document = d.Id == owner ? d.Document.DeepClone() : d.Document
+                Id = d.Id, Name = d.Name, FaOnly = d.FaOnly, Document = d.Id == owner ? d.Document.DeepClone() : d.Document
             }).ToList()
         };
         recoveredProject.Difficulties.Single(d => d.Id == owner).Document.SourcePath = plan.Target;
@@ -66,7 +66,7 @@ public static class WorkspaceExportRecovery
             foreach (var entry in savedManifest.Difficulties)
             {
                 if (Path.GetFileName(entry.File) != entry.File) throw new InvalidDataException(L.Get("project.invalid"));
-                savedProject.Difficulties.Add(new() { Id = entry.Id, Name = entry.Name,
+                savedProject.Difficulties.Add(new() { Id = entry.Id, Name = entry.Name, FaOnly = entry.FaOnly,
                     Document = ProjectSerializer.ReadFile(Path.Combine(directory, entry.File)) });
             }
             var recovered = project.Difficulties.Single();

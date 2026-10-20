@@ -34,6 +34,7 @@ public sealed record WorkspaceSyncConflict(string Key, string Local, string Exte
 
 public sealed class WorkspaceMerge
 {
+    public bool NativeDifficulty { get; internal set; }
     public required MapDocument Local { get; init; }
     public required WorkspaceSyncCandidate External { get; init; }
     public required MapDocument Baseline { get; init; }
@@ -52,6 +53,8 @@ public sealed class WorkspaceMerge
         && PreviouslyRetained.Any(p => p.ExternalLines.Intersect(before).Any());
     public IReadOnlySet<Guid> ConflictSources(string key, bool external)
     {
+        if (NativeDifficulty && key == "$objects:native")
+            return WorkspaceSynchronization.SourceIds(external ? External.Document : Local).Select(p => p.Id).ToHashSet();
         var group = Objects.FirstOrDefault(g => g.Key == key);
         if (group.Sources is null) return new HashSet<Guid>();
         if (!external) return group.Sources.ToHashSet();
@@ -62,7 +65,7 @@ public sealed class WorkspaceMerge
     }
 }
 
-public static class WorkspaceSynchronization
+public static partial class WorkspaceSynchronization
 {
     public static bool IsMetadataField(string key) => key is "Metadata/Title" or "Metadata/TitleUnicode" or "Metadata/Artist"
         or "Metadata/ArtistUnicode" or "Metadata/Creator" or "Metadata/Version" or "Metadata/Source" or "Metadata/Tags"
@@ -140,23 +143,25 @@ public static class WorkspaceSynchronization
     public static WorkspaceSyncScan Scan(WorkspaceSession session, string songs, bool searchMissing = true, CancellationToken cancellation = default, Guid? difficultyId = null)
     {
         var entries = session.Manifest.Difficulties.Where(e => difficultyId is null || e.Id == difficultyId).ToList();
+        var activeEntries = entries.Where(e => !e.FaOnly).ToArray();
+        var ignoredPaths = session.Manifest.Difficulties.Where(e => e.FaOnly).Select(Target).OfType<string>().ToHashSet(Paths);
         var files = new Dictionary<string, WorkspaceSyncCandidate>(Paths);
         var errors = new List<string>();
         var roots = new HashSet<string>(Paths);
-        var trackedPaths = entries.Select(Target).OfType<string>().ToHashSet(Paths);
+        var trackedPaths = activeEntries.Select(Target).OfType<string>().ToHashSet(Paths);
         var associatedFolders = trackedPaths.Select(p => System.IO.Path.GetDirectoryName(p)!).ToHashSet(Paths);
         var signatures = new HashSet<string>();
         var firstObjects = new HashSet<string>();
-        foreach (var entry in entries.Where(e => e.Sync is not null))
+        foreach (var entry in activeEntries.Where(e => e.Sync is not null))
         {
             var objects = ObjectLines(entry.Sync!.Text);
             signatures.Add(Digest(string.Join("\n", objects)));
             firstObjects.Add(objects.FirstOrDefault() ?? "");
         }
-        var onlineIds = entries.Where(e => e.Sync is not null).Select(e => OnlineIdentity(e.Sync!.Text)).OfType<string>().ToHashSet();
-        bool missingAssociation = entries.Select(Target).OfType<string>().Any(path => !File.Exists(path));
+        var onlineIds = activeEntries.Where(e => e.Sync is not null).Select(e => OnlineIdentity(e.Sync!.Text)).OfType<string>().ToHashSet();
+        bool missingAssociation = activeEntries.Select(Target).OfType<string>().Any(path => !File.Exists(path));
         if (!string.IsNullOrWhiteSpace(songs) && missingAssociation && searchMissing) roots.Add(System.IO.Path.GetFullPath(songs));
-        foreach (var path in entries.Select(Target).OfType<string>())
+        foreach (var path in activeEntries.Select(Target).OfType<string>())
             if (string.IsNullOrWhiteSpace(songs) || !missingAssociation || !searchMissing || !WorkspaceProject.Within(songs, path)) roots.Add(System.IO.Path.GetDirectoryName(path)!);
         if (difficultyId is not null && !missingAssociation)
         {
@@ -177,6 +182,7 @@ public static class WorkspaceSynchronization
                     .Where(p => System.IO.Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase)))
                 {
                     cancellation.ThrowIfCancellationRequested();
+                    if (ignoredPaths.Contains(file)) continue;
                     try
                     {
                         if (new FileInfo(file).Length > OsuBeatmapReader.MaximumFileBytes)
@@ -210,12 +216,12 @@ public static class WorkspaceSynchronization
             .Where(c => !Paths.Equals(c.Project, session.Directory)).ToArray();
         // A missing copy must not steal a surviving difficulty's exact association,
         // even when their objects or copied online IDs are identical.
-        var occupied = trackedPaths.Concat(duplicates.Select(c => c.Target)).Where(File.Exists).ToHashSet(Paths);
+        var occupied = trackedPaths.Concat(ignoredPaths).Concat(duplicates.Select(c => c.Target)).Where(File.Exists).ToHashSet(Paths);
         foreach (var entry in entries)
         {
             cancellation.ThrowIfCancellationRequested();
             string? path = Target(entry);
-            if (path is null) { results.Add(new(entry.Id, WorkspaceSyncState.Local, null, [])); continue; }
+            if (entry.FaOnly || path is null) { results.Add(new(entry.Id, WorkspaceSyncState.Local, null, [])); continue; }
             files.TryGetValue(path, out var exact);
             if (exact is null && File.Exists(path))
             {
@@ -270,8 +276,8 @@ public static class WorkspaceSynchronization
                 ? item with { State = WorkspaceSyncState.Duplicate }
                 : item with { State = WorkspaceSyncState.Ambiguous, Candidate = null, Candidates = [group.Key] };
         }
-        var known = results.SelectMany(r => r.Candidate is { } c ? new[] { c.Path } : r.Candidates).ToHashSet(Paths);
-        var folders = entries.Select(Target).OfType<string>().Select(p => System.IO.Path.GetDirectoryName(p)!)
+        var known = results.SelectMany(r => r.Candidate is { } c ? new[] { c.Path } : r.Candidates).Concat(ignoredPaths).ToHashSet(Paths);
+        var folders = activeEntries.Select(Target).OfType<string>().Select(p => System.IO.Path.GetDirectoryName(p)!)
             .Concat(results.Where(r => r.Candidate is not null).Select(r => System.IO.Path.GetDirectoryName(r.Candidate!.Path)!)).ToHashSet(Paths);
         return new(results, difficultyId is not null ? [] : files.Values.Where(f => folders.Contains(System.IO.Path.GetDirectoryName(f.Path)!) && !known.Contains(f.Path)).ToArray());
     }
@@ -537,6 +543,7 @@ public static class WorkspaceSynchronization
 
     public static MapDocument Resolve(WorkspaceMerge merge, IReadOnlyDictionary<string, bool> externalChoices)
     {
+        if (merge.NativeDifficulty) return ResolveNativeDifficulty(merge, externalChoices);
         if (merge.CanExportLocalChanges) return merge.Local.DeepClone();
         foreach (var conflict in merge.Conflicts)
             if (!externalChoices.ContainsKey(conflict.Key) && !merge.PreviouslyResolved.Contains(conflict.Key)) throw new InvalidOperationException(L.Get("sync.unresolved"));
@@ -589,8 +596,10 @@ public static class WorkspaceSynchronization
 
     public static MapDocument ResolveExternal(WorkspaceMerge merge)
     {
+        if (merge.NativeDifficulty) return merge.External.Document.DeepClone();
         var result = merge.External.Document.DeepClone();
         PreserveCurves(merge, result, merge.Local.Tracks.Select(t => t.Id).ToHashSet());
+        PreserveStreams(merge, result);
         WorkspaceTimingSynchronization.NormalizeDocument(result);
         OsuBeatmapReader.Validate(result);
         return result;
@@ -627,6 +636,52 @@ public static class WorkspaceSynchronization
         }
     }
 
+    private static void PreserveStreams(WorkspaceMerge merge, MapDocument target)
+    {
+        var streams = merge.Local.Tracks.Where(t => t.StreamSnapDivisor is not null).ToArray();
+        if (streams.Length == 0) return;
+        var output = OsuBeatmapWriter.Serialize(merge.Local, merge.Compensate);
+        var lines = ObjectLines(output.Text);
+        var localCounts = lines.GroupBy(l => l).ToDictionary(g => g.Key, g => g.Count());
+        var externalLines = ObjectLines(merge.External.Text);
+        var incoming = target.Fruits.Where(f => f.SourceOrder >= 0 && f.SourceOrder < externalLines.Length)
+            .GroupBy(f => externalLines[f.SourceOrder]).Where(g => g.Count() == 1)
+            .ToDictionary(g => g.Key, g => g.Single());
+        var groups = lines.Select((line, i) => (Line: line, Id: output.ObjectSources[i]))
+            .GroupBy(p => p.Id).ToDictionary(g => g.Key, g => g.Select(p => p.Line).ToArray());
+        var retained = new List<(CurveTrack Track, Fruit[] Fruits, string[] Lines)>();
+        var replaced = new HashSet<Guid>();
+        foreach (var stream in streams)
+        {
+            if (!groups.TryGetValue(stream.Id, out var group) || group.Length == 0
+                || group.Any(line => localCounts[line] != 1 || !incoming.ContainsKey(line))) continue;
+            var fruits = group.Select(line => incoming[line]).ToArray();
+            var track = stream.DeepClone();
+            track.SourceOrder = fruits.Min(f => f.SourceOrder);
+            replaced.UnionWith(fruits.Select(f => f.Id));
+            target.Tracks.Add(track);
+            retained.Add((track, fruits, group));
+        }
+        if (retained.Count == 0) return;
+        target.Fruits.RemoveAll(f => replaced.Contains(f.Id));
+        // The external timing and difficulty settings must still reproduce every
+        // member of the stream; matching scattered fruits alone cannot establish that.
+        Dictionary<Guid, string[]> verified = [];
+        try
+        {
+            var candidate = OsuBeatmapWriter.Serialize(target, merge.Compensate);
+            verified = ObjectLines(candidate.Text).Select((line, i) => (Line: line, Id: candidate.ObjectSources[i]))
+                .GroupBy(p => p.Id).ToDictionary(g => g.Key, g => g.Select(p => p.Line).ToArray());
+        }
+        catch (InvalidDataException) { }
+        foreach (var item in retained)
+            if (!verified.TryGetValue(item.Track.Id, out var group) || !group.SequenceEqual(item.Lines))
+            {
+                target.Tracks.Remove(item.Track);
+                target.Fruits.AddRange(item.Fruits);
+            }
+    }
+
     private static string? SliderShape(string line)
     {
         var parts = NormalizeObject(line).Split(',');
@@ -646,7 +701,7 @@ public static class WorkspaceSynchronization
     public static WorkspaceExportPlan PlanResolvedChanges(WorkspaceSession session, WorkspaceDifficulty entry, MapDocument resolved,
         WorkspaceSyncCandidate external, bool compensate, OsuWriteCache? cache = null)
     {
-        if (!entry.ExportConfirmed || !Paths.Equals(Target(entry), external.Path))
+        if (entry.FaOnly || !entry.ExportConfirmed || !Paths.Equals(Target(entry), external.Path))
             throw new InvalidOperationException(L.Get("sync.baseline"));
         WorkspaceAssociations.EnsureOwner(session, entry.Id, external.Path);
         WorkspaceProject.RejectLinks(external.Path);
@@ -746,7 +801,7 @@ public static class WorkspaceSynchronization
         foreach (var entry in manifest.Difficulties)
         {
             if (System.IO.Path.GetFileName(entry.File) != entry.File) throw new InvalidDataException(L.Get("project.invalid"));
-            saved.Difficulties.Add(new ProjectDifficulty { Id = entry.Id, Name = entry.Name,
+            saved.Difficulties.Add(new ProjectDifficulty { Id = entry.Id, Name = entry.Name, FaOnly = entry.FaOnly,
                 Document = ProjectSerializer.ReadFile(System.IO.Path.Combine(session.Directory, entry.File)) });
         }
         WorkspaceHistoryFile.WriteProject(saved, System.IO.Path.Combine(target, "saved.catchproj"));

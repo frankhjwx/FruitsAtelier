@@ -90,7 +90,8 @@ internal static class InspectorPanelsTests
                 RandomActions();
                 ui.View.ShowSongDock(); ui.Paint();
                 var song = ui.View.SongDockViewport;
-                ui.Click(song.X + 3 * ((song.Width - 9) / 4 + 3) + 5, song.Y + 10);
+                ui.View.Wheel(song.X + 10, song.Y + 40, 12000, false, false); ui.Paint();
+                ui.Click(song.X + 3 * ((song.Width - 12) / 5 + 3) + 5, song.Y + 10);
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("song.countdownOff")), "Horizontal category buttons select Design");
                 void RandomActions()
                 {

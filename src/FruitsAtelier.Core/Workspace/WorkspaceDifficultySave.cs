@@ -19,7 +19,7 @@ public static partial class WorkspaceProject
             {
                 Name = session.Project.Name, Notes = session.Project.Notes,
                 Difficulties = session.Project.Difficulties.Select(d => d.Id == id
-                    ? new ProjectDifficulty { Id = id, Name = name, Document = document } : d).ToList()
+                    ? new ProjectDifficulty { Id = id, Name = name, Document = document, FaOnly = session.Manifest.Difficulties.Single(d => d.Id == id).FaOnly } : d).ToList()
             };
             var manifest = SnapshotManifest(session.Manifest);
             var entry = manifest.Difficulties.Single(d => d.Id == id);

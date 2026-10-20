@@ -42,6 +42,12 @@ public sealed partial class EditorView
     }
     private void SubmitTimeJump()
     {
+        if (FruitsAtelier.Core.EditorTimestamp.IsOsuLink(timeJumpText.Trim()))
+        {
+            if (!FruitsAtelier.Core.EditorTimestamp.TryParse(timeJumpText.Trim(), out var timestamp))
+            { timeJumpError = L.Get("osuLinks.invalid"); return; }
+            ApplyEditorTimestamp(timestamp!); TimeJumpVisible = false; return;
+        }
         var match = Regex.Match(timeJumpText.Trim(), @"^(?<time>\d+:\d{1,2}:\d{1,3}|\d+(?:\.\d+)?)\s*(?:\(\d+(?:\s*,\s*\d+)*\)\s*-?)?$");
         string value = match.Groups["time"].Value;
         double time = double.NaN;

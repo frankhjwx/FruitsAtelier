@@ -20,6 +20,7 @@ internal static class DifficultyTabsRenderCheck
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
                 var project = BeatmapProject.FromDocuments(Enumerable.Range(0, 4).Select(_ => new MapDocument { IsDemo = false }));
                 for (int i = 0; i < 4; i++) project.Difficulties[i].Name = "Difficulty " + i;
+                project.Difficulties[1].FaOnly = true;
                 var view = new EditorView(false); view.LoadProject(project); Paint();
                 var until = DateTime.UtcNow.AddSeconds(30);
                 while (view.StarRatingsRefreshing && DateTime.UtcNow < until) { Thread.Sleep(10); Paint(); }

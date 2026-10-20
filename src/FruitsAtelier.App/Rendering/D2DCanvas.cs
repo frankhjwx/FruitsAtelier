@@ -608,9 +608,19 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
         imageBytes = 0;
     }
 
-    public void Dispose()
+    public void ReleaseDifficultyResources()
     {
         ClearSliderRasters();
+        foreach (var geometry in pathGeometries.Values) geometry.Dispose();
+        pathGeometries.Clear(); pathGeometryOrder.Clear();
+        foreach (var border in sliderBorders.Values) border.Mask.Dispose();
+        sliderBorders.Clear(); sliderBorderOrder.Clear();
+        beatmapBackground?.Image.Bitmap.Dispose(); beatmapBackground = null;
+    }
+
+    public void Dispose()
+    {
+        ReleaseDifficultyResources();
         thumbnails.Dispose();
         foreach (var thumbnail in thumbnailImages.Values) thumbnail.Bitmap.Dispose();
         thumbnailImages.Clear();
@@ -619,11 +629,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
         foreach (var format in formats.Values) format.Dispose(); formats.Clear();
         formatOrder.Clear();
         solidBrush?.Dispose(); solidBrush = null;
-        foreach (var geometry in pathGeometries.Values) geometry.Dispose();
-        pathGeometries.Clear(); pathGeometryOrder.Clear();
         roundPathStroke?.Dispose(); roundPathStroke = null;
-        foreach (var border in sliderBorders.Values) border.Mask.Dispose();
-        sliderBorders.Clear(); sliderBorderOrder.Clear();
         if (context is not null) context.Target = null;
         target?.Dispose(); target = null;
         context?.Dispose(); context = null;

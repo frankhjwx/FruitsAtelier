@@ -8,23 +8,28 @@ public sealed record SliderBatchConversionResult(IReadOnlyList<CurveTrack> Track
 public static class ImportedSliderEditing
 {
     public const double ApproximationTolerance = ImportedCurveFitter.Tolerance;
+    internal const double ExportPositionTolerance = 4;
 
     public static ImportedSliderEditResult ConvertToTrack(MapDocument document, Guid sliderId, CatchConversionCache? cache = null, bool derandomizeDroplets = true)
     {
         if (!document.ImportedSliders.Any(s => s.Id == sliderId))
             throw new ArgumentException(L.Get("core.importEditing.notFound"), nameof(sliderId));
-        var result = derandomizeDroplets ? Convert(document, [sliderId], cache: cache)
+        var result = document.SliderImportState != SliderImportState.None || document.ImportedSliders.Any(s => s.Id == sliderId && s.RandomizationTrack is not null)
+            ? SliderImportEditing.ConvertFollowingMap(document, [sliderId])
+            : derandomizeDroplets ? Convert(document, [sliderId], cache: cache)
             : ConvertPreservingPositions(document, [sliderId], default, cache);
         if (result.Tracks.Count == 0) throw new InvalidOperationException(result.Failures[0].Reason);
         return new(result.Tracks[0], []);
     }
 
     public static SliderBatchConversionResult ConvertAll(MapDocument document, CancellationToken cancellation = default, bool derandomizeDroplets = true)
-        => derandomizeDroplets ? Convert(document, document.ImportedSliders.Select(s => s.Id).ToArray(), cancellation)
+        => document.SliderImportState != SliderImportState.None || document.ImportedSliders.Any(s => s.RandomizationTrack is not null)
+            ? SliderImportEditing.ConvertFollowingMap(document, document.ImportedSliders.Select(s => s.Id).ToArray(), cancellation)
+            : derandomizeDroplets ? Convert(document, document.ImportedSliders.Select(s => s.Id).ToArray(), cancellation)
             : ConvertPreservingPositions(document, document.ImportedSliders.Select(s => s.Id).ToArray(), cancellation);
 
-    private static SliderBatchConversionResult ConvertPreservingPositions(MapDocument document, IReadOnlyCollection<Guid> ids,
-        CancellationToken cancellation, CatchConversionCache? cache = null)
+    internal static SliderBatchConversionResult ConvertPreservingPositions(MapDocument document, IReadOnlyCollection<Guid> ids,
+        CancellationToken cancellation, CatchConversionCache? cache = null, double tolerance = CatchStreamConverter.AlignmentTolerance)
     {
         cancellation.ThrowIfCancellationRequested();
         var wanted = ids.ToHashSet();
@@ -53,12 +58,15 @@ public static class ImportedSliderEditing
                 track.Nodes.Add(new Anchor { TimeMs = source.TimeMs + duration, X = objects.First(o => o.Kind == CatchObjectKind.Fruit && o.EventIndex > 0).X });
                 var points = objects.Select(o => new MapPoint(CurveMath.FirstSpanTime(track, o.TimeMs), o.X))
                     .OrderBy(p => p.TimeMs).ToArray();
+                if (tolerance > CatchStreamConverter.AlignmentTolerance)
+                    points = points.GroupBy(p => Math.Round(p.TimeMs, 6))
+                        .Select(g => new MapPoint(g.First().TimeMs, (g.Min(p => p.X) + g.Max(p => p.X)) / 2)).ToArray();
                 track.Nodes.Clear();
                 foreach (var point in points)
                 {
                     if (track.Nodes.Count > 0 && point.TimeMs - track.Nodes[^1].TimeMs < CurveMath.MinimumAnchorSpacingMs)
                     {
-                        if (Math.Abs(point.X - track.Nodes[^1].X) > CatchStreamConverter.AlignmentTolerance)
+                        if (Math.Abs(point.X - track.Nodes[^1].X) > tolerance)
                             throw new InvalidOperationException(L.Get("core.conversion.tinyConflict"));
                         continue;
                     }
@@ -71,6 +79,7 @@ public static class ImportedSliderEditing
         }
         var candidate = document.DeepClone();
         cache ??= new CatchConversionCache();
+        var recoveryAttempts = new Dictionary<Guid, int>();
         while (candidates.Count > 0)
         {
             cancellation.ThrowIfCancellationRequested();
@@ -88,8 +97,23 @@ public static class ImportedSliderEditing
                 if (actual.TryGetValue(track.Id, out var items) && items.Length == expected.Length
                     && items.Zip(expected).All(pair => pair.First.Kind == pair.Second.Kind
                         && Math.Abs(pair.First.TimeMs - pair.Second.TimeMs) <= 1e-6
-                        && Math.Abs(pair.First.X - pair.Second.X) <= CatchStreamConverter.AlignmentTolerance
-                        && Math.Abs(pair.First.X - pair.First.TargetX) <= CatchStreamConverter.AlignmentTolerance)) continue;
+                        && Math.Abs(pair.First.X - pair.Second.X) <= tolerance
+                        && (tolerance > CatchStreamConverter.AlignmentTolerance
+                            || Math.Abs(pair.First.X - pair.First.TargetX) <= tolerance))) continue;
+                if (tolerance > CatchStreamConverter.AlignmentTolerance && items is not null && items.Length == expected.Length
+                    && items.Zip(expected).All(p => p.First.Kind == p.Second.Kind && Math.Abs(p.First.TimeMs - p.Second.TimeMs) <= 1e-6)
+                    && recoveryAttempts.GetValueOrDefault(track.Id) < 8)
+                {
+                    // Shared repeat geometry may retain residual offsets. Recover against playback,
+                    // correcting the shared target instead of treating each traversal as another effect.
+                    var corrections = items.Zip(expected).GroupBy(p => Math.Round(CurveMath.FirstSpanTime(track, p.First.TimeMs), 6))
+                        .ToDictionary(g => g.Key, g => g.Average(p => p.Second.X - p.First.X));
+                    foreach (var node in track.Nodes)
+                        node.X = Math.Clamp(node.X + corrections.GetValueOrDefault(Math.Round(node.TimeMs, 6)), 0, 512);
+                    recoveryAttempts[track.Id] = recoveryAttempts.GetValueOrDefault(track.Id) + 1;
+                    removed = true;
+                    continue;
+                }
                 candidates.Remove(track); removed = true;
                 failures.Add(new(track.Id, track.Nodes[0].TimeMs, L.Get("core.importEditing.preservePositionsFailed")));
             }
@@ -102,7 +126,8 @@ public static class ImportedSliderEditing
         return new(candidates, failures);
     }
 
-    internal static SliderBatchConversionResult Convert(MapDocument document, IReadOnlyCollection<Guid> ids, CancellationToken cancellation = default, CatchConversionCache? cache = null)
+    internal static SliderBatchConversionResult Convert(MapDocument document, IReadOnlyCollection<Guid> ids, CancellationToken cancellation = default, CatchConversionCache? cache = null,
+        bool fitPlayback = true)
     {
         ArgumentNullException.ThrowIfNull(document);
         var wanted = ids.ToHashSet();
@@ -188,10 +213,113 @@ public static class ImportedSliderEditing
             if (!changed) break;
         }
         cancellation.ThrowIfCancellationRequested();
+        if (fitPlayback) FitPlayback(document, candidates, cancellation);
         // Publish duration-preserving replacements atomically; invalid sources remain available to repair.
         document.ImportedSliders.RemoveAll(s => candidates.ContainsKey(s.Id));
         document.Tracks.AddRange(candidates.Values);
         return new(candidates.Values.ToArray(), failures);
+    }
+
+    internal static void FitPlayback(MapDocument document, Dictionary<Guid, CurveTrack> candidates, CancellationToken cancellation)
+    {
+        if (candidates.Count == 0) return;
+        // Exported compensation bends the osu! path away from the visible tiny droplets.
+        // Prefer a simpler curve fitted to playback only when every event still agrees.
+        var original = CatchStreamConverter.Convert(document).Objects
+            .Where(o => candidates.ContainsKey(o.SourceId)).GroupBy(o => o.SourceId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(o => o.EventIndex).ToArray());
+        OsuWriteResult exportedOriginal;
+        try { exportedOriginal = OsuBeatmapWriter.Serialize(document); }
+        catch (Exception error) when (error is InvalidDataException or InvalidOperationException or CatchConversionException)
+        { return; }
+        var exportedNm = exportedOriginal.PlayableObjects.GroupBy(o => o.SourceId).ToDictionary(g => g.Key, g => g.ToArray());
+        var exportedHr = exportedOriginal.PlayableHardRockObjects.GroupBy(o => o.SourceId).ToDictionary(g => g.Key, g => g.ToArray());
+        var writeCache = new OsuWriteCache();
+        var endpoints = document.ImportedSliders.Where(s => candidates.ContainsKey(s.Id)).ToDictionary(s => s.Id, s =>
+        {
+            double end = candidates[s.Id].Nodes[^1].X;
+            // HR seeds following fruit offsets from the last control point, not the playable tail.
+            return s.ControlPoints.Count > 0 && Math.Abs(s.ControlPoints[^1].X - end) <= ExportPositionTolerance
+                ? s.ControlPoints[^1].X : end;
+        });
+        var lines = candidates.ToDictionary(p => p.Key, p =>
+        {
+            var line = p.Value.DeepClone();
+            var start = line.Nodes[0]; var end = line.Nodes[^1];
+            line.Nodes.Clear();
+            line.Nodes.Add(new() { TimeMs = start.TimeMs, X = start.X, OutgoingKind = CurveKind.Linear });
+            line.Nodes.Add(new() { TimeMs = end.TimeMs, X = endpoints[p.Key] });
+            line.Kind = CurveKind.Linear; line.DropletMode = SliderDropletMode.Derandomize;
+            return line;
+        });
+        Accept(lines);
+        // Fruit and regular droplets do not carry random offsets. Try their curve first;
+        // repeat conflicts and edge clamping can make tiny-droplet playback a noisy target.
+        FitSamples(regularOnly: true);
+        FitSamples(regularOnly: false);
+
+        void FitSamples(bool regularOnly)
+        {
+            var fitted = new Dictionary<Guid, CurveTrack>();
+            foreach (var (id, track) in candidates)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                if (track.Nodes.Count == 2 || !original.TryGetValue(id, out var events)) continue;
+                var allPoints = events
+                    .Select(o => new MapPoint(CurveMath.FirstSpanTime(track, o.TimeMs), o.X))
+                    .GroupBy(p => Math.Round(p.TimeMs, 6)).OrderBy(g => g.Key)
+                    .Select(g => new MapPoint(g.First().TimeMs, g.Average(p => p.X))).ToArray();
+                allPoints[^1] = allPoints[^1] with { X = endpoints[id] };
+                var regularTimes = events.Where(o => o.Kind != CatchObjectKind.TinyDroplet)
+                    .Select(o => Math.Round(CurveMath.FirstSpanTime(track, o.TimeMs), 6)).ToHashSet();
+                var corners = PlaybackCurveFitter.Corners(allPoints, .8).ToHashSet();
+                var points = regularOnly ? allPoints.Where((p, i) => regularTimes.Contains(Math.Round(p.TimeMs, 6)) || corners.Contains(i)).ToArray() : allPoints;
+                if (points.Length < (regularOnly ? 4 : 2)) continue;
+                var smooth = track.DeepClone(); smooth.Nodes.Clear();
+                try
+                {
+                    PlaybackCurveFitter.Fit(smooth, points, tolerance: .8, cancellation);
+                }
+                catch (InvalidOperationException) { continue; }
+                if (smooth.Nodes.Count >= track.Nodes.Count) continue;
+                smooth.DropletMode = SliderDropletMode.Derandomize;
+                fitted[id] = smooth;
+            }
+            Accept(fitted);
+        }
+
+        void Accept(Dictionary<Guid, CurveTrack> proposals)
+        {
+            if (proposals.Count == 0) return;
+            var candidate = document.DeepClone();
+            candidate.ImportedSliders.RemoveAll(s => candidates.ContainsKey(s.Id));
+            candidate.Tracks.AddRange(candidates.Select(p => proposals.GetValueOrDefault(p.Key, p.Value)));
+            var actual = writeCache.Convert(candidate).Objects
+                .Where(o => proposals.ContainsKey(o.SourceId)).GroupBy(o => o.SourceId)
+                .ToDictionary(g => g.Key, g => g.OrderBy(o => o.EventIndex).ToArray());
+            cancellation.ThrowIfCancellationRequested();
+            OsuWriteResult exported;
+            try { exported = OsuBeatmapWriter.Serialize(candidate, cache: writeCache); }
+            catch (Exception error) when (error is InvalidDataException or InvalidOperationException or CatchConversionException)
+            { return; }
+            var nm = exported.PlayableObjects.GroupBy(o => o.SourceId).ToDictionary(g => g.Key, g => g.ToArray());
+            var hr = exported.PlayableHardRockObjects.GroupBy(o => o.SourceId).ToDictionary(g => g.Key, g => g.ToArray());
+            foreach (var (id, track) in proposals)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                if (original.TryGetValue(id, out var expected) && actual.TryGetValue(id, out var events) && events.Length == expected.Length
+                    && events.Zip(expected).All(p => p.First.Kind == p.Second.Kind
+                        && Math.Abs(p.First.TimeMs - p.Second.TimeMs) <= 1e-6
+                        && Math.Abs(p.First.X - p.Second.X) <= ExportPositionTolerance)
+                    && Matches(exportedNm, nm, id) && Matches(exportedHr, hr, id)) candidates[id] = track;
+            }
+        }
+
+        static bool Matches(Dictionary<Guid, ConvertedCatchObject[]> expected, Dictionary<Guid, ConvertedCatchObject[]> actual, Guid id)
+            => expected.TryGetValue(id, out var before) && actual.TryGetValue(id, out var after)
+                && before.Length == after.Length && before.Zip(after).All(p => p.First.Kind == p.Second.Kind
+                    && Math.Abs(p.First.TimeMs - p.Second.TimeMs) <= 1e-6
+                    && Math.Abs(p.First.X - p.Second.X) <= ExportPositionTolerance);
     }
 
     private static void Approximate(CurveTrack track, ImportedSlider source, ImportedSliderGeometry path, double velocity)

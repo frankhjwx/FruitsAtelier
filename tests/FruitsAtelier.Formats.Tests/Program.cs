@@ -1,9 +1,23 @@
 using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
+if (args.Contains("--slider-import-policy-check")) { SliderImportPolicyTests.Run(); Console.WriteLine("PASS unified slider import policy"); return 0; }
+if (args.Contains("--slider-reimport-check")) { SliderReimportTests.Run(); Console.WriteLine("PASS compensated osu reimport and fitted FSlider playback"); return 0; }
 
+if (args.Contains("--collaboration-check")) { CollaborationMappingTests.Run(); return 0; }
+if (args.Length == 2 && args[0] == "--collaboration-map-check") { CollaborationMapCheck.Run(args[1]); return 0; }
+if (args.Length == 2 && args[0] == "--collaboration-map-sequence-check") { CollaborationMapCheck.Sequence(args[1]); return 0; }
+if (args.Contains("--fa-only-check")) { FaOnlyTests.Run(); return 0; }
+if (args.Contains("--full-sync-check"))
+{
+    foreach (var (name, run) in SynchronizationTests.Cases().Where(c => c.Item1.Contains("entire osu version")
+        || c.Item1.Contains("sound and combo") || c.Item1.Contains("exported curves keep") || c.Item1.Contains("uploaded IDs")))
+    { run(); Console.WriteLine("PASS " + name); }
+    VersionHistoryTests.Run(); return 0;
+}
 if (args.Contains("--semantic-sync-check"))
 {
+    FaOnlyTests.Run();
     foreach (var (name, run) in SynchronizationTests.Cases()) { run(); Console.WriteLine("PASS " + name); }
     return 0;
 }
@@ -58,6 +72,8 @@ if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Slider import modes and compensated baselines remain stable through conversion", SliderImportPolicyTests.Run),
+    ("Reimported compensated sliders recover straight playback", SliderReimportTests.Run),
     ("Independent Legacy SV preserves per-object timing, postprocessing and overlap constraints", IndependentSliderSvTests.Run),
     ("Large imported paths preserve compact project data and capacity limits", LargeImportedPathTests.Run),
     ("Legacy red timing preserves positive beat lengths, slider lifetime and raw source values", XnorTimingTests.Run),
@@ -78,8 +94,10 @@ var tests = new (string Name, Action Run)[]
     ("v8 through v14 preserve inherited SV tick spacing and legacy coordinates", LegacyVersionTiming),
     ("v7 preserves legacy ticks, RNG, project rules and generated slider exports", LegacyV7Tests.Run),
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
+    ("Workspace difficulty FA-only policy controls synchronization, generation and external file removal", FaOnlyTests.Run),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),
     ("Multi-difficulty projects preserve content, history and compatibility", MultiProjectTests.Run),
+    ("Collaboration references preserve range ownership, timing and hitsounds", CollaborationMappingTests.Run),
     ("Pre-rename schema 1 projects preserve user names and editable curves", RenameCompatibilityTests.Run),
     ("Reader preserves original timing order, duplicates, samples and unknown sections", ReadOriginal),
     ("Unedited export retains all object and timing text", OriginalRoundTrip),

@@ -7,6 +7,7 @@ public sealed partial class EditorView
 {
     private Action<int>? discardConfirmation;
     private bool deleteProjectConfirmation, replaceBackgroundConfirmation;
+    private bool addDifficultyConfirmation, faOnlyConfirmation, newDifficultyFaOnly;
     private bool offerSongsExport;
     private bool keepDeletedProjectBackup;
     public bool DiscardConfirmationVisible => FazVisible || discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput || previousSaveRestore is not null;
@@ -38,6 +39,7 @@ public sealed partial class EditorView
         if (SynchronizationVisible) { CancelSynchronization(); return; }
         var callback = discardConfirmation;
         discardConfirmation = null;
+        addDifficultyConfirmation = faOnlyConfirmation = false;
         deleteProjectConfirmation = false;
         replaceBackgroundConfirmation = false;
         offerSongsExport = false;
@@ -78,6 +80,11 @@ public sealed partial class EditorView
             c.Text(L.Get(previousSaveRestore is null ? "history.revertSavePrompt" : "history.restoring"), left + 24, top + 62, 14, Foreground, 452);
             Button(c, new(left + 24, top + 116, 210, 40), L.Get("mac.cancel"), () => AnswerDiscard(2), true, previousSaveRestore is null);
             Button(c, new(left + 266, top + 116, 210, 40), L.Get("history.revertSave"), () => AnswerDiscard(7), enabled: previousSaveRestore is null);
+            return;
+        }
+        if (addDifficultyConfirmation || faOnlyConfirmation)
+        {
+            DrawDifficultySettingsConfirmation(c);
             return;
         }
         if (replaceBackgroundConfirmation)

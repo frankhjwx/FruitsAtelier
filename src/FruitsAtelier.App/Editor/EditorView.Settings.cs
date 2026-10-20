@@ -7,11 +7,13 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, Experimental, Updates }
+    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, Experimental, OsuLinks, Updates }
     private SettingsCategory settingsCategory;
     private bool draftAudioDiagnostics, draftAudioDiagnosticFrames;
     private string draftAudioDiagnosticProfile = "event-10";
     private bool draftRomanisedMetadata;
+    private ImportSliderConversionMode draftImportSliderConversion;
+    private bool draftConfirmCompensatedImports;
     private bool draftDerandomizeDroplets;
     private bool draftDerandomizeNewProjects;
     public bool SupportsDisplayMode { get; set; }
@@ -22,6 +24,8 @@ public sealed partial class EditorView
     public Action<bool>? RequestFullscreen { get; set; }
     private bool draftFullscreen, fullscreenShortcutHeld;
     private bool draftExperimentalSnapDivisions;
+    private bool draftPreserveSameTimeObjects;
+    public Rect PreserveSameTimeObjectsToggleBounds { get; private set; }
     private bool draftLazerEditing;
     private CatchHitLightingMode draftCatchHitLighting;
     internal Rect HitLightingSettingsBounds => new(SettingsContentX, SettingsTop + 464, SettingsContentWidth, SettingsControlHeight);
@@ -93,6 +97,7 @@ public sealed partial class EditorView
         if (librarySettingsOpen || IsTestplaying || !PrepareFileOperation()) return;
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
         ResetSettingsDrafts();
+        RefreshOsuLinkSettings();
         settingsCategory = SettingsCategory.General;
         librarySettingsOpen = true;
         updatesPage = exportPage = resourcePage = false;
@@ -111,9 +116,12 @@ public sealed partial class EditorView
         draftOsuRoot = LibrarySettings.OsuRoot;
         draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
+        draftImportSliderConversion = LibrarySettings.ImportSliderConversion;
+        draftConfirmCompensatedImports = LibrarySettings.ConfirmCompensatedImports;
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
         draftDerandomizeNewProjects = LibrarySettings.DerandomizeNewProjects;
         draftExperimentalSnapDivisions = LibrarySettings.ExperimentalSnapDivisions;
+        draftPreserveSameTimeObjects = LibrarySettings.PreserveSameTimeObjects;
         draftLazerEditing = LibrarySettings.LazerEditing;
         draftCatchHitLighting = LibrarySettings.CatchHitLighting;
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
@@ -151,6 +159,8 @@ public sealed partial class EditorView
         draftOsuRoot != LibrarySettings.OsuRoot ||
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
+        draftImportSliderConversion != LibrarySettings.ImportSliderConversion ||
+        draftConfirmCompensatedImports != LibrarySettings.ConfirmCompensatedImports ||
         FirstRunSetupVisible && (draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
             draftDerandomizeNewProjects != LibrarySettings.DerandomizeNewProjects) ||
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
@@ -158,6 +168,7 @@ public sealed partial class EditorView
         draftSettingsColours[6] != LibrarySettings.SelectionHighlightColour ||
         draftFullscreen != LibrarySettings.Fullscreen ||
         draftExperimentalSnapDivisions != LibrarySettings.ExperimentalSnapDivisions ||
+        draftPreserveSameTimeObjects != LibrarySettings.PreserveSameTimeObjects ||
         draftLazerEditing != LibrarySettings.LazerEditing ||
         draftCatchHitLighting != LibrarySettings.CatchHitLighting ||
         draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
@@ -196,7 +207,7 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
         c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "update.title"];
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "osuLinks.title", "update.title"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
@@ -205,6 +216,7 @@ public sealed partial class EditorView
             {
                 FinishVolumeDrag(); FinishBackgroundDimDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
                 settingsCategory = category; workspaceScroll = 0;
+                if (category == SettingsCategory.OsuLinks) { RefreshOsuLinkSettings(); LoadOsuLinkApplications(); }
                 if (category == SettingsCategory.Workspace) { workspaceScroll = 0; StartStorage(); }
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
                     RequestUpdateCheck?.Invoke();
@@ -213,6 +225,9 @@ public sealed partial class EditorView
         c.Text(L.Get(categories[(int)settingsCategory]), SettingsContentX, SettingsTop + 82, 24, Foreground, SettingsContentWidth, true);
         switch (settingsCategory)
         {
+            case SettingsCategory.OsuLinks:
+                DrawOsuLinkSettings(c);
+                break;
             case SettingsCategory.General:
                 workspaceScrollBounds = new(SettingsContentX, SettingsTop + 116, SettingsContentWidth + 12, SettingsBounds.Height - 208);
                 workspaceScroll = Math.Clamp(workspaceScroll, 0, Math.Max(0, GeneralContentHeight - workspaceScrollBounds.Height));
@@ -260,6 +275,8 @@ public sealed partial class EditorView
                     c.Text(dropletHint[i].Text, SettingsContentX, dropletsTop + 40 + i * 18, SettingsHintSize, Muted, SettingsContentWidth);
                 SettingsButton(c, new(SettingsContentX, dropletsTop + 46 + dropletHint.Length * 18, SettingsContentWidth, SettingsControlHeight),
                     L.Get("settings.openDropletSettings"), OpenDropletSettingsFromGeneral);
+                float importBottom = DrawMapImportSettings(c, dropletsTop + 100 + dropletHint.Length * 18);
+                generalContentHeight = importBottom - generalTop - 116 + 12;
                 c.Unclip();
                 ClipSettingsHits(generalFirstHit);
                 DrawSettingsScrollbar(c, GeneralContentHeight);
@@ -295,6 +312,11 @@ public sealed partial class EditorView
                 SettingsButton(c, LazerEditingToggleBounds,
                     L.Get("settings.lazerEditing", L.Get(draftLazerEditing ? "settings.romanisedOn" : "settings.romanisedOff")),
                     () => draftLazerEditing = !draftLazerEditing, draftLazerEditing);
+                float preserveToggleTop = SettingsParagraph(c, L.Get("settings.preserveSameTimeObjects"), snapToggleTop + 128, SettingsTextSize);
+                PreserveSameTimeObjectsToggleBounds = new(SettingsContentX, preserveToggleTop + 12, SettingsContentWidth, SettingsControlHeight);
+                SettingsButton(c, PreserveSameTimeObjectsToggleBounds,
+                    L.Get(draftPreserveSameTimeObjects ? "settings.romanisedOn" : "settings.romanisedOff"),
+                    () => draftPreserveSameTimeObjects = !draftPreserveSameTimeObjects, draftPreserveSameTimeObjects);
                 break;
             case SettingsCategory.MappingCanvas:
                 DrawMappingCanvasSettings(c);
@@ -309,6 +331,7 @@ public sealed partial class EditorView
                 DrawAudioSettings(c);
                 break;
         }
+        if (settingsCategory == SettingsCategory.OsuLinks) return;
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);
         c.Text(libraryError, SettingsContentX, r.Bottom - 116, 13, Error, SettingsContentWidth);
         bool canApply = SettingsChanged && (!SettingsRootsChanged || scanTask is null && searchTask is null);
@@ -382,6 +405,8 @@ public sealed partial class EditorView
             settings.CanvasGridOpacity = draftCanvasGridOpacity;
             settings.ForceBackgroundDim = draftForceBackgroundDim;
             settings.RomanisedMetadata = draftRomanisedMetadata;
+            settings.ImportSliderConversion = draftImportSliderConversion;
+            settings.ConfirmCompensatedImports = draftConfirmCompensatedImports;
             settings.DerandomizeDroplets = FirstRunSetupVisible ? draftDerandomizeDroplets : LibrarySettings.DerandomizeDroplets;
             settings.DerandomizeNewProjects = FirstRunSetupVisible ? draftDerandomizeNewProjects : LibrarySettings.DerandomizeNewProjects;
             settings.DefaultDropletMode = LibrarySettings.DefaultDropletMode;
@@ -393,6 +418,7 @@ public sealed partial class EditorView
             settings.SelectionHighlightColour = draftSettingsColours[6];
             settings.Fullscreen = draftFullscreen;
             settings.ExperimentalSnapDivisions = draftExperimentalSnapDivisions;
+            settings.PreserveSameTimeObjects = draftPreserveSameTimeObjects;
             settings.LazerEditing = draftLazerEditing;
             settings.MappingSpeedDistanceSnap = LibrarySettings.MappingSpeedDistanceSnap;
             settings.LazerSpeedDistanceSnap = LibrarySettings.LazerSpeedDistanceSnap;

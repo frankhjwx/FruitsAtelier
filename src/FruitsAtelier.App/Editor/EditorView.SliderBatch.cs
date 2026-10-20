@@ -5,31 +5,39 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private sealed record SliderBatchItem(DifficultySession Session, MapDocument Before, SliderBatchConversionResult Result);
+    private sealed record SliderBatchItem(DifficultySession Session, MapDocument Before, MapDocument After, SliderBatchConversionResult Result);
     private Task<SliderBatchItem[]>? sliderBatchTask;
     private CancellationTokenSource? sliderBatchCancellation;
     private int[] sliderImportTargets = [];
-    private bool sliderDerandomizeDroplets = true;
     private string[] sliderBatchErrors = [];
     private int sliderErrorPage;
     private readonly List<HitArea> sliderDialogHits = [];
     public bool SliderImportPromptVisible => sliderImportTargets.Length > 0;
-    public bool SliderConversionBusy => sliderBatchTask is not null || LegacyDropletRefreshBusy;
-    private bool SliderDialogVisible => SliderImportPromptVisible || SliderConversionBusy || sliderBatchErrors.Length > 0;
+    public bool SliderConversionBusy => sliderBatchTask is not null || sliderImportTask is not null || LegacyDropletRefreshBusy;
+    private bool SliderDialogVisible => SliderImportPromptVisible || SliderImportSourcePromptVisible || SliderConversionBusy || sliderBatchErrors.Length > 0;
+    private bool rememberSliderImportChoice;
 
     public void OfferSliderConversion(bool allDifficulties)
     {
+        sliderImportWizard = false;
         sliderDialogHits.Clear();
         sliderImportTargets = (allDifficulties ? Enumerable.Range(0, difficulties.Count) : new[] { activeDifficulty })
             .Where(i => difficulties[i].History.Document.ImportedSliders.Count > 0).ToArray();
-        sliderDerandomizeDroplets = Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets;
     }
     public void AnswerSliderImport(bool convert)
     {
+        if (!SliderImportPromptVisible) return;
+        if (sliderImportWizard && rememberSliderImportChoice)
+        {
+            LibrarySettings.ImportSliderConversion = convert ? ImportSliderConversionMode.ConvertToFSlider : ImportSliderConversionMode.KeepLegacy;
+            RequestViewPreference?.Invoke();
+        }
+        sliderImportWizard = false;
+        rememberSliderImportChoice = false;
         sliderDialogHits.Clear();
         var targets = sliderImportTargets; sliderImportTargets = [];
         if (!convert) return;
-        StartSliderBatch(targets, sliderDerandomizeDroplets);
+        StartSliderBatch(targets);
     }
     public void ConvertAllSliders()
     {
@@ -42,7 +50,7 @@ public sealed partial class EditorView
         sliderBatchCancellation?.Cancel();
         CancelLegacyDropletRefresh();
     }
-    private void StartSliderBatch(int[] targets, bool derandomizeDroplets)
+    private void StartSliderBatch(int[] targets)
     {
         if (notesLocked) { StatusMessage = L.Get("assist.locked"); return; }
         if (SliderDialogVisible || !PrepareFileOperation()) return;
@@ -56,11 +64,13 @@ public sealed partial class EditorView
         {
             token.ThrowIfCancellationRequested();
             var edited = input.Before.DeepClone();
-            return new SliderBatchItem(input.Session, input.Before, ImportedSliderEditing.ConvertAll(edited, token, derandomizeDroplets));
+            var result = SliderImportEditing.ConvertFollowingMap(edited, edited.ImportedSliders.Select(s => s.Id).ToArray(), token);
+            return new SliderBatchItem(input.Session, input.Before, edited, result);
         }).ToArray(), token);
     }
     private void PumpSliderBatch()
     {
+        PumpSliderImport();
         if (sliderBatchTask is not { IsCompleted: true } task) return;
         sliderBatchTask = null;
         bool cancelled = sliderBatchCancellation!.IsCancellationRequested;
@@ -75,11 +85,8 @@ public sealed partial class EditorView
         {
             if (result.Result.Tracks.Count == 0) continue;
             var history = result.Session.History;
-            history.Begin(L.Get("sliderBatch.command"));
-            history.Document.DerandomizeDroplets = sliderDerandomizeDroplets;
-            var ids = result.Result.Tracks.Select(t => t.Id).ToHashSet();
-            history.Document.ImportedSliders.RemoveAll(s => ids.Contains(s.Id));
-            history.Document.Tracks.AddRange(result.Result.Tracks); history.Commit(); count += ids.Count;
+            history.RestoreVersion(L.Get("sliderBatch.command"), result.After);
+            count += result.Result.Tracks.Count;
         }
         sliderBatchErrors = results.SelectMany(r => r.Result.Failures.Select(f =>
             L.Get("sliderBatch.failure", r.Session.Name, Time(f.TimeMs), f.Reason))).ToArray();
@@ -93,16 +100,35 @@ public sealed partial class EditorView
         var rect = new Rect((width - Math.Min(700, width - 40)) / 2, (height - 300) / 2, Math.Min(700, width - 40), 300);
         c.Fill(new(rect.X - 4, rect.Y - 4, rect.Width + 8, rect.Height + 8), Background, 10);
         c.Fill(rect, Panel, 8); c.Stroke(rect, Accent, 1, 8);
-        c.Text(L.Get("sliderBatch.title"), rect.X + 22, rect.Y + 20, 18, Foreground, rect.Width - 44, true);
-        if (SliderImportPromptVisible)
+        c.Text(L.Get(sliderImportWizard ? "sliderImport.title" : "sliderBatch.title"), rect.X + 22, rect.Y + 20, 18, Foreground, rect.Width - 200, true);
+        if (sliderImportWizard && sliderSourceQuestions is { } questions)
+        {
+            int page = SliderImportPromptVisible ? questions.Length + 1 : questions.Count(i => i < sliderSourceIndex) + 1;
+            string progress = L.Get("sliderImport.page", page, Math.Max(1, questions.Length + (LibrarySettings.ImportSliderConversion == ImportSliderConversionMode.Ask ? 1 : 0)));
+            c.Text(progress, rect.Right - 22 - c.MeasureText(progress, 12), rect.Y + 24, 12, Muted, 170);
+        }
+        if (SliderImportSourcePromptVisible)
+        {
+            c.Text(difficulties[sliderSourceTargets[sliderSourceIndex]].Name, rect.X + 22, rect.Y + 62, 14, Foreground, rect.Width - 44);
+            c.Text(L.Get("sliderImport.question"), rect.X + 22, rect.Y + 105, 14, Foreground, rect.Width - 44);
+            c.Text(L.Get("sliderImport.detected"), rect.X + 22, rect.Y + 150, 12, Muted, rect.Width - 44);
+            if (sliderBatchErrors.Length > 0)
+                c.Text(sliderBatchErrors[0], rect.X + 22, rect.Y + 185, 11, Error, rect.Width - 44);
+            if (sliderImportTask is not null) DrawRatingSpinner(c, rect.X + 30, rect.Bottom - 40);
+            Button(c, new(rect.Right - 330, rect.Bottom - 58, 144, 36), L.Get("sliderImport.no"), () => AnswerSliderImportSource(false), enabled: sliderImportTask is null);
+            Button(c, new(rect.Right - 174, rect.Bottom - 58, 152, 36), L.Get("sliderImport.yes"), () => AnswerSliderImportSource(true), true, enabled: sliderImportTask is null);
+        }
+        else if (SliderImportPromptVisible)
         {
             int count = sliderImportTargets.Sum(i => difficulties[i].History.Document.ImportedSliders.Count);
             c.Text(L.Get("sliderBatch.prompt", count, sliderImportTargets.Length), rect.X + 22, rect.Y + 65, 14, Foreground, rect.Width - 44);
-            c.Text(L.Get("sliderBatch.help"), rect.X + 22, rect.Y + 104, 12, Muted, rect.Width - 44);
-            Button(c, new(rect.X + 22, rect.Y + 145, rect.Width - 44, 36),
-                L.Get(sliderDerandomizeDroplets ? "sliderBatch.derandomizeOn" : "sliderBatch.derandomizeOff"),
-                () => sliderDerandomizeDroplets = !sliderDerandomizeDroplets, sliderDerandomizeDroplets);
-            c.Text(L.Get("sliderBatch.later"), rect.X + 22, rect.Y + 195, 12, Muted, rect.Width - 44);
+            c.Text(L.Get("sliderImport.conversionMode"), rect.X + 22, rect.Y + 150, 12, Foreground, rect.Width - 44);
+            if (sliderImportWizard)
+            {
+                TimingCheck(c, new(rect.X + 22, rect.Y + 180, rect.Width - 44, 28), "sliderImport.remember", rememberSliderImportChoice,
+                    () => rememberSliderImportChoice = !rememberSliderImportChoice);
+                c.Text(L.Get("sliderImport.rememberHint"), rect.X + 22, rect.Y + 214, 11, Muted, rect.Width - 44);
+            }
             Button(c, new(rect.Right - 330, rect.Bottom - 58, 144, 36), L.Get("sliderBatch.keep"), () => AnswerSliderImport(false));
             Button(c, new(rect.Right - 174, rect.Bottom - 58, 152, 36), L.Get("sliderBatch.convert"), () => AnswerSliderImport(true), true);
         }
@@ -110,7 +136,8 @@ public sealed partial class EditorView
         {
             DrawRatingSpinner(c, rect.X + 30, rect.Y + 80);
             c.Text(L.Get("sliderBatch.working"), rect.X + 48, rect.Y + 72, 14, Foreground, rect.Width - 70);
-            Button(c, new(rect.Right - 174, rect.Bottom - 58, 152, 36), L.Get("sliderBatch.cancel"), CancelSliderConversion);
+            if (sliderImportTask is null)
+                Button(c, new(rect.Right - 174, rect.Bottom - 58, 152, 36), L.Get("sliderBatch.cancel"), CancelSliderConversion);
         }
         else
         {

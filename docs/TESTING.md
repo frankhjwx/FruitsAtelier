@@ -2,6 +2,13 @@
 
 ## SDKs and builds
 
+`App.Tests --fad-check` verifies portable difficulty packages, local resource
+conflicts, matching, adding difficulties, native merge choices, undo/redo, Library
+rejection and the FAZ export chooser. `FruitsAtelier.App.exe --render-check
+--fad-render-check` captures the File menu, difficulty context menu, FAZ choices,
+native merge review and Library error in English and Chinese at two window sizes
+and 96/144/192 DPI under `artifacts/tests/fad-native`.
+
 The project targets .NET 8 with C# 12. Two `global.json` entry points pin SDK versions:
 
 | Entry point | SDK | Purpose |
@@ -63,6 +70,51 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --map-import-settings-check` checks General import preferences, saved
+defaults, cancelled drafts, remembered Keep/Convert choices and the 95% automatic
+FA decision threshold. Uncertain suspected maps still require a source choice.
+
+`Formats.Tests --slider-import-policy-check` checks ordinary import modes, confirmed
+compensation, one to three traversals, repeated refreshes, conversion, mode toggles,
+project persistence and undo against exported playback. `App.Tests --slider-batch-check`
+checks localized source confirmation, Global import defaults, Ctrl+D, conversion,
+cancellation, original Catch path display and existing-workspace isolation.
+`FruitsAtelier.App.exe --render-check --osu-canvas-render-check --slider-import-render-check`
+checks source/representation prompts and Droplet Settings in English/Chinese at two
+window sizes and 96/144/192 DPI, including the original ordinary Legacy Catch path.
+Captures are stored under `artifacts/tests/osu-canvas-native/import-*`.
+
+
+`App.Tests --osu-link-check` verifies encoded timestamps, sequential combo
+selection, source-object roundtrips, playback pausing, content isolation,
+non-editor notifications, URI preservation, loop rejection, named-pipe activation,
+registered-application discovery, icon and path rows, confirmation, the clear-binding action, the single fallback selector and
+required setup after a system association. It
+also runs the time-jump and settings layout regressions. Windows-specific routing
+checks use isolated preferences and do not
+change the OSU protocol association or launch an osu! client.
+`FruitsAtelier.App.exe --render-check --osu-link-render-check` checks native
+settings actions, notifications and activation during painting without timer messages in English and Chinese at two
+window sizes and 96/144/192 DPI. Captures are stored under
+`artifacts/tests/osu-links/native`; protocol actions use test callbacks.
+
+`Formats.Tests --collaboration-check` checks same-project reference graphs,
+half-open adjacent ranges, source edits/deletions, timing restoration, boundary
+sample inheritance, repeated sliders, FSliders, streams, banana showers, custom
+samples, target STR precedence, cross-folder sample conflicts, project schemas
+and undo/redo, bookmark section generation, unassigned section persistence and
+strict overlap validation, complete slider/spinner section containment, exclusion
+reports and optional same-position target hitsound preservation. `App.Tests --collaboration-check` checks
+the dockable panel, active-difficulty configuration, reverse references, osu!
+timestamps, integer milliseconds, clipboard input and manual synchronization.
+On Windows, `FruitsAtelier.App.exe --render-check --collaboration-render-check`
+checks native panel input and synchronization in English and Chinese at two
+window sizes and 96/144/192 DPI. Captures are written under
+`artifacts/tests/collaboration/native`.
+`Formats.Tests --collaboration-map-check <difficulty.catchdiff>` reads a saved
+workspace manifest and its documents directly to check that difficulty's manual
+references without opening a recovery session or changing source files.
+
 `App.Tests --dirty-exit-check` verifies Save / Discard / Cancel on leaving a linked
 project, read-only background checks while dirty, and uninterrupted object placement
 when an external conflict is detected.
@@ -73,6 +125,10 @@ normalized timing choices. `FruitsAtelier.App.exe --render-check
 --semantic-sync-render-check` exercises the English and Chinese timing and playable-object tables at
 two window sizes and captures unresolved/resolved cells under
 `artifacts/tests/semantic-sync-native`.
+
+`Formats.Tests --fa-only-check` checks default compatibility, per-difficulty persistence, source exclusion, portable snapshots, individual saves, stale export rejection, source-change and deletion-failure isolation, and reenabling generation. `App.Tests --fa-only-check` checks new-difficulty defaults and FA-only selection, Song Setup dock and modal controls, keep/delete/cancel choices, independent policies and restart in English and Chinese at two sizes. Native synchronization checks capture the creation choice, FA Settings and file-removal confirmation.
+
+`Formats.Tests --full-sync-check` runs the focused connection-retention and version-history checks. `App.Tests --full-sync-check` checks full-sync confirmation and cancellation without writes, backup failure isolation, unchanged Stream retention, external object replacement, the named working snapshot, direct recovery, expired recovery points, undo and project isolation in English and Chinese at two window sizes. It also runs the synchronization and version-history UI regressions. Native synchronization rendering captures the full-sync confirmation. `Formats.Tests --semantic-sync-check` additionally verifies complete stream retention, edited/deleted/ambiguous stream rejection, external timing changes and project round trips.
 
 `App.Tests --sync-details-check` checks playable event matching, position tolerance,
 insertions and per-property unresolved/resolved colours.
@@ -514,6 +570,18 @@ After changing input or drawing, manually check affected operations, language sw
 
 ## Editing performance benchmark
 
+`App.Tests --cache-lifetime-check` verifies that closing after both canvas modes
+and clipboard use releases the document, conversion and exported read-back.
+`App.Tests --project-memory-performance <folder>` opens all sibling `.osu`
+difficulties, waits for ratings and measures memory before and after returning
+to the library. Its final forced collection distinguishes live data from garbage.
+`FruitsAtelier.App.exe --render-check --project-memory-folder=<folder>` repeats
+opening and closing twice in a native Direct2D window with silent audio decoding.
+Each round visits both canvases and renders ten seconds of simulated playback.
+It reports working set, private memory, managed heap and process peak in
+`artifacts/tests/project-memory/native.txt`. Stable measurements use the editor's
+normal lifecycle collection; process peak includes temporary loading allocations.
+
 `App.Tests --difficulty-switch-performance <path.osz>` opens the set three times
 and switches through every difficulty forwards and backwards, entering and leaving
 testplay each time. It records editor switching, testplay frame CPU, allocations,
@@ -652,6 +720,29 @@ For a read-only CPU profile of an existing `.osu` or `.catchdiff` file, run the 
 On Windows, run `FruitsAtelier.App.exe --profile-map <path> [startMs]` in a hidden Direct2D window with the active default skin. It opens an in-memory workspace session for the selected `.osu` or `.catchdiff` and sibling difficulties, including periodic resource checks, then samples 3,600 warmed frames per case from the supplied time (default 70000 ms) at 100% zoom and 1/4 snap with preview closed, NM, HR, and paused fruit hover. Playback advances thirty seconds per case. The report separates drawing submission, total rendering including `EndDraw`/`Present`, and silent transport updates. Per-frame samples include allocations, GC collections, and image decode counts to identify isolated stalls. It also measures document comparison time. The report is written to `artifacts/logs/playback-profile.json` in repository builds, or the application log directory in distributed builds. This is not a visible-screen FPS measurement. Neither profile saves or imports the map into the workspace, plays audio, or changes system volume.
 
 ## Imported slider corpus
+
+`Core.Tests --slider-recovery-check` covers compensated export/import round trips
+for straight lines, quadratic/cubic Beziers with nonlinear time controls, circular
+arcs, BPM changes, repeat counts, different tick rates and sharp droplet reversals.
+It checks whole-path samples against original authoring, NM/HR export positions
+within 4 pixels, unchanged event kinds/times, cancellation, undo, persistence and
+safe rejection of an incompatible baseline.
+
+For a read-only authored-map round trip, run:
+
+```powershell
+dotnet run --project tests/FruitsAtelier.Core.Tests -c Release -- --slider-roundtrip "path/to/difficulty.catchdiff" "artifacts/slider-roundtrip/sample"
+```
+
+This exports the source to `.osu`, explicitly treats it as a confirmed compensated
+import, and converts it to FSliders. It reports the independent detection ratio;
+it does not simulate an automatic source-confirmation decision. Stream/Stack
+tracks are excluded from the slider restoration denominator. A restored slider
+uses no more anchors than its original and stays within 4 pixels at 2,001
+normalized first-span times. The report also lists control counts, retained Legacy
+objects, allocation, runtime and actual NM/HR playback errors. Reports, exported
+files and recovered documents go only to the supplied output directory. The source
+file hash and in-memory authoring content must remain unchanged.
 
 The Core test executable accepts `--slider-corpus <workspace>` for opt-in, read-only
 checks against existing `.catchdiff` documents. It never saves or opens a workspace
@@ -881,7 +972,8 @@ Shift duration locking and unchanged authoring timing. `Formats.Tests
 project persistence and compatible/incompatible coincident FSlider heads. Native
 `--render-check --osu-canvas-render-check --independent-sv-render-check` exercises
 Inspector input and Shift dragging in English/Chinese at both window sizes and
-96/144/192 DPI. `Formats.Tests --sv-timing-sync-check` checks timing/SV sync.
+96/120/144/168/192 DPI, including compact corner controls, slider and button
+input, and Catch coordinate readouts. `Formats.Tests --sv-timing-sync-check` checks timing/SV sync.
 
 ## Slider endpoint snapping
 
@@ -903,3 +995,9 @@ and conversion isolation, selection changes, actual endpoint fractions and NC
 label separation in English and Chinese at narrow and standard widths. Native
 `--slider-endpoint-snap-render-check` captures expanded/collapsed sections and
 Catch endpoint labels alongside NC.
+
+`App.Tests --same-time-placement-check` checks optional same-time placement in both canvases,
+native circle/slider/spinner replacement, preview/export equivalence, project
+roundtrips, undo/redo and Experimental setting
+persistence and cancellation. Native `--render-check --experimental-snap-render-check`
+also exercises its toggle in English and Chinese at compact and standard sizes.

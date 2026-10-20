@@ -14,6 +14,7 @@ internal static class OsuCanvasInputTests
         SliderCanvasLockTests.Run();
         ToggleAndHeldKeys();
         NativeCircleAndLegacySlider();
+        SameTimePlacement();
         NativeSelectionAndCancellation();
         StackedMarqueeUsesVisibleCenters();
         NativePlacementPreservesGeometry();
@@ -23,6 +24,46 @@ internal static class OsuCanvasInputTests
         DistanceSliderAndNavigation();
         OsuDistanceSpacingCacheTests.Run();
         ImportedCurveVisibilityTests.Run();
+    }
+
+    public static void SameTimePlacement()
+    {
+        foreach (bool preserve in new[] { false, true })
+        foreach (int tool in new[] { '2', '3', '4' })
+        {
+            var ui = NewUi();
+            var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:0\n[Difficulty]\nSliderMultiplier:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n64,64,1000,1,0\n64,64,998,2,0,L|192:64,1,128\n256,192,1002,8,0,1500\n300,64,997,1,0\n");
+            var readOnly = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 4 };
+            readOnly.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 200 }]);
+            map.Tracks.Add(readOnly);
+            ui.LoadDocument(map); ui.View.ToggleOsuCanvas();
+            ui.View.UpdateTransport(1000, 5000, true, false, false, null, "fixture.wav"); ui.Paint();
+            ui.View.LibrarySettings.PreserveSameTimeObjects = preserve;
+            var before = ui.View.Document.DeepClone();
+            ui.Key(tool); Click(ui, 400, 300);
+            if (tool == '3')
+            {
+                Check(before.ContentEquals(ui.View.Document), "Native slider draft removed same-time objects before commit.");
+                Click(ui, 450, 300); ui.Key(13); ui.Paint();
+            }
+            if (tool == '4')
+            {
+                Check(before.ContentEquals(ui.View.Document), "Spinner draft removed same-time objects before commit.");
+                ui.View.UpdateTransport(2000, 5000, true, false, false, null, "fixture.wav"); ui.Paint();
+                var point = ui.View.OsuCanvasScreen(400, 300);
+                ui.View.PointerDown(point.X, point.Y, 2, false, false);
+                ui.View.PointerUp(point.X, point.Y, 2); ui.Paint();
+            }
+            Check(ui.View.Document.Tracks.Single().Id == readOnly.Id, "Native placement removed a read-only FSlider.");
+            Check(ui.View.Document.Fruits.Count == (preserve ? 2 : 1) + (tool == '2' ? 1 : 0)
+                && ui.View.Document.ImportedSliders.Count == (preserve ? 1 : 0) + (tool == '3' ? 1 : 0)
+                && ui.View.Document.BananaShowers.Count == (preserve ? 1 : 0) + (tool == '4' ? 1 : 0),
+                $"Native same-time placement failed: preserve={preserve}, tool={tool}, fruits={ui.View.Document.Fruits.Count}, sliders={ui.View.Document.ImportedSliders.Count}, spinners={ui.View.Document.BananaShowers.Count}, status={ui.View.StatusMessage}.");
+            var after = ui.View.Document.DeepClone();
+            Check(OsuBeatmapWriter.Serialize(after).ObjectSequenceMatches, "Native same-time export differs.");
+            ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Native replacement did not undo atomically.");
+            ui.Key('Y', ctrl: true); Check(after.ContentEquals(ui.View.Document), "Native replacement redo changed content.");
+        }
     }
 
     private static void ToggleAndHeldKeys()

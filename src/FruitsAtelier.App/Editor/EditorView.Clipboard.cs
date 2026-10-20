@@ -127,7 +127,7 @@ public sealed partial class EditorView
     {
         if (!TryCopySnapshot(out var snapshot)) return false;
         var ids = ClipboardParents(snapshot!).Select(p => p.Id).ToHashSet();
-        if (ids.Any(IsReadOnlySlider)) { StatusMessage = L.Get("osu.readOnlySlider"); return false; }
+        if (ids.Any(IsReadOnlySlider)) { ShowEditorNotice("osu.readOnlySlider"); return false; }
         string reference = SelectionReference(snapshot!);
         if (!Edit(L.Get("editor.command.cutObjects"), () =>
         {
@@ -173,8 +173,7 @@ public sealed partial class EditorView
             {
                 var replacement = replacements[track.Id];
                 track.Id = replacement.NewId; track.SourceOrder = replacement.Order;
-                foreach (var node in track.Nodes) { node.Id = Guid.NewGuid(); node.TimeMs = ShiftTime(node.TimeMs);
-                    if (node.OutgoingCurve is { } curve) foreach (var point in curve.Controls) point.Id = Guid.NewGuid(); }
+                ShiftTrack(track);
                 IncludeEnd(CurveMath.EndTimeMs(track));
             }
             foreach (var slider in pasted.ImportedSliders)
@@ -182,6 +181,18 @@ public sealed partial class EditorView
                 var replacement = replacements[slider.Id];
                 slider.Id = replacement.NewId; slider.SourceOrder = replacement.Order; slider.TimeMs = ShiftTime(slider.TimeMs);
                 slider.OriginalLine = WithClipboardTimes(slider.OriginalLine, (2, slider.TimeMs));
+                if (slider.RandomizationSource is { } source)
+                {
+                    source.Id = slider.Id; source.SourceOrder = slider.SourceOrder; source.TimeMs = ShiftTime(source.TimeMs);
+                    source.OriginalLine = WithClipboardTimes(source.OriginalLine, (2, source.TimeMs));
+                }
+                if (slider.RandomizationTrack is { } baseline)
+                {
+                    // Effect refresh restores this baseline as the copied parent before fitting it again.
+                    baseline.Id = slider.Id; baseline.SourceOrder = slider.SourceOrder;
+                    baseline.OriginalLine = slider.OriginalLine;
+                    ShiftTrack(baseline);
+                }
                 double sliderEnd;
                 try { sliderEnd = ImportedSliderConverter.EndTimeMs(Document, slider); }
                 catch (Exception error) when (error is not OutOfMemoryException)
@@ -207,6 +218,16 @@ public sealed partial class EditorView
             Document.ImportedSliders.AddRange(pasted.ImportedSliders);
             Document.BananaShowers.AddRange(pasted.BananaShowers);
             Document.DurationMs = pasted.DurationMs;
+
+            void ShiftTrack(CurveTrack track)
+            {
+                foreach (var node in track.Nodes)
+                {
+                    node.Id = Guid.NewGuid(); node.TimeMs = ShiftTime(node.TimeMs);
+                    if (node.OutgoingCurve is { } curve)
+                        foreach (var point in curve.Controls) point.Id = Guid.NewGuid();
+                }
+            }
 
             void IncludeEnd(double objectEnd)
             {

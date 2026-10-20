@@ -104,6 +104,12 @@ public sealed partial class EditorView
 
     private void ResetDeferredConversion()
     {
+        if (deferredConversionTask is { } retired)
+        {
+            retiredDifficultyWork.Add(retired);
+            _ = retired.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        }
+        deferredConversionTask = null;
         deferredConversion = deferredTestplay = false;
         draftBaseConversion = null; draftBaseObjects = []; draftBaseExport = null; draftPreviewSnapshot = null;
     }

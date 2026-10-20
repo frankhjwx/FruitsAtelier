@@ -1,5 +1,128 @@
 # Editing Controls
 
+## osu! editor links
+
+**Settings → osu! Links** contains one fallback application selector. It becomes
+available when the system routes `osu://` to FruitsAtelier. Choose from the
+applications registered to handle osu! links. The list shows application names
+and icons, with executable paths in smaller gray text after the names. Select an
+application and press **Confirm** to save it. **Clear FA binding…** opens Windows
+Default apps to choose another protocol handler; on macOS it restores the selected
+fallback as the protocol handler.
+When FruitsAtelier is not the default handler, this button becomes **Rebind to FA…**.
+Fallback selection is disabled and setup is not required until FruitsAtelier becomes
+the default again. On Windows, rebinding opens Default apps for the user's choice.
+
+When FruitsAtelier is the system handler and its fallback is missing or invalid,
+a required application list appears automatically. It remains open until a
+registered external application is selected and confirmed. The system association is checked at
+startup, on activation and periodically while running. Changing the default
+handler away from FruitsAtelier removes the requirement. Windows protocol
+registration advertises FruitsAtelier as an available application without
+changing the user's selected default.
+
+Editor links address the active difficulty, without identifying or opening a
+beatmap. For example, `osu://edit/00:13:247%20(2,3)` pauses playback and selects
+the next objects numbered 2 and 3 from 13,247 ms onward. Numbers are combo-local
+and matched in chronological order, including repeated numbers across combos.
+With a selection suffix, the playback position moves to the first object at or
+after the timestamp; without one it moves directly to the timestamp. Times are
+clamped to the current timeline. Streams and segmented banana showers resolve
+their event numbers to selectable source objects. Navigation does not edit the
+beatmap or add undo history. The time-jump dialog also accepts a complete editor URL.
+
+Outside editing, including the library, settings, startup and testplay, editor
+links only display a notification, which stays visible for three seconds and fades
+out over half a second. They are discarded rather than deferred until
+a difficulty opens. Active text input, gestures and modal dialogs must finish
+before an external editor link can navigate.
+
+Other `osu://` commands are passed unchanged to the configured application,
+directly rather than through the system protocol association. Windows retains
+the registered command arguments and resolves the selected ProgId on each use;
+macOS resolves its bundle identifier. Their behaviour depends on that client's
+support. Missing forwarding targets and self-forwarding
+are rejected. Link preferences are stored in `FruitsAtelier/osu-links.json` under
+the system application-data directory.
+
+## Collab Mapping
+
+Open **Layout → Collab Mapping** to add the dockable panel, then select its tab.
+The panel follows the active difficulty. Each difficulty independently chooses its
+references and when to synchronize. It lists source difficulties and their ranges,
+and all target difficulties that directly reference the current difficulty.
+Selecting a target opens that difficulty. The panel supports multiple sources and
+multiple targets, including separate non-overlapping ranges from the same source.
+All referenced difficulties must belong to the same project.
+
+The full-width **Sync references** button and **Sync object hitsounds** option form
+the sync group. A separator divides it from **Generate sections from bookmarks**,
+the section list. **Add Section** sits below all section rows. Use it, select the source, and
+edit **Start** and **End** on one row.
+New references start **Unassigned**. The source menu can also clear an existing
+source. Unassigned sections are saved and checked for overlaps, but synchronization
+leaves their objects, timing and hitsounds untouched.
+
+**Generate sections from bookmarks** replaces the current reference list with
+unassigned sections spanning the entire timeline: zero to the first bookmark,
+between bookmarks, and the last bookmark to the timeline end (including loaded
+audio duration). Duplicate and endpoint bookmarks do not create empty sections;
+without bookmarks, one section covers the timeline. Generation is undoable.
+Choose each source manually before synchronizing the sections you want to copy.
+
+Inputs
+display osu! timestamps such as `01:24:771`; typed or pasted integer milliseconds
+such as `84771` are also accepted. Clipboard timestamps with an osu! object-list
+suffix are accepted. Ctrl/Cmd+A, C, X and V use the normal field selection and
+clipboard controls. Fractional milliseconds are rejected. Enter commits a field;
+Escape discards its draft. References are saved with the target difficulty.
+
+Ranges include Start and exclude End. Overlaps and self-references are rejected;
+adjacent ranges are allowed. Objects belong to the range
+containing their start time. Sliders (including FSliders and repeated spans) and
+spinners must fit completely inside one section; an end exactly at the section
+end is allowed. Partially intersecting sliders and spinners are skipped while
+other objects and timing still synchronize. Streams retain start-time ownership.
+After a successful sync with exclusions, a draggable popup lists each skipped
+object and its source difficulty, object time range and section range. Click a row
+to switch to that source and select and seek to the object. Scroll the list for
+more entries; use the close button or Escape to dismiss it. Removing a reference
+detaches it and leaves the merged content in place.
+
+**Sync references** reads the currently loaded source documents, including unsaved
+edits, and replaces target objects whose starts lie in the configured ranges.
+Source additions, modifications and deletions are applied together. **Sync object
+hitsounds** is on by default. Turn it off to copy objects while keeping the target
+difficulty's existing sounds at the same exported time and event kind. If multiple
+target events share that time and kind, the nearest X position wins. New events
+without a match use the merged timeline's default samples, without source custom
+files or additions. This is a sync option and does not edit project content.
+Timing points still synchronize. Objects
+starting outside those ranges remain. The source's timing points are copied within
+each range, with boundary points establishing inherited BPM, sample bank, index,
+volume and effects and restoring target state after End. Boundary red points
+establish a beat-grid origin at that boundary. Reference relationships do not
+trigger automatic synchronization or recursively synchronize their sources.
+
+Object identities are mapped independently for each reference and remain stable
+on repeated synchronization. Object sample fields and event overrides are
+retained; boundary inheritance differences are materialized when required to
+preserve audible events. The merged difficulty's SliderTickRate and tick rules
+govern derived output. Changing tick density remaps existing event overrides to
+their matching edges or times; new ticks inherit source sample timing. Random
+positions follow the merged map's RNG traversal.
+
+Sources in other resource folders copy their used samples into the target resource
+folder. Custom files and numbered sample groups receive separate names so existing
+target samples remain intact. Resource copies are part of the same undo step.
+Default skin samples require no file copies. A target receiving actual sample
+files needs an audio/source resource folder.
+
+Validation runs on detached source/target snapshots in a worker. A changed source,
+target or compensation setting invalidates its result. Each
+successful synchronization is one undo step in the target difficulty. Saving or
+switching difficulties waits until validation completes.
+
 ## Remembered window and canvas preferences
 
 Closing the editor saves its normal window size and maximized state for the next
@@ -23,6 +146,10 @@ osu!standard 512×384 geometric view. Text fields, dialogs, Ctrl+Tab difficulty
 navigation and Testplay retain their own key handling. Switching views does not
 convert objects or create a content edit. Catch preview continues to show the
 exported fruits in either view.
+
+Slider shapes are edited in their matching canvas: Legacy Sliders in osu! and
+FSliders in Catch. Clicking a slider in the other canvas or attempting a blocked
+edit shows a three-second notice explaining how to switch with Tab, then fades out.
 
 The osu! canvas draws circles, approach circles, Legacy Slider paths, repeats,
 slider balls and spinners. Circle size, approach rate, combo ordering and stacking
@@ -152,6 +279,20 @@ Different aspect ratios fit the reference into the available width and height;
 the remaining space extends the editing area. Compact startup dialogs fit their
 own layout dimensions. Native title bars and file dialogs follow Windows display
 settings; macOS uses its native display scaling.
+
+## Same-time object placement
+
+Settings → Experimental → **Enable same-time object placements** disables
+the automatic replacement of fruits, FSliders and banana showers starting within
+2 ms of a newly placed fruit in the Catch canvas. In the osu! canvas, placing a
+circle, native slider or spinner replaces same-time circles, native sliders and
+spinners; the same toggle preserves them. Sliders that are read-only in the active
+canvas remain unchanged. The toggle defaults to off and is saved as an application
+preference. Enabling it allows fruits at the same time with
+independent X coordinates; previews retain the existing objects too. Changing the
+preference leaves existing content and undo history unchanged. Placement remains
+one undo step, and turning it off restores replacement for subsequent placements.
+Completing a Catch FSlider also retains a fruit at its exact head when enabled.
 
 ## Experimental lazer editing
 
@@ -340,7 +481,7 @@ invalid numeric input leaves the last valid value intact. Strength has a numeric
 field and slider, plus Reset strength to restore 20.
 
 The separate **Global Derandomize** section controls derandomization for new projects
-and Legacy-to-FSlider conversion. These preferences save immediately and do not
+and imported maps. These preferences save immediately and do not
 change the current difficulty or its undo history. New projects default to
 derandomization. Valid current-difficulty edits also save the last used mode, strength,
 seed and NM/HR target as global defaults for new projects. Existing projects retain
@@ -634,15 +775,14 @@ First-time setup also offers both preferences as part of its draft, saved on Fin
 General retains a link and a notice directing randomization and derandomization to
 Droplet Settings. The link preserves unapplied General preferences and returns there
 when the dialog closes. With no open project, it shows only global preferences.
-**Legacy → FSlider** sets the initial conversion choice in maps
-without a saved choice. **New projects** controls projects created
+**Imported maps** sets the droplet mode for ordinary new imports. **New projects** controls projects created
 from scratch or from audio. Both start On. With the new-project option Off,
 new FSliders using Follow map randomize with Strength 20 and Seed 1337; with it
 On, they derandomize. The map default survives reopening and is inherited by
 additional blank difficulties. Imported difficulties retain their own settings.
 Global defaults save immediately, including when the current difficulty is locked;
 Cancel in Song Setup discards map drafts while retaining these global preferences.
-Changing them does not modify existing maps or a saved Legacy conversion choice.
+Changing them does not modify existing workspace difficulties or saved projects.
 
 Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same logical dimensions apply on both desktop platforms and follow their interface scaling. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
@@ -860,7 +1000,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Right-click a note / edited point | Delete an object; a straight point becomes curved, a curved point is deleted; no context menu |
 | Ctrl+L | Confirm restoring the current difficulty to its previous saved version |
 | Ctrl+Shift+I | Insert a control point on the curve under the pointer |
-| Ctrl+D | Clone selected parents one measure after the last selected start |
+| Ctrl+D | Clone selected parents one measure after the last selected start; Legacy Slider copies retain their type and follow the current difficulty's Droplet Settings |
 | Ctrl+A | Select all objects |
 | Ctrl+H | Flip selected parents horizontally around X=256 |
 | Ctrl+Left / Right | Seek to the previous / next bookmark |
@@ -1035,11 +1175,43 @@ In Select mode, the first click selects the whole slider; the second click on a 
 
 Selecting or double-clicking a Legacy Slider in Catch preserves its representation. Editing requires the explicit Convert to FSlider action; the conversion and subsequent edits have separate undo steps. Legacy geometry can instead be edited directly in the osu! canvas. B / 3 selects the current canvas's slider tool.
 
-Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Hold the left mouse button stationary on a Legacy Slider to open its conversion actions beside the pointer. Holding a slider fruit first identifies its beat at 300 ms. Continuing to hold stationary opens conversion actions at 1000 ms; a small progress ring fills during the final 700 ms. Moving at least 2 DIP or releasing before completion cancels the hold; ordinary selection and dragging remain available. The buttons stay open until an action, another click, a key, or focus loss dismisses them. Conversion preserves start time, total duration, and span count. It first fits a small set of straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete the conversion. Exact nested-object positions and sequences are not required to match. Invalid or unrepresentable input retains its original object with a reason.
+Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Hold the left mouse button stationary on a Legacy Slider to open its conversion actions beside the pointer. Holding a slider fruit first identifies its beat at 300 ms. Continuing to hold stationary opens conversion actions at 1000 ms; a small progress ring fills during the final 700 ms. Moving at least 2 DIP or releasing before completion cancels the hold; ordinary selection and dragging remain available. The buttons stay open until an action, another click, a key, or focus loss dismisses them. Conversion preserves start time, total duration, and span count. Ordinary geometric conversion first fits straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete conversion. Its nested-object positions need not match the randomized source. Confirmed compensated imports use the playback-preserving recovery described below. Invalid or unrepresentable input retains its original object with a reason.
 
-The first workspace import from Songs, an external folder, `.osu`, or `.osz` asks whether to convert sliders in all newly imported difficulties if they contain Legacy Sliders. The prompt offers **Derandomize droplets**. With it off, conversion builds an editable path through the actual legacy fruit and droplet positions, including randomized TinyDroplets. Generated geometry compensates the RNG so objects stay on that path. Conversion preserves their times and positions; incompatible shared repeat targets remain Legacy with a reason. The selected policy is saved per difficulty after a successful conversion and reused for later conversions. Keeping Legacy preserves that representation. Reopening an existing project does not prompt again. Importing one difficulty into a project prompts only for that difficulty.
+Fresh `.osu`/`.osz`, Songs and folder imports capture **Global Derandomize → Imported maps**. Ordinary imports use that mode immediately: Randomize retains native offsets, while Derandomize targets the original slider path and generates compensation for export. In the Catch canvas, ordinary imported Legacy Sliders continue to draw and hit-test their original path after processing; waterdrop positions and export use the effective mode. Changing Global settings does not reinitialize existing workspace difficulties or `.catchproj` files.
 
-**Edit → Convert all sliders to FSliders** opens the droplet choice for the current difficulty and is disabled when it has no Legacy Sliders. Explicit single-slider conversion proceeds without a prompt, using the saved difficulty policy or the global conversion default in Droplet Settings. Batch conversion runs in the background with a cancellable prompt and blocks content editing. Cancellation applies no partial results. Conversions per difficulty can be undone together; valid sliders that previously failed strict alignment now convert approximately. Invalid input and reasons appear in paginated results. Saving persists conversion in the workspace without modifying original Songs/external files; Export is still required to write `.osu`.
+Detection requires **more than 80% of all sliders** to consist of straight segments with an actual anchor at every droplet and tiny-droplet position. It checks the nested event timing, SV and all repeated traversals against cumulative anchor distances, allowing up to 1.5 playfield pixels for integer-coordinate rounding. Both linear paths and the exporter's Bezier encoding with repeated internal anchors qualify. Y coordinates and standalone fruit positions do not affect detection. Sliders without droplets do not count as evidence; dense but misaligned anchors and ordinary Bezier curves do not qualify.
+
+The import dialog shows each suspected difficulty's name and a page counter, asking **Was this beatmap exported by Fruits Atelier or Derandomizer?**. **Yes** initializes Droplet Settings to Derandomize and retains the current playback while recovering a reusable baseline. **No** uses the captured global import mode and the file's geometric path. **Settings → General → Map Import** defaults to user confirmation for suspected maps.
+Disable **Confirm suspected FA / Derandomizer maps** to accept the FA interpretation
+automatically when at least 95% of sliders match. Suspected maps above 80% but below
+95% still require a choice; ordinary maps continue without the source question. Import preparation runs in the background before editing and export. A workspace import saves its resolved initial state locally before offering conversion; existing difficulties are not reinitialized. The saved state and baselines survive reloads, and an interrupted, unresolved import resumes preparation.
+
+Confirmed compensated imports recover straight lines, quadratic/cubic Beziers with
+variable control times, and circular arcs from playback samples. Fruit and regular
+droplets supply an initial fit, followed by all droplet samples. Stable slopes on
+both sides of a sharp corner retain its anchor; smooth reversals can remain one
+curve. Repeated traversals fold onto one shared path. Every accepted simplification
+checks all events, including tiny droplets, through NM and HR export/read-back.
+Final conversion preserves event kinds, counts and times (within 0.000001 ms), with
+at most 4 playfield pixels of position error across the complete map. A replacement
+that fails validation retains its Legacy source. Existing saved workspace baselines
+are not automatically refitted.
+
+The `.osu` file contains sampled and quantized geometry, so recovery cannot promise
+the original control points or the exact shape between samples. Sparse samples,
+clipped curves and partial repeat compensation can retain more detailed paths.
+
+After preparation, the last page offers to keep Legacy Sliders or convert them to FSliders across the imported difficulties.
+In **Settings → General → Map Import**, the default is **Ask before converting imported
+sliders**. Choose **Always convert imported sliders to FSliders** to skip this final
+question and run the same background conversion automatically, or **Always keep
+imported Legacy Sliders** to retain their representation. On the final import page,
+**Remember this choice for future imports** saves whichever answer you choose.
+Manual conversion does not offer this checkbox. These global import
+preferences are saved when applying Settings; they do not edit existing maps. Conversion uses the current map and slider modes and the retained baseline; there is no separate conversion-mode toggle. **Edit → Convert all sliders to FSliders** offers the same representation choice for the current difficulty. Single-slider conversion uses the same policy. Batch conversion is cancellable, checks its source snapshot before publication, and supports one undo step per difficulty. Invalid input retains its source with diagnostics. Saving persists the result in the workspace without modifying the original source files.
+
+Ctrl+D retains the source object and creates a same-type copy with its baseline and effective mode. Generated compensation is recalculated for the copied object's position in the map RNG sequence. This does not apply derandomization again to an already processed path.
+
 
 With Distance Snap disabled, dragging a selected slider fruit, droplet or tiny droplet follows horizontal Grid Snap, including the existing Shift override. Unreachable positions stop at an accepted grid point, or retain the original X when no grid point is reachable. With Distance Snap enabled, the strict event snapping rules above apply; rejected candidates do not leave partial geometry.
 
@@ -1385,7 +1557,9 @@ collection limits and the distinction between software timing and acoustic delay
 The Timing menu separates snap/metronome controls, current timing-section commands,
 setup tools, whole-map commands, and the preview point with dividers.
 
-Open **Timing → Hitsound Copier (Beta)** for a floating dialog. The tabs are external
+Open **Timing → Hitsound Copier (Beta)** for a floating dialog. Copying and clearing
+sounds work for both Legacy Sliders and FSliders in either canvas, preserving their
+geometry and representation. The tabs are external
 copy, same-set copy, and Clear from left to right. Choose Clear,
 an external osu!standard or Catch `.osu`, or another difficulty in the current set. Clear restores
 normal default samples and removes Whistle, Finish, Clap and custom object samples.
@@ -1499,8 +1673,13 @@ slider SV. These properties are read-only.
 Selecting one Legacy Slider exposes **Legacy SV (×)** in Slider Inspector. This
 edits its independent authored multiplier (0.1–10); it retains path length and
 changes duration without inserting authoring green timing points. Imported
-sliders capture their original head SV. New Legacy sliders use **osu! slider default SV**
-below Distance Snapping in the osu! canvas (initially 1×). The slider covers
+sliders capture their original head SV. New Legacy sliders use **SV** below **DS** in the upper-right corner of the osu!
+canvas (initially 1×). The compact sliders share this corner with the X/Y readout.
+Catch canvas shows X and the selected object’s previous/next distance ratios in
+the same corner. The assist buttons sit below these readouts and scroll when the canvas is too
+short to show every button. Catch uses uniformly scaled square buttons and icons,
+while osu! keeps a compact palette. Catch previous/next distances share one row
+below the X coordinate. The slider covers
 0.1–3.2× in 0.1× steps; Shift uses 0.01×. Click its numeric value to enter any SV
 from 0.1–10×, confirm with Enter or by clicking outside, and cancel with Esc.
 Values above 3.2× keep the slider at its right endpoint. The default saves globally

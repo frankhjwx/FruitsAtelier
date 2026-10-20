@@ -45,12 +45,18 @@ public sealed partial class EditorView
     private double versionZoom = 1;
     private static readonly HashSet<Guid> noVersionSelection = [];
 
-    public void ShowVersionHistory()
+    private string? preferredVersionPath;
+    private Guid preferredVersionDifficulty;
+
+    public void ShowVersionHistory() => ShowVersionHistory(null, Guid.Empty);
+
+    private void ShowVersionHistory(string? path, Guid difficultyId)
     {
         if (WorkspaceSession is not { } session || VersionHistoryVisible) return;
         if (NotifySynchronizationBlocked() || !PrepareFileOperation()) return;
         if (AudioPlaying) RequestPausePlayback?.Invoke();
         menu = -1; contextItems.Clear(); hits.Clear(); fields.Clear();
+        preferredVersionPath = path; preferredVersionDifficulty = difficultyId;
         VersionHistoryVisible = true;
         versions = []; versionProject = null; versionError = ""; versionScroll = versionDifficultyScroll = 0;
         versionCurrentPane = versionHistoricalPane = null; versionMerge = null; versionComparison = null;
@@ -122,12 +128,22 @@ public sealed partial class EditorView
             if (versionListTask is { IsCompleted: true } listed)
             {
                 versionListTask = null; versions = listed.GetAwaiter().GetResult();
-                if (versions.Count > 0) SelectVersion(0);
+                int preferred = versions.ToList().FindIndex(v => WorkspaceSynchronization.Paths.Equals(v.Path, preferredVersionPath));
+                string? requested = preferredVersionPath;
+                preferredVersionPath = null;
+                if (requested is not null && preferred < 0)
+                {
+                    if (fullSyncBackup?.Version.Path == requested) fullSyncBackup = null;
+                    throw new FileNotFoundException(null, requested);
+                }
+                if (versions.Count > 0) SelectVersion(Math.Max(0, preferred));
             }
             if (versionReadTask is { IsCompleted: true } read)
             {
                 versionReadTask = null; versionProject = read.GetAwaiter().GetResult();
-                int index = versionProject.Difficulties.FindIndex(d => d.Id == difficulties[activeDifficulty].Id);
+                Guid id = preferredVersionDifficulty == Guid.Empty ? difficulties[activeDifficulty].Id : preferredVersionDifficulty;
+                preferredVersionDifficulty = Guid.Empty;
+                int index = versionProject.Difficulties.FindIndex(d => d.Id == id);
                 versionDifficultyScroll = 0;
                 SelectVersionDifficulty(Math.Max(0, index));
             }
@@ -259,7 +275,7 @@ public sealed partial class EditorView
             var row = new Rect(versionListBounds.X + 4, versionListBounds.Y + (i - versionScroll) * 54, versionListBounds.Width - 8, 50);
             c.Fill(row, i == versionIndex ? Surface : Panel, 4);
             c.Text(version.TimeUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"), row.X + 8, row.Y + 7, 12, Foreground, row.Width - 16);
-            string operation = L.Get("history.operation." + (version.Operation is "save" or "delete" or "restore" or "before-sync" or "reimport" ? version.Operation : "other"));
+            string operation = L.Get("history.operation." + (version.Operation is "save" or "delete" or "restore" or "before-sync" or "before-full-sync" or "reimport" ? version.Operation : "other"));
             c.Text(L.Get("history.versionLabel", operation, L.Get(version.WorkingCopy ? "history.working" : "history.saved")), row.X + 8, row.Y + 28, 11, Muted, row.Width - 16);
             hits.Add(new(row, () => SelectVersion(selected), versionRestoreTask is null));
         }

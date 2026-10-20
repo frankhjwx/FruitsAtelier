@@ -12,12 +12,18 @@ public static class WorkspaceExport
     {
         if (string.IsNullOrWhiteSpace(songs)) throw new InvalidOperationException(L.Get("library.bindForExport"));
         WorkspaceProject.ValidateRoots(Path.GetDirectoryName(session.Directory)!, songs);
-        var missing = WorkspaceProject.MissingResources(BeatmapProject.FromDocuments([difficulty.Document]));
-        if (missing.Count > 0) throw new IOException(L.Get("library.missingResources", string.Join("\n", missing)));
         var entry = session.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulty.Id);
+        // For an unlinked difficulty, SourcePath locates resources rather than a required live .osu.
+        var missing = WorkspaceProject.MissingResources(BeatmapProject.FromDocuments([difficulty.Document]))
+            .Where(path => entry is null || WorkspaceSynchronization.Target(entry) is not null
+                || !WorkspaceSynchronization.Paths.Equals(path, difficulty.Document.SourcePath)).ToArray();
+        if (missing.Length > 0) throw new IOException(L.Get("library.missingResources", string.Join("\n", missing)));
+        if (difficulty.FaOnly || entry?.FaOnly == true) throw new InvalidOperationException(L.Get("song.faOnlyExportHelp"));
         string? target = overwrite ? entry?.ExportTarget ?? entry?.Source : null;
         string? expected = overwrite ? entry?.ExportHash ?? entry?.SourceHash : null;
         var document = difficulty.Document.DeepClone();
+        // A detached baseline retains the resource directory after its .osu is deleted.
+        document.SourcePath ??= entry?.Sync?.Path;
         SetMetadata(document, "Version", difficulty.Name);
         if (overwrite)
         {
@@ -58,6 +64,8 @@ public static class WorkspaceExport
 
     public static void Commit(WorkspaceSession session, WorkspaceExportPlan plan, bool updateAssociation = true)
     {
+        if (session.Manifest.Difficulties.Any(d => d.Id == plan.DifficultyId && d.FaOnly))
+            throw new InvalidOperationException(L.Get("song.faOnlyExportHelp"));
         WorkspaceProject.RejectLinks(plan.Target);
         if (plan.PreviousTarget is not null)
         {

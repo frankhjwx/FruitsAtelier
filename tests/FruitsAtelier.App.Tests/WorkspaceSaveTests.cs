@@ -150,7 +150,10 @@ static class WorkspaceSaveTests
         File.WriteAllText(source, originalOsu);
         var ui = new Ui(false); ui.Resize(width, height);
         ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
-        ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); ui.View.AnswerSliderImport(initialConversion); ui.Paint();
+        ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings));
+        var preparationDeadline = DateTime.UtcNow.AddSeconds(30);
+        while (ui.View.SliderConversionBusy && DateTime.UtcNow < preparationDeadline) { ui.Paint(); Thread.Sleep(5); }
+        ui.Paint(); ui.View.AnswerSliderImport(initialConversion); ui.Paint();
         var session = ui.View.WorkspaceSession!;
         Guid originalId = session.Manifest.Difficulties.Single().Id;
         string catchdiff = Path.Combine(session.Directory, session.Manifest.Difficulties.Single().File);

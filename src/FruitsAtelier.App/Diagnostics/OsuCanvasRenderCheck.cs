@@ -14,6 +14,11 @@ internal static class OsuCanvasRenderCheck
         string folder = Path.GetFullPath("artifacts/tests/osu-canvas-native");
         Directory.CreateDirectory(folder);
         string[] arguments = Environment.GetCommandLineArgs();
+        if (arguments.Contains("--slider-import-render-check"))
+        {
+            SliderImportRenderCheck.Run(canvas, folder);
+            return;
+        }
         if (arguments.Contains("--canvas-feedback-render-check"))
         {
             CanvasFeedbackRenderCheck.Run(canvas, folder);
@@ -179,6 +184,18 @@ internal static class OsuCanvasRenderCheck
                 { editor.PointerDown(preview.X + 10, preview.Y + 10, 0, false, false); editor.PointerUp(preview.X + 10, preview.Y + 10, 0); }
                 Paint("catch-preview");
                 if (!editor.IsOsuCanvas || editor.IsDirty || !map.ContentEquals(editor.Document)) throw new InvalidOperationException("Standard canvas rendering changed content or mode.");
+                editor.UpdateTransport(1900, 10000, true, false, false, null, null);
+                var cloneHead = editor.OsuCanvasScreen(210, 80);
+                editor.PointerDown(cloneHead.X, cloneHead.Y, 0, false, false); editor.PointerUp(cloneHead.X, cloneHead.Y, 0);
+                editor.KeyDown('D', true, false); editor.KeyUp('D'); Paint();
+                if (editor.Document.ImportedSliders.Count != map.ImportedSliders.Count + 1 || editor.Document.Tracks.Count != 0)
+                    throw new InvalidOperationException("Cloning a Legacy Slider changed its representation.");
+                editor.UpdateTransport(4000, 10000, true, false, false, null, null); Paint("legacy-slider-clone");
+                editor.KeyDown('Z', true, false); editor.KeyUp('Z'); Paint();
+                if (!map.ContentEquals(editor.Document)) throw new InvalidOperationException("Legacy Slider clone undo did not restore the map.");
+                editor.UpdateTransport(1900, 10000, true, false, false, null, null);
+                editor.ShowOsuLinkNotice("osu.readOnlySlider");
+                Paint("slider-canvas-notice");
                 void Paint(string? name = null)
                 {
                     var wait = System.Diagnostics.Stopwatch.StartNew();

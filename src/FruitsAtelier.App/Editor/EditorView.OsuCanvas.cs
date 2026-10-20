@@ -17,8 +17,9 @@ public sealed partial class EditorView
         public int Order, Flags, Number, Colour, Stack, Spans = 1;
         public string NumberText = "";
         public bool Spinner;
-        public SliderPathPoint[] Path = [];
-        public System.Numerics.Vector2[] StrokePath = [];
+        public IReadOnlyList<SliderPathPoint> Path = [];
+        private System.Numerics.Vector2[]? strokePath;
+        public System.Numerics.Vector2[] StrokePath => strokePath ??= Path.Select(p => new System.Numerics.Vector2((float)p.X, (float)p.GeometryY)).ToArray();
         public double[] Distances = [];
         public double TickDistance, TickEndDistance, TickLength;
     }
@@ -90,8 +91,8 @@ public sealed partial class EditorView
                 && (!importedSources.TryGetValue(id, out var original) || s.OriginalLine != original.OriginalLine)) converted = null;
             var drawn = !osuShowProcessedSliders && importedSources.TryGetValue(id, out var authored)
                 ? authored.RandomizationSource : null;
-            var path = (drawn is not null ? ImportedSliderConverter.Path(drawn)
-                : converted?.Path ?? ImportedSliderConverter.Path(s)).ToArray();
+            var path = drawn is not null ? ImportedSliderConverter.Path(drawn)
+                : converted?.Path ?? ImportedSliderConverter.Path(s);
             var state = timing.At(s.TimeMs);
             double duration = converted?.DurationMs ?? ImportedSliderConverter.DurationMs(map, s);
             double tick = converted?.TickDistance ?? 100 * map.EffectiveSliderMultiplier * state.SliderVelocityMultiplier / (map.SliderTickRate > 0 ? map.SliderTickRate : 1);
@@ -103,7 +104,7 @@ public sealed partial class EditorView
         if (playableExport is null)
             foreach (var t in map.Tracks)
                 if (sliders.TryGetValue(t.Id, out var s))
-                    items.Add(Slider(t.Id, s.StartTimeMs, s.DurationMs, t.SourceOrder, Flags(t.OriginalLine), s.SpanCount, s.Path.ToArray(), s.TickDistance));
+                    items.Add(Slider(t.Id, s.StartTimeMs, s.DurationMs, t.SourceOrder, Flags(t.OriginalLine), s.SpanCount, s.Path, s.TickDistance));
         foreach (var s in map.BananaShowers)
             items.Add(new() { Id = s.Id, Start = s.TimeMs, End = s.EndTimeMs, X = 256, Y = 192, Spinner = true, Order = s.SourceOrder, Flags = Flags(s.OriginalLine) });
         osuCanvasObjects = items.OrderBy(i => i.Start).ThenBy(i => i.Order).ToArray();
@@ -121,13 +122,13 @@ public sealed partial class EditorView
         for (int i = 0; i < osuCanvasObjects.Length; i++) osuCanvasMaximumEnds[i] = maximum = Math.Max(maximum, osuCanvasObjects[i].End);
 
         static int Flags(string? line) => line?.Split(',') is { Length: > 3 } p && int.TryParse(p[3], out int flags) ? flags : 0;
-        static OsuCanvasObject Slider(Guid id, double start, double duration, int order, int flags, int spans, SliderPathPoint[] path, double tick)
+        static OsuCanvasObject Slider(Guid id, double start, double duration, int order, int flags, int spans, IReadOnlyList<SliderPathPoint> path, double tick)
         {
-            var distances = new double[path.Length];
-            for (int i = 1; i < path.Length; i++) distances[i] = distances[i - 1] + Math.Sqrt(Math.Pow(path[i].X - path[i - 1].X, 2) + Math.Pow(path[i].GeometryY - path[i - 1].GeometryY, 2));
+            var distances = new double[path.Count];
+            for (int i = 1; i < path.Count; i++) distances[i] = distances[i - 1] + Math.Sqrt(Math.Pow(path[i].X - path[i - 1].X, 2) + Math.Pow(path[i].GeometryY - path[i - 1].GeometryY, 2));
             double tickLength = distances.Length > 0 ? Math.Min(100000, distances[^1]) : 0;
             double tickEnd = duration > 0 ? tickLength * (1 - 10 * spans / duration) : 0;
-            return new() { Id = id, Start = start, End = start + duration, Order = order, Flags = flags, Spans = Math.Max(1, spans), Path = path, StrokePath = path.Select(p => new System.Numerics.Vector2((float)p.X, (float)p.GeometryY)).ToArray(), Distances = distances, TickDistance = tick, TickEndDistance = tickEnd, TickLength = tickLength, X = path.Length > 0 ? path[0].X : 256, Y = path.Length > 0 ? path[0].GeometryY : 192 };
+            return new() { Id = id, Start = start, End = start + duration, Order = order, Flags = flags, Spans = Math.Max(1, spans), Path = path, Distances = distances, TickDistance = tick, TickEndDistance = tickEnd, TickLength = tickLength, X = path.Count > 0 ? path[0].X : 256, Y = path.Count > 0 ? path[0].GeometryY : 192 };
         }
     }
 
@@ -143,7 +144,7 @@ public sealed partial class EditorView
         {
             var current = osuCanvasObjects[i];
             if (current.Spinner || current.Stack != 0) continue;
-            bool sliderBranch = current.Path.Length > 0;
+            bool sliderBranch = current.Path.Count > 0;
             for (int n = i - 1; n >= 0; n--)
             {
                 var previous = osuCanvasObjects[n];
@@ -155,7 +156,7 @@ public sealed partial class EditorView
                     if (Distance(tail.X, tail.Y, current.X, current.Y) < 3) { previous.Stack = current.Stack + 1; current = previous; }
                     continue;
                 }
-                if (previous.Path.Length > 0 && Distance(tail.X, tail.Y, current.X, current.Y) < 3)
+                if (previous.Path.Count > 0 && Distance(tail.X, tail.Y, current.X, current.Y) < 3)
                 {
                     int offset = current.Stack - previous.Stack + 1;
                     for (int j = n + 1; j <= i; j++)
@@ -169,12 +170,12 @@ public sealed partial class EditorView
     private static double Distance(double ax, double ay, double bx, double by) => Math.Sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by));
     private static (double X, double Y) OsuPathPosition(OsuCanvasObject o, double progress)
     {
-        if (o.Path.Length == 0) return (o.X, o.Y);
+        if (o.Path.Count == 0) return (o.X, o.Y);
         double distance = Math.Clamp(progress, 0, 1) * o.Distances[^1];
         int index = Array.BinarySearch(o.Distances, distance);
         if (index < 0) index = ~index;
         if (index <= 0) return (o.Path[0].X, o.Path[0].GeometryY);
-        if (index >= o.Path.Length) return (o.Path[^1].X, o.Path[^1].GeometryY);
+        if (index >= o.Path.Count) return (o.Path[^1].X, o.Path[^1].GeometryY);
         double amount = (distance - o.Distances[index - 1]) / Math.Max(.00001, o.Distances[index] - o.Distances[index - 1]);
         return (o.Path[index - 1].X + (o.Path[index].X - o.Path[index - 1].X) * amount, o.Path[index - 1].GeometryY + (o.Path[index].GeometryY - o.Path[index - 1].GeometryY) * amount);
     }
@@ -201,9 +202,9 @@ public sealed partial class EditorView
             double shift = -o.Stack * OsuCanvasRadius / 10;
             if (now < o.Start + 700 && Distance(point.X, point.Y, o.X + shift, o.Y + shift) <= OsuCanvasRadius) return o.Id;
             var tail = OsuPathPosition(o, o.Spans % 2 == 0 ? 0 : 1);
-            if (o.Path.Length > 0 && Distance(point.X, point.Y, tail.X + shift, tail.Y + shift) <= OsuCanvasRadius) return o.Id;
+            if (o.Path.Count > 0 && Distance(point.X, point.Y, tail.X + shift, tail.Y + shift) <= OsuCanvasRadius) return o.Id;
             if (now >= o.End + 240) continue;
-            for (int i = 1; i < o.Path.Length; i++)
+            for (int i = 1; i < o.Path.Count; i++)
             {
                 var a = o.Path[i - 1]; var b = o.Path[i];
                 double dx = b.X - a.X, dy = b.GeometryY - a.GeometryY;
@@ -227,7 +228,7 @@ public sealed partial class EditorView
         double now = LazerPresentationTime;
         int denseBodies = 0;
         foreach (int index in osuCanvasVisible)
-            if (osuCanvasObjects[index] is { StrokePath.Length: > 2048 } body && body.End + 240 > now)
+            if (osuCanvasObjects[index] is { Path.Count: > 2048 } body && body.End + 240 > now)
                 denseBodies++;
         c.PrepareSliderBodies(denseBodies, AudioPlaying);
         for (int n = osuCanvasVisible.Count - 1; n >= 0; n--)
@@ -239,7 +240,7 @@ public sealed partial class EditorView
             (float X, float Y) Point(double x, double y) => OsuCanvasScreen(x + shift, y + shift);
             var head = Point(o.X, o.Y);
             uint colour = OsuComboColour(o.Colour);
-            if (o.Path.Length > 0)
+            if (o.Path.Count > 0)
             {
                 float bodyOpacity = opacity * FadeAfter(o.End, 240);
                 if (bodyOpacity > 0)
@@ -277,8 +278,8 @@ public sealed partial class EditorView
                 if (span < o.Spans - 1)
                 {
                     var reverse = span % 2 == 0 ? tailScreen : head;
-                    int from = span % 2 == 0 ? o.Path.Length - 1 : 0;
-                    int to = span % 2 == 0 ? Math.Max(0, from - 1) : Math.Min(o.Path.Length - 1, 1);
+                    int from = span % 2 == 0 ? o.Path.Count - 1 : 0;
+                    int to = span % 2 == 0 ? Math.Max(0, from - 1) : Math.Min(o.Path.Count - 1, 1);
                     float arrowAngle = (float)(Math.Atan2(o.Path[to].GeometryY - o.Path[from].GeometryY, o.Path[to].X - o.Path[from].X) * 180 / Math.PI);
                     if (!((skin ?? defaultSkin)?.DrawOsuTexture(c, "reversearrow", reverse.X, reverse.Y, radius * 1.5f, opacity: opacity, rotation: arrowAngle) ?? false))
                     {
@@ -302,7 +303,7 @@ public sealed partial class EditorView
             }
             float headOpacity = opacity * FadeAfter(o.Start, 700);
             if (headOpacity > 0)
-                DrawOsuCircle(c, head.X, head.Y, radius * 2, now >= o.Start ? 0xFFFFFF : colour, o.Number, o.Path.Length > 0 ? "sliderstartcircle" : "hitcircle", headOpacity, o.NumberText);
+                DrawOsuCircle(c, head.X, head.Y, radius * 2, now >= o.Start ? 0xFFFFFF : colour, o.Number, o.Path.Count > 0 ? "sliderstartcircle" : "hitcircle", headOpacity, o.NumberText);
             if (now < o.Start)
             {
                 float approach = radius * (1 + 3 * (float)Math.Clamp((o.Start - now) / OsuCanvasPreempt, 0, 1));
@@ -312,7 +313,7 @@ public sealed partial class EditorView
             {
                 if (sliderSnapLabels.TryGetValue(o.Id, out var snapLabels))
                 {
-                    var finalTail = o.Path.Length > 0 ? OsuPathPosition(o, o.Spans % 2 == 0 ? 0 : 1) : (X: o.X, Y: o.Y);
+                    var finalTail = o.Path.Count > 0 ? OsuPathPosition(o, o.Spans % 2 == 0 ? 0 : 1) : (X: o.X, Y: o.Y);
                     var at = Point(finalTail.X, finalTail.Y);
                     DrawSliderSnapCaption(c, snapLabels.StartPosition, head.X, head.Y, radius, CanvasRenderBounds);
                     bool coincident = Math.Abs(at.X - head.X) < radius * 2 && Math.Abs(at.Y - head.Y) < 18;
@@ -321,7 +322,7 @@ public sealed partial class EditorView
                 float ringRadius = radius * 118 / 128;
                 float ringWidth = Math.Max(1, 3 * scale);
                 c.Circle(head.X, head.Y, ringRadius, OsuSelectionColour, false, ringWidth);
-                if (o.Path.Length > 0)
+                if (o.Path.Count > 0)
                 {
                     var tail = o.Path[^1];
                     var tailScreen = Point(tail.X, tail.GeometryY);

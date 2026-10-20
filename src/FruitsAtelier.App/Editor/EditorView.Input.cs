@@ -25,6 +25,11 @@ public sealed partial class EditorView
 
     private void PointerDownCore(float x, float y, int button, bool shift, bool ctrl)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible)
+        {
+            OsuLinkPickerPointerDown(x, y, button);
+            return;
+        }
         if (AcknowledgementsVisible) { AcknowledgementsPointerDown(x, y, button); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
@@ -38,6 +43,10 @@ public sealed partial class EditorView
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
+        }
+        if (CollaborationReportVisible)
+        {
+            mouseX = x; mouseY = y; CollaborationReportPointerDown(x, y, button); return;
         }
         if (HitsoundCopierVisible)
         {
@@ -136,6 +145,7 @@ public sealed partial class EditorView
             return;
         }
         if (SongDockPointer(x, y, button, shift)) return;
+        if (CollaborationPointer(x, y, button)) return;
         if (NotesPointer(x, y, button, shift)) return;
         if (PatternDockPointer(x, y, button)) return;
         if (CanvasScalePointerDown(x, y, button)) return;
@@ -263,7 +273,7 @@ public sealed partial class EditorView
         {
             PickObject(readOnlyHit.SourceId, ctrl);
             clickedCoordinate = readOnlyHit.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet ? readOnlyHit : null;
-            BeginSliderHold(x, y, ctrl || shift); StatusMessage = L.Get("osu.readOnlySlider"); return;
+            BeginSliderHold(x, y, ctrl || shift); ShowEditorNotice("osu.readOnlySlider"); return;
         }
         timelineFruit = null;
         if (!ctrl && tool == Tool.Select && objectSelection.Count == 1 && SelectedDistanceObject() is { IsStandalone: false } selectedChild
@@ -451,6 +461,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (CollaborationReportVisible) { mouseX = x; mouseY = y; if (collaborationReportDragging) MoveCollaborationReport(x, y); return; }
         if (RotationVisible) { mouseX = x; mouseY = y; RotationPointerMove(x, y); return; }
         if (aimodGesture != AimodGesture.None) { MoveAimodPointer(x, y); return; }
         if (notesSelecting) { PositionNotesCaret(x, y, true); return; }
@@ -613,6 +624,8 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (collaborationReportDragging) { MoveCollaborationReport(x, y); collaborationReportDragging = false; return; }
+        if (CollaborationReportVisible) return;
         if (RotationVisible) { EndRotationPointer(x, y); return; }
         if (aimodGesture != AimodGesture.None && button == 0) { EndAimodPointer(x, y); return; }
         if (notesSelecting && button == 0) { FinishNotesSelection(x, y); return; }
@@ -701,7 +714,7 @@ public sealed partial class EditorView
         {
             var readOnlyIds = IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id);
             if (history.TransactionChangesSliderGeometry(readOnlyIds))
-            { history.Cancel(); drag = DragKind.None; StatusMessage = L.Get("osu.readOnlySlider"); return; }
+            { history.Cancel(); drag = DragKind.None; ShowEditorNotice("osu.readOnlySlider"); return; }
             try
             {
                 if (drag == DragKind.TimelineTail && tailImportedBefore is { } beforeTail
@@ -711,7 +724,7 @@ public sealed partial class EditorView
             catch (InvalidOperationException error)
             { history.Cancel(); drag = DragKind.None; StatusMessage = error.Message; return; }
             if (Document.DerandomizeDroplets is null && Document.Tracks.Any(track => pendingImplicitSliderConversions.Contains(track.Id)))
-                Document.DerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
+                Document.DerandomizeDroplets = Document.DerandomizeFSliderDroplets;
             CommitContentHistory();
         }
         pendingImplicitSliderConversions.Clear();
@@ -748,6 +761,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
@@ -837,7 +851,7 @@ public sealed partial class EditorView
         if (Document.ImportedSliders.Any(slider => slider.Id == sourceId))
         {
             SelectObjects([sourceId], sourceId);
-            StatusMessage = L.Get("osu.readOnlySlider");
+            ShowEditorNotice("osu.readOnlySlider");
             return;
         }
         if (Document.Tracks.FirstOrDefault(track => track.Id == sourceId) is not { } track) return;
@@ -850,6 +864,12 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible)
+        {
+            if (osuLinkApplicationList.Contains(x, y))
+                osuLinkFirstApplication = Math.Clamp(osuLinkFirstApplication - (int)(delta / 120), 0, Math.Max(0, osuLinkApplications.Count - osuLinkVisibleRows));
+            return;
+        }
         if (AcknowledgementsVisible)
         {
             if (acknowledgementsTextBounds.Contains(x, y)) { acknowledgementsScroll -= delta / 120 * 66; ClampAcknowledgementsScroll(); }
@@ -900,6 +920,12 @@ public sealed partial class EditorView
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
+        if (CollaborationReportVisible)
+        {
+            if (CollaborationReportList.Contains(x, y)) collaborationReportScroll = Math.Clamp(collaborationReportScroll - delta / 120 * 58,
+                0, Math.Max(0, collaborationExcluded.Count * 58 - CollaborationReportList.Height));
+            return;
+        }
         if (RotationVisible) return;
         if (pendingLanguage is not null) return;
         if (languageMenuOpen)
@@ -926,6 +952,8 @@ public sealed partial class EditorView
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (HandleVolumePopoverWheel(x, y, delta)) return;
         if (WheelDockHorizontal(x, y, delta, shift)) return;
+        if (DockContentInputAvailable && CollaborationPanelVisible && collaborationBounds.Contains(x, y))
+        { collaborationPanelScroll = Math.Clamp(collaborationPanelScroll - delta / 120 * 48, 0, Math.Max(0, collaborationContentHeight - collaborationBounds.Height)); return; }
         if (RandomDockEditing && randomBounds.Contains(x, y))
         { randomScroll = Math.Clamp(randomScroll - delta / 120 * 48, 0, Math.Max(0, RandomContentHeight - randomBounds.Height)); return; }
         if (DockContentInputAvailable && PanelVisible(DockPanel.SliderInspector) && inspectorBounds.Contains(x, y))
@@ -1133,6 +1161,16 @@ public sealed partial class EditorView
 
     private void KeyDownCore(int virtualKey, bool ctrl, bool shift)
     {
+        if (CollaborationReportVisible && !ErrorVisible && !DiscardConfirmationVisible)
+        {
+            if (virtualKey == 27) CloseCollaborationReport();
+            return;
+        }
+        if (OsuLinkPickerVisible && !ErrorVisible)
+        {
+            OsuLinkPickerKey(virtualKey);
+            return;
+        }
         if (dockPressed is not null)
         {
             if (virtualKey == 27) { dockPressed = null; dockDragging = false; }
@@ -1256,6 +1294,8 @@ public sealed partial class EditorView
         if (SongSetupVisible) { SongSetupKey(virtualKey, ctrl, shift); return; }
         if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
+        if (CollaborationFocused)
+        { CollaborationKey(virtualKey, ctrl, shift); return; }
         if (AimodKey(virtualKey, ctrl, shift)) return;
         if (BananaEditVisible) { BananaEditKey(virtualKey, ctrl, shift); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
@@ -1462,6 +1502,12 @@ public sealed partial class EditorView
     private void TextInputCore(char value)
     {
         if (AcknowledgementsVisible) return;
+        if (CollaborationFocused)
+        {
+            if (!CollaborationBusy && collaborationField.Length > 0 && !char.IsControl(value))
+                collaborationText = InsertInput(collaborationField, collaborationText, value.ToString(), 128);
+            return;
+        }
         if (RotationVisible) { if (!char.IsControl(value)) RotationText(value.ToString()); return; }
         if (HitsoundCopierVisible) { if (!ErrorVisible && !DiscardConfirmationVisible && !char.IsControl(value)) PasteHitsoundName(value.ToString()); return; }
 
@@ -1769,7 +1815,7 @@ public sealed partial class EditorView
                 : (IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id)).ToArray();
             field.Apply(value);
             if (history.TransactionChangesSliderGeometry(readOnlyIds))
-            { history.Cancel(); fieldError = StatusMessage = L.Get("osu.readOnlySlider"); return false; }
+            { history.Cancel(); ShowEditorNotice("osu.readOnlySlider"); fieldError = StatusMessage; return false; }
             CommitContentHistory();
             editField = -1;
             fieldError = "";
@@ -1815,24 +1861,28 @@ public sealed partial class EditorView
     }
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible) { PointerDownCore(x, y, button, shift, ctrl); return; }
         var document = Document;
         try { PointerDownCore(x, y, button, shift, ctrl); }
         finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
     }
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible) { mouseX = x; mouseY = y; return; }
         var document = Document;
         try { PointerMoveCore(x, y, shift, ctrl); }
         finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
     }
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible) return;
         var document = Document;
         try { PointerUpCore(x, y, button, shift); }
         finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (OsuLinkPickerVisible && !ErrorVisible) { KeyDownCore(virtualKey, ctrl, shift); return; }
         bool shortcut = ctrl && !altHeld && (virtualKey is 38 or 40 || virtualKey == 82 && !shift)
             || altHeld && virtualKey is 13 or 37 or 38 or 39 or 40;
         if (!shortcut) heldEditorKeys.Add(virtualKey);
@@ -1844,6 +1894,7 @@ public sealed partial class EditorView
     }
     public void TextInput(char value)
     {
+        if (OsuLinkPickerVisible) return;
         var document = Document;
         try { TextInputCore(value); }
         finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
