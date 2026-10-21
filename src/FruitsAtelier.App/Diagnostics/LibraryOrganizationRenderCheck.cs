@@ -13,7 +13,7 @@ internal static class LibraryOrganizationRenderCheck
     {
         string folder = Path.GetFullPath("artifacts/tests/library-organization-native");
         string root = Path.Combine(folder, Guid.NewGuid().ToString("N"));
-        var settings = new LibrarySettings { Workspace = Path.Combine(root, "Workspace"), Songs = Path.Combine(root, "osu", "Songs") };
+        var settings = new LibrarySettings { MapperUsernames = ["Alice"], Workspace = Path.Combine(root, "Workspace"), Songs = Path.Combine(root, "osu", "Songs") };
         var names = new[] { "A New Beginning", "After the Rain", "Blue Hour", "Beyond the Clouds", "Crystal Garden", "Daylight" };
         var paths = new List<string>();
         for (int i = 0; i < names.Length; i++)
@@ -64,6 +64,15 @@ internal static class LibraryOrganizationRenderCheck
                     typeof(EditorView).GetField("collectionsScroll", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(view, 128f);
                     Paint(); Capture("osu-collection");
                     view.PointerDown(40, 244, 0, false, false); view.PointerUp(40, 244, 0); Wait(2); Capture("recent");
+                    Invoke("SwitchLibraryCategory", true, false, false, null!); Wait(2); Capture("my-maps");
+                    settings.MapperUsernames = [];
+                    Invoke("InvalidateLibraryOrganization", false); Wait(0); Capture("my-maps-setup");
+                    view.PointerDown(250, 254, 0, false, false); view.PointerUp(250, 254, 0); Paint();
+                    if (!(bool)typeof(EditorView).GetField("librarySettingsOpen", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view)!)
+                        throw new InvalidOperationException("My Maps setup must open Settings on the first click.");
+                    view.Wheel(view.SettingsBounds.Right - 60, view.SettingsBounds.Y + 200, -12000, false);
+                    Paint(); Capture("library-settings");
+                    view.KeyDown(27, false, false); settings.MapperUsernames = ["Alice"];
                 }
                 finally { view.CloseLibrary(); }
 

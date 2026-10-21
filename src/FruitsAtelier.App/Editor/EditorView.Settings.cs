@@ -12,6 +12,8 @@ public sealed partial class EditorView
     private bool draftAudioDiagnostics, draftAudioDiagnosticFrames;
     private string draftAudioDiagnosticProfile = "event-10";
     private bool draftRomanisedMetadata;
+    private string draftMapperUsernames = "";
+    private bool draftScanStandardMaps;
     private ImportSliderConversionMode draftImportSliderConversion;
     private bool draftConfirmCompensatedImports;
     private bool draftDerandomizeDroplets;
@@ -116,6 +118,8 @@ public sealed partial class EditorView
         draftOsuRoot = LibrarySettings.OsuRoot;
         draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
+        draftMapperUsernames = string.Join("; ", LibrarySettings.MapperUsernames ?? []);
+        draftScanStandardMaps = LibrarySettings.ScanStandardMaps;
         draftImportSliderConversion = LibrarySettings.ImportSliderConversion;
         draftConfirmCompensatedImports = LibrarySettings.ConfirmCompensatedImports;
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
@@ -148,7 +152,8 @@ public sealed partial class EditorView
 
     private bool SettingsRootsChanged => draftWorkspace != LibrarySettings.Workspace || draftOsuRoot != LibrarySettings.OsuRoot;
 
-    private bool SettingsChanged => draftMappingCanvasBackgroundDim != LibrarySettings.MappingCanvasBackgroundDim ||
+    private bool SettingsChanged => draftMapperUsernames != string.Join("; ", LibrarySettings.MapperUsernames ?? []) ||
+        draftScanStandardMaps != LibrarySettings.ScanStandardMaps || draftMappingCanvasBackgroundDim != LibrarySettings.MappingCanvasBackgroundDim ||
         draftSettingsColours[4] != LibrarySettings.CanvasGridColour ||
         draftSettingsColours[5] != LibrarySettings.CanvasCentreLineColour ||
         draftCanvasGridOpacity != LibrarySettings.CanvasGridOpacity ||
@@ -276,7 +281,12 @@ public sealed partial class EditorView
                 SettingsButton(c, new(SettingsContentX, dropletsTop + 46 + dropletHint.Length * 18, SettingsContentWidth, SettingsControlHeight),
                     L.Get("settings.openDropletSettings"), OpenDropletSettingsFromGeneral);
                 float importBottom = DrawMapImportSettings(c, dropletsTop + 100 + dropletHint.Length * 18);
-                generalContentHeight = importBottom - generalTop - 116 + 12;
+                LibraryTextField(c, 7, L.Get("settings.mapperUsernames"), draftMapperUsernames, importBottom + 16);
+                float libraryBottom = SettingsParagraph(c, L.Get("settings.mapperUsernamesHint"), importBottom + 84);
+                TimingCheck(c, new(SettingsContentX, libraryBottom + 8, SettingsContentWidth, SettingsControlHeight),
+                    "settings.scanStandardMaps", draftScanStandardMaps, () => draftScanStandardMaps = !draftScanStandardMaps);
+                libraryBottom = SettingsParagraph(c, L.Get("settings.scanStandardMapsHint"), libraryBottom + 48);
+                generalContentHeight = libraryBottom - generalTop - 116 + 12;
                 c.Unclip();
                 ClipSettingsHits(generalFirstHit);
                 DrawSettingsScrollbar(c, GeneralContentHeight);
@@ -405,6 +415,8 @@ public sealed partial class EditorView
             settings.CanvasGridOpacity = draftCanvasGridOpacity;
             settings.ForceBackgroundDim = draftForceBackgroundDim;
             settings.RomanisedMetadata = draftRomanisedMetadata;
+            settings.MapperUsernames = draftMapperUsernames.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.Ordinal).ToList();
+            settings.ScanStandardMaps = draftScanStandardMaps;
             settings.ImportSliderConversion = draftImportSliderConversion;
             settings.ConfirmCompensatedImports = draftConfirmCompensatedImports;
             settings.DerandomizeDroplets = FirstRunSetupVisible ? draftDerandomizeDroplets : LibrarySettings.DerandomizeDroplets;
@@ -448,6 +460,8 @@ public sealed partial class EditorView
             settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
             bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;
+            bool scanningChanged = settings.ScanStandardMaps != LibrarySettings.ScanStandardMaps;
+            bool mappersChanged = !(LibrarySettings.MapperUsernames ?? []).SequenceEqual(settings.MapperUsernames);
             if (persist) settings.Save(settingsPath);
             else
             {
@@ -484,7 +498,12 @@ public sealed partial class EditorView
                 RequestAudioDiagnosticRestart?.Invoke(audioScroll);
                 return;
             }
-            if (!rootsChanged) return;
+            if (!rootsChanged)
+            {
+                if (mappersChanged) InvalidateLibraryOrganization();
+                if (scanningChanged) { InvalidateLibraryOrganization(); StartLibraryScan(); }
+                return;
+            }
             EnableFileMonitoring();
             InvalidateLibraryRatings(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
             foreach (var cached in libraryCategoryBrowsers.Values) cached.Browser?.Retire();

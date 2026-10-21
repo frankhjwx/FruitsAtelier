@@ -22,12 +22,12 @@ internal static class LibraryResponsivenessTests
             Settle();
             WithWriteLock(() =>
             {
-                var text = canvas.Texts.Single(t => t.Value == L.Get("library.projects"));
+                var text = canvas.Texts.Single(t => t.Value == L.Get("library.myMaps"));
                 view.PointerDown(text.X + 2, text.Y + 2, 0, false, false);
                 view.PointerUp(text.X + 2, text.Y + 2, 0);
                 view.Render(canvas, 980, 620);
                 view.CloseLibrary();
-            }, "My projects blocked the UI on the database writer");
+            }, "My Maps blocked the UI on the database writer");
             Settle();
 
             void WithWriteLock(Action action, string message)

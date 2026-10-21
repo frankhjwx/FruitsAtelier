@@ -10,13 +10,13 @@ internal static class LibraryDoubleClickTests
         try
         {
             string workspace = Path.Combine(root, "Workspace");
-            var session = WorkspaceProject.Create(workspace, BeatmapProject.FromDocuments([new MapDocument { Name = "Click project", IsDemo = false }]), "");
+            var session = WorkspaceProject.Create(workspace, BeatmapProject.FromDocuments([MyMapsTests.Document("Click project", "Mapper")]), "");
             var view = new EditorView(loadDemo: false);
-            view.InitializeLibrary(true, new LibrarySettings { Workspace = workspace });
+            view.InitializeLibrary(true, new LibrarySettings { Workspace = workspace, MapperUsernames = ["Mapper"] });
             var canvas = new RecordingCanvas();
             int opens = 0; LibraryMap? target = null; bool selectedDifficulty = false;
             view.RequestLibraryOpen = (map, selectDifficulty) => { opens++; target = map; selectedDifficulty = selectDifficulty; };
-            Settle(); Click("library.projects"); Settle();
+            Settle(); Click("library.myMaps"); Settle();
             var title = canvas.Texts.Single(t => t.Value == "Click project" && t.X < 600);
             float x = title.X + 2, y = title.Y + 2;
             view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0);

@@ -12,6 +12,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
     private readonly SqliteConnection db;
     private readonly string catalogPath;
     private readonly bool projectsOnly, favouritesOnly;
+    private readonly HashSet<string>? creators;
     private readonly string songs;
     private sealed record ProjectListing(IReadOnlyList<LibraryMap> Maps, bool? InSongs, LibraryMap Representative);
     private readonly Dictionary<string, ProjectListing> projectDetails = new(WorkspaceSynchronization.Paths);
@@ -34,6 +35,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
     internal LibrarySearchSnapshot(SqliteConnection connection, string songs, string query, bool projectsOnly, IReadOnlyCollection<string>? favourites, LibraryOrganization? organization)
     {
         this.projectsOnly = projectsOnly;
+        creators = organization?.Creators is { } names ? new(names, StringComparer.Ordinal) : null;
         favouritesOnly = favourites is not null;
         this.songs = songs;
         catalogPath = connection.DataSource;
@@ -47,13 +49,34 @@ public sealed class LibrarySearchSnapshot : IDisposable
             command.CommandText = "PRAGMA temp_store=FILE; PRAGMA cache_size=-8192; PRAGMA temp.cache_size=-8192; "
                 + "CREATE TEMP TABLE matches(path TEXT PRIMARY KEY,groupKey TEXT,title TEXT,project TEXT) WITHOUT ROWID;";
             command.ExecuteNonQuery();
+            if (creators is not null)
+            {
+                db.CreateFunction<string?, bool>("is_my_mapper", creator => creator is not null && creators.Contains(creator));
+                db.CreateFunction<string, string>("search_metadata", data =>
+                {
+                    var map = JsonSerializer.Deserialize<LibraryMap>(data)!;
+                    return LibraryDatabase.Normalize(string.Join(" ", map.Title, map.TitleUnicode, map.Artist, map.ArtistUnicode, map.Creator, map.Difficulty, map.Tags, map.Source));
+                });
+                // Saved difficulties supply current mapper metadata for their associated source sets.
+                command.CommandText = "CREATE TEMP VIEW maps AS SELECT * FROM catalog.maps m WHERE NOT EXISTS(SELECT 1 FROM catalog.project_difficulty_metadata d WHERE d.source=m.path) "
+                    + "UNION ALL SELECT path,project,stamp,size,data,search_metadata(data) FROM catalog.project_difficulty_metadata";
+                command.ExecuteNonQuery();
+            }
             string project = "(SELECT p.project FROM project_sources p WHERE p.source=json_extract(m.data,'$.Directory') ORDER BY p.project LIMIT 1)";
+            if (organization?.Creators is not null)
+                project = $"coalesce((SELECT d.project FROM project_difficulty_metadata d WHERE d.path=m.path),{project})";
             var favouriteKeys = new HashSet<string>(favourites ?? [], WorkspaceSynchronization.Paths);
             db.CreateFunction<string?, string?, bool>("is_favourite", (directory, projectPath) =>
                 directory is not null && favouriteKeys.Contains(directory) || projectPath is not null && favouriteKeys.Contains(projectPath));
             string key = favouritesOnly ? $"coalesce({project},json_extract(m.data,'$.Directory'))" : projectsOnly ? project : "json_extract(m.data,'$.Directory')";
-            command.CommandText = $"INSERT INTO matches SELECT m.path,{key},json_extract(m.data,'$.Title'),{project} FROM maps m WHERE (m.root=$r OR m.root IN (SELECT path FROM external_sources))";
+            if (organization?.Creators is not null) key = $"coalesce({project},json_extract(m.data,'$.Directory'))";
+            string nativeScope = creators is null ? "" : " OR m.path IN (SELECT path FROM project_difficulty_metadata)";
+            command.CommandText = $"INSERT INTO matches SELECT m.path,{key},json_extract(m.data,'$.Title'),{project} FROM maps m WHERE (m.root=$r OR m.root IN (SELECT path FROM external_sources){nativeScope})";
             command.Parameters.AddWithValue("$r", songs);
+            if (organization?.Creators is not null)
+            {
+                command.CommandText += " AND is_my_mapper(json_extract(m.data,'$.Creator'))";
+            }
             var words = LibraryDatabase.Normalize(query).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < words.Length; i++)
             {
@@ -202,7 +225,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
             WorkspaceManifest? manifest = null;
             if (project is not null)
                 lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project, includeSync: false);
-            ProjectListing? details = (projectsOnly || favouritesOnly) && manifest is not null ? ProjectDifficulties(project!, map, manifest) : null;
+            ProjectListing? details = (projectsOnly || favouritesOnly || creators is not null) && manifest is not null ? ProjectDifficulties(project!, map, manifest) : null;
             if (details is not null) { difficultyCount = details.Maps.Count; map = details.Representative; }
             bool? inSongs = string.IsNullOrWhiteSpace(songs) ? null
                 : manifest is not null
@@ -217,7 +240,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
     public IReadOnlyList<LibraryMap> Difficulties(LibrarySetRow set, int start, int count = 64)
     {
         using var attachment = Attach();
-        if ((projectsOnly || favouritesOnly) && set.Map.ProjectPath is { } project)
+        if ((projectsOnly || favouritesOnly || creators is not null) && set.Map.ProjectPath is { } project)
         {
             return ProjectDifficulties(project, set.Map).Maps.Skip(Math.Max(0, start)).Take(Math.Clamp(count, 1, 128)).ToArray();
         }
@@ -296,17 +319,36 @@ public sealed class LibrarySearchSnapshot : IDisposable
             }
         }
         var entries = new List<LibraryMap>();
+        var authored = new Dictionary<string, LibraryMap>(WorkspaceSynchronization.Paths);
+        if (creators is not null)
+        {
+            using var lookup = db.CreateCommand();
+            lookup.CommandText = "SELECT path,data FROM project_difficulty_metadata WHERE project=$p";
+            lookup.Parameters.AddWithValue("$p", project);
+            using var reader = lookup.ExecuteReader();
+            while (reader.Read()) authored[reader.GetString(0)] = JsonSerializer.Deserialize<LibraryMap>(reader.GetString(1))!;
+        }
         var representative = (live.Values.OrderBy(m => m.Path, WorkspaceSynchronization.Paths).FirstOrDefault() ?? fallback) with { ProjectPath = project };
         foreach (var difficulty in manifest.Difficulties)
         {
             if (Path.GetFileName(difficulty.File) != difficulty.File || !difficulty.File.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("project.invalid"));
             var metadata = targets[difficulty.Id] is { } target && live.Remove(target, out var map) ? map : fallback;
+            if (creators is not null)
+            {
+                if (!authored.TryGetValue(Path.Combine(project, difficulty.File), out metadata)) continue;
+                if (!creators.Contains(metadata.Creator)) continue;
+            }
             entries.Add(metadata with { Path = Path.Combine(project, difficulty.File), Directory = project,
                 Difficulty = difficulty.Name, ProjectPath = project, ExternalMissing = missing.Contains(difficulty.Id),
                 ReferenceSearching = searching && targets[difficulty.Id] is { } absent && !File.Exists(absent) });
         }
         entries.AddRange(live.Values.OrderBy(m => m.Path, WorkspaceSynchronization.Paths).Select(m => m with { ProjectPath = project }));
+        if (creators is not null)
+        {
+            entries.RemoveAll(m => !creators.Contains(m.Creator));
+            representative = entries.FirstOrDefault() ?? fallback;
+        }
         if (projectDetails.Count >= 128) projectDetails.Remove(projectDetails.Keys.First());
         bool? inSongs = string.IsNullOrWhiteSpace(songs) ? null : targets.Values.OfType<string>()
             .Concat(live.Keys).Any(p => WorkspaceProject.Within(songs, p) && File.Exists(p));

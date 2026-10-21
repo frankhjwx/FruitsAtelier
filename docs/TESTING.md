@@ -77,6 +77,12 @@ native windows and captures grouping, sorting, collection membership and recent
 visits at 980×620 and 1440×900 with 96/144/192 DPI in both languages under
 `artifacts/tests/library-organization-native`.
 
+`App.Tests --my-maps-check` checks exact case-sensitive mapper filtering, multiple
+usernames, mixed-mapper sets, native project difficulties, persisted and cancelled
+Settings drafts, and disabling/re-enabling standard scanning without source changes.
+The library organization native render check also captures My Maps, the missing-name
+prompt and General library preferences in English and Chinese at both window sizes.
+
 ## Automated regressions
 
 `App.Tests --new-difficulty-check` checks independent complete copies, named
@@ -907,7 +913,7 @@ new difficulties, inactive conflict gating, pointer-capture deferral and externa
 changes during a pending merge. Apply must revalidate rather than commit a stale choice.
 
 Project-library notification regressions add and remove external difficulties while
-the My projects view stays open, checking both card counts and detail rows. They
+the My Maps view stays open, checking both card counts and detail rows. They
 also verify muted retained FA entries, background filename/directory rediscovery,
 duplicate-free listings and unchanged authoring/baseline files during discovery.
 

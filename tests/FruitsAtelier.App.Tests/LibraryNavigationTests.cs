@@ -7,16 +7,16 @@ internal static class LibraryNavigationTests
     public static void Run()
     {
         string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-navigation-" + Guid.NewGuid());
-        var settings = new LibrarySettings { Workspace = root };
+        var settings = new LibrarySettings { Workspace = root, MapperUsernames = ["Mapper"] };
         var view = new EditorView(loadDemo: false);
         var canvas = new RecordingCanvas();
         try
         {
-            for (int i = 0; i < 24; i++) WorkspaceProject.Create(root, BeatmapProject.FromDocuments([new MapDocument { Name = "Navigation " + i.ToString("D2"), IsDemo = false }]), "");
+            for (int i = 0; i < 24; i++) WorkspaceProject.Create(root, BeatmapProject.FromDocuments([MyMapsTests.Document("Navigation " + i.ToString("D2"), "Mapper")]), "");
             view.InitializeLibrary(true, settings); Settle();
             Check(!view.HasEditorProject && !view.Document.IsDemo && view.Document.Fruits.Count == 0, "startup has no demo");
             view.KeyDown(27, false, false); Check(view.LibraryVisible, "Escape on home does not open an empty editor");
-            Click(L.Get("library.projects")); Settle();
+            Click(L.Get("library.myMaps")); Settle();
             Check(!canvas.Texts.Any(t => t.Value == L.Get("library.refresh") || t.Value == L.Get("library.new")), "sidebar contains only categories");
             Check(canvas.Texts.Any(t => t.Value == "Search"), "search placeholder stays concise");
             var first = Titles();
@@ -26,7 +26,7 @@ internal static class LibraryNavigationTests
             for (int cycle = 0; cycle < 3; cycle++)
             {
                 Click(L.Get("library.all"));
-                Click(L.Get("library.projects"));
+                Click(L.Get("library.myMaps"));
                 Check(view.LibrarySetTotal == 24 && Titles().SequenceEqual(scrolled), "category switching immediately restores loaded rows and scroll position");
             }
             Settle();

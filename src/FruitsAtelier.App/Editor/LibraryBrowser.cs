@@ -13,6 +13,7 @@ internal sealed class LibraryBrowser
     private readonly HashSet<string>? filter;
     private readonly Dictionary<string, long> visits;
     private readonly HashSet<string>? difficultyPaths;
+    private readonly HashSet<string>? creators;
     private readonly int[] headers;
     private bool retiringForReorder, transferred, retired;
     private Task<LibraryBrowser>? reorderTask;
@@ -42,6 +43,7 @@ internal sealed class LibraryBrowser
         headers = snapshot.HeaderIndices.ToArray();
         this.filter = filter is null ? null : new(filter, WorkspaceSynchronization.Paths);
         difficultyPaths = organization?.DifficultyPaths is { } paths ? new(paths, WorkspaceSynchronization.Paths) : null;
+        creators = organization?.Creators is { } names ? new(names, StringComparer.Ordinal) : null;
         visits = new(organization?.Visits ?? new Dictionary<string, long>(), WorkspaceSynchronization.Paths);
     }
     public static LibraryBrowser Create(LibraryDatabase db, string query, bool projects, string? selected, string? top, float offset,
@@ -68,6 +70,7 @@ internal sealed class LibraryBrowser
         => !retired && !retiringForReorder && ReferenceEquals(database, db) && catalogRevision == db.Revision && this.query == query && this.projects == projects
             && (this.filter is null ? filter is null : filter is not null && this.filter.SetEquals(filter))
             && (difficultyPaths is null ? organization.DifficultyPaths is null : organization.DifficultyPaths is not null && difficultyPaths.SetEquals(organization.DifficultyPaths))
+            && (creators is null ? organization.Creators is null : organization.Creators is not null && creators.SetEquals(organization.Creators))
             && visits.Count == (organization.Visits?.Count ?? 0) && visits.All(p => organization.Visits?.GetValueOrDefault(p.Key) == p.Value);
     public Task<LibraryBrowser> Reorder(LibraryOrganization organization, string? selected, string? top, float offset)
     {

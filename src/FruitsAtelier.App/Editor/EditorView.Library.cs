@@ -31,7 +31,7 @@ public sealed partial class EditorView
     private string runningSearchQuery = "";
     private string? runningSearchSelection;
     private float runningSearchScroll;
-    private bool runningSearchProjects, runningSearchFavourites, libraryResultsReady;
+    private bool runningSearchMyMaps, runningSearchFavourites, libraryResultsReady;
     private int runningFavouriteRevision;
     private LibraryBrowser? libraryBrowser;
     private int LibrarySetCount => libraryBrowser?.Count ?? 0;
@@ -41,7 +41,7 @@ public sealed partial class EditorView
     private Dictionary<string, double?> libraryRatings = [];
     private long libraryRatingRevision;
     private string? selectedLibraryGroup;
-    private bool librarySettingsOpen, libraryProjectsOnly, exportPage, resourcePage;
+    private bool librarySettingsOpen, libraryMyMapsOnly, exportPage, resourcePage;
     private int libraryField = -1, libraryDiffScroll;
     private float libraryScroll;
     private string exportName = "";
@@ -329,6 +329,7 @@ public sealed partial class EditorView
             libraryRescanRequested = false;
             libraryPendingDirectories.Clear();
             string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
+            bool scanStandardMaps = LibrarySettings.ScanStandardMaps;
             var existing = indexedWorkspace == workspace && indexedSongs == songs ? libraryDatabase : null;
             Volatile.Write(ref scanningDatabase, null);
             searchedLibraryRevision = -1;
@@ -339,7 +340,7 @@ public sealed partial class EditorView
                 Platform.FazArchive.Recover(new LibrarySettings { Workspace = workspace, Songs = songs });
                 var db = existing ?? new LibraryDatabase(workspace, songs);
                 Volatile.Write(ref scanningDatabase, db);
-                return (db, db.ScanDirectories(directories, progress: p => Volatile.Write(ref libraryScanProgress, p)));
+                return (db, db.ScanDirectories(directories, progress: p => Volatile.Write(ref libraryScanProgress, p), scanStandardMaps: scanStandardMaps));
             });
             indexedWorkspace = workspace; indexedSongs = songs;
             libraryNotice = L.Get("library.scanning");
@@ -382,7 +383,7 @@ public sealed partial class EditorView
             try
             {
                 var result = searchTask.GetAwaiter().GetResult();
-                if (runningOrganizationKey != LibrarySearchKey || runningSearchQuery != libraryQuery || runningSearchProjects != libraryProjectsOnly || runningSearchFavourites != libraryFavouritesOnly
+                if (runningOrganizationKey != LibrarySearchKey || runningSearchQuery != libraryQuery || runningSearchMyMaps != libraryMyMapsOnly || runningSearchFavourites != libraryFavouritesOnly
                     || runningFavouriteRevision != libraryFavouriteRevision
                     || runningSearchSelection != selectedLibraryGroup || runningSearchScroll != libraryScroll)
                 { result.Retire(); searchTask = null; QueueLibrarySearch(); return; }
@@ -399,8 +400,8 @@ public sealed partial class EditorView
         }
         if (LibraryVisible && searchTask is null && libraryDatabase is not null && DateTime.UtcNow >= searchAfter && searchTaskQuery != LibrarySearchKey)
         {
-            var db = libraryDatabase; string query = libraryQuery; bool projects = libraryProjectsOnly;
-            runningSearchQuery = query; runningSearchProjects = projects;
+            var db = libraryDatabase; string query = libraryQuery;
+            runningSearchQuery = query; runningSearchMyMaps = libraryMyMapsOnly;
             runningSearchFavourites = libraryFavouritesOnly; runningFavouriteRevision = libraryFavouriteRevision;
             var favourites = LibraryFilterKeys;
             var organization = CurrentLibraryOrganization;
@@ -411,12 +412,12 @@ public sealed partial class EditorView
             string? selected = selectedLibraryGroup, top = libraryResultsReady ? libraryBrowser?.Get(libraryBrowser.IndexAtOffset(libraryScroll))?.Key : null;
             float offset = libraryScroll;
             runningSearchSelection = selected; runningSearchScroll = libraryScroll;
-            if (!reindex && libraryBrowser is { } reusable && reusable.CanReorder(db, query, projects, favourites, organization))
+            if (!reindex && libraryBrowser is { } reusable && reusable.CanReorder(db, query, false, favourites, organization))
                 searchTask = reusable.Reorder(organization, selected, top, offset);
             else searchTask = Task.Run(() =>
             {
                 if (reindex) db.ReindexProjects();
-                return LibraryBrowser.Create(db, query, projects, selected, top, offset, favourites, organization);
+                return LibraryBrowser.Create(db, query, false, selected, top, offset, favourites, organization);
             });
         }
         if (ratingTask is { IsCompleted: true })
@@ -446,6 +447,7 @@ public sealed partial class EditorView
     {
         libraryCards.Clear(); libraryHeaders.Clear(); libraryWebButtons.Clear();
         libraryScrollTrack = libraryDiffTrack = default;
+        libraryMapperSetupBounds = default;
         c.Fill(new(0, 0, width, height), Background);
         DrawHeader(c);
         c.Text(L.Get(resourcePage ? "library.referenceErrors" : exportPage ? "library.export" : "library.title"), 109, 11, 13, Foreground, width - 535, true);
@@ -473,7 +475,7 @@ public sealed partial class EditorView
         }
         c.Fill(new(0, HeaderHeight, 190, height - HeaderHeight), Panel);
         Button(c, new(16, 88, 158, 36), L.Get("library.all"), () => SwitchLibraryCategory(false), !LibraryUsesProjects && libraryCollection is null);
-        Button(c, new(16, 134, 158, 36), L.Get("library.projects"), () => SwitchLibraryCategory(true), libraryProjectsOnly && !libraryFavouritesOnly);
+        Button(c, new(16, 134, 158, 36), L.Get("library.myMaps"), () => SwitchLibraryCategory(true), libraryMyMapsOnly && !libraryFavouritesOnly);
         Button(c, new(16, 180, 158, 36), L.Get("library.favourites"), () => SwitchLibraryCategory(false, true), libraryFavouritesOnly);
         DrawLibraryCollections(c);
         var noticeLines = libraryNotice.Split('\n');
@@ -549,16 +551,25 @@ public sealed partial class EditorView
                 c.Text(presence, badge.X + 8, y + 53, 11, Foreground, badgeWidth - 16);
                 countWidth = Math.Max(0, badge.X - 324);
             }
-            string countLabel = (libraryProjectsOnly || libraryFavouritesOnly && map.ProjectPath is not null) && group.MissingCount > 0
+            bool workspaceListing = (libraryMyMapsOnly || libraryFavouritesOnly) && map.ProjectPath is not null;
+            string countLabel = workspaceListing && group.MissingCount > 0
                 ? L.Get("library.projectMissingCount", group.Count - group.MissingCount, group.MissingCount)
-                : L.Get(libraryProjectsOnly || libraryFavouritesOnly && map.ProjectPath is not null ? "library.projectCount" : "library.diffCount", group.Count);
+                : L.Get(workspaceListing ? "library.projectCount" : "library.diffCount", group.Count);
             c.Text(countLabel, 314, y + 53, 11, Accent, countWidth);
             c.Unclip();
         }
         c.Unclip();
         DrawLibraryScrollbar(c, new(libraryListBounds.Right + 6, libraryListBounds.Y, 10, libraryListBounds.Height), libraryScroll, libraryBrowser?.Extent ?? 0, LibraryVisibleRows, false);
         DrawLibraryDetails(c, width - 320);
-        if (LibrarySetCount == 0) c.Text(initialLoading ? L.Get("library.scanning") : L.Get(string.IsNullOrWhiteSpace(LibrarySettings.Songs) && !LibraryUsesProjects ? "library.unboundEmpty" : "library.empty"), 226, 204, 15, Muted, listWidth - 24);
+        if (libraryMyMapsOnly && !(LibrarySettings.MapperUsernames?.Any(name => !string.IsNullOrWhiteSpace(name)) ?? false))
+        {
+            c.Text(L.Get("library.myMapsSetup"), 226, 204, 15, Muted, listWidth - 24);
+            libraryMapperSetupBounds = new(226, 242, Math.Min(240, listWidth - 24), 32);
+            c.Fill(libraryMapperSetupBounds, Surface, 4);
+            c.Stroke(libraryMapperSetupBounds, Grid, radius: 4);
+            Button(c, libraryMapperSetupBounds, L.Get("library.settings"), OpenSettings);
+        }
+        else if (LibrarySetCount == 0) c.Text(initialLoading ? L.Get("library.scanning") : L.Get(string.IsNullOrWhiteSpace(LibrarySettings.Songs) && !LibraryUsesProjects ? "library.unboundEmpty" : "library.empty"), 226, 204, 15, Muted, listWidth - 24);
         if (libraryError.Length > 0) c.Text(libraryError.Replace('\n', ' '), 214, height - 34, 12, Error, width - 238);
         else c.Text(L.Get("library.dropHint"), 214, height - 34, 12, Muted, width - 238);
     }
@@ -650,7 +661,7 @@ public sealed partial class EditorView
     {
         if (librarySettingsOpen && !FirstRunSetupVisible && settingsCategory == SettingsCategory.Workspace && !workspaceScrollBounds.Contains(x, y)) return false;
         foreach (int index in (FirstRunSetupVisible ? firstRunStep == 0 ? new[] { 0, 1 } : firstRunStep == 1 ? new[] { 4 } : Array.Empty<int>()
-            : collectionDialogOpen ? new[] { 6 } : ExportVisible ? new[] { 3 } : librarySettingsOpen ? settingsColourIndex >= 0 ? new[] { 5 } : new[] { 0, 1, 4 } : new[] { 2 }))
+            : collectionDialogOpen ? new[] { 6 } : ExportVisible ? new[] { 3 } : librarySettingsOpen ? settingsColourIndex >= 0 ? new[] { 5 } : new[] { 0, 1, 4, 7 } : new[] { 2 }))
         {
             string key = "library:" + index;
             if (!textLayouts.TryGetValue(key, out var layout)) continue;
@@ -698,7 +709,7 @@ public sealed partial class EditorView
     }
     private string LibraryFieldValue
     {
-        get => libraryField switch { 0 => draftWorkspace, 1 => draftOsuRoot, 2 => libraryQuery, 3 => exportName, 4 => draftDefaultSkin, 5 => settingsColourHex, 6 => collectionDialogText, _ => "" };
-        set { switch (libraryField) { case 0: draftWorkspace = value; break; case 1: draftOsuRoot = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; case 4: draftDefaultSkin = value; break; case 6: collectionDialogText = value; collectionDialogScroll = 0; collectionDialogError = ""; break; case 5: settingsColourHex = value; settingsColourError = ""; break; } }
+        get => libraryField switch { 0 => draftWorkspace, 1 => draftOsuRoot, 2 => libraryQuery, 3 => exportName, 4 => draftDefaultSkin, 5 => settingsColourHex, 6 => collectionDialogText, 7 => draftMapperUsernames, _ => "" };
+        set { switch (libraryField) { case 7: draftMapperUsernames = value; break; case 0: draftWorkspace = value; break; case 1: draftOsuRoot = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; case 4: draftDefaultSkin = value; break; case 6: collectionDialogText = value; collectionDialogScroll = 0; collectionDialogError = ""; break; case 5: settingsColourHex = value; settingsColourError = ""; break; } }
     }
 }

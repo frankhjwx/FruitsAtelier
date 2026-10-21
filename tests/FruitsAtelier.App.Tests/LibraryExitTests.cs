@@ -61,6 +61,7 @@ internal static class LibraryExitTests
     {
         string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "library-rating", Guid.NewGuid().ToString()));
         var document = new MapDocument { Name = "Rating refresh", IsDemo = false, DurationMs = 20000 };
+        document.OriginalSections.Add(new OsuSection { Name = "Metadata", Lines = { "Creator:Mapper" } });
         for (int i = 0; i < 100; i++)
             document.Fruits.Add(new Fruit { TimeMs = 1000 + i * 100, X = i % 2 == 0 ? 20 : 490 });
         var view = new EditorView(loadDemo: false);
@@ -69,6 +70,7 @@ internal static class LibraryExitTests
         {
             view.LoadProject(BeatmapProject.FromDocuments([document]));
             view.LibrarySettings.Workspace = root;
+            view.LibrarySettings.MapperUsernames = ["Mapper"];
             view.LibrarySettings.Songs = "";
             Check(view.SaveWorkspace(), "Initial rating project saves");
             string directory = view.WorkspaceSession!.Directory;

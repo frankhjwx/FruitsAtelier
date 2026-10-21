@@ -74,13 +74,13 @@ stay intact. Apply checks the external map and compared audio again. If they cha
 the review is refreshed before applying; choices survive only for unchanged conflict
 contents and authoring source identities. Changed audio always requires a fresh choice.
 
-All songs and My projects retain their last loaded, paged results when switching
+All songs and My Maps retain their last loaded, paged results when switching
 categories. The selected category refreshes in the background while its cached
 rows remain visible. A changed search discards an incompatible cached view;
 changing workspace or osu! roots clears both category views.
 
-The My projects library combines saved FA difficulties with newly indexed Catch
-difficulties in associated source directories. Counts and detail rows refresh
+The My Maps library combines saved FA difficulties with newly indexed Catch
+difficulties in associated source directories, filtered by the configured exact mapper names. Counts and detail rows refresh
 together without opening the editor. Deleted unimported files leave the list;
 saved difficulties with missing sources remain muted, with the card counting
 available and missing difficulties separately. Missing references trigger read-only
@@ -300,8 +300,8 @@ unchanged. A missing or ambiguous source stops the operation without discarding
 local data. Cancelling the confirmation also preserves the current edits.
 
 The library's **Delete local project** action removes the workspace project and
-its source association from My projects, while keeping the source maps in All
-songs. Opening a source map again creates a new workspace project. Project deletion
+its source association, while keeping the source maps in All songs and in
+My Maps when their mapper matches a configured username. Opening a source map again creates a new workspace project. Project deletion
 removes local files and version history by default; **Keep a recovery backup** is
 unchecked initially. Selecting it retains a recovery copy under `.sync-history`.
 Unreferenced FAZ and audio-import resource directories are removed with permanent

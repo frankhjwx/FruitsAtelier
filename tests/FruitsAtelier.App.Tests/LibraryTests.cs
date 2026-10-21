@@ -116,7 +116,7 @@ internal static class LibraryTests
             "local project deletion preserves linked Songs files");
         var db = new LibraryDatabase(workspace, songs);
         Check(db.ProjectForSource(songs) is null && db.Search("", projectsOnly: true).Count == 0,
-            "deleted local project is absent from My projects and source associations");
+            "deleted local project is absent from the project index and source associations");
         var reopened = FruitsAtelier.App.Platform.LibraryOperations.Open(LibraryDatabase.ReadMetadata(source)!, settings);
         Check(File.Exists(Path.Combine(reopened.Directory, WorkspaceProject.ManifestName))
             && reopened.Manifest.Id != linked.Manifest.Id && File.ReadAllText(source) == original,

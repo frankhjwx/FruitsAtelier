@@ -27,7 +27,7 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 
 ### What you can do
 
-- Browse and search songs by title, artist, mapper, difficulty or tags; resume work from **My projects**.
+- Browse and search songs by title, artist, mapper, difficulty or tags; resume work from **My Maps**.
 - Place fruits and banana showers; move, duplicate, flip and delete groups with undo/redo.
 - Draw FSliders with control points or Bezier handles; add reverses and create fruit streams.
 - Align patterns with beat, grid and distance snapping; edit combos and hitsounds.
