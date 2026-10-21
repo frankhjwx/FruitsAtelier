@@ -2,8 +2,9 @@
 
 ## Creating difficulties and map templates
 
-Choose **+ → Add blank difficulty** to name a new difficulty and choose its
-FA-only policy. **Create from a difficulty or template** starts disabled;
+Choose **+ → Add new difficulty** to name a new difficulty and choose
+**Create this difficulty in Fruits Atelier Only**. **Create from a difficulty or template**
+starts disabled on first use and remembers its last state globally across projects and restarts;
 with it disabled, creation retains the current difficulty's settings and timing
 and clears all objects, as with ordinary blank creation.
 

@@ -11,6 +11,7 @@ public enum ImportSliderConversionMode { Ask, KeepLegacy, ConvertToFSlider }
 public sealed class LibrarySettings
 {
     public List<MapTemplate> MapTemplates { get; set; } = [];
+    public bool NewDifficultyUseSource { get; set; }
     public EditorDockLayouts? DockLayouts { get; set; }
     public const int CurrentFirstRunSetupVersion = 1;
     public int FirstRunSetupVersion { get; set; }

@@ -31,18 +31,20 @@ internal static class NewDifficultyTests
             ui.View.SwitchDifficulty(0); ui.Paint();
             Check(original.ContentEquals(ui.View.Document), "Copied objects are independent");
 
-            Open(); Click("difficulty.useSource"); Click("difficulty.templateTab"); Click("template.manage"); Click("template.fromCurrent"); ui.Key(13);
+            Open(); Click("difficulty.templateTab"); Click("template.manage"); Click("template.fromCurrent"); ui.Key(13);
+            Check(ui.View.LibrarySettings.NewDifficultyUseSource, "Source toggle remains enabled when reopening creation");
             Check(original.ContentEquals(ui.View.Document) && ui.View.DifficultyCount == 2, "Saving a template preserves map content and difficulty count");
             string root = Path.GetFullPath("artifacts/tests/new-difficulty/" + locale + size.Item1);
             Directory.CreateDirectory(root);
             string config = Path.Combine(root, "settings.json"); ui.View.LibrarySettings.Save(config);
             var template = LibrarySettings.Load(config).MapTemplates.Single();
+            Check(LibrarySettings.Load(config).NewDifficultyUseSource, "Source preference survives settings reload");
             Check(template.SliderMultiplier == 2.4 && template.HP == "6.3" && template.OD == "7.2", "Template settings survive restart");
             ui.Key(27); Check(original.ContentEquals(ui.View.Document), "Cancel and template save preserve source content");
             ui.View.Document.ApproachRate = 4; ui.View.Document.CircleSize = 3;
             ui.View.Document.SliderMultiplierOverride = 1.1; ui.View.Document.SliderTickRate = 1;
             var blankSource = ui.View.Document.DeepClone();
-            Open(); Click("difficulty.useSource"); Click("difficulty.templateTab"); Confirm();
+            Open(); Click("difficulty.templateTab"); Confirm();
             Check(ui.View.Document.Fruits.Count == 0 && ui.View.Document.Tracks.Count == 0
                 && ui.View.Document.ImportedSliders.Count == 0 && ui.View.Document.BananaShowers.Count == 0, "Template creates an empty difficulty");
             Check(ui.View.Document.ApproachRate == template.ApproachRate && ui.View.Document.CircleSize == template.CircleSize
@@ -51,7 +53,7 @@ internal static class NewDifficultyTests
             ui.View.SwitchDifficulty(0); ui.Paint();
             Check(blankSource.ContentEquals(ui.View.Document), "Template creation leaves its source unchanged");
 
-            Open(); Click("difficulty.templateTab"); Confirm();
+            Open(); Click("difficulty.useSource"); Click("difficulty.templateTab"); Confirm();
             Check(ui.View.Document.ApproachRate == 4 && ui.View.Document.EffectiveSliderMultiplier == 1.1
                 && ui.View.Document.SliderTickRate == 1 && ui.View.Document.Fruits.Count == 0, "Disabled source toggle retains blank behavior");
             Open(); ui.Key('A', ctrl: true); ui.Key(8); ui.Key(13);
@@ -68,8 +70,15 @@ internal static class NewDifficultyTests
                 && ui.View.LibrarySettings.MapTemplates[0].Icon == MapTemplateIcon.Indigo, "Manager edits template name, parameters and icon");
             ui.View.LibrarySettings.Save(config);
             Check(LibrarySettings.Load(config).MapTemplates.Single().Icon == MapTemplateIcon.Indigo, "Template icon survives restart");
+            ui.View.LibrarySettings.NewDifficultyUseSource = true;
             ui.View.OpenSettings(); ui.Paint(); ui.View.ApplySettings(config, force: true); ui.Key(27);
             Check(ui.View.LibrarySettings.MapTemplates.Single().Icon == MapTemplateIcon.Indigo, "Applying settings retains templates and icons");
+            Check(ui.View.LibrarySettings.NewDifficultyUseSource, "Applying settings retains the enabled source preference");
+            Open(); Click("difficulty.useSource"); ui.Key(27);
+            Open();
+            Check(ui.Canvas.Texts.Last(t => t.Value == L.Get("difficulty.copyTab")).Color == 0x5B6777,
+                "Cancelling creation retains the disabled source preference");
+            ui.Key(27);
             ui.View.OpenMapTemplates(); ui.Paint(); Set("AR", "NaN", false); ui.Key(13);
             Check(ui.View.MapTemplatesVisible, "Invalid parameters cannot save"); ui.Key(27);
             Check(ui.View.LibrarySettings.MapTemplates[0].ApproachRate == 6.5, "Cancel retains saved parameters");

@@ -77,7 +77,12 @@ public sealed partial class EditorView
         DrawInputText(c, new(nameBounds.X + 10, nameBounds.Y + 8, inner - 20, 20), newDifficultyName, 14, true, "newDiff:0");
         hits.Add(new(nameBounds, () => FocusInput("newDiff:0", newDifficultyName, mouseX), true));
         ToggleSwitch(c, new(x + 22, y + 124, inner, 34), L.Get("difficulty.useSource"), newDifficultyUseSource,
-            () => { newDifficultyUseSource = !newDifficultyUseSource; newDifficultySourcesOpen = false; });
+            () =>
+            {
+                LibrarySettings.NewDifficultyUseSource = newDifficultyUseSource = !newDifficultyUseSource;
+                newDifficultySourcesOpen = false;
+                RequestViewPreference?.Invoke();
+            });
         var sourceRegion = new Rect(x + 22, y + 166, inner, 216);
         c.Stroke(new(sourceRegion.X, y + 210, sourceRegion.Width, sourceRegion.Bottom - (y + 210)), Grid, radius: 6);
         float sourceX = x + 32, sourceWidth = inner - 20;
@@ -109,7 +114,7 @@ public sealed partial class EditorView
             Button(c, new(sourceX, y + 328, sourceWidth, 36), L.Get("template.manage"), OpenMapTemplates, enabled: newDifficultyUseSource);
         if (!newDifficultyUseSource)
             c.Fill(new(sourceRegion.X + 1, sourceRegion.Y + 1, sourceRegion.Width - 2, sourceRegion.Height - 2), Background, 5, .55f);
-        ToggleSwitch(c, new(x + 22, y + 404, inner, 34), L.Get("song.faOnly"), newDifficultyFaOnly,
+        ToggleSwitch(c, new(x + 22, y + 404, inner, 34), L.Get("difficulty.createFaOnly"), newDifficultyFaOnly,
             () => newDifficultyFaOnly = !newDifficultyFaOnly);
         Button(c, new(x + 22, y + h - 60, (inner - 10) / 2, 36), L.Get("mac.cancel"), () => AnswerDiscard(2));
         Button(c, new(x + 32 + (inner - 10) / 2, y + h - 60, (inner - 10) / 2, 36), L.Get("project.add"),

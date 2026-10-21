@@ -13,7 +13,7 @@ public sealed partial class EditorView
     {
         if (!PrepareFileOperation()) return;
         newDifficultyFaOnly = false;
-        newDifficultyUseSource = false; newDifficultyTemplateTab = false;
+        newDifficultyUseSource = LibrarySettings.NewDifficultyUseSource; newDifficultyTemplateTab = false;
         newDifficultySourcesOpen = false;
         newDifficultySource = activeDifficulty; newDifficultyTemplate = 0;
         newDifficultyName = L.Get("project.defaultDifficulty", difficulties.Count + 1);
