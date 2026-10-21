@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private MapDocument? objectClipboard;
-    private DifficultySession? clipboardDifficulty;
+    private Guid? clipboardDifficulty;
     public Action<string>? RequestCopyText { get; set; }
     public string ObjectClipboardText { get; private set; } = "";
     private (Guid Id, int EventIndex, int Flags, bool IsBanana)[] comboEntries = [];
@@ -15,7 +15,7 @@ public sealed partial class EditorView
     private void StoreClipboard(MapDocument snapshot, string text)
     {
         objectClipboard = snapshot;
-        clipboardDifficulty = difficulties[activeDifficulty];
+        clipboardDifficulty = difficulties[activeDifficulty].Id;
         ObjectClipboardText = text;
         RequestCopyText?.Invoke(text);
     }
@@ -113,7 +113,7 @@ public sealed partial class EditorView
         }
     }
 
-    public bool CanPasteSelection => ClipboardInteractionReady && objectClipboard is not null && ReferenceEquals(clipboardDifficulty, difficulties[activeDifficulty]);
+    public bool CanPasteSelection => ClipboardInteractionReady && objectClipboard is not null;
 
     public bool CopySelection()
     {
@@ -155,6 +155,9 @@ public sealed partial class EditorView
             if (!double.IsFinite(playhead) || playhead < 0 || playhead > int.MaxValue)
                 throw new InvalidOperationException(L.Get("editor.error.pasteTimeRange"));
             var pasted = objectClipboard!.DeepClone();
+            bool crossDifficulty = clipboardDifficulty != difficulties[activeDifficulty].Id;
+            var sourceTiming = crossDifficulty && pasted.ImportedSliders.Count > 0 ? new TimingMap.Lookup(objectClipboard) : null;
+            var targetTiming = sourceTiming is not null ? new TimingMap.Lookup(Document) : null;
             var parents = ClipboardParents(pasted).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
             if (parents.Length == 0) throw new InvalidOperationException(L.Get("editor.error.clipboardInvalid"));
             double ShiftTime(double time) => playhead + (time - parents[0].TimeMs);
@@ -178,6 +181,8 @@ public sealed partial class EditorView
             }
             foreach (var slider in pasted.ImportedSliders)
             {
+                if (sourceTiming is not null)
+                    RetargetSlider(slider, ShiftTime(slider.TimeMs));
                 var replacement = replacements[slider.Id];
                 slider.Id = replacement.NewId; slider.SourceOrder = replacement.Order; slider.TimeMs = ShiftTime(slider.TimeMs);
                 slider.OriginalLine = WithClipboardTimes(slider.OriginalLine, (2, slider.TimeMs));
@@ -210,6 +215,11 @@ public sealed partial class EditorView
             }
 
             pasted.DurationMs = Math.Max(Document.DurationMs, end);
+            if (crossDifficulty)
+            {
+                pasted.SliderMultiplier = Document.SliderMultiplier;
+                pasted.SliderMultiplierOverride = Document.SliderMultiplierOverride;
+            }
             OsuBeatmapReader.Validate(pasted);
             var errors = CurveMath.Validate(pasted);
             if (errors.Count > 0) throw new InvalidOperationException(errors[0]);
@@ -218,6 +228,32 @@ public sealed partial class EditorView
             Document.ImportedSliders.AddRange(pasted.ImportedSliders);
             Document.BananaShowers.AddRange(pasted.BananaShowers);
             Document.DurationMs = pasted.DurationMs;
+            if (crossDifficulty && (pasted.Tracks.Count > 0 || pasted.ImportedSliders.Count > 0))
+            {
+                var output = OsuBeatmapWriter.Serialize(Document, compensateTinyDroplets, editorWriteCache);
+                if (!output.ObjectSequenceMatches)
+                    throw new InvalidDataException(string.Join(L.Get("core.diagnostics.separator"), output.Diagnostics));
+            }
+
+            void RetargetSlider(ImportedSlider slider, double time)
+            {
+                var sourceState = sourceTiming!.At(slider.TimeMs);
+                var targetState = targetTiming!.At(time);
+                // Keep geometric speed when BPM and the map's stored SV basis differ.
+                double scale = objectClipboard.SliderMultiplier * targetState.BeatLengthMs
+                    / (Document.SliderMultiplier * sourceState.BeatLengthMs);
+                double own = slider.SliderVelocityMultiplier ?? sourceState.SliderVelocityMultiplier
+                    * objectClipboard.EffectiveSliderMultiplier / objectClipboard.SliderMultiplier;
+                slider.SliderVelocityMultiplier = own * scale;
+                if (slider.ProcessedSliderVelocityMultiplier is { } processed) slider.ProcessedSliderVelocityMultiplier = processed * scale;
+                if (slider.RandomizationBaseVelocity is { } baseline) slider.RandomizationBaseVelocity = baseline * scale;
+                if (slider.RandomizationSource is { } original) RetargetSlider(original, time);
+                double effective = (slider.ProcessedSliderVelocityMultiplier ?? slider.SliderVelocityMultiplier.Value)
+                    * Document.SliderMultiplier / Document.EffectiveSliderMultiplier;
+                if (!double.IsFinite(effective) || effective is < .1 or > 10
+                    || !double.IsFinite(slider.SliderVelocityMultiplier.Value) || slider.SliderVelocityMultiplier is < .1 or > 10)
+                    throw new InvalidDataException(L.Get("timing.sliderMultiplierSvLimit"));
+            }
 
             void ShiftTrack(CurveTrack track)
             {
@@ -262,6 +298,7 @@ public sealed partial class EditorView
         selected.Tracks.AddRange(Document.Tracks.Where(t => ids.Contains(t.Id)));
         selected.ImportedSliders.AddRange(Document.ImportedSliders.Where(s => ids.Contains(s.Id)));
         selected.BananaShowers.AddRange(Document.BananaShowers.Where(s => ids.Contains(s.Id)));
+        if (selected.ImportedSliders.Count > 0) selected.TimingPoints.AddRange(Document.TimingPoints);
         try
         {
             OsuBeatmapReader.Validate(selected);

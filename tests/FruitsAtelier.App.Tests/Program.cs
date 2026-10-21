@@ -1,6 +1,8 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--cross-difficulty-clipboard-check")) { CrossDifficultyClipboardTests.Run(); Console.WriteLine("PASS mapset clipboard, target settings, independent SV, undo and rejection"); return 0; }
+if (args.Contains("--new-difficulty-check")) { NewDifficultyTests.Run(); Console.WriteLine("PASS difficulty copies, templates, persistence and cancellation"); return 0; }
 if (args.Contains("--map-import-settings-check")) { MapImportSettingsTests.Run(); Console.WriteLine("PASS global map import settings, remembered choices and FA confidence thresholds"); return 0; }
 if (args.Contains("--slider-batch-check")) { SliderBatchTests.Run(); NativeImportedPathTests.Run(); WorkspaceSaveTests.Run(); LegacyReadOnlyEditingTests.Run(); SliderInteractionTests.LegacyContextConversion(); Console.WriteLine("PASS import defaults, fitted batch conversion, scope, paths, saves and undo"); return 0; }
 if (args.Contains("--osu-link-check")) { OsuLinkTests.Run(); TimeJumpTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS osu! editor links, routing, activation and settings"); return 0; }
@@ -295,6 +297,7 @@ var tests = new (string Name, Action Run)[]
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
     ("Background synchronization retries retain dirty edits and explicit publication archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),
     ("Difficulty FA-only settings preserve default generation and control external file removal", FaOnlyUiTests.Run),
+    ("Difficulty copies and template management preserve source content and settings", NewDifficultyTests.Run),
     ("Full synchronization confirms replacement, keeps unchanged connections and exposes its backup", FullSynchronizationTests.Run),
     ("Version history previews and restores changed and deleted difficulties with undo and modal isolation", VersionHistoryUiTests.Run),
 
@@ -469,6 +472,7 @@ var tests = new (string Name, Action Run)[]
     ("Operation errors remain visible and isolate input on editor and library pages", OperationErrorTests.Run),
     ("Text inputs blink, highlight selection and menus fit their rows", TextInputFeedbackTests.Run),
     ("Legacy clipboard and horizontal grid preserve pattern scope", LegacyAlignmentTests.ClipboardAndGrid),
+    ("Mapset clipboard preserves objects across difficulty settings and rejects unsupported SV", CrossDifficultyClipboardTests.Run),
     ("Legacy timestamps and read-only details preserve precision", LegacyAlignmentTests.TimestampAndReadOnly),
     ("Legacy samples use event timing and edge leniency", LegacyAlignmentTests.Samples),
     ("Timeline indexed visibility matches full scans", TimelineRangeTests.Run),

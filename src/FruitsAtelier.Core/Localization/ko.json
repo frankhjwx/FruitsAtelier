@@ -1686,5 +1686,21 @@
   "library.order.DateAdded": "Date added",
   "library.group.RecentVisited": "Recent visit",
   "library.order.RecentVisited": "Recent visit",
-  "library.visitWeb": "Visit in osu web"
+  "library.visitWeb": "Visit in osu web",
+  "difficulty.useSource": "난이도 또는 템플릿으로 만들기",
+  "difficulty.copyTab": "난이도 복사",
+  "difficulty.templateTab": "맵 템플릿",
+  "difficulty.noTemplates": "저장된 템플릿 없음",
+  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
+  "difficulty.copyHelp": "선택한 난이도의 모든 오브젝트, 타이밍 및 설정을 복사합니다.",
+  "difficulty.templateHelp": "빈 난이도에 6개 설정을 적용합니다. 타이밍은 현재 난이도를 따릅니다.",
+  "difficulty.name": "난이도 이름",
+  "template.manage": "맵 템플릿 관리",
+  "template.new": "새 템플릿",
+  "template.fromCurrent": "현재 난이도 사용",
+  "template.name": "템플릿 이름",
+  "template.defaultName": "템플릿 {0}",
+  "template.delete": "템플릿 삭제",
+  "template.invalid": "고유한 이름, 0~10의 AR/CS/HP/OD, 양수 SV/STR을 사용하세요.",
+  "template.icon": "Catch 아이콘"
 }

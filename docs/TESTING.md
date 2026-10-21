@@ -79,6 +79,16 @@ visits at 980×620 and 1440×900 with 96/144/192 DPI in both languages under
 
 ## Automated regressions
 
+`App.Tests --new-difficulty-check` checks independent complete copies, named
+creation, template settings persistence, blank creation, cancellation and empty
+name validation, plus template creation/editing/deletion, invalid values and
+the Library management entry point in English and Chinese at compact and
+standard window sizes. Icon selection, restart persistence and preservation
+when applying general settings are included.
+`FruitsAtelier.App.exe --render-check --new-difficulty-render-check` checks the
+native creation dialog and both tabs at two sizes and three DPI values, with
+captures under `artifacts/tests/new-difficulty-native`.
+
 `App.Tests --map-import-settings-check` checks General import preferences, saved
 defaults, cancelled drafts, remembered Keep/Convert choices and the 95% automatic
 FA decision threshold. Uncertain suspected maps still require a source choice.
@@ -800,8 +810,14 @@ position and native PCM render timestamps; all device output stays muted.
 Run the App test executable with `--legacy-map <difficulty.osu>` for a read-only
 report of sample-bank/index/volume boundary corrections during the first 40 seconds.
 Synthetic App regressions cover the inclusive 5 ms edge boundary, the slider body's
-6 ms start lookup, tick inheritance across timing changes, same-difficulty clipboard
+6 ms start lookup, tick inheritance across timing changes, mapset clipboard
 scope, combo reference numbers, horizontal grids, and timestamp precision.
+
+`App.Tests --cross-difficulty-clipboard-check` checks mixed parent types across
+different AR/CS/STR, BPM and base SV, preserved Legacy duration and geometry,
+unchanged target settings and source content, undo/redo, unsupported SV rollback,
+clipboard reuse and project-session boundaries. Existing same-difficulty and
+overflow clipboard checks run alongside these cases.
 
 The feedback regressions cover V/End navigation, scroll direction, persistent independent volume controls, skin sample precedence and cache upgrades, and compatible versus conflicting close SV timing. Windows PCM checks verify live and scheduled hitsound gain separately from song gain; headless Mac CI exercises the native mixer with no audio device. Native window checks exercise all three volume sliders in both languages.
 

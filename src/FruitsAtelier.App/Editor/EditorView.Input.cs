@@ -40,6 +40,7 @@ public sealed partial class EditorView
         if (IsTestplaying) { TestplayPointerDown(x, y, button); return; }
         if (ErrorVisible || DiscardConfirmationVisible)
         {
+            mouseX = x; mouseY = y;
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
@@ -1289,6 +1290,8 @@ public sealed partial class EditorView
         }
         if (DiscardConfirmationVisible)
         {
+            if (MapTemplatesVisible) { MapTemplatesKey(virtualKey, ctrl, shift); return; }
+            if (addDifficultyConfirmation) { NewDifficultyKey(virtualKey, ctrl, shift); return; }
             if (virtualKey is 27 or 13) AnswerDiscard(virtualKey == 13 ? previousSaveConfirmation ? 7 : pendingLanguage is not null ? 6 : 2 : 2);
             return;
         }
@@ -1504,6 +1507,8 @@ public sealed partial class EditorView
     private void TextInputCore(char value)
     {
         if (AcknowledgementsVisible) return;
+        if (MapTemplatesVisible && !ErrorVisible) { MapTemplatesText(value.ToString()); return; }
+        if (addDifficultyConfirmation && !ErrorVisible) { NewDifficultyText(value.ToString()); return; }
         if (CollaborationFocused)
         {
             if (!CollaborationBusy && collaborationField.Length > 0 && !char.IsControl(value))

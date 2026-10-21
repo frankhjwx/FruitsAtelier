@@ -440,6 +440,7 @@ public sealed partial class EditorView
             settings.CanvasTimeZoom = LibrarySettings.CanvasTimeZoom;
             settings.UniformCanvasScale = LibrarySettings.UniformCanvasScale;
             settings.MapEditingPreferences = LibrarySettings.MapEditingPreferences;
+            settings.MapTemplates = LibrarySettings.MapTemplates;
             settings.ObjectTimelineScale = LibrarySettings.ObjectTimelineScale;
             settings.ObjectTimelineHeight = LibrarySettings.ObjectTimelineHeight;
             settings.OverviewTimelineHeight = LibrarySettings.OverviewTimelineHeight;

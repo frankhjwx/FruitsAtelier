@@ -1686,5 +1686,21 @@
   "library.order.DateAdded": "Date added",
   "library.group.RecentVisited": "Recent visit",
   "library.order.RecentVisited": "Recent visit",
-  "library.visitWeb": "Visit in osu web"
+  "library.visitWeb": "Visit in osu web",
+  "difficulty.useSource": "Maken vanuit moeilijkheid of sjabloon",
+  "difficulty.copyTab": "Moeilijkheid kopiëren",
+  "difficulty.templateTab": "Mapsjablonen",
+  "difficulty.noTemplates": "Geen opgeslagen sjablonen",
+  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
+  "difficulty.copyHelp": "Kopieert alle objecten, timing en instellingen van de gekozen moeilijkheid.",
+  "difficulty.templateHelp": "Past zes instellingen toe op een lege moeilijkheid. Timing volgt de huidige moeilijkheid.",
+  "difficulty.name": "Naam moeilijkheid",
+  "template.manage": "Mapsjablonen beheren",
+  "template.new": "Nieuw sjabloon",
+  "template.fromCurrent": "Huidige moeilijkheid gebruiken",
+  "template.name": "Sjabloonnaam",
+  "template.defaultName": "Sjabloon {0}",
+  "template.delete": "Sjabloon verwijderen",
+  "template.invalid": "Gebruik een unieke naam, AR/CS/HP/OD van 0–10 en positieve SV/STR.",
+  "template.icon": "Catch-pictogram"
 }

@@ -1686,5 +1686,21 @@
   "library.order.DateAdded": "Date added",
   "library.group.RecentVisited": "Recent visit",
   "library.order.RecentVisited": "Recent visit",
-  "library.visitWeb": "Visit in osu web"
+  "library.visitWeb": "Visit in osu web",
+  "difficulty.useSource": "สร้างจากระดับความยากหรือแม่แบบ",
+  "difficulty.copyTab": "คัดลอกระดับความยาก",
+  "difficulty.templateTab": "แม่แบบแผนที่",
+  "difficulty.noTemplates": "ยังไม่มีแม่แบบที่บันทึกไว้",
+  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
+  "difficulty.copyHelp": "คัดลอกวัตถุ ไทมิง และการตั้งค่าทั้งหมดจากระดับความยากที่เลือก",
+  "difficulty.templateHelp": "ใช้การตั้งค่าหกค่าในระดับความยากว่าง โดยใช้ไทมิงจากระดับปัจจุบัน",
+  "difficulty.name": "ชื่อระดับความยาก",
+  "template.manage": "จัดการแม่แบบแผนที่",
+  "template.new": "แม่แบบใหม่",
+  "template.fromCurrent": "ใช้ระดับความยากปัจจุบัน",
+  "template.name": "ชื่อแม่แบบ",
+  "template.defaultName": "แม่แบบ {0}",
+  "template.delete": "ลบแม่แบบ",
+  "template.invalid": "ใช้ชื่อที่ไม่ซ้ำ AR/CS/HP/OD ตั้งแต่ 0 ถึง 10 และ SV/STR มากกว่า 0",
+  "template.icon": "ไอคอน Catch"
 }

@@ -1686,5 +1686,21 @@
   "library.order.DateAdded": "Date added",
   "library.group.RecentVisited": "Recent visit",
   "library.order.RecentVisited": "Recent visit",
-  "library.visitWeb": "Visit in osu web"
+  "library.visitWeb": "Visit in osu web",
+  "difficulty.useSource": "Utwórz z poziomu lub szablonu",
+  "difficulty.copyTab": "Kopiuj poziom trudności",
+  "difficulty.templateTab": "Szablony map",
+  "difficulty.noTemplates": "Brak zapisanych szablonów",
+  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
+  "difficulty.copyHelp": "Kopiuje wszystkie obiekty, timing i ustawienia wybranego poziomu.",
+  "difficulty.templateHelp": "Stosuje sześć ustawień do pustego poziomu. Timing pochodzi z bieżącego poziomu.",
+  "difficulty.name": "Nazwa poziomu",
+  "template.manage": "Zarządzaj szablonami map",
+  "template.new": "Nowy szablon",
+  "template.fromCurrent": "Użyj bieżącego poziomu",
+  "template.name": "Nazwa szablonu",
+  "template.defaultName": "Szablon {0}",
+  "template.delete": "Usuń szablon",
+  "template.invalid": "Użyj unikalnej nazwy, AR/CS/HP/OD od 0 do 10 oraz dodatnich SV/STR.",
+  "template.icon": "Ikona Catch"
 }

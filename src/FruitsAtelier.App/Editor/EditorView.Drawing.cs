@@ -726,6 +726,7 @@ public sealed partial class EditorView
         if (menu == 0)
         {
             Item(L.Get("project.new"), () => RequestNewProject?.Invoke());
+            Item(L.Get("difficulty.templateTab"), OpenMapTemplates);
             Item(L.Get("ui.openMenu"), () => RequestOpen?.Invoke());
             Item(L.Get("ui.saveMenu"), () => RequestSave?.Invoke());
             Item(L.Get("ui.exportMenu"), () => RequestExport?.Invoke());

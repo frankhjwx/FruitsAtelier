@@ -1686,5 +1686,21 @@
   "library.order.DateAdded": "Date added",
   "library.group.RecentVisited": "Recent visit",
   "library.order.RecentVisited": "Recent visit",
-  "library.visitWeb": "Visit in osu web"
+  "library.visitWeb": "Visit in osu web",
+  "difficulty.useSource": "Crear desde dificultad o plantilla",
+  "difficulty.copyTab": "Copiar dificultad",
+  "difficulty.templateTab": "Plantillas de mapa",
+  "difficulty.noTemplates": "No hay plantillas guardadas",
+  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
+  "difficulty.copyHelp": "Copia todos los objetos, tiempos y ajustes de la dificultad seleccionada.",
+  "difficulty.templateHelp": "Aplica seis ajustes a una dificultad vacía. Conserva los tiempos de la actual.",
+  "difficulty.name": "Nombre de dificultad",
+  "template.manage": "Gestionar plantillas de mapa",
+  "template.new": "Nueva plantilla",
+  "template.fromCurrent": "Usar dificultad actual",
+  "template.name": "Nombre de plantilla",
+  "template.defaultName": "Plantilla {0}",
+  "template.delete": "Eliminar plantilla",
+  "template.invalid": "Usa un nombre único, AR/CS/HP/OD entre 0 y 10 y SV/STR positivos.",
+  "template.icon": "Icono de Catch"
 }

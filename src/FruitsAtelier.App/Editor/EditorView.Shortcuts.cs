@@ -92,7 +92,7 @@ public sealed partial class EditorView
         double savedHead = playhead;
         try
         {
-            objectClipboard = snapshot; clipboardDifficulty = difficulties[activeDifficulty];
+            objectClipboard = snapshot; clipboardDifficulty = difficulties[activeDifficulty].Id;
             playhead = last + timing.BeatLengthMs * timing.Meter;
             PasteSelection();
         }

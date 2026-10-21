@@ -1686,5 +1686,21 @@
   "library.order.DateAdded": "Date added",
   "library.group.RecentVisited": "Recent visit",
   "library.order.RecentVisited": "Recent visit",
-  "library.visitWeb": "Visit in osu web"
+  "library.visitWeb": "Visit in osu web",
+  "difficulty.useSource": "Create from a difficulty or template",
+  "difficulty.copyTab": "Copy difficulty",
+  "difficulty.templateTab": "Map templates",
+  "difficulty.noTemplates": "No saved templates",
+  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
+  "difficulty.copyHelp": "Copies all objects, timing and settings from the selected difficulty.",
+  "difficulty.templateHelp": "Applies six settings to a blank difficulty. Timing follows the current difficulty.",
+  "difficulty.name": "Difficulty name",
+  "template.manage": "Manage map templates",
+  "template.new": "New template",
+  "template.fromCurrent": "Use current difficulty",
+  "template.name": "Template name",
+  "template.defaultName": "Template {0}",
+  "template.delete": "Delete template",
+  "template.invalid": "Use a unique name, AR/CS/HP/OD from 0 to 10, and positive SV/STR.",
+  "template.icon": "Catch icon"
 }

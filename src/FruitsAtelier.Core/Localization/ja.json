@@ -1686,5 +1686,21 @@
   "library.order.DateAdded": "Date added",
   "library.group.RecentVisited": "Recent visit",
   "library.order.RecentVisited": "Recent visit",
-  "library.visitWeb": "Visit in osu web"
+  "library.visitWeb": "Visit in osu web",
+  "difficulty.useSource": "難易度またはテンプレートから作成",
+  "difficulty.copyTab": "難易度をコピー",
+  "difficulty.templateTab": "譜面テンプレート",
+  "difficulty.noTemplates": "保存済みテンプレートはありません",
+  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
+  "difficulty.copyHelp": "選択した難易度のすべてのオブジェクト、タイミング、設定をコピーします。",
+  "difficulty.templateHelp": "6項目を空の難易度に適用します。タイミングは現在の難易度を引き継ぎます。",
+  "difficulty.name": "難易度名",
+  "template.manage": "譜面テンプレートの管理",
+  "template.new": "新規テンプレート",
+  "template.fromCurrent": "現在の難易度から作成",
+  "template.name": "テンプレート名",
+  "template.defaultName": "テンプレート {0}",
+  "template.delete": "テンプレートを削除",
+  "template.invalid": "名前は一意、AR/CS/HP/OD は0～10、SV/STR は正の数にしてください。",
+  "template.icon": "Catch アイコン"
 }
