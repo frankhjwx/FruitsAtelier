@@ -79,12 +79,13 @@ public sealed partial class EditorView
         ToggleSwitch(c, new(x + 22, y + 124, inner, 34), L.Get("difficulty.useSource"), newDifficultyUseSource,
             () => { newDifficultyUseSource = !newDifficultyUseSource; newDifficultySourcesOpen = false; });
         var sourceRegion = new Rect(x + 22, y + 166, inner, 216);
+        c.Fill(new(sourceRegion.X + 1, sourceRegion.Y + 1, sourceRegion.Width - 2, 43), Surface, 5);
+        c.Fill(new(sourceRegion.X + 1, sourceRegion.Y + 7, sourceRegion.Width - 2, 37), Surface);
         c.Stroke(sourceRegion, Grid, radius: 6);
+        c.Line(sourceRegion.X + 1, y + 210, sourceRegion.Right - 1, y + 210, Grid);
         float sourceX = x + 32, sourceWidth = inner - 20;
-        Button(c, new(sourceX, y + 176, (sourceWidth - 10) / 2, 34), L.Get("difficulty.copyTab"),
-            () => { newDifficultyTemplateTab = false; newDifficultySourcesOpen = false; }, !newDifficultyTemplateTab, newDifficultyUseSource);
-        Button(c, new(sourceX + (sourceWidth + 10) / 2, y + 176, (sourceWidth - 10) / 2, 34), L.Get("difficulty.templateTab"),
-            () => { newDifficultyTemplateTab = true; newDifficultySourcesOpen = false; }, newDifficultyTemplateTab, newDifficultyUseSource);
+        SourceTab(new(sourceX, y + 172, (sourceWidth - 6) / 2, 38), "difficulty.copyTab", false);
+        SourceTab(new(sourceX + (sourceWidth + 6) / 2, y + 172, (sourceWidth - 6) / 2, 38), "difficulty.templateTab", true);
         int count = NewDifficultySourceCount, selected = NewDifficultySelectedSource;
         string label = count == 0 ? L.Get("difficulty.noTemplates") : SourceName(selected);
         newDifficultySourceBounds = new(sourceX, y + 222, sourceWidth, 38);
@@ -142,5 +143,22 @@ public sealed partial class EditorView
             }
         }
         string SourceName(int index) => newDifficultyTemplateTab ? LibrarySettings.MapTemplates[index].Name : difficulties[index].Name;
+
+        void SourceTab(Rect bounds, string key, bool template)
+        {
+            bool active = newDifficultyTemplateTab == template;
+            if (active)
+            {
+                c.Fill(bounds, Panel, 6); c.Stroke(bounds, Grid, radius: 6);
+                // The open bottom edge joins the active tab to its content panel.
+                c.Fill(new(bounds.X + 1, bounds.Bottom - 6, bounds.Width - 2, 7), Panel);
+                c.Line(bounds.X, bounds.Bottom - 6, bounds.X, bounds.Bottom, Grid);
+                c.Line(bounds.Right, bounds.Bottom - 6, bounds.Right, bounds.Bottom, Grid);
+            }
+            else if (newDifficultyUseSource && bounds.Contains(mouseX, mouseY)) c.Fill(bounds, 0x2B3542, 6);
+            c.Text(L.Get(key), bounds.X + 12, bounds.Y + 12, 13,
+                !newDifficultyUseSource ? 0x5B6777u : active ? Accent : Muted, bounds.Width - 24, active);
+            hits.Add(new(bounds, () => { newDifficultyTemplateTab = template; newDifficultySourcesOpen = false; }, newDifficultyUseSource));
+        }
     }
 }
