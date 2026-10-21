@@ -49,7 +49,9 @@ public static class CollaborationMapping
         var excluded = new List<ExcludedObject>();
         var sliderLengths = new ImportedSliderLengthCache();
         RemoveParents(result, ParentIds(target, time => assigned.Any(r => Contains(r, time))).ToHashSet());
-        CopySectionSamples(target, result, assigned, byId);
+        CopySectionTiming(target, result, assigned, byId);
+        var mergedTiming = new TimingMap.Lookup(result);
+        foreach (var slider in result.ImportedSliders) RetargetSlider(slider, target, targetTiming);
         var origins = new Dictionary<Guid, (MapDocument Document, Guid Id, Guid Difficulty)>();
         foreach (var reference in assigned.OrderBy(r => r.StartMs))
         {
@@ -95,25 +97,8 @@ public static class CollaborationMapping
                     if (copy.RandomizationSource is { } sampleSource) sampleSource.OriginalLine = WithoutObjectSamples(sampleSource.OriginalLine);
                     if (copy.RandomizationTrack is { } sampleTrack) sampleTrack.OriginalLine = WithoutObjectSamples(sampleTrack.OriginalLine);
                 }
-                RetargetSlider(copy);
+                RetargetSlider(copy, source, timing);
                 result.ImportedSliders.Add(copy);
-
-                void RetargetSlider(ImportedSlider slider)
-                {
-                    var sourceState = timing.At(slider.TimeMs);
-                    double scale = source.SliderMultiplier * targetTiming.At(slider.TimeMs).BeatLengthMs
-                        / (target.SliderMultiplier * sourceState.BeatLengthMs);
-                    slider.SliderVelocityMultiplier = (slider.SliderVelocityMultiplier ?? sourceState.SliderVelocityMultiplier
-                        * source.EffectiveSliderMultiplier / source.SliderMultiplier) * scale;
-                    if (slider.ProcessedSliderVelocityMultiplier is { } processed) slider.ProcessedSliderVelocityMultiplier = processed * scale;
-                    if (slider.RandomizationBaseVelocity is { } velocity) slider.RandomizationBaseVelocity = velocity * scale;
-                    if (slider.RandomizationSource is { } original) RetargetSlider(original);
-                    double effective = (slider.ProcessedSliderVelocityMultiplier ?? slider.SliderVelocityMultiplier.Value)
-                        * target.SliderMultiplier / target.EffectiveSliderMultiplier;
-                    if (!double.IsFinite(effective) || effective is < .1 or > 10
-                        || !double.IsFinite(slider.SliderVelocityMultiplier.Value) || slider.SliderVelocityMultiplier is < .1 or > 10)
-                        throw new InvalidDataException(L.Get("timing.sliderMultiplierSvLimit"));
-                }
             }
             foreach (var shower in source.BananaShowers.Where(s => selected.Contains(s.Id)))
             {
@@ -122,7 +107,7 @@ public static class CollaborationMapping
                 result.BananaShowers.Add(copy);
             }
             if (synchronizeObjectHitsounds && source.SliderTickRate == target.SliderTickRate
-                && source.LegacySliderTicks == target.LegacySliderTicks && HitsoundCopier.TimingMatches(source, target))
+                && source.LegacySliderTicks == target.LegacySliderTicks && HitsoundCopier.TimingMatches(source, result))
                 foreach (var sound in source.HitsoundOverrides.Where(s => selected.Contains(s.SourceId)))
                     result.HitsoundOverrides.Add(sound with { SourceId = Remap(sound.SourceId) });
             result.DurationMs = Math.Max(result.DurationMs, source.DurationMs);
@@ -172,6 +157,23 @@ public static class CollaborationMapping
         var output = OsuBeatmapWriter.Serialize(result, compensateTinyDroplets, outputCache);
         outputCache?.RememberMultiplier(result, output, compensateTinyDroplets);
         return new(result, HitsoundResourcePlan.Combine(resources), excluded);
+
+        void RetargetSlider(ImportedSlider slider, MapDocument source, TimingMap.Lookup timing)
+        {
+            var sourceState = timing.At(slider.TimeMs);
+            double scale = source.SliderMultiplier * mergedTiming.At(slider.TimeMs).BeatLengthMs
+                / (target.SliderMultiplier * sourceState.BeatLengthMs);
+            slider.SliderVelocityMultiplier = (slider.SliderVelocityMultiplier ?? sourceState.SliderVelocityMultiplier
+                * source.EffectiveSliderMultiplier / source.SliderMultiplier) * scale;
+            if (slider.ProcessedSliderVelocityMultiplier is { } processed) slider.ProcessedSliderVelocityMultiplier = processed * scale;
+            if (slider.RandomizationBaseVelocity is { } velocity) slider.RandomizationBaseVelocity = velocity * scale;
+            if (slider.RandomizationSource is { } original) RetargetSlider(original, source, timing);
+            double effective = (slider.ProcessedSliderVelocityMultiplier ?? slider.SliderVelocityMultiplier.Value)
+                * target.SliderMultiplier / target.EffectiveSliderMultiplier;
+            if (!double.IsFinite(effective) || effective is < .1 or > 10
+                || !double.IsFinite(slider.SliderVelocityMultiplier.Value) || slider.SliderVelocityMultiplier is < .1 or > 10)
+                throw new InvalidDataException(L.Get("timing.sliderMultiplierSvLimit"));
+        }
     }
 
     private static string? WithoutObjectSamples(string? line)
@@ -301,7 +303,7 @@ public static class CollaborationMapping
         point.OriginalLine = null;
     }
 
-    private static void CopySectionSamples(MapDocument target, MapDocument result, CollaborationReference[] references,
+    private static void CopySectionTiming(MapDocument target, MapDocument result, CollaborationReference[] references,
         Dictionary<Guid, ProjectDifficulty> difficulties)
     {
         var points = references.Select(r => r.DifficultyId).Distinct()
@@ -312,8 +314,13 @@ public static class CollaborationMapping
         var times = targetPoints.Select(p => p.TimeMs).Concat(references.SelectMany(r => new[] { r.StartMs, r.EndMs }))
             .Concat(references.SelectMany(r => points[r.DifficultyId].Where(p => Contains(r, p.TimeMs)).Select(p => p.TimeMs)))
             .Distinct().Order();
-        var targetGroups = targetPoints.GroupBy(p => p.TimeMs).ToDictionary(g => g.Key, g => g.ToArray());
-        var timing = new TimingMap.Lookup(target);
+        var retainedPoints = targetPoints.Where(p => !references.Any(r => Contains(r, p.TimeMs)))
+            .Concat(references.SelectMany(r => points[r.DifficultyId].Where(p => p.Uninherited && Contains(r, p.TimeMs))))
+            .OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        var retainedGroups = retainedPoints.GroupBy(p => p.TimeMs).ToDictionary(g => g.Key, g => g.ToArray());
+        var timingDocument = new MapDocument { BeatLengthMs = target.BeatLengthMs, TimingOffsetMs = target.TimingOffsetMs };
+        timingDocument.TimingPoints.AddRange(retainedPoints);
+        var timing = new TimingMap.Lookup(timingDocument);
         result.TimingPoints.Clear();
         TimingPoint? previous = targetPoints.FirstOrDefault(p => p.Uninherited) ?? targetPoints.FirstOrDefault();
         foreach (double time in times)
@@ -326,8 +333,8 @@ public static class CollaborationMapping
             else while (index + 1 < sourcePoints.Length && sourcePoints[index + 1].TimeMs == time) index++;
             var sample = (index >= 0 ? sourcePoints[index] : sourcePoints.FirstOrDefault(p => p.Uninherited))?.DeepClone() ?? new TimingPoint();
             ExplicitBank(sample, source);
-            var retained = targetGroups.GetValueOrDefault(time) ?? [];
-            foreach (var original in retained.Where(p => reference is null || p.Uninherited))
+            var retained = retainedGroups.GetValueOrDefault(time) ?? [];
+            foreach (var original in retained)
             {
                 var copy = original.DeepClone();
                 if (reference is not null && (copy.SampleSet != sample.SampleSet || copy.SampleIndex != sample.SampleIndex

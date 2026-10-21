@@ -138,10 +138,15 @@ difficulty's existing sounds at the same exported time and event kind. If multip
 target events share that time and kind, the nearest X position wins. New events
 without a match use the merged timeline's default samples, without source custom
 files or additions. This is a sync option and does not edit project content.
-Objects starting outside those ranges remain. The target's red timing, BPM, meter
-and beat-grid origin are retained. Legacy slider SV is adjusted per object to
-preserve its duration under the target BPM and base SV; unrepresentable SV rejects
-the synchronization. Export generates SV changes from the objects.
+Objects starting outside those ranges remain. Synchronization replaces the
+target's timing and sample lines within each assigned section with the source's
+actual red points and sample transitions. Source red points retain their exact
+timestamps, BPM and meter. Section boundaries do not create red points; the beat
+grid follows the actual red points, including across End. Repeated synchronization
+rebuilds the section rather than appending lines. Legacy slider SV is adjusted per
+object to preserve its duration under the merged BPM and target base SV;
+unrepresentable SV rejects the synchronization. Export generates SV changes from
+the objects.
 Sample bank, index, volume and effects follow each section's source timeline,
 including its inherited state at Start, and return to target state at End.
 Sample transitions use inherited points without importing source SV-only lines.
