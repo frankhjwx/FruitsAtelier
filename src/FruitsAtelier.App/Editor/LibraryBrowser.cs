@@ -12,8 +12,10 @@ internal sealed class LibraryBrowser
     private readonly bool projects;
     private readonly HashSet<string>? filter;
     private readonly Dictionary<string, long> visits;
+    private readonly HashSet<string>? difficultyPaths;
     private readonly int[] headers;
-    private bool retiringForReorder, transferred;
+    private bool retiringForReorder, transferred, retired;
+    private Task<LibraryBrowser>? reorderTask;
     private readonly object gate = new();
     private readonly Dictionary<int, IReadOnlyList<LibrarySetRow>> pages = [];
     private readonly Queue<int> pageOrder = [];
@@ -39,6 +41,7 @@ internal sealed class LibraryBrowser
         catalogRevision = database.Revision; Count = snapshot.Count; SetCount = snapshot.SetCount;
         headers = snapshot.HeaderIndices.ToArray();
         this.filter = filter is null ? null : new(filter, WorkspaceSynchronization.Paths);
+        difficultyPaths = organization?.DifficultyPaths is { } paths ? new(paths, WorkspaceSynchronization.Paths) : null;
         visits = new(organization?.Visits ?? new Dictionary<string, long>(), WorkspaceSynchronization.Paths);
     }
     public static LibraryBrowser Create(LibraryDatabase db, string query, bool projects, string? selected, string? top, float offset,
@@ -62,14 +65,15 @@ internal sealed class LibraryBrowser
         return result;
     }
     public bool CanReorder(LibraryDatabase db, string query, bool projects, IReadOnlyCollection<string>? filter, LibraryOrganization organization)
-        => !retiringForReorder && ReferenceEquals(database, db) && catalogRevision == db.Revision && this.query == query && this.projects == projects
+        => !retired && !retiringForReorder && ReferenceEquals(database, db) && catalogRevision == db.Revision && this.query == query && this.projects == projects
             && (this.filter is null ? filter is null : filter is not null && this.filter.SetEquals(filter))
+            && (difficultyPaths is null ? organization.DifficultyPaths is null : organization.DifficultyPaths is not null && difficultyPaths.SetEquals(organization.DifficultyPaths))
             && visits.Count == (organization.Visits?.Count ?? 0) && visits.All(p => organization.Visits?.GetValueOrDefault(p.Key) == p.Value);
     public Task<LibraryBrowser> Reorder(LibraryOrganization organization, string? selected, string? top, float offset)
     {
         retiringForReorder = true;
         var pending = new Task?[] { pageTask, detailTask, discoveryTask }.OfType<Task>().ToArray();
-        return Task.Run(async () =>
+        return reorderTask = Task.Run(async () =>
         {
             try { await Task.WhenAll(pending); }
             catch { /* A failed page does not prevent rebuilding the result ordering. */ }
@@ -116,7 +120,7 @@ internal sealed class LibraryBrowser
     }
     public void Pump()
     {
-        if (retiringForReorder) return;
+        if (retired || retiringForReorder) return;
         if (pageTask is { IsCompleted: true })
         {
             try { var page = pageTask.GetAwaiter().GetResult(); AddPage(page.Start, page.Rows); }
@@ -153,7 +157,7 @@ internal sealed class LibraryBrowser
     }
     public void RequestVisible(int first, int last)
     {
-        if (retiringForReorder || pageTask is not null || Count == 0) return;
+        if (retired || retiringForReorder || pageTask is not null || Count == 0) return;
         int start = Math.Clamp(first, 0, Count - 1) / PageSize * PageSize;
         int end = Math.Min(Count - 1, last) / PageSize * PageSize;
         for (int page = start; page <= end; page += PageSize)
@@ -168,21 +172,23 @@ internal sealed class LibraryBrowser
         => Selected?.Key == detailKey && index >= detailStart && index < detailStart + details.Count ? details[index - detailStart] : null;
     public void RequestDetails(int first)
     {
-        if (retiringForReorder || Selected is not { } set || detailTask is not null) return;
+        if (retired || retiringForReorder || Selected is not { } set || detailTask is not null) return;
         int start = Math.Max(0, first) / PageSize * PageSize;
         if (detailKey == set.Key && detailStart == start) return;
         detailTask = Task.Run(() => { lock (gate) return (set.Key, start, snapshot.Difficulties(set, start, 128)); });
     }
     public void Retire()
     {
+        if (retired) return;
+        retired = true;
         if (transferred) return;
-        snapshot.CancelReferenceDiscovery();
-        var pending = new Task?[] { pageTask, detailTask, discoveryTask }.OfType<Task>().ToArray();
+        if (reorderTask is null) snapshot.CancelReferenceDiscovery();
+        var pending = new Task?[] { pageTask, detailTask, discoveryTask, reorderTask }.OfType<Task>().ToArray();
         _ = Task.Run(async () =>
         {
             try { await Task.WhenAll(pending); }
             catch { /* Disposal must also release snapshots after a failed page read. */ }
-            finally { lock (gate) snapshot.Dispose(); }
+            finally { lock (gate) if (!transferred) snapshot.Dispose(); }
         });
     }
 }

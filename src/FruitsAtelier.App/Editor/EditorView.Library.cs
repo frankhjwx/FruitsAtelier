@@ -353,6 +353,7 @@ public sealed partial class EditorView
     private void PumpLibrary()
     {
         PumpStorage();
+        PumpOsuCollections();
         PumpCollaboration();
         PumpVersionHistory();
         PumpFileMonitoring();
@@ -471,7 +472,7 @@ public sealed partial class EditorView
             c.Unclip(); return;
         }
         c.Fill(new(0, HeaderHeight, 190, height - HeaderHeight), Panel);
-        Button(c, new(16, 88, 158, 36), L.Get("library.all"), () => SwitchLibraryCategory(false), !LibraryUsesProjects);
+        Button(c, new(16, 88, 158, 36), L.Get("library.all"), () => SwitchLibraryCategory(false), !LibraryUsesProjects && libraryCollection is null);
         Button(c, new(16, 134, 158, 36), L.Get("library.projects"), () => SwitchLibraryCategory(true), libraryProjectsOnly && !libraryFavouritesOnly);
         Button(c, new(16, 180, 158, 36), L.Get("library.favourites"), () => SwitchLibraryCategory(false, true), libraryFavouritesOnly);
         DrawLibraryCollections(c);
@@ -641,7 +642,7 @@ public sealed partial class EditorView
             else Button(c, browseBounds, L.Get("library.browse"), browse, fontSize: textSize);
         }
     }
-    public bool LibraryLoading => LibraryVisible && libraryDatabase is not null && searchTaskQuery != LibrarySearchKey || scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
+    public bool LibraryLoading => osuCollectionsTask is { IsCompleted: false } || LibraryVisible && libraryDatabase is not null && searchTaskQuery != LibrarySearchKey || scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
     public bool LibraryTextFocused => (LibraryVisible || librarySettingsOpen || ExportVisible) && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;
     public int LibraryInputField => LibraryTextFocused ? libraryField : -1;
     public Action? RequestPasteLibrary { get; set; }

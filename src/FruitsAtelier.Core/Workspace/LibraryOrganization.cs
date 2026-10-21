@@ -11,4 +11,5 @@ public sealed record LibraryOrganization(
     IReadOnlyCollection<string>? Collapsed = null,
     DateTime? Today = null,
     IReadOnlyCollection<string>? Expanded = null,
-    bool CollapseByDefault = false);
+    bool CollapseByDefault = false,
+    IReadOnlyCollection<string>? DifficultyPaths = null);

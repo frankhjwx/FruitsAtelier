@@ -47,7 +47,14 @@ if (args.Contains("--osu-canvas-check"))
     OsuCanvasRenderTests.Run(); OsuCanvasInputTests.Run(); CanvasOverscanTests.Run();
     Console.WriteLine("PASS osu canvas rendering, native editing and mode boundaries"); return 0;
 }
-if (args.Contains("--library-organization-check")) { LibraryOrganizationTests.Run(); LibraryFavouriteTests.Run(); LibraryTests.Run(); LibraryScaleTests.Pagination(); Console.WriteLine("PASS Library sorting, grouping, collections, visits and persistence"); return 0; }
+if (Array.IndexOf(args, "--osu-collections-read") is var osuRead && osuRead >= 0)
+{
+    var catalog = OsuCollectionCatalog.Read(args[osuRead + 1]);
+    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { catalog.Available, Collections = catalog.Collections.Select(c => new { c.Name, Members = c.Hashes.Count, Paths = c.Paths.Select(path => new { Path = path, Exists = File.Exists(path), Difficulty = File.Exists(path) ? LibraryDatabase.ReadMetadata(path)?.Difficulty : null }) }) }));
+    return catalog.Available ? 0 : 1;
+}
+if (args.Contains("--osu-collections-check")) { OsuCollectionTests.Run(); return 0; }
+if (args.Contains("--library-organization-check")) { OsuCollectionTests.Run(); LibraryOrganizationTests.Run(); LibraryFavouriteTests.Run(); LibraryTests.Run(); LibraryScaleTests.Pagination(); Console.WriteLine("PASS Library sorting, grouping, collections, visits and persistence"); return 0; }
 
 if (args.Contains("--library-incremental-check"))
 {

@@ -111,15 +111,44 @@ The database's maps/projects/project_sources tables are rebuildable indexes. The
 ## Library organization
 
 The sidebar provides All songs, My projects, Favourites and Recent Visited. A separate
-Collections section below these entries lists user-created collections. Its **+**
+**FA Collections** section below these entries lists user-created collections. Its **+**
 button creates a collection; right-click a collection to rename or delete it.
 Deleting a collection removes its membership only. Right-click a set card and choose
 **Add to collections…** to select multiple collections, search their names or create
 one. **Done** applies membership; Cancel or Esc discards the membership draft. Inside
 a collection, **Remove from this collection** removes the selected set directly.
-Collections contain mapsets rather than individual difficulties. A set may belong
+FA Collections contain mapsets rather than individual difficulties. A set may belong
 to multiple collections, and opening a collected source associates its membership
 with the workspace project.
+
+Both collection sections enclose their heading and entries in one frame sized to
+the number of collections. Each entry keeps a border when unselected. Dividers
+separate FA Collections from the built-in categories and from osu! Collections.
+The **+** button is centered in the FA heading row. The sections scroll together
+when they exceed the available sidebar height.
+
+**osu! Collections** appears separately below FA Collections when both `osu!.db`
+and `collection.db` are readable in the configured osu! directory. Missing,
+inaccessible or malformed databases hide this section; FA Collections remain
+available. Collections are read-only: their names and difficulty membership cannot
+be changed in FA. The membership chooser contains FA Collections only.
+
+The reader follows the official [legacy database format](https://github.com/ppy/osu/wiki/Legacy-database-file-structure#collectiondb)
+and [`LegacyCollectionImporter`](https://github.com/ppy/osu/blob/44819244af116e8ae08fe2cbd29c6e489b5c9d4e/osu.Game/Database/LegacyCollectionImporter.cs).
+Collection members are MD5 hashes resolved through osu!'s cached `osu!.db`
+records to specific source paths. This preserves osu!'s membership when a file has
+changed since osu! last cached its hash. Collection browsing performs no whole-library
+file hashing or network requests. Only indexed Standard and Catch difficulties
+from the configured Songs directory can match. Collection sidebar counts are
+stored difficulty memberships, including unavailable or unsupported members.
+Set-card counts and the details panel show only matching difficulties, even when
+the set has an associated FA project. Other Library categories keep their complete
+set listings. Opening a difficulty enters the normal project editor.
+
+While Library is visible, a background check considers database file versions every
+three seconds and reloads changed collection data. Returning from an unavailable
+installation restores the section on a later successful check. No osu! database
+is written. FA membership and view positions remain in `library-view.json`.
 
 Below Search, the result count and Group/Sort controls organize the current category.
 Narrow windows put these controls on a separate row. Group supports no grouping,

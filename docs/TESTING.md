@@ -1035,3 +1035,18 @@ native circle/slider/spinner replacement, preview/export equivalence, project
 roundtrips, undo/redo and Experimental setting
 persistence and cancellation. Native `--render-check --experimental-snap-render-check`
 also exercises its toggle in English and Chinese at compact and standard sizes.
+
+## osu! collection browsing
+
+`App.Tests --osu-collections-check` verifies official legacy database layouts before
+and after the 2014, 2019 and 2025 format changes, exact difficulty subsets, changed
+source hashes with retained osu! database identities, associated FA projects,
+read-only membership controls, missing/malformed databases, background refresh,
+and repeated browser retirement during an ordering transfer. The Library organization
+check includes this suite. Native `--library-organization-render-check` also captures
+the separate Collections sections and filtered osu! difficulties in both languages,
+two sizes and three DPI values.
+
+For an optional read-only report against an existing installation, run
+`App.Tests --osu-collections-read <osu-root>`. It reports collection member paths
+and difficulty names without importing projects or writing to the installation.

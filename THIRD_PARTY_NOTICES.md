@@ -276,3 +276,11 @@ is pinned to `b5ae84f2e84087bf160bb0471420200dd2b5d809` (TaglibSharp-2.3.0.0).
 The LGPL 2.1 text in `src/FruitsAtelier.Core/Licenses/TagLibSharp.txt` is copied to
 application outputs. Users may replace that library with a compatible modified
 build; no media metadata is written by AiMod.
+
+## Legacy osu! collections
+
+`Core/Workspace/OsuCollections.cs` reads the documented stable `collection.db`
+format, checked against `osu.Game/Database/LegacyCollectionImporter.cs` at
+[ppy/osu revision 44819244af116e8ae08fe2cbd29c6e489b5c9d4e](https://github.com/ppy/osu/blob/44819244af116e8ae08fe2cbd29c6e489b5c9d4e/osu.Game/Database/LegacyCollectionImporter.cs).
+The existing ppy Pty Ltd MIT notice above and retained
+`src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt` cover osu! source references.

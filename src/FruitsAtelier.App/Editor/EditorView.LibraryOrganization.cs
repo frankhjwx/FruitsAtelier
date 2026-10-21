@@ -49,13 +49,14 @@ public sealed partial class EditorView
         InvalidateLibraryOrganization();
     }
 
-    private IReadOnlyCollection<string>? LibraryFilterKeys => libraryCollection is { } id
+    private IReadOnlyCollection<string>? LibraryFilterKeys => !IsOsuCollection && libraryCollection is { } id
         ? libraryMemory.Collections.FirstOrDefault(c => c.Id == id)?.Keys.ToArray() ?? []
         : libraryRecentOnly ? libraryMemory.Visits.Keys.ToArray()
         : libraryFavouritesOnly ? libraryMemory.FavouriteKeys.ToArray() : null;
 
     private LibraryOrganization CurrentLibraryOrganization => new(libraryGrouping, librarySort, libraryDescending,
-        new Dictionary<string, long>(libraryMemory.Visits, WorkspaceSynchronization.Paths), null, DateTime.Today, libraryExpanded.ToArray(), CollapseByDefault: true);
+        new Dictionary<string, long>(libraryMemory.Visits, WorkspaceSynchronization.Paths), null, DateTime.Today, libraryExpanded.ToArray(), CollapseByDefault: true,
+        DifficultyPaths: IsOsuCollection ? osuCollections?.Collections.FirstOrDefault(c => c.Id == libraryCollection)?.Paths ?? [] : null);
 
     private string LibraryGroupLabel(string key) => libraryGrouping switch
     {
@@ -106,33 +107,72 @@ public sealed partial class EditorView
     private void DrawLibraryCollections(ICanvas c)
     {
         Button(c, new(16, 226, 158, 36), L.Get("library.recentVisited"), () => SwitchLibraryCategory(false, recent: true), libraryRecentOnly);
-        c.Text(L.Get("library.collections"), 24, 292, 12, Muted, 118, true);
-        Button(c, new(144, 282, 30, 30), "+", () => ShowCollectionNameDialog());
-        collectionsBounds = new(16, 320, 158, Math.Max(0, height - 475));
+        c.Line(24, 272, 166, 272, Grid, 1);
+        collectionsBounds = new(16, 282, 158, Math.Max(0, height - 437));
         collectionRows.Clear();
-        collectionsScroll = Math.Clamp(collectionsScroll, 0, Math.Max(0, libraryMemory.Collections.Count * 36 - collectionsBounds.Height));
+        var imported = osuCollections is { Available: true } ? osuCollections.Collections : [];
+        float faHeight = SectionHeight(libraryMemory.Collections.Count);
+        float osuTop = faHeight + 24;
+        float total = imported.Count > 0 ? osuTop + SectionHeight(imported.Count) : faHeight;
+        collectionsScroll = Math.Clamp(collectionsScroll, 0, Math.Max(0, total - collectionsBounds.Height));
         c.Clip(collectionsBounds);
-        int first = (int)(collectionsScroll / 36);
-        int last = Math.Min(libraryMemory.Collections.Count, (int)Math.Ceiling((collectionsScroll + collectionsBounds.Height) / 36));
+        DrawSection(L.Get("library.collections"), 0, faHeight, addButton: true);
+        int first = Math.Max(0, (int)Math.Floor((collectionsScroll - 40) / 36));
+        int last = Math.Min(libraryMemory.Collections.Count, (int)Math.Ceiling((collectionsScroll + collectionsBounds.Height - 40) / 36));
         for (int i = first; i < last; i++)
         {
             var collection = libraryMemory.Collections[i];
-            var bounds = new Rect(16, 320 + i * 36 - collectionsScroll, 158, 32);
-            var clipped = new Rect(bounds.X, Math.Max(bounds.Y, collectionsBounds.Y), bounds.Width,
-                Math.Max(0, Math.Min(bounds.Bottom, collectionsBounds.Bottom) - Math.Max(bounds.Y, collectionsBounds.Y)));
-            collectionRows.Add((clipped, collection.Id));
-            if (libraryCollection == collection.Id) c.Fill(bounds, 0x31494B, 4);
-            c.Text(collection.Name, 26, bounds.Y + 8, 12, libraryCollection == collection.Id ? Accent : Foreground, 108, libraryCollection == collection.Id);
-            c.Text(collection.Keys.Count.ToString(System.Globalization.CultureInfo.CurrentCulture), 140, bounds.Y + 8, 11, Muted, 30);
-            hits.Add(new(clipped, () => SwitchLibraryCategory(false, collection: collection.Id), true));
+            DrawRow(collection.Id, collection.Name, collection.Keys.Count, 40 + i * 36);
+        }
+        if (imported.Count > 0)
+        {
+            float y = collectionsBounds.Y + osuTop - collectionsScroll;
+            c.Line(24, y - 12, 166, y - 12, Grid, 1);
+            DrawSection(L.Get("library.osuCollections"), osuTop, SectionHeight(imported.Count));
+            first = Math.Max(0, (int)Math.Floor((collectionsScroll - osuTop - 40) / 36));
+            last = Math.Min(imported.Count, (int)Math.Ceiling((collectionsScroll + collectionsBounds.Height - osuTop - 40) / 36));
+            for (int i = first; i < last; i++)
+                DrawRow(imported[i].Id, imported[i].Name, imported[i].Hashes.Count, osuTop + 40 + i * 36);
         }
         c.Unclip();
-        if (libraryMemory.Collections.Count * 36 > collectionsBounds.Height && collectionsBounds.Height > 0)
+        if (total > collectionsBounds.Height && collectionsBounds.Height > 0)
         {
-            float total = libraryMemory.Collections.Count * 36;
             float thumb = Math.Max(20, collectionsBounds.Height * collectionsBounds.Height / total);
             float y = collectionsBounds.Y + collectionsScroll / (total - collectionsBounds.Height) * (collectionsBounds.Height - thumb);
             c.Fill(new(179, y, 3, thumb), Muted, 2);
+        }
+        static float SectionHeight(int count) => count == 0 ? 32 : 48 + count * 36;
+        void DrawSection(string title, float offset, float sectionHeight, bool addButton = false)
+        {
+            var section = new Rect(16, collectionsBounds.Y + offset - collectionsScroll, 158, sectionHeight);
+            c.Fill(section, Background, 5, .35f); c.Stroke(section, Grid, radius: 5);
+            c.Fill(new(section.X + 1, section.Y + 1, section.Width - 2, 30), Surface, 4, .55f);
+            c.Text(title, section.X + 8, section.Y + 8, 12, Muted, addButton ? 112 : 142, true);
+            if (sectionHeight > 32) c.Line(section.X + 1, section.Y + 32, section.Right - 1, section.Y + 32, Grid, 1);
+            if (!addButton) return;
+            var add = new Rect(section.Right - 32, section.Y + 2, 30, 28);
+            c.Fill(add, add.Contains(mouseX, mouseY) ? 0x3D495Au : Surface, 4);
+            c.Stroke(add, add.Contains(mouseX, mouseY) ? 0x71849Au : Grid, radius: 4);
+            float cx = add.X + add.Width / 2, cy = add.Y + add.Height / 2;
+            c.Line(cx - 3, cy, cx + 3, cy, Foreground, 1.2f);
+            c.Line(cx, cy - 3, cx, cy + 3, Foreground, 1.2f);
+            var clipped = new Rect(add.X, Math.Max(add.Y, collectionsBounds.Y), add.Width,
+                Math.Max(0, Math.Min(add.Bottom, collectionsBounds.Bottom) - Math.Max(add.Y, collectionsBounds.Y)));
+            if (clipped.Height > 0) hits.Add(new(clipped, () => ShowCollectionNameDialog(), true));
+        }
+        void DrawRow(string id, string name, int count, float offset)
+        {
+            var bounds = new Rect(22, collectionsBounds.Y + offset - collectionsScroll, 146, 32);
+            if (bounds.Bottom <= collectionsBounds.Y || bounds.Y >= collectionsBounds.Bottom) return;
+            var clipped = new Rect(bounds.X, Math.Max(bounds.Y, collectionsBounds.Y), bounds.Width,
+                Math.Max(0, Math.Min(bounds.Bottom, collectionsBounds.Bottom) - Math.Max(bounds.Y, collectionsBounds.Y)));
+            collectionRows.Add((clipped, id));
+            bool selected = libraryCollection == id;
+            c.Fill(bounds, selected ? 0x31494Bu : Surface, 4, selected ? 1 : .4f);
+            c.Stroke(bounds, selected ? 0x477E7Bu : Grid, radius: 4);
+            c.Text(name, bounds.X + 10, bounds.Y + 8, 12, selected ? Accent : Foreground, bounds.Width - 50, selected);
+            c.Text(count.ToString(System.Globalization.CultureInfo.CurrentCulture), bounds.Right - 28, bounds.Y + 8, 11, Muted, 22);
+            hits.Add(new(clipped, () => SwitchLibraryCategory(false, collection: id), true));
         }
     }
 
@@ -140,7 +180,8 @@ public sealed partial class EditorView
     {
         var row = collectionRows.FirstOrDefault(r => r.Bounds.Contains(x, y));
         if (row.Id is null) return false;
-        var collection = libraryMemory.Collections.First(c => c.Id == row.Id);
+        var collection = libraryMemory.Collections.FirstOrDefault(c => c.Id == row.Id);
+        if (collection is null) { contextItems.Clear(); return true; }
         contextItems.Clear(); libraryField = -1;
         contextItems.Add(new(L.Get("library.renameCollection"), () => ShowCollectionNameDialog(collection.Id)));
         contextItems.Add(new(L.Get("library.deleteCollection"), () =>

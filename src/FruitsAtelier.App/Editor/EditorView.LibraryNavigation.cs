@@ -41,9 +41,9 @@ public sealed partial class EditorView
     private LibraryOrder librarySort;
     private bool libraryDescending;
     private HashSet<string> libraryExpanded = [];
-    private bool LibraryUsesProjects => libraryProjectsOnly || libraryFavouritesOnly || libraryRecentOnly || libraryCollection is not null;
+    private bool LibraryUsesProjects => libraryProjectsOnly || libraryFavouritesOnly || libraryRecentOnly || libraryCollection is not null && !IsOsuCollection;
     private int libraryFavouriteRevision;
-    private int LibraryCategory => libraryCollection is not null ? 4 + Math.Max(0, libraryMemory.Collections.FindIndex(c => c.Id == libraryCollection)) : libraryRecentOnly ? 3 : libraryFavouritesOnly ? 2 : libraryProjectsOnly ? 1 : 0;
+    private int LibraryCategory => libraryCollection is not null ? 4 + Math.Max(0, AllLibraryCollectionIds.ToList().IndexOf(libraryCollection)) : libraryRecentOnly ? 3 : libraryFavouritesOnly ? 2 : libraryProjectsOnly ? 1 : 0;
     private string LibrarySearchKey => libraryQuery + ":" + LibraryCategory + ":" + libraryFavouriteRevision + ":" + libraryGrouping + ":" + librarySort + ":" + libraryDescending + ":" + libraryCollection + (libraryGrouping is LibraryGrouping.DateAdded or LibraryGrouping.RecentVisited ? ":" + DateTime.Today.Ticks : "");
     private bool libraryMemoryLoaded, libraryMemoryDirty, revealLibrarySelection;
     private DateTime libraryMemorySaveAfter;
@@ -71,7 +71,7 @@ public sealed partial class EditorView
         libraryMemory.Visits = new(libraryMemory.Visits ?? [], WorkspaceSynchronization.Paths);
         libraryMemory.Positions ??= new();
         libraryRecentOnly = libraryMemory.Recent;
-        libraryCollection = libraryMemory.Collections.Any(c => c.Id == libraryMemory.Collection) ? libraryMemory.Collection : null;
+        libraryCollection = (libraryMemory.Collection?.StartsWith("osu:", StringComparison.Ordinal) == true || libraryMemory.Collections.Any(c => c.Id == libraryMemory.Collection)) ? libraryMemory.Collection : null;
         RestoreLibraryPosition();
     }
     private void RememberLibraryPosition()
@@ -199,7 +199,7 @@ public sealed partial class EditorView
                 }
                 contextItems.Add(new(L.Get(IsLibraryFavourite(map) ? "library.removeFavourite" : "library.addFavourite"), () => ToggleLibraryFavourite(map)));
                 contextItems.Add(new(L.Get("library.addCollection"), () => ShowCollectionDialog(map)));
-                if (libraryCollection is { } collectionId)
+                if (!IsOsuCollection && libraryCollection is { } collectionId)
                     contextItems.Add(new(L.Get("library.removeCollection"), () => SetCollectionMember(collectionId, map, false)));
                 AddContextSeparator();
                 contextItems.Add(new(L.Get(project is null ? "library.start" : "library.continue"), () => OpenSelectedLibraryMap(map)));

@@ -20,7 +20,12 @@ public sealed class LibrarySearchSnapshot : IDisposable
     private readonly SemaphoreSlim discoveryQueue = new(1);
     private long discoveryRevision, cachedDiscoveryRevision;
     public long DiscoveryRevision => Interlocked.Read(ref discoveryRevision);
-    public void CancelReferenceDiscovery() => discoveryCancellation.Cancel();
+    private readonly object lifetimeGate = new();
+    private bool disposed;
+    public void CancelReferenceDiscovery()
+    {
+        lock (lifetimeGate) if (!disposed) discoveryCancellation.Cancel();
+    }
     public int Count { get; private set; }
     public int SetCount { get; }
     public int FirstMapIndex { get; private set; }
@@ -54,6 +59,12 @@ public sealed class LibrarySearchSnapshot : IDisposable
             {
                 command.CommandText += $" AND instr(m.search,$q{i})>0";
                 command.Parameters.AddWithValue("$q" + i, words[i]);
+            }
+            if (organization?.DifficultyPaths is { } paths)
+            {
+                var membership = new HashSet<string>(paths, WorkspaceSynchronization.Paths);
+                db.CreateFunction<string?, bool>("in_osu_collection", path => path is not null && membership.Contains(path));
+                command.CommandText += " AND m.root=$r AND in_osu_collection(m.path)";
             }
             if (favouritesOnly) command.CommandText += $" AND is_favourite(json_extract(m.data,'$.Directory'),{project})";
             if (projectsOnly) command.CommandText += $" AND {project} IS NOT NULL";
@@ -319,8 +330,13 @@ public sealed class LibrarySearchSnapshot : IDisposable
     }
     public void Dispose()
     {
-        discoveryCancellation.Cancel(); db.Dispose();
-        _ = Task.WhenAll(discoveries.Values).ContinueWith(t =>
-        { _ = t.Exception; discoveryQueue.Dispose(); discoveryCancellation.Dispose(); }, TaskScheduler.Default);
+        lock (lifetimeGate)
+        {
+            if (disposed) return;
+            disposed = true;
+            discoveryCancellation.Cancel(); db.Dispose();
+            _ = Task.WhenAll(discoveries.Values).ContinueWith(t =>
+            { _ = t.Exception; discoveryQueue.Dispose(); discoveryCancellation.Dispose(); }, TaskScheduler.Default);
+        }
     }
 }
