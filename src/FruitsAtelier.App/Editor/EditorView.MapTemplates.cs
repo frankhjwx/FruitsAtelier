@@ -11,6 +11,7 @@ public sealed partial class EditorView
     private List<MapTemplate> templateDraft = [];
     private int templateIndex = -1, templateField, templatePage;
     private readonly string[] templateValues = new string[7];
+    private static readonly int[] templateFieldOrder = [0, 3, 2, 1, 4, 5, 6];
     private string templateError = "";
     private static readonly double?[] templateIconStars = [null, .1, 1.25, 2, 2.5, 3.3, 4.2, 4.9, 5.8, 6.7, 7.7, 9];
 
@@ -99,7 +100,7 @@ public sealed partial class EditorView
         if (templateIndex < 0) return;
         if (key == 9)
         {
-            templateField = (templateField + (shift ? 6 : 1)) % 7;
+            templateField = templateFieldOrder[(Array.IndexOf(templateFieldOrder, templateField) + (shift ? 6 : 1)) % 7];
             SelectInput("template:" + templateField, templateValues[templateField]); return;
         }
         InputKey("template:" + templateField, ref templateValues[templateField], key, ctrl, shift,
@@ -136,9 +137,9 @@ public sealed partial class EditorView
         if (templateIndex >= 0)
         {
             Field(0, L.Get("template.name"), left, y + 70, inner);
-            string[] labels = ["AR", "CS", "HP", "OD", "SV", "STR"];
+            string[] labels = ["HP", "CS", "AR", "OD", "SV", "STR"];
             for (int i = 0; i < labels.Length; i++)
-                Field(i + 1, labels[i], left + (i % 2) * ((inner + 16) / 2), y + 150 + (i / 2) * 78, (inner - 16) / 2);
+                Field(templateFieldOrder[i + 1], labels[i], left + (i % 2) * ((inner + 16) / 2), y + 150 + (i / 2) * 78, (inner - 16) / 2);
             c.Text(L.Get("template.icon"), left, y + 374, 13, Muted, inner);
             for (int i = 0; i < templateIconStars.Length; i++)
             {

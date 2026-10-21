@@ -41,6 +41,7 @@ public sealed partial class EditorView
         if (ErrorVisible || DiscardConfirmationVisible)
         {
             mouseX = x; mouseY = y;
+            if (!ErrorVisible && addDifficultyConfirmation && !MapTemplatesVisible && NewDifficultySourcePointer(x, y)) return;
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
@@ -921,6 +922,12 @@ public sealed partial class EditorView
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
+        if (!ErrorVisible && addDifficultyConfirmation && !MapTemplatesVisible && newDifficultySourcesOpen)
+        {
+            if (newDifficultySourceList.Contains(x, y)) newDifficultySourceScroll = Math.Clamp(newDifficultySourceScroll
+                - (int)(delta / 120), 0, Math.Max(0, NewDifficultySourceCount - 6));
+            return;
+        }
         if (CollaborationReportVisible)
         {
             if (CollaborationReportList.Contains(x, y)) collaborationReportScroll = Math.Clamp(collaborationReportScroll - delta / 120 * 58,

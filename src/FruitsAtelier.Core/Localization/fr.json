@@ -1688,12 +1688,10 @@
   "library.order.RecentVisited": "Recent visit",
   "library.visitWeb": "Visit in osu web",
   "difficulty.useSource": "Créer depuis une difficulté ou un modèle",
-  "difficulty.copyTab": "Copier une difficulté",
+  "difficulty.copyTab": "Depuis une difficulté",
   "difficulty.templateTab": "Modèles de beatmap",
   "difficulty.noTemplates": "Aucun modèle enregistré",
-  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
-  "difficulty.copyHelp": "Copie les objets, le timing et les réglages de la difficulté sélectionnée.",
-  "difficulty.templateHelp": "Applique six réglages à une difficulté vide. Le timing suit la difficulté actuelle.",
+  "difficulty.parameters": "HP {2} · CS {1:0.##} · AR {0:0.##} · OD {3} · SV {4:0.##} · STR {5:0.##}",
   "difficulty.name": "Nom de la difficulté",
   "template.manage": "Gérer les modèles de beatmap",
   "template.new": "Nouveau modèle",
@@ -1701,6 +1699,6 @@
   "template.name": "Nom du modèle",
   "template.defaultName": "Modèle {0}",
   "template.delete": "Supprimer le modèle",
-  "template.invalid": "Nom unique, AR/CS/HP/OD entre 0 et 10, SV/STR strictement positifs.",
+  "template.invalid": "Nom unique, HP/CS/AR/OD entre 0 et 10, SV/STR strictement positifs.",
   "template.icon": "Icône Catch"
 }

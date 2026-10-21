@@ -1688,12 +1688,10 @@
   "library.order.RecentVisited": "访问时间",
   "library.visitWeb": "访问 osu! 网页",
   "difficulty.useSource": "从难度或模板创建",
-  "difficulty.copyTab": "复制难度",
+  "difficulty.copyTab": "从难度创建",
   "difficulty.templateTab": "谱面模板",
   "difficulty.noTemplates": "暂无已保存模板",
-  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
-  "difficulty.copyHelp": "复制所选难度的全部物件、Timing 和设置。",
-  "difficulty.templateHelp": "将六项参数应用到空白难度，Timing 沿用当前难度。",
+  "difficulty.parameters": "HP {2} · CS {1:0.##} · AR {0:0.##} · OD {3} · SV {4:0.##} · STR {5:0.##}",
   "difficulty.name": "难度名称",
   "template.manage": "管理谱面模板",
   "template.new": "新建模板",
@@ -1701,6 +1699,6 @@
   "template.name": "模板名称",
   "template.defaultName": "模板 {0}",
   "template.delete": "删除模板",
-  "template.invalid": "名称须唯一；AR/CS/HP/OD 为 0–10，SV/STR 须大于 0。",
+  "template.invalid": "名称须唯一；HP/CS/AR/OD 为 0–10，SV/STR 须大于 0。",
   "template.icon": "Catch 图标"
 }

@@ -9,17 +9,51 @@ public sealed partial class EditorView
     private bool newDifficultyUseSource, newDifficultyTemplateTab;
     private int newDifficultySource, newDifficultyTemplate;
     private string newDifficultyName = "";
+    private bool newDifficultySourcesOpen;
+    private int newDifficultySourceScroll, newDifficultySourceFocus;
+    private Rect newDifficultySourceBounds, newDifficultySourceList;
+    private int NewDifficultySourceCount => newDifficultyTemplateTab ? LibrarySettings.MapTemplates.Count : difficulties.Count;
+    private int NewDifficultySelectedSource => newDifficultyTemplateTab ? newDifficultyTemplate : newDifficultySource;
+
+    private void SelectNewDifficultySource(int index)
+    {
+        if (newDifficultyTemplateTab) newDifficultyTemplate = index;
+        else newDifficultySource = index;
+        newDifficultySourcesOpen = false;
+    }
+
+    private bool NewDifficultySourcePointer(float x, float y)
+    {
+        if (!newDifficultySourcesOpen || newDifficultySourceBounds.Contains(x, y) || newDifficultySourceList.Contains(x, y)) return false;
+        newDifficultySourcesOpen = false;
+        return true;
+    }
     private bool CanCreateDifficulty => !string.IsNullOrWhiteSpace(newDifficultyName)
         && (!newDifficultyUseSource || !newDifficultyTemplateTab || newDifficultyTemplate < LibrarySettings.MapTemplates.Count);
 
     private void NewDifficultyText(string text)
     {
+        if (newDifficultySourcesOpen) return;
         text = new string(text.Where(ch => !char.IsControl(ch)).ToArray());
         newDifficultyName = InsertInput("newDiff:0", newDifficultyName, text, 128);
     }
 
     private void NewDifficultyKey(int key, bool ctrl, bool shift)
     {
+        if (newDifficultySourcesOpen)
+        {
+            if (key == 27 || key == 9) { newDifficultySourcesOpen = false; return; }
+            if (key == 13) { SelectNewDifficultySource(newDifficultySourceFocus); return; }
+            if (key is 38 or 40 or 36 or 35)
+            {
+                int count = NewDifficultySourceCount;
+                newDifficultySourceFocus = key == 36 ? 0 : key == 35 ? count - 1
+                    : Math.Clamp(newDifficultySourceFocus + (key == 38 ? -1 : 1), 0, count - 1);
+                newDifficultySourceScroll = Math.Clamp(newDifficultySourceScroll,
+                    Math.Max(0, newDifficultySourceFocus - 5), newDifficultySourceFocus);
+            }
+            return;
+        }
         if (key == 27) { AnswerDiscard(2); return; }
         if (key == 13) { if (CanCreateDifficulty) AnswerDiscard(6); return; }
         if (key == 9)
@@ -43,43 +77,70 @@ public sealed partial class EditorView
         DrawInputText(c, new(nameBounds.X + 10, nameBounds.Y + 8, inner - 20, 20), newDifficultyName, 14, true, "newDiff:0");
         hits.Add(new(nameBounds, () => FocusInput("newDiff:0", newDifficultyName, mouseX), true));
         ToggleSwitch(c, new(x + 22, y + 124, inner, 34), L.Get("difficulty.useSource"), newDifficultyUseSource,
-            () => newDifficultyUseSource = !newDifficultyUseSource);
-        Button(c, new(x + 22, y + 166, (inner - 10) / 2, 34), L.Get("difficulty.copyTab"),
-            () => newDifficultyTemplateTab = false, !newDifficultyTemplateTab);
-        Button(c, new(x + 32 + (inner - 10) / 2, y + 166, (inner - 10) / 2, 34), L.Get("difficulty.templateTab"),
-            () => newDifficultyTemplateTab = true, newDifficultyTemplateTab);
-        int count = newDifficultyTemplateTab ? LibrarySettings.MapTemplates.Count : difficulties.Count;
-        int selected = newDifficultyTemplateTab ? newDifficultyTemplate : newDifficultySource;
-        string label = count == 0 ? L.Get("difficulty.noTemplates") : newDifficultyTemplateTab
-            ? LibrarySettings.MapTemplates[selected].Name : difficulties[selected].Name;
+            () => { newDifficultyUseSource = !newDifficultyUseSource; newDifficultySourcesOpen = false; });
+        var sourceRegion = new Rect(x + 22, y + 166, inner, 216);
+        c.Stroke(sourceRegion, Grid, radius: 6);
+        float sourceX = x + 32, sourceWidth = inner - 20;
+        Button(c, new(sourceX, y + 176, (sourceWidth - 10) / 2, 34), L.Get("difficulty.copyTab"),
+            () => { newDifficultyTemplateTab = false; newDifficultySourcesOpen = false; }, !newDifficultyTemplateTab, newDifficultyUseSource);
+        Button(c, new(sourceX + (sourceWidth + 10) / 2, y + 176, (sourceWidth - 10) / 2, 34), L.Get("difficulty.templateTab"),
+            () => { newDifficultyTemplateTab = true; newDifficultySourcesOpen = false; }, newDifficultyTemplateTab, newDifficultyUseSource);
+        int count = NewDifficultySourceCount, selected = NewDifficultySelectedSource;
+        string label = count == 0 ? L.Get("difficulty.noTemplates") : SourceName(selected);
+        newDifficultySourceBounds = new(sourceX, y + 222, sourceWidth, 38);
+        c.Fill(newDifficultySourceBounds, Surface, 5);
+        c.Stroke(newDifficultySourceBounds, newDifficultySourcesOpen ? Accent : Grid, radius: 5);
+        Button(c, newDifficultySourceBounds, label, () =>
+        {
+            newDifficultySourcesOpen = !newDifficultySourcesOpen;
+            newDifficultySourceFocus = selected;
+            newDifficultySourceScroll = Math.Clamp(selected, 0, Math.Max(0, count - 6));
+        }, enabled: newDifficultyUseSource && count > 0, fontSize: 14,
+            textPadding: newDifficultyTemplateTab && count > 0 ? 42 : 12, textRightPadding: 30);
         if (newDifficultyTemplateTab && count > 0)
-            DrawTemplateIcon(c, LibrarySettings.MapTemplates[selected].Icon, new(x + 68, y + 222, 24, 24));
-        c.Text(label, x + (newDifficultyTemplateTab && count > 0 ? 104 : 68), y + 226, 15, Foreground, inner - 128, true);
-        Button(c, new(x + 22, y + 216, 34, 34), "‹", () => Choose(-1), enabled: count > 1);
-        Button(c, new(x + w - 56, y + 216, 34, 34), "›", () => Choose(1), enabled: count > 1);
+            DrawTemplateIcon(c, LibrarySettings.MapTemplates[selected].Icon, new(sourceX + 10, y + 230, 22, 22));
+        c.Text("▾", newDifficultySourceBounds.Right - 23, y + 233, 13, Muted, 18);
         if (count > 0)
         {
             var settings = newDifficultyTemplateTab ? LibrarySettings.MapTemplates[selected]
                 : MapTemplate.Capture(label, difficulties[selected].History.Document);
             c.Text(L.Get("difficulty.parameters", settings.ApproachRate, settings.CircleSize, settings.HP, settings.OD,
-                settings.SliderMultiplier, settings.SliderTickRate), x + 22, y + 260, 13, Muted, inner);
+                settings.SliderMultiplier, settings.SliderTickRate), sourceX, y + 278, 13, Muted, sourceWidth);
         }
-        c.Text(L.Get(newDifficultyTemplateTab ? "difficulty.templateHelp" : "difficulty.copyHelp"), x + 22, y + 288, 13, Muted, inner);
         if (newDifficultyTemplateTab)
-        {
-            Button(c, new(x + 22, y + 332, inner, 36), L.Get("template.manage"), OpenMapTemplates);
-        }
+            Button(c, new(sourceX, y + 328, sourceWidth, 36), L.Get("template.manage"), OpenMapTemplates, enabled: newDifficultyUseSource);
+        if (!newDifficultyUseSource)
+            c.Fill(new(sourceRegion.X + 1, sourceRegion.Y + 1, sourceRegion.Width - 2, sourceRegion.Height - 2), Background, 5, .55f);
         ToggleSwitch(c, new(x + 22, y + 404, inner, 34), L.Get("song.faOnly"), newDifficultyFaOnly,
             () => newDifficultyFaOnly = !newDifficultyFaOnly);
-        c.Text(L.Get("song.newDifficultySyncHelp"), x + 22, y + 446, 12, Muted, inner);
         Button(c, new(x + 22, y + h - 60, (inner - 10) / 2, 36), L.Get("mac.cancel"), () => AnswerDiscard(2));
         Button(c, new(x + 32 + (inner - 10) / 2, y + h - 60, (inner - 10) / 2, 36), L.Get("project.add"),
             () => { if (CanCreateDifficulty) AnswerDiscard(6); }, true, CanCreateDifficulty);
 
-        void Choose(int offset)
+        if (newDifficultySourcesOpen && newDifficultyUseSource && count > 0)
         {
-            if (newDifficultyTemplateTab) newDifficultyTemplate = (selected + offset + count) % count;
-            else newDifficultySource = (selected + offset + count) % count;
+            int visible = Math.Min(6, count);
+            newDifficultySourceScroll = Math.Clamp(newDifficultySourceScroll, 0, count - visible);
+            newDifficultySourceList = new(sourceX, newDifficultySourceBounds.Bottom + 4, sourceWidth, visible * 32 + 8);
+            c.Fill(newDifficultySourceList, Surface, 5); c.Stroke(newDifficultySourceList, Grid, radius: 5);
+            hits.Add(new(newDifficultySourceList, () => { }, true));
+            for (int row = 0; row < visible; row++)
+            {
+                int index = newDifficultySourceScroll + row;
+                var bounds = new Rect(sourceX + 4, newDifficultySourceList.Y + 4 + row * 32, sourceWidth - 14, 32);
+                Button(c, bounds, SourceName(index), () => SelectNewDifficultySource(index), index == newDifficultySourceFocus,
+                    textPadding: newDifficultyTemplateTab ? 38 : 9);
+                if (newDifficultyTemplateTab)
+                    DrawTemplateIcon(c, LibrarySettings.MapTemplates[index].Icon, new(bounds.X + 8, bounds.Y + 6, 20, 20));
+            }
+            if (count > visible)
+            {
+                float trackHeight = newDifficultySourceList.Height - 8;
+                float thumb = trackHeight * visible / count;
+                c.Fill(new(newDifficultySourceList.Right - 7, newDifficultySourceList.Y + 4
+                    + (trackHeight - thumb) * newDifficultySourceScroll / (count - visible), 3, thumb), Muted, 2);
+            }
         }
+        string SourceName(int index) => newDifficultyTemplateTab ? LibrarySettings.MapTemplates[index].Name : difficulties[index].Name;
     }
 }

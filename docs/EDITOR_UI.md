@@ -7,15 +7,16 @@ FA-only policy. **Create from a difficulty or template** starts disabled;
 with it disabled, creation retains the current difficulty's settings and timing
 and clears all objects, as with ordinary blank creation.
 
-Enable the switch and choose one of two mutually exclusive tabs:
+The disabled source area is greyed out and cannot be edited. Enable the switch
+and choose one of two mutually exclusive tabs:
 
-- **Copy difficulty**: use the arrow buttons to select a difficulty in the
+- **From difficulty**: use the dropdown to select a difficulty in the
   current project (initially the active difficulty). The new difficulty copies
   its objects, timing, hitsounds and settings into an independent document,
   with the entered difficulty name and a fresh local difficulty identity.
   Its online BeatmapID is reset to zero.
-- **Map templates**: select a saved template to apply AR, CS, HP, OD, base SV
-  and STR (SliderTickRate) to an otherwise ordinary blank difficulty. Timing
+- **Map templates**: use the dropdown to select a saved template to apply
+  HP, CS, AR, OD, base SV and STR (SliderTickRate) to an otherwise ordinary blank difficulty. Timing
   follows the active difficulty's blank-creation behavior.
 
 Open the independent **Manage map templates** window from the Library header,
@@ -23,7 +24,7 @@ Open the independent **Manage map templates** window from the Library header,
 Choose **New template** to enter parameters, or **Use current difficulty** to
 capture the active difficulty's six values (available while editing a project).
 Select a template in the list to rename it or edit its values, or choose
-**Delete template** to remove it. Names must be unique; AR/CS/HP/OD accept 0–10,
+**Delete template** to remove it. Names must be unique; HP/CS/AR/OD accept 0–10,
 and SV/STR must be positive finite numbers. Decimal input uses a period.
 Choose a **Catch icon** from the existing difficulty-colour palette to identify
 the template in the manager and difficulty creation chooser. The icon is stored
@@ -1091,7 +1092,7 @@ Undo and redo reveal an affected position only when none of the affected positio
 
 Copy and cut write a legacy reference such as `02:27:094 (1,2,3) - ` to the system clipboard. Inside the editor, a separate snapshot retains complete objects for pattern pasting across difficulties in the current mapset. Opening or reopening a project clears that snapshot. Paste aligns the earliest start to the playhead, preserves other objects' relative times and positions, and assigns new IDs. Each batch move, delete, cut, or paste is one undo step.
 
-Cross-difficulty paste keeps the target's AR, CS, HP, OD, base SV, STR and timing.
+Cross-difficulty paste keeps the target's HP, CS, AR, OD, base SV, STR and timing.
 Different tick settings regenerate nested events according to the target's rules;
 they do not block paste. Legacy sliders retain their paths and durations through
 independent SV adjusted for the target BPM and base SV. If the required SV cannot

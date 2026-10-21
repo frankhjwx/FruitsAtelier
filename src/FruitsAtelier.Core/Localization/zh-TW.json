@@ -1688,12 +1688,10 @@
   "library.order.RecentVisited": "Recent visit",
   "library.visitWeb": "造訪 osu! 網頁",
   "difficulty.useSource": "從難度或範本建立",
-  "difficulty.copyTab": "複製難度",
+  "difficulty.copyTab": "從難度建立",
   "difficulty.templateTab": "譜面範本",
   "difficulty.noTemplates": "尚無已儲存範本",
-  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
-  "difficulty.copyHelp": "複製所選難度的所有物件、Timing 和設定。",
-  "difficulty.templateHelp": "將六項參數套用至空白難度，Timing 沿用目前難度。",
+  "difficulty.parameters": "HP {2} · CS {1:0.##} · AR {0:0.##} · OD {3} · SV {4:0.##} · STR {5:0.##}",
   "difficulty.name": "難度名稱",
   "template.manage": "管理譜面範本",
   "template.new": "新增範本",
@@ -1701,6 +1699,6 @@
   "template.name": "範本名稱",
   "template.defaultName": "範本 {0}",
   "template.delete": "刪除範本",
-  "template.invalid": "名稱須唯一；AR/CS/HP/OD 為 0–10，SV/STR 須大於 0。",
+  "template.invalid": "名稱須唯一；HP/CS/AR/OD 為 0–10，SV/STR 須大於 0。",
   "template.icon": "Catch 圖示"
 }

@@ -1688,12 +1688,10 @@
   "library.order.RecentVisited": "Recent visit",
   "library.visitWeb": "Visit in osu web",
   "difficulty.useSource": "Buat dari kesulitan atau templat",
-  "difficulty.copyTab": "Salin kesulitan",
+  "difficulty.copyTab": "Dari kesulitan",
   "difficulty.templateTab": "Templat map",
   "difficulty.noTemplates": "Belum ada templat tersimpan",
-  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
-  "difficulty.copyHelp": "Menyalin semua objek, timing, dan pengaturan dari kesulitan yang dipilih.",
-  "difficulty.templateHelp": "Menerapkan enam pengaturan ke kesulitan kosong. Timing mengikuti kesulitan saat ini.",
+  "difficulty.parameters": "HP {2} · CS {1:0.##} · AR {0:0.##} · OD {3} · SV {4:0.##} · STR {5:0.##}",
   "difficulty.name": "Nama kesulitan",
   "template.manage": "Kelola templat map",
   "template.new": "Templat baru",
@@ -1701,6 +1699,6 @@
   "template.name": "Nama templat",
   "template.defaultName": "Templat {0}",
   "template.delete": "Hapus templat",
-  "template.invalid": "Gunakan nama unik, AR/CS/HP/OD 0–10, serta SV/STR positif.",
+  "template.invalid": "Gunakan nama unik, HP/CS/AR/OD 0–10, serta SV/STR positif.",
   "template.icon": "Ikon Catch"
 }

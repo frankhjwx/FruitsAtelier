@@ -85,6 +85,8 @@ name validation, plus template creation/editing/deletion, invalid values and
 the Library management entry point in English and Chinese at compact and
 standard window sizes. Icon selection, restart persistence and preservation
 when applying general settings are included.
+Source dropdown checks cover disabled controls, scrolling, mouse and keyboard
+selection, and HP/CS/AR/OD layout and tab navigation.
 `FruitsAtelier.App.exe --render-check --new-difficulty-render-check` checks the
 native creation dialog and both tabs at two sizes and three DPI values, with
 captures under `artifacts/tests/new-difficulty-native`.

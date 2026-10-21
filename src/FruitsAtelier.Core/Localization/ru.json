@@ -1688,12 +1688,10 @@
   "library.order.RecentVisited": "Recent visit",
   "library.visitWeb": "Visit in osu web",
   "difficulty.useSource": "Создать из сложности или шаблона",
-  "difficulty.copyTab": "Копировать сложность",
+  "difficulty.copyTab": "Из сложности",
   "difficulty.templateTab": "Шаблоны карт",
   "difficulty.noTemplates": "Нет сохранённых шаблонов",
-  "difficulty.parameters": "AR {0:0.##} · CS {1:0.##} · HP {2} · OD {3} · SV {4:0.##} · STR {5:0.##}",
-  "difficulty.copyHelp": "Копирует все объекты, тайминг и настройки выбранной сложности.",
-  "difficulty.templateHelp": "Применяет шесть настроек к пустой сложности. Тайминг берётся из текущей.",
+  "difficulty.parameters": "HP {2} · CS {1:0.##} · AR {0:0.##} · OD {3} · SV {4:0.##} · STR {5:0.##}",
   "difficulty.name": "Название сложности",
   "template.manage": "Управление шаблонами карт",
   "template.new": "Новый шаблон",
@@ -1701,6 +1699,6 @@
   "template.name": "Название шаблона",
   "template.defaultName": "Шаблон {0}",
   "template.delete": "Удалить шаблон",
-  "template.invalid": "Имя должно быть уникальным, AR/CS/HP/OD — от 0 до 10, SV/STR — положительными.",
+  "template.invalid": "Имя должно быть уникальным, HP/CS/AR/OD — от 0 до 10, SV/STR — положительными.",
   "template.icon": "Значок Catch"
 }

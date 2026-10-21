@@ -5,6 +5,7 @@ internal static class NewDifficultyTests
 {
     public static void Run()
     {
+        SourceControls();
         foreach (string locale in new[] { "en", "zh-CN" })
         foreach (var size in new[] { (980, 620), (1440, 900) })
         {
@@ -29,7 +30,7 @@ internal static class NewDifficultyTests
             ui.View.SwitchDifficulty(0); ui.Paint();
             Check(original.ContentEquals(ui.View.Document), "Copied objects are independent");
 
-            Open(); Click("difficulty.templateTab"); Click("template.manage"); Click("template.fromCurrent"); ui.Key(13);
+            Open(); Click("difficulty.useSource"); Click("difficulty.templateTab"); Click("template.manage"); Click("template.fromCurrent"); ui.Key(13);
             Check(original.ContentEquals(ui.View.Document) && ui.View.DifficultyCount == 2, "Saving a template preserves map content and difficulty count");
             string root = Path.GetFullPath("artifacts/tests/new-difficulty/" + locale + size.Item1);
             Directory.CreateDirectory(root);
@@ -40,7 +41,7 @@ internal static class NewDifficultyTests
             ui.View.Document.ApproachRate = 4; ui.View.Document.CircleSize = 3;
             ui.View.Document.SliderMultiplierOverride = 1.1; ui.View.Document.SliderTickRate = 1;
             var blankSource = ui.View.Document.DeepClone();
-            Open(); Click("difficulty.templateTab"); Click("difficulty.useSource"); Confirm();
+            Open(); Click("difficulty.useSource"); Click("difficulty.templateTab"); Confirm();
             Check(ui.View.Document.Fruits.Count == 0 && ui.View.Document.Tracks.Count == 0
                 && ui.View.Document.ImportedSliders.Count == 0 && ui.View.Document.BananaShowers.Count == 0, "Template creates an empty difficulty");
             Check(ui.View.Document.ApproachRate == template.ApproachRate && ui.View.Document.CircleSize == template.CircleSize
@@ -77,7 +78,8 @@ internal static class NewDifficultyTests
             Check(ui.View.LibrarySettings.MapTemplates.Count == 0, "Save commits deletion");
 
             ui.View.SwitchDifficulty(0); ui.Paint(); Open(); Click("difficulty.useSource");
-            var nextSource = ui.Canvas.Texts.Last(t => t.Value == "›"); ui.Click(nextSource.X + 4, nextSource.Y + 5); Confirm();
+            var selector = ui.Canvas.Texts.Last(t => t.Value == "▾"); ui.Click(selector.X + 4, selector.Y + 5);
+            ui.Key(36); ui.Key(40); ui.Key(13); Confirm();
             Check(ui.View.Document.Fruits[0].X == original.Fruits[0].X + 10, "Copy selector uses the chosen inactive difficulty");
 
             ui.View.OpenMapTemplates(); ui.Paint(); Click("template.new");
@@ -107,6 +109,55 @@ internal static class NewDifficultyTests
             {
                 var label = ui.Canvas.Texts.Last(t => t.Value == L.Get("project.add"));
                 ui.Click(label.X + 4, label.Y + 5);
+            }
+        }
+    }
+    private static void SourceControls()
+    {
+        foreach (string locale in new[] { "en", "zh-CN" })
+        {
+            L.SetLanguage(locale);
+            var ui = new Ui(false); ui.Resize(980, 620);
+            var project = BeatmapProject.FromDocuments(Enumerable.Range(0, 10).Select(i =>
+            {
+                var map = new MapDocument { IsDemo = false }; map.Fruits.Add(new() { TimeMs = 1000, X = 64 + i }); return map;
+            }));
+            for (int i = 0; i < 10; i++) project.Difficulties[i].Name = "Source " + i;
+            ui.View.LoadProject(project); ui.Paint();
+            ui.View.LibrarySettings.MapTemplates = Enumerable.Range(0, 10).Select(i => new MapTemplate
+                { Name = "Preset " + i, HP = "5", CircleSize = 3, ApproachRate = 4 + i * .1, OD = "8" }).ToList();
+            var plus = ui.Canvas.Texts.Single(t => t.Value == "+" && t.Y < 84);
+            ui.Click(plus.X + 4, plus.Y + 4); ui.ClickText(L.Get("project.add"));
+            Check(ui.Canvas.Texts.Last(t => t.Value == L.Get("difficulty.copyTab")).Color == 0x5B6777,
+                "Source tabs start disabled");
+            ui.ClickText(L.Get("difficulty.templateTab"));
+            Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("template.manage")), "Disabled tabs cannot change source mode");
+            Dropdown();
+            Check(!ui.Canvas.Texts.Any(t => t.Value == "Source 1" && t.Y > 260), "Disabled dropdown does not open");
+            ui.ClickText(L.Get("difficulty.useSource")); Dropdown();
+            Check(ui.Canvas.Texts.Any(t => t.Value == "Source 1" && t.Y > 260), "Difficulty dropdown exposes source choices");
+            ui.View.Wheel(400, 320, -480, false); ui.Paint();
+            var last = ui.Canvas.Texts.Last(t => t.Value == "Source 9"); ui.Click(last.X + 4, last.Y + 5);
+            Check(ui.Canvas.Texts.Any(t => t.Value == "Source 9" && t.Y > 220 && t.Y < 300), "Scrolled dropdown selects an inactive difficulty");
+            Dropdown(); ui.Key(27);
+            Check(ui.View.DiscardConfirmationVisible, "Escape closes the dropdown before the dialog");
+            ui.ClickText(L.Get("difficulty.templateTab")); Dropdown(); ui.Key(35); ui.Key(13);
+            Check(ui.Canvas.Texts.Any(t => t.Value.StartsWith("HP 5 · CS 3 · AR 4.9 · OD 8")), "Template preview follows HP/CS/AR/OD order");
+            ui.ClickText(L.Get("difficulty.useSource"));
+            ui.ClickText(L.Get("template.manage")); Check(!ui.View.MapTemplatesVisible, "Disabled source region blocks template management");
+            ui.ClickText(L.Get("difficulty.useSource"));
+            var confirm = ui.Canvas.Texts.Last(t => t.Value == L.Get("project.add")); ui.Click(confirm.X + 4, confirm.Y + 5);
+            Check(ui.View.Document.ApproachRate == 4.9 && ui.View.Document.CircleSize == 3, "Template dropdown creates from the chosen preset");
+            ui.View.OpenMapTemplates(); ui.Paint();
+            var hp = ui.Canvas.Texts.Single(t => t.Value == "HP"); var cs = ui.Canvas.Texts.Single(t => t.Value == "CS");
+            var ar = ui.Canvas.Texts.Single(t => t.Value == "AR"); var od = ui.Canvas.Texts.Single(t => t.Value == "OD");
+            Check(hp.Y == cs.Y && ar.Y == od.Y && hp.Y < ar.Y && hp.X < cs.X && ar.X < od.X, "Template fields follow HP/CS/AR/OD layout");
+            ui.Key(9); ui.Key('A', ctrl: true); ui.Type("9"); ui.Key(13);
+            Check(ui.View.LibrarySettings.MapTemplates[0].HP == "9" && ui.View.LibrarySettings.MapTemplates[0].ApproachRate == 4,
+                "Tab navigation edits HP first without swapping stored values");
+            void Dropdown()
+            {
+                var arrow = ui.Canvas.Texts.Last(t => t.Value == "▾"); ui.Click(arrow.X + 3, arrow.Y + 4);
             }
         }
     }

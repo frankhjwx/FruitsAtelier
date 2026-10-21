@@ -25,12 +25,18 @@ internal static class NewDifficultyRenderCheck
                 Paint("blank");
                 float x = (size.Item1 - 660) / 2f, y = (size.Item2 - 552) / 2f;
                 Click(x + 32, y + 140); Paint("copy");
+                Click(x + 200, y + 240); Paint("difficulty-dropdown");
+                view.KeyDown(27, false, false); Paint();
                 Click(x + 450, y + 180); Paint("templates-empty");
                 Click(x + 60, y + 350); Paint("manager-empty");
                 float managerX = (size.Item1 - 860) / 2f;
                 Click(managerX + 60, y + 462);
                 Click(managerX + 248 + 8 * 36 + 16, y + 414); Paint("manager-current");
                 view.KeyDown(13, false, false); Paint("template-saved");
+                Click(x + 200, y + 240); Paint("template-dropdown");
+                view.KeyDown(27, false, false); Paint();
+                Click(x + 32, y + 140); Paint("templates-disabled");
+                Click(x + 32, y + 140);
                 if (view.LibrarySettings.MapTemplates.Count != 1 || view.IsDirty
                     || view.LibrarySettings.MapTemplates[0].Icon != MapTemplateIcon.Pink)
                     throw new InvalidOperationException("Template save changed the map or failed.");
