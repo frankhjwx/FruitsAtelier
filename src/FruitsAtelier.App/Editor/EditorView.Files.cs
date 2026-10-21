@@ -210,6 +210,13 @@ public sealed partial class EditorView
     public bool AddDifficulty(MapDocument? imported = null, bool faOnly = false,
         int? copyFrom = null, MapTemplate? template = null, string? difficultyName = null)
     {
+        long started = Performance.Start();
+        try { return AddDifficultyCore(imported, faOnly, copyFrom, template, difficultyName); }
+        finally { Performance.End(EditorPerformanceStage.DifficultyAdd, started); }
+    }
+
+    private bool AddDifficultyCore(MapDocument? imported, bool faOnly, int? copyFrom, MapTemplate? template, string? difficultyName)
+    {
         if (!PrepareFileOperation()) return false;
         if (copyFrom is { } sourceIndex && (sourceIndex < 0 || sourceIndex >= difficulties.Count || imported is not null || template is not null)) return false;
         if (imported?.SourcePath is { } source)

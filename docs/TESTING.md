@@ -738,6 +738,16 @@ latency are excluded.
 
 ## Playback rendering profile
 
+`App.Tests --new-difficulty-profile <workspace-project-directory> <difficulty-name>`
+reports difficulty copying, hitsound preload, first-frame rendering and export-plan
+preparation time and calling-thread allocations. It reads the persisted project
+without saving or exporting it. On Windows it also measures audio retirement after
+silent playback and pause on an STA thread; it does not change system volume.
+The regular UI performance log includes `DifficultyAdd`, `HitsoundPreload`,
+`AudioReset`, `WorkspaceExportPlan`, `WorkspaceExportSave` and `WorkspaceExportReload` to distinguish these
+stages when a native creation interaction stalls. Background worker allocation is
+not included in the calling-thread allocation values.
+
 For a read-only CPU profile of an existing `.osu` or `.catchdiff` file, run the App test executable with `--map-performance <path> [startMs]`. It measures playback from the supplied time (default 89038 ms) at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.
 
 `App.Tests --independent-scale-check` also checks allocation-free dense coordinate

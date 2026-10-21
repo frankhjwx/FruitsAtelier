@@ -181,6 +181,7 @@ internal sealed partial class EditorWindow
 
     private void ResetAudio()
     {
+        long started = view.Performance.Start();
         resettingAudio = true;
         try
         {
@@ -190,7 +191,7 @@ internal sealed partial class EditorWindow
             audio.SetPlaybackSpeed(view.PlaybackSpeed);
             view.ApplyAudioVolume();
         }
-        finally { resettingAudio = false; }
+        finally { resettingAudio = false; view.Performance.End(Editor.EditorPerformanceStage.AudioReset, started); }
     }
 
     private AudioState? displayedAudioState;

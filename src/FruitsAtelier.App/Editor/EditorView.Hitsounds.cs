@@ -20,8 +20,12 @@ public sealed partial class EditorView
         PreloadProjectHitsounds();
     }
     public Action<IReadOnlyList<MapDocument>>? RequestPreloadHitsounds { get; set; }
-    public void PreloadProjectHitsounds() => RequestPreloadHitsounds?.Invoke(
-        difficulties.Select(d => d.History.Document.DeepClone()).ToArray());
+    public void PreloadProjectHitsounds()
+    {
+        long started = Performance.Start();
+        try { RequestPreloadHitsounds?.Invoke(difficulties.Select(d => d.History.Document.DeepClone()).ToArray()); }
+        finally { Performance.End(EditorPerformanceStage.HitsoundPreload, started); }
+    }
     public Action<Hitsound, double>? RequestScheduleHitsound { get; set; }
     public double HitsoundLookaheadMs { get; set; } = 100;
     public void PrimeScheduledHitsounds(double position)
