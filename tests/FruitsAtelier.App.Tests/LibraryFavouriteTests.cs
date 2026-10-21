@@ -39,7 +39,7 @@ internal static class LibraryFavouriteTests
                 Check(view.LibrarySetTotal == 2, "restart restores favourites category and entries");
                 LibraryMap? opened = null;
                 view.RequestLibraryOpen = (map, selectDifficulty) => opened = map;
-                view.PointerDoubleClick(320, 190, false, false);
+                view.PointerDoubleClick(320, width < 1188 ? 222 : 190, false, false);
                 Check(opened is not null, "favourite card opens through host");
                 var imported = LibraryOperations.ImportPath(source, settings);
                 view.RefreshLibrary(); Settle(2);
@@ -82,7 +82,7 @@ internal static class LibraryFavouriteTests
             }
             void Toggle(string key)
             {
-                view.PointerDown(320, 190, 2, false, false); Paint();
+                view.PointerDown(320, width < 1188 ? 222 : 190, 2, false, false); Paint();
                 Check(canvas.Texts.Any(t => t.Value == L.Get(key)), "missing favourite action: " + string.Join(" | ", canvas.Texts.Select(t => t.Value)));
                 var action = canvas.Texts.Last(t => t.Value == L.Get(key));
                 var open = canvas.Texts.Last(t => t.Value == L.Get("library.start") || t.Value == L.Get("library.continue"));

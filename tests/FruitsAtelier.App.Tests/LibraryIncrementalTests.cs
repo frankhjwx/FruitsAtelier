@@ -49,8 +49,8 @@ internal static class LibraryIncrementalTests
         typeof(EditorView).GetField("scanTask", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(view, pending.Task);
         bool opened = false; view.RequestLibraryOpen = (_, _) => opened = true;
         canvas.Clear(); view.Render(canvas, 980, 620);
-        view.PointerDown(240, 190, 0, false, false); view.PointerUp(240, 190, 0);
-        view.PointerDoubleClick(240, 190, false, false);
+        view.PointerDown(240, 222, 0, false, false); view.PointerUp(240, 222, 0);
+        view.PointerDoubleClick(240, 222, false, false);
         Check(opened, "Indexed maps remain clickable during a background refresh");
         pending.SetResult((db, new(2, [])));
         canvas.Clear(); view.Render(canvas, 980, 620); view.StopFileMonitoring();

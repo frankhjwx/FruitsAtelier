@@ -60,6 +60,7 @@ internal sealed partial class EditorWindow
             else { CompleteStartupFiles(); FitEditorWindow(); SetFullscreen(view.LibrarySettings.Fullscreen); }
         });
         view.RequestSetupLink = url => FileOperation(() => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }));
+        view.RequestVisitOsuWeb = view.RequestSetupLink;
         view.RequestAudioPreference = () => FileOperation(() => view.LibrarySettings.Save());
         view.RequestViewPreference = () => FileOperation(() => view.LibrarySettings.Save());
         view.ApplyAudioVolume();

@@ -1024,6 +1024,8 @@ public sealed partial class EditorView
         if (librarySettingsOpen || ExportVisible) return;
         if (LibraryVisible)
         {
+            if (collectionDialogOpen) { collectionDialogScroll = Math.Max(0, collectionDialogScroll - delta / 120 * 68); return; }
+            if (collectionsBounds.Contains(x, y)) { collectionsScroll = Math.Max(0, collectionsScroll - delta / 120 * 72); return; }
             if (languageMenuOpen || contextItems.Count > 0 || librarySettingsOpen) return;
             if (x >= width - 330) libraryDiffScroll = Math.Max(0, libraryDiffScroll - (int)(delta / 120));
             else libraryScroll = Math.Clamp(libraryScroll - delta / 120 * 3, 0, LibraryMaxScroll);

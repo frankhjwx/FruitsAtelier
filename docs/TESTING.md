@@ -68,6 +68,15 @@ existing settings isolation and cleanup.
 
 Windows distribution uses the self-contained ZIP and extracted-executable check described in [Windows releases](RELEASING.md). Desktop CI checks packaging before a version is tagged; the tag workflow reuses successful desktop regression for identical source content when available and always builds and checks its own package. See [CI validation and reuse](RELEASING.md#ci-validation-and-reuse) for fallback and forced-validation behavior.
 
+`App.Tests --library-organization-check` checks field sorting, collapsed group
+paging, historical source-file dates, collection creation/rename/removal, membership drafts,
+restart restoration, content isolation web-link click isolation, compact default-collapsed groups, cached reordering and successful-open visit recording in English
+and Chinese at compact and wide sizes. It also runs the favourites regression.
+`FruitsAtelier.App.exe --render-check --library-organization-render-check` opens
+native windows and captures grouping, sorting, collection membership and recent
+visits at 980×620 and 1440×900 with 96/144/192 DPI in both languages under
+`artifacts/tests/library-organization-native`.
+
 ## Automated regressions
 
 `App.Tests --map-import-settings-check` checks General import preferences, saved

@@ -205,6 +205,12 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--library-organization-render-check"))
+            {
+                Diagnostics.LibraryOrganizationRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--library-opening-render-check"))
             {
                 Diagnostics.LibraryOpeningRenderCheck.Run(canvas);

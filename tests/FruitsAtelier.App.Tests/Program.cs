@@ -45,6 +45,8 @@ if (args.Contains("--osu-canvas-check"))
     OsuCanvasRenderTests.Run(); OsuCanvasInputTests.Run(); CanvasOverscanTests.Run();
     Console.WriteLine("PASS osu canvas rendering, native editing and mode boundaries"); return 0;
 }
+if (args.Contains("--library-organization-check")) { LibraryOrganizationTests.Run(); LibraryFavouriteTests.Run(); LibraryTests.Run(); LibraryScaleTests.Pagination(); Console.WriteLine("PASS Library sorting, grouping, collections, visits and persistence"); return 0; }
+
 if (args.Contains("--library-incremental-check"))
 {
     LibraryIncrementalTests.Run(); LibraryScanProgressTests.Run(); LibraryResponsivenessTests.Run();
@@ -538,6 +540,7 @@ var tests = new (string Name, Action Run)[]
     ("FAZ archives preserve native projects and explicit local associations", FazTests.Run),
     ("FAD archives exchange native difficulties through merge review", FadTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
+    ("Library organization sorts, groups, manages collections and remembers visits", LibraryOrganizationTests.Run),
     ("Library favourites persist, filter songs and projects, and toggle from the first context action", LibraryFavouriteTests.Run),
     ("Library pages sets and difficulties and reaches uncached scrollbar positions", LibraryScaleTests.Pagination),
     ("Library remains responsive while SQLite is write-locked", LibraryResponsivenessTests.Run),

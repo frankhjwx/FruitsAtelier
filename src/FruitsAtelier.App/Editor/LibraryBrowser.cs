@@ -6,6 +6,14 @@ internal sealed class LibraryBrowser
 {
     internal const int PageSize = 64, PageLimit = 8;
     private readonly LibrarySearchSnapshot snapshot;
+    private readonly LibraryDatabase database;
+    private long catalogRevision;
+    private readonly string query;
+    private readonly bool projects;
+    private readonly HashSet<string>? filter;
+    private readonly Dictionary<string, long> visits;
+    private readonly int[] headers;
+    private bool retiringForReorder, transferred;
     private readonly object gate = new();
     private readonly Dictionary<int, IReadOnlyList<LibrarySetRow>> pages = [];
     private readonly Queue<int> pageOrder = [];
@@ -16,29 +24,77 @@ internal sealed class LibraryBrowser
     private string? detailKey;
     private int detailStart;
     private IReadOnlyList<LibraryMap> details = [];
-    public int Count => snapshot.Count;
-    public int TopIndex { get; private init; }
+    public int Count { get; }
+    public int SetCount { get; }
+    public int TopIndex { get; private set; }
     public LibrarySetRow? Selected { get; private set; }
     public bool Loading => pageTask is { IsCompleted: false } || detailTask is { IsCompleted: false } || discoveryTask is { IsCompleted: false };
     public int CachedRows => pages.Values.Sum(page => page.Count);
     public string? Error { get; private set; }
 
-    private LibraryBrowser(LibrarySearchSnapshot snapshot) => this.snapshot = snapshot;
-    public static LibraryBrowser Create(LibraryDatabase db, string query, bool projects, string? selected, string? top, int offset, IReadOnlyCollection<string>? favourites = null)
+    private LibraryBrowser(LibrarySearchSnapshot snapshot, LibraryDatabase database, string query, bool projects,
+        IReadOnlyCollection<string>? filter, LibraryOrganization? organization)
     {
-        var snapshot = db.SearchSnapshot(query, projects, favourites);
-        try
-        {
-            int topIndex = snapshot.FindIndex(top), selectedIndex = snapshot.FindIndex(selected);
-            var result = new LibraryBrowser(snapshot) { TopIndex = topIndex };
-            int first = Math.Clamp(topIndex >= 0 ? topIndex : offset, 0, Math.Max(0, snapshot.Count - 1));
-            result.AddPage(first / PageSize * PageSize, snapshot.Page(first / PageSize * PageSize));
-            if (selectedIndex < 0) selectedIndex = 0;
-            if (result.Get(selectedIndex) is null) result.AddPage(selectedIndex / PageSize * PageSize, snapshot.Page(selectedIndex / PageSize * PageSize));
-            result.Selected = result.Get(selectedIndex);
-            return result;
-        }
+        this.snapshot = snapshot; this.database = database; this.query = query; this.projects = projects;
+        catalogRevision = database.Revision; Count = snapshot.Count; SetCount = snapshot.SetCount;
+        headers = snapshot.HeaderIndices.ToArray();
+        this.filter = filter is null ? null : new(filter, WorkspaceSynchronization.Paths);
+        visits = new(organization?.Visits ?? new Dictionary<string, long>(), WorkspaceSynchronization.Paths);
+    }
+    public static LibraryBrowser Create(LibraryDatabase db, string query, bool projects, string? selected, string? top, float offset,
+        IReadOnlyCollection<string>? favourites = null, LibraryOrganization? organization = null)
+    {
+        var snapshot = db.SearchSnapshot(query, projects, favourites, organization);
+        try { return Prepare(snapshot, db, query, projects, selected, top, offset, favourites, organization); }
         catch { snapshot.Dispose(); throw; }
+    }
+    private static LibraryBrowser Prepare(LibrarySearchSnapshot snapshot, LibraryDatabase db, string query, bool projects,
+        string? selected, string? top, float offset, IReadOnlyCollection<string>? filter, LibraryOrganization? organization)
+    {
+        int topIndex = snapshot.FindIndex(top), selectedIndex = snapshot.FindIndex(selected);
+        var result = new LibraryBrowser(snapshot, db, query, projects, filter, organization) { TopIndex = topIndex };
+        int first = topIndex >= 0 ? topIndex : result.IndexAtOffset(offset);
+        result.AddPage(first / PageSize * PageSize, snapshot.Page(first / PageSize * PageSize));
+        if (selectedIndex < 0) selectedIndex = snapshot.FirstMapIndex;
+        if (selectedIndex >= 0 && result.Get(selectedIndex) is null)
+            result.AddPage(selectedIndex / PageSize * PageSize, snapshot.Page(selectedIndex / PageSize * PageSize));
+        result.Selected = selectedIndex >= 0 ? result.Get(selectedIndex) : snapshot.FindSelection(selected);
+        return result;
+    }
+    public bool CanReorder(LibraryDatabase db, string query, bool projects, IReadOnlyCollection<string>? filter, LibraryOrganization organization)
+        => !retiringForReorder && ReferenceEquals(database, db) && catalogRevision == db.Revision && this.query == query && this.projects == projects
+            && (this.filter is null ? filter is null : filter is not null && this.filter.SetEquals(filter))
+            && visits.Count == (organization.Visits?.Count ?? 0) && visits.All(p => organization.Visits?.GetValueOrDefault(p.Key) == p.Value);
+    public Task<LibraryBrowser> Reorder(LibraryOrganization organization, string? selected, string? top, float offset)
+    {
+        retiringForReorder = true;
+        var pending = new Task?[] { pageTask, detailTask, discoveryTask }.OfType<Task>().ToArray();
+        return Task.Run(async () =>
+        {
+            try { await Task.WhenAll(pending); }
+            catch { /* A failed page does not prevent rebuilding the result ordering. */ }
+            lock (gate)
+            {
+                snapshot.Reorganize(organization);
+                var next = Prepare(snapshot, database, query, projects, selected, top, offset, filter, organization);
+                next.catalogRevision = catalogRevision;
+                transferred = true;
+                return next;
+            }
+        });
+    }
+    public float Extent => OffsetOf(Count);
+    public float OffsetOf(int index)
+    {
+        int lo = 0, hi = headers.Length;
+        while (lo < hi) { int mid = (lo + hi) / 2; if (headers[mid] < index) lo = mid + 1; else hi = mid; }
+        return index - lo * (1 - 30f / 86);
+    }
+    public int IndexAtOffset(float offset)
+    {
+        int lo = 0, hi = Count;
+        while (lo < hi) { int mid = (lo + hi) / 2; if (OffsetOf(mid + 1) <= offset) lo = mid + 1; else hi = mid; }
+        return Math.Clamp(lo, 0, Math.Max(0, Count - 1));
     }
     public LibrarySetRow? Get(int index)
     {
@@ -52,14 +108,15 @@ internal sealed class LibraryBrowser
         while (pages.Count >= PageLimit && pageOrder.TryDequeue(out int old)) pages.Remove(old);
         pages[start] = rows; pageOrder.Enqueue(start);
     }
-    public void Select(LibrarySetRow row) => Selected = row;
+    public void Select(LibrarySetRow row) { if (row.Header is null) Selected = row; }
     public void SelectMap(LibraryMap map)
     {
-        var row = pages.Values.SelectMany(page => page).FirstOrDefault(row => row.Map.Path == map.Path);
+        var row = pages.Values.SelectMany(page => page).FirstOrDefault(row => row.Header is null && row.Map.Path == map.Path);
         if (row is not null) Selected = row;
     }
     public void Pump()
     {
+        if (retiringForReorder) return;
         if (pageTask is { IsCompleted: true })
         {
             try { var page = pageTask.GetAwaiter().GetResult(); AddPage(page.Start, page.Rows); }
@@ -96,7 +153,7 @@ internal sealed class LibraryBrowser
     }
     public void RequestVisible(int first, int last)
     {
-        if (pageTask is not null || Count == 0) return;
+        if (retiringForReorder || pageTask is not null || Count == 0) return;
         int start = Math.Clamp(first, 0, Count - 1) / PageSize * PageSize;
         int end = Math.Min(Count - 1, last) / PageSize * PageSize;
         for (int page = start; page <= end; page += PageSize)
@@ -111,13 +168,14 @@ internal sealed class LibraryBrowser
         => Selected?.Key == detailKey && index >= detailStart && index < detailStart + details.Count ? details[index - detailStart] : null;
     public void RequestDetails(int first)
     {
-        if (Selected is not { } set || detailTask is not null) return;
+        if (retiringForReorder || Selected is not { } set || detailTask is not null) return;
         int start = Math.Max(0, first) / PageSize * PageSize;
         if (detailKey == set.Key && detailStart == start) return;
         detailTask = Task.Run(() => { lock (gate) return (set.Key, start, snapshot.Difficulties(set, start, 128)); });
     }
     public void Retire()
     {
+        if (transferred) return;
         snapshot.CancelReferenceDiscovery();
         var pending = new Task?[] { pageTask, detailTask, discoveryTask }.OfType<Task>().ToArray();
         _ = Task.Run(async () =>
