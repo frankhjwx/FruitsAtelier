@@ -79,10 +79,7 @@ public sealed partial class EditorView
         ToggleSwitch(c, new(x + 22, y + 124, inner, 34), L.Get("difficulty.useSource"), newDifficultyUseSource,
             () => { newDifficultyUseSource = !newDifficultyUseSource; newDifficultySourcesOpen = false; });
         var sourceRegion = new Rect(x + 22, y + 166, inner, 216);
-        c.Fill(new(sourceRegion.X + 1, sourceRegion.Y + 1, sourceRegion.Width - 2, 43), Surface, 5);
-        c.Fill(new(sourceRegion.X + 1, sourceRegion.Y + 7, sourceRegion.Width - 2, 37), Surface);
-        c.Stroke(sourceRegion, Grid, radius: 6);
-        c.Line(sourceRegion.X + 1, y + 210, sourceRegion.Right - 1, y + 210, Grid);
+        c.Stroke(new(sourceRegion.X, y + 210, sourceRegion.Width, sourceRegion.Bottom - (y + 210)), Grid, radius: 6);
         float sourceX = x + 32, sourceWidth = inner - 20;
         SourceTab(new(sourceX, y + 172, (sourceWidth - 6) / 2, 38), "difficulty.copyTab", false);
         SourceTab(new(sourceX + (sourceWidth + 6) / 2, y + 172, (sourceWidth - 6) / 2, 38), "difficulty.templateTab", true);
