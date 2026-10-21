@@ -41,6 +41,7 @@ public sealed partial class EditorView
         if (ErrorVisible || DiscardConfirmationVisible)
         {
             mouseX = x; mouseY = y;
+            if (!ErrorVisible && MapTemplatesVisible && MapTemplatesPointerDown(x, y, button)) return;
             if (!ErrorVisible && addDifficultyConfirmation && !MapTemplatesVisible && NewDifficultySourcePointer(x, y)) return;
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
@@ -463,6 +464,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (templatePointer) { mouseX = x; mouseY = y; MoveMapTemplate(x, y); return; }
         if (CollaborationReportVisible) { mouseX = x; mouseY = y; if (collaborationReportDragging) MoveCollaborationReport(x, y); return; }
         if (RotationVisible) { mouseX = x; mouseY = y; RotationPointerMove(x, y); return; }
         if (aimodGesture != AimodGesture.None) { MoveAimodPointer(x, y); return; }
@@ -626,6 +628,12 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (templatePointer && button == 0)
+        {
+            MoveMapTemplate(x, y);
+            FinishMapTemplateDrag(cancel: ErrorVisible || !templateListBounds.Contains(x, y));
+            return;
+        }
         if (collaborationReportDragging) { MoveCollaborationReport(x, y); collaborationReportDragging = false; return; }
         if (CollaborationReportVisible) return;
         if (RotationVisible) { EndRotationPointer(x, y); return; }
@@ -922,6 +930,15 @@ public sealed partial class EditorView
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
+        if (!ErrorVisible && MapTemplatesVisible)
+        {
+            if (templateListBounds.Contains(x, y))
+            {
+                templatePage = Math.Clamp(templatePage - Math.Sign(delta), 0, Math.Max(0, (templateDraft.Count - 1) / 8));
+                if (templatePointer) MoveMapTemplate(x, y);
+            }
+            return;
+        }
         if (!ErrorVisible && addDifficultyConfirmation && !MapTemplatesVisible && newDifficultySourcesOpen)
         {
             if (newDifficultySourceList.Contains(x, y)) newDifficultySourceScroll = Math.Clamp(newDifficultySourceScroll
@@ -1568,6 +1585,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        FinishMapTemplateDrag(cancel: true);
         CancelRotation();
         rotationDragging = false;
         heldEditorKeys.Clear();

@@ -59,6 +59,15 @@ internal static class NewDifficultyRenderCheck
                 view.KeyDown(27, false, false); Paint();
                 if (view.LibrarySettings.MapTemplates.Count != 0)
                     throw new InvalidOperationException("Library template cancellation saved a draft.");
+                view.LibrarySettings.MapTemplates = [new() { Name = "Rain", Icon = MapTemplateIcon.Red }, new() { Name = "Template 1" }];
+                view.OpenMapTemplates(); Paint("template-order");
+                view.PointerDown(managerX + 70, y + 86, 0, false, false);
+                view.PointerMove(managerX + 70, y + 136, false, false); Paint("template-order-drag");
+                view.PointerUp(managerX + 70, y + 136, 0); Paint("template-order-changed");
+                view.KeyDown(13, false, false); Paint();
+                if (view.WantsCapture || view.LibrarySettings.MapTemplates[0].Name != "Template 1"
+                    || view.LibrarySettings.MapTemplates[1].Name != "Rain")
+                    throw new InvalidOperationException("Native template drag did not save the selected order.");
                 void Click(float px, float py)
                 {
                     view.PointerDown(px, py, 0, false, false); view.PointerUp(px, py, 0); Paint();

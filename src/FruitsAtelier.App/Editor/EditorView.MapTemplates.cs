@@ -13,6 +13,51 @@ public sealed partial class EditorView
     private readonly string[] templateValues = new string[7];
     private static readonly int[] templateFieldOrder = [0, 3, 2, 1, 4, 5, 6];
     private string templateError = "";
+    private readonly List<(Rect Bounds, int Index)> templateRows = [];
+    private Rect templateListBounds;
+    private bool templatePointer, templateDragging;
+    private int templateDragSource, templateDropIndex, templateDragPage;
+    private float templateDragX, templateDragY;
+
+    private bool MapTemplatesPointerDown(float x, float y, int button)
+    {
+        if (templatePointer) return true;
+        if (button != 0) return false;
+        foreach (var row in templateRows)
+        {
+            if (!row.Bounds.Contains(x, y)) continue;
+            if (!CommitMapTemplate()) return true;
+            SelectMapTemplate(row.Index);
+            templateDragSource = row.Index; templateDragPage = templatePage;
+            templateDragX = x; templateDragY = y;
+            templateDropIndex = row.Index;
+            templatePointer = true; templateDragging = false;
+            return true;
+        }
+        return false;
+    }
+
+    private void MoveMapTemplate(float x, float y)
+    {
+        templateDragging |= Math.Abs(x - templateDragX) >= 6 || Math.Abs(y - templateDragY) >= 6;
+        if (!templateDragging) return;
+        int first = templatePage * 8, count = Math.Min(8, templateDraft.Count - first);
+        templateDropIndex = first + Math.Clamp((int)Math.Floor((y - templateListBounds.Y + 18) / 36), 0, count);
+    }
+
+    private void FinishMapTemplateDrag(bool cancel)
+    {
+        if (!templatePointer) return;
+        if (!cancel && templateDragging)
+        {
+            int target = templateDropIndex > templateDragSource ? templateDropIndex - 1 : templateDropIndex;
+            var moved = templateDraft[templateDragSource];
+            templateDraft.RemoveAt(templateDragSource); templateDraft.Insert(target, moved);
+            templateIndex = target; templatePage = target / 8;
+        }
+        else if (cancel) templatePage = templateDragPage;
+        templatePointer = templateDragging = false;
+    }
     private static readonly double?[] templateIconStars = [null, .1, 1.25, 2, 2.5, 3.3, 4.2, 4.9, 5.8, 6.7, 7.7, 9];
 
     private static void DrawTemplateIcon(ICanvas c, MapTemplateIcon icon, Rect bounds)
@@ -73,6 +118,7 @@ public sealed partial class EditorView
 
     private void CloseMapTemplates(bool save)
     {
+        FinishMapTemplateDrag(cancel: true);
         if (save)
         {
             if (!CommitMapTemplate()) return;
@@ -87,7 +133,7 @@ public sealed partial class EditorView
 
     private void MapTemplatesText(string text)
     {
-        if (templateIndex < 0) return;
+        if (templateIndex < 0 || templatePointer) return;
         text = new string(text.Where(ch => !char.IsControl(ch)).ToArray());
         templateValues[templateField] = InsertInput("template:" + templateField, templateValues[templateField], text, templateField == 0 ? 128 : 24);
         templateError = "";
@@ -95,6 +141,7 @@ public sealed partial class EditorView
 
     private void MapTemplatesKey(int key, bool ctrl, bool shift)
     {
+        if (templatePointer) { if (key == 27) FinishMapTemplateDrag(cancel: true); return; }
         if (key == 27) { CloseMapTemplates(false); return; }
         if (key == 13) { CloseMapTemplates(true); return; }
         if (templateIndex < 0) return;
@@ -117,14 +164,24 @@ public sealed partial class EditorView
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
         c.Text(L.Get("template.manage"), x + 22, y + 20, 20, Foreground, w - 44, true);
         c.Line(x + 230, y + 66, x + 230, y + h - 82, Grid);
+        templateRows.Clear();
+        templateListBounds = new(x + 22, y + 70, 190, 288);
         templatePage = Math.Clamp(templatePage, 0, Math.Max(0, (templateDraft.Count - 1) / 8));
         for (int i = templatePage * 8; i < Math.Min(templateDraft.Count, (templatePage + 1) * 8); i++)
         {
             int target = i;
             var row = new Rect(x + 22, y + 70 + (i % 8) * 36, 190, 32);
+            templateRows.Add((row, i));
             Button(c, row, templateDraft[i].Name, () => { if (CommitMapTemplate()) SelectMapTemplate(target); },
-                i == templateIndex, textPadding: 38);
+                i == templateIndex, textPadding: 38, textRightPadding: 24);
             DrawTemplateIcon(c, templateDraft[i].Icon, new(row.X + 8, row.Y + 6, 20, 20));
+            for (int line = 0; line < 3; line++)
+                c.Line(row.Right - 15, row.Y + 12 + line * 4, row.Right - 8, row.Y + 12 + line * 4, Muted);
+        }
+        if (templateDragging)
+        {
+            float markerY = templateListBounds.Y + (templateDropIndex - templatePage * 8) * 36 - 2;
+            c.Line(templateListBounds.X, markerY, templateListBounds.Right, markerY, Accent, 2);
         }
         if (templateDraft.Count > 8)
         {

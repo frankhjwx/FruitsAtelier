@@ -87,6 +87,8 @@ standard window sizes. Icon selection, restart persistence and preservation
 when applying general settings are included.
 Source dropdown checks cover disabled controls, scrolling, mouse and keyboard
 selection, and HP/CS/AR/OD layout and tab navigation.
+Template sorting checks cover upward/downward and cross-page dragging, save and
+restart, cancellation and capture loss, and matching creation-dropdown order.
 `FruitsAtelier.App.exe --render-check --new-difficulty-render-check` checks the
 native creation dialog and both tabs at two sizes and three DPI values, with
 captures under `artifacts/tests/new-difficulty-native`.

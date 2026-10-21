@@ -26,6 +26,11 @@ capture the active difficulty's six values (available while editing a project).
 Select a template in the list to rename it or edit its values, or choose
 **Delete template** to remove it. Names must be unique; HP/CS/AR/OD accept 0–10,
 and SV/STR must be positive finite numbers. Decimal input uses a period.
+Drag a template row vertically to reorder the list; the insertion line shows
+where it will be placed. Use the wheel over the list to change pages, including
+during a drag. Escape, dropping outside the list, or losing capture cancels the
+drag. Save retains this order in both the manager and creation dropdown;
+Cancel discards changes to the order along with other template edits.
 Choose a **Catch icon** from the existing difficulty-colour palette to identify
 the template in the manager and difficulty creation chooser. The icon is stored
 with the template and does not change the new difficulty's calculated rating.

@@ -6,6 +6,7 @@ internal static class NewDifficultyTests
     public static void Run()
     {
         SourceControls();
+        TemplateReordering();
         foreach (string locale in new[] { "en", "zh-CN" })
         foreach (var size in new[] { (980, 620), (1440, 900) })
         {
@@ -158,6 +159,69 @@ internal static class NewDifficultyTests
             void Dropdown()
             {
                 var arrow = ui.Canvas.Texts.Last(t => t.Value == "▾"); ui.Click(arrow.X + 3, arrow.Y + 4);
+            }
+        }
+    }
+    private static void TemplateReordering()
+    {
+        foreach (string locale in new[] { "en", "zh-CN" })
+        foreach (var size in new[] { (980, 620), (1440, 900) })
+        {
+            L.SetLanguage(locale);
+            var ui = new Ui(false); ui.Resize(size.Item1, size.Item2);
+            var original = ui.View.Document.DeepClone();
+            ui.View.LibrarySettings.MapTemplates = new[] { "Order A", "Order B", "Order C" }
+                .Select((name, i) => new MapTemplate { Name = name, ApproachRate = i + 3, Icon = (MapTemplateIcon)(i + 1) }).ToList();
+            ui.View.OpenMapTemplates(); ui.Paint();
+            Drag("Order A", "Order C", false);
+            Check(Rows() == "Order B,Order C,Order A" && !ui.View.WantsCapture, "Downward template drag reorders the draft and releases capture");
+            Check(Saved() == "Order A,Order B,Order C", "Dragging does not save settings before Save");
+            ui.Key(13);
+            Check(Saved() == "Order B,Order C,Order A" && ui.View.LibrarySettings.MapTemplates[2].ApproachRate == 3
+                && ui.View.LibrarySettings.MapTemplates[2].Icon == MapTemplateIcon.Blue, "Save preserves reordered template values and icon");
+            string config = Path.GetFullPath($"artifacts/tests/template-order/{locale}-{size.Item1}/settings.json");
+            ui.View.LibrarySettings.Save(config);
+            Check(string.Join(',', LibrarySettings.Load(config).MapTemplates.Select(t => t.Name)) == Saved(), "Template order survives restart");
+            ui.View.OpenMapTemplates(); ui.Paint(); Drag("Order A", "Order B", true); ui.Key(27);
+            Check(Saved() == "Order B,Order C,Order A", "Cancel discards reordered draft");
+            ui.View.OpenMapTemplates(); ui.Paint();
+            var from = Row("Order B"); var to = Row("Order A");
+            ui.View.PointerDown(from.X + 4, from.Y + 5, 0, false, false);
+            ui.View.PointerMove(to.X + 4, to.Y + 20, false, false); ui.Paint(); ui.Key(27);
+            Check(!ui.View.WantsCapture && ui.View.MapTemplatesVisible && Rows() == Saved(), "Escape cancels only the active drag");
+            ui.View.PointerUp(to.X + 4, to.Y + 20, 0); ui.Paint();
+            ui.View.PointerDown(from.X + 4, from.Y + 5, 0, false, false);
+            ui.View.PointerMove(to.X + 4, to.Y + 20, false, false); ui.View.CancelInteraction(); ui.Paint();
+            Check(!ui.View.WantsCapture && Rows() == Saved(), "Lost capture leaves template order unchanged");
+            ui.View.PointerDown(from.X + 4, from.Y + 5, 0, false, false);
+            ui.View.PointerMove(from.X + 300, to.Y + 20, false, false); ui.View.PointerUp(from.X + 300, to.Y + 20, 0); ui.Paint();
+            Check(Rows() == Saved(), "Dropping outside the template list cancels the drag");
+            Drag("Order A", "Order B", true); ui.Key(13);
+            Check(Saved() == "Order A,Order B,Order C" && original.ContentEquals(ui.View.Document), "Upward drag saves without editing beatmap content");
+
+            ui.View.LibrarySettings.MapTemplates = Enumerable.Range(0, 10).Select(i => new MapTemplate { Name = "Order " + i, ApproachRate = i }).ToList();
+            ui.View.OpenMapTemplates(); ui.Paint(); from = Row("Order 0");
+            ui.View.PointerDown(from.X + 4, from.Y + 5, 0, false, false);
+            ui.View.PointerMove(from.X + 4, from.Y + 12, false, false);
+            ui.View.Wheel(from.X + 4, from.Y + 12, -120, false); ui.Paint();
+            ui.View.PointerMove(from.X + 4, from.Y + 100, false, false); ui.View.PointerUp(from.X + 4, from.Y + 100, 0); ui.Paint(); ui.Key(13);
+            Check(ui.View.LibrarySettings.MapTemplates[0].Name == "Order 1" && ui.View.LibrarySettings.MapTemplates[^1].Name == "Order 0", "Dragging with wheel paging moves templates between pages");
+            var plus = ui.Canvas.Texts.Single(t => t.Value == "+" && t.Y < 84); ui.Click(plus.X + 4, plus.Y + 4);
+            ui.ClickText(L.Get("project.add")); ui.ClickText(L.Get("difficulty.useSource")); ui.ClickText(L.Get("difficulty.templateTab"));
+            var arrow = ui.Canvas.Texts.Last(t => t.Value == "▾"); ui.Click(arrow.X + 3, arrow.Y + 4); ui.Key(36); ui.Key(13);
+            var confirm = ui.Canvas.Texts.Last(t => t.Value == L.Get("project.add")); ui.Click(confirm.X + 3, confirm.Y + 4);
+            Check(ui.View.Document.ApproachRate == 1, "Creation dropdown follows the saved template order");
+
+            RecordingCanvas.Label Row(string name) => ui.Canvas.Texts.First(t => t.Value == name);
+            string Saved() => string.Join(',', ui.View.LibrarySettings.MapTemplates.Select(t => t.Name));
+            string Rows() => string.Join(',', ui.Canvas.Texts.Where(t => t.Value.StartsWith("Order ") && t.X < (size.Item1 - 860) / 2 + 230).OrderBy(t => t.Y).Select(t => t.Value));
+            void Drag(string source, string destination, bool before)
+            {
+                var a = Row(source); var b = Row(destination);
+                ui.View.PointerDown(a.X + 4, a.Y + 5, 0, false, false);
+                Check(ui.View.WantsCapture, "Template row captures the pointer");
+                ui.View.PointerMove(b.X + 4, b.Y + (before ? -8 : 20), false, false); ui.Paint();
+                ui.View.PointerUp(b.X + 4, b.Y + (before ? -8 : 20), 0); ui.Paint();
             }
         }
     }
