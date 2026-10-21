@@ -4,6 +4,31 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class CanvasZoomTests
 {
+    public static void DenseCoordinateProjection()
+    {
+        var ui = new Ui(false);
+        var project = typeof(EditorView).GetMethod("Screen", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .CreateDelegate<Func<MapPoint, (float X, float Y)>>(ui.View);
+        foreach (var size in new[] { (980, 620), (1440, 900) })
+        {
+            ui.Resize(size.Item1, size.Item2);
+            ClickZoom(ui, .46f);
+            ui.View.UpdateTransport(110000, 300000, true, true, false, null, "fixture.wav"); ui.Paint();
+            var expected = ui.ScreenAt(110000, 128);
+            var actual = project(new(110000, 128));
+            Near(expected.X, actual.X); Near(expected.Y, actual.Y);
+            long allocated = GC.GetAllocatedBytesForCurrentThread();
+            double checksum = 0;
+            for (int i = 0; i < 10000; i++)
+            {
+                var point = project(new(110000 + i % 9, 128 + i % 256));
+                checksum += point.X + point.Y;
+            }
+            if (!double.IsFinite(checksum) || GC.GetAllocatedBytesForCurrentThread() - allocated > 4096)
+                throw new Exception("Dense coordinate projection allocated per object.");
+        }
+    }
+
     public static void DefaultsAndReset()
     {
         var ui = new Ui(overview: false);

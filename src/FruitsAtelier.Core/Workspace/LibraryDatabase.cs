@@ -10,6 +10,8 @@ public enum ImportSliderConversionMode { Ask, KeepLegacy, ConvertToFSlider }
 
 public sealed class LibrarySettings
 {
+    public List<MapTemplate> MapTemplates { get; set; } = [];
+    public bool NewDifficultyUseSource { get; set; }
     public EditorDockLayouts? DockLayouts { get; set; }
     public const int CurrentFirstRunSetupVersion = 1;
     public int FirstRunSetupVersion { get; set; }
@@ -225,7 +227,7 @@ public sealed class MapEditingPreferences
 }
 
 public sealed record LibraryMap(string Path, string Directory, string Title, string TitleUnicode, string Artist, string ArtistUnicode,
-    string Creator, string Difficulty, string Tags, string Source, string Audio, string Background, string? ProjectPath = null, bool ExternalMissing = false, int Mode = 2, bool ReferenceSearching = false, long BeatmapId = 0, long BeatmapSetId = 0);
+    string Creator, string Difficulty, string Tags, string Source, string Audio, string Background, string? ProjectPath = null, bool ExternalMissing = false, int Mode = 2, bool ReferenceSearching = false, long BeatmapId = 0, long BeatmapSetId = 0, long DateAddedUtcTicks = 0);
 public sealed record LibraryScan(int Count, IReadOnlyList<string> Errors);
 public sealed record LibraryScanProgress(int Files, int Indexed, int Errors);
 
@@ -244,11 +246,19 @@ public sealed class LibraryDatabase
         using var command = db.CreateCommand();
         command.CommandText = "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS external_sources(path TEXT PRIMARY KEY, archive TEXT); CREATE TABLE IF NOT EXISTS project_sources(project TEXT NOT NULL, source TEXT NOT NULL, PRIMARY KEY(project,source));";
         command.ExecuteNonQuery();
+        command.CommandText = "CREATE TABLE IF NOT EXISTS project_metadata(project TEXT PRIMARY KEY,path TEXT,stamp INTEGER,size INTEGER,data TEXT); CREATE TABLE IF NOT EXISTS source_dates(directory TEXT PRIMARY KEY COLLATE NOCASE, ticks INTEGER NOT NULL);";
+        command.ExecuteNonQuery();
         command.CommandText = "PRAGMA user_version";
         if (Convert.ToInt64(command.ExecuteScalar()) < 5)
         {
             // Rebuild derived metadata so unchanged files acquire online identities.
             command.CommandText = "DELETE FROM maps WHERE COALESCE(json_extract(data,'$.Mode'),2) NOT IN (0,2); UPDATE maps SET stamp=-1; PRAGMA user_version=5;";
+            command.ExecuteNonQuery();
+        }
+        command.CommandText = "PRAGMA user_version";
+        if (Convert.ToInt64(command.ExecuteScalar()) < 7)
+        {
+            command.CommandText = "UPDATE maps SET stamp=-1; DELETE FROM project_metadata; PRAGMA user_version=7;";
             command.ExecuteNonQuery();
         }
         command.CommandText = "CREATE INDEX IF NOT EXISTS maps_root ON maps(root); CREATE INDEX IF NOT EXISTS maps_directory_nocase ON maps(json_extract(data,'$.Directory') COLLATE NOCASE); CREATE INDEX IF NOT EXISTS project_sources_source ON project_sources(source,project);";
@@ -261,13 +271,13 @@ public sealed class LibraryDatabase
         string path = Path.Combine(workspace, "library.db"); WorkspaceProject.RejectLinks(path);
         var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString()); db.Open(); return db;
     }
-    public LibrarySearchSnapshot SearchSnapshot(string query, bool projectsOnly = false, IReadOnlyCollection<string>? favourites = null) => new(Open(), songs, query, projectsOnly, favourites);
+    public LibrarySearchSnapshot SearchSnapshot(string query, bool projectsOnly = false, IReadOnlyCollection<string>? favourites = null, LibraryOrganization? organization = null) => new(Open(), songs, query, projectsOnly, favourites, organization);
     public void ClearDerivedCache()
     {
         using var db = Open();
         using var command = db.CreateCommand();
         // Source registrations and project associations survive an index rebuild.
-        command.CommandText = "DELETE FROM maps;";
+        command.CommandText = "DELETE FROM maps; DELETE FROM source_dates;";
         command.ExecuteNonQuery();
         command.CommandText = "VACUUM";
         command.ExecuteNonQuery();
@@ -391,6 +401,14 @@ public sealed class LibraryDatabase
                 scannedDirectories.Add(directory);
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { errors.Add(directory + ": " + e.Message); continue; }
+            if (files.Length > 0)
+            {
+                using var dates = db.CreateCommand();
+                dates.CommandText = "INSERT INTO source_dates VALUES($directory,$ticks) ON CONFLICT(directory) DO UPDATE SET ticks=excluded.ticks WHERE ticks<>excluded.ticks";
+                dates.Parameters.AddWithValue("$directory", directory);
+                dates.Parameters.AddWithValue("$ticks", files.Min(f => f.LastWriteTimeUtc.Ticks));
+                if (dates.ExecuteNonQuery() > 0) Interlocked.Increment(ref revision);
+            }
             foreach (var info in files)
             {
                 string file = info.FullName;
@@ -455,6 +473,9 @@ public sealed class LibraryDatabase
                 command.Parameters.AddWithValue("$p", folder);
                 command.Parameters.AddWithValue("$s", manifest.SongsRoot is not null && manifest.SourceDirectory is not null ? Path.GetFullPath(Path.Combine(manifest.SongsRoot, manifest.SourceDirectory)) : manifest.ExternalSourceDirectory is { } external ? Path.GetFullPath(external) : DBNull.Value);
                 command.Parameters.AddWithValue("$n", manifest.Name); command.ExecuteNonQuery();
+                try { IndexProjectMetadata(db, transaction, folder, manifest); }
+                catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException or InvalidDataException)
+                { /* An unreadable difficulty must not hide its workspace project. */ }
                 var sources = manifest.Difficulties.Select(d => d.Source).Where(p => p is not null)
                     .Select(p => Path.GetDirectoryName(Path.GetFullPath(p!))!).ToList();
                 if (manifest.ExternalSourceDirectory is { } externalDirectory) sources.Add(externalDirectory);
@@ -468,8 +489,42 @@ public sealed class LibraryDatabase
             }
             catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { projectsReadable = false; }
         }
+        using (var cleanup = db.CreateCommand())
+        {
+            cleanup.Transaction = transaction;
+            cleanup.CommandText = "DELETE FROM project_metadata WHERE project NOT IN (SELECT path FROM projects);";
+            cleanup.ExecuteNonQuery();
+        }
         transaction.Commit();
         projectIndexFiles = projectsReadable ? manifests : null;
+    }
+
+    private static void IndexProjectMetadata(SqliteConnection db, SqliteTransaction transaction, string folder, WorkspaceManifest manifest)
+    {
+        var difficulty = manifest.Difficulties.FirstOrDefault();
+        if (difficulty is null || Path.GetFileName(difficulty.File) != difficulty.File) return;
+        string path = Path.Combine(folder, difficulty.File);
+        var file = new FileInfo(path);
+        if (!file.Exists) return;
+        long added = manifest.Difficulties.Where(d => Path.GetFileName(d.File) == d.File)
+            .Select(d => new FileInfo(Path.Combine(folder, d.File))).Where(f => f.Exists)
+            .Select(f => f.LastWriteTimeUtc.Ticks).DefaultIfEmpty(0).Min();
+        using var command = db.CreateCommand(); command.Transaction = transaction;
+        command.Parameters.AddWithValue("$added", added);
+        command.CommandText = "SELECT EXISTS(SELECT 1 FROM project_metadata WHERE project=$p AND path=$f AND stamp=$t AND size=$s AND json_extract(data,'$.DateAddedUtcTicks')=$added)";
+        command.Parameters.AddWithValue("$p", folder); command.Parameters.AddWithValue("$f", path);
+        command.Parameters.AddWithValue("$t", file.LastWriteTimeUtc.Ticks); command.Parameters.AddWithValue("$s", file.Length);
+        if (Convert.ToInt64(command.ExecuteScalar()) != 0) return;
+        var document = ProjectSerializer.ReadFile(path);
+        string Get(string key) => OsuBeatmapReader.Setting(document, "Metadata", key) ?? "";
+        var map = new LibraryMap(path, folder, Get("Title") is { Length: > 0 } title ? title : manifest.Name,
+            Get("TitleUnicode"), Get("Artist"), Get("ArtistUnicode"), Get("Creator"), difficulty.Name, Get("Tags"), Get("Source"),
+            document.AudioPath ?? "", "", folder, Mode: OsuBeatmapReader.Setting(document, "General", "Mode") == "0" ? 0 : 2,
+            BeatmapId: long.TryParse(Get("BeatmapID"), out var mapId) ? mapId : 0,
+            BeatmapSetId: long.TryParse(Get("BeatmapSetID"), out var setId) ? setId : 0, DateAddedUtcTicks: added);
+        command.Parameters.RemoveAt("$added");
+        command.CommandText = "INSERT OR REPLACE INTO project_metadata VALUES($p,$f,$t,$s,$d)";
+        command.Parameters.AddWithValue("$d", JsonSerializer.Serialize(map)); command.ExecuteNonQuery();
     }
 
     public IReadOnlyList<LibraryMap> Search(string query, bool projectsOnly = false)

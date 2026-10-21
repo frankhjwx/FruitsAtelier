@@ -119,6 +119,12 @@ internal sealed partial class EditorWindow : IDisposable
             Native.DestroyWindow(hwnd);
             return 0;
         }
+        if (renderCheck && Environment.GetCommandLineArgs().Contains("--text-resources-render-check"))
+        {
+            Diagnostics.RenderCheck.Run(canvas, view, hwnd);
+            Native.DestroyWindow(hwnd);
+            return 0;
+        }
         if (renderCheck && Environment.GetCommandLineArgs().FirstOrDefault(a => a.StartsWith("--project-memory-folder=", StringComparison.Ordinal)) is { } memoryFolder)
         {
             Diagnostics.ProjectMemoryCheck.Run(canvas, view, memoryFolder["--project-memory-folder=".Length..]);
@@ -196,6 +202,12 @@ internal sealed partial class EditorWindow : IDisposable
             {
                 CheckAcknowledgementsWindow();
                 Diagnostics.AcknowledgementsRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
+            if (Environment.GetCommandLineArgs().Contains("--library-organization-render-check"))
+            {
+                Diagnostics.LibraryOrganizationRenderCheck.Run(canvas);
                 Native.DestroyWindow(hwnd);
                 return 0;
             }

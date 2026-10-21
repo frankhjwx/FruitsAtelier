@@ -8,7 +8,8 @@ public enum EditorPerformanceStage
 {
     InputQueue, InputDispatch, Poll, PrepareFrame, ViewRender, Submit, Frame,
     ConversionCheck, ConversionRebuild, ExportReadback, InputToSubmit, EndDraw, Present,
-    MessageDispatch, MessageWait, FrameWait, FrameGap, LogWrite
+    MessageDispatch, MessageWait, FrameWait, FrameGap, LogWrite,
+    DifficultyAdd, HitsoundPreload, AudioReset, WorkspaceExportPlan, WorkspaceExportSave, WorkspaceExportReload
 }
 
 // UI-thread counters; recording never allocates or writes to disk.

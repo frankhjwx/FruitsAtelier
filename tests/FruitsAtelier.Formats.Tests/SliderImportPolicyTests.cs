@@ -5,6 +5,7 @@ internal static class SliderImportPolicyTests
     public static void Run()
     {
         SliderImportDetectionTests.Run();
+        MixedCompensatedImport();
         foreach (bool derandomize in new[] { false, true })
         {
             var map = Native();
@@ -76,6 +77,39 @@ internal static class SliderImportPolicyTests
             Equivalent(imported.PlayableObjects, OsuBeatmapWriter.Serialize(history.Document).PlayableObjects, 4);
             Console.WriteLine($"PASS compensated import, refresh and modes: spans={spans}, curved={curved}");
         }
+    }
+
+    private static void MixedCompensatedImport()
+    {
+        var authored = new MapDocument { DurationMs = 12000, DerandomizeFSliderDroplets = true };
+        var track = new CurveTrack { Kind = CurveKind.Linear, DropletMode = SliderDropletMode.Derandomize };
+        track.Nodes.AddRange([new() { TimeMs = 1000, X = 128 }, new() { TimeMs = 2000, X = 384 }]);
+        authored.Tracks.Add(track);
+        var map = OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(authored).Text);
+        var native = OsuBeatmapReader.Read(
+            "osu file format v14\n[General]\nMode:0\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n"
+            + "[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,64,4000,2,0,L|256:344,3,280\n").ImportedSliders.Single();
+        map.ImportedSliders.Add(native);
+        map.SliderImportState = SliderImportState.Pending;
+        var original = OsuBeatmapWriter.Serialize(map);
+        var initialized = SliderImportEditing.Initialize(map, true);
+        Check(initialized.Success, "Mixed compensated import failed: " + string.Join("; ", initialized.Diagnostics));
+        Check(map.SliderImportState == SliderImportState.Compensated && map.ImportedSliders.Count == 2
+            && map.ImportedSliders.Select(s => s.Id).Distinct().Count() == 2 && map.Tracks.Count == 0,
+            "Mixed import did not retain each Legacy parent exactly once.");
+        Check(map.ImportedSliders.Single(s => s.Id == native.Id).RandomizationTrack is null,
+            "An incompatible repeated slider received a recovered baseline.");
+        Check(map.ImportedSliders.Single(s => s.Id != native.Id).RandomizationTrack is not null,
+            "A compatible slider lost its recovered baseline.");
+        var output = OsuBeatmapWriter.Serialize(map);
+        Equivalent(original.PlayableObjects, output.PlayableObjects, 0);
+        Equivalent(original.PlayableHardRockObjects, output.PlayableHardRockObjects, 0);
+        Check(ProjectSerializer.Read(ProjectSerializer.Serialize(map)).ContentEquals(map), "Mixed import lost its resolved state on reload.");
+        var converted = SliderImportEditing.ConvertFollowingMap(map, map.ImportedSliders.Select(s => s.Id).ToArray());
+        Check(converted.Tracks.Count + map.ImportedSliders.Count == 2, "Mixed conversion lost a parent.");
+        output = OsuBeatmapWriter.Serialize(map);
+        Equivalent(original.PlayableObjects, output.PlayableObjects, 4);
+        Equivalent(original.PlayableHardRockObjects, output.PlayableHardRockObjects, 4);
     }
 
     internal static MapDocument Native() => OsuBeatmapReader.Read(

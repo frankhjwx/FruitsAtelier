@@ -7,6 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private Task<WorkspaceSession>? libraryOpenTask;
+    private LibraryMap? libraryOpeningMap;
     private Action? libraryOpenCompleted;
     private string? libraryOpenDifficultyPath;
     private string? pendingLibraryDifficultyPath;
@@ -16,6 +17,7 @@ public sealed partial class EditorView
     {
         if (LibraryOpening || !PrepareFileOperation()) return;
         var settings = new LibrarySettings { Workspace = LibrarySettings.Workspace, Songs = LibrarySettings.Songs };
+        libraryOpeningMap = map;
         libraryOpenCompleted = completed;
         libraryOpenDifficultyPath = selectDifficulty ? map.Path : null;
         // Workspace maintenance owns the same gate as Open; waiting belongs off the UI thread.
@@ -46,12 +48,14 @@ public sealed partial class EditorView
     {
         if (libraryOpenTask is not { IsCompleted: true } task) return;
         libraryOpenTask = null;
+        var visited = libraryOpeningMap; libraryOpeningMap = null;
         var path = libraryOpenDifficultyPath; libraryOpenDifficultyPath = null;
         var completed = libraryOpenCompleted; libraryOpenCompleted = null;
         try
         {
             LoadWorkspace(task.GetAwaiter().GetResult(), checkAdditionalDifficulties: true);
             if (path is not null) SelectLibraryDifficulty(path);
+            if (visited is not null && WorkspaceSession is { } session) RecordLibraryVisit(visited, session.Directory);
             completed?.Invoke();
         }
         catch (Exception error) { ShowError(L.Reformat(error.Message)); }

@@ -60,6 +60,7 @@ internal sealed partial class EditorWindow
             else { CompleteStartupFiles(); FitEditorWindow(); SetFullscreen(view.LibrarySettings.Fullscreen); }
         });
         view.RequestSetupLink = url => FileOperation(() => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }));
+        view.RequestVisitOsuWeb = view.RequestSetupLink;
         view.RequestAudioPreference = () => FileOperation(() => view.LibrarySettings.Save());
         view.RequestViewPreference = () => FileOperation(() => view.LibrarySettings.Save());
         view.ApplyAudioVolume();
@@ -180,6 +181,7 @@ internal sealed partial class EditorWindow
 
     private void ResetAudio()
     {
+        long started = view.Performance.Start();
         resettingAudio = true;
         try
         {
@@ -189,7 +191,7 @@ internal sealed partial class EditorWindow
             audio.SetPlaybackSpeed(view.PlaybackSpeed);
             view.ApplyAudioVolume();
         }
-        finally { resettingAudio = false; }
+        finally { resettingAudio = false; view.Performance.End(Editor.EditorPerformanceStage.AudioReset, started); }
     }
 
     private AudioState? displayedAudioState;

@@ -21,7 +21,7 @@ internal static class LegacyAlignmentTests
         Check(ui.View.Document.Fruits.Any(f => f.TimeMs == 3000 && f.X == 160)
             && ui.View.Document.Fruits.Any(f => f.TimeMs == 3250 && f.X == 230), "Paste preserves the pattern's relative time and X");
         ui.View.AddDifficulty();
-        Check(!ui.View.CanPasteSelection && !ui.View.PasteSelection(), "Other difficulties reject the pattern");
+        Check(ui.View.CanPasteSelection && ui.View.PasteSelection(), "Other difficulties in the mapset accept the pattern");
         ui.View.SwitchDifficulty(0);
         Check(ui.View.CanPasteSelection, "Returning to the source difficulty retains the pattern");
         ui.View.LoadDocument(map);

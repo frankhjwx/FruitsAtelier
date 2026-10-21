@@ -160,7 +160,9 @@ internal static class LibraryTests
     private static void WaitForLibrary(EditorView view)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);
-        while (view.LibraryLoading && DateTime.UtcNow < deadline) Thread.Sleep(10);
+        var canvas = new RecordingCanvas();
+        while (view.LibraryLoading && DateTime.UtcNow < deadline)
+        { canvas.Clear(); view.Render(canvas, 980, 620); Thread.Sleep(10); }
         Check(!view.LibraryLoading, "background work completed");
     }
     private static void Click(EditorView view, RecordingCanvas canvas, string label)

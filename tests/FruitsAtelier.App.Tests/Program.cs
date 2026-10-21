@@ -1,6 +1,9 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--cross-difficulty-clipboard-check")) { CrossDifficultyClipboardTests.Run(); Console.WriteLine("PASS mapset clipboard, target settings, independent SV, undo and rejection"); return 0; }
+if (args.Length == 3 && args[0] == "--new-difficulty-profile") return NewDifficultyPerformance.Run(args[1], args[2]);
+if (args.Contains("--new-difficulty-check")) { NewDifficultyTests.Run(); Console.WriteLine("PASS difficulty copies, templates, persistence and cancellation"); return 0; }
 if (args.Contains("--map-import-settings-check")) { MapImportSettingsTests.Run(); Console.WriteLine("PASS global map import settings, remembered choices and FA confidence thresholds"); return 0; }
 if (args.Contains("--slider-batch-check")) { SliderBatchTests.Run(); NativeImportedPathTests.Run(); WorkspaceSaveTests.Run(); LegacyReadOnlyEditingTests.Run(); SliderInteractionTests.LegacyContextConversion(); Console.WriteLine("PASS import defaults, fitted batch conversion, scope, paths, saves and undo"); return 0; }
 if (args.Contains("--osu-link-check")) { OsuLinkTests.Run(); TimeJumpTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS osu! editor links, routing, activation and settings"); return 0; }
@@ -45,6 +48,15 @@ if (args.Contains("--osu-canvas-check"))
     OsuCanvasRenderTests.Run(); OsuCanvasInputTests.Run(); CanvasOverscanTests.Run();
     Console.WriteLine("PASS osu canvas rendering, native editing and mode boundaries"); return 0;
 }
+if (Array.IndexOf(args, "--osu-collections-read") is var osuRead && osuRead >= 0)
+{
+    var catalog = OsuCollectionCatalog.Read(args[osuRead + 1]);
+    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { catalog.Available, Collections = catalog.Collections.Select(c => new { c.Name, Members = c.Hashes.Count, Paths = c.Paths.Select(path => new { Path = path, Exists = File.Exists(path), Difficulty = File.Exists(path) ? LibraryDatabase.ReadMetadata(path)?.Difficulty : null }) }) }));
+    return catalog.Available ? 0 : 1;
+}
+if (args.Contains("--osu-collections-check")) { OsuCollectionTests.Run(); return 0; }
+if (args.Contains("--library-organization-check")) { OsuCollectionTests.Run(); LibraryOrganizationTests.Run(); LibraryFavouriteTests.Run(); LibraryTests.Run(); LibraryScaleTests.Pagination(); Console.WriteLine("PASS Library sorting, grouping, collections, visits and persistence"); return 0; }
+
 if (args.Contains("--library-incremental-check"))
 {
     LibraryIncrementalTests.Run(); LibraryScanProgressTests.Run(); LibraryResponsivenessTests.Run();
@@ -211,7 +223,7 @@ if (args.Contains("--performance-scheduling")) return PerformanceSchedulingTests
 if (args.Length == 2 && args[0] == "--fruit-placement-performance") return EditorPerformance.RunFruitPlacement(args[1]);
 if (args.Length == 2 && args[0] == "--testplay-edit-performance") return EditorPerformance.RunTestplayEditing(args[1]);
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
-if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
+if (args.Length is 2 or 3 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1], startMs: args.Length == 3 ? double.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture) : 89038);
 if (args.Length == 2 && args[0] == "--lazer-map-performance") return EditorPerformance.RunMap(args[1], lazer: true);
 if (args.Length == 2 && args[0] == "--slider-drag-performance") return EditorPerformance.RunSliderDrag(args[1]);
 if (args.Length == 2 && args[0] == "--slider-draft-performance")
@@ -293,6 +305,7 @@ var tests = new (string Name, Action Run)[]
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
     ("Background synchronization retries retain dirty edits and explicit publication archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),
     ("Difficulty FA-only settings preserve default generation and control external file removal", FaOnlyUiTests.Run),
+    ("Difficulty copies and template management preserve source content and settings", NewDifficultyTests.Run),
     ("Full synchronization confirms replacement, keeps unchanged connections and exposes its backup", FullSynchronizationTests.Run),
     ("Version history previews and restores changed and deleted difficulties with undo and modal isolation", VersionHistoryUiTests.Run),
 
@@ -467,6 +480,7 @@ var tests = new (string Name, Action Run)[]
     ("Operation errors remain visible and isolate input on editor and library pages", OperationErrorTests.Run),
     ("Text inputs blink, highlight selection and menus fit their rows", TextInputFeedbackTests.Run),
     ("Legacy clipboard and horizontal grid preserve pattern scope", LegacyAlignmentTests.ClipboardAndGrid),
+    ("Mapset clipboard preserves objects across difficulty settings and rejects unsupported SV", CrossDifficultyClipboardTests.Run),
     ("Legacy timestamps and read-only details preserve precision", LegacyAlignmentTests.TimestampAndReadOnly),
     ("Legacy samples use event timing and edge leniency", LegacyAlignmentTests.Samples),
     ("Timeline indexed visibility matches full scans", TimelineRangeTests.Run),
@@ -538,6 +552,7 @@ var tests = new (string Name, Action Run)[]
     ("FAZ archives preserve native projects and explicit local associations", FazTests.Run),
     ("FAD archives exchange native difficulties through merge review", FadTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
+    ("Library organization sorts, groups, manages collections and remembers visits", LibraryOrganizationTests.Run),
     ("Library favourites persist, filter songs and projects, and toggle from the first context action", LibraryFavouriteTests.Run),
     ("Library pages sets and difficulties and reaches uncached scrollbar positions", LibraryScaleTests.Pagination),
     ("Library remains responsive while SQLite is write-locked", LibraryResponsivenessTests.Run),

@@ -6,6 +6,7 @@ internal static class IndependentCanvasScaleTests
     public static void Run()
     {
         MenuPriority();
+        CanvasZoomTests.DenseCoordinateProjection();
         CanvasZoomTests.DefaultsAndReset(); CanvasZoomTests.SliderAndWheel(); CanvasZoomTests.PlaybackAndLanguages();
         SelectionTransformTests.Run(); MappingSessionTests.Preferences();
         NoteSnapTests.SliderObjectDragging(); MixedSliderTests.Import();
@@ -127,11 +128,11 @@ internal static class IndependentCanvasScaleTests
             float x = onLock ? control.X + 10 : control.Right - 10;
             float y = control.Y + control.Height / 2;
             ui.Click(x, y);
-            Check(ui.View.DifficultyCount == 1 && ui.Canvas.Texts.Any(t => t.Value == L.Get("song.faOnly")),
+            Check(ui.View.DifficultyCount == 1 && ui.Canvas.Texts.Any(t => t.Value == L.Get("difficulty.createFaOnly")),
                 "Covered Zoom controls open the difficulty synchronization choice");
             var confirm = ui.Canvas.Texts.Last(t => t.Value == L.Get("project.add"));
             ui.Click(confirm.X + 4, confirm.Y + 5);
-            Check(ui.View.DifficultyCount == 2, "Covered Zoom controls must let Add blank difficulty handle the click");
+            Check(ui.View.DifficultyCount == 2, "Covered Zoom controls must let Add new difficulty handle the click");
             Check(ui.View.UniformCanvasScale == locked && !ui.View.WantsCapture,
                 "Menu clicks preserve the scale lock and do not start a Zoom drag");
         }

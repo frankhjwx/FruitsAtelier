@@ -34,6 +34,10 @@ internal static class CollaborationMapCheck
         foreach (var difficulty in project.Difficulties) WorkspaceTimingSynchronization.NormalizeDocument(difficulty.Document);
         var target = project.Difficulties.Single(d => manifest.Difficulties.Single(m => m.Id == d.Id).File == Path.GetFileName(targetPath));
         var output = CollaborationMapping.Synchronize(project, target.Id, target.Document.CollaborationReferences ?? []).Document;
+        target.Document = output;
+        var repeated = CollaborationMapping.Synchronize(project, target.Id, output.CollaborationReferences ?? []).Document;
+        if (!output.ContentEquals(repeated)) throw new InvalidOperationException("Repeated map synchronization changed content.");
         Console.WriteLine($"PASS read-only collaboration {target.Name}: {output.Fruits.Count} fruits, {output.Tracks.Count} tracks, {output.ImportedSliders.Count} Legacy sliders");
+        Console.WriteLine("Red timing (ms): " + string.Join(", ", output.TimingPoints.Where(p => p.Uninherited).Select(p => p.TimeMs.ToString("R", System.Globalization.CultureInfo.InvariantCulture))));
     }
 }

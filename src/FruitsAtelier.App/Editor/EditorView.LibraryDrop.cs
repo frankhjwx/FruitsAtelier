@@ -4,12 +4,12 @@ public sealed partial class EditorView
 {
     public Action<string[]>? RequestLibraryDrop { get; set; }
     public Action<string>? RequestAudioProject { get; set; }
-    public bool CanDropAudio => !OsuLinkFallbackRequired && !AcknowledgementsVisible && !librarySettingsOpen && !resourcePage && !updatesPage && !IsTestplaying
+    public bool CanDropAudio => !collectionDialogOpen && !OsuLinkFallbackRequired && !AcknowledgementsVisible && !librarySettingsOpen && !resourcePage && !updatesPage && !IsTestplaying
         && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SongSetupVisible
         && !SliderDialogVisible && !SynchronizationVisible && !VersionHistoryVisible && !TimingModal
         && !DistanceSnapDialogVisible && !VolumeDialogVisible && !BananaEditVisible && !StreamDialogVisible
         && !MergeDialogVisible && !SynchronizationBlocksInput;
-    public bool CanDropLibraryFiles => !AcknowledgementsVisible && LibraryVisible && !librarySettingsOpen && !resourcePage && !updatesPage
+    public bool CanDropLibraryFiles => !collectionDialogOpen && !AcknowledgementsVisible && LibraryVisible && !librarySettingsOpen && !resourcePage && !updatesPage
         && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible && !SongSetupVisible;
 
     public bool CanDropBackground => !LibraryVisible && CanDropAudio;

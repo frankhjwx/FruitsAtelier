@@ -24,12 +24,12 @@ internal static class LibraryFavouriteRenderCheck
                 var view = new EditorView(false);
                 view.InitializeLibrary(true, new LibrarySettings { Workspace = root }); Wait();
                 Click(40, 150); Wait();
-                view.PointerDown(320, 190, 2, false, false); Paint();
-                Click(340, 210); Wait();
+                view.PointerDown(320, width < 1188 ? 222 : 190, 2, false, false); Paint();
+                Click(340, width < 1188 ? 242 : 210); Wait();
                 Click(40, 196); Wait();
                 if (view.LibrarySetTotal != 1) throw new InvalidOperationException("Native favourite category did not show its card.");
-                view.PointerDown(320, 190, 2, false, false); Paint();
-                Click(340, 210); Wait();
+                view.PointerDown(320, width < 1188 ? 222 : 190, 2, false, false); Paint();
+                Click(340, width < 1188 ? 242 : 210); Wait();
                 if (view.LibrarySetTotal != 0 || view.IsDirty) throw new InvalidOperationException("Native favourite removal did not clear the list without content edits.");
                 view.CloseLibrary();
                 AppLog.Write($"Library favourites native check passed: {locale}, {width}x{height}, context action, star rendering and category removal.");

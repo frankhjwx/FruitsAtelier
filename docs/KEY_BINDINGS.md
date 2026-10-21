@@ -114,7 +114,7 @@ unchanged selected objects retain it. Restored objects are not automatically sel
 When all affected positions are outside the canvas, undo/redo reveals the nearest affected position. Visible changes keep the viewport in place. When no history step is available, selection stays unchanged. Existing slider controls
 are edited in Select; B / 3 clears selection and prepares a new FSlider.
 
-Object paste is confined to the same difficulty session and aligns the earliest
+Object paste works across difficulties in the current mapset and aligns the earliest
 copied start to the playhead. Copy also writes an osu! timestamp reference to the
 system clipboard. Slider controls use their own editing selection; the object
 clipboard works on complete parent objects.

@@ -38,6 +38,7 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        if (MapTemplatesVisible) CloseMapTemplates(false);
         ClearFadReview();
         objectClipboard = null; clipboardDifficulty = null; ObjectClipboardText = "";
         foreach (var difficulty in project.Difficulties) WorkspaceTimingSynchronization.NormalizeDocument(difficulty.Document);
@@ -206,9 +207,18 @@ public sealed partial class EditorView
         return true;
     }
 
-    public bool AddDifficulty(MapDocument? imported = null, bool faOnly = false)
+    public bool AddDifficulty(MapDocument? imported = null, bool faOnly = false,
+        int? copyFrom = null, MapTemplate? template = null, string? difficultyName = null)
+    {
+        long started = Performance.Start();
+        try { return AddDifficultyCore(imported, faOnly, copyFrom, template, difficultyName); }
+        finally { Performance.End(EditorPerformanceStage.DifficultyAdd, started); }
+    }
+
+    private bool AddDifficultyCore(MapDocument? imported, bool faOnly, int? copyFrom, MapTemplate? template, string? difficultyName)
     {
         if (!PrepareFileOperation()) return false;
+        if (copyFrom is { } sourceIndex && (sourceIndex < 0 || sourceIndex >= difficulties.Count || imported is not null || template is not null)) return false;
         if (imported?.SourcePath is { } source)
         {
             int existing = difficulties.FindIndex(d =>
@@ -220,18 +230,23 @@ public sealed partial class EditorView
             WorkspaceAssociations.EnsureImport(WorkspaceSession, LibrarySettings.Workspace, source);
         }
         if (difficulties.Count >= 256) { SetNotice(L.Get("project.invalid")); return false; }
-        var document = imported?.DeepClone() ?? Document.DeepClone();
+        var document = (imported ?? (copyFrom is { } index ? difficulties[index].History.Document : Document)).DeepClone();
         if (imported is not null) LibraryOperations.ApplyImportDropletDefaults(document, LibrarySettings);
         WorkspaceTimingSynchronization.NormalizeDocument(document);
         string name = imported is null ? L.Get("project.defaultDifficulty", difficulties.Count + 1)
             : OsuBeatmapReader.Setting(document, "Metadata", "Version") ?? L.Get("project.defaultDifficulty", difficulties.Count + 1);
         if (imported is null)
         {
-            document.HitsoundOverrides.Clear();
-            document.CollaborationReferences = null;
-            document.Fruits.Clear(); document.Tracks.Clear(); document.ImportedSliders.Clear(); document.BananaShowers.Clear();
-            document.IsDemo = false;
-            foreach (var section in document.OriginalSections.Where(s => s.Name == "HitObjects")) section.Lines.Clear();
+            name = string.IsNullOrWhiteSpace(difficultyName) ? name : difficultyName.Trim();
+            if (copyFrom is null)
+            {
+                document.HitsoundOverrides.Clear();
+                document.CollaborationReferences = null;
+                document.Fruits.Clear(); document.Tracks.Clear(); document.ImportedSliders.Clear(); document.BananaShowers.Clear();
+                document.IsDemo = false;
+                foreach (var section in document.OriginalSections.Where(s => s.Name == "HitObjects")) section.Lines.Clear();
+            }
+            template?.Apply(document);
             var metadata = document.OriginalSections.FirstOrDefault(s => s.Name == "Metadata");
             if (metadata is null) { metadata = new OsuSection { Name = "Metadata" }; document.OriginalSections.Add(metadata); }
             metadata.Lines.RemoveAll(line => line.Split(':', 2)[0].Trim() is "Version" or "BeatmapID");
@@ -260,6 +275,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation(bool allowDifficultySave = false)
     {
+        if (MapTemplatesVisible || addDifficultyConfirmation) return false;
         if (CollaborationBusy) return false;
         if (!CommitCollaborationField()) return false;
         PumpLegacyDropletRefresh();

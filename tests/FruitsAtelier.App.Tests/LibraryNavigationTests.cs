@@ -60,7 +60,7 @@ internal static class LibraryNavigationTests
             float hoverX = settingsText.X + 3, hoverY = settingsText.Y + 3;
             view.PointerMove(hoverX, hoverY, false, false); Paint();
             Check(canvas.Fills.Any(f => f.Bounds.Contains(hoverX, hoverY) && f.Color == 0x3D495A), "library header responds to hover");
-            view.PointerDown(240, 180, 2, false, false); Paint();
+            view.PointerDown(240, 222, 2, false, false); Paint();
             Check(canvas.Texts.Any(t => t.Value == L.Get("library.new")) && canvas.Texts.Any(t => t.Value == L.Get("library.importFile")), "right-click offers creation and import");
             view.KeyDown(27, false, false); Paint();
             view.CloseLibrary();

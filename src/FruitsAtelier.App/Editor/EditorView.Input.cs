@@ -40,6 +40,9 @@ public sealed partial class EditorView
         if (IsTestplaying) { TestplayPointerDown(x, y, button); return; }
         if (ErrorVisible || DiscardConfirmationVisible)
         {
+            mouseX = x; mouseY = y;
+            if (!ErrorVisible && MapTemplatesVisible && MapTemplatesPointerDown(x, y, button)) return;
+            if (!ErrorVisible && addDifficultyConfirmation && !MapTemplatesVisible && NewDifficultySourcePointer(x, y)) return;
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
@@ -461,6 +464,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (templatePointer) { mouseX = x; mouseY = y; MoveMapTemplate(x, y); return; }
         if (CollaborationReportVisible) { mouseX = x; mouseY = y; if (collaborationReportDragging) MoveCollaborationReport(x, y); return; }
         if (RotationVisible) { mouseX = x; mouseY = y; RotationPointerMove(x, y); return; }
         if (aimodGesture != AimodGesture.None) { MoveAimodPointer(x, y); return; }
@@ -624,6 +628,12 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (templatePointer && button == 0)
+        {
+            MoveMapTemplate(x, y);
+            FinishMapTemplateDrag(cancel: ErrorVisible || !templateListBounds.Contains(x, y));
+            return;
+        }
         if (collaborationReportDragging) { MoveCollaborationReport(x, y); collaborationReportDragging = false; return; }
         if (CollaborationReportVisible) return;
         if (RotationVisible) { EndRotationPointer(x, y); return; }
@@ -920,6 +930,21 @@ public sealed partial class EditorView
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
+        if (!ErrorVisible && MapTemplatesVisible)
+        {
+            if (templateListBounds.Contains(x, y))
+            {
+                templatePage = Math.Clamp(templatePage - Math.Sign(delta), 0, Math.Max(0, (templateDraft.Count - 1) / 8));
+                if (templatePointer) MoveMapTemplate(x, y);
+            }
+            return;
+        }
+        if (!ErrorVisible && addDifficultyConfirmation && !MapTemplatesVisible && newDifficultySourcesOpen)
+        {
+            if (newDifficultySourceList.Contains(x, y)) newDifficultySourceScroll = Math.Clamp(newDifficultySourceScroll
+                - (int)(delta / 120), 0, Math.Max(0, NewDifficultySourceCount - 6));
+            return;
+        }
         if (CollaborationReportVisible)
         {
             if (CollaborationReportList.Contains(x, y)) collaborationReportScroll = Math.Clamp(collaborationReportScroll - delta / 120 * 58,
@@ -1024,6 +1049,8 @@ public sealed partial class EditorView
         if (librarySettingsOpen || ExportVisible) return;
         if (LibraryVisible)
         {
+            if (collectionDialogOpen) { collectionDialogScroll = Math.Max(0, collectionDialogScroll - delta / 120 * 68); return; }
+            if (collectionsBounds.Contains(x, y)) { collectionsScroll = Math.Max(0, collectionsScroll - delta / 120 * 72); return; }
             if (languageMenuOpen || contextItems.Count > 0 || librarySettingsOpen) return;
             if (x >= width - 330) libraryDiffScroll = Math.Max(0, libraryDiffScroll - (int)(delta / 120));
             else libraryScroll = Math.Clamp(libraryScroll - delta / 120 * 3, 0, LibraryMaxScroll);
@@ -1287,6 +1314,8 @@ public sealed partial class EditorView
         }
         if (DiscardConfirmationVisible)
         {
+            if (MapTemplatesVisible) { MapTemplatesKey(virtualKey, ctrl, shift); return; }
+            if (addDifficultyConfirmation) { NewDifficultyKey(virtualKey, ctrl, shift); return; }
             if (virtualKey is 27 or 13) AnswerDiscard(virtualKey == 13 ? previousSaveConfirmation ? 7 : pendingLanguage is not null ? 6 : 2 : 2);
             return;
         }
@@ -1502,6 +1531,8 @@ public sealed partial class EditorView
     private void TextInputCore(char value)
     {
         if (AcknowledgementsVisible) return;
+        if (MapTemplatesVisible && !ErrorVisible) { MapTemplatesText(value.ToString()); return; }
+        if (addDifficultyConfirmation && !ErrorVisible) { NewDifficultyText(value.ToString()); return; }
         if (CollaborationFocused)
         {
             if (!CollaborationBusy && collaborationField.Length > 0 && !char.IsControl(value))
@@ -1554,6 +1585,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        FinishMapTemplateDrag(cancel: true);
         CancelRotation();
         rotationDragging = false;
         heldEditorKeys.Clear();

@@ -10,7 +10,7 @@ public sealed partial class EditorView
     private bool addDifficultyConfirmation, faOnlyConfirmation, newDifficultyFaOnly;
     private bool offerSongsExport;
     private bool keepDeletedProjectBackup;
-    public bool DiscardConfirmationVisible => FazVisible || discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput || previousSaveRestore is not null;
+    public bool DiscardConfirmationVisible => MapTemplatesVisible || FazVisible || discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput || previousSaveRestore is not null;
 
     public void ShowDiscardConfirmation(Action<int> answer)
     {
@@ -50,6 +50,7 @@ public sealed partial class EditorView
 
     private void DrawDiscardConfirmation(ICanvas c)
     {
+        if (MapTemplatesVisible) { DrawMapTemplates(c); return; }
         if (FazVisible) { DrawFaz(c); return; }
         if (LibraryOpening) { DrawSynchronizationWait(c); return; }
         if (SynchronizationWaitVisible) { DrawSynchronizationWait(c); return; }

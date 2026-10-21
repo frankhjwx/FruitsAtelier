@@ -68,7 +68,30 @@ existing settings isolation and cleanup.
 
 Windows distribution uses the self-contained ZIP and extracted-executable check described in [Windows releases](RELEASING.md). Desktop CI checks packaging before a version is tagged; the tag workflow reuses successful desktop regression for identical source content when available and always builds and checks its own package. See [CI validation and reuse](RELEASING.md#ci-validation-and-reuse) for fallback and forced-validation behavior.
 
+`App.Tests --library-organization-check` checks field sorting, collapsed group
+paging, historical source-file dates, collection creation/rename/removal, membership drafts,
+restart restoration, content isolation web-link click isolation, compact default-collapsed groups, cached reordering and successful-open visit recording in English
+and Chinese at compact and wide sizes. It also runs the favourites regression.
+`FruitsAtelier.App.exe --render-check --library-organization-render-check` opens
+native windows and captures grouping, sorting, collection membership and recent
+visits at 980×620 and 1440×900 with 96/144/192 DPI in both languages under
+`artifacts/tests/library-organization-native`.
+
 ## Automated regressions
+
+`App.Tests --new-difficulty-check` checks independent complete copies, named
+creation, template settings persistence, blank creation, cancellation and empty
+name validation, plus template creation/editing/deletion, invalid values and
+the Library management entry point in English and Chinese at compact and
+standard window sizes. Icon selection, restart persistence and preservation
+when applying general settings are included.
+Source dropdown checks cover disabled controls, scrolling, mouse and keyboard
+selection, and HP/CS/AR/OD layout and tab navigation.
+Template sorting checks cover upward/downward and cross-page dragging, save and
+restart, cancellation and capture loss, and matching creation-dropdown order.
+`FruitsAtelier.App.exe --render-check --new-difficulty-render-check` checks the
+native creation dialog and both tabs at two sizes and three DPI values, with
+captures under `artifacts/tests/new-difficulty-native`.
 
 `App.Tests --map-import-settings-check` checks General import preferences, saved
 defaults, cancelled drafts, remembered Keep/Convert choices and the 95% automatic
@@ -99,14 +122,19 @@ window sizes and 96/144/192 DPI. Captures are stored under
 `artifacts/tests/osu-links/native`; protocol actions use test callbacks.
 
 `Formats.Tests --collaboration-check` checks same-project reference graphs,
-half-open adjacent ranges, source edits/deletions, timing restoration, boundary
-sample inheritance, repeated sliders, FSliders, streams, banana showers, custom
+half-open adjacent ranges, the inclusive final End, source edits/deletions, replacement of section red timing,
+fractional beat-grid precision, boundary sample inheritance, repeated sliders,
+FSliders, streams, banana showers, custom
 samples, target STR precedence, cross-folder sample conflicts, project schemas
 and undo/redo, bookmark section generation, unassigned section persistence and
 strict overlap validation, complete slider/spinner section containment, exclusion
-reports and optional same-position target hitsound preservation. `App.Tests --collaboration-check` checks
-the dockable panel, active-difficulty configuration, reverse references, osu!
-timestamps, integer milliseconds, clipboard input and manual synchronization.
+reports, per-object SV across different BPM/base SV, section sample transitions
+without source SV-only lines, and optional same-position target hitsound
+preservation. Repeated synchronization and moved/deleted source red points check
+that section replacement never accumulates timing lines.
+`App.Tests --collaboration-check` checks the dockable panel, active-difficulty
+configuration, reverse references, osu! timestamps, integer milliseconds,
+clipboard input, manual synchronization and automatic AiMod refresh after sync.
 On Windows, `FruitsAtelier.App.exe --render-check --collaboration-render-check`
 checks native panel input and synchronization in English and Chinese at two
 window sizes and 96/144/192 DPI. Captures are written under
@@ -715,7 +743,22 @@ latency are excluded.
 
 ## Playback rendering profile
 
-For a read-only CPU profile of an existing `.osu` or `.catchdiff` file, run the App test executable with `--map-performance <path>`. It measures playback around 89 seconds at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.
+`App.Tests --new-difficulty-profile <workspace-project-directory> <difficulty-name>`
+reports difficulty copying, hitsound preload, first-frame rendering and export-plan
+preparation time and calling-thread allocations. It reads the persisted project
+without saving or exporting it. On Windows it also measures audio retirement after
+silent playback and pause on an STA thread; it does not change system volume.
+The regular UI performance log includes `DifficultyAdd`, `HitsoundPreload`,
+`AudioReset`, `WorkspaceExportPlan`, `WorkspaceExportSave` and `WorkspaceExportReload` to distinguish these
+stages when a native creation interaction stalls. Background worker allocation is
+not included in the calling-thread allocation values.
+
+For a read-only CPU profile of an existing `.osu` or `.catchdiff` file, run the App test executable with `--map-performance <path> [startMs]`. It measures playback from the supplied time (default 89038 ms) at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.
+
+`App.Tests --independent-scale-check` also checks allocation-free dense coordinate
+projection after resizing and seeking. On Windows,
+`FruitsAtelier.App.exe --render-check --text-resources-render-check` checks bounded
+native text resources during animation and layout reuse for dense labels.
 
 On Windows, run `FruitsAtelier.App.exe --profile-map <path> [startMs]` in a hidden Direct2D window with the active default skin. It opens an in-memory workspace session for the selected `.osu` or `.catchdiff` and sibling difficulties, including periodic resource checks, then samples 3,600 warmed frames per case from the supplied time (default 70000 ms) at 100% zoom and 1/4 snap with preview closed, NM, HR, and paused fruit hover. Playback advances thirty seconds per case. The report separates drawing submission, total rendering including `EndDraw`/`Present`, and silent transport updates. Per-frame samples include allocations, GC collections, and image decode counts to identify isolated stalls. It also measures document comparison time. The report is written to `artifacts/logs/playback-profile.json` in repository builds, or the application log directory in distributed builds. This is not a visible-screen FPS measurement. Neither profile saves or imports the map into the workspace, plays audio, or changes system volume.
 
@@ -786,8 +829,14 @@ position and native PCM render timestamps; all device output stays muted.
 Run the App test executable with `--legacy-map <difficulty.osu>` for a read-only
 report of sample-bank/index/volume boundary corrections during the first 40 seconds.
 Synthetic App regressions cover the inclusive 5 ms edge boundary, the slider body's
-6 ms start lookup, tick inheritance across timing changes, same-difficulty clipboard
+6 ms start lookup, tick inheritance across timing changes, mapset clipboard
 scope, combo reference numbers, horizontal grids, and timestamp precision.
+
+`App.Tests --cross-difficulty-clipboard-check` checks mixed parent types across
+different AR/CS/STR, BPM and base SV, preserved Legacy duration and geometry,
+unchanged target settings and source content, undo/redo, unsupported SV rollback,
+clipboard reuse and project-session boundaries. Existing same-difficulty and
+overflow clipboard checks run alongside these cases.
 
 The feedback regressions cover V/End navigation, scroll direction, persistent independent volume controls, skin sample precedence and cache upgrades, and compatible versus conflicting close SV timing. Windows PCM checks verify live and scheduled hitsound gain separately from song gain; headless Mac CI exercises the native mixer with no audio device. Native window checks exercise all three volume sliders in both languages.
 
@@ -1001,3 +1050,18 @@ native circle/slider/spinner replacement, preview/export equivalence, project
 roundtrips, undo/redo and Experimental setting
 persistence and cancellation. Native `--render-check --experimental-snap-render-check`
 also exercises its toggle in English and Chinese at compact and standard sizes.
+
+## osu! collection browsing
+
+`App.Tests --osu-collections-check` verifies official legacy database layouts before
+and after the 2014, 2019 and 2025 format changes, exact difficulty subsets, changed
+source hashes with retained osu! database identities, associated FA projects,
+read-only membership controls, missing/malformed databases, background refresh,
+and repeated browser retirement during an ordering transfer. The Library organization
+check includes this suite. Native `--library-organization-render-check` also captures
+the separate Collections sections and filtered osu! difficulties in both languages,
+two sizes and three DPI values.
+
+For an optional read-only report against an existing installation, run
+`App.Tests --osu-collections-read <osu-root>`. It reports collection member paths
+and difficulty names without importing projects or writing to the installation.

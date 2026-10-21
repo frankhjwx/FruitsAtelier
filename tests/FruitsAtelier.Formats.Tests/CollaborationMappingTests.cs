@@ -14,10 +14,9 @@ internal static class CollaborationMappingTests
         var first = Synchronize(project, c.Id, references);
         Check(first.Fruits.Select(f => f.TimeMs).Order().SequenceEqual(new double[] {99,100,997,1000,1999,2000,2500}), "Half-open ownership and untouched outside objects");
         Check(c.Document.ContentEquals(original), "Synchronization never mutates its input");
-        Near(TimingMap.At(first, 500).BeatLengthMs, 500, "A BPM");
-        Near(TimingMap.At(first, 1200).BeatLengthMs, 400, "B BPM");
-        Near(TimingMap.At(first, 2000).BeatLengthMs, 600, "Restored outside BPM");
-        Sounds(first, [(99,1,40),(100,2,80),(997,2,80),(1000,3,60),(1999,3,60),(2000,1,40),(2500,1,40)]);
+        foreach (double time in new[] { 500d, 1200, 2000 })
+            Near(TimingMap.At(first, time).BeatLengthMs, 600, "Target BPM is retained across sections");
+        Sounds(first, [(99,1,40),(100,2,80),(997,2,80),(1000,3,60),(1999,3,60),(2000,3,60),(2500,1,40)]);
         c.Document = first;
         Check(Synchronize(project, c.Id, references).ContentEquals(first), "Repeated synchronization is idempotent");
         var history = new EditorHistory(original); history.RestoreVersion("sync", first);
@@ -34,7 +33,7 @@ internal static class CollaborationMappingTests
         a.Document.TimingPoints[0].Volume = 73;
         var updated = Synchronize(project, c.Id, references);
         Check(!updated.Fruits.Any(f => f.TimeMs == 100) && updated.Fruits.Single(f => f.TimeMs == 997).X == 250, "Source deletions and changes");
-        Sounds(updated, [(99,1,40),(997,2,73),(1000,3,60),(1999,3,60),(2000,1,40),(2500,1,40)]);
+        Sounds(updated, [(99,1,40),(997,2,73),(1000,3,60),(1999,3,60),(2000,3,60),(2500,1,40)]);
         d.Document = Synchronize(project, d.Id, [new(Guid.NewGuid(), a.Id, 100, 1000)]);
         Check(d.Document.CollaborationReferences!.Single().DifficultyId == a.Id && c.Document.CollaborationReferences!.Count == 2,
             "Multiple targets independently reference the same source");
@@ -53,11 +52,181 @@ internal static class CollaborationMappingTests
         BookmarkSections();
         CompleteSections();
         PreserveTargetSounds();
+        BoundaryTiming();
+        ObjectVelocityAndSectionSamples();
+        FinalSectionEnd();
         Console.WriteLine("PASS collaboration objects, samples, timing, graph, schemas, repeated sync and undo");
     }
 
     private static MapDocument Synchronize(BeatmapProject project, Guid target, IReadOnlyList<CollaborationReference> references)
         => CollaborationMapping.Synchronize(project, target, references).Document;
+
+    private static void FinalSectionEnd()
+    {
+        foreach (bool normalize in new[] { false, true })
+        {
+            var source = Difficulty("source", 500, 1, 80, 500, 1000);
+            var target = Difficulty("target", 500, 1, 80, 1000, 1500);
+            source.Document.Fruits[1].X = 300;
+            source.Document.TimingPoints[0].TimeMs = target.Document.TimingPoints[0].TimeMs = .75;
+            CollaborationReference[] references = [new(Guid.NewGuid(), source.Id, 100, 1000)];
+            target.Document.CollaborationReferences = references.ToList();
+            target.Document.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = 500, SampleSet = 1, Volume = 80, SourceOrder = int.MinValue });
+            target.Document.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = -100, Uninherited = false,
+                SampleSet = 1, Volume = 80, SourceOrder = int.MinValue + 1 });
+            if (normalize) WorkspaceTimingSynchronization.NormalizeDocument(target.Document);
+            var before = target.Document.DeepClone();
+            var project = new BeatmapProject { Name = "legacy boundary", Difficulties = [source, target] };
+            var merged = Synchronize(project, target.Id, references);
+            Check(merged.TimingPoints.Count == 1 && merged.TimingPoints[0].TimeMs == .75,
+                "Old generated End red and green points are removed before and after normalization");
+            Near(TimingMap.Snap(merged, 1125, 4), 1125.75, "Old End cleanup restores the original fractional grid");
+            Check(merged.Fruits.Single(f => f.TimeMs == 1000).X == 300, "The final End object replaces the target endpoint");
+            Check(target.Document.ContentEquals(before), "Synchronization leaves the input unchanged");
+            var history = new EditorHistory(before); history.RestoreVersion("sync", merged); history.Undo();
+            Check(history.Document.ContentEquals(before), "Legacy boundary cleanup is undoable");
+            history.Redo(); Check(history.Document.ContentEquals(merged), "Legacy boundary cleanup redo");
+            target.Document = ProjectSerializer.Read(ProjectSerializer.Serialize(merged));
+            Check(Synchronize(project, target.Id, references).ContentEquals(target.Document), "Legacy cleanup remains stable after reopening");
+            source.Document.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = 400, Meter = 3, SourceOrder = 7 });
+            source.Document.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = -50, Uninherited = false,
+                SampleSet = 3, Volume = 60, SourceOrder = 8 });
+            target.Document = before;
+            var replaced = Synchronize(project, target.Id, references);
+            Check(replaced.TimingPoints.Count(p => p.Uninherited && p.TimeMs == 1000) == 1
+                && replaced.TimingPoints.Any(p => p.TimeMs == 1000 && p.Uninherited && p.BeatLengthMs == 400 && p.Meter == 3),
+                "The final End copies the source red and replaces all prior target endpoint timing");
+            Sounds(replaced, [(1000,3,60),(1500,1,80)]);
+            target.Document = before;
+            CollaborationReference[] unassignedLast = [new(Guid.NewGuid(), Guid.Empty, 1000, 2000), references[0]];
+            var preserved = Synchronize(project, target.Id, unassignedLast);
+            Check(preserved.Fruits.Single(f => f.TimeMs == 1000).Id == before.Fruits.Single(f => f.TimeMs == 1000).Id
+                && preserved.TimingPoints.Any(p => p.Uninherited && p.TimeMs == 1000 && p.SourceOrder == int.MinValue),
+                "The last section is determined by time including unassigned sections, not list order");
+        }
+    }
+
+    private static void BoundaryTiming()
+    {
+        var source = Difficulty("source", 60000d / 179, 1, 80, 1500.75, 2500.25);
+        var target = Difficulty("target", 60000d / 179, 1, 80, 500.5, 3500.5);
+        source.Document.TimingPoints[0].TimeMs = target.Document.TimingPoints[0].TimeMs = .75;
+        var project = new BeatmapProject { Name = "boundary timing", Difficulties = [source, target] };
+        CollaborationReference[] references = [new(Guid.NewGuid(), source.Id, 1006, 2000), new(Guid.NewGuid(), source.Id, 2000, 3000)];
+        var original = target.Document.DeepClone();
+        var fromZero = Synchronize(project, target.Id, [new(Guid.NewGuid(), source.Id, 0, 3000)]);
+        Check(fromZero.TimingPoints.Count == 1 && fromZero.TimingPoints[0].TimeMs == .75,
+            "A section before the first fractional red point needs no extra timing point");
+        CheckGrid(fromZero);
+        var merged = Synchronize(project, target.Id, references);
+        Check(merged.TimingPoints.Count == original.TimingPoints.Count, "Matching timing adds no section-boundary points");
+        Check(merged.Fruits.Select(f => f.TimeMs).Order().SequenceEqual(new[] { 500.5, 1500.75, 2500.25, 3500.5 }),
+            "Synchronization preserves fractional note timestamps");
+        CheckGrid(merged);
+        target.Document = merged;
+        Check(Synchronize(project, target.Id, references).ContentEquals(merged), "Matching boundary timing is idempotent");
+        var history = new EditorHistory(original); history.RestoreVersion("sync", merged);
+        history.Undo(); Check(history.Document.ContentEquals(original), "Boundary timing undo");
+        history.Redo(); CheckGrid(history.Document);
+        var reopened = ProjectSerializer.Read(ProjectSerializer.Serialize(merged));
+        WorkspaceTimingSynchronization.NormalizeDocument(reopened);
+        Check(reopened.TimingPoints.Count == 1 && reopened.TimingPoints[0].TimeMs == .75, "Reopening retains only the original red point");
+        CheckGrid(reopened);
+        CheckGrid(OsuBeatmapWriter.Serialize(merged).ReadBack);
+
+        source.Document.TimingPoints[0].SampleSet = 2;
+        source.Document.TimingPoints[0].SampleIndex = 3;
+        source.Document.TimingPoints[0].Volume = 65;
+        source.Document.TimingPoints[0].Effects = 1;
+        merged = Synchronize(project, target.Id, references);
+        Check(merged.TimingPoints.Count(p => p.Uninherited) == 1, "Sample-only boundaries do not reset the beat grid");
+        Check(merged.TimingPoints.Where(p => !p.Uninherited).Select(p => p.TimeMs).SequenceEqual(new[] { 1006d, 3001d }),
+            "Sample changes add only the section sample transitions");
+        Sounds(merged, [(500.5,1,80),(1500.75,2,65),(2500.25,2,65),(3500.5,1,80)]);
+        CheckGrid(merged);
+        reopened = ProjectSerializer.Read(ProjectSerializer.Serialize(merged));
+        WorkspaceTimingSynchronization.NormalizeDocument(reopened);
+        Check(reopened.TimingPoints.Count(p => p.Uninherited) == 1 && reopened.TimingPoints.Count == 3,
+            "Required sample boundaries remain green after reopening");
+        CheckGrid(reopened);
+        target.Document = reopened;
+        Check(Synchronize(project, target.Id, references).ContentEquals(reopened), "Sample boundary timing is idempotent after reopening");
+
+        void CheckGrid(MapDocument document)
+        {
+            foreach (double time in new[] { 900d, 1006, 1500, 2000, 2500, 3000, 3500 })
+                Near(TimingMap.Snap(document, time, 4), TimingMap.Snap(original, time, 4), "Section boundaries preserve the fractional beat grid");
+        }
+    }
+
+    private static void ObjectVelocityAndSectionSamples()
+    {
+        var source = new ProjectDifficulty { Name = "source", Document = OsuBeatmapReader.Read(
+            "osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n" +
+            "0,500,4,2,0,70,1,0\n250,-50,4,2,0,70,0,0\n700,300,3,3,0,60,1,1\n1600,-20,3,3,0,60,0,1\n[HitObjects]\n" +
+            "100,192,500,2,0,L|380:192,2,280\n180,192,1750,1,0,0:0:0:0:\n") };
+        var target = Difficulty("target", 600, 1, 40, 50, 2100);
+        target.Document.TimingPoints.Add(new() { TimeMs = 1000.25, BeatLengthMs = 400, Meter = 7, SampleSet = 1, Volume = 40 });
+        target.Document.ImportedSliders.Add(new() { TimeMs = 2500, X = 100, Y = 192, PathType = 'L', PixelLength = 140,
+            ControlPoints = { new(100, 192), new(240, 192) } });
+        var original = target.Document.DeepClone();
+        var project = new BeatmapProject { Name = "object velocity", Difficulties = [source, target] };
+        CollaborationReference[] references = [new(Guid.NewGuid(), source.Id, 100, 2000)];
+        var merged = Synchronize(project, target.Id, references);
+        Check(merged.TimingPoints.Where(p => p.Uninherited).Select(p => (p.TimeMs, p.BeatLengthMs, p.Meter))
+            .SequenceEqual(new[] { (0d,600d,4), (700d,300d,3) }),
+            "Section red timing replaces target points with source points at their exact timestamps");
+        Check(!merged.TimingPoints.Any(p => p.Uninherited && (p.TimeMs == 100 || p.TimeMs == 2000)), "Section boundaries do not synthesize red timing");
+        Check(!merged.TimingPoints.Any(p => p.TimeMs == 250 || p.TimeMs == 1600), "Source SV-only lines are not copied");
+        Check(merged.TimingPoints.Where(p => !p.Uninherited).All(p => p.BeatLengthMs == -100), "Section sample lines carry neutral SV");
+        var copied = merged.ImportedSliders.Single(s => s.TimeMs == 500);
+        Check(Math.Abs(ImportedSliderConverter.DurationMs(merged, merged.ImportedSliders.Single(s => s.TimeMs == 2500))
+            - ImportedSliderConverter.DurationMs(original, original.ImportedSliders.Single())) < .001,
+            "Existing outside sliders retain their duration when section red changes affect later BPM");
+        double expectedDuration = ImportedSliderConverter.DurationMs(source.Document, source.Document.ImportedSliders.Single());
+        double actualDuration = ImportedSliderConverter.DurationMs(merged, copied);
+        Check(Math.Abs(actualDuration - expectedDuration) < .001,
+            $"Per-object SV retains repeated Legacy slider duration across BPM and base-SV differences: {actualDuration:R} vs {expectedDuration:R}");
+        var output = OsuBeatmapWriter.Serialize(merged);
+        Check(output.ObjectSequenceMatches, "Retargeted slider exports the same playable sequence");
+        var resolver = new HitsoundResolver(output.ReadBack, CatchStreamConverter.Convert(output.ReadBack).Objects);
+        foreach (var item in CatchStreamConverter.Convert(output.ReadBack).Objects.Where(o => o.TimeMs >= 100 && o.TimeMs < 2000 && o.Kind != CatchObjectKind.TinyDroplet))
+        {
+            var expected = item.TimeMs + 5 < 700 ? new HitSampleSettings(2, 2, 0, 70) : new HitSampleSettings(3, 3, 0, 60);
+            Check(resolver.Describe(item) == expected, "Section samples follow source timing across the slider and BPM change");
+        }
+        Sounds(merged, [(50,1,40),(1750,3,60),(2100,1,40)]);
+        target.Document = merged;
+        for (int i = 0; i < 5; i++)
+        {
+            var repeated = Synchronize(project, target.Id, references);
+            Check(repeated.ContentEquals(merged), "Repeated synchronization replaces section lines without accumulation");
+            target.Document = repeated;
+        }
+        var reopened = ProjectSerializer.Read(ProjectSerializer.Serialize(target.Document));
+        WorkspaceTimingSynchronization.NormalizeDocument(reopened);
+        target.Document = reopened;
+        var resynced = Synchronize(project, target.Id, references);
+        Check(resynced.TimingPoints.Count == merged.TimingPoints.Count
+            && resynced.TimingPoints.Where(p => p.Uninherited).Select(p => p.TimeMs).SequenceEqual(new[] { 0d, 700d }),
+            "Reopening and synchronizing do not add red or green lines");
+        target.Document = resynced;
+        source.Document.TimingPoints.Single(p => p.Uninherited && p.TimeMs == 700).TimeMs = 710.375;
+        var changed = Synchronize(project, target.Id, references);
+        Check(!changed.TimingPoints.Any(p => p.Uninherited && p.TimeMs == 700)
+            && changed.TimingPoints.Count(p => p.Uninherited && p.TimeMs == 710.375) == 1,
+            "Moving a source red removes its prior copied position");
+        target.Document = changed;
+        source.Document.TimingPoints.RemoveAll(p => p.Uninherited && p.TimeMs == 710.375);
+        var deleted = Synchronize(project, target.Id, references);
+        Check(!deleted.TimingPoints.Any(p => p.Uninherited && p.TimeMs >= 100 && p.TimeMs < 2000),
+            "Deleting a source red removes it from the target section");
+        target.Document = deleted;
+        target.Document.TimingPoints[0].BeatLengthMs = 6000;
+        var beforeRejection = target.Document.DeepClone();
+        Throws(() => Synchronize(project, target.Id, references), "Unrepresentable object SV");
+        Check(target.Document.ContentEquals(beforeRejection), "Rejected SV retargeting leaves the complete target unchanged");
+    }
 
     private static void PreserveTargetSounds()
     {
@@ -139,7 +308,7 @@ internal static class CollaborationMappingTests
             "Partial source intersections are returned as report entries instead of errors");
         Check(prepared.ExcludedObjects.All(o => o.DifficultyId == source.Id && o.SectionStartMs == 500 && o.SectionEndMs == 1500),
             "Exclusions retain source identity and section bounds");
-        Near(TimingMap.At(prepared.Document, 800).BeatLengthMs, 500, "Timing still synchronizes after exclusions");
+        Near(TimingMap.At(prepared.Document, 800).BeatLengthMs, 600, "Target BPM is retained after exclusions");
         target.Document = prepared.Document;
         Check(Synchronize(project, target.Id, refs).ContentEquals(prepared.Document), "Containment filtering is idempotent");
     }
@@ -170,7 +339,7 @@ internal static class CollaborationMappingTests
         var merged = Synchronize(project, target.Id, sections);
         Check(merged.Fruits.Select(f => f.TimeMs).Order().SequenceEqual(new[] { 100d,1200d,2100d }), "Only assigned sections replace objects");
         Check(merged.Fruits.Single(f => f.TimeMs == 1200).Id == target.Document.Fruits.Single(f => f.TimeMs == 1200).Id, "Empty section retains parent identity");
-        Near(TimingMap.At(merged, 1200).BeatLengthMs, 600, "Timing restores at an adjacent unassigned section");
+        Near(TimingMap.At(merged, 1200).BeatLengthMs, 400, "Section end does not synthesize a red reset");
         Sounds(merged, [(100,2,80),(1200,1,40),(2100,2,80)]);
         target.Document = merged;
         Check(Synchronize(project, target.Id, sections).ContentEquals(merged), "Repeated synchronization with an empty middle section");
@@ -194,7 +363,7 @@ internal static class CollaborationMappingTests
             new(Guid.NewGuid(), source.Id, 1000, 1500), new(Guid.NewGuid(), source.Id, 2000, 2500) };
         target.Document = Synchronize(project, target.Id, references);
         Check(target.Document.Fruits.Select(f => f.TimeMs).Order().SequenceEqual(new double[] {100,700,1100,1700,2100,3000}), "Multiple disjoint ranges from one source preserve the gaps");
-        Near(TimingMap.At(target.Document, 700).BeatLengthMs, 600, "Timing gap retains target state");
+        Near(TimingMap.At(target.Document, 700).BeatLengthMs, 500, "Timing gap follows the last actual red point");
         Check(Synchronize(project, target.Id, references).ContentEquals(target.Document), "Repeated multi-range synchronization");
         source.Document.Fruits.RemoveAll(f => f.TimeMs == 100);
         source.Document.Fruits.Single(f => f.TimeMs == 1100).X = 300;
@@ -307,7 +476,7 @@ internal static class CollaborationMappingTests
         var resolver = new HitsoundResolver(readback, events);
         foreach (var item in expected)
         {
-            var sample = resolver.Describe(events.Single(o => o.TimeMs == item.Time));
+            var sample = resolver.Describe(events.Single(o => o.TimeMs == Math.Truncate(item.Time)));
             Check(sample.NormalSet == item.Bank && sample.Volume == item.Volume, $"Exported sound at {item.Time}");
         }
     }

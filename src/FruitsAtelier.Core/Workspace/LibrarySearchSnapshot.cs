@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace FruitsAtelier.Core;
 
-public sealed record LibrarySetRow(int Index, string Key, LibraryMap Map, int Count, bool? InSongs = null, int MissingCount = 0);
+public sealed record LibrarySetRow(int Index, string Key, LibraryMap Map, int Count, bool? InSongs = null, int MissingCount = 0, string? Header = null);
 
 // A disk-backed result index keeps random scrolling independent of library size.
 // Callers serialize access on a worker; no query or disposal belongs on the UI thread.
@@ -20,9 +20,18 @@ public sealed class LibrarySearchSnapshot : IDisposable
     private readonly SemaphoreSlim discoveryQueue = new(1);
     private long discoveryRevision, cachedDiscoveryRevision;
     public long DiscoveryRevision => Interlocked.Read(ref discoveryRevision);
-    public void CancelReferenceDiscovery() => discoveryCancellation.Cancel();
-    public int Count { get; }
-    internal LibrarySearchSnapshot(SqliteConnection connection, string songs, string query, bool projectsOnly, IReadOnlyCollection<string>? favourites)
+    private readonly object lifetimeGate = new();
+    private bool disposed;
+    public void CancelReferenceDiscovery()
+    {
+        lock (lifetimeGate) if (!disposed) discoveryCancellation.Cancel();
+    }
+    public int Count { get; private set; }
+    public int SetCount { get; }
+    public int FirstMapIndex { get; private set; }
+    public IReadOnlyList<int> HeaderIndices { get; private set; } = [];
+    private bool orderingPrepared;
+    internal LibrarySearchSnapshot(SqliteConnection connection, string songs, string query, bool projectsOnly, IReadOnlyCollection<string>? favourites, LibraryOrganization? organization)
     {
         this.projectsOnly = projectsOnly;
         favouritesOnly = favourites is not null;
@@ -51,6 +60,12 @@ public sealed class LibrarySearchSnapshot : IDisposable
                 command.CommandText += $" AND instr(m.search,$q{i})>0";
                 command.Parameters.AddWithValue("$q" + i, words[i]);
             }
+            if (organization?.DifficultyPaths is { } paths)
+            {
+                var membership = new HashSet<string>(paths, WorkspaceSynchronization.Paths);
+                db.CreateFunction<string?, bool>("in_osu_collection", path => path is not null && membership.Contains(path));
+                command.CommandText += " AND m.root=$r AND in_osu_collection(m.path)";
+            }
             if (favouritesOnly) command.CommandText += $" AND is_favourite(json_extract(m.data,'$.Directory'),{project})";
             if (projectsOnly) command.CommandText += $" AND {project} IS NOT NULL";
             command.ExecuteNonQuery();
@@ -63,32 +78,123 @@ public sealed class LibrarySearchSnapshot : IDisposable
             if (projectsOnly || favouritesOnly)
             {
                 db.CreateFunction<string, bool>("matches_name", name => words.All(word => LibraryDatabase.Normalize(name).Contains(word)));
-                command.CommandText = "INSERT INTO sets(groupKey,firstPath,title,project,count) SELECT path,path,name,path,1 FROM projects p WHERE NOT EXISTS(SELECT 1 FROM sets s WHERE s.groupKey=p.path) AND matches_name(name) ORDER BY name COLLATE NOCASE,path";
-                if (favouritesOnly) command.CommandText = command.CommandText.Replace("ORDER BY name", "AND is_favourite(NULL,p.path) ORDER BY name");
+                command.CommandText = "INSERT INTO sets(groupKey,firstPath,title,project,count) SELECT p.path,p.path,coalesce(json_extract(pm.data,'$.Title'),p.name),p.path,1 FROM projects p LEFT JOIN project_metadata pm ON pm.project=p.path WHERE NOT EXISTS(SELECT 1 FROM sets s WHERE s.groupKey=p.path) AND matches_name(name) ORDER BY p.name COLLATE NOCASE,p.path";
+                if (favouritesOnly) command.CommandText = command.CommandText.Replace("ORDER BY p.name", "AND is_favourite(NULL,p.path) ORDER BY p.name");
                 command.ExecuteNonQuery();
             }
             command.Parameters.Clear(); command.CommandText = "SELECT count(*) FROM sets";
-            Count = Convert.ToInt32(command.ExecuteScalar());
+            SetCount = Convert.ToInt32(command.ExecuteScalar());
+            BuildListing(organization ?? new());
+            ReadLayout();
         }
         catch { db.Dispose(); throw; }
     }
+    public void Reorganize(LibraryOrganization options)
+    {
+        BuildListing(options);
+        ReadLayout();
+    }
+    private void ReadLayout()
+    {
+        using var command = db.CreateCommand();
+        command.CommandText = "SELECT count(*) FROM listing"; Count = Convert.ToInt32(command.ExecuteScalar());
+        command.CommandText = "SELECT coalesce(min(position)-1,-1) FROM listing WHERE header IS NULL";
+        FirstMapIndex = Convert.ToInt32(command.ExecuteScalar());
+        command.CommandText = "SELECT position-1 FROM listing WHERE header IS NOT NULL ORDER BY position";
+        var headers = new List<int>();
+        using (var reader = command.ExecuteReader()) while (reader.Read()) headers.Add(reader.GetInt32(0));
+        HeaderIndices = headers;
+    }
+    private void BuildListing(LibraryOrganization options)
+    {
+        var visits = options.Visits ?? new Dictionary<string, long>();
+        var collapsed = new HashSet<string>(options.Collapsed ?? []);
+        var expanded = new HashSet<string>(options.Expanded ?? []);
+        var today = (options.Today ?? DateTime.Today).Date;
+        db.CreateFunction<string?, string?, long>("visited", (directory, project) => Math.Max(
+            directory is null ? 0 : visits.GetValueOrDefault(directory), project is null ? 0 : visits.GetValueOrDefault(project)));
+        db.CreateFunction<string?, string>("initial", value =>
+        {
+            if (string.IsNullOrWhiteSpace(value)) return "unknown";
+            char first = LibraryDatabase.Normalize(value.Trim())[0];
+            return char.IsAsciiDigit(first) ? "0–9" : char.IsAsciiLetter(first) ? char.ToUpperInvariant(first).ToString() : "#";
+        });
+        db.CreateFunction<long, string>("date_group", ticks =>
+        {
+            if (ticks <= 0 || ticks > DateTime.MaxValue.Ticks) return "unknown";
+            int days = (today - new DateTime(ticks, DateTimeKind.Utc).ToLocalTime().Date).Days;
+            return days <= 0 ? "0" : days == 1 ? "1" : days < 7 ? "2" : days < 30 ? "3" : "4";
+        });
+        db.CreateFunction<string, bool>("is_collapsed", key => options.CollapseByDefault ? !expanded.Contains(key) : collapsed.Contains(key));
+        using var command = db.CreateCommand();
+        if (!orderingPrepared)
+        {
+        command.CommandText = "CREATE TEMP TABLE ordered AS SELECT s.*,coalesce(json_extract(coalesce(m.data,pm.data),'$.Artist'),'') artist, "
+            + "coalesce(json_extract(coalesce(m.data,pm.data),'$.Creator'),'') creator,json_extract(coalesce(m.data,pm.data),'$.Mode') mode, "
+            + "coalesce(sd.ticks,(SELECT min(stamp) FROM maps d WHERE json_extract(d.data,'$.Directory') COLLATE NOCASE=json_extract(m.data,'$.Directory')),json_extract(pm.data,'$.DateAddedUtcTicks'),0) added, "
+            + "visited(json_extract(m.data,'$.Directory'),s.project) visit FROM sets s LEFT JOIN maps m ON m.path=s.firstPath LEFT JOIN project_metadata pm ON pm.project=s.project LEFT JOIN source_dates sd ON sd.directory=json_extract(m.data,'$.Directory');";
+        command.ExecuteNonQuery();
+        }
+        string sort = options.Sort switch { LibraryOrder.Artist => "artist", LibraryOrder.Creator => "creator", LibraryOrder.Mode => "mode", LibraryOrder.DateAdded => "added", LibraryOrder.RecentVisited => "visit", _ => "title" };
+        string grouping = options.Group switch
+        {
+            LibraryGrouping.Title => "initial(title)", LibraryGrouping.Artist => "initial(artist)", LibraryGrouping.Creator => "initial(creator)",
+            LibraryGrouping.Mode => "CASE mode WHEN 0 THEN 'standard' WHEN 2 THEN 'catch' ELSE 'unknown' END",
+            LibraryGrouping.DateAdded => "date_group(added)", LibraryGrouping.RecentVisited => "date_group(visit)", _ => "''"
+        };
+        string direction = options.Descending ? " DESC" : " ASC";
+        command.CommandText = (orderingPrepared ? "DROP TABLE listing; " : "ALTER TABLE ordered ADD COLUMN bucket TEXT; ") + "UPDATE ordered SET bucket=" + grouping + "; "
+            + "CREATE TEMP TABLE listing(position INTEGER PRIMARY KEY,groupKey TEXT,firstPath TEXT,title TEXT,project TEXT,count INTEGER,header TEXT);";
+        command.ExecuteNonQuery();
+        string fields = "groupKey,firstPath,title,project,count";
+        if (options.Group == LibraryGrouping.None)
+            command.CommandText = $"INSERT INTO listing({fields},header) SELECT {fields},NULL FROM ordered ORDER BY {sort} IS NULL,{sort} COLLATE NOCASE{direction},title COLLATE NOCASE,groupKey";
+        else
+            command.CommandText = $"INSERT INTO listing({fields},header) SELECT groupKey,firstPath,title,project,count,header FROM ("
+                + "SELECT '@group:'||bucket groupKey,'' firstPath,'' title,NULL project,count(*) count,bucket header,bucket,0 kind,NULL sortValue FROM ordered GROUP BY bucket "
+                + $"UNION ALL SELECT {fields},NULL header,bucket,1 kind,{sort} sortValue FROM ordered WHERE NOT is_collapsed(bucket)) "
+                + $"ORDER BY bucket='unknown',bucket COLLATE NOCASE,kind,sortValue IS NULL,sortValue COLLATE NOCASE{direction},title COLLATE NOCASE,groupKey";
+        command.ExecuteNonQuery();
+        command.CommandText = "CREATE UNIQUE INDEX temp.listing_key ON listing(groupKey)"; command.ExecuteNonQuery();
+        orderingPrepared = true;
+    }
+
     public int FindIndex(string? key)
     {
         if (key is null) return -1;
         using var command = db.CreateCommand();
-        command.CommandText = "SELECT position-1 FROM sets WHERE groupKey=$k"; command.Parameters.AddWithValue("$k", key);
+        command.CommandText = "SELECT position-1 FROM listing WHERE groupKey=$k"; command.Parameters.AddWithValue("$k", key);
         return command.ExecuteScalar() is long index ? (int)index : -1;
     }
     public IReadOnlyList<LibrarySetRow> Page(int start, int count = 64)
     {
         using var attachment = Attach();
         using var command = db.CreateCommand();
-        command.CommandText = "SELECT s.position-1,s.groupKey,s.firstPath,s.title,s.project,s.count,m.data FROM sets s LEFT JOIN maps m ON m.path=s.firstPath WHERE s.position BETWEEN $a AND $b ORDER BY s.position";
+        command.CommandText = "SELECT s.position-1,s.groupKey,s.firstPath,s.title,s.project,s.count,coalesce(m.data,pm.data),s.header FROM listing s LEFT JOIN maps m ON m.path=s.firstPath LEFT JOIN project_metadata pm ON pm.project=s.project WHERE s.position BETWEEN $a AND $b ORDER BY s.position";
         command.Parameters.AddWithValue("$a", start + 1); command.Parameters.AddWithValue("$b", start + Math.Clamp(count, 1, 128));
+        return ReadRows(command);
+    }
+    public LibrarySetRow? FindSelection(string? key)
+    {
+        if (key is null) return null;
+        using var attachment = Attach();
+        using var command = db.CreateCommand();
+        command.CommandText = "SELECT -1,s.groupKey,s.firstPath,s.title,s.project,s.count,coalesce(m.data,pm.data),NULL FROM sets s LEFT JOIN maps m ON m.path=s.firstPath LEFT JOIN project_metadata pm ON pm.project=s.project WHERE s.groupKey=$key";
+        command.Parameters.AddWithValue("$key", key);
+        return ReadRows(command).FirstOrDefault();
+    }
+    private IReadOnlyList<LibrarySetRow> ReadRows(SqliteCommand command)
+    {
         var rows = new List<LibrarySetRow>();
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
+            if (!reader.IsDBNull(7))
+            {
+                var empty = new LibraryMap("", "", "", "", "", "", "", "", "", "", "", "");
+                rows.Add(new(reader.GetInt32(0), reader.GetString(1), empty, reader.GetInt32(5), Header: reader.GetString(7)));
+                continue;
+            }
             string? project = reader.IsDBNull(4) ? null : reader.GetString(4);
             var map = reader.IsDBNull(6) ? new LibraryMap(reader.GetString(2), reader.GetString(1), reader.GetString(3), "", "", "", "", "", "", "", "", "", project)
                 : JsonSerializer.Deserialize<LibraryMap>(reader.GetString(6))! with { ProjectPath = project };
@@ -224,8 +330,13 @@ public sealed class LibrarySearchSnapshot : IDisposable
     }
     public void Dispose()
     {
-        discoveryCancellation.Cancel(); db.Dispose();
-        _ = Task.WhenAll(discoveries.Values).ContinueWith(t =>
-        { _ = t.Exception; discoveryQueue.Dispose(); discoveryCancellation.Dispose(); }, TaskScheduler.Default);
+        lock (lifetimeGate)
+        {
+            if (disposed) return;
+            disposed = true;
+            discoveryCancellation.Cancel(); db.Dispose();
+            _ = Task.WhenAll(discoveries.Values).ContinueWith(t =>
+            { _ = t.Exception; discoveryQueue.Dispose(); discoveryCancellation.Dispose(); }, TaskScheduler.Default);
+        }
     }
 }

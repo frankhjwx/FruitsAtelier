@@ -38,6 +38,7 @@ internal sealed partial class MacWindow : Window
             editor.Refresh();
         };
         View.RequestSetupLink = url => RunFile(() => { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("/usr/bin/open") { ArgumentList = { url } }); return Task.CompletedTask; });
+        View.RequestVisitOsuWeb = View.RequestSetupLink;
         View.RequestAudioPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
         View.RequestViewPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
         ConfigureOsuLinks();

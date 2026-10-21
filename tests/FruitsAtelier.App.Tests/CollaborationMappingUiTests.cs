@@ -14,6 +14,7 @@ internal static class CollaborationMappingUiTests
                 L.SetLanguage(locale);
                 var a = Difficulty("A", 250); var b = Difficulty("B", 1250);
                 var c = Difficulty("C", 2200); var d = Difficulty("D", 2400);
+                foreach (var difficulty in new[] { a, b, c, d }) difficulty.Document.TimingPoints[0].TimeMs = .75;
                 c.Document.CollaborationReferences = [new(Guid.NewGuid(), a.Id, 0, 1000), new(Guid.NewGuid(), b.Id, 1000, 2000)];
                 d.Document.CollaborationReferences = [new(Guid.NewGuid(), a.Id, 0, 1000)];
                 var project = new BeatmapProject { Name = "Collaboration", Difficulties = [a, b, c, d] };
@@ -52,12 +53,17 @@ internal static class CollaborationMappingUiTests
                 while (ui.View.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { ui.Paint(); Thread.Sleep(1); }
                 Check(!ui.View.CollaborationBusy && ui.View.Document.Fruits.Count == 3, "Sources merged and outside target object retained");
                 Check(!ui.View.CollaborationReportVisible, "No exclusions leave the report closed");
+                Check(ui.View.Document.TimingPoints.Count == 1 && ui.View.Document.TimingPoints[0].TimeMs == .75,
+                    "Synchronization retains the original fractional red point without section boundary lines");
+                Check(Math.Abs(TimingMap.Snap(ui.View.Document, 1250, 4) - 1250.75) < 1e-7, "Placement stays on the target beat grid");
                 Check(ui.View.PlayheadMs == playhead && ui.View.ViewStartMs == viewStart && ui.View.AudioReady, "Sync preserves transport and viewport");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.Fruits.Count == 1, "Synchronization undo");
                 ui.Key('Y', ctrl: true); Check(ui.View.Document.Fruits.Count == 3, "Synchronization redo");
                 var loaded = ProjectSerializer.ReadProject(ProjectSerializer.Serialize(ui.View.CaptureProject()));
                 ui.View.LoadProject(loaded); ui.View.SwitchDifficulty(2); ui.View.ShowCollaborationPanel(); ui.Paint();
                 Check(ui.View.Document.CollaborationReferences!.Count == 2, "Restart retains references");
+                Check(ui.View.Document.TimingPoints.Count == 1 && ui.View.Document.TimingPoints[0].TimeMs == .75,
+                    "Restart retains fractional timing without extra red or green points");
                 ui.ClickText(L.Get("collab.add")); Check(ui.View.Document.CollaborationReferences!.Count == 3, "Multiple references can be added");
                 Check(ui.View.Document.CollaborationReferences![2].DifficultyId == Guid.Empty, "New references start unassigned");
                 Check(ui.View.SwitchDifficulty(0), "Source navigation"); ui.Paint();
@@ -66,6 +72,7 @@ internal static class CollaborationMappingUiTests
                 BookmarkSections();
                 ExclusionReport();
                 ObjectSoundsOption();
+                AimodAfterSync();
             }
         }
         finally { L.SetLanguage(language); }
@@ -74,6 +81,23 @@ internal static class CollaborationMappingUiTests
         foreach (string text in new[] { "84771.521739", "1e3", "-1", "00:60:000", "00:00:1000", "2147483648" })
             Check(!FruitsAtelier.App.Editor.EditorView.TryParseCollaborationTime(text, out _), "Invalid timestamp " + text);
         ResourceUndo();
+    }
+
+    private static void AimodAfterSync()
+    {
+        var source = Difficulty("Source", 500); var target = Difficulty("Target", 2200);
+        target.Document.TimingPoints.Add(new() { TimeMs = 2000, BeatLengthMs = 500, SourceOrder = int.MinValue });
+        target.Document.CollaborationReferences = [new(Guid.NewGuid(), source.Id, 0, 2000)];
+        var ui = new Ui(); ui.View.LoadProject(new() { Name = "refresh report", Difficulties = [source, target] });
+        ui.View.SwitchDifficulty(1); ui.View.ShowAimod(); ui.Paint();
+        Check(ui.View.AimodIssues.Any(i => i.Code == "conflictTiming"), "AiMod initially reports the target endpoint timing conflict");
+        ui.View.ShowCollaborationPanel(); ui.Paint();
+        ui.View.SynchronizeCollaboration();
+        var watch = Stopwatch.StartNew();
+        while (ui.View.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { ui.Paint(); Thread.Sleep(1); }
+        Check(!ui.View.CollaborationBusy && !ui.View.AimodIssues.Any(i => i.Code == "conflictTiming"),
+            "Successful synchronization refreshes the existing AiMod report automatically");
+        Check(ui.View.CollaborationPanelVisible && !ui.View.AimodVisible, "Automatic AiMod refresh preserves the active dock tab");
     }
 
     private static void BookmarkSections()

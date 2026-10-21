@@ -46,6 +46,9 @@ Legacy sliders can retain detached `RandomizationSource` geometry and a fitted
 repeated strength or seed changes do not compound previous effects. Materialized
 geometry and emitted timing are validated through NM and HR export/read-back
 before replacement. A failure retains the original objects and reports its reason.
+Confirmed compensated imports retain original Legacy geometry for parents whose
+playback cannot be recovered as a baseline. Other parents retain their recovered
+baselines, and source confirmation completes for the difficulty.
 Legacy sliders authored or manually edited in the osu! canvas persist `PreserveNativeGeometry`.
 Their original two-dimensional controls and authored SV remain separate from the
 materialized droplet path and processed SV, including after reopening. Failed
@@ -61,7 +64,8 @@ and slider length.
 
 Collaboration references use schema 33 (single difficulty) or 34 (multiple
 difficulties). `MapDocument.CollaborationReferences` stores reference IDs, source
-difficulty IDs and whole-millisecond half-open intervals. An unassigned source uses
+difficulty IDs and whole-millisecond intervals. Intervals include Start and exclude
+End, except the final section in time also includes End. An unassigned source uses
 `Guid.Empty`; documents containing unassigned sections use schema 35 (single) or
 36 (multiple), while fully assigned references retain schema 33/34. All sections
 participate in overlap validation; only assigned sections synchronize. An empty collection is
@@ -161,7 +165,16 @@ EditorHistory uses deep copies for transactions, undo, and dirty comparisons, pr
 
 Object selection stores complete parent IDs only. Multiple children of the same slider are deduplicated by SourceId. Anchor selection in Select is restricted to the active track; Fruit mode places objects immediately; Select mode selects complete objects and can enter control editing for a selected slider. Undo/redo preserves the current tool and selection of unchanged parents, comparing authored object content by ID across history snapshots. Changed or removed parents lose their selection, and restored parents are not automatically selected. An unavailable history step leaves selection unchanged. Box selection separately snapshots the starting selection. Esc or lost capture restores it without creating content history.
 
-The internal clipboard stores deep snapshots of selected complete parent objects. Paste applies `new time = playhead + original time − earliest selected start`, preserving relative times, X, geometry, relative handles, SpanCount, and sample fields, while assigning new parent/node IDs. It extends document duration as needed and rolls back the entire batch if any object is out of bounds. Copy creates no undo entry; each batch cut, delete, or paste is one transaction. Clipboard snapshots and unselected objects stay unchanged; the system clipboard is not used.
+The internal clipboard stores deep snapshots of selected complete parent objects. Paste applies `new time = playhead + original time − earliest selected start`, preserving relative times, X, geometry, relative handles, SpanCount, and sample fields, while assigning new parent/node IDs. It extends document duration as needed and rolls back the entire batch if any object is out of bounds. Copy creates no undo entry; each batch cut, delete, or paste is one transaction. Clipboard snapshots and unselected objects stay unchanged; the system clipboard carries only the timestamp reference, not native object data.
+
+The clipboard belongs to the open project session and can paste across its
+difficulties. It retains the source difficulty ID and timing context for Legacy
+sliders without retaining that difficulty's history. Cross-difficulty paste
+expresses Legacy SV in the target's stored base and BPM so path duration stays
+unchanged. Target settings, including SliderTickRate, govern derived events.
+Slider-bearing cross-difficulty batches validate export through the editor-owned
+write cache at the paste transaction boundary; incompatible SV rolls back the
+batch. Document replacement clears the clipboard.
 
 Interface language and resources are not serialized in `.catchproj`. Built-in default names come from resources when creating objects. Existing Name values, imported metadata, and raw lines remain user data; switching languages does not rename them. Language changes invalidate conversion diagnostic caches without changing geometry or document history.
 

@@ -3,6 +3,7 @@ using System.Text.Json;
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.Core;
 using Microsoft.Data.Sqlite;
+using L = FruitsAtelier.Localization.Strings;
 
 internal static class LibraryScaleTests
 {
@@ -41,7 +42,20 @@ internal static class LibraryScaleTests
             Check(canvas.Texts.Any(text => text.Value == "Artist // Mapper"), "library displays mapper beside artist");
             view.PointerDown(647, 577, 0, false, false); view.PointerUp(647, 577, 0);
             WaitFor(() => canvas.Texts.Any(text => text.Value == "Song 139"));
-            Check(view.LibraryCachedRows <= 512, "bounded UI pages");
+            ClickText(L.Get("library.groupBy", L.Get("library.group.None")));
+            ClickText(L.Get("library.group.Creator"));
+            WaitFor(() => canvas.Texts.Any(t => t.Value == L.Get("library.groupCount", "M", 140)));
+            Check(!canvas.Texts.Any(t => t.X == 314 && t.Value.StartsWith("Song ")), "large groups start collapsed");
+            ClickText(L.Get("library.groupCount", "M", 140));
+            WaitFor(() => canvas.Texts.Any(t => t.X == 314 && t.Value == "Song 000"));
+            view.PointerDown(647, 577, 0, false, false); view.PointerUp(647, 577, 0);
+            WaitFor(() => canvas.Texts.Any(t => t.X == 314 && t.Value == "Song 139"));
+            Check(view.LibraryCachedRows <= 512, "bounded UI pages with compact group headers");
+            void ClickText(string value)
+            {
+                var label = canvas.Texts.Last(t => t.Value == value);
+                view.PointerDown(label.X + 2, label.Y + 2, 0, false, false); view.PointerUp(label.X + 2, label.Y + 2, 0); Paint();
+            }
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
@@ -80,6 +94,26 @@ internal static class LibraryScaleTests
         }
         Check(snapshot.Page(499999).Single().Map.Title == "Song 499999", "last page");
         using (var filtered = database.SearchSnapshot("song 499999")) Check(filtered.Count == 1, "filtered result");
+        Console.WriteLine("Checking grouped and collapsed indexes...");
+        timer.Restart();
+        using (var grouped = database.SearchSnapshot("", organization: new(Group: LibraryGrouping.Creator, Sort: LibraryOrder.Artist)))
+            Check(grouped.SetCount == 500000 && grouped.Count == 500001 && grouped.Page(500000).Single().Map.Title == "Song 499999", "grouped large-library paging");
+        double groupedIndexMs = timer.Elapsed.TotalMilliseconds;
+        timer.Restart();
+        using (var collapsed = database.SearchSnapshot("", organization: new(Group: LibraryGrouping.Creator, Collapsed: new[] { "M" })))
+            Check(collapsed.SetCount == 500000 && collapsed.Count == 1 && collapsed.Page(0).Single().Count == 500000, "collapsed large-library group count");
+        double collapsedIndexMs = timer.Elapsed.TotalMilliseconds;
+        Console.WriteLine("Checking cached reorder and compact group offsets...");
+        timer.Restart(); snapshot.Reorganize(new(Group: LibraryGrouping.Creator, CollapseByDefault: true));
+        double cachedCollapseMs = timer.Elapsed.TotalMilliseconds;
+        Check(snapshot.Count == 1 && snapshot.SetCount == 500000, "cached collapse retains the filtered set");
+        timer.Restart(); snapshot.Reorganize(new(Group: LibraryGrouping.Creator, Expanded: new[] { "M" }, CollapseByDefault: true));
+        double cachedExpandMs = timer.Elapsed.TotalMilliseconds;
+        Check(snapshot.Count == 500001 && snapshot.Page(500000).Single().Map.Title == "Song 499999", "cached expansion pages final member");
+        timer.Restart(); snapshot.Reorganize(new(Sort: LibraryOrder.Title, Descending: true));
+        double cachedSortMs = timer.Elapsed.TotalMilliseconds;
+        Check(snapshot.Page(0)[0].Map.Title == "Song 499999", "cached sorting changes order");
+        snapshot.Reorganize(new());
         Console.WriteLine($"Index: {indexMs:F1} ms; checking UI scrolling and bounded cache...");
         var view = new EditorView(loadDemo: false);
         var canvas = new RecordingCanvas();
@@ -108,7 +142,7 @@ internal static class LibraryScaleTests
         Check(peakRows <= 512, "bounded metadata cache");
         Check(canvas.Texts.Any(text => text.Value == "Song 499999"), "scrollbar reaches last set");
         timings.Sort(); frames.Sort();
-        var report = new { maps = 500000, sets = snapshot.Count, indexMs, pageMedianMs = timings[timings.Count / 2],
+        var report = new { maps = 500000, sets = snapshot.Count, indexMs, groupedIndexMs, collapsedIndexMs, cachedCollapseMs, cachedExpandMs, cachedSortMs, pageMedianMs = timings[timings.Count / 2],
             pageP95Ms = timings[(int)(timings.Count * .95)], uiMedianMs = frames[frames.Count / 2],
             uiP95Ms = frames[(int)(frames.Count * .95)], uiMaxMs = frames[^1], peakCachedRows = peakRows,
             uiAllocatedBytesPerFrame = bytesPerFrame, managedHeapBytes = GC.GetTotalMemory(true),

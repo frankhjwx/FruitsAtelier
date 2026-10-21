@@ -174,7 +174,7 @@ Press **F12** to copy the current editor window content to the system clipboard 
 | J / K | Move selection back / forward one beat subdivision. |
 | Esc | Cancel the current action; otherwise return to Library. |
 
-Object paste works within the same difficulty session and aligns the earliest selected start with the playhead. Copy also places an osu! timestamp reference on the system clipboard.
+Object paste works across difficulties in the current mapset and aligns the earliest selected start with the playhead. Target difficulty settings remain in effect; unsupported slider SV rejects the entire paste. Copy also places an osu! timestamp reference on the system clipboard. Opening or reopening a project clears the internal object clipboard.
 
 ### Playback and navigation
 

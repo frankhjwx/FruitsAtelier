@@ -13,9 +13,17 @@ public sealed partial class EditorView
     {
         if (!PrepareFileOperation()) return;
         newDifficultyFaOnly = false;
+        newDifficultyUseSource = LibrarySettings.NewDifficultyUseSource; newDifficultyTemplateTab = false;
+        newDifficultySourcesOpen = false;
+        newDifficultySource = activeDifficulty; newDifficultyTemplate = 0;
+        newDifficultyName = L.Get("project.defaultDifficulty", difficulties.Count + 1);
+        SelectInput("newDiff:0", newDifficultyName);
         ShowDiscardConfirmation(answer =>
         {
-            if (answer != 6 || !AddDifficulty(faOnly: newDifficultyFaOnly)) return;
+            if (answer != 6 || !CanCreateDifficulty || !AddDifficulty(faOnly: newDifficultyFaOnly,
+                copyFrom: newDifficultyUseSource && !newDifficultyTemplateTab ? newDifficultySource : null,
+                template: newDifficultyUseSource && newDifficultyTemplateTab ? LibrarySettings.MapTemplates[newDifficultyTemplate] : null,
+                difficultyName: newDifficultyName)) return;
             if (!newDifficultyFaOnly && !string.IsNullOrWhiteSpace(LibrarySettings.Songs)) ShowWorkspaceExport();
         });
         addDifficultyConfirmation = true;
@@ -78,26 +86,17 @@ public sealed partial class EditorView
 
     private void DrawDifficultySettingsConfirmation(ICanvas c)
     {
-        float w = Math.Min(660, width - 32), h = faOnlyConfirmation ? 340 : 260;
+        if (addDifficultyConfirmation) { DrawNewDifficulty(c); return; }
+        float w = Math.Min(660, width - 32), h = 340;
         float x = (width - w) / 2, y = (height - h) / 2;
         c.Fill(new(0, 0, width, height), Background, opacity: .7f);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
-        c.Text(L.Get(faOnlyConfirmation ? "song.faOnlyPrompt" : "project.add"), x + 22, y + 22, 18, Foreground, w - 44, true);
-        var lines = WrapSyncText(c, L.Get(faOnlyConfirmation ? "song.faOnlyDeleteHelp" : "song.newDifficultySyncHelp"), w - 44);
+        c.Text(L.Get("song.faOnlyPrompt"), x + 22, y + 22, 18, Foreground, w - 44, true);
+        var lines = WrapSyncText(c, L.Get("song.faOnlyDeleteHelp"), w - 44);
         for (int i = 0; i < lines.Length; i++) c.Text(lines[i].Text, x + 22, y + 60 + i * 22, 13, Muted, w - 44);
-        if (faOnlyConfirmation)
-        {
-            c.Text(faOnlyPromptPath, x + 22, y + 136, 11, Muted, w - 44);
-            Button(c, new(x + 22, y + h - 158, w - 44, 36), L.Get("song.faOnlyKeepFile"), () => AnswerDiscard(6), true);
-            Button(c, new(x + 22, y + h - 112, w - 44, 36), L.Get("song.faOnlyDeleteFile"), () => AnswerDiscard(7));
-            Button(c, new(x + 22, y + h - 66, w - 44, 36), L.Get("mac.cancel"), () => AnswerDiscard(2));
-        }
-        else
-        {
-            ToggleSwitch(c, new(x + 22, y + 124, w - 44, 38), L.Get("song.faOnly"), newDifficultyFaOnly,
-                () => newDifficultyFaOnly = !newDifficultyFaOnly);
-            Button(c, new(x + 22, y + h - 66, (w - 54) / 2, 36), L.Get("mac.cancel"), () => AnswerDiscard(2));
-            Button(c, new(x + 32 + (w - 54) / 2, y + h - 66, (w - 54) / 2, 36), L.Get("project.add"), () => AnswerDiscard(6), true);
-        }
+        c.Text(faOnlyPromptPath, x + 22, y + 136, 11, Muted, w - 44);
+        Button(c, new(x + 22, y + h - 158, w - 44, 36), L.Get("song.faOnlyKeepFile"), () => AnswerDiscard(6), true);
+        Button(c, new(x + 22, y + h - 112, w - 44, 36), L.Get("song.faOnlyDeleteFile"), () => AnswerDiscard(7));
+        Button(c, new(x + 22, y + h - 66, w - 44, 36), L.Get("mac.cancel"), () => AnswerDiscard(2));
     }
 }

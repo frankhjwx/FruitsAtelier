@@ -36,7 +36,7 @@ public sealed partial class EditorView
     private LibraryBrowser? libraryBrowser;
     private int LibrarySetCount => libraryBrowser?.Count ?? 0;
     public int LibraryCachedRows => libraryBrowser?.CachedRows ?? 0;
-    public int LibrarySetTotal => LibrarySetCount;
+    public int LibrarySetTotal => libraryBrowser?.SetCount ?? 0;
     private readonly List<(Rect Bounds, LibraryMap Map)> libraryCards = [];
     private Dictionary<string, double?> libraryRatings = [];
     private long libraryRatingRevision;
@@ -115,8 +115,8 @@ public sealed partial class EditorView
         if (WorkspaceSession is { } session)
         {
             string? source = session.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id)?.Source;
-            if (source is null && !libraryProjectsOnly && !libraryFavouritesOnly) SwitchLibraryCategory(true);
-            string? current = libraryProjectsOnly || libraryFavouritesOnly ? session.Directory : source is null ? null : Path.GetDirectoryName(source);
+            if (source is null && !LibraryUsesProjects) SwitchLibraryCategory(true);
+            string? current = LibraryUsesProjects ? session.Directory : source is null ? null : Path.GetDirectoryName(source);
             if (current is not null)
             {
                 if (libraryQuery.Length > 0 && libraryBrowser?.Selected?.Key != current)
@@ -160,6 +160,7 @@ public sealed partial class EditorView
     }
     public void CloseLibrary()
     {
+        CloseCollectionDialog();
         if (LibraryVisible && !exportPage) { RememberLibraryPosition(); SaveLibraryMemory(); }
         LibraryVisible = !HasEditorProject; exportPage = resourcePage = false; librarySettingsOpen = false; updatesPage = false;
         libraryField = -1; libraryPointerActive = false; contextItems.Clear(); languageMenuOpen = false;
@@ -352,6 +353,7 @@ public sealed partial class EditorView
     private void PumpLibrary()
     {
         PumpStorage();
+        PumpOsuCollections();
         PumpCollaboration();
         PumpVersionHistory();
         PumpFileMonitoring();
@@ -380,14 +382,14 @@ public sealed partial class EditorView
             try
             {
                 var result = searchTask.GetAwaiter().GetResult();
-                if (runningSearchQuery != libraryQuery || runningSearchProjects != libraryProjectsOnly || runningSearchFavourites != libraryFavouritesOnly
+                if (runningOrganizationKey != LibrarySearchKey || runningSearchQuery != libraryQuery || runningSearchProjects != libraryProjectsOnly || runningSearchFavourites != libraryFavouritesOnly
                     || runningFavouriteRevision != libraryFavouriteRevision
                     || runningSearchSelection != selectedLibraryGroup || runningSearchScroll != libraryScroll)
                 { result.Retire(); searchTask = null; QueueLibrarySearch(); return; }
                 float fraction = libraryScroll - (int)libraryScroll;
                 libraryBrowser?.Retire(); libraryBrowser = result;
                 libraryBrowserQuery = runningSearchQuery;
-                if (result.TopIndex >= 0 && !libraryPointerActive) libraryScroll = result.TopIndex + fraction;
+                if (result.TopIndex >= 0 && !libraryPointerActive) libraryScroll = result.OffsetOf(result.TopIndex) + fraction;
                 if (selectedLibraryGroup is null || scanTask is not { IsCompleted: false }) selectedLibraryGroup = result.Selected?.Key;
                 libraryResultsReady = true;
                 if (libraryResultsReady) RememberLibraryPosition();
@@ -400,17 +402,21 @@ public sealed partial class EditorView
             var db = libraryDatabase; string query = libraryQuery; bool projects = libraryProjectsOnly;
             runningSearchQuery = query; runningSearchProjects = projects;
             runningSearchFavourites = libraryFavouritesOnly; runningFavouriteRevision = libraryFavouriteRevision;
-            string[]? favourites = libraryFavouritesOnly ? libraryMemory.FavouriteKeys.ToArray() : null;
+            var favourites = LibraryFilterKeys;
+            var organization = CurrentLibraryOrganization;
+            runningOrganizationKey = LibrarySearchKey;
             searchTaskQuery = LibrarySearchKey;
             bool reindex = libraryProjectsNeedReindex;
             libraryProjectsNeedReindex = false;
-            string? selected = selectedLibraryGroup, top = libraryResultsReady ? libraryBrowser?.Get((int)libraryScroll)?.Key : null;
-            int offset = (int)libraryScroll;
+            string? selected = selectedLibraryGroup, top = libraryResultsReady ? libraryBrowser?.Get(libraryBrowser.IndexAtOffset(libraryScroll))?.Key : null;
+            float offset = libraryScroll;
             runningSearchSelection = selected; runningSearchScroll = libraryScroll;
-            searchTask = Task.Run(() =>
+            if (!reindex && libraryBrowser is { } reusable && reusable.CanReorder(db, query, projects, favourites, organization))
+                searchTask = reusable.Reorder(organization, selected, top, offset);
+            else searchTask = Task.Run(() =>
             {
                 if (reindex) db.ReindexProjects();
-                return LibraryBrowser.Create(db, query, projects, selected, top, offset, favourites);
+                return LibraryBrowser.Create(db, query, projects, selected, top, offset, favourites, organization);
             });
         }
         if (ratingTask is { IsCompleted: true })
@@ -428,7 +434,7 @@ public sealed partial class EditorView
     }
     private void OpenLibraryCard(float x, float y)
     {
-        if (librarySettingsOpen || exportPage || resourcePage) return;
+        if (librarySettingsOpen || exportPage || resourcePage || collectionDialogOpen || libraryWebButtons.Any(b => b.Bounds.Contains(x, y))) return;
         foreach (var card in libraryCards)
         {
             if (!card.Bounds.Contains(x, y)) continue;
@@ -438,12 +444,13 @@ public sealed partial class EditorView
     }
     private void DrawLibrary(ICanvas c)
     {
-        libraryCards.Clear();
+        libraryCards.Clear(); libraryHeaders.Clear(); libraryWebButtons.Clear();
         libraryScrollTrack = libraryDiffTrack = default;
         c.Fill(new(0, 0, width, height), Background);
         DrawHeader(c);
         c.Text(L.Get(resourcePage ? "library.referenceErrors" : exportPage ? "library.export" : "library.title"), 109, 11, 13, Foreground, width - 535, true);
         Button(c, new(HeaderNavigationBounds.X - 116, 6, 110, 28), L.Get("library.settings"), OpenSettings);
+        Button(c, new(HeaderNavigationBounds.X - 262, 6, 140, 28), L.Get("difficulty.templateTab"), OpenMapTemplates);
         if (HasEditorProject) Button(c, HeaderNavigationBounds, L.Get("library.editor"), CloseLibrary);
         if (updatesPage) { DrawUpdates(c); return; }
         if (resourcePage)
@@ -465,9 +472,10 @@ public sealed partial class EditorView
             c.Unclip(); return;
         }
         c.Fill(new(0, HeaderHeight, 190, height - HeaderHeight), Panel);
-        Button(c, new(16, 88, 158, 36), L.Get("library.all"), () => SwitchLibraryCategory(false), !libraryProjectsOnly && !libraryFavouritesOnly);
+        Button(c, new(16, 88, 158, 36), L.Get("library.all"), () => SwitchLibraryCategory(false), !LibraryUsesProjects && libraryCollection is null);
         Button(c, new(16, 134, 158, 36), L.Get("library.projects"), () => SwitchLibraryCategory(true), libraryProjectsOnly && !libraryFavouritesOnly);
         Button(c, new(16, 180, 158, 36), L.Get("library.favourites"), () => SwitchLibraryCategory(false, true), libraryFavouritesOnly);
+        DrawLibraryCollections(c);
         var noticeLines = libraryNotice.Split('\n');
         for (int i = 0; i < noticeLines.Length; i++) c.Text(noticeLines[i], 16, height - 96 + i * 19, 12, Muted, 158);
         if (SkinName is { } skinName) c.Text(L.Get("skin.selector", skinName), 16, height - 126, 12, Muted, 158);
@@ -479,27 +487,39 @@ public sealed partial class EditorView
             c.Text(L.Get("library.search"), 226, 95, 14, Muted, queryRect.Width - 24);
         hits.Add(new(queryRect, () => { libraryField = 2; FocusInput("library:2", libraryQuery, mouseX); }, true));
         bool initialLoading = libraryBrowser is null && (!libraryResultsReady || LibraryLoading);
-        c.Text(initialLoading ? L.Get("library.scanning") : L.Get("library.results", LibrarySetCount), 214, 140, 12, Muted, listWidth);
-        libraryListBounds = new(214, 170, listWidth, Math.Max(86, height - 212));
+        DrawLibraryOrganization(c, listWidth, initialLoading);
         if (revealLibrarySelection && LibrarySetCount > 0)
         {
             int selected = libraryBrowser?.Selected is { } selectedRow && selectedRow.Key == selectedLibraryGroup ? selectedRow.Index : -1;
             if (selected >= 0)
             {
-                if (selected < libraryScroll) libraryScroll = selected;
-                else if (selected + 1 > libraryScroll + LibraryVisibleRows) libraryScroll = selected + 1 - LibraryVisibleRows;
+                float selectedOffset = libraryBrowser!.OffsetOf(selected);
+                if (selectedOffset < libraryScroll) libraryScroll = selectedOffset;
+                else if (selectedOffset + 1 > libraryScroll + LibraryVisibleRows) libraryScroll = selectedOffset + 1 - LibraryVisibleRows;
                 revealLibrarySelection = false;
             }
         }
         if (libraryResultsReady) libraryScroll = Math.Clamp(libraryScroll, 0, LibraryMaxScroll);
-        libraryBrowser?.RequestVisible((int)libraryScroll, (int)Math.Ceiling(libraryScroll + LibraryVisibleRows) + 2);
+        int firstRow = libraryBrowser?.IndexAtOffset(libraryScroll) ?? 0;
+        int lastRow = libraryBrowser?.IndexAtOffset(libraryScroll + LibraryVisibleRows) ?? 0;
+        libraryBrowser?.RequestVisible(firstRow, lastRow + 2);
         c.Clip(libraryListBounds);
-        for (int i = (int)libraryScroll; i < Math.Min(LibrarySetCount, Math.Ceiling(libraryScroll + LibraryVisibleRows)); i++)
+        for (int i = firstRow; i < Math.Min(LibrarySetCount, lastRow + 1); i++)
         {
-            float y = 170 + (i - libraryScroll) * 86;
+            float y = libraryListBounds.Y + (libraryBrowser!.OffsetOf(i) - libraryScroll) * 86;
             var rect = new Rect(214, y, listWidth, 78);
             var group = libraryBrowser?.Get(i);
             if (group is null) { c.Fill(rect, Surface, 6); continue; }
+            if (group.Header is { } header)
+            {
+                rect = new(214, y, listWidth, 26);
+                c.Fill(rect, Panel, 4);
+                c.Text(libraryExpanded.Contains(header) ? "▾" : "▸", 226, y + 5, 13, Accent, 24);
+                c.Text(L.Get("library.groupCount", LibraryGroupLabel(header), group.Count), 256, y + 5, 13, Foreground, listWidth - 58, true);
+                libraryHeaders.Add((new(rect.X, Math.Max(rect.Y, libraryListBounds.Y), rect.Width,
+                    Math.Max(0, Math.Min(rect.Bottom, libraryListBounds.Bottom) - Math.Max(rect.Y, libraryListBounds.Y))), header));
+                continue;
+            }
             var map = group.Map;
             libraryCards.Add((new(rect.X, Math.Max(rect.Y, libraryListBounds.Y), rect.Width,
                 Math.Max(0, Math.Min(rect.Bottom, libraryListBounds.Bottom) - Math.Max(rect.Y, libraryListBounds.Y))), map));
@@ -514,8 +534,9 @@ public sealed partial class EditorView
             {
                 c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "library", "favourite-star.png"), new(219.6f, y + 4.6f, 16, 16));
             }
+            float webWidth = DrawLibraryWebButton(c, rect, map);
             string title = DisplayMetadata(map.Title, map.TitleUnicode);
-            c.Text(title, 314, y + 10, 16, Foreground, listWidth - 116, true);
+            c.Text(title, 314, y + 10, 16, Foreground, listWidth - 116 - webWidth, true);
             string artist = DisplayMetadata(map.Artist, map.ArtistUnicode);
             c.Text(map.Creator.Length > 0 ? L.Get("library.artistMapper", artist, map.Creator) : artist, 314, y + 33, 12, Muted, listWidth - 116);
             float countWidth = listWidth - 116;
@@ -535,16 +556,16 @@ public sealed partial class EditorView
             c.Unclip();
         }
         c.Unclip();
-        DrawLibraryScrollbar(c, new(libraryListBounds.Right + 6, 170, 10, libraryListBounds.Height), libraryScroll, LibrarySetCount, LibraryVisibleRows, false);
+        DrawLibraryScrollbar(c, new(libraryListBounds.Right + 6, libraryListBounds.Y, 10, libraryListBounds.Height), libraryScroll, libraryBrowser?.Extent ?? 0, LibraryVisibleRows, false);
         DrawLibraryDetails(c, width - 320);
-        if (LibrarySetCount == 0) c.Text(initialLoading ? L.Get("library.scanning") : L.Get(string.IsNullOrWhiteSpace(LibrarySettings.Songs) && !libraryProjectsOnly && !libraryFavouritesOnly ? "library.unboundEmpty" : "library.empty"), 226, 204, 15, Muted, listWidth - 24);
+        if (LibrarySetCount == 0) c.Text(initialLoading ? L.Get("library.scanning") : L.Get(string.IsNullOrWhiteSpace(LibrarySettings.Songs) && !LibraryUsesProjects ? "library.unboundEmpty" : "library.empty"), 226, 204, 15, Muted, listWidth - 24);
         if (libraryError.Length > 0) c.Text(libraryError.Replace('\n', ' '), 214, height - 34, 12, Error, width - 238);
         else c.Text(L.Get("library.dropHint"), 214, height - 34, 12, Muted, width - 238);
     }
     private void DrawLibraryDetails(ICanvas c, float x)
     {
         var group = libraryBrowser?.Selected;
-        if (group is null) return;
+        if (group is null || group.Header is not null) return;
         var map = group.Map;
         c.Text(DisplayMetadata(map.Title, map.TitleUnicode), x, 170, 15, Foreground, 288, true);
         c.Text(DisplayMetadata(map.Artist, map.ArtistUnicode) + " · " + map.Creator, x, 201, 12, Muted, 288);
@@ -621,7 +642,7 @@ public sealed partial class EditorView
             else Button(c, browseBounds, L.Get("library.browse"), browse, fontSize: textSize);
         }
     }
-    public bool LibraryLoading => scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
+    public bool LibraryLoading => osuCollectionsTask is { IsCompleted: false } || LibraryVisible && libraryDatabase is not null && searchTaskQuery != LibrarySearchKey || scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
     public bool LibraryTextFocused => (LibraryVisible || librarySettingsOpen || ExportVisible) && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;
     public int LibraryInputField => LibraryTextFocused ? libraryField : -1;
     public Action? RequestPasteLibrary { get; set; }
@@ -629,7 +650,7 @@ public sealed partial class EditorView
     {
         if (librarySettingsOpen && !FirstRunSetupVisible && settingsCategory == SettingsCategory.Workspace && !workspaceScrollBounds.Contains(x, y)) return false;
         foreach (int index in (FirstRunSetupVisible ? firstRunStep == 0 ? new[] { 0, 1 } : firstRunStep == 1 ? new[] { 4 } : Array.Empty<int>()
-            : ExportVisible ? new[] { 3 } : librarySettingsOpen ? settingsColourIndex >= 0 ? new[] { 5 } : new[] { 0, 1, 4 } : new[] { 2 }))
+            : collectionDialogOpen ? new[] { 6 } : ExportVisible ? new[] { 3 } : librarySettingsOpen ? settingsColourIndex >= 0 ? new[] { 5 } : new[] { 0, 1, 4 } : new[] { 2 }))
         {
             string key = "library:" + index;
             if (!textLayouts.TryGetValue(key, out var layout)) continue;
@@ -650,6 +671,12 @@ public sealed partial class EditorView
     }
     private void LibraryKey(int key, bool ctrl, bool shift)
     {
+        if (collectionDialogOpen)
+        {
+            if (key == 27) { CloseCollectionDialog(); return; }
+            if (key == 13) { CommitCollectionDialog(); return; }
+            if (key == 116 || ctrl && key == 70) return;
+        }
         if (updatesPage) { if (key == 27) updatesPage = false; return; }
         if (key == 27 && settingsColourIndex >= 0) { CancelSettingsColourPicker(); return; }
         if (key == 27) FinishVolumeDrag();
@@ -671,7 +698,7 @@ public sealed partial class EditorView
     }
     private string LibraryFieldValue
     {
-        get => libraryField switch { 0 => draftWorkspace, 1 => draftOsuRoot, 2 => libraryQuery, 3 => exportName, 4 => draftDefaultSkin, 5 => settingsColourHex, _ => "" };
-        set { switch (libraryField) { case 0: draftWorkspace = value; break; case 1: draftOsuRoot = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; case 4: draftDefaultSkin = value; break; case 5: settingsColourHex = value; settingsColourError = ""; break; } }
+        get => libraryField switch { 0 => draftWorkspace, 1 => draftOsuRoot, 2 => libraryQuery, 3 => exportName, 4 => draftDefaultSkin, 5 => settingsColourHex, 6 => collectionDialogText, _ => "" };
+        set { switch (libraryField) { case 0: draftWorkspace = value; break; case 1: draftOsuRoot = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; case 4: draftDefaultSkin = value; break; case 6: collectionDialogText = value; collectionDialogScroll = 0; collectionDialogError = ""; break; case 5: settingsColourHex = value; settingsColourError = ""; break; } }
     }
 }

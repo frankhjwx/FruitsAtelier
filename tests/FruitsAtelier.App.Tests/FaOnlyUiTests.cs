@@ -55,7 +55,7 @@ internal static class FaOnlyUiTests
                     New(); Create(); Wait(ui);
                     Check(!ui.View.CurrentDifficultyFaOnly && exports == 1 && ui.View.WorkspaceSession!.Manifest.Difficulties[ui.View.ActiveDifficultyIndex].ExportConfirmed,
                         "default new difficulty synchronizes and generates its osu file");
-                    New(); ui.ClickText(L.Get("song.faOnly")); Create(); Wait(ui);
+                    New(); ui.ClickText(L.Get("difficulty.createFaOnly")); Create(); Wait(ui);
                     Guid local = ui.View.CaptureProject().Difficulties[ui.View.ActiveDifficultyIndex].Id;
                     Check(ui.View.CurrentDifficultyFaOnly && exports == 1, "FA-only creation does not generate to Songs");
                     ui.View.SaveCurrentDifficulty(); Wait(ui);

@@ -118,9 +118,17 @@ internal sealed partial class EditorWindow
             {
                 if (view.WorkspaceSession is null) return;
                 var project = view.CaptureProject();
-                var plan = WorkspaceExport.Plan(view.WorkspaceSession, project.Difficulties[view.ActiveDifficultyIndex], view.LibrarySettings.Songs, overwrite, name, view.CompensateTinyDroplets);
-                LibraryOperations.Export(view.WorkspaceSession, project, plan);
-                view.LibraryExportFinished(plan); view.SetNotice(L.Get("library.exported", plan.Target));
+                long started = view.Performance.Start();
+                WorkspaceExportPlan plan;
+                try { plan = WorkspaceExport.Plan(view.WorkspaceSession, project.Difficulties[view.ActiveDifficultyIndex], view.LibrarySettings.Songs, overwrite, name, view.CompensateTinyDroplets); }
+                finally { view.Performance.End(Editor.EditorPerformanceStage.WorkspaceExportPlan, started); }
+                started = view.Performance.Start();
+                try { LibraryOperations.Export(view.WorkspaceSession, project, plan); }
+                finally { view.Performance.End(Editor.EditorPerformanceStage.WorkspaceExportSave, started); }
+                started = view.Performance.Start();
+                try { view.LibraryExportFinished(plan); }
+                finally { view.Performance.End(Editor.EditorPerformanceStage.WorkspaceExportReload, started); }
+                view.SetNotice(L.Get("library.exported", plan.Target));
             }
         });
     }

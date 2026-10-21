@@ -87,7 +87,9 @@ internal static class ExternalResourceTests
             bool? folderClicked = null; view.RequestLibraryImport = value => folderClicked = value;
             foreach (var (key, expected) in new[] { ("library.importFolder", true), ("library.importFile", false) })
             {
-                view.PointerDown(240, 180, 2, false, false); view.PointerUp(240, 180, 2);
+                var list = (FruitsAtelier.App.Rendering.Rect)typeof(EditorView)
+                    .GetField("libraryListBounds", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(view)!;
+                view.PointerDown(list.X + 10, list.Y + 10, 2, false, false); view.PointerUp(list.X + 10, list.Y + 10, 2);
                 canvas.Clear(); view.Render(canvas, 980, 620);
                 var text = canvas.Texts.Single(t => t.Value == L.Get(key));
                 view.PointerDown(text.X + 2, text.Y + 2, 0, false, false); view.PointerUp(text.X + 2, text.Y + 2, 0);

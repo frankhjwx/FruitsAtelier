@@ -124,6 +124,7 @@ public sealed partial class EditorView
             contentDragPreview = false; clickedCoordinate = null;
             Select(Guid.Empty); renderedTiming = SnapTiming(); RefreshConversionPresentation();
             PreloadProjectHitsounds();
+            if (DockPanelExists(DockPanel.Aimod)) RefreshAimod();
             collaborationError = ""; SetNotice(L.Get("collab.done"));
             collaborationExcluded = result.ExcludedObjects;
             collaborationReportPosition = null; collaborationReportScroll = 0;

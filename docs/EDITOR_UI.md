@@ -1,5 +1,46 @@
 # Editing Controls
 
+## Creating difficulties and map templates
+
+Choose **+ → Add new difficulty** to name a new difficulty and choose
+**Create this difficulty in Fruits Atelier Only**. **Create from a difficulty or template**
+starts disabled on first use and remembers its last state globally across projects and restarts;
+with it disabled, creation retains the current difficulty's settings and timing
+and clears all objects, as with ordinary blank creation.
+
+The disabled source area is greyed out and cannot be edited. Enable the switch
+and choose one of two mutually exclusive tabs:
+
+- **From difficulty**: use the dropdown to select a difficulty in the
+  current project (initially the active difficulty). The new difficulty copies
+  its objects, timing, hitsounds and settings into an independent document,
+  with the entered difficulty name and a fresh local difficulty identity.
+  Its online BeatmapID is reset to zero.
+- **Map templates**: use the dropdown to select a saved template to apply
+  HP, CS, AR, OD, base SV and STR (SliderTickRate) to an otherwise ordinary blank difficulty. Timing
+  follows the active difficulty's blank-creation behavior.
+
+Open the independent **Manage map templates** window from the Library header,
+**File → Map templates**, or the creation dialog's **Map templates** tab.
+Choose **New template** to enter parameters, or **Use current difficulty** to
+capture the active difficulty's six values (available while editing a project).
+Select a template in the list to rename it or edit its values, or choose
+**Delete template** to remove it. Names must be unique; HP/CS/AR/OD accept 0–10,
+and SV/STR must be positive finite numbers. Decimal input uses a period.
+Drag a template row vertically to reorder the list; the insertion line shows
+where it will be placed. Use the wheel over the list to change pages, including
+during a drag. Escape, dropping outside the list, or losing capture cancels the
+drag. Save retains this order in both the manager and creation dropdown;
+Cancel discards changes to the order along with other template edits.
+Choose a **Catch icon** from the existing difficulty-colour palette to identify
+the template in the manager and difficulty creation chooser. The icon is stored
+with the template and does not change the new difficulty's calculated rating.
+
+**Save** commits the manager's changes to local application settings, making
+templates available across projects. **Cancel** discards its changes. Neither
+operation edits beatmap content. Closing the manager returns to the Library,
+editor, or difficulty creation draft from which it was opened.
+
 ## osu! editor links
 
 **Settings → osu! Links** contains one fallback application selector. It becomes
@@ -77,7 +118,10 @@ suffix are accepted. Ctrl/Cmd+A, C, X and V use the normal field selection and
 clipboard controls. Fractional milliseconds are rejected. Enter commits a field;
 Escape discards its draft. References are saved with the target difficulty.
 
-Ranges include Start and exclude End. Overlaps and self-references are rejected;
+Ranges include Start. The last section in time also includes End; all earlier
+sections exclude End, so adjacent sections share no objects or timing lines.
+This applies to assigned and unassigned sections. Overlaps and self-references
+are rejected;
 adjacent ranges are allowed. Objects belong to the range
 containing their start time. Sliders (including FSliders and repeated spans) and
 spinners must fit completely inside one section; an end exactly at the section
@@ -97,12 +141,25 @@ difficulty's existing sounds at the same exported time and event kind. If multip
 target events share that time and kind, the nearest X position wins. New events
 without a match use the merged timeline's default samples, without source custom
 files or additions. This is a sync option and does not edit project content.
-Timing points still synchronize. Objects
-starting outside those ranges remain. The source's timing points are copied within
-each range, with boundary points establishing inherited BPM, sample bank, index,
-volume and effects and restoring target state after End. Boundary red points
-establish a beat-grid origin at that boundary. Reference relationships do not
-trigger automatic synchronization or recursively synchronize their sources.
+Objects starting outside those ranges remain. Synchronization replaces the
+target's timing and sample lines within each assigned section with the source's
+actual red points and sample transitions. Source red points retain their exact
+timestamps, BPM and meter. Section boundaries do not create red points; the beat
+grid follows the actual red points, including across End. Repeated synchronization
+rebuilds the section rather than appending lines. Legacy slider SV is adjusted per
+object to preserve its duration under the merged BPM and target base SV;
+unrepresentable SV rejects the synchronization. Export generates SV changes from
+the objects.
+An open AiMod report refreshes after successful synchronization, including when
+its dock tab is inactive.
+Sample bank, index, volume and effects follow each section's source timeline,
+including its inherited state at Start, and return to target state at End for
+earlier sections, or the next millisecond after the final inclusive End when
+the target timeline continues beyond it.
+Sample transitions use inherited points without importing source SV-only lines.
+Adjacent sections with matching samples need no boundary point. Reference
+relationships do not trigger automatic synchronization or recursively synchronize
+their sources.
 
 Object identities are mapped independently for each reference and remain stable
 on repeated synchronization. Object sample fields and event overrides are
@@ -1055,7 +1112,14 @@ converts exact circular arcs to bounded Bezier approximations in the same transa
 
 Undo and redo reveal an affected position only when none of the affected positions is visible on the canvas. Deletion uses the removed position; restored notes and changed slider nodes use their resulting positions. Visible changes retain the viewport.
 
-Copy and cut write a legacy reference such as `02:27:094 (1,2,3) - ` to the system clipboard. Inside the editor, a separate snapshot retains complete objects for pattern pasting into the same difficulty session. Other difficulties and reopened projects cannot receive that pattern. Paste aligns the earliest start to the playhead, preserves other objects' relative times and positions, and assigns new IDs. Each batch move, delete, cut, or paste is one undo step.
+Copy and cut write a legacy reference such as `02:27:094 (1,2,3) - ` to the system clipboard. Inside the editor, a separate snapshot retains complete objects for pattern pasting across difficulties in the current mapset. Opening or reopening a project clears that snapshot. Paste aligns the earliest start to the playhead, preserves other objects' relative times and positions, and assigns new IDs. Each batch move, delete, cut, or paste is one undo step.
+
+Cross-difficulty paste keeps the target's HP, CS, AR, OD, base SV, STR and timing.
+Different tick settings regenerate nested events according to the target's rules;
+they do not block paste. Legacy sliders retain their paths and durations through
+independent SV adjusted for the target BPM and base SV. If the required SV cannot
+be represented or conflicts with other slider heads, the complete paste is rejected
+without adding objects or changing undo history.
 
 ## Distance spacing and object flags
 

@@ -9,6 +9,10 @@ public sealed partial class EditorView
 {
     private sealed class LibraryPosition
     {
+        public LibraryGrouping Group { get; set; }
+        public LibraryOrder Sort { get; set; }
+        public bool Descending { get; set; }
+        public HashSet<string> Expanded { get; set; } = [];
         public string Query { get; set; } = "";
         public string? Selected { get; set; }
         public float Scroll { get; set; }
@@ -16,6 +20,11 @@ public sealed partial class EditorView
     }
     private sealed class LibraryMemory
     {
+        public bool Recent { get; set; }
+        public string? Collection { get; set; }
+        public List<LibraryCollection> Collections { get; set; } = [];
+        public Dictionary<string, long> Visits { get; set; } = new();
+        public Dictionary<string, LibraryPosition> Positions { get; set; } = new();
         public bool Projects { get; set; }
         public bool Favourites { get; set; }
         public LibraryPosition FavouritePosition { get; set; } = new();
@@ -26,10 +35,16 @@ public sealed partial class EditorView
     private LibraryMemory libraryMemory = new();
     private readonly Dictionary<int, (LibraryBrowser? Browser, string Query)> libraryCategoryBrowsers = [];
     private string libraryBrowserQuery = "";
-    private bool libraryFavouritesOnly;
+    private bool libraryFavouritesOnly, libraryRecentOnly;
+    private string? libraryCollection;
+    private LibraryGrouping libraryGrouping;
+    private LibraryOrder librarySort;
+    private bool libraryDescending;
+    private HashSet<string> libraryExpanded = [];
+    private bool LibraryUsesProjects => libraryProjectsOnly || libraryFavouritesOnly || libraryRecentOnly || libraryCollection is not null && !IsOsuCollection;
     private int libraryFavouriteRevision;
-    private int LibraryCategory => libraryFavouritesOnly ? 2 : libraryProjectsOnly ? 1 : 0;
-    private string LibrarySearchKey => libraryQuery + ":" + LibraryCategory + ":" + libraryFavouriteRevision;
+    private int LibraryCategory => libraryCollection is not null ? 4 + Math.Max(0, AllLibraryCollectionIds.ToList().IndexOf(libraryCollection)) : libraryRecentOnly ? 3 : libraryFavouritesOnly ? 2 : libraryProjectsOnly ? 1 : 0;
+    private string LibrarySearchKey => libraryQuery + ":" + LibraryCategory + ":" + libraryFavouriteRevision + ":" + libraryGrouping + ":" + librarySort + ":" + libraryDescending + ":" + libraryCollection + (libraryGrouping is LibraryGrouping.DateAdded or LibraryGrouping.RecentVisited ? ":" + DateTime.Today.Ticks : "");
     private bool libraryMemoryLoaded, libraryMemoryDirty, revealLibrarySelection;
     private DateTime libraryMemorySaveAfter;
     private Rect libraryListBounds, libraryScrollTrack, libraryScrollThumb, libraryDiffTrack, libraryDiffThumb;
@@ -37,7 +52,7 @@ public sealed partial class EditorView
     private float libraryPointerY, libraryPointerScroll, libraryThumbOffset;
     private LibraryMap? libraryPressedMap;
     private float LibraryVisibleRows => Math.Max(1, libraryListBounds.Height / 86);
-    private float LibraryMaxScroll => Math.Max(0, LibrarySetCount - LibraryVisibleRows);
+    private float LibraryMaxScroll => Math.Max(0, (libraryBrowser?.Extent ?? 0) - LibraryVisibleRows);
 
     private void LoadLibraryMemory()
     {
@@ -51,13 +66,21 @@ public sealed partial class EditorView
         libraryProjectsOnly = libraryMemory.Projects;
         libraryFavouritesOnly = libraryMemory.Favourites;
         libraryMemory.FavouriteKeys = new(libraryMemory.FavouriteKeys ?? [], WorkspaceSynchronization.Paths);
+        libraryMemory.Collections ??= [];
+        foreach (var collection in libraryMemory.Collections) collection.Keys = new(collection.Keys ?? [], WorkspaceSynchronization.Paths);
+        libraryMemory.Visits = new(libraryMemory.Visits ?? [], WorkspaceSynchronization.Paths);
+        libraryMemory.Positions ??= new();
+        libraryRecentOnly = libraryMemory.Recent;
+        libraryCollection = (libraryMemory.Collection?.StartsWith("osu:", StringComparison.Ordinal) == true || libraryMemory.Collections.Any(c => c.Id == libraryMemory.Collection)) ? libraryMemory.Collection : null;
         RestoreLibraryPosition();
     }
     private void RememberLibraryPosition()
     {
-        var position = new LibraryPosition { Query = libraryQuery, Selected = selectedLibraryGroup, Scroll = libraryScroll, DifficultyScroll = libraryDiffScroll };
-        if (libraryFavouritesOnly) libraryMemory.FavouritePosition = position;
+        var position = new LibraryPosition { Group = libraryGrouping, Sort = librarySort, Descending = libraryDescending, Expanded = new(libraryExpanded), Query = libraryQuery, Selected = selectedLibraryGroup, Scroll = libraryScroll, DifficultyScroll = libraryDiffScroll };
+        if (libraryRecentOnly || libraryCollection is not null) libraryMemory.Positions[libraryCollection ?? "recent"] = position;
+        else if (libraryFavouritesOnly) libraryMemory.FavouritePosition = position;
         else if (libraryProjectsOnly) libraryMemory.MyProjects = position; else libraryMemory.Songs = position;
+        libraryMemory.Recent = libraryRecentOnly; libraryMemory.Collection = libraryCollection;
         libraryMemory.Projects = libraryProjectsOnly;
         libraryMemory.Favourites = libraryFavouritesOnly;
         libraryMemoryDirty = true; libraryMemorySaveAfter = DateTime.UtcNow.AddMilliseconds(350);
@@ -68,24 +91,30 @@ public sealed partial class EditorView
         try
         {
             Directory.CreateDirectory(LibrarySettings.Workspace);
-            File.WriteAllText(Path.Combine(LibrarySettings.Workspace, "library-view.json"), JsonSerializer.Serialize(libraryMemory));
+            string path = Path.Combine(LibrarySettings.Workspace, "library-view.json");
+            string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try { File.WriteAllText(temporary, JsonSerializer.Serialize(libraryMemory)); File.Move(temporary, path, overwrite: true); }
+            finally { if (File.Exists(temporary)) File.Delete(temporary); }
             libraryMemoryDirty = false;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { libraryMemoryDirty = false; libraryError = e.Message; }
     }
     private void RestoreLibraryPosition()
     {
-        var position = (libraryFavouritesOnly ? libraryMemory.FavouritePosition : libraryProjectsOnly ? libraryMemory.MyProjects : libraryMemory.Songs) ?? new();
+        var position = (libraryRecentOnly || libraryCollection is not null ? libraryMemory.Positions.GetValueOrDefault(libraryCollection ?? "recent") ?? new LibraryPosition { Group = libraryRecentOnly ? LibraryGrouping.RecentVisited : LibraryGrouping.None, Sort = libraryRecentOnly ? LibraryOrder.RecentVisited : LibraryOrder.Title, Descending = libraryRecentOnly } : libraryFavouritesOnly ? libraryMemory.FavouritePosition : libraryProjectsOnly ? libraryMemory.MyProjects : libraryMemory.Songs) ?? new();
+        libraryGrouping = Enum.IsDefined(position.Group) ? position.Group : LibraryGrouping.None;
+        librarySort = Enum.IsDefined(position.Sort) ? position.Sort : LibraryOrder.Title;
+        libraryDescending = position.Descending; libraryExpanded = new(position.Expanded ?? []);
         libraryQuery = position.Query ?? ""; selectedLibraryGroup = position.Selected;
         libraryScroll = float.IsFinite(position.Scroll) ? Math.Max(0, position.Scroll) : 0;
         libraryDiffScroll = Math.Max(0, position.DifficultyScroll);
     }
-    private void SwitchLibraryCategory(bool projects, bool favourites = false)
+    private void SwitchLibraryCategory(bool projects, bool favourites = false, bool recent = false, string? collection = null)
     {
-        if (libraryProjectsOnly == projects && libraryFavouritesOnly == favourites) return;
+        if (libraryProjectsOnly == projects && libraryFavouritesOnly == favourites && libraryRecentOnly == recent && libraryCollection == collection) return;
         RememberLibraryPosition();
         libraryCategoryBrowsers[LibraryCategory] = (libraryBrowser, libraryBrowserQuery);
-        libraryProjectsOnly = projects; libraryFavouritesOnly = favourites; RestoreLibraryPosition();
+        libraryProjectsOnly = projects; libraryFavouritesOnly = favourites; libraryRecentOnly = recent; libraryCollection = collection; RestoreLibraryPosition();
         var cached = libraryCategoryBrowsers.GetValueOrDefault(LibraryCategory);
         libraryCategoryBrowsers.Remove(LibraryCategory);
         libraryBrowser = cached.Browser; libraryBrowserQuery = cached.Query ?? "";
@@ -118,7 +147,7 @@ public sealed partial class EditorView
     private void OpenSelectedLibraryMap(LibraryMap map, bool selectDifficulty = false)
     {
         libraryBrowser?.SelectMap(map);
-        selectedLibraryGroup = (libraryProjectsOnly || libraryFavouritesOnly) ? map.ProjectPath ?? map.Directory : map.Directory;
+        selectedLibraryGroup = LibraryUsesProjects ? map.ProjectPath ?? map.Directory : map.Directory;
         libraryField = -1; RememberLibraryPosition(); SaveLibraryMemory();
         RequestLibraryOpen?.Invoke(map, selectDifficulty);
     }
@@ -135,8 +164,20 @@ public sealed partial class EditorView
     }
     private bool LibraryPointerDown(float x, float y, int button)
     {
-        if (contextItems.Count > 0) { if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear(); return true; }
+        if (contextItems.Count > 0)
+        {
+            if (button == 0 && !librarySettingsOpen && !resourcePage && !collectionDialogOpen
+                && !contextBounds.Contains(x, y) && ActivateLibraryOrderControl(x, y)) return true;
+            if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear();
+            return true;
+        }
+        if (collectionDialogOpen) return CollectionPointerDown(x, y, button);
         if (librarySettingsOpen || resourcePage) return false;
+        if (button == 0 && libraryWebButtons.FirstOrDefault(b => b.Bounds.Contains(x, y)) is var web && web.Url is not null)
+        { RequestVisitOsuWeb?.Invoke(web.Url); return true; }
+        if (button == 2 && ShowCollectionContext(x, y)) return true;
+        if (button == 0 && libraryHeaders.FirstOrDefault(h => h.Bounds.Contains(x, y)) is var header && header.Key is not null)
+        { ToggleLibraryGroup(header.Key); return true; }
         if (button == 2 && libraryListBounds.Contains(x, y))
         {
             libraryField = -1;
@@ -144,7 +185,7 @@ public sealed partial class EditorView
             if (map is not null)
             {
                 libraryBrowser?.SelectMap(map);
-                selectedLibraryGroup = (libraryProjectsOnly || libraryFavouritesOnly) ? map.ProjectPath ?? map.Directory : map.Directory;
+                selectedLibraryGroup = LibraryUsesProjects ? map.ProjectPath ?? map.Directory : map.Directory;
                 libraryDiffScroll = 0;
                 RememberLibraryPosition();
                 string? project = map.ProjectPath;
@@ -163,6 +204,9 @@ public sealed partial class EditorView
                     { libraryNotice = L.Reformat(error.Message); }
                 }
                 contextItems.Add(new(L.Get(IsLibraryFavourite(map) ? "library.removeFavourite" : "library.addFavourite"), () => ToggleLibraryFavourite(map)));
+                contextItems.Add(new(L.Get("library.addCollection"), () => ShowCollectionDialog(map)));
+                if (!IsOsuCollection && libraryCollection is { } collectionId)
+                    contextItems.Add(new(L.Get("library.removeCollection"), () => SetCollectionMember(collectionId, map, false)));
                 AddContextSeparator();
                 contextItems.Add(new(L.Get(project is null ? "library.start" : "library.continue"), () => OpenSelectedLibraryMap(map)));
                 AddContextSeparator();
@@ -227,7 +271,7 @@ public sealed partial class EditorView
         if (!libraryDraggingThumb && !libraryPointerMoved && libraryPressedMap is { } map && libraryListBounds.Contains(x, y))
         {
             libraryBrowser?.SelectMap(map);
-            selectedLibraryGroup = (libraryProjectsOnly || libraryFavouritesOnly) ? map.ProjectPath ?? map.Directory : map.Directory;
+            selectedLibraryGroup = LibraryUsesProjects ? map.ProjectPath ?? map.Directory : map.Directory;
             libraryDiffScroll = 0; libraryField = -1;
         }
         libraryPointerActive = false; libraryPressedMap = null; RememberLibraryPosition(); SaveLibraryMemory();

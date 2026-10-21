@@ -99,7 +99,19 @@ internal static class RenderCheck
             canvas.End();
             if (canvas.CachedTextFormatCount > D2DCanvas.TextFormatLimit)
                 throw new InvalidOperationException("Animated text retained unbounded native formats.");
+            if (canvas.CachedTextLayoutCount > D2DCanvas.TextLayoutLimit)
+                throw new InvalidOperationException("Animated text retained unbounded native layouts.");
         }
+        canvas.Begin();
+        canvas.Text("NC", 10, 10, 11, 0xFFFFFF, 64);
+        int builds = canvas.TextLayoutBuildCount;
+        for (int i = 0; i < 512; i++) canvas.TextOpacity("NC", 10 + i % 16, 10 + i / 16, 11, (uint)i, 64, false, .5f);
+        canvas.End();
+        if (canvas.TextLayoutBuildCount != builds)
+            throw new InvalidOperationException("Dense labels rebuilt text layouts when only position, colour or opacity changed.");
+        canvas.ReleaseDifficultyResources();
+        if (canvas.CachedTextLayoutCount != 0)
+            throw new InvalidOperationException("Difficulty retirement retained native text layouts.");
         AppLog.Write($"Animated text resource check: 2048 sizes, retained formats={canvas.CachedTextFormatCount}");
     }
     private static void CheckTimingSetup(D2DCanvas canvas, EditorView view, int width, int height)
@@ -926,6 +938,16 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--new-difficulty-render-check"))
+        {
+            NewDifficultyRenderCheck.Run(canvas);
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--text-resources-render-check"))
+        {
+            CheckAnimatedTextResources(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--collaboration-render-check"))
         {
             CollaborationRenderCheck.Run(canvas);

@@ -49,6 +49,16 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     private readonly Queue<(float, bool)> formatOrder = new();
     internal int CachedTextFormatCount => formats.Count;
     internal const int TextFormatLimit = 128;
+    private readonly record struct TextLayoutKey(string Text, float Size, float Width, float Height, bool Bold);
+    private sealed record CachedTextLayout(IDWriteTextLayout Layout)
+    {
+        public long Used { get; set; }
+    }
+    private readonly Dictionary<TextLayoutKey, CachedTextLayout> textLayouts = [];
+    private long textLayoutClock;
+    internal int CachedTextLayoutCount => textLayouts.Count;
+    internal int TextLayoutBuildCount { get; private set; }
+    internal const int TextLayoutLimit = 256;
     private readonly Dictionary<ImageKey, CachedImage> images = [];
     private readonly HashSet<ImageKey> failedImages = [];
     private readonly Dictionary<string, (long Version, long Length)> imageVersions = new(StringComparer.OrdinalIgnoreCase);
@@ -362,8 +372,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     }
     public float MeasureText(string text, float size, bool bold = false)
     {
-        var format = TextFormat(size, bold);
-        using var layout = textFactory!.CreateTextLayout(text, format, 10000, size * 2);
+        var layout = TextLayout(text, size, 10000, size * 2, bold);
         return layout.Metrics.WidthIncludingTrailingWhitespace;
     }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false)
@@ -371,8 +380,27 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     public void TextOpacity(string text, float x, float y, float size, uint color, float maxWidth, bool bold, float opacity)
     {
         if (maxWidth <= 0 || string.IsNullOrEmpty(text)) return;
-        var format = TextFormat(size, bold);
-        context!.DrawText(text, format, new DRect(x, y, maxWidth, size * 1.8f), Brush(color, opacity), DrawTextOptions.Clip);
+        var layout = TextLayout(text, size, maxWidth, size * 1.8f, bold);
+        context!.DrawTextLayout(new Vector2(x, y), layout, Brush(color, opacity), DrawTextOptions.Clip);
+    }
+    private IDWriteTextLayout TextLayout(string text, float size, float width, float height, bool bold)
+    {
+        var key = new TextLayoutKey(text, size, width, height, bold);
+        if (!textLayouts.TryGetValue(key, out var cached))
+        {
+            // Dense stacks reuse labels such as NC; position and colour do not affect shaping.
+            if (textLayouts.Count >= TextLayoutLimit)
+            {
+                var oldest = textLayouts.MinBy(entry => entry.Value.Used);
+                textLayouts.Remove(oldest.Key);
+                oldest.Value.Layout.Dispose();
+            }
+            cached = new(textFactory!.CreateTextLayout(text, TextFormat(size, bold), width, height));
+            textLayouts.Add(key, cached);
+            TextLayoutBuildCount++;
+        }
+        cached.Used = ++textLayoutClock;
+        return cached.Layout;
     }
     private IDWriteTextFormat TextFormat(float size, bool bold)
     {
@@ -610,6 +638,8 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
 
     public void ReleaseDifficultyResources()
     {
+        foreach (var layout in textLayouts.Values) layout.Layout.Dispose();
+        textLayouts.Clear();
         ClearSliderRasters();
         foreach (var geometry in pathGeometries.Values) geometry.Dispose();
         pathGeometries.Clear(); pathGeometryOrder.Clear();

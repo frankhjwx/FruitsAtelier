@@ -120,8 +120,8 @@ public sealed partial class EditorView
     public Action? RequestClose { get; set; }
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectNotes != savedProjectNotes || projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
-    public bool IsEditingText => CollaborationFocused || RandomDockFocused || SongDockFocused || NotesFocused || PatternDockEditing && (stackNumericField >= 0 || bananaEditField >= 0) || BananaEditVisible && bananaEditField >= 0 || HitsoundCopierVisible && copierNewDiff && copierNameFocused || StreamDialogVisible && stackMode && stackNumericField >= 0 || timingField.Length > 0 || SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || RotationVisible || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
-    public bool WantsCapture => collaborationReportDragging || rotationWindowDragging || rotationDragging || aimodGesture != AimodGesture.None || dockHorizontalDrag is not null || randomDragging || notesSelecting || dockPressed is not null || acknowledgementsScrollDragging || canvasDimDragging || movementPanelPointer || backgroundDimDragging || workspaceScrollDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || stackPointDragging >= 0 || stackFruitDragging >= 0 || SliderHoldNeedsRedraw || sliderHoldConsumed;
+    public bool IsEditingText => MapTemplatesVisible || addDifficultyConfirmation || CollaborationFocused || RandomDockFocused || SongDockFocused || NotesFocused || PatternDockEditing && (stackNumericField >= 0 || bananaEditField >= 0) || BananaEditVisible && bananaEditField >= 0 || HitsoundCopierVisible && copierNewDiff && copierNameFocused || StreamDialogVisible && stackMode && stackNumericField >= 0 || timingField.Length > 0 || SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || RotationVisible || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
+    public bool WantsCapture => templatePointer || collaborationReportDragging || rotationWindowDragging || rotationDragging || aimodGesture != AimodGesture.None || dockHorizontalDrag is not null || randomDragging || notesSelecting || dockPressed is not null || acknowledgementsScrollDragging || canvasDimDragging || movementPanelPointer || backgroundDimDragging || workspaceScrollDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || stackPointDragging >= 0 || stackFruitDragging >= 0 || SliderHoldNeedsRedraw || sliderHoldConsumed;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;
@@ -260,7 +260,19 @@ public sealed partial class EditorView
             return new(plot.X + margin + (float)(IsLazerEditing ? lazerPanX : canvasPanX), plot.Y, 512 * PlayfieldScale, plot.Height);
         }
     }
-    private TimelineTransform Transform => new(Playfield.X, plot.Bottom, Playfield.Width, PresentationViewStart, pixelsPerMs);
+    private TimelineTransform? canvasTransform;
+    private TimelineTransform Transform
+    {
+        get
+        {
+            var field = Playfield;
+            double start = PresentationViewStart;
+            if (canvasTransform is not { } current || current.Left != field.X || current.Bottom != plot.Bottom
+                || current.Width != field.Width || current.ViewStartMs != start || current.PixelsPerMs != pixelsPerMs)
+                canvasTransform = new(field.X, plot.Bottom, field.Width, start, pixelsPerMs);
+            return canvasTransform;
+        }
+    }
     private Fruit? SelectedFruit => Document.Fruits.FirstOrDefault(f => f.Id == selection);
     private CurveTrack? SelectedTrack => Document.Tracks.FirstOrDefault(t => t.Id == selectedTrack || t.Id == selection);
     private Anchor? SelectedAnchor => SelectedTrack?.Nodes.FirstOrDefault(n => n.Id == selection);

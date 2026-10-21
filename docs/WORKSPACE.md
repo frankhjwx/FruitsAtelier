@@ -108,6 +108,100 @@ Library backgrounds use a separate thumbnail cache on Windows and macOS. Two bac
 
 The database's maps/projects/project_sources tables are rebuildable indexes. The external_sources table contains persistent external-folder registrations and original OSZ paths. Project manifests and difficulty files hold authored data. Original `.osu` contents before export overwrites are also stored in export_backups; rebuilding the index does not delete them. Do not delete a database containing backups as if it were disposable cache data.
 
+## Library organization
+
+The sidebar provides All songs, My projects, Favourites and Recent Visited. A separate
+**FA Collections** section below these entries lists user-created collections. Its **+**
+button creates a collection; right-click a collection to rename or delete it.
+Deleting a collection removes its membership only. Right-click a set card and choose
+**Add to collections…** to select multiple collections, search their names or create
+one. **Done** applies membership; Cancel or Esc discards the membership draft. Inside
+a collection, **Remove from this collection** removes the selected set directly.
+FA Collections contain mapsets rather than individual difficulties. A set may belong
+to multiple collections, and opening a collected source associates its membership
+with the workspace project.
+
+Both collection sections enclose their heading and entries in one frame sized to
+the number of collections. Each entry keeps a border when unselected. Dividers
+separate FA Collections from the built-in categories and from osu! Collections.
+The **+** button is centered in the FA heading row. The sections scroll together
+when they exceed the available sidebar height.
+
+**osu! Collections** appears separately below FA Collections when both `osu!.db`
+and `collection.db` are readable in the configured osu! directory. Missing,
+inaccessible or malformed databases hide this section; FA Collections remain
+available. Collections are read-only: their names and difficulty membership cannot
+be changed in FA. The membership chooser contains FA Collections only.
+
+The reader follows the official [legacy database format](https://github.com/ppy/osu/wiki/Legacy-database-file-structure#collectiondb)
+and [`LegacyCollectionImporter`](https://github.com/ppy/osu/blob/44819244af116e8ae08fe2cbd29c6e489b5c9d4e/osu.Game/Database/LegacyCollectionImporter.cs).
+Collection members are MD5 hashes resolved through osu!'s cached `osu!.db`
+records to specific source paths. This preserves osu!'s membership when a file has
+changed since osu! last cached its hash. Collection browsing performs no whole-library
+file hashing or network requests. Only indexed Standard and Catch difficulties
+from the configured Songs directory can match. Collection sidebar counts are
+stored difficulty memberships, including unavailable or unsupported members.
+Set-card counts and the details panel show only matching difficulties, even when
+the set has an associated FA project. Other Library categories keep their complete
+set listings. Opening a difficulty enters the normal project editor.
+
+While Library is visible, a background check considers database file versions every
+three seconds and reloads changed collection data. Returning from an unavailable
+installation restores the section on a later successful check. No osu! database
+is written. FA membership and view positions remain in `library-view.json`.
+
+Below Search, the result count and Group/Sort controls organize the current category.
+Narrow windows put these controls on a separate row. Group supports no grouping,
+Title, Artist, Creator, Mode, Date added and Recent visit. Sort supports the same
+fields except no grouping; the arrow switches ascending/descending order within
+each group. While either menu is open, clicking Group or Sort switches menus
+immediately; clicking the direction button closes the menu and reverses sorting
+in the same click. Alphabetic groups use A–Z, 0–9 and # for other initial characters.
+Unknown metadata has its own group. A set's source representative is the first
+indexed difficulty by path; workspace-only sets use their first saved difficulty's
+metadata. Mode describes that representative, including sets containing multiple
+modes. These controls do not split a mapset into individual difficulties.
+
+Group headers use 30 logical pixels per row; map cards retain their 86-pixel row
+spacing. Selecting a grouping starts with every group collapsed. Click a heading
+to expand or collapse it. Counts continue to include collapsed sets, and the selected
+map remains available in the details panel. Each sidebar category and collection
+remembers its search, grouping, sorting, expanded groups, selection and scroll
+position across restarts.
+
+Recent Visited records successful Library opens into the editor. Selecting a card
+or a failed/cancelled open does not count. By default it groups visits into Today,
+Yesterday, Last 7 days, Last 30 days and Earlier, using local calendar dates, and
+sorts the most recent first. These buckets are disjoint. Visit sorting/grouping is
+also available in other categories, with unvisited sets in the unknown group.
+Date added for an indexed source directory is the earliest UTC last-write timestamp
+among all its `.osu` files, including other modes. Workspace-only sets use the earliest
+last-write timestamp of their saved difficulty files. These dates are derived from
+existing files, so they survive rescans without treating the scan time as the added
+date, and may change when those files are edited or replaced. The source-directory
+rule matches [`BeatmapImporter.getDateAdded()`](https://github.com/ppy/osu/blob/44819244af116e8ae08fe2cbd29c6e489b5c9d4e/osu.Game/Beatmaps/BeatmapImporter.cs)
+for official stable-directory imports. BPM, length and star-rating organization
+are not currently exposed.
+
+Cards with a positive Beatmap ID show **Visit in osu web** in their upper-right
+corner. Clicking opens the public beatmap URL in the default browser without
+selecting or editing the map. The URL is constructed from local IDs; browsing,
+searching, sorting and drawing cards do not probe osu! servers. A stale ID may lead
+to an unavailable page. URL construction follows the behavior of the official
+[`BeatmapInfoExtensions.GetOnlineURL()`](https://github.com/ppy/osu/blob/44819244af116e8ae08fe2cbd29c6e489b5c9d4e/osu.Game/Beatmaps/BeatmapInfoExtensions.cs).
+
+Collections, visits and navigation preferences are stored in `library-view.json`.
+`project_metadata` and `source_dates` in `library.db` are rebuildable metadata
+caches. Sorting, grouping and expansion reuse the active filtered result and
+extracted ordering fields. Search, category membership, visits, project reindexing
+and catalog revisions invalidate reuse. New ordering runs after outstanding page
+reads finish, then transfers the snapshot to the new paged browser; the UI retains
+its prior cached rows until publication. The cached group layout stores only
+header positions and derives card offsets without materialising all row heights.
+Organization does not modify beatmap content or create undo entries. Queries,
+group headings and collapsed membership remain disk-backed and paged; rendering
+does not enumerate the entire library.
+
 ## Difficulty synchronization
 
 Each difficulty enables Songs synchronization and generation by default. **Difficulty + → Add difficulty** offers **FA only** as an explicit opt-in. **Song Setup → FA Settings** changes the active difficulty's policy, both in the dock and modal. FA-only difficulties remain in the workspace and are excluded from source reconciliation and Songs export, including when their former `.osu` file changes or disappears. Kept linked files are excluded from automatic discovery as new difficulties. Switching a linked difficulty to FA only offers keeping its `.osu`, backing it up and deleting only that file, or canceling. Other difficulties and resources are retained. Deletion verifies the source has not changed and publishes the FA-only policy before removing the file; failures restore the previous policy. Reenabling synchronization reviews an existing association or offers generation when no association remains. The `FaOnly` flag is difficulty-local in the workspace manifest and project snapshots; omitted flags default to normal synchronization.

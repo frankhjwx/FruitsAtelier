@@ -74,6 +74,37 @@ internal static class SliderBatchTests
             view.LoadProject(saved); Render();
             Check(!view.SliderImportSourcePromptVisible && !view.SliderImportPromptVisible && !view.SliderConversionBusy, "Saved project repeated import setup.");
         }
+        foreach (string locale in new[] { "en", "zh-CN" })
+        {
+            L.SetLanguage(locale);
+            var authored = new MapDocument { DurationMs = 30000, DerandomizeFSliderDroplets = true };
+            for (int i = 0; i < 9; i++)
+            {
+                var track = new CurveTrack { Kind = CurveKind.Linear, DropletMode = SliderDropletMode.Derandomize };
+                track.Nodes.AddRange([new() { TimeMs = 1000 + i * 2000, X = 128 }, new() { TimeMs = 2000 + i * 2000, X = 384 }]);
+                authored.Tracks.Add(track);
+            }
+            var imported = OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(authored).Text);
+            imported.ImportedSliders.Add(OsuBeatmapReader.Read(
+                "osu file format v14\n[General]\nMode:0\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n"
+                + "[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,64,21000,2,0,L|256:344,3,280\n").ImportedSliders.Single());
+            var original = OsuBeatmapWriter.Serialize(imported);
+            view.NewProject(); Check(view.AddDifficulty(imported), "Mixed difficulty import failed."); Wait();
+            Check(view.SliderImportSourcePromptVisible, "Mixed import did not ask about its source.");
+            view.AnswerSliderImportSource(true); Wait();
+            Check(!view.SliderImportSourcePromptVisible && view.SliderImportPromptVisible,
+                "An unrecoverable parent trapped the mixed import in source confirmation.");
+            Check(view.Document.ImportedSliders.Count == 10 && view.Document.ImportedSliders.Count(s => s.RandomizationTrack is null) == 1,
+                "Mixed import did not retain its incompatible Legacy parent.");
+            var output = OsuBeatmapWriter.Serialize(view.Document);
+            Same(original.PlayableObjects, output.PlayableObjects);
+            Same(original.PlayableHardRockObjects, output.PlayableHardRockObjects);
+            view.AnswerSliderImport(false); Wait();
+            var saved = ProjectSerializer.ReadProject(ProjectSerializer.Serialize(view.CaptureProject()));
+            view.LoadProject(saved); Render();
+            Check(!view.SliderImportSourcePromptVisible && !view.SliderImportPromptVisible && view.PrepareFileOperation(),
+                "Resolved mixed import repeated its prompt or blocked saving after reload.");
+        }
         L.SetLanguage("en");
         view.LoadProject(BeatmapProject.FromDocuments([Fixture(), Fixture()]));
         var oldProject = view.CaptureProject();
