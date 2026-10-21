@@ -14,6 +14,7 @@ internal static class CollaborationMappingUiTests
                 L.SetLanguage(locale);
                 var a = Difficulty("A", 250); var b = Difficulty("B", 1250);
                 var c = Difficulty("C", 2200); var d = Difficulty("D", 2400);
+                foreach (var difficulty in new[] { a, b, c, d }) difficulty.Document.TimingPoints[0].TimeMs = .75;
                 c.Document.CollaborationReferences = [new(Guid.NewGuid(), a.Id, 0, 1000), new(Guid.NewGuid(), b.Id, 1000, 2000)];
                 d.Document.CollaborationReferences = [new(Guid.NewGuid(), a.Id, 0, 1000)];
                 var project = new BeatmapProject { Name = "Collaboration", Difficulties = [a, b, c, d] };
@@ -52,12 +53,17 @@ internal static class CollaborationMappingUiTests
                 while (ui.View.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { ui.Paint(); Thread.Sleep(1); }
                 Check(!ui.View.CollaborationBusy && ui.View.Document.Fruits.Count == 3, "Sources merged and outside target object retained");
                 Check(!ui.View.CollaborationReportVisible, "No exclusions leave the report closed");
+                Check(ui.View.Document.TimingPoints.Count == 1 && ui.View.Document.TimingPoints[0].TimeMs == .75,
+                    "Synchronization retains the original fractional red point without section boundary lines");
+                Check(Math.Abs(TimingMap.Snap(ui.View.Document, 1250, 4) - 1250.75) < 1e-7, "Placement stays on the target beat grid");
                 Check(ui.View.PlayheadMs == playhead && ui.View.ViewStartMs == viewStart && ui.View.AudioReady, "Sync preserves transport and viewport");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.Fruits.Count == 1, "Synchronization undo");
                 ui.Key('Y', ctrl: true); Check(ui.View.Document.Fruits.Count == 3, "Synchronization redo");
                 var loaded = ProjectSerializer.ReadProject(ProjectSerializer.Serialize(ui.View.CaptureProject()));
                 ui.View.LoadProject(loaded); ui.View.SwitchDifficulty(2); ui.View.ShowCollaborationPanel(); ui.Paint();
                 Check(ui.View.Document.CollaborationReferences!.Count == 2, "Restart retains references");
+                Check(ui.View.Document.TimingPoints.Count == 1 && ui.View.Document.TimingPoints[0].TimeMs == .75,
+                    "Restart retains fractional timing without extra red or green points");
                 ui.ClickText(L.Get("collab.add")); Check(ui.View.Document.CollaborationReferences!.Count == 3, "Multiple references can be added");
                 Check(ui.View.Document.CollaborationReferences![2].DifficultyId == Guid.Empty, "New references start unassigned");
                 Check(ui.View.SwitchDifficulty(0), "Source navigation"); ui.Paint();

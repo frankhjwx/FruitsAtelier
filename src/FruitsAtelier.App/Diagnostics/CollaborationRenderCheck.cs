@@ -20,6 +20,7 @@ internal static class CollaborationRenderCheck
                 L.SetLanguage(locale);
                 var a = Difficulty("Mapper A", 500); var b = Difficulty("Mapper B", 1500);
                 var c = Difficulty("Merged C", 2500); var d = Difficulty("Merged D", 3000);
+                foreach (var difficulty in new[] { a, b, c, d }) difficulty.Document.TimingPoints[0].TimeMs = .75;
                 a.Document.BananaShowers.Add(new() { TimeMs = 500, EndTimeMs = 1500 });
                 c.Document.CollaborationReferences = [new(Guid.NewGuid(), a.Id, 0, 1000), new(Guid.NewGuid(), b.Id, 1000, 2000),
                     new(Guid.NewGuid(), Guid.Empty, 2000, 5000)];
@@ -41,6 +42,9 @@ internal static class CollaborationRenderCheck
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 while (editor.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { Paint(); Thread.Sleep(1); }
                 if (editor.CollaborationBusy || editor.Document.Fruits.Count != 3) throw new InvalidOperationException("Native merge failed.");
+                if (editor.Document.TimingPoints.Count != 1 || editor.Document.TimingPoints[0].TimeMs != .75
+                    || Math.Abs(TimingMap.Snap(editor.Document, 1250, 4) - 1250.75) > 1e-7)
+                    throw new InvalidOperationException("Native merge changed the target beat grid.");
                 Paint("synced");
                 if (!editor.CollaborationReportVisible) throw new InvalidOperationException("Native exclusions report missing.");
                 var report = editor.CollaborationReportBounds;

@@ -122,12 +122,15 @@ window sizes and 96/144/192 DPI. Captures are stored under
 `artifacts/tests/osu-links/native`; protocol actions use test callbacks.
 
 `Formats.Tests --collaboration-check` checks same-project reference graphs,
-half-open adjacent ranges, source edits/deletions, timing restoration, boundary
-sample inheritance, repeated sliders, FSliders, streams, banana showers, custom
+half-open adjacent ranges, source edits/deletions, retained target red timing,
+fractional beat-grid precision, boundary sample inheritance, repeated sliders,
+FSliders, streams, banana showers, custom
 samples, target STR precedence, cross-folder sample conflicts, project schemas
 and undo/redo, bookmark section generation, unassigned section persistence and
 strict overlap validation, complete slider/spinner section containment, exclusion
-reports and optional same-position target hitsound preservation. `App.Tests --collaboration-check` checks
+reports, per-object SV across different BPM/base SV, section sample transitions
+without source SV-only lines, and optional same-position target hitsound
+preservation. `App.Tests --collaboration-check` checks
 the dockable panel, active-difficulty configuration, reverse references, osu!
 timestamps, integer milliseconds, clipboard input and manual synchronization.
 On Windows, `FruitsAtelier.App.exe --render-check --collaboration-render-check`

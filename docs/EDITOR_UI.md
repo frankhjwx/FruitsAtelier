@@ -138,12 +138,16 @@ difficulty's existing sounds at the same exported time and event kind. If multip
 target events share that time and kind, the nearest X position wins. New events
 without a match use the merged timeline's default samples, without source custom
 files or additions. This is a sync option and does not edit project content.
-Timing points still synchronize. Objects
-starting outside those ranges remain. The source's timing points are copied within
-each range, with boundary points establishing inherited BPM, sample bank, index,
-volume and effects and restoring target state after End. Boundary red points
-establish a beat-grid origin at that boundary. Reference relationships do not
-trigger automatic synchronization or recursively synchronize their sources.
+Objects starting outside those ranges remain. The target's red timing, BPM, meter
+and beat-grid origin are retained. Legacy slider SV is adjusted per object to
+preserve its duration under the target BPM and base SV; unrepresentable SV rejects
+the synchronization. Export generates SV changes from the objects.
+Sample bank, index, volume and effects follow each section's source timeline,
+including its inherited state at Start, and return to target state at End.
+Sample transitions use inherited points without importing source SV-only lines.
+Adjacent sections with matching samples need no boundary point. Reference
+relationships do not trigger automatic synchronization or recursively synchronize
+their sources.
 
 Object identities are mapped independently for each reference and remain stable
 on repeated synchronization. Object sample fields and event overrides are
