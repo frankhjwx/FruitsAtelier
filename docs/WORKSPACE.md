@@ -154,7 +154,9 @@ Below Search, the result count and Group/Sort controls organize the current cate
 Narrow windows put these controls on a separate row. Group supports no grouping,
 Title, Artist, Creator, Mode, Date added and Recent visit. Sort supports the same
 fields except no grouping; the arrow switches ascending/descending order within
-each group. Alphabetic groups use A–Z, 0–9 and # for other initial characters.
+each group. While either menu is open, clicking Group or Sort switches menus
+immediately; clicking the direction button closes the menu and reverses sorting
+in the same click. Alphabetic groups use A–Z, 0–9 and # for other initial characters.
 Unknown metadata has its own group. A set's source representative is the first
 indexed difficulty by path; workspace-only sets use their first saved difficulty's
 metadata. Mode describes that representative, including sets containing multiple

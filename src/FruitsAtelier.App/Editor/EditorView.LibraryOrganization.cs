@@ -16,6 +16,7 @@ public sealed partial class EditorView
     private readonly List<(Rect Bounds, string Key)> libraryHeaders = [];
     private readonly List<(Rect Bounds, string Id)> collectionRows = [];
     private Rect collectionsBounds, collectionDialogBounds;
+    private Rect libraryGroupBounds, librarySortBounds, libraryDirectionBounds;
     private float collectionsScroll, collectionDialogScroll;
     private bool collectionDialogOpen;
     private string collectionDialogMode = "", collectionDialogText = "", collectionDialogError = "";
@@ -72,15 +73,41 @@ public sealed partial class EditorView
         c.Text(loading ? L.Get("library.scanning") : L.Get("library.results", libraryBrowser?.SetCount ?? 0), 214, 140, 12, Muted, compact ? listWidth : listWidth - 420);
         if (compact) toolbarY = 166;
         float x = compact ? 214 : 214 + listWidth - 410;
-        LibraryChoice(c, new(x, toolbarY, 190, 28), L.Get("library.groupBy", L.Get("library.group." + libraryGrouping)), () =>
-            ShowLibraryOrderMenu(new(x, toolbarY, 190, 28), true));
-        LibraryChoice(c, new(x + 198, toolbarY, 174, 28), L.Get("library.sortBy", L.Get("library.order." + librarySort)), () =>
-            ShowLibraryOrderMenu(new(x + 198, toolbarY, 174, 28), false));
-        c.Fill(new(x + 378, toolbarY, 32, 28), Surface, 4);
-        c.Stroke(new(x + 378, toolbarY, 32, 28), Grid, radius: 4);
-        Button(c, new(x + 378, toolbarY, 32, 28), libraryDescending ? "↓" : "↑", () =>
-        { libraryDescending = !libraryDescending; InvalidateLibraryOrganization(true); });
+        libraryGroupBounds = new(x, toolbarY, 190, 28);
+        librarySortBounds = new(x + 198, toolbarY, 174, 28);
+        libraryDirectionBounds = new(x + 378, toolbarY, 32, 28);
+        LibraryChoice(c, libraryGroupBounds, L.Get("library.groupBy", L.Get("library.group." + libraryGrouping)), () =>
+            ShowLibraryOrderMenu(libraryGroupBounds, true));
+        LibraryChoice(c, librarySortBounds, L.Get("library.sortBy", L.Get("library.order." + librarySort)), () =>
+            ShowLibraryOrderMenu(librarySortBounds, false));
+        bool hover = libraryDirectionBounds.Contains(mouseX, mouseY);
+        c.Fill(libraryDirectionBounds, hover ? 0x3D495Au : Surface, 4);
+        c.Stroke(libraryDirectionBounds, hover ? 0x71849Au : Grid, radius: 4);
+        float cx = libraryDirectionBounds.X + libraryDirectionBounds.Width / 2;
+        float cy = libraryDirectionBounds.Y + libraryDirectionBounds.Height / 2;
+        float tip = cy + (libraryDescending ? 4 : -4), tail = cy - (libraryDescending ? 4 : -4);
+        c.Line(cx, tail, cx, tip, Foreground, 1.2f);
+        float shoulder = tip + (libraryDescending ? -3 : 3);
+        c.Line(cx - 3, shoulder, cx, tip, Foreground, 1.2f);
+        c.Line(cx + 3, shoulder, cx, tip, Foreground, 1.2f);
+        hits.Add(new(libraryDirectionBounds, ToggleLibrarySortDirection, true));
         libraryListBounds = new(214, compact ? 202 : 170, listWidth, Math.Max(86, height - (compact ? 244 : 212)));
+    }
+
+    private void ToggleLibrarySortDirection()
+    {
+        contextItems.Clear();
+        libraryDescending = !libraryDescending;
+        InvalidateLibraryOrganization(true);
+    }
+
+    private bool ActivateLibraryOrderControl(float x, float y)
+    {
+        if (libraryGroupBounds.Contains(x, y)) ShowLibraryOrderMenu(libraryGroupBounds, true);
+        else if (librarySortBounds.Contains(x, y)) ShowLibraryOrderMenu(librarySortBounds, false);
+        else if (libraryDirectionBounds.Contains(x, y)) ToggleLibrarySortDirection();
+        else return false;
+        return true;
     }
 
     private void LibraryChoice(ICanvas c, Rect bounds, string label, Action action)

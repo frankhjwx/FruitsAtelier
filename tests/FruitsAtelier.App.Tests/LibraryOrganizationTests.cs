@@ -90,7 +90,30 @@ internal static class LibraryOrganizationTests
                 var original = view.Document.DeepClone();
                 Check(Label("library.collections").Y > Label("library.recentVisited").Y + 40, "collections separated from built-in categories");
                 ClickText(L.Get("library.groupBy", L.Get("library.group.None")));
-                ClickText(L.Get("library.group.Creator")); Wait(3);
+                ClickText(L.Get("library.sortBy", L.Get("library.order.Title")));
+                Check(!canvas.Texts.Any(t => t.Value == L.Get("library.group.None")), "Group menu switches directly to Sort on the first click");
+                ClickText(L.Get("library.order.Artist")); Wait(3);
+                Check(canvas.Texts.First(t => t.X == 314 && new[] { "Alpha", "Beta", "Gamma" }.Contains(t.Value)).Value == "Beta", "Sort selection applies after direct menu switching");
+                ClickText(L.Get("library.sortBy", L.Get("library.order.Artist")));
+                ClickText(L.Get("library.groupBy", L.Get("library.group.None")));
+                Check(canvas.Texts.Any(t => t.Value == L.Get("library.group.None")), "Sort menu switches directly to Group on the first click");
+                ClickText(L.Get("library.group.None")); Wait(3);
+                ClickText(L.Get("library.sortBy", L.Get("library.order.Artist")));
+                ClickText(L.Get("library.order.Title")); Wait(3);
+                var direction = canvas.Outlines.First(o => o.Bounds.Width == 32 && o.Bounds.Height == 28).Bounds;
+                ClickText(L.Get("library.groupBy", L.Get("library.group.None")));
+                ClickDirection(); Wait(3);
+                Check(canvas.Texts.First(t => t.X == 314 && new[] { "Alpha", "Beta", "Gamma" }.Contains(t.Value)).Value == "Gamma", "direction changes immediately while Group menu is open");
+                ClickText(L.Get("library.sortBy", L.Get("library.order.Title")));
+                ClickDirection(); Wait(3);
+                Check(canvas.Texts.First(t => t.X == 314 && new[] { "Alpha", "Beta", "Gamma" }.Contains(t.Value)).Value == "Alpha", "direction changes immediately while Sort menu is open");
+                ClickText(L.Get("library.groupBy", L.Get("library.group.None")));
+                ClickText(L.Get("library.group.Creator"));
+                void ClickDirection()
+                {
+                    float x = direction.X + direction.Width / 2, y = direction.Y + direction.Height / 2;
+                    view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
+                } Wait(3);
                 Check(!canvas.Texts.Any(t => t.X == 314 && t.Value == "Alpha"), "groups start collapsed");
                 Check(canvas.Texts.Any(t => t.X == width - 320 && t.Value == "Alpha"), "collapsing groups retains selected map details");
                 var aHeader = canvas.Texts.First(t => t.Value == L.Get("library.groupCount", "A", 2));

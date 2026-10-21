@@ -164,7 +164,13 @@ public sealed partial class EditorView
     }
     private bool LibraryPointerDown(float x, float y, int button)
     {
-        if (contextItems.Count > 0) { if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear(); return true; }
+        if (contextItems.Count > 0)
+        {
+            if (button == 0 && !librarySettingsOpen && !resourcePage && !collectionDialogOpen
+                && !contextBounds.Contains(x, y) && ActivateLibraryOrderControl(x, y)) return true;
+            if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear();
+            return true;
+        }
         if (collectionDialogOpen) return CollectionPointerDown(x, y, button);
         if (librarySettingsOpen || resourcePage) return false;
         if (button == 0 && libraryWebButtons.FirstOrDefault(b => b.Bounds.Contains(x, y)) is var web && web.Url is not null)

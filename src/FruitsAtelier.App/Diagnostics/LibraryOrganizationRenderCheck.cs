@@ -48,8 +48,14 @@ internal static class LibraryOrganizationRenderCheck
                     canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
                     view.InitializeLibrary(true, settings); Wait(6); Capture("groups");
                     Invoke("ToggleLibraryGroup", "A"); Wait(6); Capture("expanded");
-                    Invoke("ShowLibraryOrderMenu", new Rect(size.Item1 < 1188 ? 412 : size.Item1 - 770, 134, 174, 28), false);
-                    Paint(); Capture("sort"); view.KeyDown(27, false, false); Paint();
+                    ClickOrder("libraryGroupBounds"); ClickOrder("librarySortBounds");
+                    var entries = (System.Collections.ICollection)typeof(EditorView).GetField("contextItems", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view)!;
+                    if (entries.Count != Enum.GetValues<LibraryOrder>().Length) throw new InvalidOperationException("Library order menu did not switch on the first click.");
+                    Capture("sort");
+                    ClickOrder("libraryDirectionBounds"); Wait(6); Capture("direction-down");
+                    if (!(bool)typeof(EditorView).GetField("libraryDescending", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view)! || entries.Count != 0)
+                        throw new InvalidOperationException("Library direction did not respond while Sort was open.");
+                    ClickOrder("libraryGroupBounds"); ClickOrder("libraryDirectionBounds"); Wait(6); Capture("direction-up");
                     var database = new LibraryDatabase(settings.Workspace, settings.Songs);
                     var map = database.Search("A New Beginning").First();
                     Invoke("ShowCollectionDialog", map); Paint(); Capture("collections"); view.KeyDown(27, false, false); Paint();
@@ -61,6 +67,12 @@ internal static class LibraryOrganizationRenderCheck
                 }
                 finally { view.CloseLibrary(); }
 
+                void ClickOrder(string field)
+                {
+                    var bounds = (Rect)typeof(EditorView).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view)!;
+                    float x = bounds.X + bounds.Width / 2, y = bounds.Y + bounds.Height / 2;
+                    view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
+                }
                 void Invoke(string name, params object[] values) => typeof(EditorView).GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, values);
                 void Paint() { canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End(); }
                 void Wait(int count)
