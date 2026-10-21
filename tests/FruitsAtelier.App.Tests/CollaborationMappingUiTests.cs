@@ -72,6 +72,7 @@ internal static class CollaborationMappingUiTests
                 BookmarkSections();
                 ExclusionReport();
                 ObjectSoundsOption();
+                AimodAfterSync();
             }
         }
         finally { L.SetLanguage(language); }
@@ -80,6 +81,23 @@ internal static class CollaborationMappingUiTests
         foreach (string text in new[] { "84771.521739", "1e3", "-1", "00:60:000", "00:00:1000", "2147483648" })
             Check(!FruitsAtelier.App.Editor.EditorView.TryParseCollaborationTime(text, out _), "Invalid timestamp " + text);
         ResourceUndo();
+    }
+
+    private static void AimodAfterSync()
+    {
+        var source = Difficulty("Source", 500); var target = Difficulty("Target", 2200);
+        target.Document.TimingPoints.Add(new() { TimeMs = 2000, BeatLengthMs = 500, SourceOrder = int.MinValue });
+        target.Document.CollaborationReferences = [new(Guid.NewGuid(), source.Id, 0, 2000)];
+        var ui = new Ui(); ui.View.LoadProject(new() { Name = "refresh report", Difficulties = [source, target] });
+        ui.View.SwitchDifficulty(1); ui.View.ShowAimod(); ui.Paint();
+        Check(ui.View.AimodIssues.Any(i => i.Code == "conflictTiming"), "AiMod initially reports the target endpoint timing conflict");
+        ui.View.ShowCollaborationPanel(); ui.Paint();
+        ui.View.SynchronizeCollaboration();
+        var watch = Stopwatch.StartNew();
+        while (ui.View.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { ui.Paint(); Thread.Sleep(1); }
+        Check(!ui.View.CollaborationBusy && !ui.View.AimodIssues.Any(i => i.Code == "conflictTiming"),
+            "Successful synchronization refreshes the existing AiMod report automatically");
+        Check(ui.View.CollaborationPanelVisible && !ui.View.AimodVisible, "Automatic AiMod refresh preserves the active dock tab");
     }
 
     private static void BookmarkSections()

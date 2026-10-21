@@ -42,14 +42,15 @@ public static class CollaborationMapping
         result.CollaborationReferences = references.Count == 0 ? null : references.ToList();
         var assigned = references.Where(r => r.DifficultyId != Guid.Empty).ToArray();
         if (assigned.Length == 0) return new(result, HitsoundResourcePlan.Combine([]), []);
+        double finalEnd = references.Max(r => r.EndMs);
         LegacySliderVelocityEditing.Capture(result);
         var targetTiming = new TimingMap.Lookup(target);
         foreach (var track in result.Tracks.Where(t => t.Nodes.Count > 0))
             track.SliderVelocitySeed ??= targetTiming.At(track.Nodes[0].TimeMs).SliderVelocityMultiplier;
         var excluded = new List<ExcludedObject>();
         var sliderLengths = new ImportedSliderLengthCache();
-        RemoveParents(result, ParentIds(target, time => assigned.Any(r => Contains(r, time))).ToHashSet());
-        CopySectionTiming(target, result, assigned, byId);
+        RemoveParents(result, ParentIds(target, time => assigned.Any(r => Contains(r, time, finalEnd))).ToHashSet());
+        CopySectionTiming(target, result, assigned, byId, finalEnd);
         var mergedTiming = new TimingMap.Lookup(result);
         foreach (var slider in result.ImportedSliders) RetargetSlider(slider, target, targetTiming);
         var origins = new Dictionary<Guid, (MapDocument Document, Guid Id, Guid Difficulty)>();
@@ -57,16 +58,17 @@ public static class CollaborationMapping
         {
             var source = byId[reference.DifficultyId].Document;
             var timing = new TimingMap.Lookup(source);
-            var selected = ParentIds(source, time => Contains(reference, time)).ToHashSet();
+            var selected = ParentIds(source, time => Contains(reference, time, finalEnd)).ToHashSet();
             foreach (var track in source.Tracks.Where(t => t.StreamSnapDivisor is null))
                 CheckBounds(track.Id, track.Nodes[0].TimeMs, CurveMath.EndTimeMs(track), false);
-            foreach (var slider in source.ImportedSliders.Where(s => s.TimeMs < reference.EndMs))
+            foreach (var slider in source.ImportedSliders.Where(s => s.TimeMs <= reference.EndMs))
                 CheckBounds(slider.Id, slider.TimeMs, sliderLengths.EndTimeMs(source, slider, timing), false);
             foreach (var shower in source.BananaShowers)
                 CheckBounds(shower.Id, shower.TimeMs, shower.EndTimeMs, true);
             void CheckBounds(Guid id, double start, double end, bool spinner)
             {
-                if (start >= reference.EndMs || end <= reference.StartMs || start >= reference.StartMs && end <= reference.EndMs) return;
+                if (start > reference.EndMs || start == reference.EndMs && reference.EndMs != finalEnd
+                    || end <= reference.StartMs || start >= reference.StartMs && end <= reference.EndMs) return;
                 selected.Remove(id);
                 excluded.Add(new(reference.DifficultyId, id, spinner, start, end, reference.StartMs, reference.EndMs));
             }
@@ -256,7 +258,8 @@ public static class CollaborationMapping
         return result;
     }
 
-    private static bool Contains(CollaborationReference r, double time) => time >= r.StartMs && time < r.EndMs;
+    private static bool Contains(CollaborationReference r, double time, double finalEnd)
+        => time >= r.StartMs && (time < r.EndMs || time == r.EndMs && r.EndMs == finalEnd);
     private static HitSampleSettings AudibleSample(ConvertedCatchObject item, HitSampleSettings sample)
     {
         if (sample.Volume == 0) return new(Volume: 0);
@@ -304,7 +307,7 @@ public static class CollaborationMapping
     }
 
     private static void CopySectionTiming(MapDocument target, MapDocument result, CollaborationReference[] references,
-        Dictionary<Guid, ProjectDifficulty> difficulties)
+        Dictionary<Guid, ProjectDifficulty> difficulties, double finalEnd)
     {
         var points = references.Select(r => r.DifficultyId).Distinct()
             .ToDictionary(id => id, id => difficulties[id].Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray());
@@ -312,10 +315,12 @@ public static class CollaborationMapping
         var sourceTimes = points.ToDictionary(p => p.Key, p => p.Value.Select(point => point.TimeMs).ToArray());
         var targetTimes = targetPoints.Select(p => p.TimeMs).ToArray();
         var times = targetPoints.Select(p => p.TimeMs).Concat(references.SelectMany(r => new[] { r.StartMs, r.EndMs }))
-            .Concat(references.SelectMany(r => points[r.DifficultyId].Where(p => Contains(r, p.TimeMs)).Select(p => p.TimeMs)))
+            .Concat(finalEnd < int.MaxValue && target.DurationMs > finalEnd && references.Any(r => r.EndMs == finalEnd)
+                ? new[] { finalEnd + 1 } : [])
+            .Concat(references.SelectMany(r => points[r.DifficultyId].Where(p => Contains(r, p.TimeMs, finalEnd)).Select(p => p.TimeMs)))
             .Distinct().Order();
-        var retainedPoints = targetPoints.Where(p => !references.Any(r => Contains(r, p.TimeMs)))
-            .Concat(references.SelectMany(r => points[r.DifficultyId].Where(p => p.Uninherited && Contains(r, p.TimeMs))))
+        var retainedPoints = targetPoints.Where(p => !references.Any(r => Contains(r, p.TimeMs, finalEnd)))
+            .Concat(references.SelectMany(r => points[r.DifficultyId].Where(p => p.Uninherited && Contains(r, p.TimeMs, finalEnd))))
             .OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
         var retainedGroups = retainedPoints.GroupBy(p => p.TimeMs).ToDictionary(g => g.Key, g => g.ToArray());
         var timingDocument = new MapDocument { BeatLengthMs = target.BeatLengthMs, TimingOffsetMs = target.TimingOffsetMs };
@@ -325,7 +330,7 @@ public static class CollaborationMapping
         TimingPoint? previous = targetPoints.FirstOrDefault(p => p.Uninherited) ?? targetPoints.FirstOrDefault();
         foreach (double time in times)
         {
-            var reference = references.FirstOrDefault(r => Contains(r, time));
+            var reference = references.FirstOrDefault(r => Contains(r, time, finalEnd));
             var source = reference is null ? target : difficulties[reference.DifficultyId].Document;
             var sourcePoints = reference is null ? targetPoints : points[reference.DifficultyId];
             int index = Array.BinarySearch(reference is null ? targetTimes : sourceTimes[reference.DifficultyId], time);

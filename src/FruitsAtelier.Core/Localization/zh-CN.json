@@ -1583,7 +1583,7 @@
   "collab.targets": "引用当前难度的目标谱面",
   "collab.source": "来源难度",
   "collab.start": "起点（包含）",
-  "collab.end": "终点（不含）",
+  "collab.end": "终点",
   "collab.add": "添加区间",
   "collab.unassigned": "未设置",
   "collab.fromBookmarks": "从书签生成区间",

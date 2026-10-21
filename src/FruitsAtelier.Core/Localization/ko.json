@@ -1583,7 +1583,7 @@
   "collab.targets": "Maps referencing this difficulty",
   "collab.source": "Source difficulty",
   "collab.start": "Start (inclusive)",
-  "collab.end": "End (exclusive)",
+  "collab.end": "End",
   "collab.add": "구간 추가",
   "collab.unassigned": "미지정",
   "collab.fromBookmarks": "북마크에서 구간 생성",

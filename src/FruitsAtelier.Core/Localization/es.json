@@ -1583,7 +1583,7 @@
   "collab.targets": "Maps referencing this difficulty",
   "collab.source": "Source difficulty",
   "collab.start": "Start (inclusive)",
-  "collab.end": "End (exclusive)",
+  "collab.end": "End",
   "collab.add": "Añadir sección",
   "collab.unassigned": "Sin asignar",
   "collab.fromBookmarks": "Generar secciones desde marcadores",

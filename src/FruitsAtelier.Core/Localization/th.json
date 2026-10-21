@@ -1583,7 +1583,7 @@
   "collab.targets": "Maps referencing this difficulty",
   "collab.source": "Source difficulty",
   "collab.start": "Start (inclusive)",
-  "collab.end": "End (exclusive)",
+  "collab.end": "End",
   "collab.add": "เพิ่มส่วน",
   "collab.unassigned": "ยังไม่ได้กำหนด",
   "collab.fromBookmarks": "สร้างส่วนจากบุ๊กมาร์ก",

@@ -1583,7 +1583,7 @@
   "collab.targets": "Maps referencing this difficulty",
   "collab.source": "Source difficulty",
   "collab.start": "Start (inclusive)",
-  "collab.end": "End (exclusive)",
+  "collab.end": "End",
   "collab.add": "区間を追加",
   "collab.unassigned": "未設定",
   "collab.fromBookmarks": "ブックマークから区間を生成",

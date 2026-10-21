@@ -118,7 +118,10 @@ suffix are accepted. Ctrl/Cmd+A, C, X and V use the normal field selection and
 clipboard controls. Fractional milliseconds are rejected. Enter commits a field;
 Escape discards its draft. References are saved with the target difficulty.
 
-Ranges include Start and exclude End. Overlaps and self-references are rejected;
+Ranges include Start. The last section in time also includes End; all earlier
+sections exclude End, so adjacent sections share no objects or timing lines.
+This applies to assigned and unassigned sections. Overlaps and self-references
+are rejected;
 adjacent ranges are allowed. Objects belong to the range
 containing their start time. Sliders (including FSliders and repeated spans) and
 spinners must fit completely inside one section; an end exactly at the section
@@ -147,8 +150,12 @@ rebuilds the section rather than appending lines. Legacy slider SV is adjusted p
 object to preserve its duration under the merged BPM and target base SV;
 unrepresentable SV rejects the synchronization. Export generates SV changes from
 the objects.
+An open AiMod report refreshes after successful synchronization, including when
+its dock tab is inactive.
 Sample bank, index, volume and effects follow each section's source timeline,
-including its inherited state at Start, and return to target state at End.
+including its inherited state at Start, and return to target state at End for
+earlier sections, or the next millisecond after the final inclusive End when
+the target timeline continues beyond it.
 Sample transitions use inherited points without importing source SV-only lines.
 Adjacent sections with matching samples need no boundary point. Reference
 relationships do not trigger automatic synchronization or recursively synchronize

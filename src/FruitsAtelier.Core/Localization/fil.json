@@ -1583,7 +1583,7 @@
   "collab.targets": "Maps referencing this difficulty",
   "collab.source": "Source difficulty",
   "collab.start": "Start (inclusive)",
-  "collab.end": "End (exclusive)",
+  "collab.end": "End",
   "collab.add": "Magdagdag ng seksyon",
   "collab.unassigned": "Hindi nakatalaga",
   "collab.fromBookmarks": "Gumawa ng mga seksyon mula sa bookmark",
