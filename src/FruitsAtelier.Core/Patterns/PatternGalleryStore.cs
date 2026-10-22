@@ -62,6 +62,14 @@ public sealed class PatternGalleryStore
         PatternArchive.WriteFile(selected is null ? all : all.Where(p => selected.Contains(p.Id)), path);
     }
 
+    public void Delete(Guid id)
+    {
+        var patterns = Load().ToList();
+        if (patterns.RemoveAll(p => p.Id == id) == 0)
+            throw new InvalidOperationException(L.Get("core.pattern.missing"));
+        PatternArchive.WriteFile(patterns, ArchivePath);
+    }
+
     private int Merge(IEnumerable<PatternSnapshot> incoming)
     {
         var patterns = Load().ToList();

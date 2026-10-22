@@ -7,7 +7,7 @@ internal static class PatternGalleryTests
 {
     internal static void Run()
     {
-        var map = new MapDocument { Name = "Source map", DurationMs = 12000, SliderTickRate = 2, SourcePath = "source.osu", AudioPath = "song.mp3" };
+        var map = new MapDocument { Name = "Source map", DurationMs = 12000, ApproachRate = 9.3, SliderTickRate = 2, SourcePath = "source.osu", AudioPath = "song.mp3" };
         map.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 }, new() { TimeMs = 3000, BeatLengthMs = 400 }]);
         map.OriginalSections.Add(new() { Name = "Metadata", Lines = { "Title:Song", "Artist:Artist", "Version:Expert", "Creator:Mapper" } });
         map.OriginalSections.Add(new() { Name = "General", Lines = { "AudioFilename:song.mp3", "Mode:2" } });
@@ -40,6 +40,8 @@ internal static class PatternGalleryTests
         using var archive = new MemoryStream();
         PatternArchive.Write([snapshot], archive); archive.Position = 0;
         var restored = PatternArchive.Read(archive).Single();
+        Check(restored.CreateDocument().ApproachRate == 9.3 && PatternPreview.Create(restored).ApproachRate == 9.3,
+            "Saved AR survives sharing and drives preview independently of the active map");
         Check(restored.Id == snapshot.Id && restored.Name == snapshot.Name && restored.Source == snapshot.Source
             && restored.CreateDocument().ContentEquals(snapshot.CreateDocument()), "Package round trip preserves complete authoring data");
         Check(restored.CreateDocument().Tracks[0].StreamSnapDivisor == 4 && restored.CreateDocument().Tracks[0].Stack!.FruitAdjustments.Count == 1,
@@ -87,6 +89,17 @@ internal static class PatternGalleryTests
             Expect<InvalidDataException>(() => imported.Import(all));
             Check(imported.Load().Single(p => p.Id == snapshot.Id).CreateDocument().Fruits[0].X == 200,
                 "Conflicting shared identities do not silently overwrite existing patterns");
+            store.Replace(replacement.WithName("Renamed"));
+            var renamed = new PatternGalleryStore(Path.Combine(directory, "Patterns")).Load().Single(p => p.Id == snapshot.Id);
+            Check(renamed.Name == "Renamed" && renamed.Source == replacement.Source
+                && renamed.CreateDocument().ContentEquals(replacement.CreateDocument())
+                && store.SourcePath(renamed.Id) == Path.Combine(directory, "original.osu"),
+                "Rename persists without changing geometry, identity or source navigation");
+            store.Delete(snapshot.Id);
+            Check(store.Load().Select(p => p.Id).SequenceEqual([second.Id]), "Delete persists and retains other patterns");
+            Expect<InvalidOperationException>(() => store.Delete(snapshot.Id));
+            store.Delete(second.Id);
+            Check(store.Load().Count == 0, "Deleting the final pattern leaves a readable empty gallery");
         }
         finally { Directory.Delete(directory, true); }
     }

@@ -110,14 +110,18 @@ all configured FA/osu! Collections. The report excludes native drawing and image
 
 ## Automated regressions
 
-`Core.Tests --pattern-gallery-check` checks beat-relative placement, optional
+`Core.Tests --pattern-placement-check` checks beat-relative placement, optional
 horizontal speed preservation, bounds, stream/stack data, destination droplet
-settings and deterministic previews. `Formats.Tests --pattern-gallery-check`
-checks snapshot isolation, `.fap` round trips, validation and atomic gallery writes.
-`App.Tests --pattern-gallery-check` checks gallery input, drop/undo, preview reuse,
+settings, saved AR, hyperdash starts and deterministic previews. `Formats.Tests --pattern-gallery-check`
+checks snapshot isolation, AR-preserving `.fap` round trips, rename/delete persistence,
+validation and atomic gallery writes.
+`App.Tests --pattern-gallery-check` checks gallery input, placement choices/cancellation,
+drop/undo, context rename/delete, fixed card sizes during dock resizing,
+preview alignment, saved-AR spacing, canvas scroll-direction settings, preview reuse,
 pattern editing and source navigation while retaining unsaved maps.
 `FruitsAtelier.App.exe --render-check --pattern-gallery-render-check` checks the
-grid, large scrolling preview, naming dialog, drag/drop and editing banner in
+grid, large scrolling preview, naming/rename dialogs, context deletion, placement menu,
+drag/drop and editing banner in
 English and Chinese at compact/wide sizes and 96/144 DPI, including warm raster
 cache reuse. Captures are written under `artifacts/tests/pattern-gallery-native`.
 

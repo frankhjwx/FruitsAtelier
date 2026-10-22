@@ -8,7 +8,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public Action<PatternSnapshot>? RequestPatternSource { get; set; }
-    private bool galleryDragging, galleryDropRequested;
+    private bool galleryDragging, galleryDropRequested, galleryDropChoosing;
     private PatternSnapshot? galleryDraggedPattern;
     private MapDocument? galleryDragTarget;
     private EditorHistory? galleryDragHistory;
@@ -41,10 +41,15 @@ public sealed partial class EditorView
             galleryPopupId = Guid.Empty;
             return false;
         }
-        if (button != 0) return true;
+        if (button is not (0 or 2)) return true;
         foreach (var card in galleryCards)
         {
             if (!galleryGridBounds.Contains(x, y) || !card.Bounds.Contains(x, y)) continue;
+            if (button == 2)
+            {
+                ShowGalleryPatternMenu(card.Id, x, y);
+                return true;
+            }
             if (ctrl)
             {
                 if (!gallerySelection.Add(card.Id)) gallerySelection.Remove(card.Id);
@@ -56,8 +61,49 @@ public sealed partial class EditorView
             galleryPressedId = card.Id; galleryPressedX = x; galleryPressedY = y;
             return true;
         }
-        InvokeGalleryHit(x, y);
+        if (button == 0) InvokeGalleryHit(x, y);
         return true;
+    }
+
+    private void ShowGalleryPatternMenu(Guid id, float x, float y)
+    {
+        if (galleryIoTask is not null || PatternEditingActive || PatternEditingBusy
+            || galleryPatterns.FirstOrDefault(p => p.Id == id) is not { } pattern) return;
+        CancelPatternGalleryInteraction();
+        gallerySelection.Clear(); gallerySelection.Add(id);
+        contextItems.Clear(); menu = -1;
+        contextItems.Add(new(L.Get("gallery.rename"), () =>
+        {
+            int generation = galleryGeneration;
+            RequestPatternName?.Invoke(L.Get("gallery.rename"), name =>
+            {
+                if (string.IsNullOrWhiteSpace(name) || generation != galleryGeneration
+                    || galleryIoTask is not null || galleryStore is not { } store) return;
+                StartGalleryIo(() =>
+                {
+                    store.Replace(pattern.WithName(name));
+                    return new(store.Load(), "");
+                });
+            });
+            if (PatternNameVisible)
+            {
+                patternNameText = pattern.Name;
+                SelectInput("gallery:name", patternNameText);
+            }
+        }, RequestPatternName is not null));
+        contextItems.Add(new(L.Get("gallery.delete"), () =>
+        {
+            if (galleryIoTask is not null || galleryStore is not { } store) return;
+            StartGalleryIo(() => { store.Delete(id); return new(store.Load(), ""); });
+        }));
+        PositionGalleryMenu(x, y);
+    }
+
+    private void PositionGalleryMenu(float x, float y)
+    {
+        float menuWidth = Math.Min(300, Math.Max(140, width - 24));
+        contextBounds = new(Math.Clamp(x, 8, Math.Max(8, width - menuWidth - 8)),
+            Math.Clamp(y, 8, Math.Max(8, height - ContextMenuHeight - 8)), menuWidth, ContextMenuHeight);
     }
 
     private void InvokeGalleryHit(float x, float y)
@@ -82,6 +128,7 @@ public sealed partial class EditorView
 
     private bool PatternGalleryPointerMove(float x, float y)
     {
+        if (galleryDropChoosing) return false;
         if (!PatternGalleryInputAvailable && (galleryPreviewPanning || galleryPressedId != Guid.Empty))
         { CancelPatternGalleryInteraction(); return false; }
         if (galleryPreviewPanning || galleryPressedId != Guid.Empty) { mouseX = x; mouseY = y; }
@@ -97,7 +144,7 @@ public sealed partial class EditorView
             if (!CanStartGalleryPlacement) { galleryPressedId = Guid.Empty; return true; }
             galleryDraggedPattern = galleryPatterns.FirstOrDefault(p => p.Id == galleryPressedId);
             if (galleryDraggedPattern is null) { galleryPressedId = Guid.Empty; return true; }
-            galleryDragging = true; galleryDragSpeed = galleryPreserveSpeed;
+            galleryDragging = true; galleryDragSpeed = false;
             galleryDragHistory = history; galleryDragConversion = convertedSnapshot;
             galleryDragVersion++; galleryRequestedTime = galleryStartedTime = double.NaN;
         }
@@ -126,8 +173,12 @@ public sealed partial class EditorView
             galleryPressedId = Guid.Empty;
             if (!plot.Contains(x, y) || !CanStartGalleryPlacement)
             { CancelPatternGalleryInteraction(); return true; }
-            galleryDropRequested = true;
-            StatusMessage = L.Get("gallery.preparing");
+            galleryDropChoosing = true;
+            contextItems.Clear(); menu = -1;
+            contextItems.Add(new(L.Get("gallery.keepWidth"), () => ConfirmGalleryDrop(false)));
+            contextItems.Add(new(L.Get("gallery.preserveSpeed"), () => ConfirmGalleryDrop(true)));
+            contextItems.Add(new(L.Get("mac.cancel"), CancelPatternGalleryInteraction));
+            PositionGalleryMenu(x, y);
         }
         else
         {
@@ -141,12 +192,25 @@ public sealed partial class EditorView
         return true;
     }
 
+    private void ConfirmGalleryDrop(bool preserveSpeed)
+    {
+        if (!galleryDropChoosing) return;
+        galleryDropChoosing = false; galleryDropRequested = true;
+        if (galleryDragSpeed != preserveSpeed)
+        {
+            galleryDragSpeed = preserveSpeed; galleryDragVersion++;
+            galleryPlacement = null; galleryStartedTime = double.NaN;
+        }
+        StatusMessage = L.Get("gallery.preparing");
+    }
+
     private bool PatternGalleryWheel(float x, float y, float delta)
     {
         if (!PatternGalleryInputAvailable || menu >= 0 || contextItems.Count > 0) return false;
         if (galleryPopupId != Guid.Empty && galleryPopupBounds.Contains(x, y))
         {
-            galleryPreviewScroll = Math.Clamp(galleryPreviewScroll - delta / 120 * 64, 0, galleryPreviewMaxScroll);
+            galleryPreviewScroll = Math.Clamp(galleryPreviewScroll
+                - delta / 120 * 64 * (LibrarySettings.ReverseCanvasScroll ? -1 : 1), 0, galleryPreviewMaxScroll);
             return true;
         }
         if (!galleryBounds.Contains(x, y)) return false;
@@ -167,7 +231,8 @@ public sealed partial class EditorView
         galleryDragVersion++;
         galleryPressedId = galleryPopupId = Guid.Empty;
         galleryFullPreview = null; galleryFullPreviewId = Guid.Empty;
-        galleryPreviewPanning = galleryDragging = galleryDropRequested = false;
+        if (galleryDropChoosing) contextItems.Clear();
+        galleryPreviewPanning = galleryDragging = galleryDropRequested = galleryDropChoosing = false;
         galleryDraggedPattern = null; galleryDragTarget = null; galleryDragHistory = null;
         galleryPlacement = null; galleryRequestedTime = galleryStartedTime = double.NaN;
         galleryPopupBounds = galleryLargePreviewBounds = default;
@@ -175,6 +240,7 @@ public sealed partial class EditorView
 
     private void PumpGalleryPlacement()
     {
+        if (galleryDropChoosing && contextItems.Count == 0) CancelPatternGalleryInteraction();
         if (galleryDragging && (!PatternGalleryInputAvailable || !ReferenceEquals(galleryDragHistory, history)
             || !ReferenceEquals(galleryDragConversion, convertedSnapshot))) CancelPatternGalleryInteraction();
         if (galleryPlacementTask is { IsCompleted: true } task)
@@ -212,7 +278,7 @@ public sealed partial class EditorView
             }
             CancelPatternGalleryInteraction();
         }
-        if (!galleryDragging || galleryDropTask is not null || galleryDraggedPattern is null || !double.IsFinite(galleryRequestedTime)) return;
+        if (!galleryDragging || galleryDropChoosing || galleryDropTask is not null || galleryDraggedPattern is null || !double.IsFinite(galleryRequestedTime)) return;
         // Capture the full target once per gesture. Pointer updates only replace a time/X request.
         galleryDragTarget ??= Document.DeepClone();
         if (galleryPlacementTask is null && galleryStartedTime != galleryRequestedTime)
@@ -282,7 +348,7 @@ public sealed partial class EditorView
 
     private void DrawGalleryGhost(ICanvas c)
     {
-        if (!galleryDragging || !plot.Contains(mouseX, mouseY)) return;
+        if (!galleryDragging || galleryDropChoosing || !plot.Contains(mouseX, mouseY)) return;
         if (galleryPlacement?.Preview is not { } preview || galleryPlacement.Placement is not { } prepared
             || galleryPlacement.Time != galleryRequestedTime)
         {
@@ -306,7 +372,7 @@ public sealed partial class EditorView
             var point = Screen(new(item.TimeMs, item.X + (item.Kind == CatchObjectKind.Banana ? 0 : offset)));
             if (point.Y < plot.Y - 50 || point.Y > plot.Bottom + 50) continue;
             DrawCatchObject(c, item, point.X, point.Y, Playfield.Width, .65f, preview.CircleSize,
-                hyperStarts: galleryNoHyperdash, colourOverride: 0xFFFFFF, skinIndexOverride: 0);
+                hyperStarts: preview.HyperdashStarts, colourOverride: 0xFFFFFF, skinIndexOverride: 0);
         }
         c.Unclip();
         c.Text(L.Get("gallery.placementScale", prepared.HorizontalScale), mouseX + 14, mouseY + 14, 11, Accent, 260);

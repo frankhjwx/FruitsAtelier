@@ -44,10 +44,22 @@ internal static class PatternGalleryUiTests
             ui.Click(title.X + 10, title.Y - 25);
             var preview = ui.View.PatternGalleryPreviewBounds;
             Check(preview.Width > 0 && preview.Height > 0, "Selecting did not open floating preview");
+            PaintScheduledFrames(ui);
             Check(!ui.Canvas.Operations.Any(o => o.Clip == preview && o.Segment is not null),
                 "Fruit preview contains an auxiliary connector or snap grid");
             Check(ui.Canvas.Operations.Where(o => o.Clip == preview && o.Dot is not null).All(o => o.Dot!.Value.Color == 0xFFFFFF),
                 "Gallery preview uses combo colouring");
+            bool reverseScroll = ui.View.LibrarySettings.ReverseCanvasScroll;
+            foreach (bool reverse in new[] { false, true })
+            {
+                ui.View.LibrarySettings.ReverseCanvasScroll = reverse;
+                float forward = reverse ? 120 : -120;
+                ui.View.Wheel(preview.X + 20, preview.Y + 20, forward, false); ui.Paint();
+                Check(ui.View.PatternGalleryPreviewScroll > 0, "Preview did not follow the canvas scroll direction setting");
+                ui.View.Wheel(preview.X + 20, preview.Y + 20, -forward, false); ui.Paint();
+                Check(ui.View.PatternGalleryPreviewScroll == 0, "Reverse wheel did not return to the preview start");
+            }
+            ui.View.LibrarySettings.ReverseCanvasScroll = reverseScroll;
             float scrollBeforeModal = ui.View.PatternGalleryGridScroll;
             int confirmation = -1;
             ui.View.ShowDiscardConfirmation(answer => confirmation = answer);
@@ -65,12 +77,17 @@ internal static class PatternGalleryUiTests
             ui.Key(27);
             Check(ui.View.PatternGalleryPreviewBounds.Width == 0, "Escape did not close the preview");
             Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Browsing changed map content");
+            FixedCardResize(ui, snapshot.Id);
+            Check(!ui.Canvas.Texts.Any(t => t.Value == Strings.Get("gallery.preserveSpeed")), "Gallery shows placement option before drop");
             title = ui.Canvas.Texts.Single(t => t.Value == snapshot.Name);
             float x = title.X + 10, y = title.Y - 25;
             ui.View.PointerDown(x, y, 0, false, false);
             var target = ui.ScreenAt(2000, 256);
             ui.View.PointerMove(target.X, target.Y, false, false); ui.Paint();
             ui.View.PointerUp(target.X, target.Y, 0);
+            ui.Paint();
+            Check(ui.View.Document.Fruits.Count == 0, "Drop committed before choosing placement mode");
+            ui.ClickText(Strings.Get("gallery.keepWidth"));
             Wait(() => ui.View.Document.Fruits.Count == 2, ui);
             Check(ui.View.Document.Fruits.All(f => f.X >= 0 && f.X <= 512), "Inserted pattern escaped playfield");
             Check(Math.Abs(ui.View.Document.Fruits[1].TimeMs - ui.View.Document.Fruits[0].TimeMs - 7200) < .001,
@@ -78,6 +95,31 @@ internal static class PatternGalleryUiTests
             Check(ui.View.Document.Fruits.All(f => source.Fruits.All(s => s.Id != f.Id)), "Drop reused snapshot identities");
             ui.Key(90, ctrl: true);
             Check(ui.View.Document.Fruits.Count == 0, "Drop was not one undo step");
+            title = ui.Canvas.Texts.Single(t => t.Value == snapshot.Name);
+            ui.View.PointerDown(title.X + 10, title.Y - 25, 0, false, false);
+            ui.View.PointerMove(target.X, target.Y, false, false); ui.Paint();
+            ui.View.PointerUp(target.X, target.Y, 0); ui.Paint();
+            ui.Key(27); ui.Paint();
+            Check(ui.View.Document.Fruits.Count == 0 && !ui.View.WantsCapture, "Dismissing drop choices changed the map or retained capture");
+            title = ui.Canvas.Texts.Single(t => t.Value == snapshot.Name);
+            ui.View.PointerDown(title.X + 10, title.Y - 25, 0, false, false);
+            ui.View.PointerMove(target.X, target.Y, false, false); ui.Paint();
+            ui.View.PointerUp(target.X, target.Y, 0); ui.Paint();
+            ui.ClickText(Strings.Get("gallery.preserveSpeed"));
+            Wait(() => ui.View.Document.Fruits.Count == 2, ui);
+            Check(Math.Abs(ui.View.Document.Fruits[1].X - ui.View.Document.Fruits[0].X - 256) < .001,
+                "Speed-preserving drop did not scale width with destination BPM");
+            ui.Key(90, ctrl: true);
+            title = ui.Canvas.Texts.Single(t => t.Value == snapshot.Name);
+            ui.View.PointerDown(title.X + 10, title.Y - 25, 2, false, false);
+            ui.View.PointerUp(title.X + 10, title.Y - 25, 2); ui.Paint();
+            ui.ClickText(Strings.Get("gallery.rename"));
+            ui.Key(65, ctrl: true);
+            foreach (char ch in "Renamed gallery pattern") ui.View.TextInput(ch);
+            ui.Key(13);
+            Wait(() => store.Load().Any(p => p.Id == snapshot.Id && p.Name == "Renamed gallery pattern")
+                && !ui.View.PatternGalleryNeedsRedraw, ui);
+            Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Rename changed the destination map");
             ui.View.BeginPatternExport(Path.Combine(directory, "shared.fap"), false);
             Wait(() => File.Exists(Path.Combine(directory, "shared.fap")) && !ui.View.PatternGalleryNeedsRedraw, ui);
             Check(ui.View.BeginPatternEditing(snapshot), "Pattern edit session did not open");
@@ -86,9 +128,76 @@ internal static class PatternGalleryUiTests
             Check(ui.View.PatternEditingActive && !ui.View.PatternEditingBusy && ui.View.SongSetupVisible,
                 "Pattern save shortcut bypassed the Song Setup modal");
             ui.Key(27); ui.View.DiscardPatternEditing();
+            ui.Paint();
+            title = ui.Canvas.Texts.Single(t => t.Value == "Renamed gallery pattern");
+            ui.View.PointerDown(title.X + 10, title.Y - 25, 2, false, false);
+            ui.View.PointerUp(title.X + 10, title.Y - 25, 2); ui.Paint();
+            ui.ClickText(Strings.Get("gallery.delete"));
+            Wait(() => ui.View.PatternGalleryCount == 15 && !ui.View.PatternGalleryNeedsRedraw, ui);
+            Check(store.Load().All(p => p.Id != snapshot.Id) && before.ContentEquals(ui.View.Document),
+                "Context delete did not persist or changed the destination map");
+            PreviewAlignment(ui, Path.Combine(directory, "alignment"));
             DenseThumbnailScheduling(ui, Path.Combine(directory, "dense"));
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    private static void FixedCardResize(Ui ui, Guid id)
+    {
+        var original = ui.View.PatternGalleryCardBounds(id);
+        var originalGrid = ui.View.PatternGalleryGridBounds;
+        float originalWidth = ui.Width - originalGrid.X + 12;
+        var positions = new HashSet<float>();
+        foreach (float width in new[] { 240f, 340f, 450f, originalWidth })
+        {
+            var handle = ui.View.DockResizeBounds(false);
+            ui.View.PointerDown(handle.X + 4, handle.Y + 60, 0, false, false);
+            foreach (float offset in new[] { -2f, 0f, 2f })
+            {
+                ui.View.PointerMove(ui.Width - width + offset, handle.Y + 60, false, false); ui.Paint();
+                var card = ui.View.PatternGalleryCardBounds(id);
+                Check(card.Width == original.Width && card.Height == original.Height,
+                    "Resizing the gallery changed card dimensions");
+                positions.Add(ui.View.PatternGalleryGridBounds.Width);
+            }
+            ui.View.PointerMove(ui.Width - width, handle.Y + 60, false, false);
+            ui.View.PointerUp(ui.Width - width, handle.Y + 60, 0); ui.Paint();
+        }
+        Check(positions.Count > 3, "Gallery resize fixture did not change dock width");
+        PaintScheduledFrames(ui);
+    }
+
+    private static void PreviewAlignment(Ui ui, string directory)
+    {
+        Directory.CreateDirectory(directory);
+        var source = new MapDocument { ApproachRate = 9, CircleSize = 5, DurationMs = 5000 };
+        source.Fruits.AddRange([new() { TimeMs = 1000, X = 30 }, new() { TimeMs = 1010, X = 140 },
+            new() { TimeMs = 1200, X = 80 }]);
+        var saved = PatternSnapshot.Capture(source, source.Fruits.Select(f => f.Id), "Left-side import");
+        PatternArchive.WriteFile([saved], Path.Combine(directory, "gallery.fap"));
+        ui.View.ConfigurePatternGallery(directory); ui.Resize(1440, 900); ui.Paint();
+        PaintScheduledFrames(ui);
+        var card = ui.View.PatternGalleryCardBounds(saved.Id);
+        var image = new FruitsAtelier.App.Rendering.Rect(card.X + 6, card.Y + 6, card.Width - 12, card.Height - 41);
+        Verify(image, thumbnail: true);
+        ui.Click(card.X + 20, card.Y + 20); PaintScheduledFrames(ui);
+        Verify(ui.View.PatternGalleryPreviewBounds, thumbnail: false);
+        ui.Key(27);
+
+        void Verify(FruitsAtelier.App.Rendering.Rect bounds, bool thumbnail)
+        {
+            var dots = ui.Canvas.Operations.Where(o => o.Clip == bounds && o.Dot is not null)
+                .Select(o => o.Dot!.Value).ToArray();
+            var fruits = dots.Where(d => d.Color == 0xFFFFFF).OrderByDescending(d => d.Y).ToArray();
+            Check(fruits.Length == 3 && dots.Any(d => d.Color == 0xFF0000), "Preview omitted red fruit or saved objects");
+            Check(Math.Abs((fruits.Min(d => d.X) + fruits.Max(d => d.X)) / 2 - (bounds.X + bounds.Width / 2)) < .001,
+                "Off-center import was not centered on its actual horizontal bounds");
+            Check(bounds.Bottom - fruits[0].Y < fruits[0].Radius * 1.2f + 4.01f,
+                "Preview did not start at the bottom");
+            if (!thumbnail)
+                Check(Math.Abs((fruits[0].Y - fruits[2].Y) - 200 * CatchScrollTiming.PixelsPerMs(9, bounds.Width - 28)) < .001,
+                    "Large preview used the active map AR instead of saved AR");
+        }
     }
 
     private static void DenseThumbnailScheduling(Ui ui, string directory)

@@ -2,9 +2,16 @@
 
 Open **Layout → Pattern Gallery** to show the dockable gallery. The default layout
 includes it in the right dock. Cards fill the panel, with a skin-rendered thumbnail
-above each pattern name. Select a card to open a larger preview beside the panel;
+above each pattern name. Cards have a fixed size; resizing the dock changes the
+number of columns and wraps the cards without resizing the thumbnails.
+Select a card to open a larger preview beside the panel;
 use the wheel or drag vertically within that preview to inspect a long pattern.
+The enlarged preview follows the canvas scroll direction, including the reverse-scroll setting.
 Ctrl-click cards to select multiple patterns for export.
+Previews start at the bottom and center the actual pattern horizontally, independent
+of its original playfield position. This alignment does not change saved coordinates.
+Right-click a card to rename or delete the saved pattern. Renaming retains its
+identity, source information and geometry; deleting removes it from the local gallery.
 
 ## Capture and sharing
 
@@ -13,7 +20,7 @@ and enter a name. Fruits, FSliders, imported sliders, streams, stacks and banana
 showers are supported. A saved pattern is an independent snapshot: editing its
 source map does not change it. Stream and stack parameters and individual fruit
 adjustments remain editable. Source artist, title, difficulty, creator and start
-time are retained alongside the authoring data and timing context.
+time are retained alongside the authoring data, AR and timing context.
 
 **Export all** or **Export selected** creates a `.fap` (Fruits Atelier Pattern)
 package. **Import** merges a package into the gallery. Identical entries with the
@@ -37,7 +44,9 @@ Horizontal dragging moves the group within the 0–512 playfield. The complete
 pattern is constrained together, so placement does not clamp individual objects.
 Dropping creates one undoable edit with fresh object identities.
 
-Enable **Preserve horizontal speed** to scale horizontal distances by the time
+After dropping on the target map, choose **Keep horizontal spacing** or
+**Preserve horizontal speed** from the placement menu, or cancel the drop.
+**Preserve horizontal speed** scales horizontal distances by the time
 ratio: moving a pattern from 120 BPM to 180 BPM makes its width two-thirds as large.
 Without this option, horizontal distances remain unchanged. A pattern that cannot
 fit the playfield is rejected. Imported slider geometry scales uniformly when
@@ -47,7 +56,10 @@ ratio across the pattern. A placement crossing incompatible BPM changes reports
 an error rather than distorting the saved geometry.
 
 Destination timing, SliderTickRate and droplet settings control inserted objects.
-The source timing and STR remain available for the saved preview. Preview sliders
+The source timing, STR and AR remain available for the saved preview. Its vertical
+spacing uses the saved AR; thumbnails fit the pattern by scaling both axes together.
+Red hyperdash fruits are calculated from the complete preview sequence and use
+the current skin's hyperdash colour. Preview sliders
 are derandomized and banana showers use a fixed preview seed; preview processing
 does not alter the saved data. Icons and large previews use the current skin with
 white combo tint, without snap grids or movement helper lines. Slider bodies remain
@@ -78,8 +90,9 @@ the meantime, returning asks how to handle those source-map changes.
 
 Preview conversion runs on a single background worker. Up to 64 thumbnail geometry
 entries retain at most 512 sampled objects and 256 sampled slider spans with 10
-points each, preserving each retained span's endpoints. The grid adapts cell size
-to keep its visible working set, including overscan, within 48 cards. This lets
+points each, preserving each retained span's endpoints. The grid keeps its visible
+working set within 48 cards by bounding the scrollable viewport
+in exceptionally tall layouts. Card dimensions remain fixed. This lets
 visible thumbnails finish warming and the gallery stop requesting idle frames.
 One separate full-resolution preview is retained for the selected popup; it is
 released when closed or replaced. Each full preview's path data is limited to

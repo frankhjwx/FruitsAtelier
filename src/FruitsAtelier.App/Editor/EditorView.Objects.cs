@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private void DrawCatchObject(ICanvas c, ConvertedCatchObject item, float x, float y, float fieldWidth, float opacity = 1, double? circleSize = null, HashSet<(Guid SourceId, int EventIndex)>? hyperStarts = null, bool animated = false, bool caught = false, uint? colourOverride = null, int? skinIndexOverride = null, double? presentationTime = null, double? approachRate = null)
+    private void DrawCatchObject(ICanvas c, ConvertedCatchObject item, float x, float y, float fieldWidth, float opacity = 1, double? circleSize = null, IReadOnlySet<(Guid SourceId, int EventIndex)>? hyperStarts = null, bool animated = false, bool caught = false, uint? colourOverride = null, int? skinIndexOverride = null, double? presentationTime = null, double? approachRate = null)
     {
         float scale = fieldWidth / 512;
         double cs = circleSize ?? Document.CircleSize;

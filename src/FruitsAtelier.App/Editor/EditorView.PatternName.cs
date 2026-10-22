@@ -41,7 +41,7 @@ public sealed partial class EditorView
         DrawInputText(c, new(patternNameField.X + 10, patternNameField.Y + 9, patternNameField.Width - 20, 20),
             patternNameText, 13, true, "gallery:name");
         Button(c, new(box.Right - 208, box.Bottom - 52, 88, 32), L.Get("mac.cancel"), () => FinishPatternName(false));
-        Button(c, new(box.Right - 108, box.Bottom - 52, 88, 32), L.Get("gallery.save"), () => FinishPatternName(true),
+        Button(c, new(box.Right - 108, box.Bottom - 52, 88, 32), L.Get("mac.save"), () => FinishPatternName(true),
             enabled: !string.IsNullOrWhiteSpace(patternNameText));
     }
 

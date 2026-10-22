@@ -3,7 +3,8 @@ using L = FruitsAtelier.Localization.Strings;
 namespace FruitsAtelier.Core.Patterns;
 
 public sealed record PatternPreviewData(IReadOnlyList<ConvertedCatchObject> Objects,
-    IReadOnlyList<IReadOnlyList<MapPoint>> Paths, double StartTimeMs, double EndTimeMs, double CircleSize);
+    IReadOnlyList<IReadOnlyList<MapPoint>> Paths, double StartTimeMs, double EndTimeMs, double CircleSize,
+    double ApproachRate, double CenterX, IReadOnlySet<(Guid SourceId, int EventIndex)> HyperdashStarts);
 
 /// <summary>Skin-independent preview geometry. Call off the pointer/render path and cache the result.</summary>
 public static class PatternPreview
@@ -58,8 +59,15 @@ public static class PatternPreview
             double velocity = ImportedSliderConverter.VelocityAt(map, slider, timing);
             AddSpans(geometry.TimeXPoints(slider, velocity), slider.TimeMs, geometry.Distance / velocity, slider.SpanCount);
         }
+        double minX = 512, maxX = 0;
+        foreach (var item in objects) IncludeX(item.X);
+        foreach (var path in paths)
+            foreach (var point in path) IncludeX(point.X);
         return new(Array.AsReadOnly(objects), paths.AsReadOnly(), PatternPlacement.Parents(map).Min(p => p.Time),
-            PatternPlacement.EndTime(map, timing), map.CircleSize);
+            PatternPlacement.EndTime(map, timing), map.CircleSize, map.ApproachRate, (minX + maxX) / 2,
+            HyperDashCalculator.GetHyperDashStarts(objects, map.CircleSize));
+
+        void IncludeX(double x) { minX = Math.Min(minX, x); maxX = Math.Max(maxX, x); }
 
         void AddSpans(IReadOnlyList<MapPoint> first, double head, double duration, int count)
         {

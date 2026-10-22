@@ -9,7 +9,23 @@ internal static class PatternPlacementTests
         TimingBoundaries();
         CurveBoundsAndHistory();
         LegacyAndPreview();
+        PreviewDifficulty();
         PreparationCost();
+    }
+
+    private static void PreviewDifficulty()
+    {
+        var map = new MapDocument { ApproachRate = 9, CircleSize = 5 };
+        map.Fruits.AddRange([new() { TimeMs = 1000, X = 40 }, new() { TimeMs = 1100, X = 470 },
+            new() { TimeMs = 1200, X = 460 }]);
+        var saved = Capture(map);
+        map.ApproachRate = 2; map.Fruits[1].X = 50;
+        var preview = PatternPreview.Create(saved);
+        Check(preview.ApproachRate == 9, "Preview retains snapshot AR after source edits");
+        Check(preview.HyperdashStarts.SetEquals(HyperDashCalculator.GetHyperDashStarts(preview.Objects, preview.CircleSize))
+            && preview.HyperdashStarts.Contains((preview.Objects[0].SourceId, preview.Objects[0].EventIndex))
+            && !preview.HyperdashStarts.Contains((preview.Objects[1].SourceId, preview.Objects[1].EventIndex)),
+            "Preview marks red departures using the complete saved sequence");
     }
 
     private static void TempoAndStack()

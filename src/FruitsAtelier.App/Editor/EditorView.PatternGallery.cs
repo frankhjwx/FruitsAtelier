@@ -8,6 +8,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private const float GalleryCardWidth = 160, GalleryCardHeight = 189, GalleryCardGap = 8;
     public Action? RequestPatternImport { get; set; }
     public Action<bool>? RequestPatternExport { get; set; }
     public Action<string, Action<string?>>? RequestPatternName { get; set; }
@@ -20,13 +21,12 @@ public sealed partial class EditorView
     private readonly Dictionary<Guid, string> galleryPreviewErrors = [];
     private readonly List<(Guid Id, Rect Bounds)> galleryCards = [];
     private readonly List<Guid> galleryVisibleIds = [];
-    private readonly HashSet<(Guid, int)> galleryNoHyperdash = [];
     private Task<GalleryLoad>? galleryIoTask;
     private Task<GalleryPreviewResult>? galleryPreviewTask;
     private Guid galleryFullPreviewId;
     private PatternPreviewData? galleryFullPreview;
     private int galleryGeneration, galleryIoGeneration, galleryPreviewGeneration;
-    private bool galleryLoadRequested, galleryLoaded, galleryPreserveSpeed;
+    private bool galleryLoadRequested, galleryLoaded;
     private float galleryScroll, galleryMaxScroll, galleryPreviewScroll, galleryPreviewMaxScroll;
     private Rect galleryBounds, galleryGridBounds, galleryPopupBounds, galleryLargePreviewBounds;
     private Guid galleryPopupId, galleryPressedId;
@@ -50,7 +50,7 @@ public sealed partial class EditorView
 
     public bool PatternGalleryWantsCapture => galleryPressedId != Guid.Empty || galleryPreviewPanning;
     public bool PatternGalleryNeedsRedraw => PatternEditingNeedsRedraw || PatternSourceNeedsRedraw || galleryIoTask is not null || galleryPreviewTask is not null
-        || galleryPlacementTask is not null || galleryDropTask is not null || galleryDragging || galleryPendingDirectory is not null
+        || galleryPlacementTask is not null || galleryDropTask is not null || galleryDragging && !galleryDropChoosing || galleryPendingDirectory is not null
         || PatternGalleryAvailable && (GalleryFullPreviewMissing || galleryVisibleIds.Any(GalleryPreviewMissing));
     private bool GalleryPreviewMissing(Guid id) => id != Guid.Empty && !galleryPreviews.ContainsKey(id) && !galleryPreviewErrors.ContainsKey(id);
     private bool GalleryFullPreviewMissing => galleryPopupId != Guid.Empty && (galleryFullPreviewId != galleryPopupId || galleryFullPreview is null) && !galleryPreviewErrors.ContainsKey(galleryPopupId);
@@ -175,6 +175,7 @@ public sealed partial class EditorView
                     galleryPreviews.Clear(); galleryPreviewErrors.Clear(); galleryFullPreview = null; galleryFullPreviewId = Guid.Empty;
                     galleryGeneration++;
                     gallerySelection.IntersectWith(galleryPatterns.Select(p => p.Id));
+                    if (!galleryPatterns.Any(p => p.Id == galleryPopupId)) galleryPopupId = Guid.Empty;
                     if (result.Notice.Length > 0) StatusMessage = result.Notice;
                 }
             }
@@ -246,31 +247,24 @@ public sealed partial class EditorView
             () => RequestPatternImport?.Invoke(), enabled: ready, fontSize: 11);
         Button(c, new(bounds.X + (unit + gap) * 2, bounds.Y, unit, 28), L.Get("gallery.export"),
             ShowGalleryExportMenu, enabled: ready && galleryPatterns.Count > 0, fontSize: 11);
-        Button(c, new(bounds.X, bounds.Y + 34, bounds.Width, 27), L.Get("gallery.preserveSpeed"),
-            () => galleryPreserveSpeed = !galleryPreserveSpeed, active: galleryPreserveSpeed, fontSize: 11);
-        galleryGridBounds = new(bounds.X, bounds.Y + 70, bounds.Width, Math.Max(0, bounds.Height - 96));
+        galleryGridBounds = new(bounds.X, bounds.Y + 36, bounds.Width, Math.Max(0, bounds.Height - 62));
         if (galleryPatterns.Count == 0)
         {
-            c.Text(L.Get(ready ? "gallery.empty" : "gallery.loading"), bounds.X + 4, bounds.Y + 88, 12, Muted, bounds.Width - 8);
+            c.Text(L.Get(ready ? "gallery.empty" : "gallery.loading"), bounds.X + 4, bounds.Y + 54, 12, Muted, bounds.Width - 8);
             return;
         }
-        int columns = Math.Max(1, (int)((bounds.Width + 8) / 116));
-        float cellWidth = (bounds.Width - (columns - 1) * 8 - 8) / columns;
-        float cellHeight = cellWidth + 29;
-        // Bound the visible working set below the thumbnail cache capacity, including overscan.
-        while (columns > 1 && columns * ((int)(galleryGridBounds.Height / (cellHeight + 8)) + 2) > 48)
+        int columns = Math.Clamp((int)(bounds.Width / (GalleryCardWidth + GalleryCardGap)), 1, 24);
+        const float cellWidth = GalleryCardWidth, cellHeight = GalleryCardHeight;
+        // Extremely tall layouts scroll a bounded viewport without changing card or raster sizes.
+        galleryGridBounds = galleryGridBounds with
         {
-            columns--;
-            cellWidth = (bounds.Width - (columns - 1) * 8 - 8) / columns;
-            cellHeight = cellWidth + 29;
-        }
-        if (columns * ((int)(galleryGridBounds.Height / (cellHeight + 8)) + 2) > 48)
-            cellHeight = Math.Max(cellHeight, galleryGridBounds.Height / (48 / columns - 2) - 7);
+            Height = Math.Min(galleryGridBounds.Height, (48 / columns - 1) * (cellHeight + GalleryCardGap))
+        };
         int rows = (galleryPatterns.Count + columns - 1) / columns;
         galleryMaxScroll = Math.Max(0, rows * (cellHeight + 8) - 8 - galleryGridBounds.Height);
         galleryScroll = Math.Clamp(galleryScroll, 0, galleryMaxScroll);
         int firstRow = Math.Max(0, (int)(galleryScroll / (cellHeight + 8)));
-        int lastRow = Math.Min(rows, firstRow + (int)(galleryGridBounds.Height / (cellHeight + 8)) + 2);
+        int lastRow = Math.Min(rows, (int)Math.Ceiling((galleryScroll + galleryGridBounds.Height) / (cellHeight + GalleryCardGap)));
         c.Clip(galleryGridBounds);
         for (int row = firstRow; row < lastRow; row++)
             for (int column = 0; column < columns; column++)
@@ -331,8 +325,9 @@ public sealed partial class EditorView
             preview.LastUsed = ++galleryUseCounter;
             if (galleryFullPreviewId == pattern.Id && galleryFullPreview is { } full)
             {
-                float timeScale = (galleryLargePreviewBounds.Width - 32) / 512 * .18f;
-                galleryPreviewMaxScroll = Math.Max(0, (float)(full.EndTimeMs - full.StartTimeMs) * timeScale + 36 - galleryLargePreviewBounds.Height);
+                double timeScale = CatchScrollTiming.PixelsPerMs(full.ApproachRate, Math.Max(10, galleryLargePreviewBounds.Width - 28));
+                float padding = GalleryPreviewPadding(full, Math.Max(10, galleryLargePreviewBounds.Width - 28));
+                galleryPreviewMaxScroll = Math.Max(0, (float)((full.EndTimeMs - full.StartTimeMs) * timeScale) + padding * 2 - galleryLargePreviewBounds.Height);
                 galleryPreviewScroll = Math.Clamp(galleryPreviewScroll, 0, galleryPreviewMaxScroll);
                 DrawGalleryPreview(c, full, galleryLargePreviewBounds, false, galleryPreviewScroll);
                 DrawGalleryScrollbar(c, galleryLargePreviewBounds, galleryPreviewScroll, galleryPreviewMaxScroll);
@@ -357,9 +352,13 @@ public sealed partial class EditorView
     {
         float fieldWidth = Math.Max(10, bounds.Width - 28);
         double duration = Math.Max(1, data.EndTimeMs - data.StartTimeMs);
-        double scale = thumbnail ? Math.Min(fieldWidth / 512 * .18, Math.Max(4, bounds.Height - 24) / duration) : fieldWidth / 512 * .18;
+        if (thumbnail)
+            fieldWidth = (float)Math.Min(fieldWidth, Math.Max(1, bounds.Height - 8)
+                / (duration * CatchScrollTiming.PixelsPerMs(data.ApproachRate, 512)
+                    + CatchSize.FruitRadius(data.CircleSize) * 2.4) * 512);
+        double scale = CatchScrollTiming.PixelsPerMs(data.ApproachRate, fieldWidth);
         float center = bounds.X + bounds.Width / 2;
-        float bottom = bounds.Bottom - 18 + scroll;
+        float bottom = bounds.Bottom - GalleryPreviewPadding(data, fieldWidth) + scroll;
         double visibleStart = data.StartTimeMs + (bottom - bounds.Bottom - 30) / scale;
         double visibleEnd = data.StartTimeMs + (bottom - bounds.Y + 30) / scale;
         c.Clip(bounds);
@@ -370,27 +369,33 @@ public sealed partial class EditorView
                 float ay = bottom - (float)((a.TimeMs - data.StartTimeMs) * scale);
                 float by = bottom - (float)((b.TimeMs - data.StartTimeMs) * scale);
                 if (Math.Max(ay, by) < bounds.Y || Math.Min(ay, by) > bounds.Bottom) continue;
-                c.Line(center + (float)(a.X - 256) * fieldWidth / 512, ay,
-                    center + (float)(b.X - 256) * fieldWidth / 512, by, 0xFFFFFF, Math.Max(1.5f, fieldWidth / 512 * 5), .6f);
+                c.Line(center + (float)(a.X - data.CenterX) * fieldWidth / 512, ay,
+                    center + (float)(b.X - data.CenterX) * fieldWidth / 512, by, 0xFFFFFF, Math.Max(1.5f, fieldWidth / 512 * 5), .6f);
             }
         for (int i = GalleryObjectLowerBound(data.Objects, visibleStart); i < data.Objects.Count && data.Objects[i].TimeMs <= visibleEnd; i++)
         {
             var item = data.Objects[i];
             float y = bottom - (float)((item.TimeMs - data.StartTimeMs) * scale);
             if (y < bounds.Y - 30 || y > bounds.Bottom + 30) continue;
-            DrawCatchObject(c, item, center + (float)(item.X - 256) * fieldWidth / 512, y, fieldWidth,
-                circleSize: data.CircleSize, hyperStarts: galleryNoHyperdash, colourOverride: 0xFFFFFF, skinIndexOverride: 0);
+            DrawCatchObject(c, item, center + (float)(item.X - data.CenterX) * fieldWidth / 512, y, fieldWidth,
+                circleSize: data.CircleSize, hyperStarts: data.HyperdashStarts, colourOverride: 0xFFFFFF, skinIndexOverride: 0);
         }
         c.Unclip();
     }
+
+    private static float GalleryPreviewPadding(PatternPreviewData data, float fieldWidth)
+        => 4 + CatchSize.FruitRadius(data.CircleSize) * fieldWidth / 512 * 1.2f;
 
     private static PatternPreviewData GalleryThumbnailData(PatternPreviewData full)
     {
         // Thumbnail sampling bounds idle cache memory independently of source pattern length.
         // The selected popup retains the full data; these samples never enter saved or placed geometry.
+        var objects = GallerySamples(full.Objects, 512);
         return full with
         {
-            Objects = GallerySamples(full.Objects, 512),
+            Objects = objects,
+            HyperdashStarts = objects.Where(o => full.HyperdashStarts.Contains((o.SourceId, o.EventIndex)))
+                .Select(o => (o.SourceId, o.EventIndex)).ToHashSet(),
             Paths = GallerySamples(full.Paths, 256).Select(path => (IReadOnlyList<MapPoint>)GallerySamples(path, 10)).ToArray()
         };
     }

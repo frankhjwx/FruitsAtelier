@@ -44,6 +44,20 @@ internal static class PatternGalleryRenderCheck
                 if (rasterBuilds == 0 || canvas.PatternRasterBuildCount != rasterBuilds
                     || canvas.CachedPatternRasterBytes > 16L * 1024 * 1024)
                     throw new InvalidOperationException("Gallery thumbnails did not reuse their bounded raster cache.");
+                var originalCard = editor.PatternGalleryCardBounds(patterns[0].Id);
+                float originalDockWidth = size.Item1 - editor.PatternGalleryGridBounds.X + 12;
+                foreach (float dockWidth in new[] { 240f, 450f, originalDockWidth })
+                {
+                    var handle = editor.DockResizeBounds(false);
+                    editor.PointerDown(handle.X + 4, handle.Y + 60, 0, false, false);
+                    editor.PointerMove(size.Item1 - dockWidth, handle.Y + 60, false, false); Paint();
+                    editor.PointerUp(size.Item1 - dockWidth, handle.Y + 60, 0); Paint();
+                    var resized = editor.PatternGalleryCardBounds(patterns[0].Id);
+                    if (resized.Width != originalCard.Width || resized.Height != originalCard.Height)
+                        throw new InvalidOperationException("Resizing the dock changed gallery card dimensions.");
+                    Wait(() => !editor.PatternGalleryNeedsRedraw, "reflow gallery");
+                    Paint($"reflow-{dockWidth:0}");
+                }
 
                 var longCard = editor.PatternGalleryCardBounds(patterns[0].Id);
                 Click(longCard);
@@ -59,7 +73,7 @@ internal static class PatternGalleryRenderCheck
 
                 editor.KeyDown('A', true, false); Paint();
                 var grid = editor.PatternGalleryGridBounds;
-                Click(new(grid.X, grid.Y - 70, 70, 28));
+                Click(new(grid.X, grid.Y - 36, 70, 28));
                 foreach (char character in locale == "en" ? "Saved selection" : "\u4fdd\u5b58\u7684\u9009\u6bb5") editor.TextInput(character);
                 Paint("name");
                 editor.KeyDown(13, false, false);
@@ -77,6 +91,10 @@ internal static class PatternGalleryRenderCheck
                 while (DateTime.UtcNow < until) { Thread.Sleep(5); Paint(); }
                 Paint("drag");
                 editor.PointerUp(px, py, 0);
+                Paint("drop-options");
+                // The placement menu is clamped at the canvas pointer and its first row keeps spacing.
+                Click(new(Math.Clamp(px, 8, Math.Max(8, size.Item1 - 308)) + 6,
+                    Math.Clamp(py, 8, Math.Max(8, size.Item2 - 116)) + 6, 288, 30));
                 Wait(() => !editor.PatternGalleryNeedsRedraw, "commit drop");
                 if (editor.Document.Fruits.Count <= map.Fruits.Count) throw new InvalidOperationException("Gallery drag did not insert fruit pattern: " + editor.StatusMessage);
                 Paint("inserted");
@@ -88,7 +106,27 @@ internal static class PatternGalleryRenderCheck
                 if (!editor.PatternEditingActive) throw new InvalidOperationException("Double click did not enter pattern editing.");
                 editor.DiscardPatternEditing(); Paint("returned");
                 if (editor.PatternEditingActive || !map.ContentEquals(editor.Document)) throw new InvalidOperationException("Pattern edit return did not restore original map.");
+                shortCard = editor.PatternGalleryCardBounds(patterns[1].Id);
+                float contextX = shortCard.X + 20, contextY = shortCard.Y + 20;
+                editor.PointerDown(contextX, contextY, 2, false, false);
+                editor.PointerUp(contextX, contextY, 2); Paint("context-menu");
+                ClickContext(0);
+                editor.KeyDown('A', true, false);
+                foreach (char character in locale == "en" ? "Renamed pattern" : "\u91cd\u547d\u540d\u7684\u56fe\u6848") editor.TextInput(character);
+                Paint("rename"); editor.KeyDown(13, false, false);
+                Wait(() => !editor.PatternGalleryNeedsRedraw, "rename pattern");
+                if (new PatternGalleryStore(gallery).Load().Single(p => p.Id == patterns[1].Id).Name == patterns[1].Name)
+                    throw new InvalidOperationException("Context rename did not persist.");
+                editor.PointerDown(contextX, contextY, 2, false, false);
+                editor.PointerUp(contextX, contextY, 2); Paint();
+                ClickContext(1);
+                Wait(() => editor.PatternGalleryCount == patterns.Count && !editor.PatternGalleryNeedsRedraw, "delete pattern");
+                Paint("deleted");
+                if (!map.ContentEquals(editor.Document)) throw new InvalidOperationException("Gallery management changed the map.");
                 Console.WriteLine($"PASS native Pattern Gallery {locale} {size.Item1}x{size.Item2} {dpi} DPI");
+
+                void ClickContext(int row) => Click(new(Math.Clamp(contextX, 8, Math.Max(8, size.Item1 - 308)) + 6,
+                    Math.Clamp(contextY, 8, Math.Max(8, size.Item2 - 84)) + 6 + row * 32, 288, 30));
 
                 void Click(Rect rect)
                 {
@@ -128,7 +166,7 @@ internal static class PatternGalleryRenderCheck
             : ["\u957f\u9636\u68af", "\u4e09\u89d2\u679c\u4e32", "\u67d4\u548c\u66f2\u7ebf", "\u4ea4\u66ff\u53e0\u4e32", "\u5feb\u901f\u4e32", "\u9999\u8549\u96e8", "\u5927\u8df3", "\u53cd\u5411\u66f2\u7ebf", "\u77ed\u53e0\u4e32", "\u5747\u5300\u4e32", "\u4ea4\u53c9", "\u6536\u5c3e"];
         for (int index = 0; index < names.Length; index++)
         {
-            var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Metadata]\nArtist:Studio Fruit\nTitle:Snowlight\nVersion:Gallery study\nCreator:Atelier\n[Difficulty]\nSliderMultiplier:1.92\nSliderTickRate:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n");
+            var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Metadata]\nArtist:Studio Fruit\nTitle:Snowlight\nVersion:Gallery study\nCreator:Atelier\n[Difficulty]\nApproachRate:9\nSliderMultiplier:1.92\nSliderTickRate:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n");
             map.DurationMs = 30000;
             if (index == 0)
                 map.Fruits.AddRange(Enumerable.Range(0, 65).Select(i => new Fruit { TimeMs = 1000 + i * 250, X = 256 + 150 * Math.Sin(i * .6) }));
@@ -146,7 +184,7 @@ internal static class PatternGalleryRenderCheck
                 map.Tracks.Add(track);
             }
             else if (index == 5) map.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 2500 });
-            else map.Fruits.AddRange([new() { TimeMs = 1000, X = 140 }, new() { TimeMs = 1250, X = 360 }, new() { TimeMs = 1500, X = 256 }]);
+            else map.Fruits.AddRange([new() { TimeMs = 1000, X = 140 }, new() { TimeMs = 1100, X = 360 }, new() { TimeMs = 1500, X = 256 }]);
             patterns.Add(PatternSnapshot.Capture(map, map.Fruits.Select(f => f.Id).Concat(map.Tracks.Select(t => t.Id))
                 .Concat(map.BananaShowers.Select(b => b.Id)), names[index]));
         }

@@ -16,6 +16,7 @@ public sealed class PatternSnapshot
     public int ObjectCount => document.Fruits.Count + document.Tracks.Count + document.ImportedSliders.Count + document.BananaShowers.Count;
     public MapDocument CreateDocument() => document.DeepClone();
     public PatternSnapshot WithDocument(MapDocument edited) => new(Id, Name, Source, edited);
+    public PatternSnapshot WithName(string name) => new(Id, name, Source, document);
 
     internal PatternSnapshot(Guid id, string name, PatternSource source, MapDocument document)
     {
