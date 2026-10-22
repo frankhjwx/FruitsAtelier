@@ -78,6 +78,27 @@ internal static class InspectorPanelsTests
                 { ui.Click(leftArrow.X + 2, leftArrow.Y + 2); }
                 Check(ui.View.DockTabBounds(EditorView.DockPanel.Preview).Width > 0, "Dock arrow reveals overflowing tabs");
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.title")), "Dock titles retain full text");
+                var contentBeforeWheel = ui.View.Document.DeepClone();
+                var conversionBeforeWheel = ui.View.Conversion;
+                var randomViewport = ui.View.RandomDockViewport;
+                float wheelX = leftArrow.X + 2, wheelY = leftArrow.Y + 2;
+                ui.View.Wheel(wheelX, wheelY, 12000, false); ui.Paint();
+                float firstTabX = ui.Canvas.Texts.Single(t => t.Value == L.Get("dock.preview")).X;
+                var previewTab = ui.View.DockTabBounds(EditorView.DockPanel.Preview);
+                ui.View.Wheel(previewTab.X + 2, previewTab.Y + 2, -60, false); ui.Paint();
+                Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("dock.preview")).X == firstTabX - 24,
+                    "Wheel over a tab scrolls right proportionally for partial wheel deltas");
+                ui.View.Wheel(wheelX, wheelY, -12000, false); ui.Paint();
+                float lastTabX = ui.Canvas.Texts.Single(t => t.Value == L.Get("dock.preview")).X;
+                ui.View.Wheel(wheelX, wheelY, -120, false); ui.Paint();
+                Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("dock.preview")).X == lastTabX,
+                    "Wheel over an arrow clamps at the right edge");
+                ui.View.Wheel(wheelX, wheelY, 12000, false); ui.Paint();
+                Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("dock.preview")).X == firstTabX,
+                    "Wheel up returns to the left edge");
+                Check(ui.View.RandomDockViewport == randomViewport && ui.View.Document.ContentEquals(contentBeforeWheel)
+                    && ReferenceEquals(conversionBeforeWheel, ui.View.Conversion),
+                    "Tab scrolling preserves the active panel, map content and conversion");
                 var baseline = ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X)).ToArray();
                 SetStrength("70"); Wait();
                 var preview = ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X)).ToArray();

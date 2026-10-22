@@ -959,6 +959,7 @@ public sealed partial class EditorView
                 0, Math.Max(0, L.AvailableLanguages.Count - languageVisibleRows));
             return;
         }
+        if (WheelDockTabs(x, y, delta)) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
             if (aimodScrollTrack.Contains(x, y) || shiftHeld)

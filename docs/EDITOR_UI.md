@@ -1808,4 +1808,6 @@ rows with a persistent background and border, matching Settings. Start/end times
 use osu! editor format (`03:37:063`). Content fits the dock width and scrolls
 vertically when needed. Merge path choices stack vertically in narrow docks.
 Dock tab names retain their natural width. When tabs overflow, left/right arrows
-scroll the tab strip; selecting a panel through Layout reveals its active tab.
+or the mouse wheel over the tab bar scroll the strip. Wheel up scrolls left and
+wheel down scrolls right without changing the active panel. Selecting a panel
+through Layout reveals its active tab.

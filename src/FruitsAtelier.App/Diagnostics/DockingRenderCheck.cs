@@ -101,6 +101,14 @@ internal static class DockingRenderCheck
                 var inspectorBounds = editor.SliderInspectorViewport;
                 editor.Wheel(inspectorBounds.X + 10, inspectorBounds.Y + 40, -12000, false, false); Paint("inspector-scrolled");
                 editor.ShowRandomDock(); Paint();
+                var tabBar = editor.DockTabBounds(EditorView.DockPanel.RandomizeDroplets);
+                var activeViewport = editor.RandomDockViewport;
+                editor.Wheel(tabBar.X + 2, tabBar.Y + 2, 12000, false); Paint("tabs-wheel-left");
+                var randomTabAfterLeft = editor.DockTabBounds(EditorView.DockPanel.RandomizeDroplets);
+                editor.Wheel(tabBar.X + 2, tabBar.Y + 2, -12000, false); Paint("tabs-wheel-right");
+                if (editor.DockTabBounds(EditorView.DockPanel.RandomizeDroplets) == randomTabAfterLeft
+                    || editor.RandomDockViewport != activeViewport)
+                    throw new InvalidOperationException("Wheel did not scroll the tabs while retaining the active panel.");
                 var randomField = editor.RandomDockValueBounds(0); Click(randomField);
                 editor.KeyDown(65, true, false); editor.PasteFieldText("70"); Paint();
                 var deadline = DateTime.UtcNow.AddSeconds(30);

@@ -12,7 +12,7 @@ public sealed partial class EditorView
         public DockPanel Active = panel;
         public bool Collapsed = true;
         public float Width = width;
-        public float TabScroll, TabViewportWidth;
+        public float TabScroll, TabViewportWidth, TabScrollMaximum;
         public DockPanel? Revealed;
     }
     private sealed class DockWorkspace
@@ -65,6 +65,20 @@ public sealed partial class EditorView
         return panels;
     }
     internal Rect DockTabBounds(DockPanel panel) => dockTabs.FirstOrDefault(t => t.Panel == panel).Bounds;
+    private bool WheelDockTabs(float x, float y, float delta)
+    {
+        if (!DockContentInputAvailable || TimingPageVisible || dockDragging) return false;
+        return Scroll(DockWorkspaceState.Left, true) || Scroll(DockWorkspaceState.Right, false);
+
+        bool Scroll(DockGroup group, bool left)
+        {
+            if (group.Collapsed || group.Panels.Count == 0) return false;
+            var bounds = DockBounds(left);
+            if (!new Rect(bounds.X, bounds.Y, bounds.Width, 38).Contains(x, y)) return false;
+            group.TabScroll = Math.Clamp(group.TabScroll - delta / 120 * 48, 0, group.TabScrollMaximum);
+            return true;
+        }
+    }
     private static string DockTitle(DockPanel panel) => L.Get(panel switch
     {
         DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
@@ -179,6 +193,7 @@ public sealed partial class EditorView
                 bool overflow = total > bounds.Width - 12;
                 float arrows = overflow ? 24 : 0;
                 var strip = new Rect(bounds.X + 6 + arrows, bounds.Y + 6, bounds.Width - 12 - arrows * 2, 32);
+                group.TabScrollMaximum = Math.Max(0, total - strip.Width);
                 group.TabScroll = Math.Clamp(group.TabScroll, 0, Math.Max(0, total - strip.Width));
                 if ((group.Revealed != group.Active || group.TabViewportWidth != strip.Width) && !dockDragging)
                 {
