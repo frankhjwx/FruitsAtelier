@@ -1728,7 +1728,7 @@
   "gallery.rename": "重新命名 Pattern",
   "gallery.delete": "刪除 Pattern",
   "gallery.dragHint": "拖入譜面 · Ctrl 點選可多選",
-  "gallery.scrollHint": "捲動或拖曳以預覽",
+  "gallery.scrollHint": "捲動或拖曳預覽 · Alt + 滾輪縮放",
   "gallery.close": "關閉",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "{0} 個物件",

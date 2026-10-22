@@ -1728,7 +1728,7 @@
   "gallery.rename": "Rename pattern",
   "gallery.delete": "Delete pattern",
   "gallery.dragHint": "Drag onto map · Ctrl-click to select multiple",
-  "gallery.scrollHint": "Scroll or drag to preview",
+  "gallery.scrollHint": "Scroll or drag to preview · Alt + wheel to zoom",
   "gallery.close": "Close",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "{0} objects",

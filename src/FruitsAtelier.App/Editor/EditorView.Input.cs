@@ -938,7 +938,7 @@ public sealed partial class EditorView
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
         if (PatternNameVisible) return;
-        if (PatternGalleryWheel(x, y, delta)) return;
+        if (PatternGalleryWheel(x, y, delta, alt || altHeld)) return;
         if (!ErrorVisible && MapTemplatesVisible)
         {
             if (templateListBounds.Contains(x, y))

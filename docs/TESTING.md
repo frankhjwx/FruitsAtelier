@@ -117,7 +117,8 @@ checks snapshot isolation, AR-preserving `.fap` round trips, rename/delete persi
 validation and atomic gallery writes.
 `App.Tests --pattern-gallery-check` checks gallery input, placement choices/cancellation,
 drop/undo, context rename/delete, fixed card sizes during dock resizing,
-preview alignment, saved-AR spacing, canvas scroll-direction settings, preview reuse,
+preview alignment, saved-AR spacing, canvas scroll-direction settings, scrollbar position,
+Alt-wheel zoom limits and preview reuse,
 pattern editing and source navigation while retaining unsaved maps.
 `FruitsAtelier.App.exe --render-check --pattern-gallery-render-check` checks the
 grid, large scrolling preview, naming/rename dialogs, context deletion, placement menu,

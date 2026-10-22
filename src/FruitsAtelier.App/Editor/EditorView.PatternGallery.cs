@@ -28,6 +28,7 @@ public sealed partial class EditorView
     private int galleryGeneration, galleryIoGeneration, galleryPreviewGeneration;
     private bool galleryLoadRequested, galleryLoaded;
     private float galleryScroll, galleryMaxScroll, galleryPreviewScroll, galleryPreviewMaxScroll;
+    private double galleryPreviewZoom = 1;
     private Rect galleryBounds, galleryGridBounds, galleryPopupBounds, galleryLargePreviewBounds;
     private Guid galleryPopupId, galleryPressedId;
     private float galleryPressedX, galleryPressedY, galleryScrollOrigin;
@@ -325,12 +326,9 @@ public sealed partial class EditorView
             preview.LastUsed = ++galleryUseCounter;
             if (galleryFullPreviewId == pattern.Id && galleryFullPreview is { } full)
             {
-                double timeScale = CatchScrollTiming.PixelsPerMs(full.ApproachRate, Math.Max(10, galleryLargePreviewBounds.Width - 28));
-                float padding = GalleryPreviewPadding(full, Math.Max(10, galleryLargePreviewBounds.Width - 28));
-                galleryPreviewMaxScroll = Math.Max(0, (float)((full.EndTimeMs - full.StartTimeMs) * timeScale) + padding * 2 - galleryLargePreviewBounds.Height);
-                galleryPreviewScroll = Math.Clamp(galleryPreviewScroll, 0, galleryPreviewMaxScroll);
+                UpdateGalleryPreviewViewport(full);
                 DrawGalleryPreview(c, full, galleryLargePreviewBounds, false, galleryPreviewScroll);
-                DrawGalleryScrollbar(c, galleryLargePreviewBounds, galleryPreviewScroll, galleryPreviewMaxScroll);
+                DrawGalleryScrollbar(c, galleryLargePreviewBounds, galleryPreviewMaxScroll - galleryPreviewScroll, galleryPreviewMaxScroll);
             }
             else c.Text(L.Get("gallery.loading"), left + 25, top + 70, 12, Muted, popupWidth - 50);
             var detailLines = L.Get("gallery.details", pattern.ObjectCount, Number(preview.TickRate), preview.Streams, preview.Stacks).Split('\n');
@@ -351,11 +349,7 @@ public sealed partial class EditorView
     private void DrawGalleryPreview(ICanvas c, PatternPreviewData data, Rect bounds, bool thumbnail, float scroll)
     {
         float fieldWidth = Math.Max(10, bounds.Width - 28);
-        double duration = Math.Max(1, data.EndTimeMs - data.StartTimeMs);
-        if (thumbnail)
-            fieldWidth = (float)Math.Min(fieldWidth, Math.Max(1, bounds.Height - 8)
-                / (duration * CatchScrollTiming.PixelsPerMs(data.ApproachRate, 512)
-                    + CatchSize.FruitRadius(data.CircleSize) * 2.4) * 512);
+        fieldWidth *= (float)(thumbnail ? GalleryPreviewFitZoom(data, bounds) : galleryPreviewZoom);
         double scale = CatchScrollTiming.PixelsPerMs(data.ApproachRate, fieldWidth);
         float center = bounds.X + bounds.Width / 2;
         float bottom = bounds.Bottom - GalleryPreviewPadding(data, fieldWidth) + scroll;
@@ -385,6 +379,24 @@ public sealed partial class EditorView
 
     private static float GalleryPreviewPadding(PatternPreviewData data, float fieldWidth)
         => 4 + CatchSize.FruitRadius(data.CircleSize) * fieldWidth / 512 * 1.2f;
+
+    private static double GalleryPreviewFitZoom(PatternPreviewData data, Rect bounds)
+    {
+        double fieldWidth = Math.Max(10, bounds.Width - 28);
+        double extent = Math.Max(1, data.EndTimeMs - data.StartTimeMs) * CatchScrollTiming.PixelsPerMs(data.ApproachRate, fieldWidth)
+            + CatchSize.FruitRadius(data.CircleSize) * 2.4 * fieldWidth / 512;
+        return Math.Min(1, Math.Max(1, bounds.Height - 8) / extent);
+    }
+
+    private void UpdateGalleryPreviewViewport(PatternPreviewData data)
+    {
+        galleryPreviewZoom = Math.Clamp(galleryPreviewZoom, GalleryPreviewFitZoom(data, galleryLargePreviewBounds), 1);
+        float fieldWidth = Math.Max(10, galleryLargePreviewBounds.Width - 28) * (float)galleryPreviewZoom;
+        double extent = (data.EndTimeMs - data.StartTimeMs) * CatchScrollTiming.PixelsPerMs(data.ApproachRate, fieldWidth)
+            + GalleryPreviewPadding(data, fieldWidth) * 2 - galleryLargePreviewBounds.Height;
+        galleryPreviewMaxScroll = extent < .01 ? 0 : (float)extent;
+        galleryPreviewScroll = Math.Clamp(galleryPreviewScroll, 0, galleryPreviewMaxScroll);
+    }
 
     private static PatternPreviewData GalleryThumbnailData(PatternPreviewData full)
     {

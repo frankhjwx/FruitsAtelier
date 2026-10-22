@@ -1728,7 +1728,7 @@
   "gallery.rename": "เปลี่ยนชื่อแพตเทิร์น",
   "gallery.delete": "ลบแพตเทิร์น",
   "gallery.dragHint": "ลากลงบีตแมป · Ctrl+คลิกเพื่อเลือกหลายรายการ",
-  "gallery.scrollHint": "เลื่อนหรือลากเพื่อดูตัวอย่าง",
+  "gallery.scrollHint": "เลื่อนหรือลากเพื่อดู · Alt + ล้อเลื่อนเพื่อซูม",
   "gallery.close": "ปิด",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "{0} วัตถุ",

@@ -1728,7 +1728,7 @@
   "gallery.rename": "Renombrar patrón",
   "gallery.delete": "Eliminar patrón",
   "gallery.dragHint": "Arrastra al beatmap · Ctrl+clic para seleccionar varios",
-  "gallery.scrollHint": "Desplázate o arrastra para previsualizar",
+  "gallery.scrollHint": "Desplaza o arrastra · Alt + rueda para ampliar",
   "gallery.close": "Cerrar",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "{0} objetos",

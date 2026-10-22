@@ -186,6 +186,7 @@ public sealed partial class EditorView
             {
                 galleryPopupId = galleryPressedId;
                 galleryPreviewScroll = 0;
+                galleryPreviewZoom = 1;
             }
             galleryPressedId = Guid.Empty;
         }
@@ -204,11 +205,28 @@ public sealed partial class EditorView
         StatusMessage = L.Get("gallery.preparing");
     }
 
-    private bool PatternGalleryWheel(float x, float y, float delta)
+    private bool PatternGalleryWheel(float x, float y, float delta, bool alt)
     {
         if (!PatternGalleryInputAvailable || menu >= 0 || contextItems.Count > 0) return false;
         if (galleryPopupId != Guid.Empty && galleryPopupBounds.Contains(x, y))
         {
+            if (alt)
+            {
+                if (galleryLargePreviewBounds.Contains(x, y) && galleryFullPreviewId == galleryPopupId && galleryFullPreview is { } data)
+                {
+                    UpdateGalleryPreviewViewport(data);
+                    float fieldWidth = Math.Max(10, galleryLargePreviewBounds.Width - 28) * (float)galleryPreviewZoom;
+                    double time = (galleryLargePreviewBounds.Bottom - GalleryPreviewPadding(data, fieldWidth) + galleryPreviewScroll - y)
+                        / CatchScrollTiming.PixelsPerMs(data.ApproachRate, fieldWidth);
+                    galleryPreviewZoom = Math.Clamp(galleryPreviewZoom * Math.Pow(1.16, delta / 120),
+                        GalleryPreviewFitZoom(data, galleryLargePreviewBounds), 1);
+                    fieldWidth = Math.Max(10, galleryLargePreviewBounds.Width - 28) * (float)galleryPreviewZoom;
+                    galleryPreviewScroll = (float)(time * CatchScrollTiming.PixelsPerMs(data.ApproachRate, fieldWidth)
+                        - galleryLargePreviewBounds.Bottom + GalleryPreviewPadding(data, fieldWidth) + y);
+                    UpdateGalleryPreviewViewport(data);
+                }
+                return true;
+            }
             galleryPreviewScroll = Math.Clamp(galleryPreviewScroll
                 - delta / 120 * 64 * (LibrarySettings.ReverseCanvasScroll ? -1 : 1), 0, galleryPreviewMaxScroll);
             return true;
@@ -231,6 +249,7 @@ public sealed partial class EditorView
         galleryDragVersion++;
         galleryPressedId = galleryPopupId = Guid.Empty;
         galleryFullPreview = null; galleryFullPreviewId = Guid.Empty;
+        galleryPreviewZoom = 1;
         if (galleryDropChoosing) contextItems.Clear();
         galleryPreviewPanning = galleryDragging = galleryDropRequested = galleryDropChoosing = false;
         galleryDraggedPattern = null; galleryDragTarget = null; galleryDragHistory = null;

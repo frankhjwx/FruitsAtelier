@@ -1728,7 +1728,7 @@
   "gallery.rename": "Ubah nama pola",
   "gallery.delete": "Hapus pola",
   "gallery.dragHint": "Seret ke beatmap · Ctrl+klik untuk memilih beberapa",
-  "gallery.scrollHint": "Gulir atau seret untuk pratinjau",
+  "gallery.scrollHint": "Gulir atau seret · Alt + roda untuk zoom",
   "gallery.close": "Tutup",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "{0} objek",

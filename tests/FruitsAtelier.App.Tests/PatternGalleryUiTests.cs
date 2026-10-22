@@ -50,16 +50,39 @@ internal static class PatternGalleryUiTests
             Check(ui.Canvas.Operations.Where(o => o.Clip == preview && o.Dot is not null).All(o => o.Dot!.Value.Color == 0xFFFFFF),
                 "Gallery preview uses combo colouring");
             bool reverseScroll = ui.View.LibrarySettings.ReverseCanvasScroll;
+            var initialThumb = ui.Canvas.Fills.Single(f => f.Color == 0x75818D && f.Bounds.X == preview.Right - 4).Bounds;
+            Check(Math.Abs(initialThumb.Bottom - preview.Bottom) < .001, "Preview scrollbar does not start at the geometry's bottom");
             foreach (bool reverse in new[] { false, true })
             {
                 ui.View.LibrarySettings.ReverseCanvasScroll = reverse;
                 float forward = reverse ? 120 : -120;
                 ui.View.Wheel(preview.X + 20, preview.Y + 20, forward, false); ui.Paint();
                 Check(ui.View.PatternGalleryPreviewScroll > 0, "Preview did not follow the canvas scroll direction setting");
+                var movedThumb = ui.Canvas.Fills.Single(f => f.Color == 0x75818D && f.Bounds.X == preview.Right - 4).Bounds;
+                Check(movedThumb.Y < initialThumb.Y, "Preview scrollbar did not move toward later geometry above");
                 ui.View.Wheel(preview.X + 20, preview.Y + 20, -forward, false); ui.Paint();
                 Check(ui.View.PatternGalleryPreviewScroll == 0, "Reverse wheel did not return to the preview start");
             }
             ui.View.LibrarySettings.ReverseCanvasScroll = reverseScroll;
+            int zoomBuilds = ui.View.PatternGalleryPreviewBuildCount;
+            float initialRadius = ui.Canvas.Operations.Where(o => o.Clip == preview && o.Dot?.Color == 0xFFFFFF)
+                .Max(o => o.Dot!.Value.Radius);
+            ui.View.Wheel(preview.X + preview.Width / 2, preview.Y + preview.Height / 2, -12000, false, false, true); ui.Paint();
+            var fitDots = ui.Canvas.Operations.Where(o => o.Clip == preview && o.Dot?.Color == 0xFFFFFF)
+                .Select(o => o.Dot!.Value).ToArray();
+            Check(fitDots.Length == 2 && fitDots.All(d => d.Y - d.Radius >= preview.Y && d.Y + d.Radius <= preview.Bottom),
+                "Alt-wheel minimum did not show the entire pattern");
+            float fitRadius = fitDots[0].Radius;
+            Check(fitRadius < initialRadius && ui.View.PatternGalleryPreviewScroll == 0,
+                "Alt-wheel did not zoom out to a fitted viewport");
+            ui.View.Wheel(preview.X + 20, preview.Y + 20, -1200, false, false, true); ui.Paint();
+            Check(ui.Canvas.Operations.Where(o => o.Clip == preview && o.Dot?.Color == 0xFFFFFF)
+                .All(o => Math.Abs(o.Dot!.Value.Radius - fitRadius) < .001), "Preview zoomed below full-pattern fit");
+            ui.View.Wheel(preview.X + preview.Width / 2, preview.Y + preview.Height / 2, 12000, false, false, true); ui.Paint();
+            ui.View.Wheel(preview.X + 20, preview.Y + 20, reverseScroll ? -12000 : 12000, false); ui.Paint();
+            Check(Math.Abs(ui.Canvas.Operations.Where(o => o.Clip == preview && o.Dot?.Color == 0xFFFFFF)
+                .Max(o => o.Dot!.Value.Radius) - initialRadius) < .001, "Preview exceeded the original maximum zoom");
+            Check(ui.View.PatternGalleryPreviewBuildCount == zoomBuilds, "Zooming rebuilt preview geometry");
             float scrollBeforeModal = ui.View.PatternGalleryGridScroll;
             int confirmation = -1;
             ui.View.ShowDiscardConfirmation(answer => confirmation = answer);

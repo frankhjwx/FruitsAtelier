@@ -7,6 +7,10 @@ number of columns and wraps the cards without resizing the thumbnails.
 Select a card to open a larger preview beside the panel;
 use the wheel or drag vertically within that preview to inspect a long pattern.
 The enlarged preview follows the canvas scroll direction, including the reverse-scroll setting.
+Its scrollbar starts at the bottom and moves upward when browsing later objects above.
+Use **Alt + wheel** over the enlarged preview to zoom. The initial scale is the
+maximum; zooming out stops when the complete pattern fits. Zooming keeps the
+time under the pointer in place where the preview bounds allow.
 Ctrl-click cards to select multiple patterns for export.
 Previews start at the bottom and center the actual pattern horizontally, independent
 of its original playfield position. This alignment does not change saved coordinates.

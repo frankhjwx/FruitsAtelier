@@ -1728,7 +1728,7 @@
   "gallery.rename": "Palitan ang pangalan ng pattern",
   "gallery.delete": "Tanggalin ang pattern",
   "gallery.dragHint": "I-drag sa beatmap · Ctrl+click para pumili ng marami",
-  "gallery.scrollHint": "Mag-scroll o mag-drag para sa preview",
+  "gallery.scrollHint": "Mag-scroll o mag-drag · Alt + wheel para mag-zoom",
   "gallery.close": "Isara",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "{0} object",

@@ -1728,7 +1728,7 @@
   "gallery.rename": "Renommer le motif",
   "gallery.delete": "Supprimer le motif",
   "gallery.dragHint": "Glisser sur la beatmap · Ctrl+clic pour sélectionner plusieurs motifs",
-  "gallery.scrollHint": "Faire défiler ou glisser pour prévisualiser",
+  "gallery.scrollHint": "Défiler ou glisser · Alt + molette pour zoomer",
   "gallery.close": "Fermer",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "{0} objets",

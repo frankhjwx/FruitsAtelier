@@ -1728,7 +1728,7 @@
   "gallery.rename": "パターン名を変更",
   "gallery.delete": "パターンを削除",
   "gallery.dragHint": "譜面へドラッグ · Ctrl+クリックで複数選択",
-  "gallery.scrollHint": "スクロールまたはドラッグでプレビュー",
+  "gallery.scrollHint": "スクロールかドラッグでプレビュー · Alt + ホイールでズーム",
   "gallery.close": "閉じる",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "{0} オブジェクト",

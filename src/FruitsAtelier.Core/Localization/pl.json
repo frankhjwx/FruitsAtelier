@@ -1728,7 +1728,7 @@
   "gallery.rename": "Zmień nazwę wzoru",
   "gallery.delete": "Usuń wzór",
   "gallery.dragHint": "Przeciągnij na beatmapę · Ctrl+klik zaznacza wiele wzorów",
-  "gallery.scrollHint": "Przewijaj lub przeciągaj, aby podejrzeć",
+  "gallery.scrollHint": "Przewijaj lub przeciągaj · Alt + kółko: zoom",
   "gallery.close": "Zamknij",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "Obiekty: {0}",

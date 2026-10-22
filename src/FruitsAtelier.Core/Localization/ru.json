@@ -1728,7 +1728,7 @@
   "gallery.rename": "Переименовать паттерн",
   "gallery.delete": "Удалить паттерн",
   "gallery.dragHint": "Перетащите на карту · Ctrl+щелчок для множественного выбора",
-  "gallery.scrollHint": "Прокрутите или перетащите для просмотра",
+  "gallery.scrollHint": "Прокрутка или перетаскивание · Alt + колесо: масштаб",
   "gallery.close": "Закрыть",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "Объектов: {0}",

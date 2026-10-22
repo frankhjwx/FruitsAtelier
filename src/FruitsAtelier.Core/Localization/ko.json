@@ -1728,7 +1728,7 @@
   "gallery.rename": "패턴 이름 변경",
   "gallery.delete": "패턴 삭제",
   "gallery.dragHint": "비트맵으로 드래그 · Ctrl+클릭으로 다중 선택",
-  "gallery.scrollHint": "스크롤하거나 드래그하여 미리 보기",
+  "gallery.scrollHint": "스크롤 또는 드래그로 미리보기 · Alt + 휠로 확대/축소",
   "gallery.close": "닫기",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "오브젝트 {0}개",

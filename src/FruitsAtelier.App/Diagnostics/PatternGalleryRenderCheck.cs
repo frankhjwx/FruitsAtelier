@@ -68,6 +68,8 @@ internal static class PatternGalleryRenderCheck
                 editor.PointerDown(preview.X + preview.Width / 2, preview.Y + 40, 0, false, false);
                 editor.PointerMove(preview.X + preview.Width / 2, preview.Y + 110, false, false);
                 editor.PointerUp(preview.X + preview.Width / 2, preview.Y + 110, 0); Paint("popup-panned");
+                editor.Wheel(preview.X + preview.Width / 2, preview.Y + preview.Height / 2, -12000, false, false, true); Paint("popup-fit");
+                editor.Wheel(preview.X + preview.Width / 2, preview.Y + preview.Height / 2, 12000, false, false, true); Paint("popup-max-zoom");
                 editor.KeyDown(27, false, false); Paint();
                 if (editor.WantsCapture || !map.ContentEquals(editor.Document)) throw new InvalidOperationException("Gallery browsing changed map content or retained capture.");
 

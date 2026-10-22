@@ -1728,7 +1728,7 @@
   "gallery.rename": "Patroon hernoemen",
   "gallery.delete": "Patroon verwijderen",
   "gallery.dragHint": "Sleep naar de beatmap · Ctrl-klik voor meervoudige selectie",
-  "gallery.scrollHint": "Scroll of sleep om te bekijken",
+  "gallery.scrollHint": "Scroll of sleep · Alt + scroll om te zoomen",
   "gallery.close": "Sluiten",
   "gallery.source": "{0} — {1}\n{2} · {3}",
   "gallery.objects": "{0} objecten",
