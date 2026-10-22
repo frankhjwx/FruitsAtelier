@@ -271,6 +271,12 @@ difficulty separately; full project reconstruction happens when a version is rea
 History compression remains deferred to the idle worker. See
 [workspace publication](WORKSPACE.md#file-structure) for recovery boundaries.
 
+Creating a history archive only queues workspace retention. Saving and synchronization
+publish their recovery snapshots without enumerating other projects or enforcing
+history limits. Retention runs in the idle Library worker and checks for resumed
+editing between files and complete snapshot removals. Cancellation retains the
+pending request; reference validation and recovery checks still precede deletion.
+
 Optimizations must preserve source order for tied timestamps, exported time and
 coordinate quantization, nested event identities, downstream random events, NM/HR
 results, and undo/redo. Removing an RNG-consuming parent can invalidate later

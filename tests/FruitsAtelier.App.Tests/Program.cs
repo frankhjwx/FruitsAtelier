@@ -1,6 +1,9 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Length == 2 && args[0] == "--history-save-performance") { HistorySavePerformance.Run(args[1]); return 0; }
+if (args.Contains("--storage-check")) { StorageSettingsTests.Run(); return 0; }
+if (args.Contains("--history-maintenance-check")) { DeferredHistoryUiTests.Run(); return 0; }
 if (args.Length == 3 && args[0] == "--library-search-profile") { LibrarySearchTests.Profile(args[1], args[2]); return 0; }
 if (args.Contains("--library-search-check")) { LibrarySearchTests.Run(); return 0; }
 if (args.Contains("--pattern-gallery-check")) { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); Console.WriteLine("PASS Pattern Gallery, editing sessions and source navigation"); return 0; }
@@ -329,6 +332,7 @@ var tests = new (string Name, Action Run)[]
     ("Timeline pattern fruits edit internal NC while move and delete retain the whole parent", ObjectTimelineTests.PatternNewCombo),
     ("Timeline skin uses combo-coloured tracks and hitcircle endpoints", ObjectTimelineTests.SkinColours),
     ("Workspace storage settings show usage and clear caches without editing maps", StorageSettingsTests.Run),
+    ("Automatic sync defers retention to idle Library maintenance", DeferredHistoryUiTests.Run),
     ("Mapping right-click deletes the marquee selection in one undo", MappingSessionTests.RightClickSelection),
     ("Mapping selection reversal and contextual horizontal nudges", MappingSessionTests.ReverseAndNudge),
     ("Mapping Snap families and overview volume routing", MappingSessionTests.SnapAndVolume),

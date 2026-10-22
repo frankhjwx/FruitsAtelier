@@ -226,6 +226,17 @@ saving captures under `artifacts/tests/faz-native`.
 `App.Tests --difficulty-save-check` covers six-difficulty local and linked saves,
 unchanged file timestamps, navigation and edits during saving, per-difficulty undo,
 compressed history reconstruction and interrupted publication recovery.
+`Core.Tests --deferred-history-check` checks deferred retention, idle cancellation,
+new requests during maintenance, referenced rounds, unreadable references, pending
+recovery and history compression. `App.Tests --storage-check` exercises the idle
+scheduler and Settings controls in English and Chinese.
+`App.Tests --history-maintenance-check` checks synchronization of a new difficulty
+over the history limit and processing of queued retention in the idle Library.
+`App.Tests --history-save-performance <artifact-directory>` measures save dispatch
+and completion after adding a difficulty and after editing one, with six starting
+difficulties, 2,500 unrelated references and more than 100 history rounds. It checks
+the persisted authoring contents and writes timings to the specified directory.
+
 `App.Tests --difficulty-save-performance` compares complete and single-difficulty
 publication on identical one- and six-difficulty fixtures, including repeated
 imported sliders. It reports CPU-thread allocations and elapsed storage work to

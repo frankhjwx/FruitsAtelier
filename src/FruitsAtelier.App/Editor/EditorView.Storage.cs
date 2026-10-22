@@ -25,20 +25,25 @@ public sealed partial class EditorView
     private int StorageFolderCount => Math.Min(8, storageReport?.Folders.Count ?? 0);
     private string storageRoot = "", storageError = "";
     private bool storageReindex;
+    private bool storageAutomatic;
+    private volatile bool storageMaintenancePaused = true;
+    private DateTime nextHistoryMaintenanceAttempt;
     private DateTime nextStorageMaintenance = DateTime.UtcNow.AddSeconds(30);
 
-    private void StartStorage(bool clean = false, bool cache = false)
+    private void StartStorage(bool clean = false, bool cache = false, bool automatic = false)
     {
         if (storageTask is not null) return;
         string root = Path.GetFullPath(LibrarySettings.Workspace), songs = LibrarySettings.Songs;
         if (storageRoot != root) { storageReport = null; workspaceScroll = 0; }
         storageRoot = root; storageError = ""; storageReindex = false;
+        storageAutomatic = automatic;
         if (clean || cache) nextStorageMaintenance = DateTime.UtcNow.AddDays(1);
         if (clean) StartHistoryCompression(root, restart: true);
         string[] livePaths = difficulties.SelectMany(d => new[] { d.History.Document.AudioPath, d.History.Document.SourcePath }).OfType<string>().ToArray();
         storageTask = Task.Run(() =>
         {
-            var report = clean || cache ? WorkspaceStorage.Clean(root, cache, protectedPaths: livePaths, compactLegacy: false) : WorkspaceStorage.Inspect(root);
+            var report = clean || cache ? WorkspaceStorage.Clean(root, cache, protectedPaths: livePaths, compactLegacy: false,
+                shouldContinue: automatic ? () => !storageMaintenancePaused : null) : WorkspaceStorage.Inspect(root);
             if (cache && !report.RecoveryPending)
             {
                 storageReindex = true;
@@ -68,23 +73,27 @@ public sealed partial class EditorView
                     storageTask = Task.Run(() => WorkspaceStorage.Inspect(root) with { ReclaimedBytes = reclaimed });
                 }
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { historyCompressionRoot = ""; }
             catch (Exception e) { storageError = e.Message; }
         }
         if (storageTask is { IsCompleted: true } completed)
         {
             storageTask = null;
             try { storageReport = completed.GetAwaiter().GetResult(); }
+            catch (OperationCanceledException) when (storageAutomatic) { }
             catch (Exception e) { storageError = e.Message; }
             if (storageReindex && storageRoot == Path.GetFullPath(LibrarySettings.Workspace))
             { libraryProjectsNeedReindex = true; if (scanTask is { IsCompleted: false }) libraryRescanRequested = true; else StartLibraryScan(); }
             storageReindex = false;
         }
         if (fileMonitor is not null && LibraryVisible && WorkspaceSession is null && storageTask is null
-            && scanTask is null && searchTask is null && DateTime.UtcNow >= nextStorageMaintenance)
+            && scanTask is null && searchTask is null && !storageMaintenancePaused
+            && (DateTime.UtcNow >= nextStorageMaintenance
+                || WorkspaceStorage.HistoryMaintenancePending(root) && DateTime.UtcNow >= nextHistoryMaintenanceAttempt))
         {
             nextStorageMaintenance = DateTime.UtcNow.AddDays(1);
-            StartStorage(clean: true);
+            nextHistoryMaintenanceAttempt = DateTime.UtcNow.AddSeconds(30);
+            StartStorage(clean: true, automatic: true);
         }
     }
 

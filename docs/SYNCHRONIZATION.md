@@ -456,11 +456,15 @@ in the system file manager. Accounting and maintenance run on background workers
 Storage actions use the active workspace, not an unapplied path draft.
 
 Automatic maintenance runs after startup while idle in the library without an open
-workspace project, then at most once per day during that app session. Ordinary
+workspace project, then daily or after new history requests. New archives only
+queue a coalesced workspace maintenance request; saving and synchronization do not
+wait for reference scanning or pruning. Automatic jobs yield between files and
+complete snapshot deletions when editing resumes, and retry pending work later.
+Recovery data is published before maintenance can prune it. Ordinary
 history expires after 30 days and each set has a 100-round limit. A round is one
 snapshot directory for the whole set; saved and working authoring in that directory
-count together. Each new archive enforces this limit for its set immediately,
-without compacting legacy data or pruning other sets. The count limit also applies
+count together. Idle maintenance enforces this limit, so a set can temporarily
+exceed it while editing. The count limit also applies
 to snapshots from the last 24 hours. Referenced rounds count toward the limit and
 leave fewer slots for ordinary rounds. Active recovery defers pruning; if references
 alone require more than 100 rounds, those dependencies remain protected until they
