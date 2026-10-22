@@ -84,11 +84,20 @@ The library organization native render check also captures My Maps, the missing-
 prompt and General library preferences in English and Chinese at both window sizes.
 
 `App.Tests --library-persistent-cache-check` verifies cached startup while a database
-writer blocks reconciliation, cross-restart star reuse with a locked source file,
+writer blocks reconciliation, first-frame cards and difficulty rows with the startup
+worker held, cross-restart star reuse with a locked source file,
 retained stars during scans, changed-source invalidation, damaged-cache fallback,
 My Maps project covers and Windows thumbnail reuse without rereading the original.
 Fixtures are isolated under `artifacts/tests`. The incremental Library check also
-runs this suite.
+runs this suite. The native Library organization check captures the first frame
+after restarting with a saved expanded group in both languages, window sizes and
+all three DPI values.
+
+For an optional read-only startup comparison against the configured Library, run
+`App.Tests --library-startup-profile`. It copies the SQLite catalog and view
+preferences into `artifacts/tests`, reads source project metadata without saving
+it, and compares query construction with cached-page restoration using
+RecordingCanvas. The report excludes native drawing and image decoding.
 
 ## Automated regressions
 

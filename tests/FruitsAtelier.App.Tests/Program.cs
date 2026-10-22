@@ -58,6 +58,8 @@ if (Array.IndexOf(args, "--osu-collections-read") is var osuRead && osuRead >= 0
 if (args.Contains("--osu-collections-check")) { OsuCollectionTests.Run(); return 0; }
 if (args.Contains("--library-organization-check")) { OsuCollectionTests.Run(); LibraryOrganizationTests.Run(); LibraryFavouriteTests.Run(); LibraryTests.Run(); LibraryScaleTests.Pagination(); Console.WriteLine("PASS Library sorting, grouping, collections, visits and persistence"); return 0; }
 
+if (args.Contains("--library-startup-profile")) { LibraryPersistentCacheTests.ProfileExisting(); return 0; }
+
 if (args.Contains("--library-persistent-cache-check")) { LibraryPersistentCacheTests.Run(); return 0; }
 
 if (args.Contains("--library-incremental-check"))

@@ -83,6 +83,7 @@ public sealed partial class EditorView
             return;
         }
         LoadLibraryMemory();
+        LoadLibraryPreview();
         string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
         libraryStartupTask = Task.Run(() => (new LibraryDatabase(workspace, songs), workspace, songs));
         libraryStartupScan = true;
@@ -454,6 +455,7 @@ public sealed partial class EditorView
             ratingTask = null;
         }
         if (!librarySettingsOpen && !exportPage) PumpPendingLibraryScan();
+        SaveLibraryPreview();
         PumpWorkspaceResources();
     }
     private void OpenLibraryCard(float x, float y)

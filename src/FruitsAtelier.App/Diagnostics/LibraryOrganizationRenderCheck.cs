@@ -48,6 +48,22 @@ internal static class LibraryOrganizationRenderCheck
                     canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
                     view.InitializeLibrary(true, settings); Wait(6); Capture("groups");
                     Invoke("ToggleLibraryGroup", "A"); Wait(6); Capture("expanded");
+                    for (int attempt = 0; attempt < 200; attempt++)
+                    {
+                        Paint();
+                        var save = (Task?)typeof(EditorView).GetField("libraryPreviewSave", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view);
+                        long revision = (long)typeof(EditorView).GetField("savedPreviewRevision", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view)!;
+                        var browser = (LibraryBrowser?)typeof(EditorView).GetField("libraryBrowser", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view);
+                        var savedBrowser = typeof(EditorView).GetField("savedPreviewBrowser", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view);
+                        if (save is { IsCompleted: true } && ReferenceEquals(savedBrowser, browser) && revision == browser?.ContentRevision) break;
+                        Thread.Sleep(10);
+                    }
+                    view.SaveLibraryMemory(); view.StopFileMonitoring(); view.CloseLibrary();
+                    view = new EditorView(false); view.InitializeLibrary(true, settings);
+                    if (view.LibraryCachedRows == 0 || view.LibrarySetTotal != 6)
+                        throw new InvalidOperationException("Warm Library startup did not restore cached rows before its first frame.");
+                    Capture("warm-restart-first-frame"); Wait(6);
+
                     ClickOrder("libraryGroupBounds"); ClickOrder("librarySortBounds");
                     var entries = (System.Collections.ICollection)typeof(EditorView).GetField("contextItems", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view)!;
                     if (entries.Count != Enum.GetValues<LibraryOrder>().Length) throw new InvalidOperationException("Library order menu did not switch on the first click.");
