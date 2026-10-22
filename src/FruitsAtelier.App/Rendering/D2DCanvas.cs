@@ -657,6 +657,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
 
     public void ReleaseDifficultyResources()
     {
+        ClearPatternRasters();
         foreach (var layout in textLayouts.Values) layout.Layout.Dispose();
         textLayouts.Clear();
         ClearSliderRasters();

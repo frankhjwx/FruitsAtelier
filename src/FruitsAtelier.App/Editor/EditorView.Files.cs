@@ -37,6 +37,8 @@ public sealed partial class EditorView
 
     public void LoadProject(BeatmapProject project)
     {
+        if (PatternEditingActive) throw new InvalidOperationException(L.Get("gallery.finishEditing"));
+        patternRestoringTransport = null;
         project.Validate();
         if (MapTemplatesVisible) CloseMapTemplates(false);
         ClearFadReview();
@@ -217,6 +219,7 @@ public sealed partial class EditorView
 
     private bool AddDifficultyCore(MapDocument? imported, bool faOnly, int? copyFrom, MapTemplate? template, string? difficultyName)
     {
+        if (RejectPatternProjectOperation()) return false;
         if (!PrepareFileOperation()) return false;
         if (copyFrom is { } sourceIndex && (sourceIndex < 0 || sourceIndex >= difficulties.Count || imported is not null || template is not null)) return false;
         if (imported?.SourcePath is { } source)
@@ -267,6 +270,7 @@ public sealed partial class EditorView
 
     public void MarkSaved()
     {
+        if (RejectPatternProjectOperation()) return;
         foreach (var difficulty in difficulties) difficulty.History.MarkSaved();
         projectStructureDirty = false; savedProjectNotes = projectNotes;
     }
@@ -306,6 +310,7 @@ public sealed partial class EditorView
     public void UpdateTransport(double positionMs, double durationMs, bool ready, bool playing, bool loading,
         string? error, string? filename, double? sampledAtMs = null, double outputBufferAheadMs = 0)
     {
+        if (PatternEditingActive && !string.Equals(filename, Document.AudioPath, StringComparison.OrdinalIgnoreCase)) return;
         PumpLegacyDropletRefresh();
         if (initializeTransport)
         {
@@ -353,6 +358,7 @@ public sealed partial class EditorView
             if (snap && !TimingPageVisible && !LibraryVisible && !librarySettingsOpen && !SongSetupVisible && !TimingModal)
                 SeekTo(Math.Clamp(TimingMap.Snap(Document, positionMs, pauseDivisor), 0, AudioDurationMs));
         }
+        RestorePatternTransportAfterLoad(ready, loading);
     }
 
     private void SeekTo(double time)

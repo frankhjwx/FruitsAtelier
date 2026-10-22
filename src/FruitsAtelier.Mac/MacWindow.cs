@@ -245,6 +245,11 @@ internal sealed partial class MacWindow : Window
     }
     private async Task<bool> ConfirmDiscard()
     {
+        if (View.PatternEditingActive || View.HasRetainedPatternProject)
+        {
+            if (!await View.ResolvePatternSessionsBeforeLeavingAsync()) return false;
+            return await ConfirmDiscard();
+        }
         var ready = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         if (View.WaitForSynchronization(result => ready.SetResult(result)))
         {

@@ -17,8 +17,9 @@ public sealed partial class EditorView
     private void DrawToolPalette(ICanvas c)
     {
         toolButtons.Clear();
-        float size = Math.Min(96, Math.Max(0, plot.Height - 100) / 4);
-        float top = plot.Y + (plot.Height - size * 4 - 100) / 2;
+        float paletteHeight = plot.Height + PatternEditingBannerHeight;
+        float size = Math.Min(96, Math.Max(0, paletteHeight - 100) / 4);
+        float top = plot.Y - PatternEditingBannerHeight + (paletteHeight - size * 4 - 100) / 2;
         top += 100;
         const float selectorsHeight = 93;
         float toolbarBottom = canvas.Y + 38;

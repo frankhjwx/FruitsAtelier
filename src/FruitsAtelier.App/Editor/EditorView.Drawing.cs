@@ -56,6 +56,9 @@ public sealed partial class EditorView
         PumpAudioProject();
         PumpLibraryOpen();
         PumpFaz();
+        PumpPatternEditing();
+        PumpPatternSource();
+        PumpPatternGallery();
         PumpLegacyDropletRefresh();
         if (ConversionNeedsRedraw) PumpDeferredConversion();
         CompleteSliderMultiplierValidation();
@@ -91,7 +94,7 @@ public sealed partial class EditorView
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
         if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawLibraryCollectionDialog(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
         LayoutDockPanels();
-        plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight));
+        plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight + PatternEditingBannerHeight, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight - PatternEditingBannerHeight));
         overview = new(420, TransportTop + 10 + (TransportRowHeight - OverviewHeight) / 2, Math.Max(100, width - 448), OverviewHeight);
         if (!IsLazerEditing)
         {
@@ -136,6 +139,8 @@ public sealed partial class EditorView
         DrawStatus(c);
         DrawUpdateNotice(c);
         DrawDockDrag(c);
+        DrawPatternGalleryOverlay(c);
+        DrawPatternEditingBanner(c);
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);
         if (!librarySettingsOpen) DrawLanguageMenu(c);
@@ -156,6 +161,7 @@ public sealed partial class EditorView
         DrawCollaborationReport(c);
         if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
+        DrawPatternNameDialog(c);
         DrawDiscardConfirmation(c);
         if (!librarySettingsOpen) DrawDifficultyTooltip(c);
     }

@@ -11,6 +11,7 @@ public sealed partial class EditorView
 
     private void ShowAddDifficulty()
     {
+        if (RejectPatternProjectOperation()) return;
         if (!PrepareFileOperation()) return;
         newDifficultyFaOnly = false;
         newDifficultyUseSource = LibrarySettings.NewDifficultyUseSource; newDifficultyTemplateTab = false;
@@ -44,6 +45,7 @@ public sealed partial class EditorView
 
     private void RequestDifficultyFaOnly(bool faOnly)
     {
+        if (RejectPatternProjectOperation()) return;
         if (faOnly == CurrentDifficultyFaOnly || NotifySynchronizationBlocked()) return;
         Guid id = difficulties[activeDifficulty].Id;
         var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == id);

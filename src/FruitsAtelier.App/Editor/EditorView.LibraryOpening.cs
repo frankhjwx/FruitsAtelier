@@ -15,6 +15,7 @@ public sealed partial class EditorView
 
     public void BeginLibraryOpen(LibraryMap map, Action? completed = null, bool selectDifficulty = false)
     {
+        if (RejectPatternProjectOperation()) return;
         if (LibraryOpening || !PrepareFileOperation()) return;
         var settings = new LibrarySettings { Workspace = LibrarySettings.Workspace, Songs = LibrarySettings.Songs };
         libraryOpeningMap = map;

@@ -7,6 +7,7 @@ internal static class MapFileDialog
 {
     internal static string OpenFilter => L.Get("dialog.openFilter") + "\0*.faz;*.fad;*.osz;*.osu;*.catchproj;*.catchdiff\0\0";
     internal static string FadFilter => L.Get("fad.fileType") + "\0*.fad\0\0";
+    internal static string PatternFilter => L.Get("gallery.fileType") + "\0*.fap\0\0";
     internal static string FazFilter => L.Get("faz.fileType") + "\0*.faz\0\0";
     internal static string OsuFilter => L.Get("dialog.osuFilter") + "\0*.osu\0\0";
     internal static string OszFilter => L.Get("library.exportOsz") + "\0*.osz\0\0";

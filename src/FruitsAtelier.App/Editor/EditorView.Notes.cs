@@ -10,7 +10,7 @@ public sealed partial class EditorView
     private bool notesFocused, notesSelecting, notesRevealCaret;
     private float notesScroll;
     internal Rect NotesBounds { get; private set; }
-    private bool NotesFocused => DockContentInputAvailable && notesFocused && PanelVisible(DockPanel.Notes) && !LibraryVisible && !TimingPageVisible;
+    private bool NotesFocused => !PatternEditingActive && DockContentInputAvailable && notesFocused && PanelVisible(DockPanel.Notes) && !LibraryVisible && !TimingPageVisible;
     private readonly Stack<string> notesUndo = new(), notesRedo = new();
     private readonly List<(int Start, string Text, int[] Positions, float[] Widths)> notesLines = [];
     private (string Text, float Width, Type Canvas)? notesLayout;
@@ -20,6 +20,7 @@ public sealed partial class EditorView
     internal IReadOnlyList<Rect> NotesReferenceBounds => notesReferenceHits.Select(h => h.Bounds).ToArray();
     private void SetNotes(string value, bool record = true)
     {
+        if (RejectPatternProjectOperation()) return;
         if (projectNotes == value) return;
         if (record)
         {
@@ -38,6 +39,11 @@ public sealed partial class EditorView
     {
         NotesBounds = bounds;
         notesReferenceHits.Clear();
+        if (PatternEditingActive)
+        {
+            c.Text(L.Get("gallery.finishEditing"), bounds.X + 8, bounds.Y + 8, 12, Muted, bounds.Width - 16);
+            return;
+        }
         c.Fill(bounds, Surface, 4); c.Stroke(bounds, NotesFocused ? Accent : Grid, radius: 4);
         float lineWidth = Math.Max(16, bounds.Width - 16);
         if (notesLayout != (projectNotes, lineWidth, c.GetType()))
@@ -125,6 +131,7 @@ public sealed partial class EditorView
     {
         if (menu >= 0 || contextItems.Count > 0) return false;
         if (!PanelVisible(DockPanel.Notes) || !NotesBounds.Contains(x, y)) { notesFocused = false; return false; }
+        if (PatternEditingActive) { notesFocused = notesSelecting = false; return true; }
         if (button == 0)
         {
             notesPressedReference = shift ? null : notesReferenceHits.FirstOrDefault(h => h.Bounds.Contains(x, y)).Reference;

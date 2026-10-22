@@ -1,5 +1,13 @@
 # Editing Controls
 
+## Pattern Gallery
+
+Use **Layout → Pattern Gallery** to save consecutive selections, browse skinned
+previews, drag patterns into a map, or share `.fap` packages. Double-click a card
+to edit the snapshot in the main canvas while retaining the previous map's unsaved
+work. See [Pattern Gallery](PATTERN_GALLERY.md) for placement, source navigation,
+editing sessions and storage details.
+
 ## Creating difficulties and map templates
 
 Choose **+ → Add new difficulty** to name a new difficulty and choose

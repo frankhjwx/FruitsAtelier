@@ -71,6 +71,7 @@ public sealed partial class EditorView
     private void PasteFieldTextCore(string text, string? expectedField = null)
     {
         if (expectedField is not null && textEditor.Field != expectedField) return;
+        if (PatternNameVisible && !ErrorVisible) { PatternNameText(text); return; }
         if (MapTemplatesVisible && !ErrorVisible) { MapTemplatesText(text); return; }
         if (addDifficultyConfirmation && !ErrorVisible) { NewDifficultyText(text); return; }
         if (CollaborationFocused)

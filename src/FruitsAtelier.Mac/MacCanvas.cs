@@ -8,7 +8,7 @@ using R = FruitsAtelier.App.Rendering.Rect;
 
 namespace FruitsAtelier.Mac;
 
-internal sealed class ImageCache : IDisposable
+internal sealed partial class ImageCache : IDisposable
 {
     private readonly Dictionary<(string, uint, long, long), (Bitmap Bitmap, long Used)> images = [];
     private readonly string bookmarkToolbarPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
@@ -114,13 +114,14 @@ internal sealed class ImageCache : IDisposable
     }
     internal void ReleaseDifficultyResources()
     {
+        ClearPatternRasters();
         beatmapBackground?.Bitmap.Dispose(); beatmapBackground = null;
         paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear();
     }
-    public void Dispose() { ClearImages(); thumbnails.Dispose(); paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear(); }
+    public void Dispose() { ClearPatternRasters(); ClearImages(); thumbnails.Dispose(); paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear(); }
 }
 
-internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICanvas, IDisposable
+internal sealed partial class MacCanvas(DrawingContext context, ImageCache images, double renderScale = 1) : ICanvas, IDisposable
 {
     public void ReleaseDifficultyResources() => images.ReleaseDifficultyResources();
     private readonly Stack<DrawingContext.PushedState> clips = [];

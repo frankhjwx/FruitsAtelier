@@ -400,6 +400,8 @@ public sealed partial class EditorView
     {
         FinishBackgroundDimDrag();
         if (!SettingsChanged && !force) return;
+        if (draftWorkspace != LibrarySettings.Workspace && (PatternEditingActive || PatternEditingBusy))
+        { libraryError = L.Get("gallery.finishEditing"); return; }
         try
         {
             bool restartAudio = persist && AudioDiagnosticSettingsChanged && RequestAudioDiagnosticRestart is not null;
@@ -461,7 +463,8 @@ public sealed partial class EditorView
             settings.OverviewTimelineHeight = LibrarySettings.OverviewTimelineHeight;
             settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
-            bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;
+            bool workspaceChanged = settings.Workspace != LibrarySettings.Workspace;
+            bool rootsChanged = workspaceChanged || settings.OsuRoot != LibrarySettings.OsuRoot;
             bool scanningChanged = settings.ScanStandardMaps != LibrarySettings.ScanStandardMaps;
             bool mappersChanged = !(LibrarySettings.MapperUsernames ?? []).SequenceEqual(settings.MapperUsernames);
             if (persist) settings.Save(settingsPath);
@@ -474,6 +477,7 @@ public sealed partial class EditorView
             if (FirstRunSetupVisible)
             {
                 LibrarySettings = settings; ResetSettingsDrafts();
+                if (workspaceChanged) ConfigurePatternGallery(Path.Combine(settings.Workspace, "Patterns"));
                 libraryField = bindingCapture = -1; libraryError = "";
                 InitializeSkin(); return;
             }
@@ -481,6 +485,7 @@ public sealed partial class EditorView
             bool lazerEditingChanged = settings.LazerEditing != LibrarySettings.LazerEditing;
             if (lazerEditingChanged) CancelInteraction();
             SaveLibraryMemory(); LibrarySettings = settings;
+            if (workspaceChanged) ConfigurePatternGallery(Path.Combine(settings.Workspace, "Patterns"));
             if (lazerEditingChanged) ResetLazerPresentation();
             if (!settings.ExperimentalSnapDivisions)
             {

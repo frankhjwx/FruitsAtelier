@@ -60,6 +60,7 @@ public sealed partial class EditorView
     {
         try { LibrarySettings = settings ?? LibrarySettings.Load(); }
         catch (Exception e) { libraryError = e.Message; }
+        ConfigurePatternGallery(Path.Combine(LibrarySettings.Workspace, "Patterns"));
         RestoreMapEditingPreferences();
         RestoreDockLayouts();
         playbackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
@@ -97,6 +98,7 @@ public sealed partial class EditorView
     }
     public void ShowLibrary()
     {
+        if (ResolvePatternSessionsBeforeLeaving(ShowLibrary)) return;
         if (LibraryOpening) return;
         if (WaitForSynchronization(ready => { if (ready) ShowLibrary(); })) return;
         if (DiscardConfirmationVisible || !PrepareFileOperation()) return;
@@ -151,6 +153,7 @@ public sealed partial class EditorView
     }
     public void ShowWorkspaceExport()
     {
+        if (RejectPatternProjectOperation()) return;
         if (!HasEditorProject || ExportVisible) return;
         if (CurrentDifficultyFaOnly) { SetNotice(L.Get("song.faOnlyExportHelp")); return; }
         if (!PrepareFileOperation()) return;
@@ -190,6 +193,7 @@ public sealed partial class EditorView
     }
     public bool SaveWorkspace()
     {
+        if (RejectPatternProjectOperation()) return false;
         if (!PrepareFileOperation()) return false;
         var project = CaptureProject();
         if (WorkspaceSession is null) WorkspaceSession = WorkspaceProject.Create(LibrarySettings.Workspace, project, LibrarySettings.Songs);
@@ -205,6 +209,7 @@ public sealed partial class EditorView
 
     public bool BeginWorkspaceSave(Action<bool>? completed = null, bool songsExportOfferShown = false)
     {
+        if (RejectPatternProjectOperation()) return false;
         if (!PrepareFileOperation()) return false;
         var project = CaptureProject();
         var session = WorkspaceSession is { } current ? DetachedSession(current, project) : null;
@@ -250,6 +255,7 @@ public sealed partial class EditorView
         : Document.SourcePath is { } path && WorkspaceProject.Within(LibrarySettings.Songs, path) && File.Exists(path));
     public void SaveCurrentDifficulty()
     {
+        if (PatternEditingActive) { SavePatternEditing(); return; }
         if (difficultySaveTask is not null || workspaceSaveTask is not null || syncCommitTask is not null) return;
         if (DiscardConfirmationVisible || ExportVisible || !PrepareFileOperation()) return;
         var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);

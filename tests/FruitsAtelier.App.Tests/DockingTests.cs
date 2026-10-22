@@ -19,6 +19,7 @@ internal static class DockingTests
                 var baseline = ui.View.Document.DeepClone();
                 Click(ui.View.DifficultyCurveToggleBounds); ui.OpenPreview();
                 ui.ClickText(L.Get("dock.layout")); ui.ClickText("✓ " + L.Get("dock.notes"));
+                ui.ClickText(L.Get("dock.layout")); ui.ClickText("✓ " + L.Get("dock.gallery"));
                 CheckToolbar();
                 ResizeDock(true, 0); ResizeDock(false, 0);
                 Check(DockWidth(true) == DockWidth(false), "Both docks share the same minimum width");

@@ -25,6 +25,7 @@ public sealed partial class EditorView
 
     public void ShowFazExportChoice(LibraryMap? map = null)
     {
+        if (RejectPatternProjectOperation()) return;
         if (!PrepareFileOperation()) return;
         menu = -1; contextItems.Clear();
         fazExportChoice = complete =>
@@ -42,6 +43,7 @@ public sealed partial class EditorView
 
     public void BeginFazOpen(string path, Action opened)
     {
+        if (RejectPatternProjectOperation()) return;
         if (!PrepareFileOperation() || FazVisible) return;
         RequestPausePlayback?.Invoke();
         var settings = new LibrarySettings { Workspace = LibrarySettings.Workspace, Songs = LibrarySettings.Songs };
@@ -71,6 +73,7 @@ public sealed partial class EditorView
 
     public void BeginFazExport(string path, bool complete, LibraryMap? map = null)
     {
+        if (RejectPatternProjectOperation()) return;
         if (!PrepareFileOperation() || FazVisible) return;
         var snapshot = map is null ? CaptureProject() : null;
         bool compensate = CompensateTinyDroplets; string workspace = LibrarySettings.Workspace;
