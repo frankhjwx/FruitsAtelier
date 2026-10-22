@@ -283,10 +283,12 @@ public sealed partial class EditorView
                 float importBottom = DrawMapImportSettings(c, dropletsTop + 100 + dropletHint.Length * 18);
                 LibraryTextField(c, 7, L.Get("settings.mapperUsernames"), draftMapperUsernames, importBottom + 16);
                 float libraryBottom = SettingsParagraph(c, L.Get("settings.mapperUsernamesHint"), importBottom + 84);
-                TimingCheck(c, new(SettingsContentX, libraryBottom + 8, SettingsContentWidth, SettingsControlHeight),
+                float scanTop = libraryBottom + 16;
+                c.Line(SettingsContentX, scanTop, SettingsContentX + SettingsContentWidth, scanTop, Grid);
+                c.Text(L.Get("settings.importSettings"), SettingsContentX, scanTop + 12, SettingsSectionSize, Foreground, SettingsContentWidth, true);
+                TimingCheck(c, new(SettingsContentX, scanTop + 44, SettingsContentWidth, SettingsControlHeight),
                     "settings.scanStandardMaps", draftScanStandardMaps, () => draftScanStandardMaps = !draftScanStandardMaps);
-                libraryBottom = SettingsParagraph(c, L.Get("settings.scanStandardMapsHint"), libraryBottom + 48);
-                generalContentHeight = libraryBottom - generalTop - 116 + 12;
+                generalContentHeight = scanTop + 76 - generalTop - 116 + 12;
                 c.Unclip();
                 ClipSettingsHits(generalFirstHit);
                 DrawSettingsScrollbar(c, GeneralContentHeight);
