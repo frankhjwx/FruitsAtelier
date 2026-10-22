@@ -44,13 +44,23 @@ internal sealed class ImageCache : IDisposable
         }
         paths.Add(points, geometry); pathOrder.Enqueue(points); return geometry;
     }
+    private static readonly FruitsAtelier.Core.LibraryFileCache thumbnailCache = new("thumbnails-mac", "png-192x152-1");
     private readonly ThumbnailCache<Bitmap> thumbnails = new(path =>
     {
+        var fingerprint = thumbnailCache.Fingerprint(path);
+        if (thumbnailCache.Read(path) is { } cached)
+        {
+            try { using var input = new MemoryStream(cached); return new Bitmap(input); }
+            catch (Exception) { /* A damaged thumbnail is regenerated from its source. */ }
+        }
         var file = new FileInfo(path);
         if (!file.Exists || file.Length is < 24 or > 32 * 1024 * 1024) return null;
         using var bitmap = new Bitmap(path);
         double scale = Math.Min(1, Math.Min(192d / bitmap.PixelSize.Width, 152d / bitmap.PixelSize.Height));
-        return bitmap.CreateScaledBitmap(new PixelSize(Math.Max(1, (int)(bitmap.PixelSize.Width * scale)), Math.Max(1, (int)(bitmap.PixelSize.Height * scale))));
+        var result = bitmap.CreateScaledBitmap(new PixelSize(Math.Max(1, (int)(bitmap.PixelSize.Width * scale)), Math.Max(1, (int)(bitmap.PixelSize.Height * scale))));
+        using var output = new MemoryStream();
+        result.Save(output); thumbnailCache.Write(path, fingerprint, output.ToArray());
+        return result;
     });
     public Bitmap? Thumbnail(string path) => thumbnails.Get(path);
     public unsafe Bitmap? Get(string path, uint tint, bool background = false)

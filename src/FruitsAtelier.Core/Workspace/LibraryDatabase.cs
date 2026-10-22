@@ -265,6 +265,12 @@ public sealed class LibraryDatabase
             command.CommandText = "UPDATE maps SET stamp=-1; DELETE FROM project_metadata; PRAGMA user_version=7;";
             command.ExecuteNonQuery();
         }
+        command.CommandText = "PRAGMA user_version";
+        if (Convert.ToInt64(command.ExecuteScalar()) < 9)
+        {
+            command.CommandText = "UPDATE project_metadata SET stamp=-1; UPDATE project_difficulty_metadata SET stamp=-1; PRAGMA user_version=9;";
+            command.ExecuteNonQuery();
+        }
         command.CommandText = "CREATE INDEX IF NOT EXISTS maps_root ON maps(root); CREATE INDEX IF NOT EXISTS maps_directory_nocase ON maps(json_extract(data,'$.Directory') COLLATE NOCASE); CREATE INDEX IF NOT EXISTS project_sources_source ON project_sources(source,project);";
         command.ExecuteNonQuery();
         command.CommandText = "CREATE INDEX IF NOT EXISTS maps_identity ON maps(root,json_extract(data,'$.BeatmapId')); CREATE INDEX IF NOT EXISTS maps_song ON maps(root,json_extract(data,'$.Artist'),json_extract(data,'$.Title'));";
@@ -545,13 +551,21 @@ public sealed class LibraryDatabase
         string Get(string key) => OsuBeatmapReader.Setting(document, "Metadata", key) ?? "";
         var map = new LibraryMap(path, folder, Get("Title") is { Length: > 0 } title ? title : manifest.Name,
             Get("TitleUnicode"), Get("Artist"), Get("ArtistUnicode"), Get("Creator"), difficulty.Name, Get("Tags"), Get("Source"),
-            document.AudioPath ?? "", "", folder, Mode: OsuBeatmapReader.Setting(document, "General", "Mode") == "0" ? 0 : 2,
+            document.AudioPath ?? "", ProjectBackground(document, folder), folder, Mode: OsuBeatmapReader.Setting(document, "General", "Mode") == "0" ? 0 : 2,
             BeatmapId: long.TryParse(Get("BeatmapID"), out var mapId) ? mapId : 0,
             BeatmapSetId: long.TryParse(Get("BeatmapSetID"), out var setId) ? setId : 0, DateAddedUtcTicks: added);
         command.Parameters.RemoveAt("$added");
         command.CommandText = selectedDifficulty is null ? "INSERT OR REPLACE INTO project_metadata VALUES($p,$f,$t,$s,$d)"
             : "INSERT OR REPLACE INTO project_difficulty_metadata VALUES($p,$f,$t,$s,$d,$source)";
         command.Parameters.AddWithValue("$d", JsonSerializer.Serialize(map)); command.ExecuteNonQuery();
+    }
+
+    private static string ProjectBackground(MapDocument document, string folder)
+    {
+        if (OsuTimeline.BackgroundFilename(document) is not { } name) return "";
+        string? origin = document.SourcePath ?? document.AudioPath;
+        string directory = origin is null ? folder : Path.GetDirectoryName(origin)!;
+        return Path.GetFullPath(Path.Combine(directory, name));
     }
 
     public IReadOnlyList<LibraryMap> Search(string query, bool projectsOnly = false)

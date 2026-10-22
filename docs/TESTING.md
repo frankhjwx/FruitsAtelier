@@ -83,6 +83,13 @@ Settings drafts, and disabling/re-enabling standard scanning without source chan
 The library organization native render check also captures My Maps, the missing-name
 prompt and General library preferences in English and Chinese at both window sizes.
 
+`App.Tests --library-persistent-cache-check` verifies cached startup while a database
+writer blocks reconciliation, cross-restart star reuse with a locked source file,
+retained stars during scans, changed-source invalidation, damaged-cache fallback,
+My Maps project covers and Windows thumbnail reuse without rereading the original.
+Fixtures are isolated under `artifacts/tests`. The incremental Library check also
+runs this suite.
+
 ## Automated regressions
 
 `App.Tests --new-difficulty-check` checks independent complete copies, named

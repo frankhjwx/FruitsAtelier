@@ -20,6 +20,11 @@ public sealed partial class EditorView
     public Action<bool, string>? RequestWorkspaceExport { get; set; }
     private LibraryDatabase? libraryDatabase;
     private Task<(LibraryDatabase Database, LibraryScan Scan)>? scanTask;
+    private Task<(LibraryDatabase Database, string Workspace, string Songs)>? libraryStartupTask;
+    private bool libraryStartupScan;
+    private readonly HashSet<string> libraryRatingsToRefresh = [];
+    // Bump when conversion or difficulty calculation changes the rating semantics.
+    private static readonly LibraryFileCache ratingCache = new("stars", "catch-stars-1");
     private bool libraryRescanRequested;
     private readonly HashSet<string> libraryPendingDirectories = new(WorkspaceSynchronization.Paths);
     private string indexedWorkspace = "", indexedSongs = "";
@@ -78,7 +83,9 @@ public sealed partial class EditorView
             return;
         }
         LoadLibraryMemory();
-        StartLibraryScan();
+        string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
+        libraryStartupTask = Task.Run(() => (new LibraryDatabase(workspace, songs), workspace, songs));
+        libraryStartupScan = true;
         EnableFileMonitoring();
         historyCompressionEnabled = true;
         StartHistoryCompression(Path.GetFullPath(LibrarySettings.Workspace));
@@ -134,7 +141,7 @@ public sealed partial class EditorView
         revealLibrarySelection = true;
         LibraryVisible = true; exportPage = resourcePage = false; libraryField = -1;
         librarySettingsOpen = false; updatesPage = false;
-        if (libraryDatabase is null) StartLibraryScan();
+        if (libraryDatabase is null && libraryStartupTask is null) StartLibraryScan();
         else
         {
             if (libraryProjectsNeedReindex) QueueLibrarySearch();
@@ -311,12 +318,13 @@ public sealed partial class EditorView
     private long searchedLibraryRevision = -1;
     private void PumpPendingLibraryScan()
     {
-        if (!LibraryVisible || scanTask is not null) return;
+        if (!LibraryVisible || scanTask is not null || libraryStartupTask is not null || libraryStartupScan) return;
         if (libraryRescanRequested) StartLibraryScan();
         else if (libraryPendingDirectories.Count > 0) StartLibraryScan(libraryPendingDirectories.ToArray());
     }
     private void StartLibraryScan(string[]? directories = null)
     {
+        if (libraryStartupTask is not null) { libraryRescanRequested = true; return; }
         if (scanTask is not null)
         {
             if (directories is null) libraryRescanRequested = true;
@@ -325,7 +333,6 @@ public sealed partial class EditorView
         }
         try
         {
-            InvalidateLibraryRatings();
             libraryRescanRequested = false;
             libraryPendingDirectories.Clear();
             string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
@@ -350,9 +357,24 @@ public sealed partial class EditorView
         catch (Exception e) { libraryError = e.Message; }
     }
     private void QueueLibrarySearch() { searchAfter = DateTime.UtcNow.AddMilliseconds(150); searchTaskQuery = "\0"; }
-    private void InvalidateLibraryRatings() { libraryRatingRevision++; libraryRatings.Clear(); }
+    private void InvalidateLibraryRatings() { libraryRatingRevision++; libraryRatings.Clear(); libraryRatingsToRefresh.Clear(); }
     private void PumpLibrary()
     {
+        if (libraryStartupTask is { IsCompleted: true } startup)
+        {
+            libraryStartupTask = null;
+            try
+            {
+                var initial = startup.GetAwaiter().GetResult();
+                if (initial.Workspace != LibrarySettings.Workspace || initial.Songs != LibrarySettings.Songs)
+                { libraryStartupScan = false; StartLibraryScan(); return; }
+                libraryDatabase = initial.Database;
+                indexedWorkspace = initial.Workspace; indexedSongs = initial.Songs;
+                QueueLibrarySearch();
+                if (!LibraryVisible) { libraryStartupScan = false; StartLibraryScan(); }
+            }
+            catch (Exception e) { libraryError = e.Message; libraryStartupScan = false; }
+        }
         PumpStorage();
         PumpOsuCollections();
         PumpCollaboration();
@@ -373,7 +395,7 @@ public sealed partial class EditorView
             libraryNotice = L.Get("library.scanProgress", progress.Files, progress.Indexed, progress.Errors);
         if (scanTask is { IsCompleted: true })
         {
-            try { var (db, result) = scanTask.GetAwaiter().GetResult(); libraryDatabase = db; libraryNotice = L.Get("library.indexed", result.Count); libraryError = ""; QueueLibrarySearch(); }
+            try { var (db, result) = scanTask.GetAwaiter().GetResult(); libraryDatabase = db; libraryNotice = L.Get("library.indexed", result.Count); libraryError = ""; libraryRatingRevision++; libraryRatingsToRefresh.UnionWith(libraryRatings.Keys); QueueLibrarySearch(); }
             catch (Exception e) { libraryError = e.Message; QueueLibrarySearch(); }
             scanTask = null;
             PumpPendingLibraryScan();
@@ -397,6 +419,7 @@ public sealed partial class EditorView
             }
             catch (Exception e) { libraryError = e.Message; }
             searchTask = null;
+            if (libraryStartupScan) { libraryStartupScan = false; StartLibraryScan(); }
         }
         if (LibraryVisible && searchTask is null && libraryDatabase is not null && DateTime.UtcNow >= searchAfter && searchTaskQuery != LibrarySearchKey)
         {
@@ -425,8 +448,8 @@ public sealed partial class EditorView
             if (ratingTask.IsCompletedSuccessfully && ratingTask.Result.Revision == libraryRatingRevision)
                 foreach (var (path, stars) in ratingTask.Result.Ratings)
                 {
-                    if (libraryRatings.Count >= 512) libraryRatings.Remove(libraryRatings.Keys.First());
-                    libraryRatings[path] = stars;
+                    if (libraryRatings.Count >= 512) { string oldest = libraryRatings.Keys.First(); libraryRatings.Remove(oldest); libraryRatingsToRefresh.Remove(oldest); }
+                    libraryRatings[path] = stars; libraryRatingsToRefresh.Remove(path);
                 }
             ratingTask = null;
         }
@@ -591,7 +614,7 @@ public sealed partial class EditorView
         {
             var diff = libraryBrowser.Detail(i);
             if (diff is null) continue;
-            if (diff.Mode == 2 && !libraryRatings.ContainsKey(diff.Path) && (diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
+            if (diff.Mode == 2 && (!libraryRatings.ContainsKey(diff.Path) || libraryRatingsToRefresh.Contains(diff.Path)) && (diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
                 || diff.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))) pending.Add(diff);
             float y = 334 + (i - libraryDiffScroll) * 40;
             var row = new Rect(x - 4, y - 5, 296, 38);
@@ -619,12 +642,18 @@ public sealed partial class EditorView
                     {
                         try
                         {
+                            var fingerprint = ratingCache.Fingerprint(entry.Path);
+                            var cached = ratingCache.Read(entry.Path);
+                            if (cached is { Length: 8 } && BitConverter.ToDouble(cached) is var cachedStars && double.IsFinite(cachedStars) && cachedStars >= 0)
+                            { if (ratingCache.Fingerprint(entry.Path) == fingerprint) result[entry.Path] = cachedStars; continue; }
                             bool project = entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase);
                             var d = project ? ProjectSerializer.ReadFile(entry.Path) : OsuBeatmapReader.ReadFile(entry.Path);
                             var converted = CatchStreamConverter.Convert(d);
                             var exported = project && converted.Success ? OsuBeatmapWriter.Serialize(d) : null;
                             var objects = exported is { ObjectSequenceMatches: true } ? exported.PlayableObjects : converted.Objects;
                             result[entry.Path] = converted.Success ? CatchDifficultyCalculator.Calculate(objects, d.CircleSize).StarRating : null;
+                            if (ratingCache.Fingerprint(entry.Path) != fingerprint) { result.Remove(entry.Path); continue; }
+                            if (result[entry.Path] is { } stars) ratingCache.Write(entry.Path, fingerprint, BitConverter.GetBytes(stars));
                         }
                         catch (Exception) { result[entry.Path] = null; }
                     }
@@ -653,7 +682,7 @@ public sealed partial class EditorView
             else Button(c, browseBounds, L.Get("library.browse"), browse, fontSize: textSize);
         }
     }
-    public bool LibraryLoading => osuCollectionsTask is { IsCompleted: false } || LibraryVisible && libraryDatabase is not null && searchTaskQuery != LibrarySearchKey || scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
+    public bool LibraryLoading => libraryStartupTask is { IsCompleted: false } || osuCollectionsTask is { IsCompleted: false } || LibraryVisible && libraryDatabase is not null && searchTaskQuery != LibrarySearchKey || scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
     public bool LibraryTextFocused => (LibraryVisible || librarySettingsOpen || ExportVisible) && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;
     public int LibraryInputField => LibraryTextFocused ? libraryField : -1;
     public Action? RequestPasteLibrary { get; set; }

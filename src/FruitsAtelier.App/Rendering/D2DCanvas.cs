@@ -64,7 +64,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     private readonly Dictionary<string, (long Version, long Length)> imageVersions = new(StringComparer.OrdinalIgnoreCase);
     private long imageBytes;
     private sealed record ThumbnailPixels(uint Width, uint Height, byte[] Pixels);
-    private readonly ThumbnailCache<ThumbnailPixels> thumbnails = new(DecodeThumbnail);
+    private readonly ThumbnailCache<ThumbnailPixels> thumbnails = new(LoadThumbnail);
     private readonly Dictionary<string, (ThumbnailPixels Pixels, ID2D1Bitmap1 Bitmap, long Used)> thumbnailImages = [];
     private long thumbnailClock;
     private const long imageCacheLimit = 64 * 1024 * 1024;
@@ -575,6 +575,25 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
         var fitted = new Rect(destination.X + (destination.Width - pixels.Width * scale) / 2, destination.Y + (destination.Height - pixels.Height * scale) / 2, pixels.Width * scale, pixels.Height * scale);
         context!.DrawBitmap(cached.Bitmap, Convert(fitted), 1, Vortice.Direct2D1.BitmapInterpolationMode.Linear, new DRect(0, 0, pixels.Width, pixels.Height));
         return true;
+    }
+    private static readonly FruitsAtelier.Core.LibraryFileCache thumbnailCache = new("thumbnails-windows", "pbgra-192x152-1");
+    private static ThumbnailPixels? LoadThumbnail(string path)
+    {
+        var fingerprint = thumbnailCache.Fingerprint(path);
+        if (thumbnailCache.Read(path) is { Length: >= 12 } data)
+        {
+            uint w = BitConverter.ToUInt32(data, 0), h = BitConverter.ToUInt32(data, 4);
+            if (w is > 0 and <= 192 && h is > 0 and <= 152 && data.Length == 8 + w * h * 4)
+                return new(w, h, data[8..]);
+        }
+        var pixels = DecodeThumbnail(path);
+        if (pixels is null) return null;
+        var bytes = new byte[8 + pixels.Pixels.Length];
+        BitConverter.GetBytes(pixels.Width).CopyTo(bytes, 0);
+        BitConverter.GetBytes(pixels.Height).CopyTo(bytes, 4);
+        pixels.Pixels.CopyTo(bytes, 8);
+        thumbnailCache.Write(path, fingerprint, bytes);
+        return pixels;
     }
     private static ThumbnailPixels? DecodeThumbnail(string path)
     {
