@@ -161,8 +161,64 @@ internal static class PatternGalleryUiTests
                 "Context delete did not persist or changed the destination map");
             PreviewAlignment(ui, Path.Combine(directory, "alignment"));
             DenseThumbnailScheduling(ui, Path.Combine(directory, "dense"));
+            LegacyOverrideDrops();
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    private static void LegacyOverrideDrops()
+    {
+        var source = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:2.52\nSliderTickRate:2\n[TimingPoints]\n0,384.615384615385,4,1,0,100,1,0\n[HitObjects]\n240,192,1000,2,0,P|272:192|320:128,1,110.25,8|0,0:3|0:0,0:0:0:0:\n160,192,1600,2,0,L|320:192,2,160\n");
+        var raw = PatternSnapshot.Capture(source, source.ImportedSliders.Select(s => s.Id), "Legacy curves");
+        source.DerandomizeFSliderDroplets = true;
+        source.SliderImportState = SliderImportState.Native;
+        var processed = SliderRepresentationEditing.RefreshLegacyDroplets(source);
+        Check(processed.Success, "Cannot prepare processed gallery fixture: " + string.Join("; ", processed.Diagnostics));
+        var saved = PatternSnapshot.Capture(source, source.ImportedSliders.Select(s => s.Id), "Processed curves");
+        var target = new MapDocument { IsDemo = false, DurationMs = 30000, BeatLengthMs = 60000.0 / 178,
+            TimingOffsetMs = -26, SliderMultiplier = 1.4, OverrideSliderMultiplier = true, SliderMultiplierOverride = 1.92,
+            SliderImportState = SliderImportState.Native, DerandomizeFSliderDroplets = true, DerandomizeDroplets = true };
+        CheckDrops([raw, saved], target);
+    }
+
+    internal static void CheckDrops(IReadOnlyList<PatternSnapshot> patterns, MapDocument target)
+    {
+        string directory = Path.GetFullPath(Path.Combine("artifacts/tests/pattern-gallery-drop", Guid.NewGuid().ToString("N")));
+        Directory.CreateDirectory(directory);
+        PatternArchive.WriteFile(patterns, Path.Combine(directory, "gallery.fap"));
+        var ui = new Ui();
+        ui.LoadDocument(target.DeepClone());
+        ui.View.ConfigurePatternGallery(directory);
+        ui.ClickText(Strings.Get("dock.layout")); ui.ClickText("✓ " + Strings.Get("dock.gallery"));
+        ui.ClickText(Strings.Get("dock.layout")); ui.ClickText(Strings.Get("dock.gallery"));
+        PaintScheduledFrames(ui);
+        foreach (var snapshot in patterns)
+        {
+            var before = ui.View.Document.DeepClone();
+            var card = ui.View.PatternGalleryCardBounds(snapshot.Id);
+            if (!ui.View.PatternGalleryGridBounds.Contains(card.X + 20, card.Y + 20))
+            {
+                var grid = ui.View.PatternGalleryGridBounds;
+                ui.View.Wheel(grid.X + 10, grid.Y + 10, -120, false); ui.Paint(); PaintScheduledFrames(ui);
+                card = ui.View.PatternGalleryCardBounds(snapshot.Id);
+            }
+            var destination = ui.ScreenAt(2000, 300);
+            ui.View.PointerDown(card.X + 20, card.Y + 20, 0, false, false);
+            ui.View.PointerMove(destination.X, destination.Y, false, false); ui.Paint();
+            ui.View.PointerUp(destination.X, destination.Y, 0); ui.Paint();
+            ui.ClickText(Strings.Get("gallery.keepWidth"));
+            Wait(() => !ui.View.PatternGalleryNeedsRedraw, ui);
+            Check(ui.View.Document.ImportedSliders.Count == before.ImportedSliders.Count + snapshot.CreateDocument().ImportedSliders.Count,
+                "Legacy gallery drop failed for " + snapshot.Name + ": " + ui.View.StatusMessage);
+            var output = OsuBeatmapWriter.Serialize(ui.View.Document);
+            Check(output.ObjectSequenceMatches, "Dropped Legacy pattern did not survive export read-back");
+            var inserted = ui.View.Document.DeepClone();
+            ui.Key(90, ctrl: true);
+            Check(ui.View.Document.ContentEquals(before), "Legacy drop did not undo as a single edit");
+            ui.Key(89, ctrl: true);
+            Check(ui.View.Document.ContentEquals(inserted), "Legacy drop redo changed processed geometry or timing");
+            ui.Key(90, ctrl: true);
+        }
     }
 
     private static void FixedCardResize(Ui ui, Guid id)

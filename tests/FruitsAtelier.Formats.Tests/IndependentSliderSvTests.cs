@@ -36,6 +36,28 @@ internal static class IndependentSliderSvTests
         }
         SharedHead();
         ProcessedSv();
+        ProcessedSvOverride();
+    }
+
+    private static void ProcessedSvOverride()
+    {
+        foreach (double multiplier in new[] { 1.92, 2.4, 1.75 })
+        {
+            var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,337.078651685393\n[HitObjects]\n240,192,1322,2,0,P|272:192|320:128,1,110.25\n");
+            map.SliderMultiplierOverride = multiplier; map.OverrideSliderMultiplier = true;
+            map.DerandomizeFSliderDroplets = true;
+            var refreshed = SliderRepresentationEditing.RefreshLegacyDroplets(map);
+            Check(refreshed.Success && refreshed.ValidatedOutput is { ObjectSequenceMatches: true },
+                "Base-SV override rejected processed Legacy materialization: " + string.Join("; ", refreshed.Diagnostics));
+            var first = OsuBeatmapWriter.Serialize(map);
+            refreshed = SliderRepresentationEditing.RefreshLegacyDroplets(map, previous: map.DeepClone());
+            Check(refreshed.Success, "Repeated base-SV refresh failed: " + string.Join("; ", refreshed.Diagnostics));
+            var next = OsuBeatmapWriter.Serialize(map);
+            Check(first.PlayableObjects.Count == next.PlayableObjects.Count && first.PlayableHardRockObjects.Count == next.PlayableHardRockObjects.Count
+                && first.PlayableObjects.Zip(next.PlayableObjects).All(p => p.First == p.Second)
+                && first.PlayableHardRockObjects.Zip(next.PlayableHardRockObjects).All(p => p.First == p.Second),
+                "Repeated refresh changed NM or HR events with a base-SV override");
+        }
     }
 
     private static void ProcessedSv()

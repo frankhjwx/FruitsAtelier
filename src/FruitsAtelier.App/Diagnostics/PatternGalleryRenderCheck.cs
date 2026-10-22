@@ -25,7 +25,9 @@ internal static class PatternGalleryRenderCheck
                 Directory.CreateDirectory(gallery);
                 var patterns = Fixtures(locale);
                 PatternArchive.WriteFile(patterns, Path.Combine(gallery, "gallery.fap"));
-                var map = new MapDocument { Name = "Gallery placement", DurationMs = 30000, BeatLengthMs = 1000.0 / 3 };
+                var map = new MapDocument { Name = "Gallery placement", DurationMs = 30000, BeatLengthMs = 1000.0 / 3,
+                    SliderMultiplier = 1.4, OverrideSliderMultiplier = true, SliderMultiplierOverride = 1.92,
+                    SliderImportState = SliderImportState.Native, DerandomizeFSliderDroplets = true };
                 map.Fruits.AddRange([new() { TimeMs = 1000, X = 160 }, new() { TimeMs = 1500, X = 300 }, new() { TimeMs = 2000, X = 200 }]);
                 var editor = new EditorView(false);
                 editor.LoadDocument(map); editor.ConfigurePatternGallery(gallery);
@@ -103,6 +105,19 @@ internal static class PatternGalleryRenderCheck
                 editor.KeyDown('Z', true, false); Paint();
                 if (!map.ContentEquals(editor.Document)) throw new InvalidOperationException("Pattern drop did not undo as one operation.");
 
+                var legacyCard = editor.PatternGalleryCardBounds(patterns[2].Id);
+                editor.PointerDown(legacyCard.X + 20, legacyCard.Y + 20, 0, false, false);
+                editor.PointerMove(px, py, false, false); Paint();
+                editor.PointerUp(px, py, 0); Paint();
+                Click(new(Math.Clamp(px, 8, Math.Max(8, size.Item1 - 308)) + 6,
+                    Math.Clamp(py, 8, Math.Max(8, size.Item2 - 116)) + 6, 288, 30));
+                Wait(() => !editor.PatternGalleryNeedsRedraw, "commit Legacy drop with base SV override");
+                if (editor.Document.ImportedSliders.Count != 1)
+                    throw new InvalidOperationException("Legacy gallery drop failed: " + editor.StatusMessage);
+                Paint("legacy-inserted");
+                editor.KeyDown('Z', true, false); Paint();
+                if (!map.ContentEquals(editor.Document)) throw new InvalidOperationException("Legacy drop undo did not restore the map.");
+
                 shortCard = editor.PatternGalleryCardBounds(patterns[1].Id);
                 editor.PointerDoubleClick(shortCard.X + 20, shortCard.Y + 20, false, false); Paint("edit");
                 if (!editor.PatternEditingActive) throw new InvalidOperationException("Double click did not enter pattern editing.");
@@ -172,7 +187,9 @@ internal static class PatternGalleryRenderCheck
             map.DurationMs = 30000;
             if (index == 0)
                 map.Fruits.AddRange(Enumerable.Range(0, 65).Select(i => new Fruit { TimeMs = 1000 + i * 250, X = 256 + 150 * Math.Sin(i * .6) }));
-            else if (index is 2 or 7 or 10)
+            else if (index == 2)
+                map.ImportedSliders.AddRange(OsuBeatmapReader.Read("osu file format v14\n[TimingPoints]\n0,500\n[HitObjects]\n240,192,1000,2,0,P|272:192|320:128,1,110.25\n").ImportedSliders);
+            else if (index is 7 or 10)
             {
                 var track = new CurveTrack { Kind = CurveKind.Bezier, SpanCount = index == 7 ? 2 : 1 };
                 track.Nodes.AddRange([new() { TimeMs = 1000, X = 120, HandleOut = new(500, 260) }, new() { TimeMs = 2500, X = 360, HandleIn = new(-500, -260) }]);
@@ -188,7 +205,7 @@ internal static class PatternGalleryRenderCheck
             else if (index == 5) map.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 2500 });
             else map.Fruits.AddRange([new() { TimeMs = 1000, X = 140 }, new() { TimeMs = 1100, X = 360 }, new() { TimeMs = 1500, X = 256 }]);
             patterns.Add(PatternSnapshot.Capture(map, map.Fruits.Select(f => f.Id).Concat(map.Tracks.Select(t => t.Id))
-                .Concat(map.BananaShowers.Select(b => b.Id)), names[index]));
+                .Concat(map.ImportedSliders.Select(s => s.Id)).Concat(map.BananaShowers.Select(b => b.Id)), names[index]));
         }
         return patterns;
     }
