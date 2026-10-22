@@ -58,13 +58,15 @@ if (Array.IndexOf(args, "--osu-collections-read") is var osuRead && osuRead >= 0
 if (args.Contains("--osu-collections-check")) { OsuCollectionTests.Run(); return 0; }
 if (args.Contains("--library-organization-check")) { OsuCollectionTests.Run(); LibraryOrganizationTests.Run(); LibraryFavouriteTests.Run(); LibraryTests.Run(); LibraryScaleTests.Pagination(); Console.WriteLine("PASS Library sorting, grouping, collections, visits and persistence"); return 0; }
 
+if (args.Contains("--library-category-cache-check")) { LibraryCategoryCacheTests.Run(); return 0; }
+
 if (args.Contains("--library-startup-profile")) { LibraryPersistentCacheTests.ProfileExisting(); return 0; }
 
 if (args.Contains("--library-persistent-cache-check")) { LibraryPersistentCacheTests.Run(); return 0; }
 
 if (args.Contains("--library-incremental-check"))
 {
-    LibraryPersistentCacheTests.Run(); LibraryIncrementalTests.Run(); LibraryScanProgressTests.Run(); LibraryResponsivenessTests.Run();
+    LibraryCategoryCacheTests.Run(); LibraryPersistentCacheTests.Run(); LibraryIncrementalTests.Run(); LibraryScanProgressTests.Run(); LibraryResponsivenessTests.Run();
     Console.WriteLine("PASS Library incremental indexing and background interaction"); return 0;
 }
 if (args.Contains("--benchmark-library-loading")) return LibraryIncrementalTests.Benchmark();
@@ -555,6 +557,7 @@ var tests = new (string Name, Action Run)[]
     ("Library opening keeps UI responsive while workspace maintenance holds the project gate", LibraryOpeningTests.Run),
     ("My Maps filters exact mapper names and persists library scanning preferences", MyMapsTests.Run),
     ("Library caches survive restart and retain unchanged stars during reconciliation", LibraryPersistentCacheTests.Run),
+    ("Library tabs and FA/osu! Collections retain independent cached pages across restart", LibraryCategoryCacheTests.Run),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
     ("FAZ archives preserve native projects and explicit local associations", FazTests.Run),
     ("FAD archives exchange native difficulties through merge review", FadTests.Run),

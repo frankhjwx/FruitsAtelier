@@ -33,7 +33,7 @@ public sealed partial class EditorView
         public LibraryPosition MyProjects { get; set; } = new();
     }
     private LibraryMemory libraryMemory = new();
-    private readonly Dictionary<int, (LibraryBrowser? Browser, string Query)> libraryCategoryBrowsers = [];
+    private readonly Dictionary<string, (LibraryBrowser? Browser, string Query)> libraryCategoryBrowsers = [];
     private string libraryBrowserQuery = "";
     private bool libraryFavouritesOnly, libraryRecentOnly;
     private string? libraryCollection;
@@ -113,13 +113,15 @@ public sealed partial class EditorView
     private void SwitchLibraryCategory(bool projects, bool favourites = false, bool recent = false, string? collection = null)
     {
         if (libraryMyMapsOnly == projects && libraryFavouritesOnly == favourites && libraryRecentOnly == recent && libraryCollection == collection) return;
+        SaveLibraryPreviewOnLeave();
         RememberLibraryPosition();
-        libraryCategoryBrowsers[LibraryCategory] = (libraryBrowser, libraryBrowserQuery);
+        libraryCategoryBrowsers[LibraryPreviewCategory] = (libraryBrowser, libraryBrowserQuery);
         libraryMyMapsOnly = projects; libraryFavouritesOnly = favourites; libraryRecentOnly = recent; libraryCollection = collection; RestoreLibraryPosition();
-        var cached = libraryCategoryBrowsers.GetValueOrDefault(LibraryCategory);
-        libraryCategoryBrowsers.Remove(LibraryCategory);
+        var cached = libraryCategoryBrowsers.GetValueOrDefault(LibraryPreviewCategory);
+        libraryCategoryBrowsers.Remove(LibraryPreviewCategory);
         libraryBrowser = cached.Browser; libraryBrowserQuery = cached.Query ?? "";
         if (libraryBrowserQuery != libraryQuery) { libraryBrowser?.Retire(); libraryBrowser = null; }
+        if (libraryBrowser is null) LoadLibraryPreview();
         libraryCards.Clear(); libraryResultsReady = libraryBrowser is not null;
         libraryField = -1; contextItems.Clear();
         QueueLibrarySearch(); RememberLibraryPosition();
@@ -141,7 +143,7 @@ public sealed partial class EditorView
             if (map.ProjectPath is { } project) libraryMemory.FavouriteKeys.Add(project);
         }
         libraryFavouriteRevision++;
-        if (libraryCategoryBrowsers.Remove(2, out var cached)) cached.Browser?.Retire();
+        if (libraryCategoryBrowsers.Remove("favourites", out var cached)) cached.Browser?.Retire();
         QueueLibrarySearch(); RememberLibraryPosition(); SaveLibraryMemory();
     }
 

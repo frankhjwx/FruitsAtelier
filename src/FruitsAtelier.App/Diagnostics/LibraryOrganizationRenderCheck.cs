@@ -81,6 +81,22 @@ internal static class LibraryOrganizationRenderCheck
                     Paint(); Capture("osu-collection");
                     view.PointerDown(40, 244, 0, false, false); view.PointerUp(40, 244, 0); Wait(2); Capture("recent");
                     Invoke("SwitchLibraryCategory", true, false, false, null!); Wait(2); Capture("my-maps");
+                    if (dpi == 96 && size.Item1 == 1440)
+                    {
+                        Invoke("SwitchLibraryCategory", false, true, false, null!); Wait(0);
+                        Invoke("SwitchLibraryCategory", false, false, false, "practice"); Wait(3);
+                        Invoke("SwitchLibraryCategory", false, false, false, "reference"); Wait(3);
+                        view.SaveLibraryMemory(); view.CompleteLibraryCacheWrites(); view.StopFileMonitoring(); view.CloseLibrary();
+                        view = new EditorView(false); view.InitializeLibrary(true, settings);
+                        Cached(3, "fa-reference");
+                        Invoke("SwitchLibraryCategory", false, false, false, "practice"); Cached(3, "fa-practice");
+                        Invoke("SwitchLibraryCategory", false, false, false, imported.Id); Cached(1, "osu");
+                        Invoke("SwitchLibraryCategory", false, false, true, null!); Cached(2, "recent");
+                        Invoke("SwitchLibraryCategory", false, true, false, null!); Cached(0, "favourites");
+                        Invoke("SwitchLibraryCategory", false, false, false, null!); Cached(6, "songs");
+                        Invoke("SwitchLibraryCategory", true, false, false, null!); Cached(2, "my-maps");
+                    }
+
                     settings.MapperUsernames = [];
                     Invoke("InvalidateLibraryOrganization", false); Wait(0); Capture("my-maps-setup");
                     view.PointerDown(250, 254, 0, false, false); view.PointerUp(250, 254, 0); Paint();
@@ -91,6 +107,13 @@ internal static class LibraryOrganizationRenderCheck
                     view.KeyDown(27, false, false); settings.MapperUsernames = ["Alice"];
                 }
                 finally { view.CloseLibrary(); }
+
+                void Cached(int count, string name)
+                {
+                    if (view.LibrarySetTotal != count || typeof(EditorView).GetField("libraryBrowser", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view) is not LibraryBrowser { IsPreview: true })
+                        throw new InvalidOperationException("Library category did not restore its independent cache: " + name);
+                    Capture("category-restart-" + name); Wait(count);
+                }
 
                 void ClickOrder(string field)
                 {

@@ -93,11 +93,20 @@ runs this suite. The native Library organization check captures the first frame
 after restarting with a saved expanded group in both languages, window sizes and
 all three DPI values.
 
+`App.Tests --library-category-cache-check` verifies independent membership, search,
+sort and disk caches for all four tabs, two FA Collections and two osu! Collections
+with matching names. With the database startup worker held after restart, it
+switches through every cached view, reorders osu! Collections, and verifies that
+neither memory nor disk caches are reused for another identity. The incremental
+Library suite includes this check. Native Library checks also capture switching
+the four tabs and FA/osu! Collections after restart in both languages.
+
 For an optional read-only startup comparison against the configured Library, run
 `App.Tests --library-startup-profile`. It copies the SQLite catalog and view
 preferences into `artifacts/tests`, reads source project metadata without saving
 it, and compares query construction with cached-page restoration using
-RecordingCanvas. The report excludes native drawing and image decoding.
+RecordingCanvas. It also creates isolated preview files for the four tabs and
+all configured FA/osu! Collections. The report excludes native drawing and image decoding.
 
 ## Automated regressions
 

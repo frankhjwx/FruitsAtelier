@@ -641,6 +641,7 @@ internal sealed partial class EditorWindow : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        view.CompleteLibraryCacheWrites();
         view.StopFileMonitoring();
         view.CleanupFazOnExit();
         updates?.Dispose();

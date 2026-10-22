@@ -49,6 +49,33 @@ internal static class LibraryPersistentCacheTests
         string json = System.Text.Json.JsonSerializer.Serialize(report, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(Path.Combine(root, "report.json"), json); Console.WriteLine(json);
         browser.Retire();
+        var catalog = OsuCollectionCatalog.Read(settings.OsuRoot);
+        Set("osuCollections", catalog);
+        var memory = Field(view, "libraryMemory")!;
+        var collections = (System.Collections.IEnumerable)memory.GetType().GetProperty("Collections")!.GetValue(memory)!;
+        var targets = new List<(bool Mine, bool Favourite, bool Recent, string? Collection)>
+            { (false, false, false, null), (true, false, false, null), (false, true, false, null), (false, false, true, null) };
+        foreach (object collection in collections)
+            targets.Add((false, false, false, (string)collection.GetType().GetProperty("Id")!.GetValue(collection)!));
+        targets.AddRange(catalog.Collections.Select(c => (false, false, false, (string?)c.Id)));
+        foreach (var target in targets)
+        {
+            typeof(EditorView).GetMethod("SwitchLibraryCategory", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(view,
+                [target.Mine, target.Favourite, target.Recent, target.Collection]);
+            var page = LibraryBrowser.Create(db, (string)Field(view, "libraryQuery")!, false,
+                (string?)Field(view, "selectedLibraryGroup"), null, (float)Field(view, "libraryScroll")!,
+                (IReadOnlyCollection<string>?)Property(view, "LibraryFilterKeys"), (LibraryOrganization)Property(view, "CurrentLibraryOrganization")!);
+            page.RequestDetails((int)Field(view, "libraryDiffScroll")!);
+            var waiting = Stopwatch.StartNew();
+            while (page.Loading && waiting.Elapsed < TimeSpan.FromSeconds(15)) { page.Pump(); Thread.Sleep(10); }
+            page.Pump();
+            Set("libraryBrowser", page); Set("libraryBrowserQuery", Field(view, "libraryQuery"));
+            Set("runningOrganizationKey", Property(view, "LibrarySearchKey")); Set("searchTaskQuery", Property(view, "LibrarySearchKey"));
+            Invoke(view, "SaveLibraryPreviewOnLeave");
+            ((Task)Field(view, "libraryPreviewSave")!).GetAwaiter().GetResult();
+            Console.WriteLine($"Cached {Property(view, "LibraryPreviewCategory")}: {page.SetCount} sets");
+            page.Retire();
+        }
 
         void Prepare(EditorView editor)
         {
@@ -101,12 +128,12 @@ internal static class LibraryPersistentCacheTests
         double? first = Ratings(view)[source];
         Check(first is not null, "Fixture has a rating");
         Wait(() => Field(view, "libraryPreviewSave") is Task { IsCompleted: true }
-            && File.Exists(Path.Combine(workspace, "library-preview.json"))
+            && File.Exists(Path.Combine(workspace, "library-preview-songs.json"))
             && ReferenceEquals(Field(view, "savedPreviewBrowser"), Field(view, "libraryBrowser"))
             && (long)Field(view, "savedPreviewRevision")! == ((LibraryBrowser)Field(view, "libraryBrowser")!).ContentRevision,
             "Visible page and selected difficulty are persisted");
         view.SaveLibraryMemory();
-        string previewPath = Path.Combine(workspace, "library-preview.json");
+        string previewPath = Path.Combine(workspace, "library-preview-songs.json");
         string validPreview = File.ReadAllText(previewPath);
         File.WriteAllText(previewPath, "{");
         var invalid = new EditorView(loadDemo: false);
