@@ -27,6 +27,7 @@ public sealed partial class EditorView
     private bool PatternGalleryPointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
         if (!PatternGalleryInputAvailable || menu >= 0 || contextItems.Count > 0) return false;
+        if (GallerySearchFocused && !gallerySearchBounds.Contains(x, y)) textEditor.Field = "";
         if (galleryPopupId != Guid.Empty && galleryPopupBounds.Contains(x, y))
         {
             if (button == 0 && galleryLargePreviewBounds.Contains(x, y))
@@ -82,7 +83,7 @@ public sealed partial class EditorView
                 StartGalleryIo(() =>
                 {
                     store.Replace(pattern.WithName(name));
-                    return new(store.Load(), "");
+                    return new(store.Load(), "", true);
                 });
             });
             if (PatternNameVisible)
@@ -111,19 +112,6 @@ public sealed partial class EditorView
         for (int i = hits.Count - 1; i >= 0; i--)
             if (hits[i].Bounds.Contains(x, y))
             { if (hits[i].Enabled) hits[i].Action(); break; }
-    }
-
-    private bool PatternGalleryDoubleClick(float x, float y, int button)
-    {
-        if (!PatternGalleryInputAvailable || menu >= 0 || contextItems.Count > 0 || button != 0 || !galleryGridBounds.Contains(x, y)) return false;
-        foreach (var card in galleryCards)
-            if (card.Bounds.Contains(x, y) && galleryPatterns.FirstOrDefault(p => p.Id == card.Id) is { } pattern)
-            {
-                CancelPatternGalleryInteraction();
-                BeginPatternEditing(pattern);
-                return true;
-            }
-        return false;
     }
 
     private bool PatternGalleryPointerMove(float x, float y)
@@ -238,6 +226,15 @@ public sealed partial class EditorView
 
     private bool PatternGalleryKeyDown(int key, bool ctrl, bool shift)
     {
+        if (GallerySearchFocused)
+        {
+            if (key is 27 or 13) { textEditor.Field = ""; return true; }
+            string previous = galleryQuery;
+            if (InputKey("gallery:search", ref galleryQuery, key, ctrl, shift, 4096, RequestPasteField) && previous != galleryQuery) ApplyGalleryFilter();
+            return true;
+        }
+        if (PatternGalleryInputAvailable && ctrl && key == 70)
+        { SelectInput("gallery:search", galleryQuery); return true; }
         if (!PatternGalleryInputAvailable || IsEditingText || menu >= 0 || contextItems.Count > 0) return false;
         if (key == 27 && (galleryDragging || galleryPopupId != Guid.Empty || galleryPressedId != Guid.Empty || galleryDropTask is not null))
         { CancelPatternGalleryInteraction(); return true; }

@@ -72,6 +72,7 @@ public sealed partial class EditorView
     {
         if (expectedField is not null && textEditor.Field != expectedField) return;
         if (PatternNameVisible && !ErrorVisible) { PatternNameText(text); return; }
+        if (GallerySearchFocused) { GallerySearchText(text); return; }
         if (MapTemplatesVisible && !ErrorVisible) { MapTemplatesText(text); return; }
         if (addDifficultyConfirmation && !ErrorVisible) { NewDifficultyText(text); return; }
         if (CollaborationFocused)
@@ -142,6 +143,7 @@ public sealed partial class EditorView
         {
             "copier:name" => copierName,
             "time" => timeJumpText,
+            "gallery:search" => galleryQuery,
             _ when key.StartsWith("collab:") => collaborationText,
             "distance" => editBuffer,
             "ds:base" => dsBaseText,

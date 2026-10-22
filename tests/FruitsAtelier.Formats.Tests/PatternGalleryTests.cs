@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json.Nodes;
 using FruitsAtelier.Core;
 using FruitsAtelier.Core.Patterns;
 
@@ -24,6 +25,7 @@ internal static class PatternGalleryTests
         var shower = new BananaShower { TimeMs = 5000, EndTimeMs = 6000, Pattern = new(1, 4, 1, 4) }; map.BananaShowers.Add(shower);
         var ids = new[] { fruit.Id, track.Id, slider.Id, shower.Id };
         var snapshot = PatternSnapshot.Capture(map, ids, "My pattern");
+        snapshot = snapshot.WithTags([new("Stream", 0x58D8C1), new("Jump", 0xFFB45C)]);
         Check(snapshot.ObjectCount == 4 && snapshot.Source == new PatternSource("Artist", "Song", "Expert", "Mapper", 1000), "Captured identity and source metadata");
         var data = snapshot.CreateDocument();
         Check(data.SourcePath is null && data.AudioPath is null && data.OriginalSections.All(s => s.Name != "Events")
@@ -40,6 +42,26 @@ internal static class PatternGalleryTests
         using var archive = new MemoryStream();
         PatternArchive.Write([snapshot], archive); archive.Position = 0;
         var restored = PatternArchive.Read(archive).Single();
+        Check(restored.Tags.SequenceEqual(snapshot.Tags) && snapshot.WithName("Renamed").Tags.SequenceEqual(snapshot.Tags)
+            && snapshot.WithDocument(snapshot.CreateDocument()).Tags.SequenceEqual(snapshot.Tags), "Tag names and colours survive sharing and editing");
+        Expect<InvalidDataException>(() => snapshot.WithTags([new("tag", 1), new("TAG", 2)]));
+        Expect<InvalidDataException>(() => snapshot.WithTags([new("bad", 0x1000000)]));
+        Expect<InvalidDataException>(() => snapshot.WithTags(Enumerable.Range(0, 65).Select(i => new PatternTag(i.ToString(), 0))));
+        using var legacy = new MemoryStream();
+        archive.Position = 0;
+        using (var oldZip = new ZipArchive(archive, ZipArchiveMode.Read, true))
+        using (var zip = new ZipArchive(legacy, ZipArchiveMode.Create, true))
+            foreach (var entry in oldZip.Entries)
+            {
+                using var output = zip.CreateEntry(entry.FullName).Open();
+                using var input = entry.Open();
+                if (entry.FullName != "manifest.json") { input.CopyTo(output); continue; }
+                var manifest = JsonNode.Parse(input)!; manifest["Version"] = 1;
+                foreach (var item in manifest["Patterns"]!.AsArray()) item!.AsObject().Remove("Tags");
+                using var writer = new StreamWriter(output); writer.Write(manifest.ToJsonString());
+            }
+        legacy.Position = 0;
+        Check(PatternArchive.Read(legacy).Single().Tags.Count == 0, "Version 1 galleries remain readable without tags");
         Check(restored.CreateDocument().ApproachRate == 9.3 && PatternPreview.Create(restored).ApproachRate == 9.3,
             "Saved AR survives sharing and drives preview independently of the active map");
         Check(restored.Id == snapshot.Id && restored.Name == snapshot.Name && restored.Source == snapshot.Source
@@ -57,7 +79,7 @@ internal static class PatternGalleryTests
         Expect<InvalidDataException>(() => PatternArchive.Read(malicious));
         using var future = new MemoryStream();
         using (var zip = new ZipArchive(future, ZipArchiveMode.Create, true))
-        using (var writer = new StreamWriter(zip.CreateEntry("manifest.json").Open(), new UTF8Encoding(false))) writer.Write("{\"Version\":2,\"Patterns\":[]}");
+        using (var writer = new StreamWriter(zip.CreateEntry("manifest.json").Open(), new UTF8Encoding(false))) writer.Write("{\"Version\":3,\"Patterns\":[]}");
         future.Position = 0;
         Expect<InvalidDataException>(() => PatternArchive.Read(future));
 
@@ -66,6 +88,15 @@ internal static class PatternGalleryTests
         try
         {
             var store = new PatternGalleryStore(Path.Combine(directory, "Patterns"));
+            var tagStore = new PatternGalleryStore(Path.Combine(directory, "Tags"));
+            tagStore.Add(snapshot);
+            var taggedSecond = PatternSnapshot.Capture(map, [before.Id], "Tagged second").WithTags([new("Stream", 0x58D8C1)]);
+            tagStore.Add(taggedSecond);
+            tagStore.EditTag("Stream", new("Flow", 0x65A9FF));
+            Check(tagStore.Load().All(p => p.Tags.Any(t => t.Name == "Flow" && t.Colour == 0x65A9FF)), "Tag rename and colour edits update all assignments");
+            Expect<InvalidOperationException>(() => tagStore.EditTag("Flow", new("Jump", 1)));
+            tagStore.EditTag("Flow", null);
+            Check(tagStore.Load().All(p => p.Tags.All(t => t.Name != "Flow")), "Tag deletion removes all assignments");
             Check(store.Load().Count == 0 && store.Add(snapshot) && !store.Add(restored), "Persistent store deduplicates repeated import");
             var second = PatternSnapshot.Capture(map, [before.Id], "Second"); store.Add(second);
             string export = Path.Combine(directory, "selected.fap"); store.Export(export, [snapshot.Id]);

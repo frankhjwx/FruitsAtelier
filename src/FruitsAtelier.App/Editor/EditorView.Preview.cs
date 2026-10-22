@@ -173,7 +173,7 @@ public sealed partial class EditorView
         sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
         Guid id = boxedSlider != Guid.Empty ? boxedSlider : hit?.SourceId ?? (showTargets ? HitSliderLocation(x, y)?.Id : null) ?? Guid.Empty;
         if (!Document.Tracks.Any(t => t.Id == id) && !Document.ImportedSliders.Any(t => t.Id == id)
-            && !(objectSelection.Count > 1 && objectSelection.Contains(id) && Document.Fruits.Any(f => f.Id == id))) return;
+            && !Document.Fruits.Any(f => f.Id == id) && !Document.BananaShowers.Any(s => s.Id == id)) return;
         if (tool == Tool.Slider && SelectedTrack?.Id != id) return;
         sliderHoldId = id; sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
     }
@@ -191,7 +191,7 @@ public sealed partial class EditorView
             {
                 if (!objectSelection.Contains(source.Id) || source.End < viewStart || source.Start > visibleEnd
                     || !Document.Tracks.Any(t => t.Id == source.Id) && !Document.ImportedSliders.Any(t => t.Id == source.Id)
-                        && !(objectSelection.Count > 1 && Document.Fruits.Any(f => f.Id == source.Id))) continue;
+                        && !Document.Fruits.Any(f => f.Id == source.Id) && !Document.BananaShowers.Any(s => s.Id == source.Id)) continue;
                 if (tool == Tool.Slider && SelectedTrack?.Id != source.Id) continue;
                 sliderHoldId = source.Id;
                 var position = Screen(new(Math.Clamp(source.Start, viewStart, visibleEnd), 256));
@@ -202,7 +202,7 @@ public sealed partial class EditorView
         if (sliderHoldId == Guid.Empty && objectSelection.Count > 0)
         {
             sliderHoldId = objectSelection.FirstOrDefault(id => Document.Tracks.Any(t => t.Id == id)
-                || Document.ImportedSliders.Any(s => s.Id == id) || objectSelection.Count > 1 && Document.Fruits.Any(f => f.Id == id));
+                || Document.ImportedSliders.Any(s => s.Id == id) || Document.Fruits.Any(f => f.Id == id) || Document.BananaShowers.Any(s => s.Id == id));
             sliderHoldX = plot.X + plot.Width / 2; sliderHoldY = plot.Y + plot.Height / 2;
         }
         if (sliderHoldId == Guid.Empty) return;
@@ -216,8 +216,9 @@ public sealed partial class EditorView
         if (!objectSelection.Contains(id)) SelectObjects([id]);
         RefreshSliderInspector();
         menu = -1; contextItems.Clear();
-        foreach (var action in SliderInspectorActions())
+        foreach (var action in SliderInspectorActions().Where(a => a.Kind >= 0))
             contextItems.Add(new(action.Label, action.Action, action.Enabled, SliderAction: action.Kind));
+        AddGalleryCaptureContextItem();
         contextBounds = new(Math.Clamp(sliderHoldX, 0, Math.Max(0, width - 280)),
             Math.Clamp(sliderHoldY, 0, Math.Max(0, height - ContextMenuHeight)), 280, ContextMenuHeight);
     }

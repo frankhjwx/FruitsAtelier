@@ -11,31 +11,47 @@ Its scrollbar starts at the bottom and moves upward when browsing later objects 
 Use **Alt + wheel** over the enlarged preview to zoom. The initial scale is the
 maximum; zooming out stops when the complete pattern fits. Zooming keeps the
 time under the pointer in place where the preview bounds allow.
-Ctrl-click cards to select multiple patterns for export.
 Previews start at the bottom and center the actual pattern horizontally, independent
 of its original playfield position. This alignment does not change saved coordinates.
 Right-click a card to rename or delete the saved pattern. Renaming retains its
 identity, source information and geometry; deleting removes it from the local gallery.
 
+The gallery toolbar has three rows: search; tag filtering and tag management;
+then **Save selection**, **Import patterns**, and **Export**. Search follows Library
+matching: case-insensitive Unicode normalization and whitespace-separated words
+that must all occur in the pattern name, source artist/title/mapper/difficulty or
+tag names. Ctrl+F focuses the search field. Selecting multiple tags requires all
+selected tags; **All patterns** clears the tag filter. Filters affect browsing only.
+
+Use **Edit Tags** in a pattern's details to assign existing tags or create one.
+Each tag has a name and colour. **Manage tags** renames, recolours or removes a
+tag across every assigned pattern. Choose a palette colour or enter `#RRGGBB`.
+Tag changes persist in the gallery without changing the source map or rebuilding
+preview geometry. Tags are shared with `.fap` packages; existing local colours
+take precedence when importing another pattern with the same tag name.
+
 ## Capture and sharing
 
 Select consecutive complete parent objects on the map, choose **Save selection**,
-and enter a name. Fruits, FSliders, imported sliders, streams, stacks and banana
+and enter a name. Save selection is disabled without a complete object selection.
+The object action menu also offers **Save to Pattern Gallery** for one or multiple objects,
+including when the gallery panel is hidden. Fruits, FSliders, imported sliders, streams, stacks and banana
 showers are supported. A saved pattern is an independent snapshot: editing its
 source map does not change it. Stream and stack parameters and individual fruit
 adjustments remain editable. Source artist, title, difficulty, creator and start
 time are retained alongside the authoring data, AR and timing context.
 
-**Export all** or **Export selected** creates a `.fap` (Fruits Atelier Pattern)
-package. **Import** merges a package into the gallery. Identical entries with the
+**Export** creates a `.fap` (Fruits Atelier Pattern) package of the complete gallery,
+including patterns hidden by search or tag filters. **Import** merges a package into the gallery. Identical entries with the
 same ID are skipped; different content using an existing ID is rejected without
 replacing the gallery. Packages contain authoring data, not audio, backgrounds,
 skins or local source paths. Custom sample references do not bundle sample files.
 
 The local gallery lives in `Patterns/gallery.fap` under the configured workspace.
 Local source-file hints are stored separately in `Patterns/sources.local.json`.
-The version 1 package is a ZIP containing `manifest.json` and one project document
-per pattern. Import validates IDs, names, exact archive entries and bounded sizes
+Packages are ZIP files containing `manifest.json` and one project document per
+pattern. Untagged exports use version 1; tagged exports use version 2. Both versions
+can be imported. Import validates IDs, names, tags, exact archive entries and bounded sizes
 before publishing the complete result. Writes use a temporary file and atomic
 replacement. The package limit is 4,096 patterns, 64 MiB compressed and 256 MiB
 expanded; individual documents also obey the project format's limits.
@@ -71,20 +87,22 @@ visible, while streams and stacks appear as their generated fruits.
 
 ## Editing and source navigation
 
-Double-click a card to edit its snapshot in the main canvas. Only that pattern's
+Click a card to open its details. The footer shows **Artist - Title (Mapper)
+[Difficulty]**, then **Edit Pattern** and **Edit Tags**, followed by **Go to Original Map**.
+Choose **Edit Pattern** to edit its snapshot in the main canvas. Only that pattern's
 objects are present. The **Editing pattern** banner identifies the mode and offers
-**Save and return**, **Discard and return**, and **Go to source**.
+**Save and return**, **Discard and return**, and **Go to Original Map**.
 Saving replaces the gallery snapshot; discarding keeps its prior version. Both
 return to the previous map and editing position, retaining its unsaved content,
 undo history, selection and view state. Ctrl+S saves the pattern in this mode.
 
-**Go to source** in the preview locates the original difficulty locally and seeks
+**Go to Original Map** in the preview locates the original difficulty locally and seeks
 to the saved start time. If the current workspace has unsaved content, the normal
 Save / Discard / Cancel dialog is shown before navigation. Shared patterns can
 resolve a source through the local Library; missing or ambiguous sources report
 an error instead of opening a guessed match.
 
-Using **Go to source** while editing a pattern first asks whether to save or discard
+Using **Go to Original Map** while editing a pattern first asks whether to save or discard
 the pattern draft, with Cancel keeping the draft open. Navigation then retains the
 previous map in memory without requiring it to be saved. **Return to previous map**
 restores it, including unsaved edits and history. If the source map was edited in

@@ -777,7 +777,7 @@ public sealed partial class EditorView
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
         if (PatternNameVisible || PatternEditingBusy) return;
-        if (DockContentInputAvailable && PatternGalleryDoubleClick(x, y, 0)) return;
+        if (PatternGalleryInputAvailable && galleryGridBounds.Contains(x, y)) return;
         if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
@@ -1544,6 +1544,7 @@ public sealed partial class EditorView
     private void TextInputCore(char value)
     {
         if (PatternNameVisible && !ErrorVisible) { PatternNameText(value.ToString()); return; }
+        if (GallerySearchFocused) { GallerySearchText(value.ToString()); return; }
         if (AcknowledgementsVisible) return;
         if (MapTemplatesVisible && !ErrorVisible) { MapTemplatesText(value.ToString()); return; }
         if (addDifficultyConfirmation && !ErrorVisible) { NewDifficultyText(value.ToString()); return; }

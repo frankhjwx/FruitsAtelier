@@ -126,7 +126,8 @@ validation and atomic gallery writes.
 drop/undo, context rename/delete, fixed card sizes during dock resizing,
 preview alignment, saved-AR spacing, canvas scroll-direction settings, scrollbar position,
 Alt-wheel zoom limits and preview reuse,
-pattern editing and source navigation while retaining unsaved maps.
+Library-style search, multi-tag filtering, tag creation/colour/name edits and persistence,
+detail-page editing, single/multiple-object context capture and source navigation while retaining unsaved maps.
 `FruitsAtelier.App.exe --render-check --pattern-gallery-render-check` checks the
 grid, large scrolling preview, naming/rename dialogs, context deletion, placement menu,
 drag/drop and editing banner in

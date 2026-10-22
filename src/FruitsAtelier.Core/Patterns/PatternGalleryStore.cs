@@ -70,21 +70,37 @@ public sealed class PatternGalleryStore
         PatternArchive.WriteFile(patterns, ArchivePath);
     }
 
+    public void EditTag(string name, PatternTag? replacement)
+    {
+        var patterns = Load();
+        if (replacement is not null && !string.Equals(name, replacement.Name.Trim(), StringComparison.OrdinalIgnoreCase)
+            && patterns.Any(p => p.Tags.Any(t => string.Equals(t.Name, replacement.Name.Trim(), StringComparison.OrdinalIgnoreCase))))
+            throw new InvalidOperationException(L.Get("gallery.tagExists"));
+        var updated = patterns.Select(p => p.Tags.Any(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase))
+            ? p.WithTags(p.Tags.Where(t => !string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase))
+                .Concat(replacement is null ? [] : new[] { replacement })) : p).ToArray();
+        PatternArchive.WriteFile(updated, ArchivePath);
+    }
+
     private int Merge(IEnumerable<PatternSnapshot> incoming)
     {
         var patterns = Load().ToList();
         var byId = patterns.ToDictionary(p => p.Id);
+        var tags = patterns.SelectMany(p => p.Tags).DistinctBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
         int added = 0;
         foreach (var pattern in incoming)
         {
+            var imported = pattern.WithTags(pattern.Tags.Select(t => tags.TryGetValue(t.Name, out var tag) ? tag : t));
             if (byId.TryGetValue(pattern.Id, out var existing))
             {
-                if (existing.Name != pattern.Name || existing.Source != pattern.Source
+                if (existing.Name != pattern.Name || existing.Source != pattern.Source || !existing.Tags.SequenceEqual(imported.Tags)
                     || !existing.CreateDocument().ContentEquals(pattern.CreateDocument()))
                     throw new InvalidDataException(L.Get("core.pattern.conflict"));
                 continue;
             }
-            patterns.Add(pattern); byId.Add(pattern.Id, pattern); added++;
+            foreach (var tag in imported.Tags) tags.TryAdd(tag.Name, tag);
+            patterns.Add(imported); byId.Add(imported.Id, imported); added++;
         }
         if (added > 0)
         {

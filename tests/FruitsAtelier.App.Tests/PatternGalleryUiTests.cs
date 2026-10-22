@@ -162,6 +162,7 @@ internal static class PatternGalleryUiTests
             PreviewAlignment(ui, Path.Combine(directory, "alignment"));
             DenseThumbnailScheduling(ui, Path.Combine(directory, "dense"));
             LegacyOverrideDrops();
+            PatternGalleryOrganizationTests.Run();
         }
         finally { Directory.Delete(directory, true); }
     }

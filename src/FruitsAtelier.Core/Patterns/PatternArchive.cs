@@ -18,7 +18,8 @@ public static class PatternArchive
     {
         WriteIndented = true, MaxDepth = 16, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
-    private sealed record Entry(Guid Id, string Name, PatternSource Source);
+    private sealed record Entry(Guid Id, string Name, PatternSource Source,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] PatternTag[]? Tags = null);
     private sealed record Manifest(int Version, Entry[] Patterns);
 
     public static IReadOnlyList<PatternSnapshot> ReadFile(string path)
@@ -42,7 +43,7 @@ public static class PatternArchive
             }
             var manifestEntry = archive.GetEntry("manifest.json") ?? throw Invalid("invalid");
             var manifest = JsonSerializer.Deserialize<Manifest>(ReadEntry(manifestEntry, MaximumManifestBytes), Options);
-            if (manifest?.Version != 1 || manifest.Patterns is null || manifest.Patterns.Length > MaximumPatterns)
+            if (manifest?.Version is not (1 or 2) || manifest.Patterns is null || manifest.Patterns.Length > MaximumPatterns)
                 throw Invalid("invalid");
             var ids = new HashSet<Guid>();
             var expected = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -58,7 +59,7 @@ public static class PatternArchive
             {
                 var text = ReadEntry(archive.GetEntry(DocumentPath(item.Id))!, ProjectSerializer.MaximumFileBytes);
                 var document = ProjectSerializer.Read(text);
-                patterns.Add(new(item.Id, item.Name, item.Source, document));
+                patterns.Add(new(item.Id, item.Name, item.Source, document, item.Tags));
             }
             return patterns.AsReadOnly();
         }
@@ -86,7 +87,9 @@ public static class PatternArchive
         long expanded = 0;
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
-            string manifest = JsonSerializer.Serialize(new Manifest(1, items.Select(p => new Entry(p.Id, p.Name, p.Source)).ToArray()), Options);
+            int version = items.Any(p => p.Tags.Count > 0) ? 2 : 1;
+            string manifest = JsonSerializer.Serialize(new Manifest(version, items.Select(p => new Entry(p.Id, p.Name, p.Source,
+                p.Tags.Count == 0 ? null : p.Tags.ToArray())).ToArray()), Options);
             if (Encoding.UTF8.GetByteCount(manifest) > MaximumManifestBytes) throw Invalid("limit");
             WriteEntry("manifest.json", manifest);
             foreach (var item in items) WriteEntry(DocumentPath(item.Id), ProjectSerializer.Serialize(item.CreateDocument()));

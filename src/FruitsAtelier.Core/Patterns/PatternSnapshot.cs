@@ -5,6 +5,8 @@ namespace FruitsAtelier.Core.Patterns;
 public sealed record PatternSource(string Artist, string Title, string Difficulty, string Creator, double StartTimeMs,
     long BeatmapId = 0, long BeatmapSetId = -1);
 
+public sealed record PatternTag(string Name, uint Colour);
+
 /// <summary>A detached authoring snapshot. Call CreateDocument to obtain an editable copy.</summary>
 public sealed class PatternSnapshot
 {
@@ -12,13 +14,15 @@ public sealed class PatternSnapshot
     public Guid Id { get; }
     public string Name { get; }
     public PatternSource Source { get; }
+    public IReadOnlyList<PatternTag> Tags { get; }
     public double StartTimeMs { get; }
     public int ObjectCount => document.Fruits.Count + document.Tracks.Count + document.ImportedSliders.Count + document.BananaShowers.Count;
     public MapDocument CreateDocument() => document.DeepClone();
-    public PatternSnapshot WithDocument(MapDocument edited) => new(Id, Name, Source, edited);
-    public PatternSnapshot WithName(string name) => new(Id, name, Source, document);
+    public PatternSnapshot WithDocument(MapDocument edited) => new(Id, Name, Source, edited, Tags);
+    public PatternSnapshot WithName(string name) => new(Id, name, Source, document, Tags);
+    public PatternSnapshot WithTags(IEnumerable<PatternTag> tags) => new(Id, Name, Source, document, tags);
 
-    internal PatternSnapshot(Guid id, string name, PatternSource source, MapDocument document)
+    internal PatternSnapshot(Guid id, string name, PatternSource source, MapDocument document, IEnumerable<PatternTag>? tags = null)
     {
         if (id == Guid.Empty || string.IsNullOrWhiteSpace(name) || name.Length > 256 || source is null
             || new[] { source.Artist, source.Title, source.Difficulty, source.Creator }.Any(s => s is null || s.Length > 4096)
@@ -29,6 +33,12 @@ public sealed class PatternSnapshot
             || parents.Any(p => p.Id == Guid.Empty))
             throw new InvalidDataException(L.Get("core.pattern.invalid"));
         Id = id; Name = name.Trim(); Source = source;
+        var tagList = tags?.Take(65).ToArray() ?? [];
+        if (tagList.Length > 64 || tagList.Any(t => t is null || string.IsNullOrWhiteSpace(t.Name)
+            || t.Name.Length > 64 || t.Name.Any(char.IsControl) || t.Colour > 0xFFFFFF)
+            || tagList.Select(t => t.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != tagList.Length)
+            throw new InvalidDataException(L.Get("core.pattern.invalid"));
+        Tags = Array.AsReadOnly(tagList.Select(t => t with { Name = t.Name.Trim() }).OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToArray());
         StartTimeMs = parents.Min(p => p.TimeMs);
         this.document = document.DeepClone();
         DetachResources(this.document);

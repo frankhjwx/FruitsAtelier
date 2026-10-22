@@ -41,6 +41,11 @@ internal static class PatternGalleryRenderCheck
                 Wait(() => editor.PatternGalleryCount == patterns.Count && editor.PatternGalleryPreviewCacheCount >= 4
                     && !editor.PatternGalleryNeedsRedraw, "load and preview gallery");
                 Paint("grid");
+                Click(editor.PatternGallerySearchBounds);
+                foreach (char character in "Studio Fruit") editor.TextInput(character);
+                Paint("search");
+                if (editor.PatternGalleryFilteredCount != patterns.Count) throw new InvalidOperationException("Gallery search lost source metadata.");
+                editor.KeyDown('A', true, false); editor.KeyDown(8, false, false); editor.KeyDown(27, false, false); Paint();
                 int rasterBuilds = canvas.PatternRasterBuildCount;
                 for (int frame = 0; frame < 24; frame++) Paint();
                 if (rasterBuilds == 0 || canvas.PatternRasterBuildCount != rasterBuilds
@@ -119,8 +124,13 @@ internal static class PatternGalleryRenderCheck
                 if (!map.ContentEquals(editor.Document)) throw new InvalidOperationException("Legacy drop undo did not restore the map.");
 
                 shortCard = editor.PatternGalleryCardBounds(patterns[1].Id);
-                editor.PointerDoubleClick(shortCard.X + 20, shortCard.Y + 20, false, false); Paint("edit");
-                if (!editor.PatternEditingActive) throw new InvalidOperationException("Double click did not enter pattern editing.");
+                Click(shortCard);
+                editor.PointerDoubleClick(shortCard.X + 20, shortCard.Y + 20, false, false); Paint("details");
+                if (editor.PatternEditingActive) throw new InvalidOperationException("Double click entered pattern editing.");
+                Click(editor.PatternGalleryEditTagsBounds); Paint("tags");
+                editor.KeyDown(27, false, false); Paint();
+                Click(editor.PatternGalleryEditPatternBounds); Paint("edit");
+                if (!editor.PatternEditingActive) throw new InvalidOperationException("Edit Pattern did not enter pattern editing.");
                 editor.DiscardPatternEditing(); Paint("returned");
                 if (editor.PatternEditingActive || !map.ContentEquals(editor.Document)) throw new InvalidOperationException("Pattern edit return did not restore original map.");
                 shortCard = editor.PatternGalleryCardBounds(patterns[1].Id);
@@ -205,7 +215,8 @@ internal static class PatternGalleryRenderCheck
             else if (index == 5) map.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 2500 });
             else map.Fruits.AddRange([new() { TimeMs = 1000, X = 140 }, new() { TimeMs = 1100, X = 360 }, new() { TimeMs = 1500, X = 256 }]);
             patterns.Add(PatternSnapshot.Capture(map, map.Fruits.Select(f => f.Id).Concat(map.Tracks.Select(t => t.Id))
-                .Concat(map.ImportedSliders.Select(s => s.Id)).Concat(map.BananaShowers.Select(b => b.Id)), names[index]));
+                .Concat(map.ImportedSliders.Select(s => s.Id)).Concat(map.BananaShowers.Select(b => b.Id)), names[index])
+                .WithTags([index % 2 == 0 ? new("Flow", 0x58D8C1) : new("Jump", 0xFFB45C)]));
         }
         return patterns;
     }

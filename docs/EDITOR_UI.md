@@ -3,8 +3,8 @@
 ## Pattern Gallery
 
 Use **Layout → Pattern Gallery** to save consecutive selections, browse skinned
-previews, drag patterns into a map, or share `.fap` packages. Double-click a card
-to edit the snapshot in the main canvas while retaining the previous map's unsaved
+previews, filter by search and coloured tags, drag patterns into a map, or share `.fap` packages.
+Click a card and choose **Edit Pattern** in its details to edit the snapshot while retaining the previous map's unsaved
 work. See [Pattern Gallery](PATTERN_GALLERY.md) for placement, source navigation,
 editing sessions and storage details.
 
