@@ -49,17 +49,14 @@ internal static class SliderSelectionTests
             if (!ui.Canvas.Circles.Any(c => !c.Filled && c.Color == 0x59D3C3 && Math.Abs(c.X - x) < 0.01f))
                 throw new Exception($"No parent selection highlight for {kind}, imported={imported}, hidden={hidden}.");
             ui.Key(46);
-            if (imported)
-            {
-                if (ui.View.Document.ImportedSliders.Count != 1 || ui.View.Document.Fruits.Count != 1 || ui.View.IsDirty)
-                    throw new Exception("Catch deletion changed a read-only Legacy Slider or its neighbouring fruit.");
-                continue;
-            }
             if (ui.View.Document.ImportedSliders.Count + ui.View.Document.Tracks.Count != 0 || ui.View.Document.Fruits.Count != 1)
                 throw new Exception("Deleting the selection did not remove exactly the owning slider.");
             ui.Key('Z', ctrl: true);
             if (ui.View.Document.ImportedSliders.Count + ui.View.Document.Tracks.Count != 1 || ui.View.Document.Fruits.Count != 1)
                 throw new Exception("Undo did not restore the whole slider.");
+            ui.Key('Y', ctrl: true);
+            if (ui.View.Document.ImportedSliders.Count + ui.View.Document.Tracks.Count != 0 || ui.View.Document.Fruits.Count != 1)
+                throw new Exception("Redo did not delete exactly the owning slider.");
         }
     }
 }

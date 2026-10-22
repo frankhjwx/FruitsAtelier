@@ -182,6 +182,7 @@ public sealed partial class EditorView
                     contextItems.Clear();
                     contextItems.Add(new(L.Get("osu.readOnlySlider"), () => { }, Enabled: false));
                     contextItems.Add(new(L.Get("osu.convertLegacy"), () => ConvertSelectedSliderRepresentation(id)));
+                    contextItems.Add(new(L.Get("editor.command.deleteObjects"), DeleteSelectedObjects));
                     contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 320)), Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 320, ContextMenuHeight);
                 }
                 else DeleteSelectedObjects();

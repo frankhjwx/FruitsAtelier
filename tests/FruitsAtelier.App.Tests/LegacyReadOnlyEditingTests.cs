@@ -23,8 +23,8 @@ internal static class LegacyReadOnlyEditingTests
                 Check(before.ContentEquals(ui.View.Document), "Catch child drag changed a read-only Legacy Slider.");
             }
             ui.ClickMap(1000, 100); ui.ClickMap(1500, 400, ctrl: true);
-            ui.Key(46); ui.Key(39, ctrl: true);
-            Check(before.ContentEquals(ui.View.Document), "Catch insertion/deletion/nudge changed a read-only Legacy Slider.");
+            ui.Key(39, ctrl: true);
+            Check(before.ContentEquals(ui.View.Document), "Catch insertion/nudge changed a read-only Legacy Slider.");
             ui.Key('1'); ui.ClickMap(1000, 100);
             var p = ui.ScreenAt(1000, 100);
             ui.View.PointerDoubleClick(p.X, p.Y, false, false); ui.Paint();

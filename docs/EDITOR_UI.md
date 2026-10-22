@@ -215,6 +215,8 @@ exported fruits in either view.
 Slider shapes are edited in their matching canvas: Legacy Sliders in osu! and
 FSliders in Catch. Clicking a slider in the other canvas or attempting a blocked
 edit shows a three-second notice explaining how to switch with Tab, then fades out.
+Whole sliders can be deleted in either canvas with Delete or the object delete
+action, including mixed selections. Each deletion is one undoable edit.
 
 The osu! canvas draws circles, approach circles, Legacy Slider paths, repeats,
 slider balls and spinners. Circle size, approach rate, combo ordering and stacking

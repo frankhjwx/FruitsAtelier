@@ -240,7 +240,7 @@ public sealed partial class EditorView
             Document.Tracks.RemoveAll(t => ids.Contains(t.Id));
             Document.ImportedSliders.RemoveAll(s => ids.Contains(s.Id));
             Document.BananaShowers.RemoveAll(s => ids.Contains(s.Id));
-        })) return;
+        }, allowSliderDeletion: true)) return;
         Select(Guid.Empty);
         StatusMessage = L.Get("editor.status.objectsDeleted", ids.Count);
     }

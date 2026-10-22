@@ -442,7 +442,7 @@ public sealed partial class EditorView
         SelectObjects(objectSelection.Where(unchanged.Contains), selection);
     }
 
-    private bool Edit(string label, Action change, Action<bool, MapDocument, MapDocument>? restoreRelated = null)
+    private bool Edit(string label, Action change, Action<bool, MapDocument, MapDocument>? restoreRelated = null, bool allowSliderDeletion = false)
     {
         history.Begin(label, restoreRelated);
         try
@@ -451,6 +451,8 @@ public sealed partial class EditorView
             var readOnlyIds = (IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id)).ToHashSet();
             int importedBefore = Document.ImportedSliders.Count;
             change();
+            if (allowSliderDeletion)
+                readOnlyIds.IntersectWith(Document.Tracks.Select(t => t.Id).Concat(Document.ImportedSliders.Select(s => s.Id)));
             if (!osuAllowSliderConversion && history.TransactionChangesSliderGeometry(readOnlyIds))
             { history.Cancel(); ShowEditorNotice("osu.readOnlySlider"); return false; }
             if (before is not null && !PositionsEqual(before, Document))

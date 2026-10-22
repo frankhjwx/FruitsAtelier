@@ -20,6 +20,7 @@ internal static class SliderCanvasLockTests
             {
                 L.SetLanguage(locale);
                 NoticeAndClone();
+                CrossCanvasDeletion();
                 var map = new MapDocument { DurationMs = 5000 };
                 var legacy = new ImportedSlider { TimeMs = 1000, X = 64, Y = 64, PixelLength = 128, PathType = 'L' };
                 legacy.ControlPoints.AddRange([new(64, 64), new(192, 64)]);
@@ -61,6 +62,52 @@ internal static class SliderCanvasLockTests
             }
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void CrossCanvasDeletion()
+    {
+        foreach (bool osu in new[] { false, true })
+        foreach (bool context in new[] { false, true })
+        foreach (bool mixed in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 5000 };
+            var legacy = new ImportedSlider { TimeMs = 1000, X = 64, Y = 64, PixelLength = 128, PathType = 'L' };
+            legacy.ControlPoints.AddRange([new(64, 64), new(192, 64)]);
+            map.ImportedSliders.Add(legacy);
+            var track = new CurveTrack();
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 320 }, new() { TimeMs = 1500, X = 448 }]);
+            map.Tracks.Add(track);
+            map.Fruits.Add(new() { TimeMs = 3000, X = 256 });
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Key('1');
+            if (osu) ui.View.ToggleOsuCanvas();
+            ui.View.UpdateTransport(1000, 5000, true, false, false, null, null); ui.Paint();
+            Guid id = osu ? track.Id : legacy.Id;
+            var before = ui.View.Document.DeepClone();
+            if (context)
+            {
+                var point = osu ? ui.View.OsuCanvasScreen(320, 192) : ui.ScreenAt(1000, 64);
+                ui.View.PointerDown(point.X, point.Y, 2, false, false);
+                ui.View.PointerUp(point.X, point.Y, 2); ui.Paint();
+                if (osu) ui.ClickText(L.Get("editor.command.deleteObjects"));
+            }
+            else
+            {
+                var ids = mixed ? new[] { legacy.Id, track.Id } : new[] { id };
+                typeof(EditorView).GetMethod("SelectObjects", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                    .Invoke(ui.View, [ids, id]);
+                ui.Key(46);
+            }
+            int remaining = !context && mixed ? 0 : 1;
+            Check(ui.View.Document.ImportedSliders.Count + ui.View.Document.Tracks.Count == remaining
+                && ui.View.Document.Fruits.Count == 1 && ui.View.SelectedObjectIds.Count == 0 && ui.View.IsDirty,
+                "Cross-canvas deletion must remove exactly the selected slider parents.");
+            var after = ui.View.Document.DeepClone();
+            Check(OsuBeatmapWriter.Serialize(after).ObjectSequenceMatches, "Cross-canvas deletion changed exported objects.");
+            ui.Key('Z', ctrl: true);
+            Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Cross-canvas deletion must undo in one step.");
+            ui.Key('Y', ctrl: true);
+            Check(after.ContentEquals(ui.View.Document), "Cross-canvas deletion redo changed content.");
+        }
     }
 
     private static void NoticeAndClone()
