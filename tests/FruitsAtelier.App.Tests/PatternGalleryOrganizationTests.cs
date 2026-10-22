@@ -60,21 +60,42 @@ internal static class PatternGalleryOrganizationTests
         ui.View.DiscardPatternEditing(); ui.Paint();
         Open(jump);
         int builds = ui.View.PatternGalleryPreviewBuildCount;
-        ui.ClickText(L.Get("gallery.editTags")); ui.ClickText(L.Get("gallery.newTag"));
-        ui.Type("Custom"); ui.Key(13); ui.ClickText("#65A9FF"); Settle();
+        ui.ClickText(L.Get("gallery.editTags"));
+        Check(ui.View.GalleryTagsVisible, "Edit Tags did not open the dedicated dialog");
+        ui.ClickText(L.Get("gallery.newTag")); ui.Type("Custom"); ui.Key(13); Settle();
+        SelectTag("Custom"); SetColour("#65A9FF"); ui.ClickText(L.Get("mac.save")); Settle();
         Check(store.Load().Single(p => p.Id == jump.Id).Tags.Any(t => t.Name == "Custom" && t.Colour == 0x65A9FF), "New tag assignment did not persist");
         Check(ui.View.PatternGalleryPreviewBuildCount == builds, "Tag assignment rebuilt geometry");
+        ui.Key(27); Check(!ui.View.GalleryTagsVisible && ui.View.PatternGalleryPreviewVisible, "Closing tags closed the detail preview");
         ui.Key(27); Open(stream);
-        ui.ClickText(L.Get("gallery.editTags")); ui.ClickText("Custom"); Settle();
-        ManageCustom(); ui.ClickText(L.Get("gallery.tagColour")); ui.ClickText(L.Get("gallery.customColour"));
-        ui.Key('A', ctrl: true); ui.Type("#123ABC"); ui.Key(13); Settle();
+        ui.ClickText(L.Get("gallery.editTags"));
+        var tagText = ui.Canvas.Texts.First(t => t.Value == "Custom");
+        ui.Click(tagText.X - 20, tagText.Y + 4); Settle();
+        ui.Key(27); ui.Key(27);
+        ui.ClickText(L.Get("gallery.manageTags"));
+        Check(ui.View.GalleryTagsVisible, "Manage Tags did not open the shared dialog");
+        SelectTag("Custom");
+        var hue = ui.View.GalleryTagHueBounds;
+        var palette = ui.View.GalleryTagPaletteBounds;
+        ui.View.PointerDown(hue.X + hue.Width / 3, hue.Y + 10, 0, false, false);
+        ui.View.PointerMove(hue.X + hue.Width / 2, hue.Y + 10, false, false);
+        ui.View.PointerUp(hue.X + hue.Width / 2, hue.Y + 10, 0); ui.Paint();
+        ui.View.PointerDown(palette.Right - 1, palette.Y + 1, 0, false, false);
+        Check(ui.View.WantsCapture, "Colour picker did not capture dragging");
+        ui.View.PointerMove(palette.X + palette.Width / 2, palette.Y + palette.Height / 2, false, false);
+        ui.View.PointerUp(palette.X + palette.Width / 2, palette.Y + palette.Height / 2, 0); ui.Paint();
+        Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Custom" && t.Colour == 0x65A9FF)) == 2,
+            "Colour dragging wrote before Save");
+        ui.Key(27); ui.ClickText(L.Get("gallery.manageTags")); SelectTag("Custom");
+        Check(ui.Canvas.Texts.Any(t => t.Value == "#65A9FF"), "Closing the dialog persisted unsaved colour changes");
+        SetColour("#123ABC"); ui.ClickText(L.Get("mac.save")); Settle();
         Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Custom" && t.Colour == 0x123ABC)) == 2,
             "Tag colour editing did not update all assignments");
-        ManageCustom(); ui.ClickText(L.Get("gallery.renameTag"));
-        ui.Key('A', ctrl: true); ui.Type("Practice"); ui.Key(13); Settle();
+        ui.ClickText(L.Get("gallery.renameTag")); ui.Key('A', ctrl: true); ui.Type("Practice"); ui.Key(13); Settle();
         Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Practice")) == 2, "Tag rename did not persist across patterns");
-        ui.ClickText(L.Get("gallery.manageTags")); ui.ClickText("Practice"); ui.ClickText(L.Get("gallery.deleteTag")); Settle();
+        ui.ClickText(L.Get("gallery.deleteTag")); Settle();
         Check(store.Load().All(p => p.Tags.All(t => t.Name != "Practice")), "Tag removal left assignments");
+        ui.Key(27);
         Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Gallery organization changed map content");
         ui.View.ConfigurePatternGallery(directory); ui.Paint(); Settle();
         Check(ui.View.PatternGalleryCount == 3 && store.Load().Single(p => p.Id == jump.Id).Tags.Single().Name == "Jump",
@@ -96,7 +117,17 @@ internal static class PatternGalleryOrganizationTests
             var bounds = ui.View.PatternGalleryCardBounds(pattern.Id);
             ui.Click(bounds.X + 20, bounds.Y + 20); Settle();
         }
-        void ManageCustom() { ui.ClickText(L.Get("gallery.manageTags")); ui.ClickText("Custom"); }
+        void SelectTag(string name)
+        {
+            var row = ui.Canvas.Texts.First(t => t.Value == name);
+            ui.Click(row.X + 5, row.Y + 5);
+        }
+        void SetColour(string hex)
+        {
+            var swatch = ui.Canvas.Texts.Last(t => t.Value.StartsWith("#", StringComparison.Ordinal) && t.Value.Length == 7);
+            ui.Click(swatch.X + 20, swatch.Y + 5);
+            ui.Key('A', ctrl: true); ui.Type(hex); ui.Key(13); ui.Paint();
+        }
         void Capture(string name, int count)
         {
             ui.Key('F', shift: true);

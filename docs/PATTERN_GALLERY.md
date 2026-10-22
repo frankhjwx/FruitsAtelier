@@ -25,7 +25,12 @@ selected tags; **All patterns** clears the tag filter. Filters affect browsing o
 
 Use **Edit Tags** in a pattern's details to assign existing tags or create one.
 Each tag has a name and colour. **Manage tags** renames, recolours or removes a
-tag across every assigned pattern. Choose a palette colour or enter `#RRGGBB`.
+tag across every assigned pattern. Both **Edit Tags** and **Manage tags** open a
+dedicated tag dialog. From **Edit Tags**, use the checkboxes to assign tags to the
+current pattern. Select a tag to rename or delete it, or choose a colour using the
+same saturation/value chart and hue strip as Song Setup. Click the hex colour
+swatch to enter an exact `#RRGGBB` value. Colour changes are previewed locally until
+**Save** is pressed; closing the dialog discards unsaved colour changes.
 Tag changes persist in the gallery without changing the source map or rebuilding
 preview geometry. Tags are shared with `.fap` packages; existing local colours
 take precedence when importing another pattern with the same tag name.

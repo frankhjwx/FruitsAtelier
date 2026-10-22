@@ -26,17 +26,27 @@ public sealed partial class EditorView
         Button(c, new(r.X + 167, r.Y + 376, 135, 32), L.Get("song.removeColour"), () =>
         { songColours.RemoveAt(songColour); SelectSongColour(Math.Min(songColour, songColours.Count - 1)); }, enabled: songCustomColours && songColours.Count > 1);
         songPalette = new(r.X + 338, r.Y + 158, r.Width - 360, 216);
+        DrawColourChart(c, songPalette, songHue, songSaturation, songValue, songCustomColours ? 1 : .35f);
+        songHueTrack = new(songPalette.X, songPalette.Bottom + 14, songPalette.Width, 22);
+        DrawHueTrack(c, songHueTrack, songHue);
+        SongTextField(c, "Hex", r.Y + 430);
+    }
+
+    private static void DrawColourChart(ICanvas c, Rect palette, double hue, double saturation, double value, float opacity = 1)
+    {
         for (int sy = 0; sy < 24; sy++)
         for (int sx = 0; sx < 40; sx++)
-            c.Fill(new(songPalette.X + sx * songPalette.Width / 40, songPalette.Y + sy * 9,
-                songPalette.Width / 40 + .5f, 9.5f), SongHsv(songHue, sx / 39d, 1 - sy / 23d), opacity: songCustomColours ? 1 : .35f);
-        c.Circle(songPalette.X + (float)songSaturation * songPalette.Width, songPalette.Y + (float)(1 - songValue) * songPalette.Height, 5, Foreground, false, 2);
-        songHueTrack = new(songPalette.X, songPalette.Bottom + 14, songPalette.Width, 22);
+            c.Fill(new(palette.X + sx * palette.Width / 40, palette.Y + sy * palette.Height / 24,
+                palette.Width / 40 + .5f, palette.Height / 24 + .5f), SongHsv(hue, sx / 39d, 1 - sy / 23d), opacity: opacity);
+        c.Circle(palette.X + (float)saturation * palette.Width, palette.Y + (float)(1 - value) * palette.Height, 5, Foreground, false, 2);
+    }
+
+    private static void DrawHueTrack(ICanvas c, Rect track, double hue)
+    {
         for (int i = 0; i < 60; i++)
-            c.Fill(new(songHueTrack.X + i * songHueTrack.Width / 60, songHueTrack.Y, songHueTrack.Width / 60 + .5f, 22), SongHsv(i * 6, 1, 1));
-        float hueX = songHueTrack.X + (float)(songHue / 360) * songHueTrack.Width;
-        c.Stroke(new(hueX - 3, songHueTrack.Y - 2, 6, 26), Foreground, 2);
-        SongTextField(c, "Hex", r.Y + 430);
+            c.Fill(new(track.X + i * track.Width / 60, track.Y, track.Width / 60 + .5f, track.Height), SongHsv(i * 6, 1, 1));
+        float x = track.X + (float)(hue / 360) * track.Width;
+        c.Stroke(new(x - 3, track.Y - 2, 6, track.Height + 4), Foreground, 2);
     }
 
     private bool CommitSongHex()

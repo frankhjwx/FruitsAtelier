@@ -128,6 +128,8 @@ internal static class PatternGalleryRenderCheck
                 editor.PointerDoubleClick(shortCard.X + 20, shortCard.Y + 20, false, false); Paint("details");
                 if (editor.PatternEditingActive) throw new InvalidOperationException("Double click entered pattern editing.");
                 Click(editor.PatternGalleryEditTagsBounds); Paint("tags");
+                if (!editor.GalleryTagsVisible) throw new InvalidOperationException("Edit Tags did not open the tag dialog.");
+                Click(editor.GalleryTagHueBounds); Paint("tag-colour");
                 editor.KeyDown(27, false, false); Paint();
                 Click(editor.PatternGalleryEditPatternBounds); Paint("edit");
                 if (!editor.PatternEditingActive) throw new InvalidOperationException("Edit Pattern did not enter pattern editing.");

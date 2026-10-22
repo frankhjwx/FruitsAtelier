@@ -78,6 +78,7 @@ public sealed partial class EditorView
         if (PatternEditingActive || PatternEditingBusy || galleryIoTask is not null)
         { galleryPendingDirectory = directory; return; }
         galleryPendingDirectory = null;
+        CloseGalleryTags();
         galleryGeneration++;
         galleryStore = new PatternGalleryStore(directory);
         galleryPatterns = []; galleryFilteredPatterns = []; gallerySearchIndex = []; galleryTags = []; galleryTagFilter.Clear();

@@ -26,6 +26,7 @@ public sealed partial class EditorView
     private void PointerDownCore(float x, float y, int button, bool shift, bool ctrl)
     {
         if (PatternNameVisible && !ErrorVisible) { mouseX = x; mouseY = y; PatternNamePointerDown(x, y, button); return; }
+        if (GalleryTagsVisible && !ErrorVisible) { mouseX = x; mouseY = y; GalleryTagsPointerDown(x, y, button); return; }
         if (OsuLinkPickerVisible && !ErrorVisible)
         {
             OsuLinkPickerPointerDown(x, y, button);
@@ -467,6 +468,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (GalleryTagsVisible) { mouseX = x; mouseY = y; if (!PatternNameVisible) MoveGalleryTagColour(x, y); return; }
         if (PatternGalleryPointerMove(x, y)) return;
         if (templatePointer) { mouseX = x; mouseY = y; MoveMapTemplate(x, y); return; }
         if (CollaborationReportVisible) { mouseX = x; mouseY = y; if (collaborationReportDragging) MoveCollaborationReport(x, y); return; }
@@ -632,6 +634,7 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (GalleryTagsVisible) { if (button == 0) { if (!PatternNameVisible) MoveGalleryTagColour(x, y); galleryTagDrag = 0; } return; }
         if (PatternGalleryPointerUp(x, y, button)) return;
         if (templatePointer && button == 0)
         {
@@ -776,7 +779,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
-        if (PatternNameVisible || PatternEditingBusy) return;
+        if (PatternNameVisible || GalleryTagsVisible || PatternEditingBusy) return;
         if (PatternGalleryInputAvailable && galleryGridBounds.Contains(x, y)) return;
         if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
@@ -937,7 +940,7 @@ public sealed partial class EditorView
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
-        if (PatternNameVisible) return;
+        if (PatternNameVisible || GalleryTagsVisible) return;
         if (PatternGalleryWheel(x, y, delta, alt || altHeld)) return;
         if (!ErrorVisible && MapTemplatesVisible)
         {
@@ -1199,6 +1202,7 @@ public sealed partial class EditorView
     private void KeyDownCore(int virtualKey, bool ctrl, bool shift)
     {
         if (PatternNameVisible && !ErrorVisible) { PatternNameKey(virtualKey, ctrl, shift); return; }
+        if (GalleryTagsVisible && !ErrorVisible) { if (virtualKey == 27) CloseGalleryTags(); return; }
         if (PatternEditingKeyDown(virtualKey, ctrl)) return;
         if (PatternGalleryKeyDown(virtualKey, ctrl, shift)) return;
         if (CollaborationReportVisible && !ErrorVisible && !DiscardConfirmationVisible)
@@ -1544,6 +1548,7 @@ public sealed partial class EditorView
     private void TextInputCore(char value)
     {
         if (PatternNameVisible && !ErrorVisible) { PatternNameText(value.ToString()); return; }
+        if (GalleryTagsVisible) return;
         if (GallerySearchFocused) { GallerySearchText(value.ToString()); return; }
         if (AcknowledgementsVisible) return;
         if (MapTemplatesVisible && !ErrorVisible) { MapTemplatesText(value.ToString()); return; }

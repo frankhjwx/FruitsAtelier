@@ -162,6 +162,7 @@ public sealed partial class EditorView
         DrawCollaborationReport(c);
         if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
+        DrawGalleryTags(c);
         DrawPatternNameDialog(c);
         DrawDiscardConfirmation(c);
         if (!librarySettingsOpen) DrawDifficultyTooltip(c);

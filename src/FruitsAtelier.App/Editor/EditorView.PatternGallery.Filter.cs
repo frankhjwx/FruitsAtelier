@@ -1,4 +1,3 @@
-using System.Globalization;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 using FruitsAtelier.Core.Patterns;
@@ -61,7 +60,7 @@ public sealed partial class EditorView
         Button(c, new(bounds.X, bounds.Y + 34, half, 28), L.Get("gallery.filterTags", galleryTagFilter.Count),
             () => ShowGalleryTagFilter(), enabled: ready, active: galleryTagFilter.Count > 0, fontSize: 11);
         Button(c, new(bounds.X + half + 5, bounds.Y + 34, half, 28), L.Get("gallery.manageTags"),
-            () => ShowGalleryTagManager(), enabled: ready && CanEditGalleryTags && galleryTags.Length > 0, fontSize: 11);
+            () => ShowGalleryTagManager(), enabled: ready && CanEditGalleryTags, fontSize: 11);
     }
 
     private void ShowGalleryTagFilter(int page = 0)
@@ -85,32 +84,7 @@ public sealed partial class EditorView
         if ((page + 1) * 8 < galleryTags.Length) contextItems.Add(new(L.Get("gallery.nextTags"), () => open(page + 1)));
     }
 
-    private void ShowGalleryTagAssignments(Guid id, int page = 0)
-    {
-        if (!CanEditGalleryTags || galleryPatterns.FirstOrDefault(p => p.Id == id) is not { } pattern) return;
-        contextItems.Clear(); menu = -1;
-        foreach (var tag in GalleryTagPage(page))
-        {
-            bool assigned = pattern.Tags.Any(t => string.Equals(t.Name, tag.Name, StringComparison.OrdinalIgnoreCase));
-            contextItems.Add(new(tag.Name, () => SaveGalleryTags(pattern, assigned
-                ? pattern.Tags.Where(t => !string.Equals(t.Name, tag.Name, StringComparison.OrdinalIgnoreCase)).ToArray()
-                : pattern.Tags.Append(tag).ToArray()), Color: tag.Colour, Active: assigned));
-        }
-        GalleryTagPaging(page, next => ShowGalleryTagAssignments(id, next));
-        contextItems.Add(new(L.Get("gallery.newTag"), () => RequestGalleryText(L.Get("gallery.newTag"), "", name =>
-        {
-            if (!ValidGalleryTagName(name)) return;
-            var existing = galleryTags.FirstOrDefault(t => string.Equals(t.Name, name!.Trim(), StringComparison.OrdinalIgnoreCase));
-            if (existing is not null)
-            {
-                if (!pattern.Tags.Any(t => string.Equals(t.Name, existing.Name, StringComparison.OrdinalIgnoreCase)))
-                    SaveGalleryTags(pattern, pattern.Tags.Append(existing).ToArray());
-            }
-            else PickGalleryTagColour(0x58D8C1, colour => SaveGalleryTags(pattern, pattern.Tags.Append(new(name!.Trim(), colour)).ToArray()));
-        })));
-        contextItems.Add(new(L.Get("gallery.manageTags"), () => ShowGalleryTagManager(), galleryTags.Length > 0));
-        PositionGalleryMenu(mouseX, mouseY);
-    }
+    private void ShowGalleryTagAssignments(Guid id) => OpenGalleryTags(id);
 
     private bool ValidGalleryTagName(string? name)
     {
@@ -125,25 +99,7 @@ public sealed partial class EditorView
         StartGalleryIo(() => { store.Replace(pattern.WithTags(tags)); return new(store.Load(), "", true); });
     }
 
-    private void ShowGalleryTagManager(int page = 0)
-    {
-        if (!CanEditGalleryTags) return;
-        contextItems.Clear(); menu = -1;
-        foreach (var tag in GalleryTagPage(page))
-            contextItems.Add(new(tag.Name, () => ShowGalleryTagActions(tag), Color: tag.Colour));
-        GalleryTagPaging(page, ShowGalleryTagManager);
-        PositionGalleryMenu(mouseX, mouseY);
-    }
-
-    private void ShowGalleryTagActions(PatternTag tag)
-    {
-        contextItems.Clear(); menu = -1;
-        contextItems.Add(new(L.Get("gallery.renameTag"), () => RequestGalleryText(L.Get("gallery.renameTag"), tag.Name, name =>
-        { if (ValidGalleryTagName(name)) EditGalleryTag(tag, tag with { Name = name!.Trim() }); })));
-        contextItems.Add(new(L.Get("gallery.tagColour"), () => PickGalleryTagColour(tag.Colour, colour => EditGalleryTag(tag, tag with { Colour = colour })), Color: tag.Colour));
-        contextItems.Add(new(L.Get("gallery.deleteTag"), () => EditGalleryTag(tag, null)));
-        PositionGalleryMenu(mouseX, mouseY);
-    }
+    private void ShowGalleryTagManager() => OpenGalleryTags(Guid.Empty);
 
     private void EditGalleryTag(PatternTag tag, PatternTag? replacement)
     {
@@ -156,21 +112,5 @@ public sealed partial class EditorView
         int generation = galleryGeneration;
         RequestPatternName?.Invoke(title, value => { if (generation == galleryGeneration) completion(value); });
         if (PatternNameVisible) { patternNameText = initial; SelectInput("gallery:name", initial); }
-    }
-
-    private void PickGalleryTagColour(uint initial, Action<uint> completion)
-    {
-        contextItems.Clear(); menu = -1;
-        foreach (uint colour in new uint[] { 0x58D8C1, 0x65A9FF, 0xB58DFF, 0xED8DBB, 0xFF7777, 0xFFB45C, 0xE1D466, 0x83CE77 })
-            contextItems.Add(new("#" + colour.ToString("X6", CultureInfo.InvariantCulture), () => completion(colour), Color: colour, Active: colour == initial));
-        contextItems.Add(new(L.Get("gallery.customColour"), () => RequestGalleryText(L.Get("gallery.customColour"),
-            "#" + initial.ToString("X6", CultureInfo.InvariantCulture), value =>
-            {
-                if (value is null) return;
-                string hex = value.Trim().TrimStart('#');
-                if (hex.Length == 6 && uint.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint colour)) completion(colour);
-                else StatusMessage = L.Get("gallery.invalidColour");
-            })));
-        PositionGalleryMenu(mouseX, mouseY);
     }
 }
