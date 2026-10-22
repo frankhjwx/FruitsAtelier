@@ -275,6 +275,8 @@ public sealed class LibraryDatabase
         command.ExecuteNonQuery();
         command.CommandText = "CREATE INDEX IF NOT EXISTS maps_identity ON maps(root,json_extract(data,'$.BeatmapId')); CREATE INDEX IF NOT EXISTS maps_song ON maps(root,json_extract(data,'$.Artist'),json_extract(data,'$.Title'));";
         command.ExecuteNonQuery();
+        command.CommandText = "CREATE INDEX IF NOT EXISTS maps_search ON maps(root,search,path)";
+        command.ExecuteNonQuery();
     }
     private SqliteConnection Open()
     {

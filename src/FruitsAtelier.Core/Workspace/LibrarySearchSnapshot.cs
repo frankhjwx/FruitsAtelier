@@ -71,16 +71,26 @@ public sealed class LibrarySearchSnapshot : IDisposable
             string key = favouritesOnly ? $"coalesce({project},json_extract(m.data,'$.Directory'))" : projectsOnly ? project : "json_extract(m.data,'$.Directory')";
             if (organization?.Creators is not null) key = $"coalesce({project},json_extract(m.data,'$.Directory'))";
             string nativeScope = creators is null ? "" : " OR m.path IN (SELECT path FROM project_difficulty_metadata)";
-            command.CommandText = $"INSERT INTO matches SELECT m.path,{key},json_extract(m.data,'$.Title'),{project} FROM maps m WHERE (m.root=$r OR m.root IN (SELECT path FROM external_sources){nativeScope})";
+            var words = LibraryDatabase.Normalize(query).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            bool indexedSearch = words.Length > 0 && creators is null;
+            string prefix = "", source = "maps m";
+            if (indexedSearch)
+            {
+                // Materialize paths from the covering index before reading JSON and project associations.
+                // My Maps uses saved difficulty metadata through its separate maps view.
+                string predicates = string.Join(" AND ", Enumerable.Range(0, words.Length).Select(i => $"instr(search,$q{i})>0"));
+                prefix = $"WITH candidates AS MATERIALIZED (SELECT path FROM catalog.maps INDEXED BY maps_search WHERE (root=$r OR root IN (SELECT path FROM external_sources)) AND {predicates}) ";
+                source = "candidates c JOIN maps m ON m.path=c.path";
+            }
+            command.CommandText = prefix + $"INSERT INTO matches SELECT m.path,{key},json_extract(m.data,'$.Title'),{project} FROM {source} WHERE (m.root=$r OR m.root IN (SELECT path FROM external_sources){nativeScope})";
             command.Parameters.AddWithValue("$r", songs);
             if (organization?.Creators is not null)
             {
                 command.CommandText += " AND is_my_mapper(json_extract(m.data,'$.Creator'))";
             }
-            var words = LibraryDatabase.Normalize(query).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < words.Length; i++)
             {
-                command.CommandText += $" AND instr(m.search,$q{i})>0";
+                if (!indexedSearch) command.CommandText += $" AND instr(m.search,$q{i})>0";
                 command.Parameters.AddWithValue("$q" + i, words[i]);
             }
             if (organization?.DifficultyPaths is { } paths)

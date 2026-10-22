@@ -363,7 +363,7 @@ public sealed partial class EditorView
         }
         catch (Exception e) { libraryError = e.Message; }
     }
-    private void QueueLibrarySearch() { searchAfter = DateTime.UtcNow.AddMilliseconds(150); searchTaskQuery = "\0"; }
+    private void QueueLibrarySearch() { searchAfter = DateTime.UtcNow.AddMilliseconds(25); searchTaskQuery = "\0"; }
     private void InvalidateLibraryRatings() { libraryRatingRevision++; libraryRatings.Clear(); libraryRatingsToRefresh.Clear(); }
     private void PumpLibrary()
     {
@@ -415,7 +415,7 @@ public sealed partial class EditorView
                 if (runningOrganizationKey != LibrarySearchKey || runningSearchQuery != libraryQuery || runningSearchMyMaps != libraryMyMapsOnly || runningSearchFavourites != libraryFavouritesOnly
                     || runningFavouriteRevision != libraryFavouriteRevision
                     || runningSearchSelection != selectedLibraryGroup || runningSearchScroll != libraryScroll)
-                { result.Retire(); searchTask = null; QueueLibrarySearch(); return; }
+                { result.Retire(); searchTask = null; searchTaskQuery = "\0"; return; }
                 float fraction = libraryScroll - (int)libraryScroll;
                 libraryBrowser?.Retire(); libraryBrowser = result;
                 libraryBrowserQuery = runningSearchQuery;

@@ -1,6 +1,8 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Length == 3 && args[0] == "--library-search-profile") { LibrarySearchTests.Profile(args[1], args[2]); return 0; }
+if (args.Contains("--library-search-check")) { LibrarySearchTests.Run(); return 0; }
 if (args.Contains("--pattern-gallery-check")) { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); Console.WriteLine("PASS Pattern Gallery, editing sessions and source navigation"); return 0; }
 if (args.Contains("--cross-difficulty-clipboard-check")) { CrossDifficultyClipboardTests.Run(); Console.WriteLine("PASS mapset clipboard, target settings, independent SV, undo and rejection"); return 0; }
 if (args.Length == 3 && args[0] == "--new-difficulty-profile") return NewDifficultyPerformance.Run(args[1], args[2]);
@@ -67,7 +69,7 @@ if (args.Contains("--library-persistent-cache-check")) { LibraryPersistentCacheT
 
 if (args.Contains("--library-incremental-check"))
 {
-    LibraryCategoryCacheTests.Run(); LibraryPersistentCacheTests.Run(); LibraryIncrementalTests.Run(); LibraryScanProgressTests.Run(); LibraryResponsivenessTests.Run();
+    LibrarySearchTests.Run(); LibraryCategoryCacheTests.Run(); LibraryPersistentCacheTests.Run(); LibraryIncrementalTests.Run(); LibraryScanProgressTests.Run(); LibraryResponsivenessTests.Run();
     Console.WriteLine("PASS Library incremental indexing and background interaction"); return 0;
 }
 if (args.Contains("--benchmark-library-loading")) return LibraryIncrementalTests.Benchmark();

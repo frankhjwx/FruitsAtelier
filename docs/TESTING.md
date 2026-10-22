@@ -68,6 +68,13 @@ existing settings isolation and cleanup.
 
 Windows distribution uses the self-contained ZIP and extracted-executable check described in [Windows releases](RELEASING.md). Desktop CI checks packaging before a version is tagged; the tag workflow reuses successful desktop regression for identical source content when available and always builds and checks its own package. See [CI validation and reuse](RELEASING.md#ci-validation-and-reuse) for fallback and forced-validation behavior.
 
+`App.Tests --library-search-check` compares indexed substring searches with the
+independent catalog scan, including Unicode normalization, multiword and literal
+punctuation queries, exact collection membership, metadata updates/deletions, and
+publication after superseded input. The incremental Library suite includes it.
+`App.Tests --library-search-profile <workspace-copy> <songs-root>` reports query
+and initial page preparation time and managed allocations against a catalog copy.
+
 `App.Tests --library-organization-check` checks field sorting, collapsed group
 paging, historical source-file dates, collection creation/rename/removal, membership drafts,
 restart restoration, content isolation web-link click isolation, compact default-collapsed groups, cached reordering and successful-open visit recording in English

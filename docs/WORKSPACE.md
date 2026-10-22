@@ -90,6 +90,13 @@ External sources are stored in the current workspace's `library.db`, scanned aft
 
 ## Library and search
 
+Text search normalizes Unicode and case and matches every whitespace-separated
+word as a literal substring of the indexed metadata. A covering SQLite index
+filters source paths before the paged browser reads full metadata and project
+associations. The index follows catalog updates and deletions. Search input is
+coalesced for 25 ms; discarding an obsolete result preserves the latest input's
+scheduled deadline.
+
 Right-click a set card for grouped actions separated by divider lines: enter editing; open, delete or create an FA workspace project; open the osu! Songs folder; export or import maps. Export includes all Catch difficulties in an `.osz`. Deleting a local project removes its local files and unreferenced managed resources by default; selecting **Keep a recovery backup** retains a restorable copy. The source set is kept; opening the source again creates a new project. See [Synchronization](SYNCHRONIZATION.md#missing-files-and-deletion) for deletion behavior.
 
 Difficulty-tab menus group local `.catchdiff` and workspace-folder actions first, followed by `.osu` and Songs-folder actions, synchronization review, and deletion on both sides.
