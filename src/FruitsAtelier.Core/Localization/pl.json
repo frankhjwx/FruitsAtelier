@@ -1,7 +1,7 @@
 {
   "browser.settings": "Web",
-  "browser.clearData": "Usuń lokalne dane użytkownika",
-  "browser.clearHint": "Usuwa pliki cookie, dane witryn, pamięć podręczną i dane przeglądania w przeglądarce FA. Okna i niewysłane szkice zostaną zamknięte. Konieczne będzie ponowne logowanie. Nie wpływa to na zewnętrzne przeglądarki ani projekty.",
+  "osuLinks.webTitle": "Łącza osu! & Web",
+  "browser.clearData": "Usuń lokalne dane użytkownika i pliki cookie",
   "browser.clearing": "Usuwanie…",
   "browser.cleared": "Dane przeglądarki usunięte. Zaloguj się ponownie w razie potrzeby.",
   "browser.clearFailed": "Nie udało się usunąć danych. Spróbuj ponownie.",

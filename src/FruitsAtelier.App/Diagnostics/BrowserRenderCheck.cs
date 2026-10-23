@@ -47,12 +47,13 @@ internal static class BrowserRenderCheck
                 if (Math.Abs(editor.BrowserCopyOpacity - .5f) > .01) throw new InvalidOperationException("Copy feedback fade is not synchronized.");
                 clock.Milliseconds = 2100; Paint("restored");
                 if (editor.BrowserFeedbackNeedsRedraw) throw new InvalidOperationException("Expired copy feedback keeps redrawing.");
+                editor.RequestUpdateCheck = () => { };
                 editor.OpenSettings(); Paint("settings");
                 if (editor.BrowserViewport.Width > 0) throw new InvalidOperationException("Browser covers settings.");
                 editor.RequestClearBrowserData = () => Task.CompletedTask;
                 var settings = editor.SettingsBounds;
-                editor.PointerDown(settings.X + 40, settings.Y + 78 + 8 * 48 + 16, 0, false, false);
-                editor.PointerUp(settings.X + 40, settings.Y + 78 + 8 * 48 + 16, 0); Paint("web-settings");
+                editor.PointerDown(settings.X + 40, settings.Y + 78 + 6 * 48 + 16, 0, false, false);
+                editor.PointerUp(settings.X + 40, settings.Y + 78 + 6 * 48 + 16, 0); Paint("web-settings");
                 editor.StopDiscussions();
 
                 void Paint(string name)

@@ -1,7 +1,7 @@
 {
   "browser.settings": "Web",
-  "browser.clearData": "Burahin ang lokal na data ng user",
-  "browser.clearHint": "Binubura ang cookies, imbakan ng website, cache at browsing data ng browser sa FA. Isasara ang mga window at hindi pa naipapadalang draft. Kailangang mag-sign in muli. Hindi maaapektuhan ang ibang browser at mga proyekto.",
+  "osuLinks.webTitle": "Mga link ng osu! & Web",
+  "browser.clearData": "Burahin ang lokal na data ng user at cookies",
   "browser.clearing": "Binubura…",
   "browser.cleared": "Nabura ang data ng browser. Mag-sign in muli kung kailangan.",
   "browser.clearFailed": "Hindi mabura ang data. Subukan muli.",

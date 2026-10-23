@@ -1,7 +1,7 @@
 {
   "browser.settings": "Web",
-  "browser.clearData": "清除本地用户数据",
-  "browser.clearHint": "删除 FA 内嵌浏览器的 Cookie、网站存储、缓存和浏览数据。浏览器窗口及未提交的草稿将关闭，之后需要重新登录。不影响外部浏览器和谱面工程。",
+  "osuLinks.webTitle": "osu! 链接 & Web",
+  "browser.clearData": "清除本地用户数据和 Cookie",
   "browser.clearing": "正在清除…",
   "browser.cleared": "本地浏览器数据已清除，需要时请重新登录。",
   "browser.clearFailed": "无法清除浏览器数据，请重试。",

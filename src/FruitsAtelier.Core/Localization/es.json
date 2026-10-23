@@ -1,7 +1,7 @@
 {
   "browser.settings": "Web",
-  "browser.clearData": "Borrar datos locales del usuario",
-  "browser.clearHint": "Borra cookies, almacenamiento de sitios, caché y datos de navegación del navegador integrado de FA. Se cerrarán sus ventanas y borradores sin enviar. Tendrás que iniciar sesión de nuevo. No afecta a navegadores externos ni proyectos.",
+  "osuLinks.webTitle": "Enlaces de osu! & Web",
+  "browser.clearData": "Borrar datos locales del usuario y cookies",
   "browser.clearing": "Borrando…",
   "browser.cleared": "Datos del navegador borrados. Inicia sesión de nuevo cuando sea necesario.",
   "browser.clearFailed": "No se pudieron borrar los datos. Inténtalo de nuevo.",

@@ -1,7 +1,7 @@
 {
   "browser.settings": "Web",
-  "browser.clearData": "Hapus data pengguna lokal",
-  "browser.clearHint": "Menghapus cookie, penyimpanan situs, cache, dan data penjelajahan browser bawaan FA. Jendela browser dan draf yang belum dikirim akan ditutup. Anda perlu masuk kembali. Browser eksternal dan proyek tidak terpengaruh.",
+  "osuLinks.webTitle": "Tautan osu! & Web",
+  "browser.clearData": "Hapus data pengguna lokal dan cookie",
   "browser.clearing": "Menghapus…",
   "browser.cleared": "Data browser dihapus. Masuk kembali bila diperlukan.",
   "browser.clearFailed": "Data browser tidak dapat dihapus. Coba lagi.",

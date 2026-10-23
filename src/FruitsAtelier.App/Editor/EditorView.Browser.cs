@@ -11,10 +11,9 @@ public sealed partial class EditorView
     private Task? browserClearTask;
     private string? browserClearStatus;
     private bool BrowserClearing => browserClearTask is not null;
-    private void DrawBrowserSettings(ICanvas c)
+    private void DrawBrowserSettings(ICanvas c, float y)
     {
-        float y = SettingsParagraph(c, L.Get("browser.clearHint"), SettingsTop + 128);
-        SettingsButton(c, new(SettingsContentX, y + 16, SettingsContentWidth, SettingsControlHeight),
+        SettingsButton(c, new(SettingsContentX, y, SettingsContentWidth, SettingsControlHeight),
             L.Get(BrowserClearing ? "browser.clearing" : "browser.clearData"), () =>
             {
                 if (BrowserClearing || RequestClearBrowserData is null) return;
@@ -22,7 +21,7 @@ public sealed partial class EditorView
                 try { browserClearTask = RequestClearBrowserData(); }
                 catch { browserClearStatus = "browser.clearFailed"; }
             }, enabled: !BrowserClearing && RequestClearBrowserData is not null);
-        if (browserClearStatus is { } status) SettingsParagraph(c, L.Get(status), y + 64);
+        if (browserClearStatus is { } status) SettingsParagraph(c, L.Get(status), y + 48);
     }
     private void PumpBrowserClear()
     {
