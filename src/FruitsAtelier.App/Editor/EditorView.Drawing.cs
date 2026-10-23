@@ -34,6 +34,9 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        // Full-screen pages can return before laying out docks; never reuse their previous native viewport.
+        browserRenderedViewport = browserToolbar = default;
+        discussionMarkerHits.Clear(); discussionQuoteBounds.Clear(); discussionQuoteActions.Clear(); discussionQuoteViews.Clear();
         RenderContent(c, width, height);
         DrawOsuLinkNotice(c);
         DrawOsuLinkFallback(c);

@@ -102,7 +102,9 @@ slider duration. Object numbers are matched against the current timeline; when
 the local revision no longer matches, the timestamp remains the anchor. Click a
 quote or marker to reveal its thread in the panel. Canvas annotations also show
 complete posts, replies, badges and resolution records; scroll inside a card or
-drag its scrollbar to read long threads. Each visible thread appears once, with
+drag its scrollbar to read long threads. Cards without an internal scroll range
+pass wheel input to the canvas, including annotations shown from osu! Web.
+Each visible thread appears once, with
 all of its referenced regions highlighted. Cards remain inside the canvas even
 when anchored at 0ms. With Discussion open, the paused Catch canvas can scroll
 into negative viewing time to leave room around the opening notes. Playback seeks,

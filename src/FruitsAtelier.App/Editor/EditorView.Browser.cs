@@ -11,16 +11,18 @@ public sealed partial class EditorView
     private (long Set, long Map, bool Discussion) browserContext;
     private string? browserPage;
     private Rect browserToolbar;
+    private Rect browserRenderedViewport;
     private string? browserTooltip;
     private long? browserCopiedAt;
     private float browserCopiedPainted;
     internal float BrowserCopyOpacity => browserCopiedAt is { } started
         ? (float)Math.Clamp((2 - timeProvider.GetElapsedTime(started).TotalSeconds) / .4, 0, 1) : 0;
-    public bool BrowserFeedbackNeedsRedraw => PanelVisible(DockPanel.OsuWeb) && browserCopiedPainted > 0;
+    public bool BrowserFeedbackNeedsRedraw => BrowserContentAvailable && browserCopiedPainted > 0;
     private bool BrowserContentAvailable => PanelVisible(DockPanel.OsuWeb) && DockContentInputAvailable
         && !librarySettingsOpen && !StartupDialogVisible && !CollaborationReportVisible && !RotationVisible
         && !MapTemplatesVisible && !addDifficultyConfirmation && !OsuLinkPickerVisible && !OsuLinkFallbackRequired
         && !PatternGalleryPreviewVisible && !panelMenuOpen && !volumePopoverOpen && !languageMenuOpen
+        && !updatesPage && !resourcePage && syncPage != "resolve"
         && menu < 0 && contextItems.Count == 0 && !dockDragging;
     private bool BrowserToolbarContains(float x, float y) => BrowserContentAvailable && browserToolbar.Contains(x, y);
     private bool BrowserToolbarPointer(float x, float y, int button)
@@ -56,7 +58,7 @@ public sealed partial class EditorView
         }
     }
     private bool DiscussionAnnotationsVisible => PanelVisible(DockPanel.Discussion)
-        || PanelVisible(DockPanel.OsuWeb) && BrowserDiscussionMatches;
+        || BrowserContentAvailable && BrowserDiscussionMatches;
 
     public bool HandleBrowserEditorLink(string link, string page)
     {
@@ -87,6 +89,7 @@ public sealed partial class EditorView
 
     private void DrawBrowserPanel(ICanvas c, Rect bounds)
     {
+        browserRenderedViewport = new(bounds.X + 8, bounds.Y + 104, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 110));
         browserToolbar = new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), 54);
         browserTooltip = null;
         float x = browserToolbar.X, y = browserToolbar.Y;
@@ -158,8 +161,7 @@ public sealed partial class EditorView
         get
         {
             if (!BrowserContentAvailable || BrowserUrl is null) return default;
-            var bounds = PanelBounds(DockPanel.OsuWeb);
-            return new(bounds.X + 8, bounds.Y + 104, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 110));
+            return browserRenderedViewport;
         }
     }
 }

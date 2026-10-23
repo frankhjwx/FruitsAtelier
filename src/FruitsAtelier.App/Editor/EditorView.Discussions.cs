@@ -819,13 +819,14 @@ public sealed partial class EditorView
 
     private bool WheelDiscussions(float x, float y, float delta)
     {
-        if (!DockContentInputAvailable || !PanelVisible(DockPanel.Discussion)) return false;
+        if (!DockContentInputAvailable) return false;
         foreach (var quote in discussionQuoteViews)
-            if (quote.Bounds.Contains(x, y))
+            if (DiscussionAnnotationsVisible && quote.Maximum > 0 && quote.Bounds.Contains(x, y))
             {
                 discussionQuoteScrolls[quote.Id] = Math.Clamp(discussionQuoteScrolls.GetValueOrDefault(quote.Id) - delta / 120 * 60, 0, quote.Maximum);
                 return true;
             }
+        if (!PanelVisible(DockPanel.Discussion)) return false;
         if (discussionTabsBounds.Contains(x, y)) { discussionTabScroll = Math.Clamp(discussionTabScroll - delta / 120 * 48, 0, discussionTabMaximum); return true; }
         if (!discussionListBounds.Contains(x, y)) return false;
         discussionScroll = Math.Clamp(discussionScroll - delta / 120 * 60, 0, Math.Max(0, discussionContentHeight - discussionListBounds.Height)); return true;

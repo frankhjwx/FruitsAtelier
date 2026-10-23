@@ -10,6 +10,7 @@ namespace FruitsAtelier.App.Platform;
 // A dedicated STA message loop keeps browser callbacks out of the editor's render loop.
 internal sealed class OsuBrowserWindow : IDisposable
 {
+    internal const uint ViewportChangedMessage = 0x8003;
     private readonly string? profile;
     public OsuBrowserWindow(string? profile = null) { this.profile = profile; }
     public readonly System.Collections.Concurrent.ConcurrentQueue<(string Link, string Page)> EditorLinks = new();
@@ -75,14 +76,14 @@ internal sealed class OsuBrowserWindow : IDisposable
                 if (form.Visible)
                 {
                     form.Hide();
-                    // Hiding occurs on this STA after the editor may have presented its replacement panel.
-                    InvalidateRect(parent, 0, false);
+                    // Queue repaint on the owner after its current paint and this STA's visibility change finish.
+                    Native.PostMessage(parent, ViewportChangedMessage, 0, 0);
                 }
                 return;
             }
             form.Bounds = bounds;
             form.Show();
-            InvalidateRect(parent, 0, false);
+            Native.PostMessage(parent, ViewportChangedMessage, 0, 0);
             // Compare the map target, not the browser URL: ordinary website navigation must survive redraws.
             if (target is { } url && navigated != url)
             {
@@ -96,9 +97,6 @@ internal sealed class OsuBrowserWindow : IDisposable
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern nint SetParent(nint child, nint parent);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern bool InvalidateRect(nint window, nint rectangle, bool erase);
 
     public void Dispose()
     {
@@ -301,10 +299,20 @@ internal sealed class OsuBrowserWindow : IDisposable
         }
     }
 
+    private sealed class BrowserCheckWindow : Forms.Form
+    {
+        public int ViewportChanges;
+        protected override void WndProc(ref Forms.Message message)
+        {
+            if (message.Msg == ViewportChangedMessage) { ViewportChanges++; Invalidate(); }
+            base.WndProc(ref message);
+        }
+    }
+
     private static int RunEmbeddedCheck(string directory)
     {
         Directory.CreateDirectory(directory);
-        using var window = new Forms.Form { Width = 760, Height = 620, Text = "FA embedded browser check", ShowInTaskbar = false, Opacity = 0 };
+        using var window = new BrowserCheckWindow { Width = 760, Height = 620, Text = "FA embedded browser check", ShowInTaskbar = false, Opacity = 0 };
         using var host = new OsuBrowserWindow(Path.Combine(directory, "embedded-fixture-profile"));
         int result = 1;
         window.Shown += async (_, _) =>
@@ -344,6 +352,22 @@ internal sealed class OsuBrowserWindow : IDisposable
                     catch (Exception error) { retained.SetException(error); }
                 }));
                 await retained.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                foreach (var viewport in new[] { System.Drawing.Rectangle.Empty, new System.Drawing.Rectangle(8, 60, 300, 420),
+                    new System.Drawing.Rectangle(350, 80, 320, 360), System.Drawing.Rectangle.Empty, bounds })
+                {
+                    int notifications = window.ViewportChanges;
+                    host.Update(window.Handle, viewport, "about:blank");
+                    var applied = new TaskCompletionSource();
+                    child.BeginInvoke((Action)(() =>
+                    {
+                        if (child.Visible != !viewport.IsEmpty || !viewport.IsEmpty && child.Bounds != viewport)
+                            applied.SetException(new InvalidOperationException("Hide/move/resize retained the previous native viewport."));
+                        else applied.SetResult();
+                    }));
+                    await applied.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                    for (int i = 0; window.ViewportChanges == notifications && i < 100; i++) await Task.Delay(10);
+                    if (window.ViewportChanges == notifications) throw new InvalidOperationException("Viewport transition did not queue an owner repaint.");
+                }
                 var captured = new TaskCompletionSource();
                 child.BeginInvoke((Action)(async () =>
                 {
@@ -364,7 +388,7 @@ internal sealed class OsuBrowserWindow : IDisposable
                     catch (Exception error) { captured.SetException(error); }
                 }));
                 await captured.Task.WaitAsync(TimeSpan.FromSeconds(10));
-                File.WriteAllText(Path.Combine(directory, "embedded.txt"), "PASS child window placement, web viewport bounds, local editing and retained draft after tab hide/show");
+                File.WriteAllText(Path.Combine(directory, "embedded.txt"), "PASS child placement, hide/move/resize owner repaint, viewport bounds, local editing and retained draft after tab hide/show");
                 result = 0;
             }
             catch (Exception error) { File.WriteAllText(Path.Combine(directory, "embedded.txt"), error.ToString()); }

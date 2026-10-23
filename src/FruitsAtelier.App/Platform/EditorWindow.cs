@@ -421,6 +421,8 @@ internal sealed partial class EditorWindow : IDisposable
                 var dropped = Native.TakeDroppedFiles((nint)wParam);
                 if (!NativeModalScope.Active) FileOperation(() => view.DropLibraryFiles(dropped));
                 return 0;
+            case OsuBrowserWindow.ViewportChangedMessage:
+                Invalidate(); return 0;
             case 0x000F: // WM_PAINT
                 Native.BeginPaint(window, out var paint);
                 bool ownsPaint = false;

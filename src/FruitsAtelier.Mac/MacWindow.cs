@@ -209,9 +209,13 @@ internal sealed partial class MacWindow : Window
             editorRoot.Children.Add(osuBrowser);
         }
         float scale = View.UiScaleFactor;
-        osuBrowser.Margin = new Thickness(bounds.X * scale, bounds.Y * scale, 0, 0);
+        var margin = new Thickness(bounds.X * scale, bounds.Y * scale, 0, 0);
+        bool moved = !osuBrowser.IsVisible || osuBrowser.Margin != margin
+            || osuBrowser.Width != bounds.Width * scale || osuBrowser.Height != bounds.Height * scale;
+        osuBrowser.Margin = margin;
         osuBrowser.Width = bounds.Width * scale; osuBrowser.Height = bounds.Height * scale;
         osuBrowser.IsVisible = true;
+        if (moved) Dispatcher.UIThread.Post(editor.Refresh, DispatcherPriority.Background);
         if (View.BrowserUrl is { } url) osuBrowser.Open(url);
         if (View.UpdateBrowserState(osuBrowser.State)) editor.Refresh();
     }

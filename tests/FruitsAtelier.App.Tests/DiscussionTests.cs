@@ -94,8 +94,25 @@ internal static class DiscussionTests
         Check(copied == page && ui.View.BrowserCopyOpacity == 1, "address copies the full URL with green feedback");
         Check(ui.View.PixelsPerMs == zoom && ui.View.PlayheadMs == position, "toolbar wheel and double click leave canvas navigation unchanged");
         ui.View.OpenSettings(); ui.Paint();
-        Check(ui.View.BrowserViewport.Width == 0, "settings and its full-screen dimmer cover the browser");
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionQuoteBounds.Count == 0
+            && ui.View.DiscussionMarkerHits.Count == 0, "settings and its full-screen dimmer cover browser annotations too");
         ui.Key(27); ui.Paint();
+        var expanded = ui.View.CaptureDockLayouts();
+        var collapsed = ui.View.CaptureDockLayouts(); collapsed.Mapping!.Right!.Collapsed = true;
+        ui.View.LibrarySettings.DockLayouts = collapsed; ui.View.RestoreDockLayouts(); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionMarkerHits.Count == 0, "collapsed tools hide browser and annotations");
+        ui.View.LibrarySettings.DockLayouts = expanded; ui.View.RestoreDockLayouts(); ui.Paint();
+        var tab = ui.View.DockTabBounds(EditorView.DockPanel.OsuWeb);
+        ui.View.PointerDown(tab.X + 10, tab.Y + 10, 0, false, false);
+        ui.View.PointerMove(8, 200, false, false); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionMarkerHits.Count == 0, "dragging a browser tab hides the native surface and annotations");
+        ui.View.PointerUp(8, 200, 0); ui.Paint();
+        Check(ui.View.BrowserViewport.Width > 0 && ui.View.BrowserViewport.Right < ui.View.CanvasPlotBounds.X,
+            "browser viewport follows a tab dropped into the left dock");
+        ui.Key(114); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionMarkerHits.Count == 0, "Timing clears native browser and annotation hit targets");
+        ui.ClickText(L.Get("timing.panel") + " ▾"); ui.ClickText(L.Get("timing.detailsPanel")); ui.Paint();
+        ui.View.LibrarySettings.DockLayouts = expanded; ui.View.RestoreDockLayouts(); ui.Paint();
         Check(ui.View.Document.ContentEquals(original) && !ui.View.IsDirty, "browser navigation does not modify content");
         var otherTab = ui.View.CaptureDockLayouts();
         otherTab.Mapping!.Right!.Active = "CollaborationMapping";
@@ -104,8 +121,14 @@ internal static class DiscussionTests
         Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionQuoteBounds.Count == 0 && ui.View.DiscussionMarkerHits.Count == 0
             && !ui.Canvas.Fills.Any(f => f.Color is 0xA6D9AE or 0xE6AA64 && Math.Abs(f.Bounds.Width - ui.View.PlayfieldBounds.Width) < .1),
             "switching to another tab clears web viewport, quotes and highlight bands in the next frame");
+        ui.View.LibrarySettings.DockLayouts = expanded; ui.View.RestoreDockLayouts(); ui.Paint();
+        Check(ui.View.BrowserViewport.Width > 0, "browser is restored before the full-screen error transition");
         ui.View.ShowError("fixture"); ui.Paint();
-        Check(ui.View.BrowserViewport.Width == 0, "native browser yields to editor modal overlays");
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionQuoteBounds.Count == 0
+            && ui.View.DiscussionMarkerHits.Count == 0, "full-screen error clears native viewport and stale annotation targets");
+        ui.Key(27); ui.Paint();
+        ui.View.ShowLibrary(); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionMarkerHits.Count == 0, "Library cannot retain the editor browser viewport");
         ui.View.StopDiscussions();
 
         var praise = new OsuDiscussionSnapshot(777, 20, [new BeatmapDiscussion(900, 101, null, 10, 1000, "praise", false, false, null, [new(901, 10, "00:01:000 (1)", false, null)])], snapshot.Users, snapshot.Owners);
@@ -113,6 +136,16 @@ internal static class DiscussionTests
         positive.View.LoadProject(Project()); positive.View.ShowDiscussionPanel(); Wait(positive);
         Check(positive.Canvas.Fills.Any(f => f.Color == 0xA6D9AE && Math.Abs(f.Bounds.Width - positive.View.PlayfieldBounds.Width) < .1)
             && !positive.Canvas.Fills.Any(f => f.Color == 0xE6AA64), "praise uses green annotation bands and borders without a resolved flag");
+        foreach (string active in new[] { "Discussion", "OsuWeb" })
+        {
+            var shortLayout = positive.View.CaptureDockLayouts(); shortLayout.Mapping!.Right!.Active = active;
+            positive.View.LibrarySettings.DockLayouts = shortLayout; positive.View.RestoreDockLayouts();
+            positive.View.UpdateBrowserPage(page); positive.Paint();
+            Check(positive.View.DiscussionQuoteScrollState.Single().Maximum == 0, "short annotation needs no internal scrolling");
+            var card = positive.View.DiscussionQuoteBounds.Single(); double beforeScroll = positive.View.ViewStartMs;
+            positive.View.Wheel(card.X + 10, card.Y + 10, -120, false); positive.Paint();
+            Check(positive.View.ViewStartMs != beforeScroll, "wheel over a short annotation scrolls the canvas in " + active);
+        }
         positive.View.StopDiscussions();
     }
 
@@ -388,6 +421,17 @@ internal static class DiscussionTests
         var quote = ui.View.DiscussionQuoteBounds[0];
         Check(quote.Y >= ui.Plot.Y && quote.Bottom <= ui.Plot.Bottom, "long zero-time annotation remains entirely within the canvas");
         Check(ui.View.DiscussionQuoteScrollState.Single().Maximum > 500, "complete long discussion has an internal scroll range");
+        foreach (string active in new[] { "OsuWeb", "Discussion" })
+        {
+            var layout = ui.View.CaptureDockLayouts(); layout.Mapping!.Right!.Active = active;
+            ui.View.LibrarySettings.DockLayouts = layout; ui.View.RestoreDockLayouts();
+            ui.View.UpdateBrowserPage(ui.View.BrowserUrl); ui.Paint();
+            quote = ui.View.DiscussionQuoteBounds.Single(); double startTime = ui.View.ViewStartMs;
+            ui.View.Wheel(quote.X + 20, quote.Y + 30, -120, false); ui.Paint();
+            Check(ui.View.DiscussionQuoteScrollState.Single().Scroll > 0 && ui.View.ViewStartMs == startTime,
+                "long annotation scrolls internally without moving the canvas in " + active);
+            ui.View.Wheel(quote.X + 20, quote.Y + 30, 120, false); ui.Paint();
+        }
         ui.View.PointerDown(quote.Right - 5, quote.Bottom - 12, 0, false, false);
         Check(ui.View.WantsCapture, "annotation scrollbar captures pointer dragging");
         ui.View.PointerMove(quote.Right - 5, quote.Y + 5, false, false);
