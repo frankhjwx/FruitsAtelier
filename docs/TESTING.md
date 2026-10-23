@@ -115,6 +115,31 @@ it, and compares query construction with cached-page restoration using
 RecordingCanvas. It also creates isolated preview files for the four tabs and
 all configured FA/osu! Collections. The report excludes native drawing and image decoding.
 
+### macOS resource fixture paths
+
+Tests that open or import maps, create workspaces, or copy resources through
+workspace/resource path validation must create their macOS fixtures beneath `/private/tmp`:
+
+```csharp
+string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
+    "atelier-fixture-" + Guid.NewGuid().ToString("N"));
+```
+
+On macOS, `Path.GetTempPath()` can return a path beneath `/var/folders`; `/var`
+is a symbolic link to `/private/var`. Resource validation rejects symbolic links
+in any ancestor, so these fixtures can fail with `Resource paths cannot pass
+through symbolic links: /var` even when the test created ordinary files.
+`Path.GetFullPath()` does not resolve that link.
+
+When this diagnostic occurs in a regression, check the fixture's complete path
+and move its root to `/private/tmp`, following the Library and external-resource
+tests. Keep the symbolic-link rejection in production code and its security
+tests. Plain serialization tests that do not enter resource validation can keep
+using the system temporary directory. Use a unique directory per fixture and
+retain cleanup in `finally`. Run the affected suite and the macOS Desktop
+regression on the final revision before release; a Windows pass does not verify
+macOS path behavior.
+
 ## Automated regressions
 
 `Core.Tests --pattern-placement-check` checks beat-relative placement, optional

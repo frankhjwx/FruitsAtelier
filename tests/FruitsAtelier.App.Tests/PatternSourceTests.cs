@@ -7,7 +7,7 @@ internal static class PatternSourceTests
 {
     internal static void Run()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "fa-pattern-source-" + Guid.NewGuid().ToString("N"));
+        string directory = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "fa-pattern-source-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
         {
