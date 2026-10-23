@@ -5,9 +5,9 @@ includes it in the right dock. Cards fill the panel, with a skin-rendered thumbn
 above each pattern name. A single row of coloured tag names sits immediately above
 the name; a `+N` chip represents tags that do not fit. The enlarged preview displays
 source information below its title, followed by all tags with a compact **Edit Tags** button beside them.
-When a tag row does not fit, names longer than five Unicode characters show their
-first five characters followed by an ellipsis. A row that fits retains full names.
-Expanded tags wrap as needed; cards keep the `+N` overflow indicator. **Edit Pattern** and **Go to Original Map** share one row of outlined buttons below the preview.
+On cards, when a tag row does not fit, names longer than five Unicode characters
+show their first five characters followed by an ellipsis. A row that fits retains
+full names. Details always show complete tag names, wrapping as needed; cards keep the `+N` overflow indicator. **Edit Pattern** and **Go to Original Map** share one row of outlined buttons below the preview.
 If the tags exceed the available
 header space, scroll within the tag area to read the remaining tags independently
 of the pattern preview. Cards have a fixed size; resizing the dock changes the

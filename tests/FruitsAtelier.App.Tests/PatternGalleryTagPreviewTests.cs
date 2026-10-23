@@ -34,10 +34,10 @@ internal static class PatternGalleryTagPreviewTests
         Open(tagged);
         var bounds = ui.View.PatternGalleryPreviewTagsBounds;
         var popupTitle = ui.Canvas.Texts.Last(t => t.Value == tagged.Name);
-        Check(new[] { "Alpha", "Beta", "Corne…", "Desce…", "Exten…" }.All(label => ui.Canvas.Texts.Any(t => t.Value == label && bounds.Contains(t.X, t.Y))),
+        Check(tagged.Tags.Select(tag => tag.Name).All(label => ui.Canvas.Texts.Any(t => t.Value == label && bounds.Contains(t.X, t.Y))),
             "Expanded preview omits tags shown as +N on the card");
-        Check(ui.Canvas.Texts.Where(t => bounds.Contains(t.X, t.Y)).Select(t => t.Y).Distinct().Count() == 1
-            && bounds.Y > popupTitle.Y && bounds.Bottom < ui.View.PatternGalleryPreviewBounds.Y, "Shortened expanded tags do not fit between the title and graphic preview");
+        Check(ui.Canvas.Texts.Where(t => bounds.Contains(t.X, t.Y)).Select(t => t.Y).Distinct().Count() > 1
+            && bounds.Y > popupTitle.Y && bounds.Bottom < ui.View.PatternGalleryPreviewBounds.Y, "Expanded tags do not wrap between the title and graphic preview");
         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.scrollHint")), "Expanded tags did not replace the scroll/zoom hint");
         int builds = ui.View.PatternGalleryPreviewBuildCount;
         ui.Paint(); ui.Paint();
@@ -49,7 +49,7 @@ internal static class PatternGalleryTagPreviewTests
         double before = ui.View.PatternGalleryPreviewScroll;
         ui.View.Wheel(bounds.X + 10, bounds.Y + 10, -120000, false, false, false); ui.Paint();
         string visibleTags = string.Concat(ui.Canvas.Texts.Where(t => bounds.Contains(t.X, t.Y)).OrderBy(t => t.Y).ThenBy(t => t.X).Select(t => t.Value));
-        Check(visibleTags.Contains("Tag63…", StringComparison.Ordinal), "Final shortened tag is missing from the expanded preview");
+        Check(visibleTags.Contains(many.Tags[^1].Name, StringComparison.Ordinal), "Final long tag cannot be read in full in the expanded preview");
         Check(ui.View.PatternGalleryPreviewScroll == before && !ui.View.IsDirty, "Scrolling tags changed the graphic viewport or map content");
 
         ui.Key(27); Open(full);
@@ -61,7 +61,7 @@ internal static class PatternGalleryTagPreviewTests
         ui.Key(27); ui.View.ConfigurePatternGallery(directory); ui.Paint(); Settle(); Open(tagged);
         bounds = ui.View.PatternGalleryPreviewTagsBounds;
         Check(ui.Canvas.Texts.Where(t => bounds.Contains(t.X, t.Y)).Select(t => t.Value)
-            .SequenceEqual(["Exten…", "Desce…", "Corne…", "Beta", "Alpha"]),
+            .SequenceEqual(["Extended jump shape", "Descending pattern", "Corner", "Beta", "Alpha"]),
             "Expanded preview did not follow the persisted catalog order");
 
         void Open(PatternSnapshot pattern)

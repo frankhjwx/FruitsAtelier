@@ -25,7 +25,7 @@ public sealed partial class EditorView
         var tags = pattern.Tags.OrderBy(t => ranks.GetValueOrDefault(t.Name, int.MaxValue)).ToArray();
         var labels = tags.Select(t => t.Name).ToArray();
         var sizes = labels.Select(t => MathF.Ceiling(c.MeasureText(t, 10)) + 14).ToArray();
-        if (sizes.Sum() + Math.Max(0, sizes.Length - 1) * 4 > width)
+        if (!expanded && sizes.Sum() + Math.Max(0, sizes.Length - 1) * 4 > width)
         {
             labels = labels.Select(name =>
             {
