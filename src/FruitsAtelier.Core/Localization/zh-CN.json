@@ -1796,7 +1796,7 @@
   "gallery.folderCount": "{0} 个 pattern",
   "gallery.mergeInto": "合并到 {0}",
   "gallery.importInto": "导入到 {0}",
-  "gallery.importNewFolders": "导入为新文件夹",
+  "gallery.importNewFolders": "导入到新文件夹",
   "gallery.exportFolder": "导出文件夹",
   "gallery.defaultPermanent": "Default 永久保留，不能重命名或删除。",
   "gallery.renameFolder": "重命名文件夹",
@@ -1804,5 +1804,7 @@
   "gallery.moveTo": "移动到",
   "gallery.deleteFolderPrompt": "此文件夹包含 {0} 个 pattern，是否保留？",
   "gallery.keepPatterns": "保留 patterns 并移到 Default",
-  "gallery.deleteFolderPatterns": "删除文件夹及其中的 patterns"
+  "gallery.deleteFolderPatterns": "删除文件夹及其中的 patterns",
+  "gallery.importExistingFolders": "导入到已有文件夹",
+  "gallery.oneFile": "每次只能导入一个 pattern 文件。"
 }

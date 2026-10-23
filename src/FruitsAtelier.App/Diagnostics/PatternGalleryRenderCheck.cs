@@ -92,7 +92,22 @@ internal static class PatternGalleryRenderCheck
                 var defaultFolder = editor.PatternGalleryFolderBounds(PatternFolder.DefaultId);
                 Click(defaultFolder);
                 editor.BeginPatternImport(Path.Combine(gallery, "gallery.fap")); Paint("folder-import-destination");
+                Click(editor.PatternGalleryContextItemBounds(1)); Paint("folder-import-existing");
                 editor.KeyDown(27, false, false); Paint();
+                var dragCard = editor.PatternGalleryCardBounds(patterns[0].Id);
+                var dragFolder = editor.PatternGalleryFolderBounds(practiceFolder);
+                editor.PointerDown(dragCard.X + 15, dragCard.Y + 15, 0, false, false);
+                editor.PointerMove(dragFolder.X + 15, dragFolder.Y + 15, false, false); Paint("drag-to-category");
+                editor.PointerUp(dragFolder.X + 15, dragFolder.Y + 15, 0); Paint();
+                Wait(() => !editor.PatternGalleryNeedsRedraw, "drag to category");
+                if (!folderStore.LoadContents().Folders!.Single(f => f.Id == practiceFolder).PatternIds.Contains(patterns[0].Id))
+                    throw new InvalidOperationException("Category drag did not move the pattern.");
+                Click(dragFolder);
+                dragCard = editor.PatternGalleryCardBounds(patterns[0].Id);
+                editor.PointerDown(dragCard.X + 15, dragCard.Y + 15, 0, false, false);
+                editor.PointerMove(defaultFolder.X + 15, defaultFolder.Y + 15, false, false); Paint();
+                editor.PointerUp(defaultFolder.X + 15, defaultFolder.Y + 15, 0); Paint();
+                Wait(() => !editor.PatternGalleryNeedsRedraw, "drag back to Default"); Click(defaultFolder);
                 if (editor.PatternGallerySearchBounds.Y != editor.PatternGalleryTagsBounds.Y)
                     throw new InvalidOperationException("Search and Tags are not on the same row.");
                 Click(editor.PatternGalleryTagsBounds); Paint("tags-menu");
@@ -135,6 +150,14 @@ internal static class PatternGalleryRenderCheck
                 Click(longCard);
                 Wait(() => editor.PatternGalleryPreviewVisible && !editor.PatternGalleryNeedsRedraw, "open long preview");
                 Paint("popup");
+                var coveredResize = editor.OverviewTimelineResizeBounds;
+                var popupBounds = editor.PatternGalleryPopupBounds;
+                float coveredX = popupBounds.X + popupBounds.Width / 2, coveredY = coveredResize.Y + 4;
+                if (popupBounds.Contains(coveredX, coveredY))
+                {
+                    editor.PointerMove(coveredX, coveredY, false, false); Paint("popup-timeline-occlusion");
+                    if (editor.TimelinePanelResizeCursor) throw new InvalidOperationException("Popup exposes the covered timeline resize cursor.");
+                }
                 var preview = editor.PatternGalleryPreviewBounds;
                 editor.Wheel(preview.X + 30, preview.Y + 30, -600, false); Paint("popup-scrolled");
                 editor.PointerDown(preview.X + preview.Width / 2, preview.Y + 40, 0, false, false);
@@ -204,15 +227,16 @@ internal static class PatternGalleryRenderCheck
                 if (editor.PatternEditingActive || !map.ContentEquals(editor.Document)) throw new InvalidOperationException("Pattern edit return did not restore original map.");
                 shortCard = editor.PatternGalleryCardBounds(patterns[1].Id);
                 float contextX = shortCard.X + 20, contextY = shortCard.Y + 20;
-                editor.PointerDown(contextX, contextY, 2, false, false);
-                editor.PointerUp(contextX, contextY, 2); Paint("context-menu");
-                ClickContext(0);
+                Click(shortCard); Paint();
+                var titleBounds = editor.PatternGalleryPopupBounds;
+                Click(new(titleBounds.X + 12, titleBounds.Y + 8, titleBounds.Width - 56, 30));
                 editor.KeyDown('A', true, false);
                 foreach (char character in locale == "en" ? "Renamed pattern" : "\u91cd\u547d\u540d\u7684\u56fe\u6848") editor.TextInput(character);
                 Paint("rename"); editor.KeyDown(13, false, false);
                 Wait(() => !editor.PatternGalleryNeedsRedraw, "rename pattern");
                 if (new PatternGalleryStore(gallery).Load().Single(p => p.Id == patterns[1].Id).Name == patterns[1].Name)
                     throw new InvalidOperationException("Context rename did not persist.");
+                editor.KeyDown(27, false, false); Paint();
                 editor.PointerDown(contextX, contextY, 2, false, false);
                 editor.PointerUp(contextX, contextY, 2); Paint();
                 ClickContext(1);

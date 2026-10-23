@@ -1796,7 +1796,7 @@
   "gallery.folderCount": "{0} pola",
   "gallery.mergeInto": "Gabungkan ke {0}",
   "gallery.importInto": "Impor ke {0}",
-  "gallery.importNewFolders": "Impor sebagai folder baru",
+  "gallery.importNewFolders": "Impor ke folder baru",
   "gallery.exportFolder": "Ekspor folder",
   "gallery.defaultPermanent": "Default bersifat permanen dan tidak dapat diganti nama atau dihapus.",
   "gallery.renameFolder": "Ganti nama folder",
@@ -1804,5 +1804,7 @@
   "gallery.moveTo": "Pindahkan ke",
   "gallery.deleteFolderPrompt": "Folder ini berisi {0} pola. Simpan pola?",
   "gallery.keepPatterns": "Simpan pola di Default",
-  "gallery.deleteFolderPatterns": "Hapus folder dan pola"
+  "gallery.deleteFolderPatterns": "Hapus folder dan pola",
+  "gallery.importExistingFolders": "Impor ke folder yang ada",
+  "gallery.oneFile": "Impor satu arsip pola setiap kali."
 }

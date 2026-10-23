@@ -9,6 +9,8 @@ public sealed partial class EditorView
 {
     public Action<PatternSnapshot>? RequestPatternSource { get; set; }
     private bool galleryDragging, galleryDropRequested, galleryDropChoosing;
+    private Guid[] galleryDragIds = [];
+    private int galleryDragGalleryGeneration;
     private PatternSnapshot? galleryDraggedPattern;
     private MapDocument? galleryDragTarget;
     private EditorHistory? galleryDragHistory;
@@ -75,7 +77,7 @@ public sealed partial class EditorView
                 ShowGalleryPatternMenu(card.Id, x, y);
                 return true;
             }
-            SelectGalleryRange(card.Id, ctrl, shift);
+            if (ctrl || shift || !gallerySelection.Contains(card.Id)) SelectGalleryRange(card.Id, ctrl, shift);
             if (ctrl || shift)
             {
                 galleryPopupId = Guid.Empty;
@@ -102,25 +104,7 @@ public sealed partial class EditorView
         CancelPatternGalleryInteraction();
         if (!gallerySelection.Contains(id)) { gallerySelection.Clear(); gallerySelection.Add(id); gallerySelectionAnchor = id; }
         contextItems.Clear(); menu = -1;
-        contextItems.Add(new(L.Get("gallery.rename"), () =>
-        {
-            int generation = galleryGeneration;
-            RequestPatternName?.Invoke(L.Get("gallery.rename"), name =>
-            {
-                if (string.IsNullOrWhiteSpace(name) || generation != galleryGeneration
-                    || galleryIoTask is not null || galleryStore is not { } store) return;
-                StartGalleryIo(() =>
-                {
-                    store.Replace(pattern.WithName(name));
-                    return ReloadGallery(store, "", true);
-                });
-            });
-            if (PatternNameVisible)
-            {
-                patternNameText = pattern.Name;
-                SelectInput("gallery:name", patternNameText);
-            }
-        }, RequestPatternName is not null && gallerySelection.Count == 1));
+        contextItems.Add(new(L.Get("gallery.rename"), () => RenameGalleryPattern(pattern), RequestPatternName is not null && gallerySelection.Count == 1));
         contextItems.Add(new(L.Get("gallery.delete"), () =>
         {
             if (galleryIoTask is not null || galleryStore is not { } store) return;
@@ -136,6 +120,7 @@ public sealed partial class EditorView
             StartGalleryIo(() => { store.TransferPatterns(selectedIds, folder.Id, false); return ReloadGallery(store, "", true); });
         })).ToArray();
         contextItems.Add(new(L.Get("gallery.moveTo"), () => { }, destinations.Length > 0, Children: destinations));
+        contextItems.Add(new(L.Get("gallery.export"), () => RequestGalleryExport(selectedOnly: true), RequestPatternExport is not null));
         if (galleryClipboard.Length > 0)
             contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(galleryFolderId)));
         PositionGalleryMenu(x, y);
@@ -147,6 +132,19 @@ public sealed partial class EditorView
         contextBounds = new(Math.Clamp(x, 8, Math.Max(8, width - menuWidth - 8)),
             Math.Clamp(y, 8, Math.Max(8, height - ContextMenuHeight - 8)), menuWidth, ContextMenuHeight);
     }
+
+    private void RenameGalleryPattern(PatternSnapshot pattern)
+    {
+        if (!CanEditGalleryTags) return;
+        RequestGalleryText(L.Get("gallery.rename"), pattern.Name, name =>
+        {
+            if (string.IsNullOrWhiteSpace(name) || !CanEditGalleryTags || galleryStore is not { } store) return;
+            StartGalleryIo(() => { store.Replace(pattern.WithName(name)); return ReloadGallery(store, "", true); });
+        });
+    }
+
+    private Guid GalleryFolderDropTarget(float x, float y) => galleryCategoryListBounds.Contains(x, y)
+        ? galleryFolderCards.FirstOrDefault(f => f.Bounds.Contains(x, y)).Id : Guid.Empty;
 
     private void InvokeGalleryHit(float x, float y)
     {
@@ -176,7 +174,9 @@ public sealed partial class EditorView
         if (!galleryDragging && Math.Abs(x - galleryPressedX) + Math.Abs(y - galleryPressedY) > 6)
         {
             galleryPopupId = Guid.Empty;
-            if (!CanStartGalleryPlacement) { galleryPressedId = Guid.Empty; return true; }
+            if (!CanEditGalleryTags) { galleryPressedId = Guid.Empty; return true; }
+            galleryDragIds = galleryFilteredPatterns.Where(p => gallerySelection.Contains(p.Id)).Select(p => p.Id).ToArray();
+            galleryDragGalleryGeneration = galleryGeneration;
             galleryDraggedPattern = galleryPatterns.FirstOrDefault(p => p.Id == galleryPressedId);
             if (galleryDraggedPattern is null) { galleryPressedId = Guid.Empty; return true; }
             galleryDragging = true; galleryDragSpeed = false;
@@ -185,6 +185,8 @@ public sealed partial class EditorView
         }
         if (galleryDragging)
         {
+            if (galleryDragIds.Length != 1 || !plot.Contains(x, y) || !CanStartGalleryPlacement)
+            { galleryRequestedTime = double.NaN; return true; }
             var point = Transform.ToMap(x, y);
             galleryRequestedTime = Math.Max(0, SnapTiming().Snap(point.TimeMs, divisor));
             galleryRequestedX = point.X - 256;
@@ -207,7 +209,17 @@ public sealed partial class EditorView
         {
             PatternGalleryPointerMove(x, y);
             galleryPressedId = Guid.Empty;
-            if (!plot.Contains(x, y) || !CanStartGalleryPlacement)
+            Guid folder = GalleryFolderDropTarget(x, y);
+            if (folder != Guid.Empty)
+            {
+                var ids = galleryDragIds;
+                bool move = folder != galleryFolderId && CanEditGalleryTags && galleryGeneration == galleryDragGalleryGeneration;
+                CancelPatternGalleryInteraction();
+                if (move && galleryStore is { } store)
+                    StartGalleryIo(() => { store.TransferPatterns(ids, folder, false); return ReloadGallery(store, "", true); });
+                return true;
+            }
+            if (galleryDragIds.Length != 1 || !plot.Contains(x, y) || !CanStartGalleryPlacement)
             { CancelPatternGalleryInteraction(); return true; }
             galleryDropChoosing = true;
             contextItems.Clear(); menu = -1;
@@ -220,6 +232,7 @@ public sealed partial class EditorView
         {
             if (galleryGridBounds.Contains(x, y))
             {
+                SelectGalleryRange(galleryPressedId, false, false);
                 galleryPopupId = galleryPressedId;
                 galleryPreviewScroll = 0;
                 galleryPreviewTagsScroll = 0;
@@ -331,6 +344,7 @@ public sealed partial class EditorView
         if (galleryDropChoosing) contextItems.Clear();
         galleryPreviewPanning = galleryDragging = galleryDropRequested = galleryDropChoosing = false;
         galleryDraggedPattern = null; galleryDragTarget = null; galleryDragHistory = null;
+        galleryDragIds = [];
         galleryPlacement = null; galleryRequestedTime = galleryStartedTime = double.NaN;
         galleryPopupBounds = galleryLargePreviewBounds = default;
     }
@@ -338,7 +352,7 @@ public sealed partial class EditorView
     private void PumpGalleryPlacement()
     {
         if (galleryDropChoosing && contextItems.Count == 0) CancelPatternGalleryInteraction();
-        if (galleryDragging && (!PatternGalleryInputAvailable || !ReferenceEquals(galleryDragHistory, history)
+        if (galleryDragging && (!PatternGalleryInputAvailable || galleryDragGalleryGeneration != galleryGeneration || !ReferenceEquals(galleryDragHistory, history)
             || !ReferenceEquals(galleryDragConversion, convertedSnapshot))) CancelPatternGalleryInteraction();
         if (galleryPlacementTask is { IsCompleted: true } task)
         {
@@ -445,7 +459,12 @@ public sealed partial class EditorView
 
     private void DrawGalleryGhost(ICanvas c)
     {
-        if (!galleryDragging || galleryDropChoosing || !plot.Contains(mouseX, mouseY)) return;
+        if (galleryDragging && !galleryDropChoosing && GalleryFolderDropTarget(mouseX, mouseY) != Guid.Empty)
+        {
+            c.Text(L.Get("gallery.folderCount", galleryDragIds.Length), mouseX + 14, mouseY + 14, 11, Accent, 200);
+            return;
+        }
+        if (!galleryDragging || galleryDropChoosing || galleryDragIds.Length != 1 || !plot.Contains(mouseX, mouseY)) return;
         if (galleryPlacement?.Preview is not { } preview || galleryPlacement.Placement is not { } prepared
             || galleryPlacement.Time != galleryRequestedTime)
         {

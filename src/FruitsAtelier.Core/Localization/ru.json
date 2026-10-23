@@ -1796,7 +1796,7 @@
   "gallery.folderCount": "Паттернов: {0}",
   "gallery.mergeInto": "Объединить в {0}",
   "gallery.importInto": "Импорт в {0}",
-  "gallery.importNewFolders": "Импорт в новые папки",
+  "gallery.importNewFolders": "Импорт в новую папку",
   "gallery.exportFolder": "Экспорт папки",
   "gallery.defaultPermanent": "Папка Default постоянная: её нельзя переименовать или удалить.",
   "gallery.renameFolder": "Переименовать папку",
@@ -1804,5 +1804,7 @@
   "gallery.moveTo": "Переместить в",
   "gallery.deleteFolderPrompt": "В папке {0} паттернов. Сохранить их?",
   "gallery.keepPatterns": "Сохранить паттерны в Default",
-  "gallery.deleteFolderPatterns": "Удалить папку и паттерны"
+  "gallery.deleteFolderPatterns": "Удалить папку и паттерны",
+  "gallery.importExistingFolders": "Импорт в существующую папку",
+  "gallery.oneFile": "Импортируйте по одному архиву паттернов."
 }

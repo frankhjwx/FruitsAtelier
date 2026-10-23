@@ -25,6 +25,7 @@ public sealed partial class EditorView
     public Rect PreviewToggleBounds { get; private set; }
     public Rect PreviewResizeBounds { get; private set; }
     public bool PreviewResizeCursor => !TimeJumpVisible && !LibraryVisible && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible && !languageMenuOpen && menu < 0
+        && !PatternGalleryPopupContains(mouseX, mouseY) && !PatternGalleryWantsCapture
         && !TimingPageVisible && dockPressed is null && (drag == DragKind.PreviewResize || leftDockResizeBounds.Contains(mouseX, mouseY) || rightDockResizeBounds.Contains(mouseX, mouseY));
     public Rect LegacyConversionBounds { get; private set; }
     public double PreviewApproachRate => previewMod switch { 1 => Document.ApproachRate * .5, 2 => Math.Min(10, Document.ApproachRate * 1.4), _ => Document.ApproachRate };

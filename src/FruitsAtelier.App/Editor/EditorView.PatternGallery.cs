@@ -57,7 +57,7 @@ public sealed partial class EditorView
 
     public bool PatternGalleryWantsCapture => galleryPressedId != Guid.Empty || galleryPreviewPanning;
     public bool PatternGalleryNeedsRedraw => galleryTagReordering || GalleryTagAutosavePending || PatternEditingNeedsRedraw || PatternSourceNeedsRedraw || galleryIoTask is not null || galleryPreviewTask is not null
-        || galleryPlacementTask is not null || galleryDropTask is not null || galleryDragging && !galleryDropChoosing || galleryPendingDirectory is not null
+        || galleryPlacementTask is not null || galleryDropTask is not null || galleryDragging && !galleryDropChoosing || galleryPendingDirectory is not null || galleryPendingImportPath is not null
         || PatternGalleryAvailable && (GalleryFullPreviewMissing || galleryVisibleIds.Any(GalleryPreviewMissing));
     private bool GalleryPreviewMissing(Guid id) => id != Guid.Empty && !galleryPreviews.ContainsKey(id) && !galleryPreviewErrors.ContainsKey(id);
     private bool GalleryFullPreviewMissing => galleryPopupId != Guid.Empty && (galleryFullPreviewId != galleryPopupId || galleryFullPreview is null) && !galleryPreviewErrors.ContainsKey(galleryPopupId);
@@ -103,6 +103,7 @@ public sealed partial class EditorView
     }
 
     private void EnsurePatternGalleryLoaded() => galleryLoadRequested = true;
+    private string? galleryPendingImportPath;
 
     private void StartGalleryIo(Func<GalleryLoad> action)
     {
@@ -184,6 +185,8 @@ public sealed partial class EditorView
 
     private void PumpPatternGallery()
     {
+        if (galleryPendingImportPath is not null && (!HasEditorProject || LibraryVisible || !PanelVisible(DockPanel.PatternGallery)))
+            galleryPendingImportPath = null;
         if (galleryPendingDirectory is { } pending && !PatternEditingActive && !PatternEditingBusy && galleryIoTask is null)
             ConfigurePatternGallery(pending);
         if (PatternGalleryAvailable)
@@ -222,6 +225,11 @@ public sealed partial class EditorView
             { galleryPendingCut = null; galleryLoaded = true; StatusMessage = L.Get("gallery.failed", error.Message); CompleteGalleryTagAutosave(false, StatusMessage); }
         }
         PumpGalleryTagAutosave();
+        if (galleryPendingImportPath is { } importPath && galleryLoaded && galleryIoTask is null && PatternGalleryInputAvailable && galleryBounds.Width > 0)
+        {
+            galleryPendingImportPath = null;
+            ShowGalleryImportDestination(importPath);
+        }
         if (galleryLoadRequested && !galleryLoaded && galleryIoTask is null && !PatternNameVisible && galleryStore is { } store)
             StartGalleryIo(() => ReloadGallery(store, ""));
         if (galleryFullPreviewId != galleryPopupId || !PatternGalleryAvailable)
@@ -360,10 +368,11 @@ public sealed partial class EditorView
         galleryPopupBounds = new(left, top, popupWidth, popupHeight);
         c.Fill(new(left + 5, top + 5, popupWidth, popupHeight), 0x000000, 7, .35f);
         c.Fill(galleryPopupBounds, Background, 7); c.Stroke(galleryPopupBounds, Accent, 1, 7);
+        galleryPopupHitStart = hits.Count;
         c.Text(pattern.Name, left + 16, top + 14, 16, Foreground, popupWidth - 65, true);
+        hits.Add(new(new(left + 12, top + 8, popupWidth - 56, 30), () => RenameGalleryPattern(pattern), CanEditGalleryTags && RequestPatternName is not null));
         c.Text(L.Get("gallery.sourceSummary", pattern.Source.Artist, pattern.Source.Title, pattern.Source.Creator, pattern.Source.Difficulty),
             left + 16, top + 44, 11, Muted, popupWidth - 32);
-        galleryPopupHitStart = hits.Count;
         Button(c, new(left + popupWidth - 36, top + 8, 28, 28), "×", () => galleryPopupId = Guid.Empty);
         string editTags = L.Get("gallery.editTags");
         float editTagsWidth = MathF.Ceiling(c.MeasureText(editTags, 10)) + 14;

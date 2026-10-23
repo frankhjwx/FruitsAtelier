@@ -135,7 +135,7 @@ internal static class PatternFolderUiTests
         Console.WriteLine($"Gallery zoom/pointer ({language}): {watch.Elapsed.TotalMilliseconds:F2} ms, {GC.GetAllocatedBytesForCurrentThread() - allocated} bytes / 100 interactions");
         Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Gallery organization changed map content");
         string package = Path.Combine(directory, "Legacy.fap"); PatternArchive.WriteFile([patterns[0]], package);
-        ui.View.BeginPatternImport(package); ui.Paint(); ui.ClickText(L.Get("gallery.importInto", "Default")); Settle();
+        ui.View.BeginPatternImport(package); ui.Paint(); ui.ClickText(L.Get("gallery.importExistingFolders")); ui.ClickObjectAction("Default"); Settle();
         Check(store.LoadContents().Folders!.Single(f => f.Id == PatternFolder.DefaultId).PatternIds.Count == 25, "Explicit import target was ignored");
         ui.View.BeginPatternImport(package); ui.Paint(); ui.ClickText(L.Get("gallery.importNewFolders")); Settle();
         Check(store.LoadContents().Folders!.Any(f => f.Name == "Legacy"), "New-folder import was ignored");

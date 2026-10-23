@@ -1796,7 +1796,7 @@
   "gallery.folderCount": "Wzory: {0}",
   "gallery.mergeInto": "Scal do {0}",
   "gallery.importInto": "Importuj do {0}",
-  "gallery.importNewFolders": "Importuj jako nowe foldery",
+  "gallery.importNewFolders": "Importuj do nowego folderu",
   "gallery.exportFolder": "Eksportuj folder",
   "gallery.defaultPermanent": "Folder Default jest stały i nie można zmienić jego nazwy ani go usunąć.",
   "gallery.renameFolder": "Zmień nazwę folderu",
@@ -1804,5 +1804,7 @@
   "gallery.moveTo": "Przenieś do",
   "gallery.deleteFolderPrompt": "Ten folder zawiera {0} wzorów. Zachować je?",
   "gallery.keepPatterns": "Zachowaj wzory w Default",
-  "gallery.deleteFolderPatterns": "Usuń folder i wzory"
+  "gallery.deleteFolderPatterns": "Usuń folder i wzory",
+  "gallery.importExistingFolders": "Importuj do istniejących folderów",
+  "gallery.oneFile": "Importuj po jednym archiwum wzorów."
 }

@@ -75,6 +75,8 @@ public sealed partial class EditorView
             if (row.Y >= galleryCategoryListBounds.Bottom) break;
             galleryFolderCards.Add((folder.Id, row));
             if (folder.Id == galleryFolderId) c.Fill(row, Accent, 3, .16f);
+            if (galleryDragging && folder.Id != galleryFolderId && row.Contains(mouseX, mouseY))
+            { c.Fill(row, Accent, 3, .28f); c.Stroke(row, Accent, 2, 3); }
             if (galleryFolderSelection.Contains(folder.Id)) c.Stroke(row, Accent, radius: 3);
             c.Text(folder.Name, row.X + 5, row.Y + 5, 12, Foreground, row.Width - 10);
             c.Text(L.Get("gallery.folderCount", folder.PatternIds.Count), row.X + 5, row.Y + 25, 10, Muted, row.Width - 10);
@@ -151,12 +153,13 @@ public sealed partial class EditorView
         }, "gallery.mergeInto", ShowGalleryMergeFolders);
     }
 
-    private void ShowGalleryImportDestination(string path, int page = 0)
+    private void ShowGalleryImportDestination(string path)
     {
         if (galleryStore is null || galleryIoTask is not null) return;
-        ShowGalleryFolderChoices(galleryFolders, page, folder => ImportGalleryInto(path, folder.Id), "gallery.importInto",
-            next => ShowGalleryImportDestination(path, next));
-        contextItems.Insert(0, new(L.Get("gallery.importNewFolders"), () => ImportGalleryInto(path, null), Active: true));
+        contextItems.Clear(); menu = -1;
+        contextItems.Add(new(L.Get("gallery.importNewFolders"), () => ImportGalleryInto(path, null), Active: true));
+        contextItems.Add(new(L.Get("gallery.importExistingFolders"), () => { }, Children:
+            galleryFolders.Select(folder => new ContextItem(folder.Name, () => ImportGalleryInto(path, folder.Id))).ToArray()));
         PositionGalleryMenu(galleryBounds.X, galleryBounds.Y + 64);
     }
 

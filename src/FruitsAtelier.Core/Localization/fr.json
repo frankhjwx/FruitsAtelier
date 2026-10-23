@@ -1796,7 +1796,7 @@
   "gallery.folderCount": "{0} motifs",
   "gallery.mergeInto": "Fusionner dans {0}",
   "gallery.importInto": "Importer dans {0}",
-  "gallery.importNewFolders": "Importer dans de nouveaux dossiers",
+  "gallery.importNewFolders": "Importer dans un nouveau dossier",
   "gallery.exportFolder": "Exporter le dossier",
   "gallery.defaultPermanent": "Default est permanent et ne peut pas être renommé ni supprimé.",
   "gallery.renameFolder": "Renommer le dossier",
@@ -1804,5 +1804,7 @@
   "gallery.moveTo": "Déplacer vers",
   "gallery.deleteFolderPrompt": "Ce dossier contient {0} motifs. Les conserver ?",
   "gallery.keepPatterns": "Conserver les motifs dans Default",
-  "gallery.deleteFolderPatterns": "Supprimer le dossier et les motifs"
+  "gallery.deleteFolderPatterns": "Supprimer le dossier et les motifs",
+  "gallery.importExistingFolders": "Importer dans un dossier existant",
+  "gallery.oneFile": "Importez une archive de motifs à la fois."
 }

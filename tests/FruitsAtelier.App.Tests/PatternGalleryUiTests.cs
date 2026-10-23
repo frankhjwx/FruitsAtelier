@@ -182,6 +182,7 @@ internal static class PatternGalleryUiTests
             PatternGalleryOrganizationTests.Run();
             PatternGalleryTagPreviewTests.Run();
             PatternFolderUiTests.Run();
+            PatternGalleryInteractionTests.Run();
         }
         finally { Directory.Delete(directory, true); }
     }
@@ -266,6 +267,19 @@ internal static class PatternGalleryUiTests
         Check(preferenceSaves == 0, "Blank popup space activated a covered canvas button");
 
         var preview = ui.View.PatternGalleryPreviewBounds;
+        foreach (var resize in new[] { ui.View.ObjectTimelineResizeBounds, ui.View.OverviewTimelineResizeBounds })
+        {
+            float resizeX = Math.Max(popup.X + 8, resize.X + 8), resizeY = resize.Y + 4;
+            if (!popup.Contains(resizeX, resizeY) || !resize.Contains(resizeX, resizeY)) continue;
+            float upper = ui.View.LibrarySettings.ObjectTimelineHeight, lower = ui.View.LibrarySettings.OverviewTimelineHeight;
+            ui.View.PointerMove(resizeX, resizeY, false, false); ui.Paint();
+            Check(!ui.View.TimelinePanelResizeCursor && !ui.View.TimelineResizeCursor, "Covered timeline still exposes resize cursor");
+            ui.View.PointerDown(resizeX, resizeY, 0, false, false);
+            ui.View.PointerMove(resizeX, resizeY + 24, false, false); ui.Paint();
+            ui.View.PointerUp(resizeX, resizeY + 24, 0); ui.Paint();
+            Check(ui.View.LibrarySettings.ObjectTimelineHeight == upper && ui.View.LibrarySettings.OverviewTimelineHeight == lower,
+                "Popup drag resized a covered timeline");
+        }
         x = preview.X + preview.Width / 2; y = preview.Y + preview.Height / 2;
         double start = ui.View.ViewStartMs;
         int dim = ui.View.LibrarySettings.MappingCanvasBackgroundDim;

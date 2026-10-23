@@ -1796,7 +1796,7 @@
   "gallery.folderCount": "{0} แพตเทิร์น",
   "gallery.mergeInto": "รวมไปยัง {0}",
   "gallery.importInto": "นำเข้าไปยัง {0}",
-  "gallery.importNewFolders": "นำเข้าเป็นโฟลเดอร์ใหม่",
+  "gallery.importNewFolders": "นำเข้าโฟลเดอร์ใหม่",
   "gallery.exportFolder": "ส่งออกโฟลเดอร์",
   "gallery.defaultPermanent": "Default เป็นโฟลเดอร์ถาวร ไม่สามารถเปลี่ยนชื่อหรือลบได้",
   "gallery.renameFolder": "เปลี่ยนชื่อโฟลเดอร์",
@@ -1804,5 +1804,7 @@
   "gallery.moveTo": "ย้ายไปที่",
   "gallery.deleteFolderPrompt": "โฟลเดอร์นี้มี {0} แพตเทิร์น ต้องการเก็บไว้หรือไม่?",
   "gallery.keepPatterns": "เก็บแพตเทิร์นไว้ใน Default",
-  "gallery.deleteFolderPatterns": "ลบโฟลเดอร์และแพตเทิร์น"
+  "gallery.deleteFolderPatterns": "ลบโฟลเดอร์และแพตเทิร์น",
+  "gallery.importExistingFolders": "นำเข้าโฟลเดอร์ที่มีอยู่",
+  "gallery.oneFile": "นำเข้าไฟล์แพตเทิร์นครั้งละหนึ่งไฟล์"
 }

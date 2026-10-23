@@ -1796,7 +1796,7 @@
   "gallery.folderCount": "{0} patterns",
   "gallery.mergeInto": "Merge into {0}",
   "gallery.importInto": "Import into {0}",
-  "gallery.importNewFolders": "Import as new folders",
+  "gallery.importNewFolders": "Import into New Folder",
   "gallery.exportFolder": "Export folder",
   "gallery.defaultPermanent": "Default is permanent and cannot be renamed or removed.",
   "gallery.renameFolder": "Rename Folder",
@@ -1804,5 +1804,7 @@
   "gallery.moveTo": "Move to",
   "gallery.deleteFolderPrompt": "Patterns in this folder: {0}. Keep them?",
   "gallery.keepPatterns": "Keep patterns in Default",
-  "gallery.deleteFolderPatterns": "Delete folder and patterns"
+  "gallery.deleteFolderPatterns": "Delete folder and patterns",
+  "gallery.importExistingFolders": "Import into existing folders",
+  "gallery.oneFile": "Import one pattern archive at a time."
 }

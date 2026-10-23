@@ -131,6 +131,8 @@ Library-style search, multi-tag filtering, tag creation/colour/name edits and pe
 detail-page editing, single/multiple-object context capture and source navigation while retaining unsaved maps.
 It also checks range selection across offscreen cards, category switching and merging,
 cross-folder clipboard shortcuts, Move to submenus with scrolling and multi-selection,
+single/multiple-card category dragging, preview-title rename, selection-only context exports,
+external FAP drops and the new/existing-folder import submenu,
 conditional folder menus, folder rename/deletion with keep/delete/cancel choices,
 import destinations, 50% minimum card zoom, two-column maximum sizing and geometry reuse.
 `FruitsAtelier.App.exe --render-check --pattern-gallery-render-check` checks the
@@ -140,6 +142,8 @@ English and Chinese at compact/wide sizes and 96/144 DPI, including warm raster
 cache reuse, the Category sidebar and divider, folder selection/merge/import menus,
 50% cards, enlarged cards filling two columns in a wide dock, Move to submenus,
 and nonempty folder deletion confirmations.
+Gallery popup occlusion checks cover timeline resize cursors, hover feedback and
+drag gestures; timeline layout checks retain normal resizing outside the popup.
 Captures are written under `artifacts/tests/pattern-gallery-native`.
 
 `App.Tests --new-difficulty-check` checks independent complete copies, named

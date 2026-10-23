@@ -1796,7 +1796,7 @@
   "gallery.folderCount": "{0} patronen",
   "gallery.mergeInto": "Samenvoegen in {0}",
   "gallery.importInto": "Importeren in {0}",
-  "gallery.importNewFolders": "Importeren als nieuwe mappen",
+  "gallery.importNewFolders": "Importeren in nieuwe map",
   "gallery.exportFolder": "Map exporteren",
   "gallery.defaultPermanent": "Default is permanent en kan niet worden hernoemd of verwijderd.",
   "gallery.renameFolder": "Map hernoemen",
@@ -1804,5 +1804,7 @@
   "gallery.moveTo": "Verplaatsen naar",
   "gallery.deleteFolderPrompt": "Deze map bevat {0} patronen. Bewaren?",
   "gallery.keepPatterns": "Patronen in Default bewaren",
-  "gallery.deleteFolderPatterns": "Map en patronen verwijderen"
+  "gallery.deleteFolderPatterns": "Map en patronen verwijderen",
+  "gallery.importExistingFolders": "Importeren in bestaande mappen",
+  "gallery.oneFile": "Importeer één patroonarchief tegelijk."
 }

@@ -17,6 +17,7 @@ public sealed partial class EditorView
     private bool resizingObjectTimeline;
     private float timelineResizeY, timelineResizeHeight, timelineResizeOriginal;
     public bool TimelinePanelResizeCursor => DockContentInputAvailable && !librarySettingsOpen && menu < 0 && contextItems.Count == 0
+        && !PatternGalleryPopupContains(mouseX, mouseY) && !PatternGalleryWantsCapture
         && (drag == DragKind.TimelinePanelResize || drag == DragKind.None
             && (ObjectTimelineResizeBounds.Contains(mouseX, mouseY) || OverviewTimelineResizeBounds.Contains(mouseX, mouseY)));
 
@@ -59,7 +60,7 @@ public sealed partial class EditorView
         Draw(OverviewTimelineResizeBounds);
         void Draw(Rect bounds)
         {
-            bool hover = bounds.Contains(mouseX, mouseY);
+            bool hover = TimelinePanelResizeCursor && bounds.Contains(mouseX, mouseY);
             c.Line(bounds.X, bounds.Y + 4, bounds.Right, bounds.Y + 4, hover ? Accent : Grid, hover ? 2 : 1);
             c.Line(bounds.X + bounds.Width / 2 - 16, bounds.Y + 4, bounds.X + bounds.Width / 2 + 16, bounds.Y + 4, hover ? Accent : Muted, 2);
         }

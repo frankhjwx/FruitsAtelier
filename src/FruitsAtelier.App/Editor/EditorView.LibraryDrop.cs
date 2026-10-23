@@ -13,9 +13,15 @@ public sealed partial class EditorView
         && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible && !SongSetupVisible;
 
     public bool CanDropBackground => !LibraryVisible && CanDropAudio;
+    public bool CanDropPatterns => HasEditorProject && !LibraryVisible && !TimingPageVisible && CanDropAudio
+        && !PatternNameVisible && !GalleryTagsVisible && !PatternEditingActive && !PatternEditingBusy && !WantsCapture
+        && (galleryStore is not null || !string.IsNullOrWhiteSpace(LibrarySettings.Workspace))
+        && galleryPendingImportPath is null && galleryIoTask is null;
+    public static bool IsPatternArchive(string path) => Path.GetExtension(path).Equals(".fap", StringComparison.OrdinalIgnoreCase);
     public static bool IsBackgroundImage(string path) => Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".bmp";
 
     public bool CanDropFile(string path) => CanDropBackground && IsBackgroundImage(path)
+        || CanDropPatterns && IsPatternArchive(path)
         || CanDropAudio && Platform.FadArchive.IsPackage(path)
         || CanDropAudio && Platform.FazArchive.IsPackage(path)
         || CanDropAudio && Platform.LibraryOperations.IsProjectAudio(path)
@@ -28,6 +34,17 @@ public sealed partial class EditorView
     public void DropLibraryFiles(IEnumerable<string> paths)
     {
         var files = paths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (CanDropPatterns && files.Any(IsPatternArchive))
+        {
+            if (files.Length != 1) { ShowError(FruitsAtelier.Localization.Strings.Get("gallery.oneFile")); return; }
+            CancelInteraction();
+            AddDockPanel(DockPanel.PatternGallery, false);
+            var group = PanelGroup(DockPanel.PatternGallery);
+            group.Active = DockPanel.PatternGallery; group.Collapsed = false;
+            EnsurePatternGalleryLoaded();
+            galleryPendingImportPath = files[0];
+            return;
+        }
         if (CanDropAudio && files.Any(Platform.FadArchive.IsPackage))
         {
             if (files.Length != 1) { ShowError(FruitsAtelier.Localization.Strings.Get("faz.oneFile")); return; }

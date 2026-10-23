@@ -1796,7 +1796,7 @@
   "gallery.folderCount": "{0} pattern",
   "gallery.mergeInto": "Pagsamahin sa {0}",
   "gallery.importInto": "I-import sa {0}",
-  "gallery.importNewFolders": "I-import bilang mga bagong folder",
+  "gallery.importNewFolders": "I-import sa bagong folder",
   "gallery.exportFolder": "I-export ang folder",
   "gallery.defaultPermanent": "Permanente ang Default at hindi maaaring palitan ang pangalan o alisin.",
   "gallery.renameFolder": "Palitan ang pangalan ng folder",
@@ -1804,5 +1804,7 @@
   "gallery.moveTo": "Ilipat sa",
   "gallery.deleteFolderPrompt": "May {0} pattern ang folder na ito. Panatilihin?",
   "gallery.keepPatterns": "Panatilihin ang mga pattern sa Default",
-  "gallery.deleteFolderPatterns": "Tanggalin ang folder at mga pattern"
+  "gallery.deleteFolderPatterns": "Tanggalin ang folder at mga pattern",
+  "gallery.importExistingFolders": "I-import sa kasalukuyang mga folder",
+  "gallery.oneFile": "Mag-import ng isang pattern archive sa bawat pagkakataon."
 }

@@ -1796,7 +1796,7 @@
   "gallery.folderCount": "{0} patrones",
   "gallery.mergeInto": "Combinar en {0}",
   "gallery.importInto": "Importar en {0}",
-  "gallery.importNewFolders": "Importar como carpetas nuevas",
+  "gallery.importNewFolders": "Importar en carpeta nueva",
   "gallery.exportFolder": "Exportar carpeta",
   "gallery.defaultPermanent": "Default es permanente y no se puede renombrar ni eliminar.",
   "gallery.renameFolder": "Renombrar carpeta",
@@ -1804,5 +1804,7 @@
   "gallery.moveTo": "Mover a",
   "gallery.deleteFolderPrompt": "Esta carpeta contiene {0} patrones. ¿Conservarlos?",
   "gallery.keepPatterns": "Conservar patrones en Default",
-  "gallery.deleteFolderPatterns": "Eliminar carpeta y patrones"
+  "gallery.deleteFolderPatterns": "Eliminar carpeta y patrones",
+  "gallery.importExistingFolders": "Importar en carpetas existentes",
+  "gallery.oneFile": "Importa un archivo de patrones cada vez."
 }

@@ -24,7 +24,8 @@ maximum; zooming out stops when the complete pattern fits. Zooming keeps the
 time under the pointer in place where the preview bounds allow.
 Previews start at the bottom and center the actual pattern horizontally, independent
 of its original playfield position. This alignment does not change saved coordinates.
-Right-click a card to rename or delete the saved pattern. Renaming retains its
+Click the title in the enlarged preview to rename the pattern, or use the card's
+right-click menu to rename or delete it. The rename field starts with the current name. Renaming retains its
 identity, source information and geometry; deleting removes it from the local gallery.
 
 The toolbar contains search and **Tag Filters**; then **Save selection**,
@@ -59,6 +60,9 @@ remove selections that are no longer visible in the filtered list.
 Right-click selected cards and open **Move to** to choose a destination category.
 The submenu opens on hover or click and lists every other category; scroll within
 it when the list exceeds the available height. Moving retains each pattern's identity.
+You can also drag a selected card onto a category in the left sidebar. All selected
+patterns move together on release; the destination is highlighted while hovering.
+Escape, dropping in blank space, or dropping into the current folder leaves the contents unchanged.
 Use Ctrl+C / Ctrl+X, open a destination folder, then Ctrl+V to copy or move selected
 patterns with the keyboard; right-click an empty area or a folder for Paste.
 Copies have independent identities. Cutting
@@ -111,20 +115,29 @@ adjustments remain editable. Source artist, title, difficulty, creator and start
 time are retained alongside the authoring data, AR and timing context.
 
 **Export** offers selected patterns, the current folder, or the complete gallery.
+The card context menu's **Export** shares only the selected patterns, including multiple selections.
 The category context menu exports the selected folders.
 Whole-gallery export includes unassigned tags and patterns hidden by filters.
 Folders, including empty folders, travel inside the `.fap` package. A flat export
 containing only Default's patterns receives a folder named after the export filename;
 explicit folder exports preserve the folder name.
 
-After choosing an import file, select **Import as new folders** (the default choice)
-or an existing destination, including Default. New folders preserve package names;
+After choosing an import file, select **Import into New Folder** (the default choice)
+or open **Import into existing folders** and choose a category from its submenu,
+including Default. Dropping a `.fap` file from the file manager into an open editor
+opens the gallery and the same destination menu. Import one package at a time.
+New folders preserve package names;
 conflicts are resolved case-insensitively by appending ` (1)`, ` (2)`, and so on.
 Packages without folders use the import filename. Choosing an existing destination
 places all imported patterns in that folder. Repeated imports create independent
 copies when pattern IDs already exist; local patterns are never overwritten.
 Packages contain authoring data, not audio, backgrounds,
 skins or local source paths. Custom sample references do not bundle sample files.
+
+Pattern packages have a dedicated orange document icon. Windows registers the icon
+for `.fap` on normal application startup; the macOS bundle declares the same file type
+and icon. The editable master is `assets/branding/fap-file.svg`; regenerate its PNG,
+ICO and ICNS with `node scripts/Generate-FazIcon.cjs fap-file` with `sharp` on `NODE_PATH`.
 
 The local gallery lives in `Patterns/gallery.fap` under the configured workspace.
 Local source-file hints are stored separately in `Patterns/sources.local.json`.
