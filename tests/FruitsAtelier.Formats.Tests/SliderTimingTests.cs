@@ -68,15 +68,27 @@ internal static class SliderTimingTests
         var document = Map();
         AddTrack(document, 1000, 2000, 0, 400);
         AddImported(document, 1100, 100, 1);
+        AddImported(document, 1300, 150, 2);
         var result = OsuBeatmapWriter.Serialize(document, false);
         var raw = RawMap.Parse(result.Text);
         Near(1000, raw.Duration(1000, 0));
         Near(1000, raw.Duration(1000, 1));
         Check(raw.Timing.Where(p => p.Time > 1000 && p.Time <= 1001).Count() == 0,
             "SV restoration entered the slider head's next-millisecond window.");
-        Near(1, raw.State(1002).Sv);
+        Check(raw.Timing.Count == 3 && raw.Timing[^1].Time == 1100,
+            "Restore must occur at the first imported slider that needs the original SV.");
+        Near(1, raw.State(1100).Sv);
         Near(500, raw.Duration(1100, 0)); Near(500, raw.Duration(1100, 1));
+        Near(1500, raw.Duration(1300, 0)); Near(1500, raw.Duration(1300, 1));
         Check(raw.Timing.All(p => p.Time == Math.Truncate(p.Time)), "Writer introduced a fractional timing offset.");
+        document.ImportedSliders[0].TimeMs = 1100.75;
+        var fractional = OsuBeatmapWriter.Serialize(document, false);
+        var quantized = RawMap.Parse(fractional.Text);
+        Check(quantized.Timing[^1].Time == 1100, "Restoration must share the exported integer head.");
+        Near(500, quantized.Duration(1100, 0)); Near(500, quantized.Duration(1100, 1));
+        Near(1000, quantized.Duration(1000, 0)); Near(1000, quantized.Duration(1000, 1));
+        Check(fractional.ObjectSequenceMatches && fractional.MaxConvertedTimeErrorMs < 1,
+            "Fractional imported head changed the exported Catch stream beyond time quantization.");
     }
 
     public static void IsolatedEditedSliderDoesNotRestoreUnusedSv()
@@ -149,9 +161,9 @@ internal static class SliderTimingTests
         var raw = RawMap.Parse(OsuBeatmapWriter.Serialize(document, false).Text);
         Near(1000, raw.Duration(1000, 1)); Near(1000, raw.Duration(1010, 1));
         Near(500, raw.Duration(1100, 0)); Near(500, raw.Duration(1100, 1));
-        Check(raw.Timing.Count == 3 && raw.Timing[^1].Time == 1012,
+        Check(raw.Timing.Count == 3 && raw.Timing[^1].Time == 1100,
             "Shared SV must continue through generated heads and restore only for the following imported slider.");
-        Near(1, raw.State(1012).Sv);
+        Near(1, raw.State(1100).Sv);
     }
 
     public static void FollowingGeneratedHeadReestablishesOriginalSv()
@@ -209,9 +221,13 @@ internal static class SliderTimingTests
             var metadata = raw.Timing.Single(p => p.Time == boundary);
             Check(metadata.Fields[3] == "3" && metadata.Fields[4] == "7" && metadata.Fields[5] == "35"
                 && metadata.Fields[7] == "1", "Close SV normalization moved or changed sample/effect metadata.");
-            var restore = raw.Timing.Single(p => p.Time == 1002);
+            var restore = raw.Timing.Single(p => p.Time == 1100);
             Check(restore.BeatLength.Equals(restoredBeatLength), "Restore must use the state after the nearby boundary.");
             Check(result.ObjectSequenceMatches && document.ContentEquals(before), "Normalization changed Catch objects or source content.");
+            document.ImportedSliders.Clear();
+            var isolated = RawMap.Parse(OsuBeatmapWriter.Serialize(document, false).Text);
+            Check(isolated.Timing.All(p => p.Time <= boundary), "Deferred SV without a dependent slider introduced a restoration.");
+            Near(1000, isolated.Duration(1000, 0)); Near(1000, isolated.Duration(1000, 1));
         }
     }
 
@@ -272,9 +288,9 @@ internal static class SliderTimingTests
         AddImported(document, 1200, 100, 1);
         var raw = RawMap.Parse(OsuBeatmapWriter.Serialize(document, false).Text);
         Near(1000, raw.Duration(1000, 0)); Near(1000, raw.Duration(1000, 1));
-        var restored = raw.Timing.Single(p => p.Time == 1002);
+        var restored = raw.Timing.Single(p => p.Time == 1200);
         Check(double.IsNaN(restored.BeatLength) && !restored.Red, "Original NaN state was not restored.");
-        Near(1, raw.State(1002).Sv);
+        Near(1, raw.State(1200).Sv);
         Near(500, raw.Duration(1200, 0)); Near(500, raw.Duration(1200, 1));
 
         var sharedHead = Map();

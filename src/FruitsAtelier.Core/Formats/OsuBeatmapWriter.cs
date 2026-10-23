@@ -396,26 +396,26 @@ public static class OsuBeatmapWriter
                 throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(preceding.TimeMs), Number(start)));
             var template = TemplateAt(start, inclusive: true);
             // Equal-SV heads can share a window, but its restoration must clear every head in the chain.
-            double restoreTime = start + 2;
+            double safeWindowEnd = start + 2;
             int following = LowerBound(heads, Math.BitIncrement(start));
             for (int i = following; i < orderedSliders.Length; i++)
             {
                 var nearby = orderedSliders[i];
                 double head = heads[i];
-                if (head >= restoreTime) break;
+                if (head >= safeWindowEnd) break;
                 if (Math.Abs(nearby.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9)
                     throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(head), Number(start)));
-                restoreTime = head + 2;
+                safeWindowEnd = head + 2;
             }
-            int nextTiming = LowerBound(originalTimes, restoreTime), nextHead = LowerBound(heads, restoreTime);
+            int nextTiming = LowerBound(originalTimes, safeWindowEnd), nextHead = LowerBound(heads, safeWindowEnd);
             double nextBoundary = Math.Min(nextTiming < originalTimes.Length ? originalTimes[nextTiming] : double.PositiveInfinity,
                 nextHead < heads.Length ? heads[nextHead] : double.PositiveInfinity);
             double nextImported = document.ImportedSliders.Where(s => s.TimeMs > start && s.TimeMs < nextBoundary)
-                .Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min();
+                .Select(s => s.OriginalLine is null ? QuantizeTime(s.TimeMs) : s.TimeMs)
+                .DefaultIfEmpty(double.PositiveInfinity).Min();
             int firstBoundary = LowerBound(originalTimes, Math.BitIncrement(start));
             var closeBoundaries = original.Skip(firstBoundary).Take(nextTiming - firstBoundary)
                 .GroupBy(t => t.TimeMs).ToArray();
-            bool normalizedBoundary = false;
             foreach (var boundary in closeBoundaries)
             {
                 var state = originalLookup.At(boundary.Key);
@@ -427,13 +427,12 @@ public static class OsuBeatmapWriter
                 foreach (var green in greens) green.BeatLengthMs = -100 / first.SliderVelocityMultiplier;
                 if (greens.Length == 0)
                     OverrideInherited(emitted.TimingPoints, boundary.First(), boundary.Key, -100 / first.SliderVelocityMultiplier);
-                normalizedBoundary = true;
             }
-            var restoreState = originalLookup.At(Math.BitDecrement(restoreTime));
+            double restoreTime = nextImported;
+            var restoreState = originalLookup.At(double.IsFinite(restoreTime) ? restoreTime : safeWindowEnd);
             bool restoreDiffers = Math.Abs(restoreState.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9;
-            bool needsRestore = restoreDiffers && (normalizedBoundary || double.IsFinite(nextImported))
-                && (nextTiming == originalTimes.Length || originalTimes[nextTiming] != restoreTime);
-            if (needsRestore && restoreTime > int.MaxValue)
+            bool needsRestore = double.IsFinite(restoreTime) && restoreDiffers;
+            if (needsRestore && (restoreTime < safeWindowEnd || restoreTime > int.MaxValue))
                 throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(restoreTime), Number(start)));
             if (changesSv)
                 OverrideInherited(emitted.TimingPoints, template, start,
