@@ -1789,5 +1789,16 @@
   "gallery.saveReturn": "Сохранить и вернуться",
   "gallery.discardReturn": "Отменить и вернуться",
   "gallery.returnOriginal": "Вернуться к предыдущей карте",
-  "gallery.finishEditing": "Сначала сохраните или отмените изменения текущего паттерна."
+  "gallery.finishEditing": "Сначала сохраните или отмените изменения текущего паттерна.",
+  "gallery.folders": "Папки",
+  "gallery.newFolder": "Новая папка",
+  "gallery.zoom": "{0:0}%",
+  "gallery.mergeFolders": "Объединить папки",
+  "gallery.folderCount": "Паттернов: {0}",
+  "gallery.openFolder": "Открыть папку",
+  "gallery.mergeInto": "Объединить в {0}",
+  "gallery.importInto": "Импорт в {0}",
+  "gallery.importNewFolders": "Импорт в новые папки",
+  "gallery.exportFolder": "Экспорт папки",
+  "gallery.defaultPermanent": "Папка Default постоянная: её нельзя переименовать или удалить."
 }

@@ -120,7 +120,9 @@ internal static class PatternGalleryOrganizationTests
         int exports = 0;
         ui.View.RequestPatternExport = selected => { Check(!selected, "Export still requests selected-only output"); exports++; };
         ui.ClickText(L.Get("gallery.export"));
-        Check(exports == 1 && !ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.exportSelected")), "Export did not directly export the gallery");
+        Check(exports == 0 && ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.exportSelected")), "Export does not offer selection and folder scopes");
+        ui.ClickText(L.Get("gallery.exportAll"));
+        Check(exports == 1, "Whole-gallery export did not request the complete package");
 
         Open(jump);
         var card = ui.View.PatternGalleryCardBounds(jump.Id);
@@ -129,6 +131,10 @@ internal static class PatternGalleryOrganizationTests
         Check(ui.Canvas.Texts.Any(t => t.Value == "Studio Fruit - Snowlight (Mapper) [Expert]")
             && !ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.exportSelected")), "Detail footer does not match requested layout");
         ui.ClickText(L.Get("gallery.editPattern"));
+        ui.Key('A', ctrl: true);
+        Check(ui.View.SelectedObjectIds.Count == ui.View.Document.Fruits.Count + ui.View.Document.Tracks.Count
+            + ui.View.Document.ImportedSliders.Count + ui.View.Document.BananaShowers.Count,
+            "Entering pattern editing retained gallery shortcut focus");
         Check(ui.View.PatternEditingActive, "Edit Pattern button did not enter editing");
         ui.View.DiscardPatternEditing(); ui.Paint();
         Open(jump);

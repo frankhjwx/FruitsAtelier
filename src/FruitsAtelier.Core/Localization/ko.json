@@ -1789,5 +1789,16 @@
   "gallery.saveReturn": "저장 후 돌아가기",
   "gallery.discardReturn": "변경 취소 후 돌아가기",
   "gallery.returnOriginal": "이전 비트맵으로 돌아가기",
-  "gallery.finishEditing": "현재 패턴을 먼저 저장하거나 변경 사항을 버리세요."
+  "gallery.finishEditing": "현재 패턴을 먼저 저장하거나 변경 사항을 버리세요.",
+  "gallery.folders": "폴더",
+  "gallery.newFolder": "새 폴더",
+  "gallery.zoom": "{0:0}%",
+  "gallery.mergeFolders": "폴더 병합",
+  "gallery.folderCount": "패턴 {0}개",
+  "gallery.openFolder": "폴더 열기",
+  "gallery.mergeInto": "{0}(으)로 병합",
+  "gallery.importInto": "{0}(으)로 가져오기",
+  "gallery.importNewFolders": "새 폴더로 가져오기",
+  "gallery.exportFolder": "폴더 내보내기",
+  "gallery.defaultPermanent": "Default는 영구적으로 유지되며 이름을 바꾸거나 삭제할 수 없습니다."
 }

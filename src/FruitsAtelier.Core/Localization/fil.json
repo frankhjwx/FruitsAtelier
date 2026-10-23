@@ -1789,5 +1789,16 @@
   "gallery.saveReturn": "I-save at bumalik",
   "gallery.discardReturn": "Itapon ang pagbabago at bumalik",
   "gallery.returnOriginal": "Bumalik sa naunang beatmap",
-  "gallery.finishEditing": "I-save o itapon muna ang kasalukuyang pattern."
+  "gallery.finishEditing": "I-save o itapon muna ang kasalukuyang pattern.",
+  "gallery.folders": "Mga folder",
+  "gallery.newFolder": "Bagong folder",
+  "gallery.zoom": "{0:0}%",
+  "gallery.mergeFolders": "Pagsamahin ang mga folder",
+  "gallery.folderCount": "{0} pattern",
+  "gallery.openFolder": "Buksan ang folder",
+  "gallery.mergeInto": "Pagsamahin sa {0}",
+  "gallery.importInto": "I-import sa {0}",
+  "gallery.importNewFolders": "I-import bilang mga bagong folder",
+  "gallery.exportFolder": "I-export ang folder",
+  "gallery.defaultPermanent": "Permanente ang Default at hindi maaaring palitan ang pangalan o alisin."
 }

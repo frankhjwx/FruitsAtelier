@@ -1789,5 +1789,16 @@
   "gallery.saveReturn": "保存并返回",
   "gallery.discardReturn": "丢弃并返回",
   "gallery.returnOriginal": "返回原谱面",
-  "gallery.finishEditing": "请先保存或丢弃当前 Pattern。"
+  "gallery.finishEditing": "请先保存或丢弃当前 Pattern。",
+  "gallery.folders": "文件夹",
+  "gallery.newFolder": "新建文件夹",
+  "gallery.zoom": "{0:0}%",
+  "gallery.mergeFolders": "合并文件夹",
+  "gallery.folderCount": "{0} 个 pattern",
+  "gallery.openFolder": "打开文件夹",
+  "gallery.mergeInto": "合并到 {0}",
+  "gallery.importInto": "导入到 {0}",
+  "gallery.importNewFolders": "导入为新文件夹",
+  "gallery.exportFolder": "导出文件夹",
+  "gallery.defaultPermanent": "Default 永久保留，不能重命名或删除。"
 }

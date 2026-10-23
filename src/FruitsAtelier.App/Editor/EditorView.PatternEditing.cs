@@ -49,6 +49,7 @@ public sealed partial class EditorView
         RetirePatternContextWork();
         editingPattern = snapshot;
         CancelPatternGalleryInteraction();
+        galleryFocused = false;
         CloseAimod(); CloseSongSetup(); CloseTimingSetup(); ResetPatternDock();
         TimingPageVisible = false; LibraryVisible = false;
         WorkspaceSession = null;

@@ -1789,5 +1789,16 @@
   "gallery.saveReturn": "Guardar y volver",
   "gallery.discardReturn": "Descartar y volver",
   "gallery.returnOriginal": "Volver al beatmap anterior",
-  "gallery.finishEditing": "Primero guarda o descarta el patrón actual."
+  "gallery.finishEditing": "Primero guarda o descarta el patrón actual.",
+  "gallery.folders": "Carpetas",
+  "gallery.newFolder": "Nueva carpeta",
+  "gallery.zoom": "{0:0}%",
+  "gallery.mergeFolders": "Combinar carpetas",
+  "gallery.folderCount": "{0} patrones",
+  "gallery.openFolder": "Abrir carpeta",
+  "gallery.mergeInto": "Combinar en {0}",
+  "gallery.importInto": "Importar en {0}",
+  "gallery.importNewFolders": "Importar como carpetas nuevas",
+  "gallery.exportFolder": "Exportar carpeta",
+  "gallery.defaultPermanent": "Default es permanente y no se puede renombrar ni eliminar."
 }

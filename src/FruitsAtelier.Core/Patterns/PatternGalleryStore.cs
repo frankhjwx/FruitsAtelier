@@ -4,13 +4,22 @@ using System.Text.Json;
 namespace FruitsAtelier.Core.Patterns;
 
 /// <summary>The complete gallery is atomically replaced, including multi-pattern imports.</summary>
-public sealed class PatternGalleryStore
+public sealed partial class PatternGalleryStore
 {
     private readonly string directory;
     private string ArchivePath => Path.Combine(directory, "gallery.fap");
     public PatternGalleryStore(string directory) => this.directory = Path.GetFullPath(directory);
 
-    public PatternArchive.Contents LoadContents() => File.Exists(ArchivePath) ? PatternArchive.ReadContentsFile(ArchivePath) : new([], []);
+    public PatternArchive.Contents LoadContents()
+    {
+        var contents = File.Exists(ArchivePath) ? PatternArchive.ReadContentsFile(ArchivePath) : new([], []);
+        var folders = contents.Folders?.ToList() ?? [new(PatternFolder.DefaultId, PatternFolder.DefaultName, contents.Patterns.Select(p => p.Id).ToArray())];
+        if (folders.All(f => f.Id != PatternFolder.DefaultId)) folders.Insert(0, new(PatternFolder.DefaultId, PatternFolder.DefaultName, []));
+        if (folders.Any(f => f.Id == PatternFolder.DefaultId && f.Name != PatternFolder.DefaultName
+            || f.Id != PatternFolder.DefaultId && string.Equals(f.Name, PatternFolder.DefaultName, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException(L.Get("core.pattern.invalid"));
+        return contents with { Folders = folders };
+    }
     public IReadOnlyList<PatternSnapshot> Load() => LoadContents().Patterns;
 
     public void AddTag(PatternTag tag, Guid assignTo = default)
@@ -25,16 +34,12 @@ public sealed class PatternGalleryStore
             if (!patterns.Any(p => p.Id == assignTo)) throw new InvalidOperationException(L.Get("core.pattern.missing"));
             patterns = patterns.Select(p => p.Id == assignTo ? p.WithTags(p.Tags.Append(tag)) : p).ToArray();
         }
-        PatternArchive.WriteFile(patterns, ArchivePath, contents.Tags.Append(tag));
+        PatternArchive.WriteFile(patterns, ArchivePath, contents.Tags.Append(tag), contents.Folders);
     }
 
-    public bool Add(PatternSnapshot pattern) => Merge([pattern]) > 0;
+    public bool Add(PatternSnapshot pattern, Guid? folderId = null) => Merge([pattern], folderId: folderId) > 0;
 
-    public int Import(string path)
-    {
-        var contents = PatternArchive.ReadContentsFile(path);
-        return Merge(contents.Patterns, contents.Tags);
-    }
+    public int Import(string path, Guid? folderId = null) => ImportFolders(path, folderId);
 
     public string? SourcePath(Guid id) => ReadSourceHints().GetValueOrDefault(id);
 
@@ -71,19 +76,29 @@ public sealed class PatternGalleryStore
         int index = patterns.FindIndex(p => p.Id == pattern.Id);
         if (index < 0) throw new InvalidOperationException(L.Get("core.pattern.missing"));
         patterns[index] = pattern;
-        PatternArchive.WriteFile(patterns, ArchivePath, contents.Tags);
+        PatternArchive.WriteFile(patterns, ArchivePath, contents.Tags, contents.Folders);
     }
 
-    public void Export(string path, IEnumerable<Guid>? ids = null)
+    public void Export(string path, IEnumerable<Guid>? ids = null, IEnumerable<Guid>? folderIds = null)
     {
         var contents = LoadContents();
         var all = contents.Patterns;
-        var selected = ids?.ToHashSet();
+        var selectedFolders = folderIds?.ToHashSet();
+        if (selectedFolders is not null && selectedFolders.Except(contents.Folders!.Select(f => f.Id)).Any())
+            throw new InvalidOperationException(L.Get("core.pattern.missing"));
+        var selected = ids?.ToHashSet() ?? (selectedFolders is null ? null : contents.Folders!
+            .Where(f => selectedFolders.Contains(f.Id)).SelectMany(f => f.PatternIds).ToHashSet());
         if (selected is not null && selected.Except(all.Select(p => p.Id)).Any())
             throw new InvalidOperationException(L.Get("core.pattern.missing"));
         var exporting = selected is null ? all : all.Where(p => selected.Contains(p.Id)).ToArray();
         var usedTags = exporting.SelectMany(p => p.Tags).Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        PatternArchive.WriteFile(exporting, path, selected is null ? contents.Tags : contents.Tags.Where(t => usedTags.Contains(t.Name)));
+        var exportingIds = exporting.Select(p => p.Id).ToHashSet();
+        var folders = contents.Folders!.Where(f => selectedFolders is not null ? selectedFolders.Contains(f.Id)
+            : selected is null || f.PatternIds.Any(exportingIds.Contains))
+            .Select(f => f with { PatternIds = f.PatternIds.Where(exportingIds.Contains).ToArray() }).ToArray();
+        if (selectedFolders is null && folders.All(f => f.Id == PatternFolder.DefaultId))
+            folders = [new(Guid.NewGuid(), ExportFolderName(path), exportingIds.ToArray())];
+        PatternArchive.WriteFile(exporting, path, selected is null ? contents.Tags : contents.Tags.Where(t => usedTags.Contains(t.Name)), folders);
     }
 
     public void Delete(Guid id)
@@ -92,7 +107,8 @@ public sealed class PatternGalleryStore
         var patterns = contents.Patterns.ToList();
         if (patterns.RemoveAll(p => p.Id == id) == 0)
             throw new InvalidOperationException(L.Get("core.pattern.missing"));
-        PatternArchive.WriteFile(patterns, ArchivePath, contents.Tags);
+        PatternArchive.WriteFile(patterns, ArchivePath, contents.Tags,
+            contents.Folders!.Select(f => f with { PatternIds = f.PatternIds.Where(member => member != id).ToArray() }));
     }
 
     public void EditTag(string name, PatternTag? replacement)
@@ -107,7 +123,7 @@ public sealed class PatternGalleryStore
                 .Concat(replacement is null ? [] : new[] { replacement })) : p).ToArray();
         var tags = contents.Tags.SelectMany(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase)
             ? replacement is null ? Array.Empty<PatternTag>() : new[] { replacement } : new[] { t });
-        PatternArchive.WriteFile(updated, ArchivePath, tags);
+        PatternArchive.WriteFile(updated, ArchivePath, tags, contents.Folders);
     }
 
     public void ReorderTags(IEnumerable<string> names)
@@ -118,12 +134,13 @@ public sealed class PatternGalleryStore
         if (order.Length != tags.Count || order.Distinct(StringComparer.OrdinalIgnoreCase).Count() != tags.Count
             || order.Any(name => !tags.ContainsKey(name)))
             throw new InvalidDataException(L.Get("core.pattern.invalid"));
-        PatternArchive.WriteFile(contents.Patterns, ArchivePath, order.Select(name => tags[name]));
+        PatternArchive.WriteFile(contents.Patterns, ArchivePath, order.Select(name => tags[name]), contents.Folders);
     }
 
-    private int Merge(IEnumerable<PatternSnapshot> incoming, IEnumerable<PatternTag>? importedTags = null)
+    private int Merge(IEnumerable<PatternSnapshot> incoming, IEnumerable<PatternTag>? importedTags = null, Guid? folderId = null)
     {
         var contents = LoadContents();
+        Guid destination = RequireFolder(contents, folderId ?? PatternFolder.DefaultId).Id;
         var patterns = contents.Patterns.ToList();
         var byId = patterns.ToDictionary(p => p.Id);
         var tags = contents.Tags.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
@@ -145,7 +162,9 @@ public sealed class PatternGalleryStore
         if (added > 0 || tags.Count != contents.Tags.Count)
         {
             Directory.CreateDirectory(directory);
-            PatternArchive.WriteFile(patterns, ArchivePath, tags.Values);
+            var newIds = patterns.Select(p => p.Id).Except(contents.Patterns.Select(p => p.Id)).ToArray();
+            PatternArchive.WriteFile(patterns, ArchivePath, tags.Values, contents.Folders!.Select(f => f.Id == destination
+                ? f with { PatternIds = f.PatternIds.Concat(newIds).ToArray() } : f));
         }
         return added;
     }

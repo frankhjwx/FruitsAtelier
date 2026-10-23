@@ -1789,5 +1789,16 @@
   "gallery.saveReturn": "Opslaan en terug",
   "gallery.discardReturn": "Verwerpen en terug",
   "gallery.returnOriginal": "Terug naar vorige beatmap",
-  "gallery.finishEditing": "Sla het huidige patroon eerst op of verwerp de wijzigingen."
+  "gallery.finishEditing": "Sla het huidige patroon eerst op of verwerp de wijzigingen.",
+  "gallery.folders": "Mappen",
+  "gallery.newFolder": "Nieuwe map",
+  "gallery.zoom": "{0:0}%",
+  "gallery.mergeFolders": "Mappen samenvoegen",
+  "gallery.folderCount": "{0} patronen",
+  "gallery.openFolder": "Map openen",
+  "gallery.mergeInto": "Samenvoegen in {0}",
+  "gallery.importInto": "Importeren in {0}",
+  "gallery.importNewFolders": "Importeren als nieuwe mappen",
+  "gallery.exportFolder": "Map exporteren",
+  "gallery.defaultPermanent": "Default is permanent en kan niet worden hernoemd of verwijderd."
 }

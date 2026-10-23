@@ -34,10 +34,13 @@ public sealed partial class EditorView
     private void ApplyGalleryFilter(bool resetScroll = true)
     {
         var words = LibraryDatabase.Normalize(galleryQuery).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        galleryFilteredPatterns = gallerySearchIndex.Where(p => words.All(w => p.Search.Contains(w, StringComparison.Ordinal))
+        var members = galleryFolders.FirstOrDefault(f => f.Id == galleryFolderId)?.PatternIds.ToHashSet() ?? [];
+        galleryFilteredPatterns = gallerySearchIndex.Where(p => members.Contains(p.Pattern.Id) && words.All(w => p.Search.Contains(w, StringComparison.Ordinal))
             && (galleryTagFilter.Count == 0 || p.Pattern.Tags.Any(t => galleryTagFilter.Contains(t.Name))))
             .Select(p => p.Pattern).ToArray();
         if (resetScroll) galleryScroll = 0;
+        gallerySelection.IntersectWith(galleryFilteredPatterns.Select(p => p.Id));
+        if (!galleryFilteredPatterns.Any(p => p.Id == gallerySelectionAnchor)) gallerySelectionAnchor = Guid.Empty;
         if (!galleryFilteredPatterns.Any(p => p.Id == galleryPopupId)) galleryPopupId = Guid.Empty;
     }
 
@@ -80,7 +83,7 @@ public sealed partial class EditorView
                 ApplyGalleryFilter(); ShowGalleryTagFilter(page);
             }, Color: tag.Colour, Active: galleryTagFilter.Contains(tag.Name)));
         GalleryTagPaging(page, ShowGalleryTagFilter);
-        PositionGalleryMenu(gallerySearchBounds.Right + 5, galleryBounds.Y + 30);
+        PositionGalleryMenu(gallerySearchBounds.Right + 5, gallerySearchBounds.Bottom + 2);
     }
 
     private IEnumerable<PatternTag> GalleryTagPage(int page) => galleryTags.Skip(page * 8).Take(8);

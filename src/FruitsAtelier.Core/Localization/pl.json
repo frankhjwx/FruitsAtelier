@@ -1789,5 +1789,16 @@
   "gallery.saveReturn": "Zapisz i wróć",
   "gallery.discardReturn": "Odrzuć i wróć",
   "gallery.returnOriginal": "Wróć do poprzedniej beatmapy",
-  "gallery.finishEditing": "Najpierw zapisz lub odrzuć bieżący wzór."
+  "gallery.finishEditing": "Najpierw zapisz lub odrzuć bieżący wzór.",
+  "gallery.folders": "Foldery",
+  "gallery.newFolder": "Nowy folder",
+  "gallery.zoom": "{0:0}%",
+  "gallery.mergeFolders": "Scal foldery",
+  "gallery.folderCount": "Wzory: {0}",
+  "gallery.openFolder": "Otwórz folder",
+  "gallery.mergeInto": "Scal do {0}",
+  "gallery.importInto": "Importuj do {0}",
+  "gallery.importNewFolders": "Importuj jako nowe foldery",
+  "gallery.exportFolder": "Eksportuj folder",
+  "gallery.defaultPermanent": "Folder Default jest stały i nie można zmienić jego nazwy ani go usunąć."
 }

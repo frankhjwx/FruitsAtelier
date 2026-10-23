@@ -25,6 +25,9 @@ internal static class PatternGalleryRenderCheck
                 Directory.CreateDirectory(gallery);
                 var patterns = Fixtures(locale);
                 PatternArchive.WriteFile(patterns, Path.Combine(gallery, "gallery.fap"));
+                var folderStore = new PatternGalleryStore(gallery);
+                Guid practiceFolder = folderStore.CreateFolder(locale == "en" ? "Practice" : "练习");
+                Guid sharedFolder = folderStore.CreateFolder(locale == "en" ? "Shared" : "分享");
                 var map = new MapDocument { Name = "Gallery placement", DurationMs = 30000, BeatLengthMs = 1000.0 / 3,
                     SliderMultiplier = 1.4, OverrideSliderMultiplier = true, SliderMultiplierOverride = 1.92,
                     SliderImportState = SliderImportState.Native, DerandomizeFSliderDroplets = true };
@@ -41,6 +44,31 @@ internal static class PatternGalleryRenderCheck
                 Wait(() => editor.PatternGalleryCount == patterns.Count && editor.PatternGalleryPreviewCacheCount >= 4
                     && !editor.PatternGalleryNeedsRedraw, "load and preview gallery");
                 Paint("grid");
+                var zoomGrid = editor.PatternGalleryGridBounds;
+                var fullCard = editor.PatternGalleryCardBounds(patterns[0].Id);
+                editor.Wheel(zoomGrid.X + 10, zoomGrid.Y + 10, -12000, true); Paint();
+                Wait(() => !editor.PatternGalleryNeedsRedraw, "half-size cards"); Paint("grid-50-percent");
+                if (editor.PatternGalleryCardBounds(patterns[0].Id).Width != fullCard.Width / 2)
+                    throw new InvalidOperationException("Card zoom did not stop at 50%.");
+                int zoomBuilds = editor.PatternGalleryPreviewBuildCount;
+                editor.Wheel(zoomGrid.X + 10, zoomGrid.Y + 10, 12000, true); Paint();
+                if (editor.PatternGalleryPreviewBuildCount != zoomBuilds)
+                    throw new InvalidOperationException("Card zoom rebuilt preview geometry.");
+                Click(new(editor.PatternGallerySearchBounds.X, editor.PatternGallerySearchBounds.Y - 34, 70, 28));
+                Paint("folders");
+                var firstFolder = editor.PatternGalleryFolderBounds(practiceFolder);
+                var lastFolder = editor.PatternGalleryFolderBounds(sharedFolder);
+                Click(firstFolder);
+                editor.PointerDown(lastFolder.X + 10, lastFolder.Y + 10, 0, true, false);
+                editor.PointerUp(lastFolder.X + 10, lastFolder.Y + 10, 0); Paint("folders-selected");
+                editor.PointerDown(lastFolder.X + 10, lastFolder.Y + 10, 2, false, false);
+                editor.PointerUp(lastFolder.X + 10, lastFolder.Y + 10, 2); Paint();
+                Click(editor.PatternGalleryContextItemBounds(2)); Paint("folders-merge");
+                editor.KeyDown(27, false, false); Paint();
+                var defaultFolder = editor.PatternGalleryFolderBounds(PatternFolder.DefaultId);
+                editor.PointerDoubleClick(defaultFolder.X + 10, defaultFolder.Y + 10, false, false); Paint();
+                editor.BeginPatternImport(Path.Combine(gallery, "gallery.fap")); Paint("folder-import-destination");
+                editor.KeyDown(27, false, false); Paint();
                 if (editor.PatternGallerySearchBounds.Y != editor.PatternGalleryTagsBounds.Y)
                     throw new InvalidOperationException("Search and Tags are not on the same row.");
                 Click(editor.PatternGalleryTagsBounds); Paint("tags-menu");
@@ -190,8 +218,7 @@ internal static class PatternGalleryRenderCheck
                 editor.KeyDown(27, false, false); Paint();
                 Console.WriteLine($"PASS native Pattern Gallery {locale} {size.Item1}x{size.Item2} {dpi} DPI");
 
-                void ClickContext(int row) => Click(new(Math.Clamp(contextX, 8, Math.Max(8, size.Item1 - 308)) + 6,
-                    Math.Clamp(contextY, 8, Math.Max(8, size.Item2 - 84)) + 6 + row * 32, 288, 30));
+                void ClickContext(int row) => Click(editor.PatternGalleryContextItemBounds(row));
 
                 void Click(Rect rect)
                 {

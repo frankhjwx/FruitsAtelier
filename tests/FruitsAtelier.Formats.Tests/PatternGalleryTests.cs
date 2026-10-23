@@ -79,7 +79,7 @@ internal static class PatternGalleryTests
         Expect<InvalidDataException>(() => PatternArchive.Read(malicious));
         using var future = new MemoryStream();
         using (var zip = new ZipArchive(future, ZipArchiveMode.Create, true))
-        using (var writer = new StreamWriter(zip.CreateEntry("manifest.json").Open(), new UTF8Encoding(false))) writer.Write("{\"Version\":4,\"Patterns\":[]}");
+        using (var writer = new StreamWriter(zip.CreateEntry("manifest.json").Open(), new UTF8Encoding(false))) writer.Write("{\"Version\":5,\"Patterns\":[]}");
         future.Position = 0;
         Expect<InvalidDataException>(() => PatternArchive.Read(future));
 
@@ -134,7 +134,8 @@ internal static class PatternGalleryTests
             store.RememberSource(snapshot.Id, Path.Combine(directory, "original.osu"));
             Check(store.SourcePath(snapshot.Id) == Path.Combine(directory, "original.osu"), "Local source hint persists");
             var imported = new PatternGalleryStore(Path.Combine(directory, "Imported"));
-            Check(imported.Import(all) == 2 && imported.Import(all) == 0 && imported.Load().Count == 2, "Whole gallery import is persistent and repeatable");
+            Check(imported.Import(all) == 2 && imported.Import(all) == 2 && imported.Load().Count == 4,
+                "Repeated import creates independent folders and patterns");
             Check(imported.SourcePath(snapshot.Id) is null, "Sharing never includes local source paths");
             byte[] prior = File.ReadAllBytes(Path.Combine(directory, "Patterns", "gallery.fap"));
             string invalid = Path.Combine(directory, "invalid.fap"); File.WriteAllText(invalid, "invalid zip");
@@ -146,7 +147,7 @@ internal static class PatternGalleryTests
             Check(replacement.StartTimeMs == 1200 && replacement.Source.StartTimeMs == 1000
                 && replacement.CreateDocument().Fruits[0].X == 333, "Editing preserves identity and source provenance while updating geometry");
             store.Export(all);
-            Expect<InvalidDataException>(() => imported.Import(all));
+            Check(imported.Import(all) == 2, "Edited shared identities should import as independent copies");
             Check(imported.Load().Single(p => p.Id == snapshot.Id).CreateDocument().Fruits[0].X == 200,
                 "Conflicting shared identities do not silently overwrite existing patterns");
             store.Replace(replacement.WithName("Renamed"));
@@ -162,6 +163,7 @@ internal static class PatternGalleryTests
             Check(store.Load().Count == 0, "Deleting the final pattern leaves a readable empty gallery");
         }
         finally { Directory.Delete(directory, true); }
+        PatternFolderTests.Run();
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

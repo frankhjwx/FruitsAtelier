@@ -780,6 +780,12 @@ public sealed partial class EditorView
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
         if (PatternNameVisible || GalleryTagsVisible || PatternEditingBusy) return;
+        if (PatternGalleryInputAvailable && galleryFolderId is null && galleryGridBounds.Contains(x, y) && !ctrl && !shift)
+        {
+            var folder = galleryFolderCards.FirstOrDefault(f => f.Bounds.Contains(x, y));
+            if (folder.Id != Guid.Empty) OpenGalleryFolder(folder.Id);
+            return;
+        }
         if (PatternGalleryPopupContains(x, y) || PatternGalleryInputAvailable && galleryGridBounds.Contains(x, y)) return;
         if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
@@ -941,7 +947,7 @@ public sealed partial class EditorView
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
         if (PatternNameVisible || GalleryTagsVisible) return;
-        if (PatternGalleryWheel(x, y, delta, alt || altHeld)) return;
+        if (PatternGalleryWheel(x, y, delta, ctrl, alt || altHeld)) return;
         if (!ErrorVisible && MapTemplatesVisible)
         {
             if (templateListBounds.Contains(x, y))

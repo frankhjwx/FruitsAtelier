@@ -181,6 +181,7 @@ internal static class PatternGalleryUiTests
             LegacyOverrideDrops();
             PatternGalleryOrganizationTests.Run();
             PatternGalleryTagPreviewTests.Run();
+            PatternFolderUiTests.Run();
         }
         finally { Directory.Delete(directory, true); }
     }

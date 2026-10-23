@@ -10,8 +10,9 @@ show their first five characters followed by an ellipsis. A row that fits retain
 full names. Details always show complete tag names, wrapping as needed; cards keep the `+N` overflow indicator. **Edit Pattern** and **Go to Original Map** share one row of outlined buttons below the preview.
 If the tags exceed the available
 header space, scroll within the tag area to read the remaining tags independently
-of the pattern preview. Cards have a fixed size; resizing the dock changes the
-number of columns and wraps the cards without resizing the thumbnails.
+of the pattern preview. **Ctrl + wheel** over the card grid changes card size from
+50% to 100%; the percentage button also offers 50%, 75% and 100%. Resizing the dock
+changes the number of columns without changing the selected card scale.
 Select a card to open a larger preview beside the panel;
 use the wheel, left-button drag or middle-button drag vertically within that preview to inspect a long pattern.
 The enlarged panel blocks pointer input and hover feedback from controls underneath it.
@@ -25,14 +26,42 @@ of its original playfield position. This alignment does not change saved coordin
 Right-click a card to rename or delete the saved pattern. Renaming retains its
 identity, source information and geometry; deleting removes it from the local gallery.
 
-The gallery toolbar has two rows: search and **Tag Filters**; then **Save selection**,
+The navigation row shows the current folder, **New folder**, and card zoom.
+Below it are search and **Tag Filters**; then **Save selection**,
 **Import patterns**, and **Export**. The **Tag Filters** menu contains tag filters and
 **Manage Tags** in its first row, beside **All** and **None**, separated from the tag
 list by a divider. **All** selects every tag; **None** clears the selection. Search
 follows Library matching: case-insensitive Unicode normalization and whitespace-separated words
 that must all occur in the pattern name, source artist/title/mapper/difficulty or
 tag names. Ctrl+F focuses the search field. Selecting multiple tags matches any
-selected tag. Filters affect browsing only.
+selected tag. Filters affect browsing within the current folder only.
+
+## Folders and selection
+
+The gallery opens in **Default**. Click its name in the navigation row to browse
+folders. The hierarchy has one folder level and one pattern level. Create folders
+with **New folder**; double-click a folder, press Enter with one selected, or use
+**Open folder** to browse its contents. Right-click a folder to rename it.
+Default always exists and cannot be renamed or removed. Existing flat galleries
+load into Default. Captures save into the current folder, or Default while the
+folder list is open.
+
+Ctrl-click toggles individual cards or folders. Shift-click selects the inclusive
+range from the previous selection anchor in displayed order, including entries
+outside the viewport. Ctrl+Shift adds that range to the existing selection.
+Ctrl+A selects all entries in the focused gallery view. Search and tag changes
+remove selections that are no longer visible in the filtered list.
+
+Use Ctrl+C / Ctrl+X, open a destination folder, then Ctrl+V to copy or move selected
+patterns. These commands are also available in the card context menu; right-click
+an empty area or a folder for Paste. Copies have independent identities. Cutting
+retains the source entries until a successful paste, then clears the move clipboard.
+The clipboard belongs to the current gallery and clears when its workspace changes.
+Gallery shortcuts operate only while the gallery has input focus.
+
+Select multiple folders and choose **Merge folders**, then select the destination
+from the selected folders. All contents move to that destination; merged folders
+are removed. If Default is merged into another folder, it remains as an empty folder.
 
 Use **Edit Tags** in a pattern's details to assign existing tags or create one.
 Each tag has a name and colour. **Tag Filters → Manage Tags** creates tags independently
@@ -74,19 +103,31 @@ source map does not change it. Stream and stack parameters and individual fruit
 adjustments remain editable. Source artist, title, difficulty, creator and start
 time are retained alongside the authoring data, AR and timing context.
 
-**Export** creates a `.fap` (Fruits Atelier Pattern) package of the complete gallery,
-including unassigned tags and patterns hidden by search or tag filters. **Import**
-merges a package into the gallery. Identical entries with the same ID are skipped; different content using an existing ID is rejected without
-replacing the gallery. Packages contain authoring data, not audio, backgrounds,
+**Export** offers selected patterns, the current folder, or the complete gallery.
+In the folder list it exports selected folders, or all folders when none are selected.
+Whole-gallery export includes unassigned tags and patterns hidden by filters.
+Folders, including empty folders, travel inside the `.fap` package. A flat export
+containing only Default's patterns receives a folder named after the export filename;
+explicit folder exports preserve the folder name.
+
+After choosing an import file, select **Import as new folders** (the default choice)
+or an existing destination, including Default. New folders preserve package names;
+conflicts are resolved case-insensitively by appending ` (1)`, ` (2)`, and so on.
+Packages without folders use the import filename. Choosing an existing destination
+places all imported patterns in that folder. Repeated imports create independent
+copies when pattern IDs already exist; local patterns are never overwritten.
+Packages contain authoring data, not audio, backgrounds,
 skins or local source paths. Custom sample references do not bundle sample files.
 
 The local gallery lives in `Patterns/gallery.fap` under the configured workspace.
 Local source-file hints are stored separately in `Patterns/sources.local.json`.
 Packages are ZIP files containing `manifest.json` and one project document per
-pattern. Untagged exports use version 1. Version 2 stores pattern tags without a
-gallery catalog. Packages with a gallery tag catalog use version 3; catalog array
-order preserves the user-defined tag order, including unassigned tags. All three versions can be imported. Import validates IDs,
-names, tags, exact archive entries and bounded sizes before publishing the complete result. Writes use a temporary file and atomic
+pattern. Version 4 stores a flat folder catalog with IDs, names and pattern IDs.
+Every pattern belongs to exactly one folder. Versions 1–3 remain readable: version 1
+has no tags, version 2 has per-pattern tags, and version 3 adds the ordered shared
+tag catalog. Catalog order preserves user-defined tag order, including unassigned
+tags. Import validates IDs, unique folder names and membership, tags, exact archive
+entries and bounded sizes before publishing the complete result. Writes use a temporary file and atomic
 replacement. The package limit is 4,096 patterns, 64 MiB compressed and 256 MiB
 expanded; individual documents also obey the project format's limits.
 
@@ -149,7 +190,7 @@ Preview conversion runs on a single background worker. Up to 64 thumbnail geomet
 entries retain at most 512 sampled objects and 256 sampled slider spans with 10
 points each, preserving each retained span's endpoints. The grid keeps its visible
 working set within 48 cards by bounding the scrollable viewport
-in exceptionally tall layouts. Card dimensions remain fixed. This lets
+in exceptionally tall layouts. Card scale affects layout and raster size only. This lets
 visible thumbnails finish warming and the gallery stop requesting idle frames.
 One separate full-resolution preview is retained for the selected popup; it is
 released when closed or replaced. Each full preview's path data is limited to

@@ -1789,5 +1789,16 @@
   "gallery.saveReturn": "Save and return",
   "gallery.discardReturn": "Discard and return",
   "gallery.returnOriginal": "Return to previous map",
-  "gallery.finishEditing": "Save or discard the current pattern first."
+  "gallery.finishEditing": "Save or discard the current pattern first.",
+  "gallery.folders": "Folders",
+  "gallery.newFolder": "New folder",
+  "gallery.zoom": "{0:0}%",
+  "gallery.mergeFolders": "Merge folders",
+  "gallery.folderCount": "{0} patterns",
+  "gallery.openFolder": "Open folder",
+  "gallery.mergeInto": "Merge into {0}",
+  "gallery.importInto": "Import into {0}",
+  "gallery.importNewFolders": "Import as new folders",
+  "gallery.exportFolder": "Export folder",
+  "gallery.defaultPermanent": "Default is permanent and cannot be renamed or removed."
 }

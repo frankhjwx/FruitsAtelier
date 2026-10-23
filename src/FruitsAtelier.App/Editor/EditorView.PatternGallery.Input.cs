@@ -51,10 +51,15 @@ public sealed partial class EditorView
         }
         if (!galleryBounds.Contains(x, y))
         {
+            galleryFocused = false;
             galleryPopupId = Guid.Empty;
             return false;
         }
+        galleryFocused = true;
         if (button is not (0 or 2)) return true;
+        foreach (var folder in galleryFolderCards)
+            if (galleryGridBounds.Contains(x, y) && folder.Bounds.Contains(x, y))
+            { GalleryFolderPointerDown(folder.Id, x, y, button, ctrl, shift); return true; }
         foreach (var card in galleryCards)
         {
             if (!galleryGridBounds.Contains(x, y) || !card.Bounds.Contains(x, y)) continue;
@@ -63,18 +68,22 @@ public sealed partial class EditorView
                 ShowGalleryPatternMenu(card.Id, x, y);
                 return true;
             }
-            if (ctrl)
+            SelectGalleryRange(card.Id, ctrl, shift);
+            if (ctrl || shift)
             {
-                if (!gallerySelection.Add(card.Id)) gallerySelection.Remove(card.Id);
                 galleryPopupId = Guid.Empty;
                 return true;
             }
-            if (!shift) gallerySelection.Clear();
-            gallerySelection.Add(card.Id);
             galleryPressedId = card.Id; galleryPressedX = x; galleryPressedY = y;
             return true;
         }
         if (button == 0) InvokeGalleryHit(x, y);
+        else if (galleryFolderId is { } destination)
+        {
+            contextItems.Clear(); menu = -1;
+            contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(destination), CanEditGalleryTags && galleryClipboard.Length > 0));
+            PositionGalleryMenu(x, y);
+        }
         return true;
     }
 
@@ -83,7 +92,7 @@ public sealed partial class EditorView
         if (galleryIoTask is not null || PatternEditingActive || PatternEditingBusy
             || galleryPatterns.FirstOrDefault(p => p.Id == id) is not { } pattern) return;
         CancelPatternGalleryInteraction();
-        gallerySelection.Clear(); gallerySelection.Add(id);
+        if (!gallerySelection.Contains(id)) { gallerySelection.Clear(); gallerySelection.Add(id); gallerySelectionAnchor = id; }
         contextItems.Clear(); menu = -1;
         contextItems.Add(new(L.Get("gallery.rename"), () =>
         {
@@ -103,12 +112,16 @@ public sealed partial class EditorView
                 patternNameText = pattern.Name;
                 SelectInput("gallery:name", patternNameText);
             }
-        }, RequestPatternName is not null));
+        }, RequestPatternName is not null && gallerySelection.Count == 1));
         contextItems.Add(new(L.Get("gallery.delete"), () =>
         {
             if (galleryIoTask is not null || galleryStore is not { } store) return;
-            StartGalleryIo(() => { store.Delete(id); return ReloadGallery(store, ""); });
+            var ids = gallerySelection.ToArray();
+            StartGalleryIo(() => { store.DeletePatterns(ids); return ReloadGallery(store, ""); });
         }));
+        contextItems.Add(new(L.Get("editor.command.copy"), () => CopyGalleryPatterns(false)));
+        contextItems.Add(new(L.Get("editor.command.cut"), () => CopyGalleryPatterns(true)));
+        contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(galleryFolderId ?? PatternFolder.DefaultId), galleryClipboard.Length > 0));
         PositionGalleryMenu(x, y);
     }
 
@@ -213,7 +226,7 @@ public sealed partial class EditorView
         StatusMessage = L.Get("gallery.preparing");
     }
 
-    private bool PatternGalleryWheel(float x, float y, float delta, bool alt)
+    private bool PatternGalleryWheel(float x, float y, float delta, bool ctrl, bool alt)
     {
         if (!PatternGalleryInputAvailable || menu >= 0 || contextItems.Count > 0) return false;
         if (galleryPopupId != Guid.Empty && galleryPopupBounds.Contains(x, y))
@@ -245,6 +258,11 @@ public sealed partial class EditorView
             return true;
         }
         if (!galleryBounds.Contains(x, y)) return false;
+        if (ctrl && galleryFolderId is not null)
+        {
+            SetGalleryCardZoom(galleryCardZoom * (float)Math.Pow(1.1, delta / 120));
+            return true;
+        }
         galleryScroll = Math.Clamp(galleryScroll - delta / 120 * 96, 0, galleryMaxScroll);
         return true;
     }
@@ -259,10 +277,27 @@ public sealed partial class EditorView
             return true;
         }
         if (PatternGalleryInputAvailable && ctrl && key == 70)
-        { SelectInput("gallery:search", galleryQuery); return true; }
+        { if (galleryFolderId is null) OpenGalleryFolder(PatternFolder.DefaultId); galleryFocused = true; SelectInput("gallery:search", galleryQuery); return true; }
         if (!PatternGalleryInputAvailable || IsEditingText || menu >= 0 || contextItems.Count > 0) return false;
         if (key == 27 && (galleryDragging || galleryPopupId != Guid.Empty || galleryPressedId != Guid.Empty || galleryDropTask is not null))
-        { CancelPatternGalleryInteraction(); return true; }
+        { CancelPatternGalleryInteraction(); galleryFocused = false; return true; }
+        if (galleryFocused && ctrl && key == 65)
+        {
+            if (galleryFolderId is null) galleryFolderSelection.UnionWith(galleryFolders.Select(f => f.Id));
+            else gallerySelection.UnionWith(galleryFilteredPatterns.Select(p => p.Id));
+            galleryPopupId = Guid.Empty;
+            return true;
+        }
+        if (galleryFocused && ctrl && key is 67 or 88)
+        { CopyGalleryPatterns(key == 88); return true; }
+        if (galleryFocused && ctrl && key == 86)
+        {
+            if (galleryFolderId is { } destination) PasteGalleryPatterns(destination);
+            else if (galleryFolderSelection.Count == 1) PasteGalleryPatterns(galleryFolderSelection.Single());
+            return true;
+        }
+        if (galleryFocused && galleryFolderId is null && key == 13 && galleryFolderSelection.Count == 1)
+        { OpenGalleryFolder(galleryFolderSelection.Single()); return true; }
         return false;
     }
 
