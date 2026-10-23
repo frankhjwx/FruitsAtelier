@@ -61,6 +61,15 @@ internal static class PatternFolderTests
         Guid emptyDelete = store.CreateFolder("Empty delete");
         store.DeleteFolder(emptyDelete);
         Check(store.LoadContents().Folders!.All(f => f.Id != emptyDelete), "Empty folder deletion did not persist");
+        var toKeep = store.LoadContents();
+        Guid keepFolder = store.CreateFolder("Keep");
+        store.TransferPatterns([toKeep.Patterns[0].Id], keepFolder, false);
+        store.DeleteFolder(keepFolder, true);
+        contents = new PatternGalleryStore(directory).LoadContents();
+        Check(contents.Patterns.Select(p => p.Id).SequenceEqual(toKeep.Patterns.Select(p => p.Id))
+            && contents.Folders!.Single(f => f.Id == PatternFolder.DefaultId).PatternIds.Contains(toKeep.Patterns[0].Id)
+            && contents.Folders!.All(f => f.Id != keepFolder), "Keep deletion must preserve identities in Default");
+        Expect(() => store.DeleteFolder(PatternFolder.DefaultId, true));
         using var invalid = new MemoryStream();
         Expect(() => PatternArchive.Write([pattern], invalid, folders: [new(Guid.NewGuid(), "Bad", [pattern.Id, pattern.Id])]));
         using var missing = new MemoryStream();

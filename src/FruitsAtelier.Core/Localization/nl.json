@@ -1800,5 +1800,9 @@
   "gallery.exportFolder": "Map exporteren",
   "gallery.defaultPermanent": "Default is permanent en kan niet worden hernoemd of verwijderd.",
   "gallery.renameFolder": "Map hernoemen",
-  "gallery.deleteFolder": "Map verwijderen"
+  "gallery.deleteFolder": "Map verwijderen",
+  "gallery.moveTo": "Verplaatsen naar",
+  "gallery.deleteFolderPrompt": "Deze map bevat {0} patronen. Bewaren?",
+  "gallery.keepPatterns": "Patronen in Default bewaren",
+  "gallery.deleteFolderPatterns": "Map en patronen verwijderen"
 }

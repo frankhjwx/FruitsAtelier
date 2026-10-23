@@ -1800,5 +1800,9 @@
   "gallery.exportFolder": "Export folder",
   "gallery.defaultPermanent": "Default is permanent and cannot be renamed or removed.",
   "gallery.renameFolder": "Rename Folder",
-  "gallery.deleteFolder": "Delete Folder"
+  "gallery.deleteFolder": "Delete Folder",
+  "gallery.moveTo": "Move to",
+  "gallery.deleteFolderPrompt": "Patterns in this folder: {0}. Keep them?",
+  "gallery.keepPatterns": "Keep patterns in Default",
+  "gallery.deleteFolderPatterns": "Delete folder and patterns"
 }

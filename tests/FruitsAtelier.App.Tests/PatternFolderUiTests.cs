@@ -38,6 +38,18 @@ internal static class PatternFolderUiTests
         Context(ui.View.PatternGalleryFolderBounds(PatternFolder.DefaultId));
         Check(!HasText("gallery.deleteFolder"), "Default must not offer deletion");
         ui.Key(27);
+        Click(first, ctrl: true); Click(ui.View.PatternGalleryCardBounds(patterns[1].Id), ctrl: true);
+        Context(first);
+        Check(HasText("gallery.moveTo") && !HasText("editor.command.copy") && !HasText("editor.command.cut"), "Pattern menu must offer Move to");
+        HoverMoveTo();
+        Check(ui.View.ContextSubmenuBounds.Width > 0
+            && ui.Canvas.Texts.Count(t => t.Value == "Default") == 1, "Move destinations must exclude the current folder");
+        ui.ClickObjectAction("B"); Settle();
+        Check(store.Load().Count == 24 && store.LoadContents().Folders!.Single(f => f.Id == b).PatternIds.SequenceEqual(patterns.Take(2).Select(p => p.Id)),
+            "Move to must transfer the complete selection without copying");
+        Open(b); Click(ui.View.PatternGalleryCardBounds(patterns[0].Id), ctrl: true); ui.Key('A', ctrl: true);
+        Context(ui.View.PatternGalleryCardBounds(patterns[0].Id)); ui.ClickText(L.Get("gallery.moveTo"));
+        ui.ClickObjectAction("Default"); Settle(); Open(PatternFolder.DefaultId);
         Click(first, ctrl: true);
         var grid = ui.View.PatternGalleryGridBounds;
         ui.View.Wheel(grid.X + 10, grid.Y + 10, -12000, false); ui.Paint(); Settle();
@@ -69,6 +81,11 @@ internal static class PatternFolderUiTests
         Open(a); Click(ui.View.PatternGalleryCardBounds(store.LoadContents().Folders!.Single(f => f.Id == a).PatternIds[0]), ctrl: true);
         ui.Key('C', ctrl: true);
         Context(ui.View.PatternGalleryFolderBounds(a)); ui.ClickText(L.Get("gallery.deleteFolder")); Settle();
+        Check(ui.View.DiscardConfirmationVisible && store.Load().Count == 48, "Nonempty deletion must wait for a choice");
+        ui.Key(27);
+        Check(!ui.View.DiscardConfirmationVisible && store.LoadContents().Folders!.Any(f => f.Id == a), "Cancel changed the folder");
+        Context(ui.View.PatternGalleryFolderBounds(a)); ui.ClickText(L.Get("gallery.deleteFolder"));
+        ui.ClickText(L.Get("gallery.deleteFolderPatterns")); Settle();
         Check(store.LoadContents().Folders!.All(f => f.Id != a) && store.Load().Count == 24
             && ui.View.PatternGalleryFolderId == PatternFolder.DefaultId, "Deleting the active folder did not remove contents and return to Default");
         Context(ui.View.PatternGalleryFolderBounds(PatternFolder.DefaultId));
@@ -79,6 +96,14 @@ internal static class PatternFolderUiTests
         Guid created = store.LoadContents().Folders!.Single(f => f.Name == "Created").Id;
         Context(ui.View.PatternGalleryFolderBounds(created)); ui.ClickText(L.Get("gallery.deleteFolder")); Settle();
         Check(store.LoadContents().Folders!.All(f => f.Id != created), "Empty folder deletion did not persist");
+        Guid keepFolder = store.CreateFolder("Keep");
+        store.TransferPatterns(patterns.Take(2).Select(p => p.Id), keepFolder, false);
+        ui.View.ConfigurePatternGallery(directory); Settle(); Open(keepFolder);
+        Context(ui.View.PatternGalleryFolderBounds(keepFolder)); ui.ClickText(L.Get("gallery.deleteFolder"));
+        ui.ClickText(L.Get("gallery.keepPatterns")); Settle();
+        Check(store.LoadContents().Folders!.All(f => f.Id != keepFolder) && store.Load().Count == 24
+            && store.LoadContents().Folders!.Single(f => f.Id == PatternFolder.DefaultId).PatternIds.Count == 24,
+            "Keep must merge the folder contents into Default without changing identities");
         Open(PatternFolder.DefaultId);
         grid = ui.View.PatternGalleryGridBounds;
         ui.View.Wheel(grid.X + 10, grid.Y + 10, -12000, true); ui.Paint(); Settle();
@@ -130,6 +155,21 @@ internal static class PatternFolderUiTests
         ui.View.Wheel(category.X + 10, category.Y + 40, 12000, false); ui.Paint();
         Check(ui.View.PatternGalleryFolderBounds(PatternFolder.DefaultId).Width > 0,
             "Category scrolling did not return to Default");
+        ui.View.Wheel(grid.X + 10, grid.Y + 10, 12000, false); ui.Paint();
+        Context(ui.View.PatternGalleryCardBounds(patterns[0].Id)); HoverMoveTo();
+        var submenu = ui.View.ContextSubmenuBounds;
+        Check(submenu.X >= 0 && submenu.Right <= ui.Width && submenu.Bottom <= ui.Height, "Submenu must stay within the window");
+        ui.View.PointerMove(submenu.X + 20, submenu.Y + 20, false, false); ui.Paint();
+        ui.View.Wheel(submenu.X + 20, submenu.Y + 20, -12000, false); ui.Paint();
+        ui.ClickObjectAction("Category 15"); Settle();
+        Check(store.LoadContents().Folders!.Single(f => f.Name == "Category 15").PatternIds.Contains(patterns[0].Id),
+            "Scrolled Move to menu cannot reach the final category");
+
+        void HoverMoveTo()
+        {
+            var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("gallery.moveTo"));
+            ui.View.PointerMove(label.X + 5, label.Y + 5, false, false); ui.Paint();
+        }
 
         bool HasText(string key) => ui.Canvas.Texts.Any(t => t.Value == L.Get(key));
 

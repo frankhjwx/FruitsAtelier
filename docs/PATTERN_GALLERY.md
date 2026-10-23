@@ -43,7 +43,9 @@ vertical divider. Click a category to display its patterns. The list scrolls
 independently of the grid. The hierarchy has one folder level and one pattern level.
 Right-click blank space in the list and choose **New folder** to create one.
 A category's context menu offers **Rename Folder**, **Delete Folder**, and export.
-Deleting a folder also deletes its patterns. **Merge folders** appears when multiple
+Deleting a nonempty folder opens a confirmation: keep its patterns in Default,
+delete the folder and its patterns, or cancel. Empty folders delete immediately.
+Keeping patterns retains their identities, tags and source information. **Merge folders** appears when multiple
 folders are selected; **Paste** appears only when the gallery clipboard contains patterns.
 Default always exists and cannot be renamed or removed. Existing flat galleries
 load into Default. Captures save into the current category.
@@ -54,9 +56,12 @@ outside the viewport. Ctrl+Shift adds that range to the existing selection.
 Ctrl+A selects all entries in the focused gallery view. Search and tag changes
 remove selections that are no longer visible in the filtered list.
 
+Right-click selected cards and open **Move to** to choose a destination category.
+The submenu opens on hover or click and lists every other category; scroll within
+it when the list exceeds the available height. Moving retains each pattern's identity.
 Use Ctrl+C / Ctrl+X, open a destination folder, then Ctrl+V to copy or move selected
-patterns. These commands are also available in the card context menu; right-click
-an empty area or a folder for Paste. Copies have independent identities. Cutting
+patterns with the keyboard; right-click an empty area or a folder for Paste.
+Copies have independent identities. Cutting
 retains the source entries until a successful paste, then clears the move clipboard.
 The clipboard belongs to the current gallery and clears when its workspace changes.
 Gallery shortcuts operate only while the gallery has input focus.

@@ -1800,5 +1800,9 @@
   "gallery.exportFolder": "匯出資料夾",
   "gallery.defaultPermanent": "Default 永久保留，不能重新命名或刪除。",
   "gallery.renameFolder": "重新命名資料夾",
-  "gallery.deleteFolder": "刪除資料夾"
+  "gallery.deleteFolder": "刪除資料夾",
+  "gallery.moveTo": "移動到",
+  "gallery.deleteFolderPrompt": "此資料夾包含 {0} 個 pattern，是否保留？",
+  "gallery.keepPatterns": "保留 patterns 並移到 Default",
+  "gallery.deleteFolderPatterns": "刪除資料夾及其中的 patterns"
 }

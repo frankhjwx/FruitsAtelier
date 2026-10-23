@@ -1800,5 +1800,9 @@
   "gallery.exportFolder": "Exportar carpeta",
   "gallery.defaultPermanent": "Default es permanente y no se puede renombrar ni eliminar.",
   "gallery.renameFolder": "Renombrar carpeta",
-  "gallery.deleteFolder": "Eliminar carpeta"
+  "gallery.deleteFolder": "Eliminar carpeta",
+  "gallery.moveTo": "Mover a",
+  "gallery.deleteFolderPrompt": "Esta carpeta contiene {0} patrones. ¿Conservarlos?",
+  "gallery.keepPatterns": "Conservar patrones en Default",
+  "gallery.deleteFolderPatterns": "Eliminar carpeta y patrones"
 }

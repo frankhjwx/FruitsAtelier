@@ -1800,5 +1800,9 @@
   "gallery.exportFolder": "Exporter le dossier",
   "gallery.defaultPermanent": "Default est permanent et ne peut pas être renommé ni supprimé.",
   "gallery.renameFolder": "Renommer le dossier",
-  "gallery.deleteFolder": "Supprimer le dossier"
+  "gallery.deleteFolder": "Supprimer le dossier",
+  "gallery.moveTo": "Déplacer vers",
+  "gallery.deleteFolderPrompt": "Ce dossier contient {0} motifs. Les conserver ?",
+  "gallery.keepPatterns": "Conserver les motifs dans Default",
+  "gallery.deleteFolderPatterns": "Supprimer le dossier et les motifs"
 }

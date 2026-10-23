@@ -1083,7 +1083,7 @@ public sealed partial class EditorView
             return;
         }
         if (drag != DragKind.None && !NavigationDuringDrag) return;
-        if (contextItems.Count > 0) { contextItems.Clear(); return; }
+        if (contextItems.Count > 0) { if (!ScrollContextSubmenu(x, y, delta)) contextItems.Clear(); return; }
         if (assistPalette.Contains(x, y)) { assistScroll = Math.Clamp(assistScroll - delta / 120 * 64, 0, assistScrollLimit); return; }
         if (difficultyTabStrip.Contains(x, y))
         {

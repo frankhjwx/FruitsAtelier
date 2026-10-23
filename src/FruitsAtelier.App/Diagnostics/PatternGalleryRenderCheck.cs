@@ -218,6 +218,29 @@ internal static class PatternGalleryRenderCheck
                 ClickContext(1);
                 Wait(() => editor.PatternGalleryCount == patterns.Count && !editor.PatternGalleryNeedsRedraw, "delete pattern");
                 Paint("deleted");
+                var moveCard = Card(patterns[0].Id);
+                editor.PointerDown(moveCard.X + 10, moveCard.Y + 10, 2, false, false);
+                editor.PointerUp(moveCard.X + 10, moveCard.Y + 10, 2); Paint();
+                var moveRow = editor.PatternGalleryContextItemBounds(2);
+                editor.PointerMove(moveRow.X + 20, moveRow.Y + 15, false, false); Paint("move-to-categories");
+                var destinations = editor.ContextSubmenuBounds;
+                if (destinations.Width <= 0 || destinations.X < 0 || destinations.Right > size.Item1)
+                    throw new InvalidOperationException("Move to submenu did not fit the window.");
+                Click(new(destinations.X + 6, destinations.Y + 38, destinations.Width - 12, 30));
+                Wait(() => !editor.PatternGalleryNeedsRedraw, "move pattern to Shared");
+                if (!folderStore.LoadContents().Folders!.Single(f => f.Id == sharedFolder).PatternIds.Contains(patterns[0].Id))
+                    throw new InvalidOperationException("Move to did not change category membership.");
+                var deleteFolder = editor.PatternGalleryFolderBounds(sharedFolder);
+                Click(deleteFolder);
+                editor.PointerDown(deleteFolder.X + 10, deleteFolder.Y + 10, 2, false, false);
+                editor.PointerUp(deleteFolder.X + 10, deleteFolder.Y + 10, 2); Paint();
+                Click(editor.PatternGalleryContextItemBounds(1)); Paint("delete-folder-confirmation");
+                if (!editor.DiscardConfirmationVisible) throw new InvalidOperationException("Nonempty folder deletion needs a choice.");
+                Click(editor.GalleryFolderDeleteChoiceBounds(0));
+                Wait(() => !editor.PatternGalleryNeedsRedraw, "keep patterns in Default");
+                if (folderStore.LoadContents().Folders!.Any(f => f.Id == sharedFolder)
+                    || !folderStore.LoadContents().Folders!.Single(f => f.Id == PatternFolder.DefaultId).PatternIds.Contains(patterns[0].Id))
+                    throw new InvalidOperationException("Keep did not preserve the pattern in Default.");
                 if (!map.ContentEquals(editor.Document)) throw new InvalidOperationException("Gallery management changed the map.");
                 string emptyGallery = Path.Combine(gallery, "empty");
                 editor.ConfigurePatternGallery(emptyGallery); Paint();

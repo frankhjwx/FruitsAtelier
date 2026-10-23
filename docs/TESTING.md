@@ -130,14 +130,16 @@ Alt-wheel zoom limits and preview reuse,
 Library-style search, multi-tag filtering, tag creation/colour/name edits and persistence,
 detail-page editing, single/multiple-object context capture and source navigation while retaining unsaved maps.
 It also checks range selection across offscreen cards, category switching and merging,
-cross-folder clipboard shortcuts, conditional folder menus, folder rename/deletion,
+cross-folder clipboard shortcuts, Move to submenus with scrolling and multi-selection,
+conditional folder menus, folder rename/deletion with keep/delete/cancel choices,
 import destinations, 50% minimum card zoom, two-column maximum sizing and geometry reuse.
 `FruitsAtelier.App.exe --render-check --pattern-gallery-render-check` checks the
 grid, large scrolling preview, naming/rename dialogs, context deletion, placement menu,
 drag/drop and editing banner in
 English and Chinese at compact/wide sizes and 96/144 DPI, including warm raster
 cache reuse, the Category sidebar and divider, folder selection/merge/import menus,
-50% cards and enlarged cards filling two columns in a wide dock.
+50% cards, enlarged cards filling two columns in a wide dock, Move to submenus,
+and nonempty folder deletion confirmations.
 Captures are written under `artifacts/tests/pattern-gallery-native`.
 
 `App.Tests --new-difficulty-check` checks independent complete copies, named

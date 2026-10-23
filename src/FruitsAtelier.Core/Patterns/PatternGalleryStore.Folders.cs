@@ -48,7 +48,7 @@ public sealed partial class PatternGalleryStore
         SaveContents(contents with { Folders = contents.Folders!.Select(f => f.Id == id ? f with { Name = name.Trim() } : f).ToArray() });
     }
 
-    public void DeleteFolder(Guid id)
+    public void DeleteFolder(Guid id, bool keepPatterns = false)
     {
         var contents = LoadContents();
         var folder = RequireFolder(contents, id);
@@ -56,8 +56,10 @@ public sealed partial class PatternGalleryStore
         var members = folder.PatternIds.ToHashSet();
         SaveContents(contents with
         {
-            Patterns = contents.Patterns.Where(p => !members.Contains(p.Id)).ToArray(),
-            Folders = contents.Folders!.Where(f => f.Id != id).ToArray()
+            Patterns = keepPatterns ? contents.Patterns : contents.Patterns.Where(p => !members.Contains(p.Id)).ToArray(),
+            Folders = contents.Folders!.Where(f => f.Id != id)
+                .Select(f => keepPatterns && f.Id == PatternFolder.DefaultId
+                    ? f with { PatternIds = f.PatternIds.Concat(folder.PatternIds).ToArray() } : f).ToArray()
         });
     }
 

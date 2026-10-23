@@ -127,11 +127,7 @@ public sealed partial class EditorView
                 });
             }, CanEditGalleryTags && id != PatternFolder.DefaultId && RequestPatternName is not null));
             if (id != PatternFolder.DefaultId)
-                contextItems.Add(new(L.Get("gallery.deleteFolder"), () =>
-                {
-                    if (!CanEditGalleryTags || galleryStore is not { } store) return;
-                    StartGalleryIo(() => { store.DeleteFolder(id); return ReloadGallery(store, ""); });
-                }, CanEditGalleryTags));
+                contextItems.Add(new(L.Get("gallery.deleteFolder"), () => RequestDeleteGalleryFolder(id), CanEditGalleryTags));
             if (galleryFolderSelection.Count >= 2)
                 contextItems.Add(new(L.Get("gallery.mergeFolders"), () => ShowGalleryMergeFolders(), CanEditGalleryTags));
             contextItems.Add(new(L.Get("gallery.export"), () => RequestGalleryExport(galleryFolderSelection.ToArray())));

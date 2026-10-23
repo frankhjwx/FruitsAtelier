@@ -127,8 +127,15 @@ public sealed partial class EditorView
             var ids = gallerySelection.ToArray();
             StartGalleryIo(() => { store.DeletePatterns(ids); return ReloadGallery(store, ""); });
         }));
-        contextItems.Add(new(L.Get("editor.command.copy"), () => CopyGalleryPatterns(false)));
-        contextItems.Add(new(L.Get("editor.command.cut"), () => CopyGalleryPatterns(true)));
+        var selectedIds = gallerySelection.ToArray();
+        var storeForMove = galleryStore;
+        int moveGeneration = galleryGeneration;
+        var destinations = galleryFolders.Where(f => f.Id != galleryFolderId).Select(folder => new ContextItem(folder.Name, () =>
+        {
+            if (!CanEditGalleryTags || galleryStore is not { } store || !ReferenceEquals(store, storeForMove) || galleryGeneration != moveGeneration) return;
+            StartGalleryIo(() => { store.TransferPatterns(selectedIds, folder.Id, false); return ReloadGallery(store, "", true); });
+        })).ToArray();
+        contextItems.Add(new(L.Get("gallery.moveTo"), () => { }, destinations.Length > 0, Children: destinations));
         if (galleryClipboard.Length > 0)
             contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(galleryFolderId)));
         PositionGalleryMenu(x, y);

@@ -1800,5 +1800,9 @@
   "gallery.exportFolder": "ส่งออกโฟลเดอร์",
   "gallery.defaultPermanent": "Default เป็นโฟลเดอร์ถาวร ไม่สามารถเปลี่ยนชื่อหรือลบได้",
   "gallery.renameFolder": "เปลี่ยนชื่อโฟลเดอร์",
-  "gallery.deleteFolder": "ลบโฟลเดอร์"
+  "gallery.deleteFolder": "ลบโฟลเดอร์",
+  "gallery.moveTo": "ย้ายไปที่",
+  "gallery.deleteFolderPrompt": "โฟลเดอร์นี้มี {0} แพตเทิร์น ต้องการเก็บไว้หรือไม่?",
+  "gallery.keepPatterns": "เก็บแพตเทิร์นไว้ใน Default",
+  "gallery.deleteFolderPatterns": "ลบโฟลเดอร์และแพตเทิร์น"
 }

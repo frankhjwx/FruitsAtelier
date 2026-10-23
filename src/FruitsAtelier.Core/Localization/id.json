@@ -1800,5 +1800,9 @@
   "gallery.exportFolder": "Ekspor folder",
   "gallery.defaultPermanent": "Default bersifat permanen dan tidak dapat diganti nama atau dihapus.",
   "gallery.renameFolder": "Ganti nama folder",
-  "gallery.deleteFolder": "Hapus folder"
+  "gallery.deleteFolder": "Hapus folder",
+  "gallery.moveTo": "Pindahkan ke",
+  "gallery.deleteFolderPrompt": "Folder ini berisi {0} pola. Simpan pola?",
+  "gallery.keepPatterns": "Simpan pola di Default",
+  "gallery.deleteFolderPatterns": "Hapus folder dan pola"
 }

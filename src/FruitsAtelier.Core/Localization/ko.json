@@ -1800,5 +1800,9 @@
   "gallery.exportFolder": "폴더 내보내기",
   "gallery.defaultPermanent": "Default는 영구적으로 유지되며 이름을 바꾸거나 삭제할 수 없습니다.",
   "gallery.renameFolder": "폴더 이름 바꾸기",
-  "gallery.deleteFolder": "폴더 삭제"
+  "gallery.deleteFolder": "폴더 삭제",
+  "gallery.moveTo": "이동 위치",
+  "gallery.deleteFolderPrompt": "이 폴더에 패턴이 {0}개 있습니다. 보관할까요?",
+  "gallery.keepPatterns": "패턴을 Default에 보관",
+  "gallery.deleteFolderPatterns": "폴더와 패턴 삭제"
 }

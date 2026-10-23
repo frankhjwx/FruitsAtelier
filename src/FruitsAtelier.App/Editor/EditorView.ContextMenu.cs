@@ -8,14 +8,15 @@ public sealed partial class EditorView
 {
     private readonly List<ContextItem> contextItems = [];
     private Rect contextBounds;
-    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null, bool Separator = false, bool Heading = false, bool Active = false, int SliderAction = 0, ContextItem[]? Actions = null, int Weight = 1);
+    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null, bool Separator = false, bool Heading = false, bool Active = false, int SliderAction = 0, ContextItem[]? Actions = null, int Weight = 1, ContextItem[]? Children = null);
     private float ContextMenuHeight => 12 + contextItems.Sum(item => item.Separator ? 10 : 32);
     private void AddContextSeparator() => contextItems.Add(new("", () => { }, Enabled: false, Separator: true));
     private sealed record SliderLocation(Guid Id, double FirstSpanTimeMs);
 
     private void DrawContextMenu(ICanvas c)
     {
-        if (contextItems.Count == 0) return;
+        if (contextItems.Count == 0) { contextSubmenu = null; return; }
+        UpdateContextSubmenu();
         c.Fill(new(contextBounds.X + 3, contextBounds.Y + 4, contextBounds.Width, contextBounds.Height), 0x11151B, 5);
         c.Fill(contextBounds, Surface, 5);
         c.Stroke(contextBounds, Grid, 1, 5);
@@ -38,18 +39,26 @@ public sealed partial class EditorView
             }
             else DrawContextAction(c, item, rect);
         }
+        DrawContextSubmenu(c);
     }
 
     private void DrawContextAction(ICanvas c, ContextItem item, Rect rect)
     {
         bool hover = item.Enabled && rect.Contains(mouseX, mouseY);
-        if (item.Active)
+        bool active = item.Active || ReferenceEquals(item, contextSubmenu);
+        if (active)
         {
             c.Fill(rect, hover ? 0x3A6260u : 0x31494Bu, 4);
             c.Stroke(rect, 0x477E7B, 1, 4);
         }
         else if (hover) c.Fill(rect, 0x343E4D, 4);
-        c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? item.Color ?? (item.Active ? Accent : Foreground) : 0x5B6777, rect.Width - (item.Shortcut.Length > 0 ? 90 : 18), item.Active);
+        c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? item.Color ?? (active ? Accent : Foreground) : 0x5B6777, rect.Width - (item.Shortcut.Length > 0 ? 90 : item.Children is not null ? 34 : 18), active);
+        if (item.Children is not null)
+        {
+            uint color = item.Enabled ? Foreground : 0x5B6777;
+            c.Line(rect.Right - 17, rect.Y + 10, rect.Right - 12, rect.Y + 15, color);
+            c.Line(rect.Right - 12, rect.Y + 15, rect.Right - 17, rect.Y + 20, color);
+        }
         string shortcut = item.Shortcut;
         if (shortcut.Length > 0)
         {
@@ -72,10 +81,12 @@ public sealed partial class EditorView
 
     private void ActivateContextMenu(float x, float y)
     {
+        if (ActivateContextSubmenu(x, y)) return;
         Action? action = null;
         for (int i = 0; i < contextItems.Count; i++)
             if (ContextItemBounds(i).Contains(x, y) && contextItems[i].Enabled)
             {
+                if (contextItems[i].Children is not null) { OpenContextSubmenu(contextItems[i], ContextItemBounds(i)); return; }
                 if (contextItems[i].Actions is { } actions)
                 {
                     for (int column = 0; column < actions.Length; column++)

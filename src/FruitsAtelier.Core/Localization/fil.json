@@ -1800,5 +1800,9 @@
   "gallery.exportFolder": "I-export ang folder",
   "gallery.defaultPermanent": "Permanente ang Default at hindi maaaring palitan ang pangalan o alisin.",
   "gallery.renameFolder": "Palitan ang pangalan ng folder",
-  "gallery.deleteFolder": "Tanggalin ang folder"
+  "gallery.deleteFolder": "Tanggalin ang folder",
+  "gallery.moveTo": "Ilipat sa",
+  "gallery.deleteFolderPrompt": "May {0} pattern ang folder na ito. Panatilihin?",
+  "gallery.keepPatterns": "Panatilihin ang mga pattern sa Default",
+  "gallery.deleteFolderPatterns": "Tanggalin ang folder at mga pattern"
 }

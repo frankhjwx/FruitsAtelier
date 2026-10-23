@@ -1800,5 +1800,9 @@
   "gallery.exportFolder": "导出文件夹",
   "gallery.defaultPermanent": "Default 永久保留，不能重命名或删除。",
   "gallery.renameFolder": "重命名文件夹",
-  "gallery.deleteFolder": "删除文件夹"
+  "gallery.deleteFolder": "删除文件夹",
+  "gallery.moveTo": "移动到",
+  "gallery.deleteFolderPrompt": "此文件夹包含 {0} 个 pattern，是否保留？",
+  "gallery.keepPatterns": "保留 patterns 并移到 Default",
+  "gallery.deleteFolderPatterns": "删除文件夹及其中的 patterns"
 }

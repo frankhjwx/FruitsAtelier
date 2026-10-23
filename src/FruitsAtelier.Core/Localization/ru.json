@@ -1800,5 +1800,9 @@
   "gallery.exportFolder": "Экспорт папки",
   "gallery.defaultPermanent": "Папка Default постоянная: её нельзя переименовать или удалить.",
   "gallery.renameFolder": "Переименовать папку",
-  "gallery.deleteFolder": "Удалить папку"
+  "gallery.deleteFolder": "Удалить папку",
+  "gallery.moveTo": "Переместить в",
+  "gallery.deleteFolderPrompt": "В папке {0} паттернов. Сохранить их?",
+  "gallery.keepPatterns": "Сохранить паттерны в Default",
+  "gallery.deleteFolderPatterns": "Удалить папку и паттерны"
 }
