@@ -8,7 +8,7 @@ using R = FruitsAtelier.App.Rendering.Rect;
 
 namespace FruitsAtelier.Mac;
 
-internal sealed class ImageCache : IDisposable
+internal sealed partial class ImageCache : IDisposable
 {
     private readonly Dictionary<(string, uint, long, long), (Bitmap Bitmap, long Used)> images = [];
     private readonly string bookmarkToolbarPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
@@ -44,13 +44,23 @@ internal sealed class ImageCache : IDisposable
         }
         paths.Add(points, geometry); pathOrder.Enqueue(points); return geometry;
     }
+    private static readonly FruitsAtelier.Core.LibraryFileCache thumbnailCache = new("thumbnails-mac", "png-192x152-1");
     private readonly ThumbnailCache<Bitmap> thumbnails = new(path =>
     {
+        var fingerprint = thumbnailCache.Fingerprint(path);
+        if (thumbnailCache.Read(path) is { } cached)
+        {
+            try { using var input = new MemoryStream(cached); return new Bitmap(input); }
+            catch (Exception) { /* A damaged thumbnail is regenerated from its source. */ }
+        }
         var file = new FileInfo(path);
         if (!file.Exists || file.Length is < 24 or > 32 * 1024 * 1024) return null;
         using var bitmap = new Bitmap(path);
         double scale = Math.Min(1, Math.Min(192d / bitmap.PixelSize.Width, 152d / bitmap.PixelSize.Height));
-        return bitmap.CreateScaledBitmap(new PixelSize(Math.Max(1, (int)(bitmap.PixelSize.Width * scale)), Math.Max(1, (int)(bitmap.PixelSize.Height * scale))));
+        var result = bitmap.CreateScaledBitmap(new PixelSize(Math.Max(1, (int)(bitmap.PixelSize.Width * scale)), Math.Max(1, (int)(bitmap.PixelSize.Height * scale))));
+        using var output = new MemoryStream();
+        result.Save(output); thumbnailCache.Write(path, fingerprint, output.ToArray());
+        return result;
     });
     public Bitmap? Thumbnail(string path) => thumbnails.Get(path);
     public unsafe Bitmap? Get(string path, uint tint, bool background = false)
@@ -104,13 +114,14 @@ internal sealed class ImageCache : IDisposable
     }
     internal void ReleaseDifficultyResources()
     {
+        ClearPatternRasters();
         beatmapBackground?.Bitmap.Dispose(); beatmapBackground = null;
         paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear();
     }
-    public void Dispose() { ClearImages(); thumbnails.Dispose(); paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear(); }
+    public void Dispose() { ClearPatternRasters(); ClearImages(); thumbnails.Dispose(); paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear(); }
 }
 
-internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICanvas, IDisposable
+internal sealed partial class MacCanvas(DrawingContext context, ImageCache images, double renderScale = 1) : ICanvas, IDisposable
 {
     public void ReleaseDifficultyResources() => images.ReleaseDifficultyResources();
     private readonly Stack<DrawingContext.PushedState> clips = [];

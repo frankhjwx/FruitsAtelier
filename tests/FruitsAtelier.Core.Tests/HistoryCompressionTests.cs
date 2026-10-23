@@ -74,15 +74,17 @@ internal static class HistoryCompressionTests
         File.WriteAllText(Path.Combine(other, "saved.catchproj"), "{}");
         project.Difficulties[0].Document.Fruits[0].X = 200;
         WorkspaceVersionHistory.ArchiveCurrent(session, project);
-        Check(Directory.GetDirectories(projectHistory).Length == 100 && !Directory.Exists(rounds[0]) && !Directory.Exists(rounds[1]), "new backup trims a set to 100 rounds without the 24-hour exemption");
-        Check(Directory.Exists(other), "write-time retention leaves other sets alone");
+        Check(Directory.GetDirectories(projectHistory).Length == 102 && WorkspaceStorage.HistoryMaintenancePending(cappedWorkspace), "new backup defers retention to idle maintenance");
+        WorkspaceStorage.Clean(cappedWorkspace, compactLegacy: false);
+        Check(Directory.GetDirectories(projectHistory).Length == 100 && !Directory.Exists(rounds[0]) && !Directory.Exists(rounds[1]), "idle maintenance trims a set to 100 rounds without the 24-hour exemption");
+        Check(Directory.Exists(other), "idle retention preserves another set's newest round");
         var newest = WorkspaceVersionHistory.List(session).First(v => v.WorkingCopy);
-        Check(WorkspaceVersionHistory.Read(session, newest).Difficulties[0].Document.Fruits[0].X == 200, "latest unsaved authoring survives write-time pruning");
+        Check(WorkspaceVersionHistory.Read(session, newest).Difficulties[0].Document.Fruits[0].X == 200, "latest unsaved authoring survives deferred retention");
         BackgroundMigration(Path.Combine(root, "background"));
-        CachedRetention(Path.Combine(root, "cached-retention"));
+        RetainedReferences(Path.Combine(root, "retained-references"));
     }
 
-    private static void CachedRetention(string workspace)
+    private static void RetainedReferences(string workspace)
     {
         var project = BeatmapProject.FromDocuments([new MapDocument { IsDemo = false }]);
         var session = WorkspaceProject.Create(workspace, project, "");
@@ -93,21 +95,21 @@ internal static class HistoryCompressionTests
         Directory.CreateDirectory(Path.GetDirectoryName(other)!);
         WorkspaceHistoryFile.Write(other, Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { AudioPath = Path.Combine(rounds[0], "audio.mp3") })));
         WorkspaceStorage.CompressLegacyHistoryAsync(workspace, interval: TimeSpan.Zero).GetAwaiter().GetResult();
-        WorkspaceStorage.EnforceVersionLimit(session);
+        WorkspaceStorage.Clean(workspace, compactLegacy: false);
         Check(Directory.Exists(rounds[0]) && !Directory.Exists(rounds[1]) && Directory.GetDirectories(history).Length == 100,
-            "primed references protect an older round and consume a retention slot");
+            "compressed references protect an older round and consume a retention slot");
         string extra = Path.Combine(history, DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffffff") + "-save");
         Directory.CreateDirectory(extra); WorkspaceHistoryFile.Write(Path.Combine(extra, "saved.catchproj"), "{}"u8.ToArray());
         WorkspaceHistoryFile.Write(other, "{}"u8.ToArray());
         File.SetLastWriteTimeUtc(other + WorkspaceHistoryFile.Extension, DateTime.UtcNow.AddSeconds(1));
-        WorkspaceStorage.EnforceVersionLimit(session);
-        Check(!Directory.Exists(rounds[0]) && Directory.GetDirectories(history).Length == 100, "replaced binary invalidates its cached reference pins");
+        WorkspaceStorage.Clean(workspace, compactLegacy: false);
+        Check(!Directory.Exists(rounds[0]) && Directory.GetDirectories(history).Length == 100, "replaced binary refreshes reference pins");
         extra = Path.Combine(history, DateTime.UtcNow.AddSeconds(1).ToString("yyyyMMddTHHmmssfffffff") + "-save");
         Directory.CreateDirectory(extra); WorkspaceHistoryFile.Write(Path.Combine(extra, "saved.catchproj"), "{}"u8.ToArray());
         byte[] damaged = File.ReadAllBytes(other + WorkspaceHistoryFile.Extension); damaged[12] ^= 1;
         File.WriteAllBytes(other + WorkspaceHistoryFile.Extension, damaged);
         File.SetLastWriteTimeUtc(other + WorkspaceHistoryFile.Extension, DateTime.UtcNow.AddSeconds(2));
-        Reject(() => WorkspaceStorage.EnforceVersionLimit(session), "changed corrupt reference accepted from cache");
+        Reject(() => WorkspaceStorage.Clean(workspace, compactLegacy: false), "changed corrupt reference accepted");
         Check(Directory.GetDirectories(history).Length == 101, "corrupt replacement aborts retention before any deletion");
     }
 

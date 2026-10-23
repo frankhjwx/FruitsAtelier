@@ -250,6 +250,13 @@ internal static class DropletDefaultsTests
         ui.View.OpenSettings(); ui.Paint();
         var bounds = ui.View.SettingsBounds;
         ui.View.Wheel(bounds.Right - 100, bounds.Y + 150, -1200, false); ui.Paint();
+        for (int i = 0; i < 20; i++)
+        {
+            var link = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.openDropletSettings"));
+            if (link.Y >= bounds.Y + 124 && link.Y <= bounds.Bottom - 124) break;
+            ui.View.Wheel(bounds.Right - 100, bounds.Y + 150, link.Y < bounds.Y + 124 ? 120 : -120, false);
+            ui.Paint();
+        }
     }
 
     private static void Wait(Ui ui)

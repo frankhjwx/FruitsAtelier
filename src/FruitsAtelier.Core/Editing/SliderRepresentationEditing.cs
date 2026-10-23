@@ -163,7 +163,7 @@ public static class SliderRepresentationEditing
                 slider.EndpointSnap = source.EndpointSnap;
                 slider.PreserveNativeGeometry = source.PreserveNativeGeometry;
                 slider.ProcessedSliderVelocityMultiplier = source.SliderVelocityMultiplier is null ? null
-                    : slider.SliderVelocityMultiplier * document.EffectiveSliderMultiplier / document.SliderMultiplier;
+                    : StoredVelocity(slider.SliderVelocityMultiplier!.Value);
                 slider.SliderVelocityMultiplier = source.SliderVelocityMultiplier;
                 slider.RandomizationSource = (source.RandomizationSource ?? source).DeepClone();
                 slider.RandomizationTrack = baselineTracks[source.Id];
@@ -180,6 +180,16 @@ public static class SliderRepresentationEditing
             if (sources.Any(s => s.SliderVelocityMultiplier is null))
             { document.TimingPoints.Clear(); document.TimingPoints.AddRange(candidate.TimingPoints); }
             return new(true, []) { ValidatedOutput = actual };
+
+            double StoredVelocity(double velocity)
+            {
+                if (document.EffectiveSliderMultiplier == document.SliderMultiplier) return velocity;
+                float beatLength = (float)(100 / velocity);
+                // Rebase into the middle of the float interval that rounds up to the emitted green.
+                // An exact boundary can round up again after the inverse multiplier calculation.
+                double magnitude = ((double)beatLength + MathF.BitDecrement(beatLength)) / 2;
+                return 100 / (magnitude * document.SliderMultiplier / document.EffectiveSliderMultiplier);
+            }
         }
         catch (Exception error) when (error is InvalidDataException or InvalidOperationException or ArgumentException or CatchConversionException)
         { return new(false, [error.Message]); }

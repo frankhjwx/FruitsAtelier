@@ -13,12 +13,12 @@ internal static class LibraryFavouriteTests
         {
             L.SetLanguage(locale);
             string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "favourites", Guid.NewGuid().ToString()));
-            var settings = new LibrarySettings { Workspace = Path.Combine(root, "Workspace"), Songs = Path.Combine(root, "osu", "Songs") };
+            var settings = new LibrarySettings { MapperUsernames = ["Local mapper"], Workspace = Path.Combine(root, "Workspace"), Songs = Path.Combine(root, "osu", "Songs") };
             string folder = Path.Combine(settings.Songs, "Song");
             Directory.CreateDirectory(folder);
             string source = Path.Combine(folder, "map.osu");
             File.WriteAllText(source, "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Favourite song\nArtist:Artist\nCreator:Mapper\nVersion:Rain\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,1,0,0:0:0:0:");
-            var local = WorkspaceProject.Create(settings.Workspace, BeatmapProject.FromDocuments([new MapDocument { Name = "Local favourite", IsDemo = false }]), settings.Songs);
+            var local = WorkspaceProject.Create(settings.Workspace, BeatmapProject.FromDocuments([MyMapsTests.Document("Local favourite", "Local mapper")]), settings.Songs);
             var view = new EditorView(loadDemo: false);
             var canvas = new RecordingCanvas();
             try
@@ -27,7 +27,7 @@ internal static class LibraryFavouriteTests
                 var original = view.Document.DeepClone();
                 Toggle("library.addFavourite");
                 Check(StarCount() == 1, "star image on upper-left of song card");
-                Click("library.projects"); Settle(1); Toggle("library.addFavourite");
+                Click("library.myMaps"); Settle(1); Toggle("library.addFavourite");
                 Click("library.favourites"); Settle(2);
                 Check(view.LibrarySetTotal == 2, "favourites includes songs and local projects");
                 Check(StarCount() == 2, "both favourites are marked");
@@ -57,7 +57,7 @@ internal static class LibraryFavouriteTests
                 view.CloseLibrary();
                 view = new EditorView(loadDemo: false); view.InitializeLibrary(true, settings); Settle(0);
                 Check(view.LibrarySetTotal == 0, "removals survive restart");
-                Click("library.projects"); Settle(2);
+                Click("library.myMaps"); Settle(1);
                 Check(StarCount() == 0, "project cards no longer show favourite stars");
             }
             finally { view.CloseLibrary(); }

@@ -6,6 +6,17 @@ internal sealed partial class EditorWindow
 {
     private void ConfigureLibrary()
     {
+        view.RequestPatternImport = () => FileOperation(() =>
+        {
+            var path = MapFileDialog.Select(hwnd, false, L.Get("gallery.import"), MapFileDialog.PatternFilter);
+            if (path is not null) view.BeginPatternImport(path);
+        });
+        view.RequestPatternExport = selectedOnly => FileOperation(() =>
+        {
+            var path = MapFileDialog.Select(hwnd, true, L.Get("gallery.export"), MapFileDialog.PatternFilter,
+                "Patterns.fap", "fap");
+            if (path is not null) view.BeginPatternExport(path, selectedOnly);
+        });
         view.RequestFazOpen = path => ConfirmDiscard(() => OpenPath(path));
         view.RequestFazExport = complete => ExportFaz(complete);
         view.RequestFadExport = index => FileOperation(() =>

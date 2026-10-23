@@ -1,4 +1,6 @@
 using FruitsAtelier.Core;
+if (args.Contains("--deferred-history-check")) { DeferredHistoryTests.Run(); WorkspaceStorageTests.Run(); HistoryCompressionTests.Run(); return 0; }
+if (args.Contains("--pattern-placement-check")) { PatternPlacementTests.Run(); Console.WriteLine("PASS Pattern placement and preview"); return 0; }
 if (args.Contains("--slider-recovery-check")) { SliderRecoveryTests.Run(); return 0; }
 if (args.Length == 3 && args[0] == "--slider-roundtrip") return SliderRoundtripCorpus.Run(args[1], args[2]);
 if (args.Contains("--compact-arc-check")) { SliderModeTests.CompactArcConversion(); SliderModeTests.PenConversionAndHistory(); return 0; }
@@ -40,6 +42,7 @@ if (args.Length == 2 && args[0] == "--benchmark-history")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Pattern placement preserves beats, geometry, settings, snapshots and history", PatternPlacementTests.Run),
     ("Compact arc editing preserves trajectory, endpoint identity, export and history", SliderModeTests.CompactArcConversion),
     ("Imported geometry follows snapshot inputs and shares readonly derived paths", ImportedGeometryMemoTests.Run),
     ("Hitsound snapshots retain sample fields without copying large path text", HitsoundSnapshotTests.Run),
@@ -56,6 +59,7 @@ var tests = new (string Name, Action Run)[]
     ("Fractional repeats share fixed targets during partial tiny compensation", PartialCompensationTests.FractionalRepeats),
     ("Project files support 128 MiB and reject oversized UTF-8 data", ProjectSizeLimitTests.Run),
     ("Workspace storage protects references and recovery while pruning history and rebuilding caches", WorkspaceStorageTests.Run),
+    ("History maintenance yields and preserves references and recovery", DeferredHistoryTests.Run),
     ("Reusable beat grids match reference boundaries and allocate no warm frame buffers", GridBufferTests.Equivalence),
     ("Timing edits transform sections, FSliders, metadata and exported durations", TimingEditingTests.Run),
     ("Waveform preserves stereo transients across chunks and zoom levels", WaveformTests.Run),

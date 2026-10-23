@@ -205,6 +205,12 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--pattern-gallery-render-check"))
+            {
+                Diagnostics.PatternGalleryRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--library-organization-render-check"))
             {
                 Diagnostics.LibraryOrganizationRenderCheck.Run(canvas);
@@ -322,6 +328,7 @@ internal sealed partial class EditorWindow : IDisposable
 
     private void ConfirmDiscard(Action continuation)
     {
+        if (view.ResolvePatternSessionsBeforeLeaving(() => ConfirmDiscard(continuation))) return;
         if (view.WaitForSynchronization(ready => { if (ready) ConfirmDiscard(continuation); })) { Invalidate(); return; }
         if (view.DiscardConfirmationVisible || !view.PrepareFileOperation()) return;
         if (Native.GetCapture() == hwnd) Native.ReleaseCapture();
@@ -485,7 +492,7 @@ internal sealed partial class EditorWindow : IDisposable
                 }
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
-                    || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
+                    || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
                     || canvas?.SliderRasterNeedsRedraw == true) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: RefreshUiScale(window); Invalidate(); return 0; // WM_SIZE
@@ -641,6 +648,7 @@ internal sealed partial class EditorWindow : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        view.CompleteLibraryCacheWrites();
         view.StopFileMonitoring();
         view.CleanupFazOnExit();
         updates?.Dispose();

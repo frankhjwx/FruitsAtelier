@@ -25,6 +25,8 @@ public sealed partial class EditorView
 
     private void PointerDownCore(float x, float y, int button, bool shift, bool ctrl)
     {
+        if (PatternNameVisible && !ErrorVisible) { mouseX = x; mouseY = y; PatternNamePointerDown(x, y, button); return; }
+        if (GalleryTagsVisible && !ErrorVisible) { mouseX = x; mouseY = y; GalleryTagsPointerDown(x, y, button); return; }
         if (OsuLinkPickerVisible && !ErrorVisible)
         {
             OsuLinkPickerPointerDown(x, y, button);
@@ -133,6 +135,8 @@ public sealed partial class EditorView
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
+        if (PatternEditingPointerDown(x, y, button)) return;
+        if (PatternGalleryPointerDown(x, y, button, shift, ctrl)) return;
         if (BeginTimelinePanelResize(x, y, button)) return;
         if (BeginDockHorizontal(x, y, button)) return;
         if (BeginDockPointer(x, y, button)) return;
@@ -464,6 +468,8 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (GalleryTagsVisible) { mouseX = x; mouseY = y; if (!PatternNameVisible) { if (MoveGalleryTagOrder(x, y)) return; if (textSelecting && GalleryTagTextFocused) MoveInputSelection(x); else MoveGalleryTagColour(x, y); } return; }
+        if (PatternGalleryPointerMove(x, y)) return;
         if (templatePointer) { mouseX = x; mouseY = y; MoveMapTemplate(x, y); return; }
         if (CollaborationReportVisible) { mouseX = x; mouseY = y; if (collaborationReportDragging) MoveCollaborationReport(x, y); return; }
         if (RotationVisible) { mouseX = x; mouseY = y; RotationPointerMove(x, y); return; }
@@ -628,6 +634,8 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (GalleryTagsVisible) { if (button == 0) { if (EndGalleryTagOrder(x, y)) return; if (!PatternNameVisible) MoveGalleryTagColour(x, y); galleryTagDrag = 0; textSelecting = false; } return; }
+        if (PatternGalleryPointerUp(x, y, button)) return;
         if (templatePointer && button == 0)
         {
             MoveMapTemplate(x, y);
@@ -771,6 +779,9 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (PatternNameVisible || GalleryTagsVisible || PatternEditingBusy) return;
+        if (PatternGalleryPopupContains(x, y) || PatternGalleryInputAvailable
+            && (galleryGridBounds.Contains(x, y) || galleryCategoryBounds.Contains(x, y))) return;
         if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
@@ -930,6 +941,8 @@ public sealed partial class EditorView
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
+        if (PatternNameVisible || GalleryTagsVisible) return;
+        if (PatternGalleryWheel(x, y, delta, ctrl, alt || altHeld)) return;
         if (!ErrorVisible && MapTemplatesVisible)
         {
             if (templateListBounds.Contains(x, y))
@@ -959,6 +972,7 @@ public sealed partial class EditorView
                 0, Math.Max(0, L.AvailableLanguages.Count - languageVisibleRows));
             return;
         }
+        if (WheelDockTabs(x, y, delta)) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
             if (aimodScrollTrack.Contains(x, y) || shiftHeld)
@@ -1069,7 +1083,7 @@ public sealed partial class EditorView
             return;
         }
         if (drag != DragKind.None && !NavigationDuringDrag) return;
-        if (contextItems.Count > 0) { contextItems.Clear(); return; }
+        if (contextItems.Count > 0) { if (!ScrollContextSubmenu(x, y, delta)) contextItems.Clear(); return; }
         if (assistPalette.Contains(x, y)) { assistScroll = Math.Clamp(assistScroll - delta / 120 * 64, 0, assistScrollLimit); return; }
         if (difficultyTabStrip.Contains(x, y))
         {
@@ -1188,6 +1202,10 @@ public sealed partial class EditorView
 
     private void KeyDownCore(int virtualKey, bool ctrl, bool shift)
     {
+        if (PatternNameVisible && !ErrorVisible) { PatternNameKey(virtualKey, ctrl, shift); return; }
+        if (GalleryTagsVisible && !ErrorVisible) { GalleryTagsKey(virtualKey, ctrl, shift); return; }
+        if (PatternEditingKeyDown(virtualKey, ctrl)) return;
+        if (PatternGalleryKeyDown(virtualKey, ctrl, shift)) return;
         if (CollaborationReportVisible && !ErrorVisible && !DiscardConfirmationVisible)
         {
             if (virtualKey == 27) CloseCollaborationReport();
@@ -1383,7 +1401,7 @@ public sealed partial class EditorView
         if (virtualKey == 116 && !ctrl && !shift && !altHeld) { StartTestplay(); return; }
         if (ctrl && !shift && !altHeld && virtualKey == 83 && drag == DragKind.None)
         {
-            RequestSave?.Invoke();
+            if (PatternEditingActive) SavePatternEditing(); else RequestSave?.Invoke();
             return;
         }
         if (ctrl && altHeld && !shift && virtualKey == 69 && drag == DragKind.None)
@@ -1530,6 +1548,9 @@ public sealed partial class EditorView
 
     private void TextInputCore(char value)
     {
+        if (PatternNameVisible && !ErrorVisible) { PatternNameText(value.ToString()); return; }
+        if (GalleryTagsVisible) { GalleryTagsText(value.ToString()); return; }
+        if (GallerySearchFocused) { GallerySearchText(value.ToString()); return; }
         if (AcknowledgementsVisible) return;
         if (MapTemplatesVisible && !ErrorVisible) { MapTemplatesText(value.ToString()); return; }
         if (addDifficultyConfirmation && !ErrorVisible) { NewDifficultyText(value.ToString()); return; }
@@ -1585,6 +1606,8 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        CancelPatternGalleryInteraction();
+        CancelGalleryTagOrder();
         FinishMapTemplateDrag(cancel: true);
         CancelRotation();
         rotationDragging = false;

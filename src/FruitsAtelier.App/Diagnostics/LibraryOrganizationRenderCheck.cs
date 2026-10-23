@@ -13,7 +13,7 @@ internal static class LibraryOrganizationRenderCheck
     {
         string folder = Path.GetFullPath("artifacts/tests/library-organization-native");
         string root = Path.Combine(folder, Guid.NewGuid().ToString("N"));
-        var settings = new LibrarySettings { Workspace = Path.Combine(root, "Workspace"), Songs = Path.Combine(root, "osu", "Songs") };
+        var settings = new LibrarySettings { MapperUsernames = ["Alice"], Workspace = Path.Combine(root, "Workspace"), Songs = Path.Combine(root, "osu", "Songs") };
         var names = new[] { "A New Beginning", "After the Rain", "Blue Hour", "Beyond the Clouds", "Crystal Garden", "Daylight" };
         var paths = new List<string>();
         for (int i = 0; i < names.Length; i++)
@@ -48,6 +48,22 @@ internal static class LibraryOrganizationRenderCheck
                     canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
                     view.InitializeLibrary(true, settings); Wait(6); Capture("groups");
                     Invoke("ToggleLibraryGroup", "A"); Wait(6); Capture("expanded");
+                    for (int attempt = 0; attempt < 200; attempt++)
+                    {
+                        Paint();
+                        var save = (Task?)typeof(EditorView).GetField("libraryPreviewSave", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view);
+                        long revision = (long)typeof(EditorView).GetField("savedPreviewRevision", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view)!;
+                        var browser = (LibraryBrowser?)typeof(EditorView).GetField("libraryBrowser", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view);
+                        var savedBrowser = typeof(EditorView).GetField("savedPreviewBrowser", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view);
+                        if (save is { IsCompleted: true } && ReferenceEquals(savedBrowser, browser) && revision == browser?.ContentRevision) break;
+                        Thread.Sleep(10);
+                    }
+                    view.SaveLibraryMemory(); view.StopFileMonitoring(); view.CloseLibrary();
+                    view = new EditorView(false); view.InitializeLibrary(true, settings);
+                    if (view.LibraryCachedRows == 0 || view.LibrarySetTotal != 6)
+                        throw new InvalidOperationException("Warm Library startup did not restore cached rows before its first frame.");
+                    Capture("warm-restart-first-frame"); Wait(6);
+
                     ClickOrder("libraryGroupBounds"); ClickOrder("librarySortBounds");
                     var entries = (System.Collections.ICollection)typeof(EditorView).GetField("contextItems", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view)!;
                     if (entries.Count != Enum.GetValues<LibraryOrder>().Length) throw new InvalidOperationException("Library order menu did not switch on the first click.");
@@ -64,8 +80,40 @@ internal static class LibraryOrganizationRenderCheck
                     typeof(EditorView).GetField("collectionsScroll", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(view, 128f);
                     Paint(); Capture("osu-collection");
                     view.PointerDown(40, 244, 0, false, false); view.PointerUp(40, 244, 0); Wait(2); Capture("recent");
+                    Invoke("SwitchLibraryCategory", true, false, false, null!); Wait(2); Capture("my-maps");
+                    if (dpi == 96 && size.Item1 == 1440)
+                    {
+                        Invoke("SwitchLibraryCategory", false, true, false, null!); Wait(0);
+                        Invoke("SwitchLibraryCategory", false, false, false, "practice"); Wait(3);
+                        Invoke("SwitchLibraryCategory", false, false, false, "reference"); Wait(3);
+                        view.SaveLibraryMemory(); view.CompleteLibraryCacheWrites(); view.StopFileMonitoring(); view.CloseLibrary();
+                        view = new EditorView(false); view.InitializeLibrary(true, settings);
+                        Cached(3, "fa-reference");
+                        Invoke("SwitchLibraryCategory", false, false, false, "practice"); Cached(3, "fa-practice");
+                        Invoke("SwitchLibraryCategory", false, false, false, imported.Id); Cached(1, "osu");
+                        Invoke("SwitchLibraryCategory", false, false, true, null!); Cached(2, "recent");
+                        Invoke("SwitchLibraryCategory", false, true, false, null!); Cached(0, "favourites");
+                        Invoke("SwitchLibraryCategory", false, false, false, null!); Cached(6, "songs");
+                        Invoke("SwitchLibraryCategory", true, false, false, null!); Cached(2, "my-maps");
+                    }
+
+                    settings.MapperUsernames = [];
+                    Invoke("InvalidateLibraryOrganization", false); Wait(0); Capture("my-maps-setup");
+                    view.PointerDown(250, 254, 0, false, false); view.PointerUp(250, 254, 0); Paint();
+                    if (!(bool)typeof(EditorView).GetField("librarySettingsOpen", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view)!)
+                        throw new InvalidOperationException("My Maps setup must open Settings on the first click.");
+                    view.Wheel(view.SettingsBounds.Right - 60, view.SettingsBounds.Y + 200, -12000, false);
+                    Paint(); Capture("library-settings");
+                    view.KeyDown(27, false, false); settings.MapperUsernames = ["Alice"];
                 }
                 finally { view.CloseLibrary(); }
+
+                void Cached(int count, string name)
+                {
+                    if (view.LibrarySetTotal != count || typeof(EditorView).GetField("libraryBrowser", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view) is not LibraryBrowser { IsPreview: true })
+                        throw new InvalidOperationException("Library category did not restore its independent cache: " + name);
+                    Capture("category-restart-" + name); Wait(count);
+                }
 
                 void ClickOrder(string field)
                 {

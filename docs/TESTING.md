@@ -68,6 +68,13 @@ existing settings isolation and cleanup.
 
 Windows distribution uses the self-contained ZIP and extracted-executable check described in [Windows releases](RELEASING.md). Desktop CI checks packaging before a version is tagged; the tag workflow reuses successful desktop regression for identical source content when available and always builds and checks its own package. See [CI validation and reuse](RELEASING.md#ci-validation-and-reuse) for fallback and forced-validation behavior.
 
+`App.Tests --library-search-check` compares indexed substring searches with the
+independent catalog scan, including Unicode normalization, multiword and literal
+punctuation queries, exact collection membership, metadata updates/deletions, and
+publication after superseded input. The incremental Library suite includes it.
+`App.Tests --library-search-profile <workspace-copy> <songs-root>` reports query
+and initial page preparation time and managed allocations against a catalog copy.
+
 `App.Tests --library-organization-check` checks field sorting, collapsed group
 paging, historical source-file dates, collection creation/rename/removal, membership drafts,
 restart restoration, content isolation web-link click isolation, compact default-collapsed groups, cached reordering and successful-open visit recording in English
@@ -77,7 +84,103 @@ native windows and captures grouping, sorting, collection membership and recent
 visits at 980×620 and 1440×900 with 96/144/192 DPI in both languages under
 `artifacts/tests/library-organization-native`.
 
+`App.Tests --my-maps-check` checks exact case-sensitive mapper filtering, multiple
+usernames, mixed-mapper sets, native project difficulties, persisted and cancelled
+Settings drafts, and disabling/re-enabling standard scanning without source changes.
+The library organization native render check also captures My Maps, the missing-name
+prompt and General library preferences in English and Chinese at both window sizes.
+
+`App.Tests --library-persistent-cache-check` verifies cached startup while a database
+writer blocks reconciliation, first-frame cards and difficulty rows with the startup
+worker held, cross-restart star reuse with a locked source file,
+retained stars during scans, changed-source invalidation, damaged-cache fallback,
+My Maps project covers and Windows thumbnail reuse without rereading the original.
+Fixtures are isolated under `artifacts/tests`. The incremental Library check also
+runs this suite. The native Library organization check captures the first frame
+after restarting with a saved expanded group in both languages, window sizes and
+all three DPI values.
+
+`App.Tests --library-category-cache-check` verifies independent membership, search,
+sort and disk caches for all four tabs, two FA Collections and two osu! Collections
+with matching names. With the database startup worker held after restart, it
+switches through every cached view, reorders osu! Collections, and verifies that
+neither memory nor disk caches are reused for another identity. The incremental
+Library suite includes this check. Native Library checks also capture switching
+the four tabs and FA/osu! Collections after restart in both languages.
+
+For an optional read-only startup comparison against the configured Library, run
+`App.Tests --library-startup-profile`. It copies the SQLite catalog and view
+preferences into `artifacts/tests`, reads source project metadata without saving
+it, and compares query construction with cached-page restoration using
+RecordingCanvas. It also creates isolated preview files for the four tabs and
+all configured FA/osu! Collections. The report excludes native drawing and image decoding.
+
+### Asynchronous fixture cleanup
+
+Before deleting a Library fixture or replacing its `EditorView`, stop file
+monitoring and call `CompleteLibraryCacheWrites()` on each view that used it.
+`CloseLibrary()` alone does not wait for background preview-cache writes.
+Deleting the root while a writer owns `library-preview-*.json.*.tmp` can fail
+with a Windows sharing violation. Likewise, wait for gallery I/O to complete
+before polling its archive contents; repeated reads can block atomic replacement
+on Windows. Wait for the owning operation rather than adding a fixed delay or
+ignoring cleanup failures.
+
+### macOS resource fixture paths
+
+Tests that open or import maps, create workspaces, or copy resources through
+workspace/resource path validation must create their macOS fixtures beneath `/private/tmp`:
+
+```csharp
+string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
+    "atelier-fixture-" + Guid.NewGuid().ToString("N"));
+```
+
+On macOS, `Path.GetTempPath()` can return a path beneath `/var/folders`; `/var`
+is a symbolic link to `/private/var`. Resource validation rejects symbolic links
+in any ancestor, so these fixtures can fail with `Resource paths cannot pass
+through symbolic links: /var` even when the test created ordinary files.
+`Path.GetFullPath()` does not resolve that link.
+
+When this diagnostic occurs in a regression, check the fixture's complete path
+and move its root to `/private/tmp`, following the Library and external-resource
+tests. Keep the symbolic-link rejection in production code and its security
+tests. Plain serialization tests that do not enter resource validation can keep
+using the system temporary directory. Use a unique directory per fixture and
+retain cleanup in `finally`. Run the affected suite and the macOS Desktop
+regression on the final revision before release; a Windows pass does not verify
+macOS path behavior.
+
 ## Automated regressions
+
+`Core.Tests --pattern-placement-check` checks beat-relative placement, optional
+horizontal speed preservation, bounds, stream/stack data, destination droplet
+settings, saved AR, hyperdash starts and deterministic previews. `Formats.Tests --pattern-gallery-check`
+checks snapshot isolation, AR-preserving `.fap` round trips, rename/delete persistence,
+validation and atomic gallery writes, folder migration, copy/move identity isolation,
+folder merges/deletion, Default preservation, version 4 folder packages and import collisions.
+`App.Tests --pattern-gallery-check` checks gallery input, placement choices/cancellation,
+drop/undo, context rename/delete, fixed card sizes during dock resizing,
+preview alignment, saved-AR spacing, canvas scroll-direction settings, scrollbar position,
+Alt-wheel zoom limits and preview reuse,
+Library-style search, multi-tag filtering, tag creation/colour/name edits and persistence,
+detail-page editing, single/multiple-object context capture and source navigation while retaining unsaved maps.
+It also checks range selection across offscreen cards, category switching and merging,
+cross-folder clipboard shortcuts, Move to submenus with scrolling and multi-selection,
+single/multiple-card category dragging, preview-title rename, selection-only context exports,
+external FAP drops and the new/existing-folder import submenu,
+conditional folder menus, folder rename/deletion with keep/delete/cancel choices,
+import destinations, 50% minimum card zoom, two-column maximum sizing and geometry reuse.
+`FruitsAtelier.App.exe --render-check --pattern-gallery-render-check` checks the
+grid, large scrolling preview, naming/rename dialogs, context deletion, placement menu,
+drag/drop and editing banner in
+English and Chinese at compact/wide sizes and 96/144 DPI, including warm raster
+cache reuse, the Category sidebar and divider, folder selection/merge/import menus,
+50% cards, enlarged cards filling two columns in a wide dock, Move to submenus,
+and nonempty folder deletion confirmations.
+Gallery popup occlusion checks cover timeline resize cursors, hover feedback and
+drag gestures; timeline layout checks retain normal resizing outside the popup.
+Captures are written under `artifacts/tests/pattern-gallery-native`.
 
 `App.Tests --new-difficulty-check` checks independent complete copies, named
 creation, template settings persistence, blank creation, cancellation and empty
@@ -172,6 +275,17 @@ saving captures under `artifacts/tests/faz-native`.
 `App.Tests --difficulty-save-check` covers six-difficulty local and linked saves,
 unchanged file timestamps, navigation and edits during saving, per-difficulty undo,
 compressed history reconstruction and interrupted publication recovery.
+`Core.Tests --deferred-history-check` checks deferred retention, idle cancellation,
+new requests during maintenance, referenced rounds, unreadable references, pending
+recovery and history compression. `App.Tests --storage-check` exercises the idle
+scheduler and Settings controls in English and Chinese.
+`App.Tests --history-maintenance-check` checks synchronization of a new difficulty
+over the history limit and processing of queued retention in the idle Library.
+`App.Tests --history-save-performance <artifact-directory>` measures save dispatch
+and completion after adding a difficulty and after editing one, with six starting
+difficulties, 2,500 unrelated references and more than 100 history rounds. It checks
+the persisted authoring contents and writes timings to the specified directory.
+
 `App.Tests --difficulty-save-performance` compares complete and single-difficulty
 publication on identical one- and six-difficulty fixtures, including repeated
 imported sliders. It reports CPU-thread allocations and elapsed storage work to
@@ -907,7 +1021,7 @@ new difficulties, inactive conflict gating, pointer-capture deferral and externa
 changes during a pending merge. Apply must revalidate rather than commit a stale choice.
 
 Project-library notification regressions add and remove external difficulties while
-the My projects view stays open, checking both card counts and detail rows. They
+the My Maps view stays open, checking both card counts and detail rows. They
 also verify muted retained FA entries, background filename/directory rediscovery,
 duplicate-free listings and unchanged authoring/baseline files during discovery.
 

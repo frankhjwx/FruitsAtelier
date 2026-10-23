@@ -286,6 +286,11 @@ internal static class FazTests
                 using var command = classes.OpenSubKey(@"FruitsAtelier.ProjectArchive\shell\open\command");
                 using var difficultyExtension = classes.OpenSubKey(".fad");
                 using var difficultyIcon = classes.OpenSubKey(@"FruitsAtelier.DifficultyArchive\DefaultIcon");
+                using var patternExtension = classes.OpenSubKey(".fap");
+                using var patternIcon = classes.OpenSubKey(@"FruitsAtelier.PatternArchive\DefaultIcon");
+                Check(patternExtension?.GetValue("") as string == "FruitsAtelier.PatternArchive"
+                    && (patternIcon?.GetValue("") as string)?.EndsWith("fap-file.ico\"", StringComparison.Ordinal) == true,
+                    "FAP has a dedicated pattern icon");
                 Check(difficultyExtension?.GetValue("") as string == "FruitsAtelier.DifficultyArchive"
                     && (difficultyIcon?.GetValue("") as string)?.EndsWith("fad-file.ico\"", StringComparison.Ordinal) == true,
                     "FAD has an independent file association and icon");

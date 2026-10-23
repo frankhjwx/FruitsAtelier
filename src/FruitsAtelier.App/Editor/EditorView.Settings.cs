@@ -12,6 +12,8 @@ public sealed partial class EditorView
     private bool draftAudioDiagnostics, draftAudioDiagnosticFrames;
     private string draftAudioDiagnosticProfile = "event-10";
     private bool draftRomanisedMetadata;
+    private string draftMapperUsernames = "";
+    private bool draftScanStandardMaps;
     private ImportSliderConversionMode draftImportSliderConversion;
     private bool draftConfirmCompensatedImports;
     private bool draftDerandomizeDroplets;
@@ -116,6 +118,8 @@ public sealed partial class EditorView
         draftOsuRoot = LibrarySettings.OsuRoot;
         draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
+        draftMapperUsernames = string.Join("; ", LibrarySettings.MapperUsernames ?? []);
+        draftScanStandardMaps = LibrarySettings.ScanStandardMaps;
         draftImportSliderConversion = LibrarySettings.ImportSliderConversion;
         draftConfirmCompensatedImports = LibrarySettings.ConfirmCompensatedImports;
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
@@ -148,7 +152,8 @@ public sealed partial class EditorView
 
     private bool SettingsRootsChanged => draftWorkspace != LibrarySettings.Workspace || draftOsuRoot != LibrarySettings.OsuRoot;
 
-    private bool SettingsChanged => draftMappingCanvasBackgroundDim != LibrarySettings.MappingCanvasBackgroundDim ||
+    private bool SettingsChanged => draftMapperUsernames != string.Join("; ", LibrarySettings.MapperUsernames ?? []) ||
+        draftScanStandardMaps != LibrarySettings.ScanStandardMaps || draftMappingCanvasBackgroundDim != LibrarySettings.MappingCanvasBackgroundDim ||
         draftSettingsColours[4] != LibrarySettings.CanvasGridColour ||
         draftSettingsColours[5] != LibrarySettings.CanvasCentreLineColour ||
         draftCanvasGridOpacity != LibrarySettings.CanvasGridOpacity ||
@@ -276,7 +281,14 @@ public sealed partial class EditorView
                 SettingsButton(c, new(SettingsContentX, dropletsTop + 46 + dropletHint.Length * 18, SettingsContentWidth, SettingsControlHeight),
                     L.Get("settings.openDropletSettings"), OpenDropletSettingsFromGeneral);
                 float importBottom = DrawMapImportSettings(c, dropletsTop + 100 + dropletHint.Length * 18);
-                generalContentHeight = importBottom - generalTop - 116 + 12;
+                LibraryTextField(c, 7, L.Get("settings.mapperUsernames"), draftMapperUsernames, importBottom + 16);
+                float libraryBottom = SettingsParagraph(c, L.Get("settings.mapperUsernamesHint"), importBottom + 84);
+                float scanTop = libraryBottom + 16;
+                c.Line(SettingsContentX, scanTop, SettingsContentX + SettingsContentWidth, scanTop, Grid);
+                c.Text(L.Get("settings.importSettings"), SettingsContentX, scanTop + 12, SettingsSectionSize, Foreground, SettingsContentWidth, true);
+                TimingCheck(c, new(SettingsContentX, scanTop + 44, SettingsContentWidth, SettingsControlHeight),
+                    "settings.scanStandardMaps", draftScanStandardMaps, () => draftScanStandardMaps = !draftScanStandardMaps);
+                generalContentHeight = scanTop + 76 - generalTop - 116 + 12;
                 c.Unclip();
                 ClipSettingsHits(generalFirstHit);
                 DrawSettingsScrollbar(c, GeneralContentHeight);
@@ -388,6 +400,8 @@ public sealed partial class EditorView
     {
         FinishBackgroundDimDrag();
         if (!SettingsChanged && !force) return;
+        if (draftWorkspace != LibrarySettings.Workspace && (PatternEditingActive || PatternEditingBusy))
+        { libraryError = L.Get("gallery.finishEditing"); return; }
         try
         {
             bool restartAudio = persist && AudioDiagnosticSettingsChanged && RequestAudioDiagnosticRestart is not null;
@@ -405,6 +419,8 @@ public sealed partial class EditorView
             settings.CanvasGridOpacity = draftCanvasGridOpacity;
             settings.ForceBackgroundDim = draftForceBackgroundDim;
             settings.RomanisedMetadata = draftRomanisedMetadata;
+            settings.MapperUsernames = draftMapperUsernames.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.Ordinal).ToList();
+            settings.ScanStandardMaps = draftScanStandardMaps;
             settings.ImportSliderConversion = draftImportSliderConversion;
             settings.ConfirmCompensatedImports = draftConfirmCompensatedImports;
             settings.DerandomizeDroplets = FirstRunSetupVisible ? draftDerandomizeDroplets : LibrarySettings.DerandomizeDroplets;
@@ -447,7 +463,10 @@ public sealed partial class EditorView
             settings.OverviewTimelineHeight = LibrarySettings.OverviewTimelineHeight;
             settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
-            bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;
+            bool workspaceChanged = settings.Workspace != LibrarySettings.Workspace;
+            bool rootsChanged = workspaceChanged || settings.OsuRoot != LibrarySettings.OsuRoot;
+            bool scanningChanged = settings.ScanStandardMaps != LibrarySettings.ScanStandardMaps;
+            bool mappersChanged = !(LibrarySettings.MapperUsernames ?? []).SequenceEqual(settings.MapperUsernames);
             if (persist) settings.Save(settingsPath);
             else
             {
@@ -458,6 +477,7 @@ public sealed partial class EditorView
             if (FirstRunSetupVisible)
             {
                 LibrarySettings = settings; ResetSettingsDrafts();
+                if (workspaceChanged) ConfigurePatternGallery(Path.Combine(settings.Workspace, "Patterns"));
                 libraryField = bindingCapture = -1; libraryError = "";
                 InitializeSkin(); return;
             }
@@ -465,6 +485,7 @@ public sealed partial class EditorView
             bool lazerEditingChanged = settings.LazerEditing != LibrarySettings.LazerEditing;
             if (lazerEditingChanged) CancelInteraction();
             SaveLibraryMemory(); LibrarySettings = settings;
+            if (workspaceChanged) ConfigurePatternGallery(Path.Combine(settings.Workspace, "Patterns"));
             if (lazerEditingChanged) ResetLazerPresentation();
             if (!settings.ExperimentalSnapDivisions)
             {
@@ -484,7 +505,12 @@ public sealed partial class EditorView
                 RequestAudioDiagnosticRestart?.Invoke(audioScroll);
                 return;
             }
-            if (!rootsChanged) return;
+            if (!rootsChanged)
+            {
+                if (mappersChanged) InvalidateLibraryOrganization();
+                if (scanningChanged) { InvalidateLibraryOrganization(); StartLibraryScan(); }
+                return;
+            }
             EnableFileMonitoring();
             InvalidateLibraryRatings(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
             foreach (var cached in libraryCategoryBrowsers.Values) cached.Browser?.Retire();

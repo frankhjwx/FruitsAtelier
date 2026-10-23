@@ -32,9 +32,6 @@ public sealed partial class EditorView
         ConfirmFaImportBounds = new(SettingsContentX, top + 84, SettingsContentWidth, SettingsControlHeight);
         TimingCheck(c, ConfirmFaImportBounds, "settings.importConfirmFa", draftConfirmCompensatedImports,
             () => draftConfirmCompensatedImports = !draftConfirmCompensatedImports);
-        var hint = WrapSyncText(c, L.Get("settings.importConfirmFaHint"), SettingsContentWidth);
-        for (int i = 0; i < hint.Length; i++)
-            c.Text(hint[i].Text, SettingsContentX, top + 124 + i * 18, SettingsHintSize, Muted, SettingsContentWidth);
-        return top + 124 + hint.Length * 18;
+        return top + 116;
     }
 }

@@ -22,7 +22,7 @@
 ## Validation and Documentation
 
 - Commit and push intermediate bug fixes to `dev` unless the user explicitly requests another destination.
-- Run the affected checks described in [Building and Testing](docs/TESTING.md). Launch the application to check window and input changes.
+- Run the affected checks described in [Building and Testing](docs/TESTING.md). Follow its [macOS resource fixture path rules](docs/TESTING.md#macos-resource-fixture-paths) when adding resource or workspace tests. Launch the application to check window and input changes.
 - Automated audio tests output silent PCM while retaining the device clock and sample comparisons before muting. Do not change the system volume.
 - Store build artifacts, test logs, and screenshots in `artifacts/`; do not commit them to Git.
 - Write documentation for project readers: describe current behavior, usage, and design details needed for maintenance. Keep conversational prompt responses, progress reports, temporary acceptance-build paths, and one-off test counts in tasks or PRs.

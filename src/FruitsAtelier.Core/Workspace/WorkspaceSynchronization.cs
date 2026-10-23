@@ -793,7 +793,7 @@ public static partial class WorkspaceSynchronization
         if (deferProject)
         {
             AtomicFile.Write(System.IO.Path.Combine(target, "saved.snapshot"), System.IO.Path.GetFullPath(session.Directory));
-            WorkspaceStorage.EnforceVersionLimit(session);
+            WorkspaceStorage.RequestHistoryMaintenance(session);
             return target;
         }
         var saved = new BeatmapProject { Name = session.Manifest.Name, Notes = session.Manifest.Notes };
@@ -805,7 +805,7 @@ public static partial class WorkspaceSynchronization
                 Document = ProjectSerializer.ReadFile(System.IO.Path.Combine(session.Directory, entry.File)) });
         }
         WorkspaceHistoryFile.WriteProject(saved, System.IO.Path.Combine(target, "saved.catchproj"));
-        WorkspaceStorage.EnforceVersionLimit(session);
+        WorkspaceStorage.RequestHistoryMaintenance(session);
         return target;
     }
 

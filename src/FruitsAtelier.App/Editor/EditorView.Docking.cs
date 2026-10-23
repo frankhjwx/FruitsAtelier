@@ -5,14 +5,14 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping }
+    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping, PatternGallery }
     private sealed class DockGroup(DockPanel panel, float width)
     {
         public readonly List<DockPanel> Panels = [panel];
         public DockPanel Active = panel;
         public bool Collapsed = true;
         public float Width = width;
-        public float TabScroll, TabViewportWidth;
+        public float TabScroll, TabViewportWidth, TabScrollMaximum;
         public DockPanel? Revealed;
     }
     private sealed class DockWorkspace
@@ -20,7 +20,7 @@ public sealed partial class EditorView
         public readonly DockGroup Left = new(DockPanel.MovementStrain, DifficultyCurveWidth);
         public readonly DockGroup Right = CreateRightDock();
         private static DockGroup CreateRightDock()
-        { var group = new DockGroup(DockPanel.Preview, 360); group.Panels.AddRange([DockPanel.Notes, DockPanel.SongSetup]); return group; }
+        { var group = new DockGroup(DockPanel.Preview, 360); group.Panels.AddRange([DockPanel.Notes, DockPanel.SongSetup, DockPanel.PatternGallery]); return group; }
         public (float X, float Y)? MovementPosition;
         public int PreviewMod, PreviewDisplayMode;
     }
@@ -29,7 +29,7 @@ public sealed partial class EditorView
     private DockWorkspace DockWorkspaceState => TimingPageVisible ? timingDockWorkspace : mappingDockWorkspace;
     private DockGroup PanelGroup(DockPanel panel) => DockWorkspaceState.Left.Panels.Contains(panel)
         ? DockWorkspaceState.Left : DockWorkspaceState.Right;
-    private bool DockContentInputAvailable => !ErrorVisible && !DiscardConfirmationVisible && !LibraryVisible
+    private bool DockContentInputAvailable => !GalleryTagsVisible && !PatternNameVisible && !ErrorVisible && !DiscardConfirmationVisible && !LibraryVisible
         && !ExportVisible && !SongSetupVisible && !SliderDialogVisible && !TimeJumpVisible && !TimingModal
         && !BananaEditVisible && !StreamDialogVisible && !MergeDialogVisible && !VolumeDialogVisible
         && !DistanceSnapDialogVisible && !HitsoundCopierVisible && !VersionHistoryVisible
@@ -65,9 +65,23 @@ public sealed partial class EditorView
         return panels;
     }
     internal Rect DockTabBounds(DockPanel panel) => dockTabs.FirstOrDefault(t => t.Panel == panel).Bounds;
+    private bool WheelDockTabs(float x, float y, float delta)
+    {
+        if (!DockContentInputAvailable || TimingPageVisible || dockDragging) return false;
+        return Scroll(DockWorkspaceState.Left, true) || Scroll(DockWorkspaceState.Right, false);
+
+        bool Scroll(DockGroup group, bool left)
+        {
+            if (group.Collapsed || group.Panels.Count == 0) return false;
+            var bounds = DockBounds(left);
+            if (!new Rect(bounds.X, bounds.Y, bounds.Width, 38).Contains(x, y)) return false;
+            group.TabScroll = Math.Clamp(group.TabScroll - delta / 120 * 48, 0, group.TabScrollMaximum);
+            return true;
+        }
+    }
     private static string DockTitle(DockPanel panel) => L.Get(panel switch
     {
-        DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
+        DockPanel.PatternGallery => "dock.gallery", DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
         DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title", DockPanel.CollaborationMapping => "collab.title",
         DockPanel.RandomizeDroplets => "randomize.title", DockPanel.SliderInspector => "inspector.title", _ => "difficulty.curve.title"
     });
@@ -87,6 +101,7 @@ public sealed partial class EditorView
         var group = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
         group.Panels.Add(panel); group.Active = panel; group.Collapsed = false;
         if (panel == DockPanel.Aimod) RefreshAimod();
+        if (panel == DockPanel.PatternGallery) EnsurePatternGalleryLoaded();
     }
     private void ResetDockLayout()
     {
@@ -97,6 +112,7 @@ public sealed partial class EditorView
         AddDockPanel(DockPanel.MovementStrain, true); AddDockPanel(DockPanel.Preview, false);
         state.Right.Panels.Add(DockPanel.Notes);
         state.Right.Panels.Add(DockPanel.SongSetup);
+        state.Right.Panels.Add(DockPanel.PatternGallery);
     }
     private bool DockTabContext(float x, float y)
     {
@@ -179,6 +195,7 @@ public sealed partial class EditorView
                 bool overflow = total > bounds.Width - 12;
                 float arrows = overflow ? 24 : 0;
                 var strip = new Rect(bounds.X + 6 + arrows, bounds.Y + 6, bounds.Width - 12 - arrows * 2, 32);
+                group.TabScrollMaximum = Math.Max(0, total - strip.Width);
                 group.TabScroll = Math.Clamp(group.TabScroll, 0, Math.Max(0, total - strip.Width));
                 if ((group.Revealed != group.Active || group.TabViewportWidth != strip.Width) && !dockDragging)
                 {
@@ -224,6 +241,8 @@ public sealed partial class EditorView
                             Math.Max(0, bounds.Width - 40), Math.Max(0, bounds.Height - 78));
                         DrawDifficultyCurve(c, DifficultyCurveGraphBounds);
                     }
+                    else if (group.Active == DockPanel.PatternGallery)
+                        DrawPatternGallery(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.PatternEditor)
                         DrawPatternDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.RandomizeDroplets)

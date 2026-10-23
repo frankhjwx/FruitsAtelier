@@ -40,7 +40,17 @@ internal static class MapImportSettingsTests
                 ui.Key(27); ui.View.OpenSettings(); ui.Paint(); Scroll();
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.importSliderAlways")+" ▾"), "Closing without Apply discards the import draft");
                 ui.Key(27); Check(ui.View.Document.ContentEquals(before) && !ui.View.IsDirty, "Import preferences never edit the current map");
-                void Scroll() { var r=ui.View.SettingsBounds; ui.View.Wheel(r.Right-60,r.Y+200,-12000,false); ui.Paint(); }
+                void Scroll()
+                {
+                    var r = ui.View.SettingsBounds;
+                    ui.View.Wheel(r.Right - 60, r.Y + 200, -12000, false); ui.Paint();
+                    for (int i = 0; i < 20; i++)
+                    {
+                        if (ui.View.ImportSliderModeBounds.Y > r.Y + 116 && ui.View.ConfirmFaImportBounds.Bottom < r.Bottom - 116) break;
+                        ui.View.Wheel(r.Right - 60, r.Y + 200, ui.View.ImportSliderModeBounds.Y <= r.Y + 116 ? 120 : -120, false);
+                        ui.Paint();
+                    }
+                }
             }
             L.SetLanguage("en");
             foreach (var mode in new[] { ImportSliderConversionMode.KeepLegacy, ImportSliderConversionMode.ConvertToFSlider })

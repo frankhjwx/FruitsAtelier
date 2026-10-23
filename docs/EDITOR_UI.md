@@ -1,5 +1,13 @@
 # Editing Controls
 
+## Pattern Gallery
+
+Use **Layout → Pattern Gallery** to save consecutive selections, browse skinned
+previews, filter by search and coloured tags, drag patterns into a map, or share `.fap` packages.
+Click a card and choose **Edit Pattern** in its details to edit the snapshot while retaining the previous map's unsaved
+work. See [Pattern Gallery](PATTERN_GALLERY.md) for placement, source navigation,
+editing sessions and storage details.
+
 ## Creating difficulties and map templates
 
 Choose **+ → Add new difficulty** to name a new difficulty and choose
@@ -207,6 +215,8 @@ exported fruits in either view.
 Slider shapes are edited in their matching canvas: Legacy Sliders in osu! and
 FSliders in Catch. Clicking a slider in the other canvas or attempting a blocked
 edit shows a three-second notice explaining how to switch with Tab, then fades out.
+Whole sliders can be deleted in either canvas with Delete or the object delete
+action, including mixed selections. Each deletion is one undoable edit.
 
 The osu! canvas draws circles, approach circles, Legacy Slider paths, repeats,
 slider balls and spinners. Circle size, approach rate, combo ordering and stacking
@@ -1808,4 +1818,6 @@ rows with a persistent background and border, matching Settings. Start/end times
 use osu! editor format (`03:37:063`). Content fits the dock width and scrolls
 vertically when needed. Merge path choices stack vertically in narrow docks.
 Dock tab names retain their natural width. When tabs overflow, left/right arrows
-scroll the tab strip; selecting a panel through Layout reveals its active tab.
+or the mouse wheel over the tab bar scroll the strip. Wheel up scrolls left and
+wheel down scrolls right without changing the active panel. Selecting a panel
+through Layout reveals its active tab.

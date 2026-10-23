@@ -1,9 +1,16 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Length == 2 && args[0] == "--history-save-performance") { HistorySavePerformance.Run(args[1]); return 0; }
+if (args.Contains("--storage-check")) { StorageSettingsTests.Run(); return 0; }
+if (args.Contains("--history-maintenance-check")) { DeferredHistoryUiTests.Run(); return 0; }
+if (args.Length == 3 && args[0] == "--library-search-profile") { LibrarySearchTests.Profile(args[1], args[2]); return 0; }
+if (args.Contains("--library-search-check")) { LibrarySearchTests.Run(); return 0; }
+if (args.Contains("--pattern-gallery-check")) { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); Console.WriteLine("PASS Pattern Gallery, editing sessions and source navigation"); return 0; }
 if (args.Contains("--cross-difficulty-clipboard-check")) { CrossDifficultyClipboardTests.Run(); Console.WriteLine("PASS mapset clipboard, target settings, independent SV, undo and rejection"); return 0; }
 if (args.Length == 3 && args[0] == "--new-difficulty-profile") return NewDifficultyPerformance.Run(args[1], args[2]);
 if (args.Contains("--new-difficulty-check")) { NewDifficultyTests.Run(); Console.WriteLine("PASS difficulty copies, templates, persistence and cancellation"); return 0; }
+if (args.Contains("--my-maps-check")) { MyMapsTests.Run(); return 0; }
 if (args.Contains("--map-import-settings-check")) { MapImportSettingsTests.Run(); Console.WriteLine("PASS global map import settings, remembered choices and FA confidence thresholds"); return 0; }
 if (args.Contains("--slider-batch-check")) { SliderBatchTests.Run(); NativeImportedPathTests.Run(); WorkspaceSaveTests.Run(); LegacyReadOnlyEditingTests.Run(); SliderInteractionTests.LegacyContextConversion(); Console.WriteLine("PASS import defaults, fitted batch conversion, scope, paths, saves and undo"); return 0; }
 if (args.Contains("--osu-link-check")) { OsuLinkTests.Run(); TimeJumpTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS osu! editor links, routing, activation and settings"); return 0; }
@@ -57,9 +64,15 @@ if (Array.IndexOf(args, "--osu-collections-read") is var osuRead && osuRead >= 0
 if (args.Contains("--osu-collections-check")) { OsuCollectionTests.Run(); return 0; }
 if (args.Contains("--library-organization-check")) { OsuCollectionTests.Run(); LibraryOrganizationTests.Run(); LibraryFavouriteTests.Run(); LibraryTests.Run(); LibraryScaleTests.Pagination(); Console.WriteLine("PASS Library sorting, grouping, collections, visits and persistence"); return 0; }
 
+if (args.Contains("--library-category-cache-check")) { LibraryCategoryCacheTests.Run(); return 0; }
+
+if (args.Contains("--library-startup-profile")) { LibraryPersistentCacheTests.ProfileExisting(); return 0; }
+
+if (args.Contains("--library-persistent-cache-check")) { LibraryPersistentCacheTests.Run(); return 0; }
+
 if (args.Contains("--library-incremental-check"))
 {
-    LibraryIncrementalTests.Run(); LibraryScanProgressTests.Run(); LibraryResponsivenessTests.Run();
+    LibrarySearchTests.Run(); LibraryCategoryCacheTests.Run(); LibraryPersistentCacheTests.Run(); LibraryIncrementalTests.Run(); LibraryScanProgressTests.Run(); LibraryResponsivenessTests.Run();
     Console.WriteLine("PASS Library incremental indexing and background interaction"); return 0;
 }
 if (args.Contains("--benchmark-library-loading")) return LibraryIncrementalTests.Benchmark();
@@ -262,6 +275,7 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Pattern Gallery preserves previews, placement and editing sessions", () => { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); }),
     ("Collab Mapping panel edits per-difficulty references and synchronizes sources", CollaborationMappingUiTests.Run),
     ("osu canvas renders standard objects and retains source identities", OsuCanvasRenderTests.Run),
     ("osu canvas edits native geometry and enforces slider representations", OsuCanvasInputTests.Run),
@@ -318,6 +332,7 @@ var tests = new (string Name, Action Run)[]
     ("Timeline pattern fruits edit internal NC while move and delete retain the whole parent", ObjectTimelineTests.PatternNewCombo),
     ("Timeline skin uses combo-coloured tracks and hitcircle endpoints", ObjectTimelineTests.SkinColours),
     ("Workspace storage settings show usage and clear caches without editing maps", StorageSettingsTests.Run),
+    ("Automatic sync defers retention to idle Library maintenance", DeferredHistoryUiTests.Run),
     ("Mapping right-click deletes the marquee selection in one undo", MappingSessionTests.RightClickSelection),
     ("Mapping selection reversal and contextual horizontal nudges", MappingSessionTests.ReverseAndNudge),
     ("Mapping Snap families and overview volume routing", MappingSessionTests.SnapAndVolume),
@@ -548,6 +563,9 @@ var tests = new (string Name, Action Run)[]
     ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
     ("Library opening keeps UI responsive while workspace maintenance holds the project gate", LibraryOpeningTests.Run),
+    ("My Maps filters exact mapper names and persists library scanning preferences", MyMapsTests.Run),
+    ("Library caches survive restart and retain unchanged stars during reconciliation", LibraryPersistentCacheTests.Run),
+    ("Library tabs and FA/osu! Collections retain independent cached pages across restart", LibraryCategoryCacheTests.Run),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
     ("FAZ archives preserve native projects and explicit local associations", FazTests.Run),
     ("FAD archives exchange native difficulties through merge review", FadTests.Run),

@@ -23,6 +23,7 @@ public sealed partial class EditorView
     private bool CanUseCanvasBackgroundDim => CanDropBackground && !TimingPageVisible && !TimeJumpVisible
         && !IsEditingText && drag == DragKind.None && !SliderHoldNeedsRedraw && !movementPanelPointer && dockPressed is null
         && menu < 0 && contextItems.Count == 0 && !panelMenuOpen && !volumePopoverOpen
+        && !PatternGalleryPopupContains(mouseX, mouseY)
         && CanvasBackgroundDimBounds.Width >= 160;
     private bool PointerOverCanvasBackgroundDim => CanUseCanvasBackgroundDim && CanvasBackgroundDimBounds.Contains(mouseX, mouseY);
     internal float CanvasBackgroundDimOpacity => canvasDimFadeFrom + (canvasDimFadeTarget - canvasDimFadeFrom)

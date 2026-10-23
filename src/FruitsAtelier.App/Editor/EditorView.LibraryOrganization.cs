@@ -57,7 +57,8 @@ public sealed partial class EditorView
 
     private LibraryOrganization CurrentLibraryOrganization => new(libraryGrouping, librarySort, libraryDescending,
         new Dictionary<string, long>(libraryMemory.Visits, WorkspaceSynchronization.Paths), null, DateTime.Today, libraryExpanded.ToArray(), CollapseByDefault: true,
-        DifficultyPaths: IsOsuCollection ? osuCollections?.Collections.FirstOrDefault(c => c.Id == libraryCollection)?.Paths ?? [] : null);
+        DifficultyPaths: IsOsuCollection ? osuCollections?.Collections.FirstOrDefault(c => c.Id == libraryCollection)?.Paths ?? [] : null,
+        Creators: libraryMyMapsOnly ? LibrarySettings.MapperUsernames ?? [] : null);
 
     private string LibraryGroupLabel(string key) => libraryGrouping switch
     {

@@ -45,6 +45,7 @@ public sealed partial class EditorView
         offerSongsExport = false;
         previousSaveConfirmation = false;
         hits.Clear();
+        galleryDeletingFolder = null;
         callback?.Invoke(answer);
     }
 
@@ -70,6 +71,7 @@ public sealed partial class EditorView
         if (SynchronizationVisible) { DrawSynchronization(c); return; }
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();
+        if (galleryDeletingFolder is not null) { DrawGalleryFolderDeletion(c); return; }
         if (pendingLanguage is not null) { DrawLanguageNotice(c); return; }
         if (previousSaveConfirmation || previousSaveRestore is not null)
         {

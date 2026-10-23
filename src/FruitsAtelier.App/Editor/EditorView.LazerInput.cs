@@ -247,8 +247,9 @@ public sealed partial class EditorView
         if (Document.Tracks.Any(t => t.Id == id) || Document.ImportedSliders.Any(s => s.Id == id))
         {
             RefreshSliderInspector();
-            foreach (var action in SliderInspectorActions()) contextItems.Add(new(action.Label, action.Action, action.Enabled, SliderAction: action.Kind));
+            foreach (var action in SliderInspectorActions().Where(a => a.Kind >= 0)) contextItems.Add(new(action.Label, action.Action, action.Enabled, SliderAction: action.Kind));
         }
+        AddGalleryCaptureContextItem();
         contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 280)), Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 280, ContextMenuHeight);
         return true;
     }

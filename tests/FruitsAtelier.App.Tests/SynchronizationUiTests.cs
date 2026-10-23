@@ -699,7 +699,8 @@ internal static class SynchronizationUiTests
         try
         {
             Until(() => ui.View.LibrarySetTotal == 1, "initial library ready");
-            ui.ClickText(L.Get("library.projects"));
+            settings.MapperUsernames = ["Mapper"];
+            ui.ClickText(L.Get("library.myMaps"));
             Until(() => Has(L.Get("library.projectCount", 3)) && Has("Diff 3"), "project shows saved difficulties");
             File.WriteAllText(FilePath(4), Text(4)); File.WriteAllText(FilePath(5), Text(5));
             Until(() => Has(L.Get("library.projectCount", 5)) && Has("Diff 4") && Has("Diff 5"), "project count and details refresh from three to five");

@@ -18,6 +18,7 @@ public sealed partial class EditorView
 
     public void BeginFadExport(string path, int index)
     {
+        if (RejectPatternProjectOperation()) return;
         if (!PrepareFileOperation() || index < 0 || index >= difficulties.Count) return;
         var difficulty = CaptureDifficulty(index);
         bool compensate = CompensateTinyDroplets; string workspace = LibrarySettings.Workspace;
@@ -27,6 +28,7 @@ public sealed partial class EditorView
 
     public void BeginFadImport(string path)
     {
+        if (RejectPatternProjectOperation()) return;
         if (!HasEditorProject || LibraryVisible) { ShowError(L.Get("fad.openProjectFirst")); return; }
         if (!PrepareFileOperation()) return;
         RequestPausePlayback?.Invoke();

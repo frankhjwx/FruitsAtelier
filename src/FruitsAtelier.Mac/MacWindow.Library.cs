@@ -49,6 +49,16 @@ internal sealed partial class MacWindow
     }
     private void ConfigureLibrary(bool show, bool smokeCheck)
     {
+        View.RequestPatternImport = () => RunFile(async () =>
+        {
+            var path = await Pick(L.Get("gallery.import"), ["*.fap"]);
+            if (path is not null) View.BeginPatternImport(path);
+        });
+        View.RequestPatternExport = selectedOnly => RunFile(async () =>
+        {
+            var path = await SavePicker(L.Get("gallery.export"), "fap", "Patterns.fap");
+            if (path is not null) View.BeginPatternExport(path, selectedOnly);
+        });
         View.RequestFazOpen = path => RunFile(async () => { if (await ConfirmDiscard()) await OpenPath(path); });
         View.RequestFazExport = complete => ExportFaz(complete);
         View.RequestFadExport = index => RunFile(async () =>

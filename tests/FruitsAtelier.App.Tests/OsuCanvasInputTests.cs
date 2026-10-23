@@ -138,7 +138,7 @@ internal static class OsuCanvasInputTests
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n64,64,1000,2,0,L|192:64,1,128\n");
         ui.LoadDocument(map); ui.Key('1'); ui.ClickMap(1000, 64); ui.Paint();
         var before = ui.View.Document.DeepClone();
-        ui.Key(46); ui.Key('H', ctrl: true);
+        ui.Key('H', ctrl: true);
         Check(ui.View.Document.ContentEquals(before), "Catch canvas mutated a read-only Legacy Slider.");
         Check(ui.View.CopySelection(), "Read-only Legacy Slider could not be copied.");
         Check(!ui.View.CutSelection() && ui.View.Document.ContentEquals(before), "Cut removed a read-only Legacy Slider.");
@@ -147,7 +147,7 @@ internal static class OsuCanvasInputTests
         ui.View.UpdateTransport(1000, 5000, true, false, false, null, "fixture.wav"); ui.Paint();
         ui.Key('1'); Click(ui, 100, 192); before = ui.View.Document.DeepClone();
         Check(ui.View.CopySelection(), "Read-only FSlider was not selected on the native canvas.");
-        ui.Key(46); ui.Key('H', ctrl: true);
+        ui.Key('H', ctrl: true);
         Check(ui.View.Document.ContentEquals(before) && !ui.View.CutSelection(), "osu canvas mutated a read-only FSlider.");
     }
 

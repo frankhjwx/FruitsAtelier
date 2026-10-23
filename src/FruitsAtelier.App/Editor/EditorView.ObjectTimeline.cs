@@ -50,6 +50,7 @@ public sealed partial class EditorView
             || Document.ImportedSliders.Any(s => s.Id == item.Id)
             || Document.BananaShowers.Any(s => s.Id == item.Id));
     public bool TimelineResizeCursor => !TimeJumpVisible && !LibraryVisible && !ExportVisible && !SliderDialogVisible && !DiscardConfirmationVisible && !ErrorVisible
+        && !PatternGalleryPopupContains(mouseX, mouseY) && !PatternGalleryWantsCapture
         && (drag is DragKind.TimelineTail or DragKind.BreakEdge || menu < 0 && contextItems.Count == 0 && objectTimeline.Contains(mouseX, mouseY)
             && (BreakEdgeAt(mouseX, mouseY) is not null || timelineObjects.AsEnumerable().Reverse().Where(i => i.Bounds.Contains(mouseX, mouseY)).Take(1)
                 .Any(i => IsTimelineTail(i, mouseX, mouseY))));

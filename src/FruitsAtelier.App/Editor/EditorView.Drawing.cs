@@ -51,11 +51,15 @@ public sealed partial class EditorView
             return;
         }
         historyCompressionPaused = !LibraryVisible || SyncInteractionActive || AudioPlaying || SynchronizationBusy;
+        storageMaintenancePaused = historyCompressionPaused || WorkspaceSession is not null;
         PumpWorkspaceSave();
         PumpSynchronizationWait();
         PumpAudioProject();
         PumpLibraryOpen();
         PumpFaz();
+        PumpPatternEditing();
+        PumpPatternSource();
+        PumpPatternGallery();
         PumpLegacyDropletRefresh();
         if (ConversionNeedsRedraw) PumpDeferredConversion();
         CompleteSliderMultiplierValidation();
@@ -91,7 +95,7 @@ public sealed partial class EditorView
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
         if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawLibraryCollectionDialog(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
         LayoutDockPanels();
-        plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight));
+        plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight + PatternEditingBannerHeight, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight - PatternEditingBannerHeight));
         overview = new(420, TransportTop + 10 + (TransportRowHeight - OverviewHeight) / 2, Math.Max(100, width - 448), OverviewHeight);
         if (!IsLazerEditing)
         {
@@ -107,35 +111,44 @@ public sealed partial class EditorView
         AdvanceBoxScroll();
         UpdatePlacementHyperdash();
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
-        c.Fill(new(0, 0, width, height), Background);
-        if (!TimingPageVisible)
-            DrawBeatmapBackground(c, new(leftPanel.Right, canvas.Y + 38,
-                canvas.Right - leftPanel.Right, plot.Bottom - canvas.Y - 38), LibrarySettings.MappingCanvasBackgroundDim / 100f, mappingCanvas: true);
-        DrawChrome(c);
-        if (TimingPageVisible) DrawTimingWaveform(c);
-        else
+        var pointer = (X: mouseX, Y: mouseY);
+        // Covered controls render as if the pointer were outside the window.
+        if (PatternGalleryPopupContains(mouseX, mouseY)) mouseX = mouseY = -1;
+        try
         {
-            DrawCanvas(c);
-            DrawToolPalette(c);
-            DrawDistanceReadout(c);
-            DrawAssistPalette(c);
-            DrawSelectionBox(c);
-            DrawCoordinateReadout(c);
+            c.Fill(new(0, 0, width, height), Background);
+            if (!TimingPageVisible)
+                DrawBeatmapBackground(c, new(leftPanel.Right, canvas.Y + 38,
+                    canvas.Right - leftPanel.Right, plot.Bottom - canvas.Y - 38), LibrarySettings.MappingCanvasBackgroundDim / 100f, mappingCanvas: true);
+            DrawChrome(c);
+            if (TimingPageVisible) DrawTimingWaveform(c);
+            else
+            {
+                DrawCanvas(c);
+                DrawToolPalette(c);
+                DrawDistanceReadout(c);
+                DrawAssistPalette(c);
+                DrawSelectionBox(c);
+                DrawCoordinateReadout(c);
+            }
+            DrawInspector(c);
+            if (TimingPageVisible) DrawTimingPage(c); else DrawDockPanels(c);
+            if (!TimingPageVisible)
+            {
+                DrawSliderHold(c);
+                DrawMovementOverlay(c);
+                DrawKiaiBadge(c);
+                DrawCanvasBackgroundDim(c);
+            }
+            DrawTransport(c);
+            DrawTimelineResizers(c);
+            DrawStatus(c);
+            DrawUpdateNotice(c);
+            DrawDockDrag(c);
         }
-        DrawInspector(c);
-        if (TimingPageVisible) DrawTimingPage(c); else DrawDockPanels(c);
-        if (!TimingPageVisible)
-        {
-            DrawSliderHold(c);
-            DrawMovementOverlay(c);
-            DrawKiaiBadge(c);
-            DrawCanvasBackgroundDim(c);
-        }
-        DrawTransport(c);
-        DrawTimelineResizers(c);
-        DrawStatus(c);
-        DrawUpdateNotice(c);
-        DrawDockDrag(c);
+        finally { mouseX = pointer.X; mouseY = pointer.Y; }
+        DrawPatternGalleryOverlay(c);
+        DrawPatternEditingBanner(c);
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);
         if (!librarySettingsOpen) DrawLanguageMenu(c);
@@ -156,6 +169,8 @@ public sealed partial class EditorView
         DrawCollaborationReport(c);
         if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
+        DrawGalleryTags(c);
+        DrawPatternNameDialog(c);
         DrawDiscardConfirmation(c);
         if (!librarySettingsOpen) DrawDifficultyTooltip(c);
     }
@@ -924,7 +939,7 @@ public sealed partial class EditorView
     {
         if (drawingDockContent) { c.Fill(r, Surface, 4); c.Stroke(r, Grid, radius: 4); }
         bool textBold = bold ?? active;
-        bool hover = enabled && r.Contains(mouseX, mouseY);
+        bool hover = enabled && contextItems.Count == 0 && r.Contains(mouseX, mouseY);
         if (hover) c.Fill(r, active ? 0x3A6260u : 0x3D495Au, 4);
         else if (active) c.Fill(r, 0x31494B, 4);
         if (hover) c.Stroke(r, 0x71849A, 1, 4);
@@ -950,7 +965,7 @@ public sealed partial class EditorView
 
     private void ToggleSwitch(ICanvas c, Rect r, string label, bool value, Action action)
     {
-        if (r.Contains(mouseX, mouseY)) c.Fill(r, 0x303A46, 5);
+        if (contextItems.Count == 0 && r.Contains(mouseX, mouseY)) c.Fill(r, 0x303A46, 5);
         c.Text(label, r.X + 10, r.Y + (r.Height - 17) / 2, 13, Foreground, r.Width - 82);
         var track = new Rect(r.Right - 58, r.Y + (r.Height - 24) / 2, 46, 24);
         c.Fill(track, value ? 0x417D77u : 0x46515Fu, 12);

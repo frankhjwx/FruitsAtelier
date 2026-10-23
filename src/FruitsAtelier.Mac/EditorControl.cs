@@ -128,11 +128,11 @@ internal sealed class EditorControl : Control, IDisposable
         base.Render(context);
         uiScale = View.UiScaleFactor;
         using var transform = context.PushTransform(Matrix.CreateScale(uiScale, uiScale));
-        using var canvas = new MacCanvas(context, images);
+        using var canvas = new MacCanvas(context, images, (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * uiScale);
         View.Render(canvas, (float)Bounds.Width / uiScale, (float)Bounds.Height / uiScale);
         UpdatePointerCursor();
-        if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.VolumePopoverNeedsRedraw)
-            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.VolumePopoverNeedsRedraw) InvalidateVisual(); });
+        if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)
+            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw) InvalidateVisual(); });
     }
     private StandardCursorType? pointerCursorType;
     private void UpdatePointerCursor()
@@ -207,5 +207,5 @@ internal sealed class EditorControl : Control, IDisposable
     }
     protected override void OnGotFocus(GotFocusEventArgs e) { base.OnGotFocus(e); View.SetTextInputFocus(true); Refresh(); }
     protected override void OnLostFocus(Avalonia.Interactivity.RoutedEventArgs e) { base.OnLostFocus(e); View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); Refresh(); }
-    public void Dispose() { View.StopFileMonitoring(); images.Dispose(); }
+    public void Dispose() { View.CompleteLibraryCacheWrites(); View.StopFileMonitoring(); images.Dispose(); }
 }
