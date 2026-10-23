@@ -82,7 +82,8 @@ internal static class CollaborationMappingTests
         var ranges = CollaborationSectionEditing.Ranges(merged.Document.CollaborationReferences.Take(2), 3000);
         var cleaned = synced.DeepClone(); CollaborationSectionEditing.RemoveOutside(cleaned, ranges);
         Check(cleaned.Fruits.Select(f => f.TimeMs).Order().SequenceEqual(new double[] { 200, 700, 1800 }), "Remove outside union of ranges");
-        synced.CollaborationEditableRanges = ranges;
+        Check(synced.CollaborationEditableRanges is { } automaticRanges && automaticRanges.SequenceEqual(ranges),
+            "Reverse sync automatically locks outside guest ranges, respecting the full reference list's final endpoint");
         Check(ProjectSerializer.Read(ProjectSerializer.Serialize(synced)).ContentEquals(synced), "Saved interval locks roundtrip");
         Check(ProjectSerializer.ReadProject(ProjectSerializer.Serialize(project)).Difficulties[0].Document.ContentEquals(synced), "Project interval locks roundtrip");
         var history = new EditorHistory(synced);

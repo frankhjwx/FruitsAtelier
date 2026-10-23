@@ -100,8 +100,11 @@ internal static class CollaborationMappingUiTests
         var watch = Stopwatch.StartNew();
         while (ui.View.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { ui.Paint(); Thread.Sleep(1); }
         Check(ui.View.Document.Fruits.Count == 3 && ui.View.Document.CollaborationReferences is null, "Reverse worker syncs both ranges");
-        ui.View.ToggleCollaborationSectionLock(merged.Id); ui.Paint();
-        Check(ui.View.Document.CollaborationEditableRanges?.Count == 2, "Lock owns both editable intervals");
+        Check(ui.View.Document.CollaborationEditableRanges?.Count == 2, "Reverse sync automatically locks outside both guest intervals");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.Fruits.Count == 1 && ui.View.Document.CollaborationEditableRanges is null, "Reverse sync and automatic lock undo together");
+        ui.Key('Y', ctrl: true);
+        Check(ui.View.Document.Fruits.Count == 3 && ui.View.Document.CollaborationEditableRanges?.Count == 2, "Reverse sync and automatic lock redo together");
         var overlays = ui.Canvas.PaintCalls.Where(p => p.Color == 0xFF9BAA && p.FillBounds is not null).ToArray();
         Check(overlays.Length >= 3 && overlays.All(p => p.Opacity == .30f), "Canvas and both timelines draw 30 percent pink overlays");
         Check(overlays.Where(p => p.FillBounds!.Value.Y >= ui.Plot.Y && p.FillBounds.Value.Y < ui.Plot.Bottom)

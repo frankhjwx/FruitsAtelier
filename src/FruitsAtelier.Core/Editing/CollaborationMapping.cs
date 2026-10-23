@@ -20,6 +20,8 @@ public static class CollaborationMapping
         var result = Synchronize(project, targetId, references, compensateTinyDroplets, outputCache,
             synchronizeObjectHitsounds, source.CollaborationReferences!.Max(r => r.EndMs));
         result.Document.CollaborationReferences = target.CollaborationReferences?.ToList();
+        result.Document.CollaborationEditableRanges = CollaborationSectionEditing.Ranges(references,
+            source.CollaborationReferences!.Max(r => r.EndMs));
         foreach (string key in new[] { "Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Source", "Tags", "BeatmapSetID" })
             SongSetup.Set(result.Document, "Metadata", key, SongSetup.Get(source, "Metadata", key));
         return result;

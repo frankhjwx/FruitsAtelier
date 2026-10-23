@@ -109,7 +109,9 @@ under one heading. **Sync from this difficulty** copies that difficulty's curren
 objects, section timing and optional object hitsounds back into every range that
 references the active difficulty. It also copies song metadata (title, artist,
 creator, source, tags and beatmap-set ID), preserving the active difficulty's
-name, version, beatmap ID and reference list. This is an explicit, undoable sync.
+name, version, beatmap ID and reference list. A successful reverse sync automatically
+locks all time outside this guest's referenced ranges. Synchronization and the
+updated lock form one undo step. Failed synchronization leaves the lock unchanged.
 
 **Remove all notes other than collab sections** keeps complete objects inside the
 listed ranges and removes all other objects and their hitsound overrides in one
