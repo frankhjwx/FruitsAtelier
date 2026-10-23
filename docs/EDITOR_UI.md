@@ -32,8 +32,11 @@ A timestamp inside a review's embedded discussion switches to its
 referenced difficulty when that difficulty is loaded in the project.
 HTTP/HTTPS addresses in posts and replies are clickable in both the panel and
 canvas annotations. Wrapped segments open the complete address in the browser.
-Author names open the corresponding osu! user profile. External links underline
-on hover. Drag across body text to select it and use Ctrl+C to copy; Ctrl+A selects
+Author names, including names in resolved/reopened records, open the corresponding
+osu! user profile. Hovering an external link
+underlines all of its wrapped segments together. Links, author names and permalinks
+use a hand cursor; body text uses the text-selection cursor. Drag across body text
+to select it and use Ctrl+C to copy; Ctrl+A selects
 the focused discussion area's body text, including replies. Text selection keeps logical line
 breaks across visual wrapping and does not follow links or edit beatmap objects.
 

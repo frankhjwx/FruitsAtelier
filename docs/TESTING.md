@@ -14,7 +14,8 @@ transport and caching, pending-image idle frames, invalid-image fallback, shared
 post/reply image requests, image navigation and retired image requests.
 Interaction checks include object selection from numbered timestamps, destination
 difficulty selection, image preview zoom/pan and input isolation, profile links,
-hover underlines, permalink clipboard hints and expiring confirmation, and body
+hand/text cursor feedback, whole-link hover underlines across wrapped segments,
+permalink clipboard hints and expiring confirmation, and body
 text selection/copy across formatted text, Unicode, replies and canvas annotations.
 On Windows, `FruitsAtelier.App.exe --render-check --discussions-render-check`
 captures compact and wide discussions, replies, type icons, offline states and

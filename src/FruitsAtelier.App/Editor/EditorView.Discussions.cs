@@ -63,7 +63,7 @@ public sealed partial class EditorView
     private (string Language, string Difficulty)? discussionTabLabelKey;
     private long? discussionFocused;
     private long? discussionRevealThread;
-    private sealed record DiscussionRun(float X, float Width, string Text, uint Colour, double? Time = null, long Discussion = 0, string? Url = null, DiscussionTextStyle Style = DiscussionTextStyle.None, IReadOnlyList<int>? Numbers = null, int TextStart = -1);
+    private sealed record DiscussionRun(float X, float Width, string Text, uint Colour, double? Time = null, long Discussion = 0, string? Url = null, DiscussionTextStyle Style = DiscussionTextStyle.None, IReadOnlyList<int>? Numbers = null, int TextStart = -1, int LinkId = -1);
     private sealed record DiscussionLine(float Top, float Height, float Indent, IReadOnlyList<DiscussionRun> Runs,
         long? User = null, long? OwnerBeatmap = null, long? Toggle = null, float AuthorWidth = 0,
         long? Permalink = null, long Thread = 0, DateTimeOffset? PostedAt = null, long? Header = null, string? Icon = null, bool Reply = false,
@@ -110,6 +110,7 @@ public sealed partial class EditorView
     {
         discussionCopyFeedbackBounds = discussionCopyHoverBounds = default;
         discussionTextHits.Clear();
+        discussionHandHits.Clear(); discussionBodyHits.Clear();
         if (timeProvider.GetUtcNow() >= discussionCopiedUntil) discussionCopiedLink = null;
         if (LibraryVisible || !HasEditorProject || PatternEditingActive) return;
         if (timeProvider.GetUtcNow() >= discussionRelativeRefresh) discussionRelativeRefresh = timeProvider.GetUtcNow().AddMinutes(1);
@@ -222,6 +223,7 @@ public sealed partial class EditorView
         CloseDiscussionImage();
         ClearDiscussionTextSelection();
         discussionTextHits.Clear();
+        discussionHandHits.Clear(); discussionBodyHits.Clear();
         discussionCopiedLink = null;
         discussionSetId = discussionBeatmapId = 0; discussionError = null; discussionAvatars.Clear();
         discussionRoots = [[], [], [], []]; discussionTabLabelKey = null;
@@ -362,6 +364,7 @@ public sealed partial class EditorView
     private void DrawDiscussionContent(ICanvas c, DiscussionLayout layout, Rect viewport, float contentX,
         float contentWidth, float scroll, bool canvasQuote)
     {
+        int? hoveredLink = DiscussionHoveredLink(layout, viewport, contentX, scroll);
         foreach (var block in layout.PostBlocks)
         {
             if (block.Bottom < scroll) continue;
@@ -378,6 +381,8 @@ public sealed partial class EditorView
             var line = layout.Lines[i]; if (line.Top >= scroll + viewport.Height) break;
             float y = viewport.Y + line.Top - scroll;
             float left = contentX + line.Indent;
+            if (line.Runs.Any(run => run.TextStart >= 0))
+                discussionBodyHits.Add(DiscussionIntersection(new(left, y, Math.Max(0, contentWidth - line.Indent), line.Height), viewport));
             if (line.Quoted) c.Line(left - 7, y, left - 7, y + line.Height, 0xA6C5D0, 2, .65f);
             if (line.CodeBlock) c.Fill(new(left - 2, y, Math.Max(1, contentWidth - line.Indent + 2), line.Height), 0x20262D, 2);
             if (line.Image is { } image && line.ImageUrl is { } imageUrl)
@@ -386,7 +391,7 @@ public sealed partial class EditorView
                 var imageBounds = new Rect(left, y, imageWidth, line.Height - 6);
                 if (!c.Image(image.Path, imageBounds)) c.Text(imageUrl, left, y + 2, 12, 0xA6C5D0, imageWidth);
                 var imageHit = DiscussionIntersection(imageBounds, viewport);
-                if (imageHit.Height > 0) Register(imageHit, () => OpenDiscussionImage(image));
+                if (imageHit.Height > 0) { discussionHandHits.Add(imageHit); Register(imageHit, () => OpenDiscussionImage(image)); }
             }
             if (line.User is { } userId)
             {
@@ -396,7 +401,7 @@ public sealed partial class EditorView
                     float nameWidth = Math.Min(Math.Max(10, line.AuthorWidth - 37), c.MeasureText(author.Name, 12, true));
                     var nameHit = DiscussionIntersection(new(left + 37, y, nameWidth, 19), viewport);
                     if (DiscussionLinkHovered(nameHit)) c.Line(left + 37, y + 17, left + 37 + nameWidth, y + 17, Foreground);
-                    if (nameHit.Height > 0) Register(nameHit, () => RequestVisitOsuWeb?.Invoke($"https://osu.ppy.sh/users/{userId}"));
+                    if (nameHit.Height > 0) { discussionHandHits.Add(nameHit); Register(nameHit, () => RequestVisitOsuWeb?.Invoke($"https://osu.ppy.sh/users/{userId}")); }
                 }
             }
             if (line.Reply) DiscussionIcon(c, "reply", new(left - 12, y + 8, 9, 9), Muted);
@@ -443,7 +448,8 @@ public sealed partial class EditorView
                     run.Style.HasFlag(DiscussionTextStyle.Bold), run.Style.HasFlag(DiscussionTextStyle.Italic));
                 if (run.Style.HasFlag(DiscussionTextStyle.Strike)) c.Line(r.X, r.Y + 10, r.Right, r.Y + 10, run.Colour);
                 var clipped = DiscussionIntersection(r, viewport);
-                if (run.Url is not null && DiscussionLinkHovered(clipped)) c.Line(r.X, r.Y + 17, r.Right, r.Y + 17, run.Colour);
+                if (run.Url is not null && hoveredLink == run.LinkId) c.Line(r.X, r.Y + 17, r.Right, r.Y + 17, run.Colour);
+                if (clipped.Width > 0 && clipped.Height > 0 && (run.Url is not null || run.Time is not null)) discussionHandHits.Add(clipped);
                 if (clipped.Height > 0 && run.Time is { } time)
                 {
                     if (!canvasQuote) discussionReferenceHits.Add((clipped, time, run.Discussion));
@@ -459,6 +465,7 @@ public sealed partial class EditorView
                 var link = DiscussionIntersection(new(left, y, Math.Min(footerWidth, labelWidth + 4), line.Height), viewport);
                 if (link.Height > 0)
                 {
+                    discussionHandHits.Add(link);
                     Register(link, () => CopyDiscussionPermalink(postId, line.Thread, canvasQuote));
                     if (DiscussionLinkHovered(link))
                     { c.Line(left, y + 15, left + labelWidth, y + 15, 0xA6C5D0); discussionCopyHoverBounds = link; }
@@ -638,7 +645,8 @@ public sealed partial class EditorView
                 {
                     bool? resolved = DiscussionText.ResolvedSystemMessage(post);
                     string user = snapshot.Users.TryGetValue(post.UserId, out var author) ? author.Name : L.Get("discussion.unknownUser", post.UserId);
-                    TextLine(resolved is { } state ? L.Get(state ? "discussion.resolvedBy" : "discussion.reopenedBy", user)
+                    string userLink = DiscussionProfileLink(post.UserId, user);
+                    TextLine(resolved is { } state ? L.Get(state ? "discussion.resolvedBy" : "discussion.reopenedBy", userLink)
                         : L.Get("discussion.systemPost", post.Message), indent + 6, thread.Id,
                         resolved == true ? DiscussionResolvedColour : DiscussionPendingColour,
                         resolved == true ? "check-circle" : resolved == false ? "clock" : "sticky-note");
@@ -782,20 +790,20 @@ public sealed partial class EditorView
             {
                 int linkStart = textPosition; textPosition += value.Length;
                 float padding = time is null ? 0 : 6;
-                uint linkColour = url is null ? Accent : 0xA6C5D0;
+                uint linkColour = url is null ? Accent : symbol is not null ? colour : 0xA6C5D0;
                 float w = Measure(value) + padding;
                 if (x + w > width && x > 0) Flush();
-                if (w <= width) { runs.Add(new(x, w, value, linkColour, time, owner, url, style, numbers, linkStart)); x += w + (time is null ? 0 : 3); return; }
+                if (w <= width) { runs.Add(new(x, w, value, linkColour, time, owner, url, style, numbers, linkStart, linkStart)); x += w + (time is null ? 0 : 3); return; }
                 // Wrapped link segments retain the complete navigation target.
                 string chunk = ""; float size = padding; int chunkStart = linkStart;
                 foreach (int offset in StringInfo.ParseCombiningCharacters(value))
                 {
                     string glyph = StringInfo.GetNextTextElement(value, offset); float g = Measure(glyph);
-                    if (size + g > width && chunk.Length > 0) { runs.Add(new(0, size, chunk, linkColour, time, owner, url, style, numbers, chunkStart)); Flush(); chunk = ""; size = padding; }
+                    if (size + g > width && chunk.Length > 0) { runs.Add(new(0, size, chunk, linkColour, time, owner, url, style, numbers, chunkStart, linkStart)); Flush(); chunk = ""; size = padding; }
                     if (chunk.Length == 0) chunkStart = linkStart + offset;
                     chunk += glyph; size += g;
                 }
-                if (chunk.Length > 0) { runs.Add(new(0, size, chunk, linkColour, time, owner, url, style, numbers, chunkStart)); x = size; }
+                if (chunk.Length > 0) { runs.Add(new(0, size, chunk, linkColour, time, owner, url, style, numbers, chunkStart, linkStart)); x = size; }
             }
         }
     }

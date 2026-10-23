@@ -41,6 +41,7 @@ internal static class DiscussionTests
                 L.SetLanguage(locale); UiChecks(snapshot);
             }
             TypeCardLayout(snapshot);
+            ResolutionProfileLinks(snapshot);
             ObjectReferenceSelection(snapshot);
             TextSelection(snapshot);
             UrlNavigation(snapshot);
@@ -157,6 +158,38 @@ internal static class DiscussionTests
         ui.View.StopDiscussions();
     }
 
+    private static void ResolutionProfileLinks(OsuDiscussionSnapshot source)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var thread = new BeatmapDiscussion(800, 101, null, 10, 0, "problem", true, true, now,
+            [new(801, 10, "A short discussion.", false, now),
+                new(802, 20, "{\"type\":\"resolved\",\"value\":false}", true, now),
+                new(803, 20, "{\"type\":\"resolved\",\"value\":true}", true, now)]);
+        const string name = "yf_bmp_[mapper]";
+        var users = source.Users.ToDictionary(pair => pair.Key, pair => pair.Key == 20 ? pair.Value with { Name = name } : pair.Value);
+        var snapshot = new OsuDiscussionSnapshot(777, 20, [thread], users, source.Owners);
+        var ui = new Ui(false); ui.View.DiscussionLoader = (_, _) => Task.FromResult(snapshot);
+        var opened = new List<string>(); ui.View.RequestVisitOsuWeb = opened.Add;
+        ui.View.LoadProject(Project()); ui.View.ShowDiscussionPanel(); Wait(ui);
+        float panelX = ui.View.DiscussionBounds.X;
+        foreach (bool quote in new[] { false, true })
+        {
+            var links = ui.Canvas.Texts.Where(text => text.Value == name && !text.Bold && (quote ? text.X < panelX : text.X > panelX)).ToArray();
+            Check(links.Length == 2 && links.Select(text => text.Color).ToHashSet().SetEquals(new uint[] { 0xA6D9AE, 0xE6AA64 }),
+                "resolved/reopened usernames preserve literal names and state colours");
+            foreach (var link in links)
+            {
+                ui.View.PointerMove(link.X + 3, link.Y + 5, false, false); ui.Paint();
+                Check(ui.View.DiscussionHandCursor && ui.Canvas.Lines.Any(line => Math.Abs(line.X1 - link.X) < .1 && Math.Abs(line.Y1 - link.Y - 15) < .1),
+                    "resolution usernames underline and use a hand cursor in panel and canvas");
+                ui.Click(link.X + 3, link.Y + 5);
+            }
+        }
+        Check(opened.Count == 4 && opened.All(url => url == "https://osu.ppy.sh/users/20") && !ui.View.IsDirty,
+            "resolution records link to the actor's osu profile without editing content");
+        ui.View.StopDiscussions();
+    }
+
     private static void ObjectReferenceSelection(OsuDiscussionSnapshot source)
     {
         var thread = new BeatmapDiscussion(600, 101, null, 10, 1000, "suggestion", false, true, null,
@@ -212,6 +245,8 @@ internal static class DiscussionTests
         {
             float panelX = ui.View.DiscussionBounds.X;
             var start = ui.Canvas.Texts.First(text => text.Value == "Copy" && (canvas ? text.X < panelX : text.X > panelX));
+            ui.View.PointerMove(start.X + 2, start.Y + 5, false, false); ui.Paint();
+            Check(ui.View.DiscussionTextCursor && !ui.View.DiscussionHandCursor, "body text uses the text-selection cursor in panel and canvas");
             var end = ui.Canvas.Texts.First(text => text.Value == "line." && (canvas ? text.X < panelX : text.X > panelX));
             Drag(start.X + 1, start.Y + 5, end.X + ((ICanvas)ui.Canvas).MeasureText(end.Value, 12) + 1, end.Y + 5);
             ui.Key('C', ctrl: true);
@@ -251,11 +286,20 @@ internal static class DiscussionTests
             var segments = ui.Canvas.Texts.Where(t => t.Size == 12 && t.Color == 0xA6C5D0
                 && (canvas ? t.X >= quote.X && t.X < quote.Right && t.Y >= quote.Y && t.Y < quote.Bottom - 20 : t.X > panel.X)).ToArray();
             Check(segments.Length >= 4, "both main post and reply URLs wrap into clickable segments");
-            var hovered = segments[0]; ui.View.PointerMove(hovered.X + 2, hovered.Y + 5, false, false); ui.Paint();
-            Check(ui.Canvas.Lines.Any(line => Math.Abs(line.X1 - hovered.X) < .1 && Math.Abs(line.Y1 - hovered.Y - 15) < .1), "wrapped external URL segments underline on hover");
+            var firstLink = segments.TakeWhile((segment, index) => index == 0 || !segment.Value.StartsWith("https://", StringComparison.Ordinal)).ToArray();
+            Check(firstLink.Length > 1, "test URL spans multiple rendered lines");
+            foreach (var hovered in firstLink)
+            {
+                ui.View.PointerMove(hovered.X + 2, hovered.Y + 5, false, false); ui.Paint();
+                Check(ui.View.DiscussionHandCursor && !ui.View.DiscussionTextCursor, "URL segments use the hand cursor in panel and canvas");
+                Check(firstLink.All(Underlined) && segments.Skip(firstLink.Length).All(segment => !Underlined(segment)),
+                    "hovering any URL segment underlines every segment of that link without underlining a repeated URL in another post");
+            }
             foreach (var segment in segments) ui.Click(segment.X + 2, segment.Y + 5);
             Check(opened.Count == segments.Length && opened.All(value => value == url), "every wrapped segment opens the complete URL in panel and canvas");
             opened.Clear();
+            bool Underlined(RecordingCanvas.Label segment) => ui.Canvas.Lines.Any(line => Math.Abs(line.X1 - segment.X) < .1
+                && Math.Abs(line.Y1 - segment.Y - 15) < .1 && line.Color == segment.Color);
         }
         Check(ui.View.PlayheadMs == playhead && ui.View.Document.ContentEquals(before) && !ui.View.IsDirty,
             "URL navigation takes priority over card seeking and preserves editing state");

@@ -71,6 +71,7 @@ internal static class DiscussionMarkdownTests
             double playhead = ui.View.PlayheadMs, viewStart = ui.View.ViewStartMs;
             ui.Click(image.Bounds.X + 5, image.Bounds.Y + 5);
             Check(ui.View.DiscussionImageVisible && opened.Count == 0, "images open inside the editor without external navigation");
+            Check(!ui.View.DiscussionHandCursor && !ui.View.DiscussionTextCursor, "image preview suppresses discussion cursors behind its overlay");
             var previewImage = ui.Canvas.Images.Last(texture => texture.Path == path);
             Check(ui.View.DiscussionImageZoom == 1 && previewImage.Bounds.Width == 128 && previewImage.Bounds.Height == 128,
                 "image preview opens at 100 percent source size instead of fitting the window");
@@ -94,6 +95,7 @@ internal static class DiscussionMarkdownTests
         }
         var name = ui.Canvas.Texts.First(text => text.Value == "Yumeno Himiko" && text.X > panel.X);
         ui.View.PointerMove(name.X + 3, name.Y + 5, false, false); ui.Paint();
+        Check(ui.View.DiscussionHandCursor && !ui.View.DiscussionTextCursor, "usernames use the hand cursor");
         Check(ui.Canvas.Lines.Any(line => Math.Abs(line.X1 - name.X) < .1 && Math.Abs(line.Y1 - name.Y - 16) < .1), "external profile links underline on hover");
         ui.Click(name.X + 3, name.Y + 5);
         Check(opened.SequenceEqual(new[] { "https://osu.ppy.sh/users/20" }), "mapper names open the corresponding osu user profile");
@@ -102,6 +104,7 @@ internal static class DiscussionMarkdownTests
         {
             var footer = ui.Canvas.Texts.First(text => text.Value == L.Get("discussion.permalink") && (canvas ? text.X < panel.X : text.X > panel.X));
             ui.View.PointerMove(footer.X + 2, footer.Y + 4, false, false); ui.Paint();
+            Check(ui.View.DiscussionHandCursor && !ui.View.DiscussionTextCursor, "permalinks use the hand cursor in panel and canvas");
             Check(ui.Canvas.Texts.Any(text => text.Value == L.Get("discussion.copyLinkHint")), "permalink hover explains the clipboard action");
             ui.Click(footer.X + 2, footer.Y + 4);
             Check(copied is not null && copied.Contains("discussion#/500/") && opened.Count == 1

@@ -94,12 +94,18 @@ internal static class DiscussionRenderCheck
                     Paint("offline");
                     if (editor.DiscussionSnapshot is null || editor.DiscussionLoading || editor.IsDirty) throw new InvalidOperationException("Offline discussions blocked native editor.");
                     var urlThread = new BeatmapDiscussion(400, 101, null, 10, 1000, "suggestion", false, true, null,
-                        [new(401, 10, "refer to https://osu.ppy.sh/beatmapsets/2518389#taiko/5556878", false, DateTimeOffset.UtcNow.AddDays(-21)),
+                        [new(401, 10, "refer to https://p.eagate.573.jp/game/2dx/33/newsong/index.html", false, DateTimeOffset.UtcNow.AddDays(-21)),
                             new(402, 20, "https://osu.ppy.sh/beatmapsets/2562136/discussion/-/generalAll/total\nI've gone through the map metadata discussion.", false, DateTimeOffset.UtcNow.AddDays(-20))]);
                     var links = new OsuDiscussionSnapshot(777, 20, [urlThread], snapshot.Users, snapshot.Owners);
                     editor.DiscussionLoader = (_, _) => Task.FromResult(links); editor.LoadDocument(map); editor.ShowDiscussionPanel();
                     watch.Restart(); do { Paint(); Thread.Sleep(1); } while ((editor.DiscussionSnapshot != links || editor.DiscussionLoading) && watch.Elapsed.TotalSeconds < 5);
                     Select(DiscussionCategory.Timeline); Paint("urls");
+                    var wrappedLink = editor.DiscussionRenderedLinkBounds("https://osu.ppy.sh/beatmapsets/2562136/discussion/-/generalAll/total");
+                    editor.PointerMove(wrappedLink.X + 3, wrappedLink.Y + 5, false, false); Paint("url-hover");
+                    if (!editor.DiscussionHandCursor || editor.DiscussionTextCursor) throw new InvalidOperationException("Native discussion link cursor failed.");
+                    var canvasLink = editor.DiscussionRenderedLinkBounds("https://p.eagate.573.jp/game/2dx/33/newsong/index.html", quote: true);
+                    editor.PointerMove(canvasLink.X + 3, canvasLink.Y + 5, false, false); Paint("url-hover-canvas");
+                    if (!editor.DiscussionHandCursor) throw new InvalidOperationException("Native canvas discussion link cursor failed.");
                     string? fixture = Environment.GetCommandLineArgs().FirstOrDefault(argument => argument.StartsWith("--discussions-image-fixture=", StringComparison.Ordinal));
                     string imagePath = fixture is not null ? Path.GetFullPath(fixture["--discussions-image-fixture=".Length..])
                         : Path.Combine(AppContext.BaseDirectory, "assets", "icons", "discussion", "bullhorn.png");
@@ -115,6 +121,8 @@ internal static class DiscussionRenderCheck
                     watch.Restart(); do { Paint(); Thread.Sleep(1); } while ((editor.DiscussionSnapshot != images || editor.DiscussionImagesLoading) && watch.Elapsed.TotalSeconds < 5);
                     Select(DiscussionCategory.Timeline); Paint("markdown");
                     var caption = editor.DiscussionRenderedTextBounds("Bold");
+                    editor.PointerMove(caption.X + 1, caption.Y + 5, false, false); Paint();
+                    if (!editor.DiscussionTextCursor || editor.DiscussionHandCursor) throw new InvalidOperationException("Native discussion body text cursor failed.");
                     editor.PointerDown(caption.X + 1, caption.Y + 5, 0, false, false);
                     editor.PointerMove(caption.Right - 1, caption.Y + 5, false, false);
                     editor.PointerUp(caption.Right - 1, caption.Y + 5, 0); Paint("text-selection");
@@ -123,6 +131,7 @@ internal static class DiscussionRenderCheck
                     var namedLink = editor.DiscussionRenderedTextBounds("osu! link");
                     float footerX = namedLink.X + 3, footerY = namedLink.Y + 30;
                     editor.PointerMove(footerX, footerY, false, false); Paint("permalink-hover");
+                    if (!editor.DiscussionHandCursor) throw new InvalidOperationException("Native discussion permalink cursor failed.");
                     string? copied = null; editor.RequestCopyText = value => copied = value;
                     editor.PointerDown(footerX, footerY, 0, false, false); editor.PointerUp(footerX, footerY, 0); Paint("permalink-copied");
                     if (copied is null) throw new InvalidOperationException("Native discussion permalink copy failed.");
