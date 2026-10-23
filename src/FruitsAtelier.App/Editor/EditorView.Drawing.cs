@@ -932,7 +932,7 @@ public sealed partial class EditorView
     {
         if (drawingDockContent) { c.Fill(r, Surface, 4); c.Stroke(r, Grid, radius: 4); }
         bool textBold = bold ?? active;
-        bool hover = enabled && r.Contains(mouseX, mouseY);
+        bool hover = enabled && contextItems.Count == 0 && r.Contains(mouseX, mouseY);
         if (hover) c.Fill(r, active ? 0x3A6260u : 0x3D495Au, 4);
         else if (active) c.Fill(r, 0x31494B, 4);
         if (hover) c.Stroke(r, 0x71849A, 1, 4);
@@ -958,7 +958,7 @@ public sealed partial class EditorView
 
     private void ToggleSwitch(ICanvas c, Rect r, string label, bool value, Action action)
     {
-        if (r.Contains(mouseX, mouseY)) c.Fill(r, 0x303A46, 5);
+        if (contextItems.Count == 0 && r.Contains(mouseX, mouseY)) c.Fill(r, 0x303A46, 5);
         c.Text(label, r.X + 10, r.Y + (r.Height - 17) / 2, 13, Foreground, r.Width - 82);
         var track = new Rect(r.Right - 58, r.Y + (r.Height - 24) / 2, 46, 24);
         c.Fill(track, value ? 0x417D77u : 0x46515Fu, 12);

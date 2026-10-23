@@ -73,16 +73,30 @@ internal static class PatternGalleryOrganizationTests
         var tagLabel = ui.Canvas.Texts.Single(t => t.Value == "Jump");
         Check(allLabel.Y == noneLabel.Y && noneLabel.Y == manageLabel.Y && allLabel.X < noneLabel.X && noneLabel.X < manageLabel.X
             && tagLabel.Y > manageLabel.Y + 32, "Tag filter actions are not one row above the tag separator");
+        float hoverX = noneLabel.X + 4, hoverY = noneLabel.Y + 5;
+        ui.Key(27); ui.View.PointerMove(hoverX, hoverY, false, false); ui.Paint();
+        Check(ui.Canvas.Fills.Any(f => f.Color == 0x3D495Au && f.Bounds.Contains(hoverX, hoverY)),
+            "Hover regression fixture does not overlap an interactive toolbar button");
+        ui.ClickText(L.Get("gallery.tagFilters"));
+        ui.View.PointerMove(hoverX, hoverY, false, false); ui.Paint();
+        Check(ui.Canvas.Fills.Any(f => f.Color == 0x343E4Du && f.Bounds.Contains(hoverX, hoverY))
+            && !ui.Canvas.Fills.Any(f => f.Color == 0x3D495Au && f.Bounds.Contains(hoverX, hoverY)),
+            "Hovering the filter menu also highlights a covered toolbar button");
         ui.ClickText(L.Get("gallery.allTags"));
-        Check(ui.View.PatternGalleryFilteredCount == 0, "All did not select every tag");
+        Check(ui.View.PatternGalleryFilteredCount == 3, "All did not match patterns with any selected tag");
         ui.ClickText(L.Get("gallery.noTags"));
         Check(ui.View.PatternGalleryFilteredCount == 3, "None did not clear the tag selection"); ui.Key(27);
         ui.ClickText(L.Get("gallery.tagFilters")); ui.ClickText("Jump"); ui.Key(27);
         Check(ui.View.PatternGalleryFilteredCount == 2, "Tag filtering did not retain assigned patterns");
         ui.ClickText(L.Get("gallery.tagFilters")); ui.ClickText("Flow"); ui.Key(27);
-        Check(ui.View.PatternGalleryFilteredCount == 1 && ui.View.PatternGalleryCardBounds(both.Id).Width > 0,
-            "Multiple tags must match all selected tags");
+        Check(ui.View.PatternGalleryFilteredCount == 3 && ui.View.PatternGalleryCardBounds(jump.Id).Width > 0
+            && ui.View.PatternGalleryCardBounds(stream.Id).Width > 0 && ui.View.PatternGalleryCardBounds(both.Id).Width > 0,
+            "Multiple tags must match any selected tag");
         ui.ClickText(L.Get("gallery.tagFilters")); ui.ClickText(L.Get("gallery.noTags")); ui.Key(27);
+        var importLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("gallery.import"));
+        ui.View.PointerMove(importLabel.X + 4, importLabel.Y + 5, false, false); ui.Paint();
+        Check(ui.Canvas.Fills.Any(f => f.Color == 0x3D495Au && f.Bounds.Contains(importLabel.X + 4, importLabel.Y + 5)),
+            "Toolbar hover does not return after closing the filter menu");
         int exports = 0;
         ui.View.RequestPatternExport = selected => { Check(!selected, "Export still requests selected-only output"); exports++; };
         ui.ClickText(L.Get("gallery.export"));

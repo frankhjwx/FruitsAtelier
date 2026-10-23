@@ -44,6 +44,8 @@ internal static class PatternGalleryRenderCheck
                 if (editor.PatternGallerySearchBounds.Y != editor.PatternGalleryTagsBounds.Y)
                     throw new InvalidOperationException("Search and Tags are not on the same row.");
                 Click(editor.PatternGalleryTagsBounds); Paint("tags-menu");
+                var manageTags = editor.PatternGalleryManageTagsMenuBounds;
+                editor.PointerMove(manageTags.X - 10, manageTags.Y + 10, false, false); Paint("tags-menu-hover");
                 Click(editor.PatternGalleryManageTagsMenuBounds); Paint("manage-tags");
                 if (!editor.GalleryTagsVisible) throw new InvalidOperationException("Tags menu did not open Manage Tags.");
                 Click(editor.GalleryNewTagBounds);

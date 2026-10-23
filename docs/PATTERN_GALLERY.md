@@ -22,8 +22,8 @@ The gallery toolbar has two rows: search and **Tag Filters**; then **Save select
 list by a divider. **All** selects every tag; **None** clears the selection. Search
 follows Library matching: case-insensitive Unicode normalization and whitespace-separated words
 that must all occur in the pattern name, source artist/title/mapper/difficulty or
-tag names. Ctrl+F focuses the search field. Selecting multiple tags requires all
-selected tags. Filters affect browsing only.
+tag names. Ctrl+F focuses the search field. Selecting multiple tags matches any
+selected tag. Filters affect browsing only.
 
 Use **Edit Tags** in a pattern's details to assign existing tags or create one.
 Each tag has a name and colour. **Tag Filters → Manage Tags** creates tags independently

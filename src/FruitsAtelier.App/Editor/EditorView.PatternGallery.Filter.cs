@@ -35,7 +35,7 @@ public sealed partial class EditorView
     {
         var words = LibraryDatabase.Normalize(galleryQuery).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         galleryFilteredPatterns = gallerySearchIndex.Where(p => words.All(w => p.Search.Contains(w, StringComparison.Ordinal))
-            && galleryTagFilter.All(tag => p.Pattern.Tags.Any(t => string.Equals(t.Name, tag, StringComparison.OrdinalIgnoreCase))))
+            && (galleryTagFilter.Count == 0 || p.Pattern.Tags.Any(t => galleryTagFilter.Contains(t.Name))))
             .Select(p => p.Pattern).ToArray();
         if (resetScroll) galleryScroll = 0;
         if (!galleryFilteredPatterns.Any(p => p.Id == galleryPopupId)) galleryPopupId = Guid.Empty;
