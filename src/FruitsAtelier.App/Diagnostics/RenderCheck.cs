@@ -938,6 +938,8 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--discussions-render-check"))
+        { DiscussionRenderCheck.Run(canvas); return; }
         if (Environment.GetCommandLineArgs().Contains("--new-difficulty-render-check"))
         {
             NewDifficultyRenderCheck.Run(canvas);

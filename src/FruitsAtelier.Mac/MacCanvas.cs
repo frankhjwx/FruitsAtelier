@@ -176,6 +176,20 @@ internal sealed partial class MacCanvas(DrawingContext context, ImageCache image
     }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false)
         => TextOpacity(text, x, y, size, color, maxWidth, bold, 1);
+    public float MeasureStyledText(string text, float size, bool bold, bool italic)
+    {
+        var formatted = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            new Typeface("Arial, PingFang SC", italic ? FontStyle.Italic : FontStyle.Normal, bold ? FontWeight.SemiBold : FontWeight.Normal), size, Brush(0xFFFFFF));
+        return (float)formatted.WidthIncludingTrailingWhitespace;
+    }
+    public void StyledText(string text, float x, float y, float size, uint color, float maxWidth, bool bold, bool italic)
+    {
+        if (maxWidth <= 0 || text.Length == 0) return;
+        var formatted = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            new Typeface("Arial, PingFang SC", italic ? FontStyle.Italic : FontStyle.Normal, bold ? FontWeight.SemiBold : FontWeight.Normal), size, Brush(color));
+        using var clip = context.PushClip(new Avalonia.Rect(x, y, maxWidth, size * 1.8));
+        context.DrawText(formatted, new Point(x, y));
+    }
     public void TextOpacity(string text, float x, float y, float size, uint color, float maxWidth, bool bold, float opacity)
     {
         if (maxWidth <= 0 || text.Length == 0) return;

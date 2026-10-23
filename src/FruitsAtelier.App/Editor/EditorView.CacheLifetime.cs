@@ -23,6 +23,7 @@ public sealed partial class EditorView
 
     private void ReleaseDifficultyCaches()
     {
+        ClearDiscussionRegions();
         difficultyGraphicsReleasePending = true;
         projectMemoryReclaimPending = true;
         // The library does not render a difficulty, so lazy invalidation cannot release its data.

@@ -1,5 +1,75 @@
 # Editing Controls
 
+## Discussion
+
+Open **Layout → Discussion** to browse the public osu! discussions for the map's
+online BeatmapSetID. Reviews and General (All Difficulties) belong to the mapset;
+General (difficulty name) and Timeline belong to the active BeatmapID. The four
+tabs stay on one line; use their arrows or the mouse wheel to reveal hidden tabs.
+
+Threads show author avatars, mapper and team badges, full posts and replies,
+and resolution records. Team badges use mode icons beside their labels. Discussion
+types and Pending/Resolved states have separate icons; vote icons show the public
+counts. In wider panels, the main post's action icons share its first body line,
+with 25px of clearance; following lines use the full body width. A single type icon uses a
+narrower background than a type-and-state pair.
+
+General and Reviews default to Last update and offer Creation time / Last update.
+Timeline defaults to Timeline and offers Timeline / Last update. Each category
+retains its own choice. Collapse individual reply groups or use Collapse all /
+Expand all for the current category. Scroll position is retained per
+category and difficulty. The refresh button reloads the public snapshot;
+permalink opens the corresponding post on osu!. Each post footer places permalink
+on the left and a smaller, muted relative age on the right, updated every minute.
+
+Click a timestamped thread card to seek to its anchor. Timestamps in both posts
+and replies seek to their own references without selecting or changing objects.
+A timestamp inside a review's embedded discussion switches to its
+referenced difficulty when that difficulty is loaded in the project.
+HTTP/HTTPS addresses in posts and replies are clickable in both the panel and
+canvas annotations. Wrapped segments open the complete address in the browser.
+
+Posts support the discussion toolbar's common Markdown formats: bold, italic,
+inline code, named links, images, blockquotes and fenced code blocks. Simple
+headings, lists and strikethrough are also displayed. Code keeps its literal text;
+unsupported syntax remains readable text. HTML is not executed.
+
+Images use their Markdown address, including extensionless image-host URLs. PNG,
+JPEG and GIF (first frame) are fitted proportionally to the body width and open
+the original when clicked. They load in the background, with two concurrent
+downloads, a ten-second deadline and an 8 MiB file limit. Saved images in
+`Cache/DiscussionImages` remain available offline; failed images retain a clickable
+address and can be retried with refresh. Image discovery and cache I/O also run
+outside the UI thread. Image dimensions are limited to 4096 per side and 8 megapixels.
+
+The formatting subset follows osu!web's
+[discussion format definitions](https://github.com/ppy/osu-web/blob/1798caf054d175cb6ead549d4b2daf58f85ed203/resources/js/beatmap-discussions/markdown-format.ts)
+and [Markdown renderers](https://github.com/ppy/osu-web/blob/1798caf054d175cb6ead549d4b2daf58f85ed203/resources/js/markdown/renderers.tsx).
+
+The Catch canvas shows discussion markers automatically. With Discussion open,
+quotes appear beside X=512, before the assist tools. Orange bands indicate pending
+threads; pale green bands indicate resolved threads. Bands cover X=0–512 and a
+circle diameter vertically, or the full referenced object interval including
+slider duration. Object numbers are matched against the current timeline; when
+the local revision no longer matches, the timestamp remains the anchor. Click a
+quote or marker to reveal its thread in the panel. Canvas annotations also show
+complete posts, replies, badges and resolution records; scroll inside a card or
+drag its scrollbar to read long threads. Each visible thread appears once, with
+all of its referenced regions highlighted. Cards remain inside the canvas even
+when anchored at 0ms. With Discussion open, the paused Catch canvas can scroll
+into negative viewing time to leave room around the opening notes. Playback seeks,
+placements and note time edits still use nonnegative time.
+
+Discussion requests use the anonymous public endpoint without login or cookies.
+Requests and cache I/O run in the background. The workspace stores public snapshots
+in `Cache/Discussions` and avatars in `Cache/DiscussionAvatars`. A saved snapshot is
+shown immediately while a fresh one loads. Failed refreshes retain the current
+discussions and show an inline retry status. Waiting requests do not continuously
+redraw the editor; completed loads and individual ready avatars trigger updates.
+Requests have a deadline covering headers and body reads, and changing mapsets or
+closing the editor cancels pending work. Editing remains available while loading
+or offline. Maps without online IDs show an empty-state explanation.
+
 ## Pattern Gallery
 
 Use **Layout → Pattern Gallery** to save consecutive selections, browse skinned

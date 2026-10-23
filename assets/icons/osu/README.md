@@ -8,4 +8,5 @@ Source: https://github.com/ppy/osu-resources/blob/d8d01c29ce0f298159aea3644b947d
 Copyright ppy Pty Ltd and contributors. Licensed under Creative Commons
 Attribution-NonCommercial 4.0 International; the full text is in `LICENCE.md`.
 The editor scales and tints the icon at runtime according to calculated stars.
+Discussion team badges also use this icon to identify the Catch playmode.
 This is a ruleset identifier, not application branding or an endorsement.

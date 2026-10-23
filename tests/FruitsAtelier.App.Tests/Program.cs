@@ -2,6 +2,7 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 if (args.Length == 2 && args[0] == "--history-save-performance") { HistorySavePerformance.Run(args[1]); return 0; }
+if (args.Contains("--discussions-check")) { DiscussionTests.Run(); return 0; }
 if (args.Contains("--storage-check")) { StorageSettingsTests.Run(); return 0; }
 if (args.Contains("--history-maintenance-check")) { DeferredHistoryUiTests.Run(); return 0; }
 if (args.Length == 3 && args[0] == "--library-search-profile") { LibrarySearchTests.Profile(args[1], args[2]); return 0; }
@@ -276,6 +277,7 @@ if (args.Contains("--lazer-editing-check"))
 var tests = new (string Name, Action Run)[]
 {
     ("Pattern Gallery preserves previews, placement and editing sessions", () => { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); }),
+    ("Discussions, replies, annotations and timestamp navigation", DiscussionTests.Run),
     ("Collab Mapping panel edits per-difficulty references and synchronizes sources", CollaborationMappingUiTests.Run),
     ("osu canvas renders standard objects and retains source identities", OsuCanvasRenderTests.Run),
     ("osu canvas edits native geometry and enforces slider representations", OsuCanvasInputTests.Run),

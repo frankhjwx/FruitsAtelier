@@ -153,6 +153,7 @@ public sealed partial class EditorView
         }
         if (SongDockPointer(x, y, button, shift)) return;
         if (CollaborationPointer(x, y, button)) return;
+        if (DiscussionPointerDown(x, y, button)) return;
         if (NotesPointer(x, y, button, shift)) return;
         if (PatternDockPointer(x, y, button)) return;
         if (CanvasScalePointerDown(x, y, button)) return;
@@ -472,6 +473,8 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (discussionQuoteDrag is not null) { MoveDiscussionQuoteScrollbar(y); return; }
+        if (discussionScrollbarDragging) { MoveDiscussionScrollbar(y); return; }
         if (GalleryTagsVisible) { mouseX = x; mouseY = y; if (!PatternNameVisible) { if (MoveGalleryTagOrder(x, y)) return; if (textSelecting && GalleryTagTextFocused) MoveInputSelection(x); else MoveGalleryTagColour(x, y); } return; }
         if (PatternGalleryPointerMove(x, y)) return;
         if (templatePointer) { mouseX = x; mouseY = y; MoveMapTemplate(x, y); return; }
@@ -638,6 +641,8 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (discussionQuoteDrag is not null) { MoveDiscussionQuoteScrollbar(y); discussionQuoteDrag = null; return; }
+        if (discussionScrollbarDragging) { MoveDiscussionScrollbar(y); discussionScrollbarDragging = false; return; }
         if (GalleryTagsVisible) { if (button == 0) { if (EndGalleryTagOrder(x, y)) return; if (!PatternNameVisible) MoveGalleryTagColour(x, y); galleryTagDrag = 0; textSelecting = false; } return; }
         if (PatternGalleryPointerUp(x, y, button)) return;
         if (templatePointer && button == 0)
@@ -977,6 +982,7 @@ public sealed partial class EditorView
             return;
         }
         if (WheelDockTabs(x, y, delta)) return;
+        if (WheelDiscussions(x, y, delta)) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
             if (aimodScrollTrack.Contains(x, y) || shiftHeld)
@@ -1172,6 +1178,7 @@ public sealed partial class EditorView
         wheelRemainder = ticks - steps;
         wheelPlayhead = playhead; wheelDivisor = stepDivisor; wheelSurface = surface;
         if (steps == 0) return;
+        if (ScrollDiscussionPreroll(steps, surface)) return;
         double target = StepAlongBeatGrid(playhead, steps, stepDivisor);
         if (target == 0 || target == TimelineDurationMs) wheelRemainder = 0;
         double nextView = viewStart + target - playhead;
@@ -1610,6 +1617,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        discussionScrollbarDragging = false; discussionQuoteDrag = null;
         CancelPatternGalleryInteraction();
         CancelGalleryTagOrder();
         FinishMapTemplateDrag(cancel: true);

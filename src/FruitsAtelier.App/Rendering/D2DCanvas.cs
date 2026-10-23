@@ -45,11 +45,11 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     private readonly Queue<IReadOnlyList<Vector2>> pathGeometryOrder = new();
     private readonly Dictionary<(IReadOnlyList<Vector2> Points, float Diameter), (ID2D1CommandList Mask, DRect Bounds)> sliderBorders = [];
     private readonly Queue<(IReadOnlyList<Vector2> Points, float Diameter)> sliderBorderOrder = new();
-    private readonly Dictionary<(float, bool), IDWriteTextFormat> formats = [];
-    private readonly Queue<(float, bool)> formatOrder = new();
+    private readonly Dictionary<(float, bool, bool), IDWriteTextFormat> formats = [];
+    private readonly Queue<(float, bool, bool)> formatOrder = new();
     internal int CachedTextFormatCount => formats.Count;
     internal const int TextFormatLimit = 128;
-    private readonly record struct TextLayoutKey(string Text, float Size, float Width, float Height, bool Bold);
+    private readonly record struct TextLayoutKey(string Text, float Size, float Width, float Height, bool Bold, bool Italic);
     private sealed record CachedTextLayout(IDWriteTextLayout Layout)
     {
         public long Used { get; set; }
@@ -377,15 +377,22 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false)
         => TextOpacity(text, x, y, size, color, maxWidth, bold, 1);
+    public float MeasureStyledText(string text, float size, bool bold, bool italic)
+        => TextLayout(text, size, 10000, size * 2, bold, italic).Metrics.WidthIncludingTrailingWhitespace;
+    public void StyledText(string text, float x, float y, float size, uint color, float maxWidth, bool bold, bool italic)
+    {
+        if (maxWidth <= 0 || string.IsNullOrEmpty(text)) return;
+        context!.DrawTextLayout(new Vector2(x, y), TextLayout(text, size, maxWidth, size * 1.8f, bold, italic), Brush(color), DrawTextOptions.Clip);
+    }
     public void TextOpacity(string text, float x, float y, float size, uint color, float maxWidth, bool bold, float opacity)
     {
         if (maxWidth <= 0 || string.IsNullOrEmpty(text)) return;
         var layout = TextLayout(text, size, maxWidth, size * 1.8f, bold);
         context!.DrawTextLayout(new Vector2(x, y), layout, Brush(color, opacity), DrawTextOptions.Clip);
     }
-    private IDWriteTextLayout TextLayout(string text, float size, float width, float height, bool bold)
+    private IDWriteTextLayout TextLayout(string text, float size, float width, float height, bool bold, bool italic = false)
     {
-        var key = new TextLayoutKey(text, size, width, height, bold);
+        var key = new TextLayoutKey(text, size, width, height, bold, italic);
         if (!textLayouts.TryGetValue(key, out var cached))
         {
             // Dense stacks reuse labels such as NC; position and colour do not affect shaping.
@@ -395,16 +402,16 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
                 textLayouts.Remove(oldest.Key);
                 oldest.Value.Layout.Dispose();
             }
-            cached = new(textFactory!.CreateTextLayout(text, TextFormat(size, bold), width, height));
+            cached = new(textFactory!.CreateTextLayout(text, TextFormat(size, bold, italic), width, height));
             textLayouts.Add(key, cached);
             TextLayoutBuildCount++;
         }
         cached.Used = ++textLayoutClock;
         return cached.Layout;
     }
-    private IDWriteTextFormat TextFormat(float size, bool bold)
+    private IDWriteTextFormat TextFormat(float size, bool bold, bool italic)
     {
-        if (!formats.TryGetValue((size, bold), out var format))
+        if (!formats.TryGetValue((size, bold, italic), out var format))
         {
             // Animated combo sizes and continuous zoom must not retain a native format for every frame.
             if (formats.Count >= TextFormatLimit)
@@ -413,10 +420,10 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
                 formats[oldest].Dispose(); formats.Remove(oldest);
             }
             format = textFactory!.CreateTextFormat("Segoe UI", null, bold ? FontWeight.SemiBold : FontWeight.Normal,
-                FontStyle.Normal, FontStretch.Normal, size, "zh-CN");
+                italic ? FontStyle.Italic : FontStyle.Normal, FontStretch.Normal, size, "zh-CN");
             format.WordWrapping = WordWrapping.NoWrap;
-            formats.Add((size, bold), format);
-            formatOrder.Enqueue((size, bold));
+            formats.Add((size, bold, italic), format);
+            formatOrder.Enqueue((size, bold, italic));
         }
         return format;
     }

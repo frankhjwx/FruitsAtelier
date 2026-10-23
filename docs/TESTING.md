@@ -2,6 +2,25 @@
 
 ## SDKs and builds
 
+`App.Tests --discussions-check` verifies anonymous snapshot transport, shared and
+per-difficulty categories, complete replies and review embeds, team badges,
+timestamp and wrapped HTTP/HTTPS link navigation, tab overflow, retained scroll, annotation bounds and slider
+duration, full long annotations at zero, negative view navigation with nonnegative
+editing, relative posting ages and footer alignment, type/status icons, independent
+category sorting, cache recovery, offline refresh retention, stalled headers/body
+reads, unchanged content and conversion, and retirement of stale requests.
+It also covers Markdown emphasis, links, literal code, quotes, extensionless image
+transport and caching, pending-image idle frames, invalid-image fallback, shared
+post/reply image requests, image navigation and retired image requests.
+On Windows, `FruitsAtelier.App.exe --render-check --discussions-render-check`
+captures compact and wide discussions, replies, type icons, offline states and
+canvas quotes in English and
+Chinese at 980×620 and 1440×900 with 96/144/192 DPI under
+`artifacts/tests/discussions/native`.
+The native check includes Markdown and image cards; pass
+`--discussions-image-fixture=<absolute-image-path>` to use a local image fixture
+without network access.
+
 `App.Tests --fad-check` verifies portable difficulty packages, local resource
 conflicts, matching, adding difficulties, native merge choices, undo/redo, Library
 rejection and the FAZ export chooser. `FruitsAtelier.App.exe --render-check
