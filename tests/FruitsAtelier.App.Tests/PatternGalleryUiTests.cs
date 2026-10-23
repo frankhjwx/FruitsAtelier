@@ -157,8 +157,8 @@ internal static class PatternGalleryUiTests
             ui.Key(65, ctrl: true);
             foreach (char ch in "Renamed gallery pattern") ui.View.TextInput(ch);
             ui.Key(13);
-            Wait(() => store.Load().Any(p => p.Id == snapshot.Id && p.Name == "Renamed gallery pattern")
-                && !ui.View.PatternGalleryNeedsRedraw, ui);
+            Wait(() => !ui.View.PatternGalleryNeedsRedraw
+                && store.Load().Any(p => p.Id == snapshot.Id && p.Name == "Renamed gallery pattern"), ui);
             Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Rename changed the destination map");
             ui.View.BeginPatternExport(Path.Combine(directory, "shared.fap"), false);
             Wait(() => File.Exists(Path.Combine(directory, "shared.fap")) && !ui.View.PatternGalleryNeedsRedraw, ui);
