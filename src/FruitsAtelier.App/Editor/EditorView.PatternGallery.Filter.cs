@@ -12,8 +12,8 @@ public sealed partial class EditorView
     private (PatternSnapshot Pattern, string Search)[] gallerySearchIndex = [];
     private PatternTag[] galleryTags = [];
     private readonly HashSet<string> galleryTagFilter = new(StringComparer.OrdinalIgnoreCase);
-    internal Rect PatternGalleryManageTagsMenuBounds => contextItems.Count > 0 && contextItems[^1].Label == L.Get("gallery.manageTags")
-        ? ContextItemBounds(contextItems.Count - 1) : default;
+    internal Rect PatternGalleryManageTagsMenuBounds => contextItems.Count > 0 && contextItems[0].Actions is { Length: 3 }
+        ? ContextActionBounds(0, 2) : default;
     private bool GallerySearchFocused => textEditor.Field == "gallery:search" && PatternGalleryInputAvailable;
     private bool CanSavePatternSelection => CanCopySelection && !PatternEditingActive && !PatternEditingBusy
         && galleryIoTask is null && RequestPatternName is not null;
@@ -51,7 +51,7 @@ public sealed partial class EditorView
 
     private void DrawGallerySearchAndFilters(ICanvas c, Rect bounds, bool ready)
     {
-        float tagsWidth = Math.Min(120, bounds.Width * .35f);
+        float tagsWidth = Math.Min(Math.Max(120, c.MeasureText(L.Get("gallery.tagFilters"), 11) + 18), bounds.Width * .5f);
         gallerySearchBounds = new(bounds.X, bounds.Y, Math.Max(20, bounds.Width - tagsWidth - 5), 28);
         c.Fill(gallerySearchBounds, Surface, 4); c.Stroke(gallerySearchBounds, GallerySearchFocused ? Accent : Grid, radius: 4);
         DrawInputText(c, new(bounds.X + 9, bounds.Y + 6, gallerySearchBounds.Width - 18, 20), galleryQuery, 12, GallerySearchFocused, "gallery:search");
@@ -59,14 +59,20 @@ public sealed partial class EditorView
             c.Text(L.Get("library.search"), bounds.X + 9, bounds.Y + 6, 12, Muted, gallerySearchBounds.Width - 18);
         hits.Add(new(gallerySearchBounds, () => FocusInput("gallery:search", galleryQuery, mouseX), true));
         galleryTagsBounds = new(gallerySearchBounds.Right + 5, bounds.Y, tagsWidth, 28);
-        Button(c, galleryTagsBounds, L.Get("gallery.filterTags", galleryTagFilter.Count),
+        Button(c, galleryTagsBounds, L.Get("gallery.tagFilters"),
             () => ShowGalleryTagFilter(), enabled: ready, active: galleryTagFilter.Count > 0, fontSize: 11);
     }
 
     private void ShowGalleryTagFilter(int page = 0)
     {
         contextItems.Clear(); menu = -1;
-        contextItems.Add(new(L.Get("gallery.allTags"), () => { galleryTagFilter.Clear(); ApplyGalleryFilter(); }));
+        contextItems.Add(new("", () => { }, Actions:
+        [
+            new(L.Get("gallery.allTags"), () => { galleryTagFilter.UnionWith(galleryTags.Select(t => t.Name)); ApplyGalleryFilter(); ShowGalleryTagFilter(page); }),
+            new(L.Get("gallery.noTags"), () => { galleryTagFilter.Clear(); ApplyGalleryFilter(); ShowGalleryTagFilter(page); }),
+            new(L.Get("gallery.manageTags"), ShowGalleryTagManager, CanEditGalleryTags, Weight: 2)
+        ]));
+        AddContextSeparator();
         foreach (var tag in GalleryTagPage(page))
             contextItems.Add(new(tag.Name, () =>
             {
@@ -74,7 +80,6 @@ public sealed partial class EditorView
                 ApplyGalleryFilter(); ShowGalleryTagFilter(page);
             }, Color: tag.Colour, Active: galleryTagFilter.Contains(tag.Name)));
         GalleryTagPaging(page, ShowGalleryTagFilter);
-        contextItems.Add(new(L.Get("gallery.manageTags"), ShowGalleryTagManager, CanEditGalleryTags));
         PositionGalleryMenu(gallerySearchBounds.Right + 5, galleryBounds.Y + 30);
     }
 

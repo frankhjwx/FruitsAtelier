@@ -8,7 +8,7 @@ public sealed partial class EditorView
 {
     private readonly List<ContextItem> contextItems = [];
     private Rect contextBounds;
-    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null, bool Separator = false, bool Heading = false, bool Active = false, int SliderAction = 0);
+    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null, bool Separator = false, bool Heading = false, bool Active = false, int SliderAction = 0, ContextItem[]? Actions = null, int Weight = 1);
     private float ContextMenuHeight => 12 + contextItems.Sum(item => item.Separator ? 10 : 32);
     private void AddContextSeparator() => contextItems.Add(new("", () => { }, Enabled: false, Separator: true));
     private sealed record SliderLocation(Guid Id, double FirstSpanTimeMs);
@@ -31,20 +31,30 @@ public sealed partial class EditorView
                 c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, Foreground, rect.Width - 18, true);
                 continue;
             }
-            bool hover = item.Enabled && rect.Contains(mouseX, mouseY);
-            if (item.Active)
+            if (item.Actions is { } actions)
             {
-                c.Fill(rect, hover ? 0x3A6260u : 0x31494Bu, 4);
-                c.Stroke(rect, 0x477E7B, 1, 4);
+                for (int column = 0; column < actions.Length; column++)
+                    DrawContextAction(c, actions[column], ContextActionBounds(i, column));
             }
-            else if (hover) c.Fill(rect, 0x343E4D, 4);
-            c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? item.Color ?? (item.Active ? Accent : Foreground) : 0x5B6777, rect.Width - (item.Shortcut.Length > 0 ? 90 : 18), item.Active);
-            string shortcut = item.Shortcut;
-            if (shortcut.Length > 0)
-            {
-                float shortcutWidth = c.MeasureText(shortcut, 11);
-                c.Text(shortcut, rect.Right - 9 - shortcutWidth, rect.Y + 7, 11, item.Enabled ? Muted : 0x5B6777, shortcutWidth + 1);
-            }
+            else DrawContextAction(c, item, rect);
+        }
+    }
+
+    private void DrawContextAction(ICanvas c, ContextItem item, Rect rect)
+    {
+        bool hover = item.Enabled && rect.Contains(mouseX, mouseY);
+        if (item.Active)
+        {
+            c.Fill(rect, hover ? 0x3A6260u : 0x31494Bu, 4);
+            c.Stroke(rect, 0x477E7B, 1, 4);
+        }
+        else if (hover) c.Fill(rect, 0x343E4D, 4);
+        c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? item.Color ?? (item.Active ? Accent : Foreground) : 0x5B6777, rect.Width - (item.Shortcut.Length > 0 ? 90 : 18), item.Active);
+        string shortcut = item.Shortcut;
+        if (shortcut.Length > 0)
+        {
+            float shortcutWidth = c.MeasureText(shortcut, 11);
+            c.Text(shortcut, rect.Right - 9 - shortcutWidth, rect.Y + 7, 11, item.Enabled ? Muted : 0x5B6777, shortcutWidth + 1);
         }
     }
 
@@ -52,11 +62,28 @@ public sealed partial class EditorView
         contextBounds.Y + 6 + contextItems.Take(index).Sum(item => item.Separator ? 10 : 32),
         contextBounds.Width - 12, contextItems[index].Separator ? 8 : 30);
 
+    private Rect ContextActionBounds(int row, int column)
+    {
+        var rect = ContextItemBounds(row);
+        var actions = contextItems[row].Actions!;
+        float unit = rect.Width / actions.Sum(a => a.Weight);
+        return new(rect.X + actions.Take(column).Sum(a => a.Weight) * unit, rect.Y, actions[column].Weight * unit, rect.Height);
+    }
+
     private void ActivateContextMenu(float x, float y)
     {
         Action? action = null;
         for (int i = 0; i < contextItems.Count; i++)
-            if (ContextItemBounds(i).Contains(x, y) && contextItems[i].Enabled) { action = contextItems[i].Action; break; }
+            if (ContextItemBounds(i).Contains(x, y) && contextItems[i].Enabled)
+            {
+                if (contextItems[i].Actions is { } actions)
+                {
+                    for (int column = 0; column < actions.Length; column++)
+                        if (actions[column].Enabled && ContextActionBounds(i, column).Contains(x, y)) { action = actions[column].Action; break; }
+                }
+                else action = contextItems[i].Action;
+                break;
+            }
         contextItems.Clear();
         action?.Invoke();
     }

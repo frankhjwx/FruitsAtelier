@@ -66,12 +66,23 @@ internal static class PatternGalleryOrganizationTests
         ui.Type("snow unknown"); ui.Paint();
         Check(ui.View.PatternGalleryFilteredCount == 0 && ui.View.Document.ContentEquals(before), "Search changed content or ignored unmatched words");
         ui.Key('A', ctrl: true); ui.Key(8); ui.Key(27);
-        ui.ClickText(L.Get("gallery.filterTags", 0)); ui.ClickText("Jump"); ui.Key(27);
+        ui.ClickText(L.Get("gallery.tagFilters"));
+        var allLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("gallery.allTags"));
+        var noneLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("gallery.noTags"));
+        var manageLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("gallery.manageTags"));
+        var tagLabel = ui.Canvas.Texts.Single(t => t.Value == "Jump");
+        Check(allLabel.Y == noneLabel.Y && noneLabel.Y == manageLabel.Y && allLabel.X < noneLabel.X && noneLabel.X < manageLabel.X
+            && tagLabel.Y > manageLabel.Y + 32, "Tag filter actions are not one row above the tag separator");
+        ui.ClickText(L.Get("gallery.allTags"));
+        Check(ui.View.PatternGalleryFilteredCount == 0, "All did not select every tag");
+        ui.ClickText(L.Get("gallery.noTags"));
+        Check(ui.View.PatternGalleryFilteredCount == 3, "None did not clear the tag selection"); ui.Key(27);
+        ui.ClickText(L.Get("gallery.tagFilters")); ui.ClickText("Jump"); ui.Key(27);
         Check(ui.View.PatternGalleryFilteredCount == 2, "Tag filtering did not retain assigned patterns");
-        ui.ClickText(L.Get("gallery.filterTags", 1)); ui.ClickText("Flow"); ui.Key(27);
+        ui.ClickText(L.Get("gallery.tagFilters")); ui.ClickText("Flow"); ui.Key(27);
         Check(ui.View.PatternGalleryFilteredCount == 1 && ui.View.PatternGalleryCardBounds(both.Id).Width > 0,
             "Multiple tags must match all selected tags");
-        ui.ClickText(L.Get("gallery.filterTags", 2)); ui.ClickText(L.Get("gallery.allTags"));
+        ui.ClickText(L.Get("gallery.tagFilters")); ui.ClickText(L.Get("gallery.noTags")); ui.Key(27);
         int exports = 0;
         ui.View.RequestPatternExport = selected => { Check(!selected, "Export still requests selected-only output"); exports++; };
         ui.ClickText(L.Get("gallery.export"));
@@ -170,7 +181,7 @@ internal static class PatternGalleryOrganizationTests
         }
         void ManageTags()
         {
-            ui.ClickText(L.Get("gallery.filterTags", 0)); ui.ClickText(L.Get("gallery.manageTags"));
+            ui.ClickText(L.Get("gallery.tagFilters")); ui.ClickText(L.Get("gallery.manageTags"));
         }
         void SelectTag(string name)
         {

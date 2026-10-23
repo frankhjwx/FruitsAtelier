@@ -16,15 +16,17 @@ of its original playfield position. This alignment does not change saved coordin
 Right-click a card to rename or delete the saved pattern. Renaming retains its
 identity, source information and geometry; deleting removes it from the local gallery.
 
-The gallery toolbar has two rows: search and **Tags**; then **Save selection**,
-**Import patterns**, and **Export**. The **Tags** menu contains tag filters and
-**Manage tags**. Search follows Library matching: case-insensitive Unicode normalization and whitespace-separated words
+The gallery toolbar has two rows: search and **Tag Filters**; then **Save selection**,
+**Import patterns**, and **Export**. The **Tag Filters** menu contains tag filters and
+**Manage Tags** in its first row, beside **All** and **None**, separated from the tag
+list by a divider. **All** selects every tag; **None** clears the selection. Search
+follows Library matching: case-insensitive Unicode normalization and whitespace-separated words
 that must all occur in the pattern name, source artist/title/mapper/difficulty or
 tag names. Ctrl+F focuses the search field. Selecting multiple tags requires all
-selected tags; **All patterns** clears the tag filter. Filters affect browsing only.
+selected tags. Filters affect browsing only.
 
 Use **Edit Tags** in a pattern's details to assign existing tags or create one.
-Each tag has a name and colour. **Tags → Manage tags** creates tags independently
+Each tag has a name and colour. **Tag Filters → Manage Tags** creates tags independently
 of patterns and renames, recolours or removes a tag across every assigned pattern.
 Choose **New tag** after the final visible tag in the list, enter its name and colour, then
 **Create tag**. Selecting an existing tag switches to editing; **Save changes** is
