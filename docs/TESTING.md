@@ -122,7 +122,7 @@ horizontal speed preservation, bounds, stream/stack data, destination droplet
 settings, saved AR, hyperdash starts and deterministic previews. `Formats.Tests --pattern-gallery-check`
 checks snapshot isolation, AR-preserving `.fap` round trips, rename/delete persistence,
 validation and atomic gallery writes, folder migration, copy/move identity isolation,
-folder merges, Default preservation, version 4 folder packages and import collisions.
+folder merges/deletion, Default preservation, version 4 folder packages and import collisions.
 `App.Tests --pattern-gallery-check` checks gallery input, placement choices/cancellation,
 drop/undo, context rename/delete, fixed card sizes during dock resizing,
 preview alignment, saved-AR spacing, canvas scroll-direction settings, scrollbar position,
@@ -130,12 +130,14 @@ Alt-wheel zoom limits and preview reuse,
 Library-style search, multi-tag filtering, tag creation/colour/name edits and persistence,
 detail-page editing, single/multiple-object context capture and source navigation while retaining unsaved maps.
 It also checks range selection across offscreen cards, category switching and merging,
-cross-folder clipboard shortcuts, import destinations, 50–100% card zoom and geometry reuse.
+cross-folder clipboard shortcuts, conditional folder menus, folder rename/deletion,
+import destinations, 50% minimum card zoom, two-column maximum sizing and geometry reuse.
 `FruitsAtelier.App.exe --render-check --pattern-gallery-render-check` checks the
 grid, large scrolling preview, naming/rename dialogs, context deletion, placement menu,
 drag/drop and editing banner in
 English and Chinese at compact/wide sizes and 96/144 DPI, including warm raster
-cache reuse, the Category sidebar and divider, folder selection/merge/import menus and 50% cards.
+cache reuse, the Category sidebar and divider, folder selection/merge/import menus,
+50% cards and enlarged cards filling two columns in a wide dock.
 Captures are written under `artifacts/tests/pattern-gallery-native`.
 
 `App.Tests --new-difficulty-check` checks independent complete copies, named

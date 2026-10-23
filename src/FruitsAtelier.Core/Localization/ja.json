@@ -1798,5 +1798,7 @@
   "gallery.importInto": "{0} にインポート",
   "gallery.importNewFolders": "新規フォルダーとしてインポート",
   "gallery.exportFolder": "フォルダーをエクスポート",
-  "gallery.defaultPermanent": "Default は常に保持され、名前の変更や削除はできません。"
+  "gallery.defaultPermanent": "Default は常に保持され、名前の変更や削除はできません。",
+  "gallery.renameFolder": "フォルダー名を変更",
+  "gallery.deleteFolder": "フォルダーを削除"
 }

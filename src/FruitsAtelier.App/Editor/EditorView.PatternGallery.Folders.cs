@@ -39,9 +39,11 @@ public sealed partial class EditorView
         ApplyGalleryFilter();
     }
 
+    private float GalleryMaximumCardZoom => Math.Max(1, (galleryGridBounds.Width - GalleryCardGap - 6) / (2 * GalleryCardWidth));
+
     private void SetGalleryCardZoom(float zoom)
     {
-        zoom = Math.Clamp(zoom, .5f, 1);
+        zoom = Math.Clamp(zoom, .5f, GalleryMaximumCardZoom);
         if (galleryCardZoom == zoom) return;
         galleryCardZoom = zoom;
         galleryScroll = 0;
@@ -115,19 +117,26 @@ public sealed partial class EditorView
         {
             if (!galleryFolderSelection.Contains(id)) SelectGalleryRange(id, false, false, true);
             contextItems.Clear(); menu = -1;
-            contextItems.Add(new(L.Get("gallery.newFolder"), RequestGalleryFolder, CanEditGalleryTags && RequestPatternName is not null));
-            contextItems.Add(new(L.Get("gallery.rename"), () =>
+            contextItems.Add(new(L.Get("gallery.renameFolder"), () =>
             {
                 var folder = galleryFolders.First(f => f.Id == id);
-                RequestGalleryText(L.Get("gallery.rename"), folder.Name, name =>
+                RequestGalleryText(L.Get("gallery.renameFolder"), folder.Name, name =>
                 {
                     if (string.IsNullOrWhiteSpace(name) || !CanEditGalleryTags || galleryStore is not { } store) return;
                     StartGalleryIo(() => { store.RenameFolder(id, name); return ReloadGallery(store, "", true); });
                 });
             }, CanEditGalleryTags && id != PatternFolder.DefaultId && RequestPatternName is not null));
-            contextItems.Add(new(L.Get("gallery.mergeFolders"), () => ShowGalleryMergeFolders(), CanEditGalleryTags && galleryFolderSelection.Count >= 2));
+            if (id != PatternFolder.DefaultId)
+                contextItems.Add(new(L.Get("gallery.deleteFolder"), () =>
+                {
+                    if (!CanEditGalleryTags || galleryStore is not { } store) return;
+                    StartGalleryIo(() => { store.DeleteFolder(id); return ReloadGallery(store, ""); });
+                }, CanEditGalleryTags));
+            if (galleryFolderSelection.Count >= 2)
+                contextItems.Add(new(L.Get("gallery.mergeFolders"), () => ShowGalleryMergeFolders(), CanEditGalleryTags));
             contextItems.Add(new(L.Get("gallery.export"), () => RequestGalleryExport(galleryFolderSelection.ToArray())));
-            contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(id), CanEditGalleryTags && galleryClipboard.Length > 0));
+            if (galleryClipboard.Length > 0)
+                contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(id), CanEditGalleryTags));
             PositionGalleryMenu(x, y);
             return;
         }

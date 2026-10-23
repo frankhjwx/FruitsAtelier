@@ -1798,5 +1798,7 @@
   "gallery.importInto": "Impor ke {0}",
   "gallery.importNewFolders": "Impor sebagai folder baru",
   "gallery.exportFolder": "Ekspor folder",
-  "gallery.defaultPermanent": "Default bersifat permanen dan tidak dapat diganti nama atau dihapus."
+  "gallery.defaultPermanent": "Default bersifat permanen dan tidak dapat diganti nama atau dihapus.",
+  "gallery.renameFolder": "Ganti nama folder",
+  "gallery.deleteFolder": "Hapus folder"
 }

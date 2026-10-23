@@ -54,10 +54,35 @@ internal static class PatternGalleryRenderCheck
                 editor.Wheel(zoomGrid.X + 10, zoomGrid.Y + 10, 12000, true); Paint();
                 if (editor.PatternGalleryPreviewBuildCount != zoomBuilds)
                     throw new InvalidOperationException("Card zoom rebuilt preview geometry.");
+                Paint("grid-maximum");
+                var maximumCard = editor.PatternGalleryCardBounds(patterns[0].Id);
+                if (Math.Abs(maximumCard.Width - Math.Max(fullCard.Width, (zoomGrid.Width - 14) / 2)) > .01)
+                    throw new InvalidOperationException("Maximum card zoom did not follow panel width.");
                 Paint("categories");
+                if (size.Item1 == 1440)
+                {
+                    var handle = editor.DockResizeBounds(false);
+                    editor.PointerDown(handle.X + 4, handle.Y + 60, 0, false, false);
+                    editor.PointerMove(size.Item1 - 800, handle.Y + 60, false, false);
+                    editor.PointerUp(size.Item1 - 800, handle.Y + 60, 0); Paint();
+                    var wideGrid = editor.PatternGalleryGridBounds;
+                    editor.Wheel(wideGrid.X + 10, wideGrid.Y + 10, 12000, true); Paint("grid-wide-maximum");
+                    var wideFirst = editor.PatternGalleryCardBounds(patterns[0].Id);
+                    var wideSecond = editor.PatternGalleryCardBounds(patterns[1].Id);
+                    if (wideFirst.Width <= fullCard.Width || wideFirst.Y != wideSecond.Y
+                        || Math.Abs(wideSecond.Right - (wideGrid.Right - 6)) > .01)
+                        throw new InvalidOperationException("Wide gallery does not fill two columns.");
+                    var wideHandle = editor.DockResizeBounds(false);
+                    editor.PointerDown(wideHandle.X + 4, wideHandle.Y + 60, 0, false, false);
+                    editor.PointerMove(handle.X + 4, handle.Y + 60, false, false);
+                    editor.PointerUp(handle.X + 4, handle.Y + 60, 0); Paint();
+                }
                 var firstFolder = editor.PatternGalleryFolderBounds(practiceFolder);
                 var lastFolder = editor.PatternGalleryFolderBounds(sharedFolder);
                 Click(firstFolder);
+                editor.PointerDown(firstFolder.X + 10, firstFolder.Y + 10, 2, false, false);
+                editor.PointerUp(firstFolder.X + 10, firstFolder.Y + 10, 2); Paint("folder-context");
+                editor.KeyDown(27, false, false); Paint();
                 editor.PointerDown(lastFolder.X + 10, lastFolder.Y + 10, 0, true, false);
                 editor.PointerUp(lastFolder.X + 10, lastFolder.Y + 10, 0); Paint("folders-selected");
                 editor.PointerDown(lastFolder.X + 10, lastFolder.Y + 10, 2, false, false);

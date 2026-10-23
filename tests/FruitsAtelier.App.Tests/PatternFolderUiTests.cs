@@ -30,6 +30,14 @@ internal static class PatternFolderUiTests
         Check(ui.View.PatternGalleryCategoryBounds.Right < ui.View.PatternGalleryGridBounds.X
             && ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.category")), "Categories are not beside the grid");
         var first = ui.View.PatternGalleryCardBounds(patterns[0].Id);
+        Context(ui.View.PatternGalleryFolderBounds(a));
+        Check(HasText("gallery.renameFolder") && HasText("gallery.deleteFolder")
+            && !HasText("gallery.newFolder") && !HasText("gallery.mergeFolders") && !HasText("editor.command.paste"),
+            "Single-folder menu includes irrelevant actions or incorrect labels");
+        ui.Key(27);
+        Context(ui.View.PatternGalleryFolderBounds(PatternFolder.DefaultId));
+        Check(!HasText("gallery.deleteFolder"), "Default must not offer deletion");
+        ui.Key(27);
         Click(first, ctrl: true);
         var grid = ui.View.PatternGalleryGridBounds;
         ui.View.Wheel(grid.X + 10, grid.Y + 10, -12000, false); ui.Paint(); Settle();
@@ -37,6 +45,8 @@ internal static class PatternFolderUiTests
         Check(ui.View.PatternGallerySelectionCount == 24 && !ui.View.PatternGalleryPreviewVisible,
             "Shift selection must include offscreen entries and avoid opening a popup");
         ui.Key('C', ctrl: true);
+        Context(ui.View.PatternGalleryFolderBounds(a));
+        Check(HasText("editor.command.paste"), "Copy must expose Paste on folders"); ui.Key(27);
         Open(a); ui.Key('V', ctrl: true); Settle();
         Check(store.LoadContents().Folders!.Single(f => f.Id == a).PatternIds.Count == 24 && store.Load().Count == 48,
             "Copy/paste across folders lost patterns");
@@ -52,9 +62,23 @@ internal static class PatternFolderUiTests
         ui.ClickText(L.Get("gallery.mergeFolders")); ui.ClickText(L.Get("gallery.mergeInto", "A")); Settle();
         Check(store.LoadContents().Folders!.All(f => f.Id != b) && store.LoadContents().Folders!.Single(f => f.Id == a).PatternIds.Count == 24,
             "Selected folder merge did not retain contents");
+        Context(ui.View.PatternGalleryFolderBounds(a));
+        Check(!HasText("editor.command.paste") && !HasText("gallery.mergeFolders"), "Completed move and merge must hide unavailable actions");
+        ui.ClickText(L.Get("gallery.renameFolder")); ui.Type("Renamed"); ui.Key(13); Settle();
+        Check(store.LoadContents().Folders!.Single(f => f.Id == a).Name == "Renamed", "Folder rename did not persist");
+        Open(a); Click(ui.View.PatternGalleryCardBounds(store.LoadContents().Folders!.Single(f => f.Id == a).PatternIds[0]), ctrl: true);
+        ui.Key('C', ctrl: true);
+        Context(ui.View.PatternGalleryFolderBounds(a)); ui.ClickText(L.Get("gallery.deleteFolder")); Settle();
+        Check(store.LoadContents().Folders!.All(f => f.Id != a) && store.Load().Count == 24
+            && ui.View.PatternGalleryFolderId == PatternFolder.DefaultId, "Deleting the active folder did not remove contents and return to Default");
+        Context(ui.View.PatternGalleryFolderBounds(PatternFolder.DefaultId));
+        Check(!HasText("editor.command.paste"), "Deleted clipboard patterns must not expose Paste"); ui.Key(27);
         Context(ui.View.PatternGalleryCategoryBounds);
         ui.ClickText(L.Get("gallery.newFolder")); ui.Type("Created"); ui.Key(13); Settle();
         Check(store.LoadContents().Folders!.Any(f => f.Name == "Created"), "New-folder prompt did not save");
+        Guid created = store.LoadContents().Folders!.Single(f => f.Name == "Created").Id;
+        Context(ui.View.PatternGalleryFolderBounds(created)); ui.ClickText(L.Get("gallery.deleteFolder")); Settle();
+        Check(store.LoadContents().Folders!.All(f => f.Id != created), "Empty folder deletion did not persist");
         Open(PatternFolder.DefaultId);
         grid = ui.View.PatternGalleryGridBounds;
         ui.View.Wheel(grid.X + 10, grid.Y + 10, -12000, true); ui.Paint(); Settle();
@@ -65,8 +89,18 @@ internal static class PatternFolderUiTests
         ui.View.Wheel(grid.X + 10, grid.Y + 10, -12000, true); ui.Paint();
         Check(ui.View.PatternGalleryCardBounds(patterns[0].Id) == small, "Zoom exceeded the minimum");
         ui.View.Wheel(grid.X + 10, grid.Y + 10, 12000, true); ui.Paint(); Settle();
-        Check(ui.View.PatternGalleryCardBounds(patterns[0].Id).Width == first.Width && ui.View.PatternGalleryPreviewBuildCount == builds,
-            "Zoom rebuilt preview geometry or exceeded the original size");
+        var large = ui.View.PatternGalleryCardBounds(patterns[0].Id);
+        Check(Math.Abs(large.Width - Math.Max(first.Width, (grid.Width - 14) / 2)) < .01
+            && ui.View.PatternGalleryPreviewBuildCount == builds, "Maximum zoom did not fit two cards or rebuilt preview geometry");
+        ui.Resize(2200, 1100); ResizeDock(850); Settle(); grid = ui.View.PatternGalleryGridBounds;
+        ui.View.Wheel(grid.X + 10, grid.Y + 10, 12000, true); ui.Paint(); Settle();
+        large = ui.View.PatternGalleryCardBounds(patterns[0].Id);
+        var second = ui.View.PatternGalleryCardBounds(patterns[1].Id);
+        Check(large.Width > first.Width && large.Y == second.Y && Math.Abs(second.Right - (grid.Right - 6)) < .01,
+            $"Wide-panel maximum must fill the row with two enlarged cards: first={first}, large={large}, second={second}, grid={grid}");
+        ResizeDock(450); ui.Resize(1440, 900); Settle(); grid = ui.View.PatternGalleryGridBounds;
+        Check(ui.View.PatternGalleryCardBounds(patterns[0].Id).Width <= Math.Max(first.Width, (grid.Width - 14) / 2) + .01,
+            "Resize must clamp enlarged cards to the new maximum");
         var watch = Stopwatch.StartNew(); long allocated = GC.GetAllocatedBytesForCurrentThread();
         for (int i = 0; i < 100; i++)
         {
@@ -96,6 +130,16 @@ internal static class PatternFolderUiTests
         ui.View.Wheel(category.X + 10, category.Y + 40, 12000, false); ui.Paint();
         Check(ui.View.PatternGalleryFolderBounds(PatternFolder.DefaultId).Width > 0,
             "Category scrolling did not return to Default");
+
+        bool HasText(string key) => ui.Canvas.Texts.Any(t => t.Value == L.Get(key));
+
+        void ResizeDock(float dockWidth)
+        {
+            var handle = ui.View.DockResizeBounds(false);
+            ui.View.PointerDown(handle.X + 4, handle.Y + 60, 0, false, false);
+            ui.View.PointerMove(ui.Width - dockWidth, handle.Y + 60, false, false);
+            ui.View.PointerUp(ui.Width - dockWidth, handle.Y + 60, 0); ui.Paint();
+        }
 
         void Context(Rect bounds)
         {

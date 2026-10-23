@@ -1798,5 +1798,7 @@
   "gallery.importInto": "{0}(으)로 가져오기",
   "gallery.importNewFolders": "새 폴더로 가져오기",
   "gallery.exportFolder": "폴더 내보내기",
-  "gallery.defaultPermanent": "Default는 영구적으로 유지되며 이름을 바꾸거나 삭제할 수 없습니다."
+  "gallery.defaultPermanent": "Default는 영구적으로 유지되며 이름을 바꾸거나 삭제할 수 없습니다.",
+  "gallery.renameFolder": "폴더 이름 바꾸기",
+  "gallery.deleteFolder": "폴더 삭제"
 }

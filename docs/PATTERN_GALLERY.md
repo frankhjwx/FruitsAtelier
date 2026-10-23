@@ -11,8 +11,9 @@ full names. Details always show complete tag names, wrapping as needed; cards ke
 If the tags exceed the available
 header space, scroll within the tag area to read the remaining tags independently
 of the pattern preview. **Ctrl + wheel** over the card grid changes card size from
-50% to 100%. Resizing the dock
-changes the number of columns without changing the selected card scale.
+50% up to a size that fits two cards across the content area, with space for the
+scrollbar. Narrow docks retain at least the original 100% maximum. Resizing the dock
+changes the number of columns and clamps the card scale to the new maximum.
 Select a card to open a larger preview beside the panel;
 use the wheel, left-button drag or middle-button drag vertically within that preview to inspect a long pattern.
 The enlarged panel blocks pointer input and hover feedback from controls underneath it.
@@ -40,8 +41,10 @@ selected tag. Filters affect browsing within the current folder only.
 The **Category** list stays visible to the left of the card grid, separated by a
 vertical divider. Click a category to display its patterns. The list scrolls
 independently of the grid. The hierarchy has one folder level and one pattern level.
-Right-click a category or blank space in the list and choose **New folder** to
-create one. A category's context menu also offers rename, merge, export and paste.
+Right-click blank space in the list and choose **New folder** to create one.
+A category's context menu offers **Rename Folder**, **Delete Folder**, and export.
+Deleting a folder also deletes its patterns. **Merge folders** appears when multiple
+folders are selected; **Paste** appears only when the gallery clipboard contains patterns.
 Default always exists and cannot be renamed or removed. Existing flat galleries
 load into Default. Captures save into the current category.
 

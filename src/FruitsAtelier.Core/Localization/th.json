@@ -1798,5 +1798,7 @@
   "gallery.importInto": "นำเข้าไปยัง {0}",
   "gallery.importNewFolders": "นำเข้าเป็นโฟลเดอร์ใหม่",
   "gallery.exportFolder": "ส่งออกโฟลเดอร์",
-  "gallery.defaultPermanent": "Default เป็นโฟลเดอร์ถาวร ไม่สามารถเปลี่ยนชื่อหรือลบได้"
+  "gallery.defaultPermanent": "Default เป็นโฟลเดอร์ถาวร ไม่สามารถเปลี่ยนชื่อหรือลบได้",
+  "gallery.renameFolder": "เปลี่ยนชื่อโฟลเดอร์",
+  "gallery.deleteFolder": "ลบโฟลเดอร์"
 }

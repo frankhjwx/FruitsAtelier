@@ -48,6 +48,19 @@ public sealed partial class PatternGalleryStore
         SaveContents(contents with { Folders = contents.Folders!.Select(f => f.Id == id ? f with { Name = name.Trim() } : f).ToArray() });
     }
 
+    public void DeleteFolder(Guid id)
+    {
+        var contents = LoadContents();
+        var folder = RequireFolder(contents, id);
+        if (id == PatternFolder.DefaultId) throw new InvalidOperationException(L.Get("gallery.defaultPermanent"));
+        var members = folder.PatternIds.ToHashSet();
+        SaveContents(contents with
+        {
+            Patterns = contents.Patterns.Where(p => !members.Contains(p.Id)).ToArray(),
+            Folders = contents.Folders!.Where(f => f.Id != id).ToArray()
+        });
+    }
+
     public void MergeFolders(IEnumerable<Guid> ids, Guid destination)
     {
         var contents = LoadContents();

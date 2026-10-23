@@ -1798,5 +1798,7 @@
   "gallery.importInto": "导入到 {0}",
   "gallery.importNewFolders": "导入为新文件夹",
   "gallery.exportFolder": "导出文件夹",
-  "gallery.defaultPermanent": "Default 永久保留，不能重命名或删除。"
+  "gallery.defaultPermanent": "Default 永久保留，不能重命名或删除。",
+  "gallery.renameFolder": "重命名文件夹",
+  "gallery.deleteFolder": "删除文件夹"
 }

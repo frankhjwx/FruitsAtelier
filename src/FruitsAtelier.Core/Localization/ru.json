@@ -1798,5 +1798,7 @@
   "gallery.importInto": "Импорт в {0}",
   "gallery.importNewFolders": "Импорт в новые папки",
   "gallery.exportFolder": "Экспорт папки",
-  "gallery.defaultPermanent": "Папка Default постоянная: её нельзя переименовать или удалить."
+  "gallery.defaultPermanent": "Папка Default постоянная: её нельзя переименовать или удалить.",
+  "gallery.renameFolder": "Переименовать папку",
+  "gallery.deleteFolder": "Удалить папку"
 }

@@ -1798,5 +1798,7 @@
   "gallery.importInto": "Importer dans {0}",
   "gallery.importNewFolders": "Importer dans de nouveaux dossiers",
   "gallery.exportFolder": "Exporter le dossier",
-  "gallery.defaultPermanent": "Default est permanent et ne peut pas être renommé ni supprimé."
+  "gallery.defaultPermanent": "Default est permanent et ne peut pas être renommé ni supprimé.",
+  "gallery.renameFolder": "Renommer le dossier",
+  "gallery.deleteFolder": "Supprimer le dossier"
 }

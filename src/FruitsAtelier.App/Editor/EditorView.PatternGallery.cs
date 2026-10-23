@@ -214,6 +214,8 @@ public sealed partial class EditorView
                     CompleteGalleryTagAutosave(true);
                     if (galleryPendingCut is { } moved && ReferenceEquals(moved, galleryClipboard)) galleryClipboard = [];
                     galleryPendingCut = null;
+                    var availableIds = galleryPatterns.Select(p => p.Id).ToHashSet();
+                    galleryClipboard = galleryClipboard.Where(availableIds.Contains).ToArray();
                 }
             }
             catch (Exception error) when (error is not OutOfMemoryException)
@@ -301,6 +303,7 @@ public sealed partial class EditorView
                 galleryGridBounds.X + 4, galleryGridBounds.Y + 18, 12, Muted, galleryGridBounds.Width - 8);
             return;
         }
+        SetGalleryCardZoom(galleryCardZoom);
         float cellWidth = GalleryCardWidth * galleryCardZoom, cellHeight = GalleryCardHeight * galleryCardZoom;
         int columns = Math.Clamp((int)((galleryGridBounds.Width + GalleryCardGap) / (cellWidth + GalleryCardGap)), 1, 24);
         // Extremely tall layouts scroll a bounded viewport without changing card or raster sizes.

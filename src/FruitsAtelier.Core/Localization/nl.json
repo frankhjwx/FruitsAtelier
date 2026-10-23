@@ -1798,5 +1798,7 @@
   "gallery.importInto": "Importeren in {0}",
   "gallery.importNewFolders": "Importeren als nieuwe mappen",
   "gallery.exportFolder": "Map exporteren",
-  "gallery.defaultPermanent": "Default is permanent en kan niet worden hernoemd of verwijderd."
+  "gallery.defaultPermanent": "Default is permanent en kan niet worden hernoemd of verwijderd.",
+  "gallery.renameFolder": "Map hernoemen",
+  "gallery.deleteFolder": "Map verwijderen"
 }

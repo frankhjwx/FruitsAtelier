@@ -1798,5 +1798,7 @@
   "gallery.importInto": "匯入至 {0}",
   "gallery.importNewFolders": "匯入為新資料夾",
   "gallery.exportFolder": "匯出資料夾",
-  "gallery.defaultPermanent": "Default 永久保留，不能重新命名或刪除。"
+  "gallery.defaultPermanent": "Default 永久保留，不能重新命名或刪除。",
+  "gallery.renameFolder": "重新命名資料夾",
+  "gallery.deleteFolder": "刪除資料夾"
 }

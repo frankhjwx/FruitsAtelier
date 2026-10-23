@@ -1798,5 +1798,7 @@
   "gallery.importInto": "I-import sa {0}",
   "gallery.importNewFolders": "I-import bilang mga bagong folder",
   "gallery.exportFolder": "I-export ang folder",
-  "gallery.defaultPermanent": "Permanente ang Default at hindi maaaring palitan ang pangalan o alisin."
+  "gallery.defaultPermanent": "Permanente ang Default at hindi maaaring palitan ang pangalan o alisin.",
+  "gallery.renameFolder": "Palitan ang pangalan ng folder",
+  "gallery.deleteFolder": "Tanggalin ang folder"
 }

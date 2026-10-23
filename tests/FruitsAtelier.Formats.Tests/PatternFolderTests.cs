@@ -44,11 +44,23 @@ internal static class PatternFolderTests
         Check(store.LoadContents().Folders!.Single(f => f.Id == PatternFolder.DefaultId).PatternIds.Count == 0, "Merging Default into another folder preserves empty Default");
         byte[] before = File.ReadAllBytes(Path.Combine(directory, "gallery.fap"));
         Expect(() => store.RenameFolder(PatternFolder.DefaultId, "Other"));
+        Expect(() => store.DeleteFolder(PatternFolder.DefaultId));
+        Expect(() => store.DeleteFolder(Guid.NewGuid()));
         Expect(() => store.CreateFolder("default"));
         Expect(() => store.TransferPatterns([Guid.NewGuid()], target, false));
         Expect(() => store.Import(package, Guid.NewGuid()));
         Expect(() => store.CreateFolder("\n"));
         Check(before.SequenceEqual(File.ReadAllBytes(Path.Combine(directory, "gallery.fap"))), "Failed operations leave the archive unchanged");
+        var retained = store.LoadContents();
+        var deletedIds = retained.Folders!.Single(f => f.Id == target).PatternIds.ToHashSet();
+        store.DeleteFolder(target);
+        contents = new PatternGalleryStore(directory).LoadContents();
+        Check(contents.Folders!.All(f => f.Id != target)
+            && contents.Patterns.Select(p => p.Id).SequenceEqual(retained.Patterns.Where(p => !deletedIds.Contains(p.Id)).Select(p => p.Id))
+            && contents.Tags.SequenceEqual(retained.Tags), "Folder deletion must remove only its contents and retain shared tags");
+        Guid emptyDelete = store.CreateFolder("Empty delete");
+        store.DeleteFolder(emptyDelete);
+        Check(store.LoadContents().Folders!.All(f => f.Id != emptyDelete), "Empty folder deletion did not persist");
         using var invalid = new MemoryStream();
         Expect(() => PatternArchive.Write([pattern], invalid, folders: [new(Guid.NewGuid(), "Bad", [pattern.Id, pattern.Id])]));
         using var missing = new MemoryStream();

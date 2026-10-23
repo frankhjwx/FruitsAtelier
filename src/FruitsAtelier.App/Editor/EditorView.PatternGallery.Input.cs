@@ -88,7 +88,8 @@ public sealed partial class EditorView
         else
         {
             contextItems.Clear(); menu = -1;
-            contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(galleryFolderId), CanEditGalleryTags && galleryClipboard.Length > 0));
+            if (galleryClipboard.Length > 0)
+                contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(galleryFolderId), CanEditGalleryTags));
             PositionGalleryMenu(x, y);
         }
         return true;
@@ -128,7 +129,8 @@ public sealed partial class EditorView
         }));
         contextItems.Add(new(L.Get("editor.command.copy"), () => CopyGalleryPatterns(false)));
         contextItems.Add(new(L.Get("editor.command.cut"), () => CopyGalleryPatterns(true)));
-        contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(galleryFolderId), galleryClipboard.Length > 0));
+        if (galleryClipboard.Length > 0)
+            contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(galleryFolderId)));
         PositionGalleryMenu(x, y);
     }
 
