@@ -58,8 +58,15 @@ public sealed partial class EditorView
         galleryFocused = true;
         if (button is not (0 or 2)) return true;
         foreach (var folder in galleryFolderCards)
-            if (galleryGridBounds.Contains(x, y) && folder.Bounds.Contains(x, y))
+            if (galleryCategoryListBounds.Contains(x, y) && folder.Bounds.Contains(x, y))
             { GalleryFolderPointerDown(folder.Id, x, y, button, ctrl, shift); return true; }
+        if (galleryCategoryBounds.Contains(x, y))
+        {
+            galleryCategoriesFocused = true;
+            if (button == 2) ShowGalleryCategoryMenu(x, y);
+            return true;
+        }
+        galleryCategoriesFocused = false;
         foreach (var card in galleryCards)
         {
             if (!galleryGridBounds.Contains(x, y) || !card.Bounds.Contains(x, y)) continue;
@@ -78,10 +85,10 @@ public sealed partial class EditorView
             return true;
         }
         if (button == 0) InvokeGalleryHit(x, y);
-        else if (galleryFolderId is { } destination)
+        else
         {
             contextItems.Clear(); menu = -1;
-            contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(destination), CanEditGalleryTags && galleryClipboard.Length > 0));
+            contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(galleryFolderId), CanEditGalleryTags && galleryClipboard.Length > 0));
             PositionGalleryMenu(x, y);
         }
         return true;
@@ -121,7 +128,7 @@ public sealed partial class EditorView
         }));
         contextItems.Add(new(L.Get("editor.command.copy"), () => CopyGalleryPatterns(false)));
         contextItems.Add(new(L.Get("editor.command.cut"), () => CopyGalleryPatterns(true)));
-        contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(galleryFolderId ?? PatternFolder.DefaultId), galleryClipboard.Length > 0));
+        contextItems.Add(new(L.Get("editor.command.paste"), () => PasteGalleryPatterns(galleryFolderId), galleryClipboard.Length > 0));
         PositionGalleryMenu(x, y);
     }
 
@@ -258,7 +265,12 @@ public sealed partial class EditorView
             return true;
         }
         if (!galleryBounds.Contains(x, y)) return false;
-        if (ctrl && galleryFolderId is not null)
+        if (galleryCategoryBounds.Contains(x, y))
+        {
+            galleryCategoryScroll = Math.Clamp(galleryCategoryScroll - delta / 120 * 48, 0, galleryCategoryMaxScroll);
+            return true;
+        }
+        if (ctrl)
         {
             SetGalleryCardZoom(galleryCardZoom * (float)Math.Pow(1.1, delta / 120));
             return true;
@@ -277,26 +289,26 @@ public sealed partial class EditorView
             return true;
         }
         if (PatternGalleryInputAvailable && ctrl && key == 70)
-        { if (galleryFolderId is null) OpenGalleryFolder(PatternFolder.DefaultId); galleryFocused = true; SelectInput("gallery:search", galleryQuery); return true; }
+        { galleryFocused = true; galleryCategoriesFocused = false; SelectInput("gallery:search", galleryQuery); return true; }
         if (!PatternGalleryInputAvailable || IsEditingText || menu >= 0 || contextItems.Count > 0) return false;
         if (key == 27 && (galleryDragging || galleryPopupId != Guid.Empty || galleryPressedId != Guid.Empty || galleryDropTask is not null))
         { CancelPatternGalleryInteraction(); galleryFocused = false; return true; }
         if (galleryFocused && ctrl && key == 65)
         {
-            if (galleryFolderId is null) galleryFolderSelection.UnionWith(galleryFolders.Select(f => f.Id));
+            if (galleryCategoriesFocused) galleryFolderSelection.UnionWith(galleryFolders.Select(f => f.Id));
             else gallerySelection.UnionWith(galleryFilteredPatterns.Select(p => p.Id));
             galleryPopupId = Guid.Empty;
             return true;
         }
         if (galleryFocused && ctrl && key is 67 or 88)
-        { CopyGalleryPatterns(key == 88); return true; }
+        { if (!galleryCategoriesFocused) CopyGalleryPatterns(key == 88); return true; }
         if (galleryFocused && ctrl && key == 86)
         {
-            if (galleryFolderId is { } destination) PasteGalleryPatterns(destination);
+            if (!galleryCategoriesFocused) PasteGalleryPatterns(galleryFolderId);
             else if (galleryFolderSelection.Count == 1) PasteGalleryPatterns(galleryFolderSelection.Single());
             return true;
         }
-        if (galleryFocused && galleryFolderId is null && key == 13 && galleryFolderSelection.Count == 1)
+        if (galleryFocused && galleryCategoriesFocused && key == 13 && galleryFolderSelection.Count == 1)
         { OpenGalleryFolder(galleryFolderSelection.Single()); return true; }
         return false;
     }

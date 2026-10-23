@@ -780,13 +780,8 @@ public sealed partial class EditorView
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
         if (PatternNameVisible || GalleryTagsVisible || PatternEditingBusy) return;
-        if (PatternGalleryInputAvailable && galleryFolderId is null && galleryGridBounds.Contains(x, y) && !ctrl && !shift)
-        {
-            var folder = galleryFolderCards.FirstOrDefault(f => f.Bounds.Contains(x, y));
-            if (folder.Id != Guid.Empty) OpenGalleryFolder(folder.Id);
-            return;
-        }
-        if (PatternGalleryPopupContains(x, y) || PatternGalleryInputAvailable && galleryGridBounds.Contains(x, y)) return;
+        if (PatternGalleryPopupContains(x, y) || PatternGalleryInputAvailable
+            && (galleryGridBounds.Contains(x, y) || galleryCategoryBounds.Contains(x, y))) return;
         if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))

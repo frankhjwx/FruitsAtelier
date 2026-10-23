@@ -11,7 +11,7 @@ full names. Details always show complete tag names, wrapping as needed; cards ke
 If the tags exceed the available
 header space, scroll within the tag area to read the remaining tags independently
 of the pattern preview. **Ctrl + wheel** over the card grid changes card size from
-50% to 100%; the percentage button also offers 50%, 75% and 100%. Resizing the dock
+50% to 100%. Resizing the dock
 changes the number of columns without changing the selected card scale.
 Select a card to open a larger preview beside the panel;
 use the wheel, left-button drag or middle-button drag vertically within that preview to inspect a long pattern.
@@ -26,8 +26,7 @@ of its original playfield position. This alignment does not change saved coordin
 Right-click a card to rename or delete the saved pattern. Renaming retains its
 identity, source information and geometry; deleting removes it from the local gallery.
 
-The navigation row shows the current folder, **New folder**, and card zoom.
-Below it are search and **Tag Filters**; then **Save selection**,
+The toolbar contains search and **Tag Filters**; then **Save selection**,
 **Import patterns**, and **Export**. The **Tag Filters** menu contains tag filters and
 **Manage Tags** in its first row, beside **All** and **None**, separated from the tag
 list by a divider. **All** selects every tag; **None** clears the selection. Search
@@ -38,13 +37,13 @@ selected tag. Filters affect browsing within the current folder only.
 
 ## Folders and selection
 
-The gallery opens in **Default**. Click its name in the navigation row to browse
-folders. The hierarchy has one folder level and one pattern level. Create folders
-with **New folder**; double-click a folder, press Enter with one selected, or use
-**Open folder** to browse its contents. Right-click a folder to rename it.
+The **Category** list stays visible to the left of the card grid, separated by a
+vertical divider. Click a category to display its patterns. The list scrolls
+independently of the grid. The hierarchy has one folder level and one pattern level.
+Right-click a category or blank space in the list and choose **New folder** to
+create one. A category's context menu also offers rename, merge, export and paste.
 Default always exists and cannot be renamed or removed. Existing flat galleries
-load into Default. Captures save into the current folder, or Default while the
-folder list is open.
+load into Default. Captures save into the current category.
 
 Ctrl-click toggles individual cards or folders. Shift-click selects the inclusive
 range from the previous selection anchor in displayed order, including entries
@@ -59,7 +58,7 @@ retains the source entries until a successful paste, then clears the move clipbo
 The clipboard belongs to the current gallery and clears when its workspace changes.
 Gallery shortcuts operate only while the gallery has input focus.
 
-Select multiple folders and choose **Merge folders**, then select the destination
+Select multiple categories and right-click **Merge folders**, then select the destination
 from the selected folders. All contents move to that destination; merged folders
 are removed. If Default is merged into another folder, it remains as an empty folder.
 
@@ -104,7 +103,7 @@ adjustments remain editable. Source artist, title, difficulty, creator and start
 time are retained alongside the authoring data, AR and timing context.
 
 **Export** offers selected patterns, the current folder, or the complete gallery.
-In the folder list it exports selected folders, or all folders when none are selected.
+The category context menu exports the selected folders.
 Whole-gallery export includes unassigned tags and patterns hidden by filters.
 Folders, including empty folders, travel inside the `.fap` package. A flat export
 containing only Default's patterns receives a folder named after the export filename;

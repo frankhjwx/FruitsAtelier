@@ -7,7 +7,10 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private IReadOnlyList<PatternFolder> galleryFolders = [];
-    private Guid? galleryFolderId = PatternFolder.DefaultId;
+    private Guid galleryFolderId = PatternFolder.DefaultId;
+    private Rect galleryCategoryBounds, galleryCategoryListBounds;
+    private float galleryCategoryScroll, galleryCategoryMaxScroll;
+    private bool galleryCategoriesFocused;
     private readonly HashSet<Guid> galleryFolderSelection = [];
     private readonly List<(Guid Id, Rect Bounds)> galleryFolderCards = [];
     private Guid gallerySelectionAnchor, galleryFolderAnchor;
@@ -20,38 +23,20 @@ public sealed partial class EditorView
         galleryExportFolders = folders;
         RequestPatternExport?.Invoke(selectedOnly);
     }
-    internal Guid? PatternGalleryFolderId => galleryFolderId;
+    internal Guid PatternGalleryFolderId => galleryFolderId;
+    internal Rect PatternGalleryCategoryBounds => galleryCategoryBounds;
     internal int PatternGallerySelectionCount => gallerySelection.Count;
     internal Rect PatternGalleryContextItemBounds(int row) => ContextItemBounds(row);
     internal Rect PatternGalleryFolderBounds(Guid id) => galleryFolderCards.FirstOrDefault(f => f.Id == id).Bounds;
 
-    private void OpenGalleryFolder(Guid? id)
+    private void OpenGalleryFolder(Guid id)
     {
         CancelPatternGalleryInteraction();
         galleryFolderId = id; galleryScroll = 0; galleryFocused = true;
         gallerySelection.Clear(); gallerySelectionAnchor = Guid.Empty;
-        galleryFolderSelection.Clear(); galleryFolderAnchor = Guid.Empty;
+        galleryCategoriesFocused = true;
         textEditor.Field = "";
         ApplyGalleryFilter();
-    }
-
-    private void DrawGalleryNavigation(ICanvas c, Rect bounds, bool ready)
-    {
-        float zoomWidth = 50, createWidth = Math.Min(95, bounds.Width / 3);
-        string label = galleryFolderId is null ? L.Get("gallery.folders")
-            : "‹ " + (galleryFolders.FirstOrDefault(f => f.Id == galleryFolderId)?.Name ?? PatternFolder.DefaultName);
-        Button(c, new(bounds.X, bounds.Y, Math.Max(20, bounds.Width - createWidth - zoomWidth - 10), 28), label,
-            () => OpenGalleryFolder(null), enabled: ready, fontSize: 11);
-        Button(c, new(bounds.Right - createWidth - zoomWidth - 5, bounds.Y, createWidth, 28), L.Get("gallery.newFolder"),
-            RequestGalleryFolder, enabled: ready && RequestPatternName is not null && CanEditGalleryTags, fontSize: 11);
-        Button(c, new(bounds.Right - zoomWidth, bounds.Y, zoomWidth, 28), L.Get("gallery.zoom", galleryCardZoom * 100),
-            () =>
-            {
-                contextItems.Clear(); menu = -1;
-                foreach (float zoom in new[] { .5f, .75f, 1f })
-                    contextItems.Add(new(L.Get("gallery.zoom", zoom * 100), () => SetGalleryCardZoom(zoom), Active: galleryCardZoom == zoom));
-                PositionGalleryMenu(bounds.Right - 180, bounds.Y + 30);
-            }, enabled: galleryFolderId is not null, fontSize: 11);
     }
 
     private void SetGalleryCardZoom(float zoom)
@@ -70,37 +55,37 @@ public sealed partial class EditorView
         {
             if (string.IsNullOrWhiteSpace(name) || !CanEditGalleryTags) return;
             StartGalleryIo(() => { store.CreateFolder(name); return ReloadGallery(store, "", true); });
-            OpenGalleryFolder(null);
         });
     }
 
-    private void DrawGalleryFolders(ICanvas c, Rect bounds, bool ready)
+    private void DrawGalleryCategories(ICanvas c, Rect bounds)
     {
-        gallerySearchBounds = galleryTagsBounds = default;
-        float unit = (bounds.Width - 10) / 3;
-        Button(c, new(bounds.X, bounds.Y, unit, 28), L.Get("gallery.import"), () => RequestPatternImport?.Invoke(), enabled: ready, fontSize: 11);
-        Button(c, new(bounds.X + unit + 5, bounds.Y, unit, 28), L.Get("gallery.export"),
-            () => RequestGalleryExport(galleryFolderSelection.Count == 0 ? null : galleryFolderSelection.ToArray()), enabled: ready, fontSize: 11);
-        Button(c, new(bounds.X + (unit + 5) * 2, bounds.Y, unit, 28), L.Get("gallery.mergeFolders"),
-            () => ShowGalleryMergeFolders(), enabled: ready && CanEditGalleryTags && galleryFolderSelection.Count >= 2, fontSize: 11);
-        galleryGridBounds = new(bounds.X, bounds.Y + 36, bounds.Width, Math.Max(0, bounds.Height - 72));
-        galleryMaxScroll = Math.Max(0, galleryFolders.Count * 54 - galleryGridBounds.Height);
-        galleryScroll = Math.Clamp(galleryScroll, 0, galleryMaxScroll);
-        c.Clip(galleryGridBounds);
-        for (int i = Math.Max(0, (int)(galleryScroll / 54)); i < galleryFolders.Count; i++)
+        galleryCategoryBounds = bounds;
+        c.Text(L.Get("gallery.category"), bounds.X + 4, bounds.Y + 3, 12, Muted, bounds.Width - 8, true);
+        galleryCategoryListBounds = new(bounds.X, bounds.Y + 26, bounds.Width, Math.Max(0, bounds.Height - 26));
+        galleryCategoryMaxScroll = Math.Max(0, galleryFolders.Count * 48 - galleryCategoryListBounds.Height);
+        galleryCategoryScroll = Math.Clamp(galleryCategoryScroll, 0, galleryCategoryMaxScroll);
+        c.Clip(galleryCategoryListBounds);
+        for (int i = Math.Max(0, (int)(galleryCategoryScroll / 48)); i < galleryFolders.Count; i++)
         {
             var folder = galleryFolders[i];
-            var row = new Rect(bounds.X, galleryGridBounds.Y + i * 54 - galleryScroll, bounds.Width - 6, 48);
-            if (row.Y >= galleryGridBounds.Bottom) break;
+            var row = new Rect(bounds.X, galleryCategoryListBounds.Y + i * 48 - galleryCategoryScroll, bounds.Width - 4, 44);
+            if (row.Y >= galleryCategoryListBounds.Bottom) break;
             galleryFolderCards.Add((folder.Id, row));
-            c.Fill(row, Surface, 4); c.Stroke(row, galleryFolderSelection.Contains(folder.Id) ? Accent : Grid, radius: 4);
-            c.Text(folder.Name, row.X + 10, row.Y + 6, 13, Foreground, row.Width - 20);
-            c.Text(L.Get("gallery.folderCount", folder.PatternIds.Count), row.X + 10, row.Y + 28, 11, Muted, row.Width - 20);
+            if (folder.Id == galleryFolderId) c.Fill(row, Accent, 3, .16f);
+            if (galleryFolderSelection.Contains(folder.Id)) c.Stroke(row, Accent, radius: 3);
+            c.Text(folder.Name, row.X + 5, row.Y + 5, 12, Foreground, row.Width - 10);
+            c.Text(L.Get("gallery.folderCount", folder.PatternIds.Count), row.X + 5, row.Y + 25, 10, Muted, row.Width - 10);
         }
         c.Unclip();
-        DrawGalleryScrollbar(c, galleryGridBounds, galleryScroll, galleryMaxScroll);
-        Button(c, new(bounds.X, galleryGridBounds.Bottom + 5, bounds.Width, 28), L.Get("gallery.openFolder"),
-            () => OpenGalleryFolder(galleryFolderSelection.Single()), enabled: ready && galleryFolderSelection.Count == 1, fontSize: 11);
+        DrawGalleryScrollbar(c, galleryCategoryListBounds, galleryCategoryScroll, galleryCategoryMaxScroll);
+    }
+
+    private void ShowGalleryCategoryMenu(float x, float y)
+    {
+        contextItems.Clear(); menu = -1;
+        contextItems.Add(new(L.Get("gallery.newFolder"), RequestGalleryFolder, CanEditGalleryTags && RequestPatternName is not null));
+        PositionGalleryMenu(x, y);
     }
 
     private void SelectGalleryRange(Guid id, bool ctrl, bool shift, bool folders = false)
@@ -124,11 +109,13 @@ public sealed partial class EditorView
 
     private void GalleryFolderPointerDown(Guid id, float x, float y, int button, bool ctrl, bool shift)
     {
+        galleryCategoriesFocused = true;
+        galleryPopupId = Guid.Empty;
         if (button == 2)
         {
             if (!galleryFolderSelection.Contains(id)) SelectGalleryRange(id, false, false, true);
             contextItems.Clear(); menu = -1;
-            contextItems.Add(new(L.Get("gallery.openFolder"), () => OpenGalleryFolder(id)));
+            contextItems.Add(new(L.Get("gallery.newFolder"), RequestGalleryFolder, CanEditGalleryTags && RequestPatternName is not null));
             contextItems.Add(new(L.Get("gallery.rename"), () =>
             {
                 var folder = galleryFolders.First(f => f.Id == id);
@@ -144,6 +131,7 @@ public sealed partial class EditorView
             PositionGalleryMenu(x, y);
             return;
         }
+        if (!ctrl && !shift) OpenGalleryFolder(id);
         SelectGalleryRange(id, ctrl, shift, true);
     }
 
@@ -181,7 +169,7 @@ public sealed partial class EditorView
     {
         contextItems.Clear(); menu = -1;
         contextItems.Add(new(L.Get("gallery.exportSelected"), () => RequestGalleryExport(selectedOnly: true), gallerySelection.Count > 0));
-        contextItems.Add(new(L.Get("gallery.exportFolder"), () => RequestGalleryExport([galleryFolderId!.Value])));
+        contextItems.Add(new(L.Get("gallery.exportFolder"), () => RequestGalleryExport([galleryFolderId])));
         contextItems.Add(new(L.Get("gallery.exportAll"), () => RequestGalleryExport()));
         PositionGalleryMenu(galleryBounds.X, galleryBounds.Y + 98);
     }
@@ -198,6 +186,7 @@ public sealed partial class EditorView
     {
         if (!CanEditGalleryTags || galleryStore is not { } store || galleryClipboard.Length == 0) return;
         var ids = galleryClipboard; bool cut = galleryClipboardCut;
+        galleryCategoriesFocused = false;
         StartGalleryIo(() => { store.TransferPatterns(ids, destination, !cut); return ReloadGallery(store, "", true); });
         // A failed move can be retried: IDs remain valid until publication succeeds.
         galleryPendingCut = cut ? ids : null;

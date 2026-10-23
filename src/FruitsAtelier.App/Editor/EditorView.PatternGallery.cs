@@ -94,6 +94,7 @@ public sealed partial class EditorView
         galleryFolders = []; galleryFolderId = PatternFolder.DefaultId; galleryFolderSelection.Clear();
         galleryClipboard = []; galleryFocused = false; gallerySelectionAnchor = Guid.Empty;
         galleryPendingCut = null; galleryExportFolders = null;
+        galleryCategoryScroll = 0; galleryCategoriesFocused = false;
         galleryQuery = ""; gallerySelection.Clear(); galleryPreviews.Clear(); galleryPreviewErrors.Clear(); galleryFullPreview = null; galleryFullPreviewId = Guid.Empty;
         galleryCards.Clear(); galleryVisibleIds.Clear();
         galleryIoTask = null; galleryPreviewTask = null;
@@ -143,7 +144,7 @@ public sealed partial class EditorView
         var source = Document.DeepClone();
         var ids = ClipboardSelectedParentIds().ToArray();
         string? sourcePath = GallerySourcePath();
-        Guid folder = galleryFolderId ?? PatternFolder.DefaultId;
+        Guid folder = galleryFolderId;
         StartGalleryIo(() =>
         {
             var snapshot = PatternSnapshot.Capture(source, ids, name);
@@ -161,7 +162,7 @@ public sealed partial class EditorView
         var source = Document.DeepClone();
         var ids = ClipboardSelectedParentIds().ToArray();
         string? sourcePath = GallerySourcePath();
-        Guid folder = galleryFolderId ?? PatternFolder.DefaultId;
+        Guid folder = galleryFolderId;
         RequestPatternName?.Invoke(L.Get("gallery.namePrompt"), name =>
         {
             if (string.IsNullOrWhiteSpace(name) || !ReferenceEquals(store, galleryStore) || galleryIoTask is not null) return;
@@ -202,7 +203,7 @@ public sealed partial class EditorView
                     galleryPatterns = result.Patterns; galleryTags = result.Tags.ToArray(); galleryLoaded = true;
                     galleryFolders = result.Folders;
                     galleryFolderSelection.IntersectWith(galleryFolders.Select(f => f.Id));
-                    if (galleryFolderId is { } folder && !galleryFolders.Any(f => f.Id == folder)) galleryFolderId = null;
+                    if (!galleryFolders.Any(f => f.Id == galleryFolderId)) galleryFolderId = PatternFolder.DefaultId;
                     if (!result.PreservePreviews)
                     { galleryPreviews.Clear(); galleryPreviewErrors.Clear(); galleryFullPreview = null; galleryFullPreviewId = Guid.Empty; }
                     RefreshGallerySearchIndex();
@@ -278,9 +279,6 @@ public sealed partial class EditorView
         galleryCards.Clear(); galleryVisibleIds.Clear();
         galleryFolderCards.Clear();
         bool ready = galleryStore is not null && galleryLoaded && galleryIoTask is null && !PatternEditingBusy;
-        DrawGalleryNavigation(c, bounds, ready);
-        bounds = new(bounds.X, bounds.Y + 34, bounds.Width, Math.Max(0, bounds.Height - 34));
-        if (galleryFolderId is null) { DrawGalleryFolders(c, bounds, ready); return; }
         DrawGallerySearchAndFilters(c, bounds, ready);
         float gap = 5, unit = Math.Max(20, (bounds.Width - gap * 2) / 3);
         Button(c, new(bounds.X, bounds.Y + 34, unit, 28), L.Get("gallery.save"), RequestSavePattern,
@@ -289,17 +287,22 @@ public sealed partial class EditorView
             () => RequestPatternImport?.Invoke(), enabled: ready, fontSize: 11);
         Button(c, new(bounds.X + (unit + gap) * 2, bounds.Y + 34, unit, 28), L.Get("gallery.export"),
             ShowGalleryExportMenu, enabled: ready, fontSize: 11);
-        galleryGridBounds = new(bounds.X, bounds.Y + 70, bounds.Width, Math.Max(0, bounds.Height - 96));
+        float categoryWidth = Math.Min(Math.Clamp(bounds.Width * .28f, 40, 130), Math.Max(40, bounds.Width - GalleryCardWidth - 12));
+        var content = new Rect(bounds.X, bounds.Y + 70, bounds.Width, Math.Max(0, bounds.Height - 96));
+        DrawGalleryCategories(c, new(content.X, content.Y, categoryWidth, content.Height));
+        float dividerX = content.X + categoryWidth + 4;
+        c.Line(dividerX, content.Y, dividerX, content.Bottom, Grid);
+        galleryGridBounds = new(dividerX + 8, content.Y, Math.Max(0, content.Right - dividerX - 8), content.Height);
         if (galleryFilteredPatterns.Count == 0)
         {
             galleryScroll = galleryMaxScroll = 0;
             bool emptyFolder = galleryFolders.FirstOrDefault(f => f.Id == galleryFolderId)?.PatternIds.Count is null or 0;
             c.Text(L.Get(!ready ? "gallery.loading" : emptyFolder ? "gallery.empty" : "gallery.noMatches"),
-                bounds.X + 4, galleryGridBounds.Y + 18, 12, Muted, bounds.Width - 8);
+                galleryGridBounds.X + 4, galleryGridBounds.Y + 18, 12, Muted, galleryGridBounds.Width - 8);
             return;
         }
         float cellWidth = GalleryCardWidth * galleryCardZoom, cellHeight = GalleryCardHeight * galleryCardZoom;
-        int columns = Math.Clamp((int)((bounds.Width + GalleryCardGap) / (cellWidth + GalleryCardGap)), 1, 24);
+        int columns = Math.Clamp((int)((galleryGridBounds.Width + GalleryCardGap) / (cellWidth + GalleryCardGap)), 1, 24);
         // Extremely tall layouts scroll a bounded viewport without changing card or raster sizes.
         galleryGridBounds = galleryGridBounds with
         {
@@ -317,7 +320,7 @@ public sealed partial class EditorView
                 int index = row * columns + column;
                 if (index >= galleryFilteredPatterns.Count) break;
                 var pattern = galleryFilteredPatterns[index];
-                var card = new Rect(bounds.X + column * (cellWidth + 8), galleryGridBounds.Y + row * (cellHeight + 8) - galleryScroll, cellWidth, cellHeight);
+                var card = new Rect(galleryGridBounds.X + column * (cellWidth + 8), galleryGridBounds.Y + row * (cellHeight + 8) - galleryScroll, cellWidth, cellHeight);
                 galleryCards.Add((pattern.Id, card)); galleryVisibleIds.Add(pattern.Id);
                 c.Fill(card, Surface, 5);
                 c.Stroke(card, gallerySelection.Contains(pattern.Id) ? Accent : Grid, gallerySelection.Contains(pattern.Id) ? 2 : 1, 5);

@@ -27,6 +27,8 @@ internal static class PatternFolderUiTests
         ui.ClickText(L.Get("dock.layout")); ui.ClickText("✓ " + L.Get("dock.gallery"));
         ui.ClickText(L.Get("dock.layout")); ui.ClickText(L.Get("dock.gallery")); Settle();
         var before = ui.View.Document.DeepClone();
+        Check(ui.View.PatternGalleryCategoryBounds.Right < ui.View.PatternGalleryGridBounds.X
+            && ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.category")), "Categories are not beside the grid");
         var first = ui.View.PatternGalleryCardBounds(patterns[0].Id);
         Click(first, ctrl: true);
         var grid = ui.View.PatternGalleryGridBounds;
@@ -35,21 +37,22 @@ internal static class PatternFolderUiTests
         Check(ui.View.PatternGallerySelectionCount == 24 && !ui.View.PatternGalleryPreviewVisible,
             "Shift selection must include offscreen entries and avoid opening a popup");
         ui.Key('C', ctrl: true);
-        Root(); Open(a); ui.Key('V', ctrl: true); Settle();
+        Open(a); ui.Key('V', ctrl: true); Settle();
         Check(store.LoadContents().Folders!.Single(f => f.Id == a).PatternIds.Count == 24 && store.Load().Count == 48,
             "Copy/paste across folders lost patterns");
         ui.Key('A', ctrl: true); ui.Key('X', ctrl: true);
         Check(store.LoadContents().Folders!.Single(f => f.Id == a).PatternIds.Count == 24, "Cut removed content before paste");
-        Root(); Open(b); ui.Key('V', ctrl: true); Settle();
+        Open(b); ui.Key('V', ctrl: true); Settle();
         Check(store.LoadContents().Folders!.Single(f => f.Id == a).PatternIds.Count == 0
             && store.LoadContents().Folders!.Single(f => f.Id == b).PatternIds.Count == 24 && store.Load().Count == 48,
             "Cut/paste did not move the original identities");
         ui.Key('V', ctrl: true); Settle(); Check(store.Load().Count == 48, "Repeated cut paste duplicated content");
-        Root();
         Click(ui.View.PatternGalleryFolderBounds(a)); Click(ui.View.PatternGalleryFolderBounds(b), ctrl: true);
+        Context(ui.View.PatternGalleryFolderBounds(b));
         ui.ClickText(L.Get("gallery.mergeFolders")); ui.ClickText(L.Get("gallery.mergeInto", "A")); Settle();
         Check(store.LoadContents().Folders!.All(f => f.Id != b) && store.LoadContents().Folders!.Single(f => f.Id == a).PatternIds.Count == 24,
             "Selected folder merge did not retain contents");
+        Context(ui.View.PatternGalleryCategoryBounds);
         ui.ClickText(L.Get("gallery.newFolder")); ui.Type("Created"); ui.Key(13); Settle();
         Check(store.LoadContents().Folders!.Any(f => f.Name == "Created"), "New-folder prompt did not save");
         Open(PatternFolder.DefaultId);
@@ -79,18 +82,31 @@ internal static class PatternFolderUiTests
         Check(store.LoadContents().Folders!.Any(f => f.Name == "Legacy"), "New-folder import was ignored");
         ui.View.ConfigurePatternGallery(directory); ui.Paint(); Settle();
         Check(ui.View.PatternGalleryFolderId == PatternFolder.DefaultId && ui.View.PatternGalleryFilteredCount == 25, "Reload lost folder contents");
+        for (int i = 0; i < 16; i++) store.CreateFolder($"Category {i:00}");
+        ui.Resize(1440, 900);
+        ui.View.ConfigurePatternGallery(directory); ui.Paint(); Settle();
+        grid = ui.View.PatternGalleryGridBounds;
+        ui.View.Wheel(grid.X + 10, grid.Y + 10, -120, false); ui.Paint(); Settle();
+        float gridScroll = ui.View.PatternGalleryGridScroll;
+        var category = ui.View.PatternGalleryCategoryBounds;
+        ui.View.Wheel(category.X + 10, category.Y + 40, -12000, true); ui.Paint();
+        Check(ui.View.PatternGalleryGridScroll == gridScroll
+            && ui.View.PatternGalleryFolderBounds(PatternFolder.DefaultId).Width == 0,
+            "Category scrolling changed the grid or failed to reach offscreen categories");
+        ui.View.Wheel(category.X + 10, category.Y + 40, 12000, false); ui.Paint();
+        Check(ui.View.PatternGalleryFolderBounds(PatternFolder.DefaultId).Width > 0,
+            "Category scrolling did not return to Default");
 
-        void Root()
+        void Context(Rect bounds)
         {
-            if (ui.View.PatternGalleryFolderId is not { } id) return;
-            string name = store.LoadContents().Folders!.Single(f => f.Id == id).Name;
-            ui.ClickText("‹ " + name);
+            ui.View.PointerDown(bounds.X + 10, bounds.Y + 10, 2, false, false);
+            ui.View.PointerUp(bounds.X + 10, bounds.Y + 10, 2); ui.Paint();
         }
         void Open(Guid id)
         {
             var bounds = ui.View.PatternGalleryFolderBounds(id); Click(bounds);
-            ui.View.PointerDoubleClick(bounds.X + 10, bounds.Y + 10, false, false); ui.Paint(); Settle();
-            Check(ui.View.PatternGalleryFolderId == id, "Double click did not enter folder");
+            Settle();
+            Check(ui.View.PatternGalleryFolderId == id, "Category click did not switch contents");
         }
         void Click(Rect bounds, bool ctrl = false, bool shift = false)
         {

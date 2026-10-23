@@ -353,6 +353,8 @@ internal static class PatternGalleryUiTests
         Check(full.Paths.Sum(path => path.Count) > 60000 && full.Objects.Count > 512, "Dense fixture does not exercise full geometry eviction");
         PatternArchive.WriteFile(patterns, Path.Combine(directory, "gallery.fap"));
         ui.View.ConfigurePatternGallery(directory); ui.Paint();
+        var initialGrid = ui.View.PatternGalleryGridBounds;
+        ui.View.Wheel(initialGrid.X + 10, initialGrid.Y + 10, -12000, true); ui.Paint();
         PaintScheduledFrames(ui);
         Check(ui.View.PatternGalleryVisibleCardCount >= 4, "Dense fixture has too few visible cards");
         Check(ui.View.PatternGalleryThumbnailCost <= 64 * 3072, "Thumbnail geometry exceeded its bounded cache");

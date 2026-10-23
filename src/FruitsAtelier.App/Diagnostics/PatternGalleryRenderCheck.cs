@@ -26,8 +26,8 @@ internal static class PatternGalleryRenderCheck
                 var patterns = Fixtures(locale);
                 PatternArchive.WriteFile(patterns, Path.Combine(gallery, "gallery.fap"));
                 var folderStore = new PatternGalleryStore(gallery);
-                Guid practiceFolder = folderStore.CreateFolder(locale == "en" ? "Practice" : "练习");
-                Guid sharedFolder = folderStore.CreateFolder(locale == "en" ? "Shared" : "分享");
+                Guid practiceFolder = folderStore.CreateFolder(locale == "en" ? "Practice" : "\u7ec3\u4e60");
+                Guid sharedFolder = folderStore.CreateFolder(locale == "en" ? "Shared" : "\u5206\u4eab");
                 var map = new MapDocument { Name = "Gallery placement", DurationMs = 30000, BeatLengthMs = 1000.0 / 3,
                     SliderMultiplier = 1.4, OverrideSliderMultiplier = true, SliderMultiplierOverride = 1.92,
                     SliderImportState = SliderImportState.Native, DerandomizeFSliderDroplets = true };
@@ -41,7 +41,7 @@ internal static class PatternGalleryRenderCheck
                 var previewTab = editor.DockTabBounds(EditorView.DockPanel.Preview);
                 editor.Wheel(previewTab.X + 10, previewTab.Y + 10, -12000, false); Paint();
                 Click(editor.DockTabBounds(EditorView.DockPanel.PatternGallery));
-                Wait(() => editor.PatternGalleryCount == patterns.Count && editor.PatternGalleryPreviewCacheCount >= 4
+                Wait(() => editor.PatternGalleryCount == patterns.Count && editor.PatternGalleryPreviewCacheCount > 0
                     && !editor.PatternGalleryNeedsRedraw, "load and preview gallery");
                 Paint("grid");
                 var zoomGrid = editor.PatternGalleryGridBounds;
@@ -54,8 +54,7 @@ internal static class PatternGalleryRenderCheck
                 editor.Wheel(zoomGrid.X + 10, zoomGrid.Y + 10, 12000, true); Paint();
                 if (editor.PatternGalleryPreviewBuildCount != zoomBuilds)
                     throw new InvalidOperationException("Card zoom rebuilt preview geometry.");
-                Click(new(editor.PatternGallerySearchBounds.X, editor.PatternGallerySearchBounds.Y - 34, 70, 28));
-                Paint("folders");
+                Paint("categories");
                 var firstFolder = editor.PatternGalleryFolderBounds(practiceFolder);
                 var lastFolder = editor.PatternGalleryFolderBounds(sharedFolder);
                 Click(firstFolder);
@@ -66,7 +65,7 @@ internal static class PatternGalleryRenderCheck
                 Click(editor.PatternGalleryContextItemBounds(2)); Paint("folders-merge");
                 editor.KeyDown(27, false, false); Paint();
                 var defaultFolder = editor.PatternGalleryFolderBounds(PatternFolder.DefaultId);
-                editor.PointerDoubleClick(defaultFolder.X + 10, defaultFolder.Y + 10, false, false); Paint();
+                Click(defaultFolder);
                 editor.BeginPatternImport(Path.Combine(gallery, "gallery.fap")); Paint("folder-import-destination");
                 editor.KeyDown(27, false, false); Paint();
                 if (editor.PatternGallerySearchBounds.Y != editor.PatternGalleryTagsBounds.Y)
@@ -93,7 +92,7 @@ internal static class PatternGalleryRenderCheck
                     || canvas.CachedPatternRasterBytes > 16L * 1024 * 1024)
                     throw new InvalidOperationException("Gallery thumbnails did not reuse their bounded raster cache.");
                 var originalCard = editor.PatternGalleryCardBounds(patterns[0].Id);
-                float originalDockWidth = size.Item1 - editor.PatternGalleryGridBounds.X + 12;
+                float originalDockWidth = size.Item1 - editor.PatternGalleryCategoryBounds.X + 12;
                 foreach (float dockWidth in new[] { 240f, 450f, originalDockWidth })
                 {
                     var handle = editor.DockResizeBounds(false);
@@ -123,11 +122,11 @@ internal static class PatternGalleryRenderCheck
 
                 editor.KeyDown('A', true, false); Paint();
                 var grid = editor.PatternGalleryGridBounds;
-                Click(new(grid.X, grid.Y - 36, 70, 28));
+                Click(new(editor.PatternGallerySearchBounds.X, grid.Y - 36, 70, 28));
                 foreach (char character in locale == "en" ? "Saved selection" : "\u4fdd\u5b58\u7684\u9009\u6bb5") editor.TextInput(character);
                 Paint("name");
                 editor.KeyDown(13, false, false);
-                Wait(() => editor.PatternGalleryCount == patterns.Count + 1 && editor.PatternGalleryPreviewCacheCount >= 4
+                Wait(() => editor.PatternGalleryCount == patterns.Count + 1 && editor.PatternGalleryPreviewCacheCount > 0
                     && !editor.PatternGalleryNeedsRedraw, "save selection");
                 if (!map.ContentEquals(editor.Document)) throw new InvalidOperationException("Saving a selection changed the map.");
 
@@ -151,7 +150,7 @@ internal static class PatternGalleryRenderCheck
                 editor.KeyDown('Z', true, false); Paint();
                 if (!map.ContentEquals(editor.Document)) throw new InvalidOperationException("Pattern drop did not undo as one operation.");
 
-                var legacyCard = editor.PatternGalleryCardBounds(patterns[2].Id);
+                var legacyCard = Card(patterns[2].Id);
                 editor.PointerDown(legacyCard.X + 20, legacyCard.Y + 20, 0, false, false);
                 editor.PointerMove(px, py, false, false); Paint();
                 editor.PointerUp(px, py, 0); Paint();
@@ -164,7 +163,7 @@ internal static class PatternGalleryRenderCheck
                 editor.KeyDown('Z', true, false); Paint();
                 if (!map.ContentEquals(editor.Document)) throw new InvalidOperationException("Legacy drop undo did not restore the map.");
 
-                shortCard = editor.PatternGalleryCardBounds(patterns[1].Id);
+                shortCard = Card(patterns[1].Id);
                 Click(shortCard);
                 editor.PointerDoubleClick(shortCard.X + 20, shortCard.Y + 20, false, false); Paint("details");
                 if (editor.PatternEditingActive) throw new InvalidOperationException("Double click entered pattern editing.");
@@ -219,6 +218,19 @@ internal static class PatternGalleryRenderCheck
                 Console.WriteLine($"PASS native Pattern Gallery {locale} {size.Item1}x{size.Item2} {dpi} DPI");
 
                 void ClickContext(int row) => Click(editor.PatternGalleryContextItemBounds(row));
+
+                Rect Card(Guid id)
+                {
+                    var gridBounds = editor.PatternGalleryGridBounds;
+                    editor.Wheel(gridBounds.X + 10, gridBounds.Y + 10, 12000, false); Paint();
+                    for (int i = 0; i < patterns.Count * 3; i++)
+                    {
+                        var card = editor.PatternGalleryCardBounds(id);
+                        if (card.Width > 0 && gridBounds.Contains(card.X + 20, card.Y + 20)) return card;
+                        editor.Wheel(gridBounds.X + 10, gridBounds.Y + 10, -120, false); Paint();
+                    }
+                    throw new InvalidOperationException("Pattern card did not scroll into view.");
+                }
 
                 void Click(Rect rect)
                 {
