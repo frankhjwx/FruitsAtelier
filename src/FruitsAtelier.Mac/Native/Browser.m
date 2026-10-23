@@ -172,6 +172,11 @@ void fa_browser_command(int command, const char *mapUrl) {
     }
 }
 const char *fa_browser_url(void) { return fa_browser.web.URL.absoluteString.UTF8String; }
+void fa_browser_focus_editor(void) {
+    if (![NSThread isMainThread]) return;
+    NSWindow *window = fa_browser.web.window;
+    [window makeFirstResponder:window.contentView];
+}
 void fa_browser_close(void) {
     if (![NSThread isMainThread]) return;
     [fa_browser.web removeFromSuperview];

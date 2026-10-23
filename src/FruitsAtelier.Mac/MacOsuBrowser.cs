@@ -63,6 +63,9 @@ internal sealed class MacOsuBrowser : NativeControlHost
     [DllImport("libFruitsAtelierAudio.dylib", EntryPoint = "fa_browser_close")]
     internal static extern void Close();
 
+    [DllImport("libFruitsAtelierAudio.dylib", EntryPoint = "fa_browser_focus_editor")]
+    internal static extern void FocusEditor();
+
     private static TaskCompletionSource? clearCompletion;
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void ClearCallback();

@@ -211,7 +211,16 @@ internal sealed partial class MacWindow : Window
         {
             osuBrowser = new MacOsuBrowser { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
             View.RequestBrowserCommand = command => osuBrowser.Execute(command, View.BrowserUrl);
-            osuBrowser.EditorLink = (link, page) => { View.HandleBrowserEditorLink(link, page); editor.Refresh(); };
+            osuBrowser.EditorLink = (link, page) =>
+            {
+                if (View.HandleBrowserEditorLink(link, page))
+                {
+                    Activate();
+                    MacOsuBrowser.FocusEditor();
+                    editor.Focus();
+                }
+                editor.Refresh();
+            };
             editorRoot.Children.Add(osuBrowser);
         }
         float scale = View.UiScaleFactor;

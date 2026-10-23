@@ -31,7 +31,14 @@ internal sealed partial class EditorWindow
         {
             if (view.UpdateBrowserState(osuBrowser.State)) Invalidate();
             while (osuBrowser.EditorLinks.TryDequeue(out var entry))
-            { view.HandleBrowserEditorLink(entry.Link, entry.Page); Invalidate(); }
+            {
+                if (view.HandleBrowserEditorLink(entry.Link, entry.Page))
+                {
+                    Native.SetForegroundWindow(hwnd);
+                    Native.SetFocus(hwnd);
+                }
+                Invalidate();
+            }
         }
         if (Environment.TickCount64 >= nextOsuLinkCheck)
         {

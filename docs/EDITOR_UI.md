@@ -18,7 +18,9 @@ uses the system browser and its separate session. Library cards' **Visit webpage
 actions continue to open the system browser.
 
 Website timestamp links seek and select notes in FA using the linked difficulty
-when it is available in the current project. While the tab is on the current map
+when it is available in the current project. Successful jumps return keyboard focus
+to the editor, so Space and editor shortcuts work without clicking the canvas first.
+While the tab is on the current map
 and difficulty's Discussion page, the Canvas shows the same public discussion
 annotations as the Discussion tab. Info pages and unrelated discussions do not
 activate these annotations. Praise and resolved discussions use green annotations;
