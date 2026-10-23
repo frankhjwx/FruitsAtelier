@@ -5,6 +5,14 @@ using FruitsAtelier.Localization;
 
 internal static class PatternGalleryUiTests
 {
+    private sealed class Clock : TimeProvider
+    {
+        private long ticks;
+        public override long TimestampFrequency => 1000;
+        public override long GetTimestamp() => ticks;
+        public void Advance(int milliseconds) => ticks += milliseconds;
+    }
+
     public static void Run()
     {
         string directory = Path.Combine(Path.GetTempPath(), "fa-gallery-ui-" + Guid.NewGuid().ToString("N"));
@@ -19,7 +27,8 @@ internal static class PatternGalleryUiTests
             var store = new PatternGalleryStore(directory);
             store.Add(snapshot);
             for (int i = 1; i < 16; i++) store.Add(PatternSnapshot.Capture(source, source.Fruits.Select(f => f.Id), $"Fixture {i:00}"));
-            var ui = new Ui();
+            var clock = new Clock();
+            var ui = new Ui(timeProvider: clock);
             ui.LoadDocument(new MapDocument { IsDemo = false, DurationMs = 30000, BeatLengthMs = 400 });
             ui.View.ConfigurePatternGallery(directory);
             // Re-adding selects the panel even when the default tab strip is scrolled.
@@ -97,6 +106,7 @@ internal static class PatternGalleryUiTests
             ui.View.RequestPatternSource = p => { Check(p.Id == snapshot.Id, "Wrong source pattern"); navigations++; };
             ui.Paint(); ui.ClickText(Strings.Get("gallery.jumpSource"));
             Check(navigations == 1, "Source button did not route selected snapshot");
+            CheckPreviewOcclusion(ui, clock);
             ui.Key(27);
             Check(ui.View.PatternGalleryPreviewBounds.Width == 0, "Escape did not close the preview");
             Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Browsing changed map content");
@@ -221,6 +231,47 @@ internal static class PatternGalleryUiTests
             Check(ui.View.Document.ContentEquals(inserted), "Legacy drop redo changed processed geometry or timing");
             ui.Key(90, ctrl: true);
         }
+    }
+
+    private static void CheckPreviewOcclusion(Ui ui, Clock clock)
+    {
+        float width = ui.Width, height = ui.Height;
+        ui.Resize(980, 620);
+        var popup = ui.View.PatternGalleryPopupBounds;
+        var slider = ui.View.CanvasBackgroundDimSliderBounds;
+        float x = Math.Max(slider.X, popup.X) + 2, y = slider.Y + slider.Height / 2;
+        Check(popup.Contains(x, y) && slider.Contains(x, y), "Fixture does not cover the canvas dim control");
+        ui.View.PointerMove(x, y, false, false); ui.Paint();
+        clock.Advance(200); ui.Paint();
+        Check(ui.View.CanvasBackgroundDimOpacity == 0 && !ui.Canvas.Texts.Any(t => t.Value == "Background Dim"),
+            "Hovering the popup revealed the covered canvas dim control");
+        Check(!ui.Canvas.Texts.Any(t => t.Value == Strings.Get("gallery.dragHint")), "Gallery still shows the drag hint");
+
+        var grid = ui.View.AssistButtonBounds[4];
+        x = grid.X + grid.Width / 2; y = popup.Bottom - 3;
+        Check(grid.Contains(x, y) && popup.Contains(x, y), "Fixture does not cover the grid snap button");
+        int preferenceSaves = 0;
+        var savePreference = ui.View.RequestViewPreference;
+        ui.View.RequestViewPreference = () => preferenceSaves++;
+        ui.Click(x, y);
+        ui.View.RequestViewPreference = savePreference;
+        Check(preferenceSaves == 0, "Blank popup space activated a covered canvas button");
+
+        var preview = ui.View.PatternGalleryPreviewBounds;
+        x = preview.X + preview.Width / 2; y = preview.Y + preview.Height / 2;
+        double start = ui.View.ViewStartMs;
+        int dim = ui.View.LibrarySettings.MappingCanvasBackgroundDim;
+        foreach (int button in new[] { 0, 1, 2 })
+        {
+            ui.View.PointerDown(x, y, button, false, false);
+            ui.View.PointerMove(x, y + 12, false, false);
+            ui.View.PointerUp(x, y + 12, button);
+        }
+        ui.View.PointerDoubleClick(x, y, false, false);
+        ui.View.Wheel(x, y, -120, false); ui.Paint();
+        Check(ui.View.ViewStartMs == start && ui.View.LibrarySettings.MappingCanvasBackgroundDim == dim && !ui.View.WantsCapture,
+            "Popup pointer gestures leaked into the canvas");
+        ui.Resize(width, height);
     }
 
     private static void FixedCardResize(Ui ui, Guid id)

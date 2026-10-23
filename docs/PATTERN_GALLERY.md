@@ -10,6 +10,7 @@ of the pattern preview. Cards have a fixed size; resizing the dock changes the
 number of columns and wraps the cards without resizing the thumbnails.
 Select a card to open a larger preview beside the panel;
 use the wheel or drag vertically within that preview to inspect a long pattern.
+The enlarged panel blocks pointer input and hover feedback from controls underneath it.
 The enlarged preview follows the canvas scroll direction, including the reverse-scroll setting.
 Its scrollbar starts at the bottom and moves upward when browsing later objects above.
 Use **Alt + wheel** over the enlarged preview to zoom. The initial scale is the

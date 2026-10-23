@@ -70,6 +70,7 @@ public sealed partial class EditorView
     internal int PatternGalleryPreviewBuildCount => galleryPreviewBuildCount;
     internal Rect PatternGalleryGridBounds => galleryGridBounds;
     internal Rect PatternGalleryPreviewBounds => galleryLargePreviewBounds;
+    internal Rect PatternGalleryPopupBounds => galleryPopupBounds;
     internal Rect PatternGallerySearchBounds => gallerySearchBounds;
     internal Rect PatternGalleryTagsBounds => galleryTagsBounds;
     internal Rect PatternGalleryEditPatternBounds { get; private set; }
@@ -315,7 +316,6 @@ public sealed partial class EditorView
             }
         c.Unclip();
         DrawGalleryScrollbar(c, galleryGridBounds, galleryScroll, galleryMaxScroll);
-        c.Text(L.Get("gallery.dragHint"), bounds.X, bounds.Bottom - 19, 10, Muted, bounds.Width);
     }
 
     private void DrawPatternGalleryOverlay(ICanvas c)
@@ -336,6 +336,7 @@ public sealed partial class EditorView
         c.Text(pattern.Name, left + 16, top + 14, 16, Foreground, popupWidth - 65, true);
         float tagsHeight = DrawGalleryPopupTags(c, pattern, left + 16, top + 36, popupWidth - 32, popupHeight);
         float previewTop = top + Math.Max(56, 36 + tagsHeight);
+        galleryPopupHitStart = hits.Count;
         Button(c, new(left + popupWidth - 36, top + 8, 28, 28), "×", () => galleryPopupId = Guid.Empty);
         float metadataTop = top + popupHeight - 112;
         galleryLargePreviewBounds = new(left + 12, previewTop, popupWidth - 24, Math.Max(1, metadataTop - previewTop - 10));
@@ -363,6 +364,7 @@ public sealed partial class EditorView
             () => ShowGalleryTagAssignments(pattern.Id), enabled: CanEditGalleryTags, fontSize: 11);
         Button(c, new(left + 12, metadataTop + 62, popupWidth - 24, 28), L.Get("gallery.jumpSource"),
             () => RequestPatternSource?.Invoke(pattern), enabled: RequestPatternSource is not null, fontSize: 11);
+        galleryPopupHitEnd = hits.Count;
     }
 
     private void DrawGalleryPreview(ICanvas c, PatternPreviewData data, Rect bounds, bool thumbnail, float scroll)

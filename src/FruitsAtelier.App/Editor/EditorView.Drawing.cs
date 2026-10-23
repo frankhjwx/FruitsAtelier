@@ -111,35 +111,42 @@ public sealed partial class EditorView
         AdvanceBoxScroll();
         UpdatePlacementHyperdash();
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
-        c.Fill(new(0, 0, width, height), Background);
-        if (!TimingPageVisible)
-            DrawBeatmapBackground(c, new(leftPanel.Right, canvas.Y + 38,
-                canvas.Right - leftPanel.Right, plot.Bottom - canvas.Y - 38), LibrarySettings.MappingCanvasBackgroundDim / 100f, mappingCanvas: true);
-        DrawChrome(c);
-        if (TimingPageVisible) DrawTimingWaveform(c);
-        else
+        var pointer = (X: mouseX, Y: mouseY);
+        // Covered controls render as if the pointer were outside the window.
+        if (PatternGalleryPopupContains(mouseX, mouseY)) mouseX = mouseY = -1;
+        try
         {
-            DrawCanvas(c);
-            DrawToolPalette(c);
-            DrawDistanceReadout(c);
-            DrawAssistPalette(c);
-            DrawSelectionBox(c);
-            DrawCoordinateReadout(c);
+            c.Fill(new(0, 0, width, height), Background);
+            if (!TimingPageVisible)
+                DrawBeatmapBackground(c, new(leftPanel.Right, canvas.Y + 38,
+                    canvas.Right - leftPanel.Right, plot.Bottom - canvas.Y - 38), LibrarySettings.MappingCanvasBackgroundDim / 100f, mappingCanvas: true);
+            DrawChrome(c);
+            if (TimingPageVisible) DrawTimingWaveform(c);
+            else
+            {
+                DrawCanvas(c);
+                DrawToolPalette(c);
+                DrawDistanceReadout(c);
+                DrawAssistPalette(c);
+                DrawSelectionBox(c);
+                DrawCoordinateReadout(c);
+            }
+            DrawInspector(c);
+            if (TimingPageVisible) DrawTimingPage(c); else DrawDockPanels(c);
+            if (!TimingPageVisible)
+            {
+                DrawSliderHold(c);
+                DrawMovementOverlay(c);
+                DrawKiaiBadge(c);
+                DrawCanvasBackgroundDim(c);
+            }
+            DrawTransport(c);
+            DrawTimelineResizers(c);
+            DrawStatus(c);
+            DrawUpdateNotice(c);
+            DrawDockDrag(c);
         }
-        DrawInspector(c);
-        if (TimingPageVisible) DrawTimingPage(c); else DrawDockPanels(c);
-        if (!TimingPageVisible)
-        {
-            DrawSliderHold(c);
-            DrawMovementOverlay(c);
-            DrawKiaiBadge(c);
-            DrawCanvasBackgroundDim(c);
-        }
-        DrawTransport(c);
-        DrawTimelineResizers(c);
-        DrawStatus(c);
-        DrawUpdateNotice(c);
-        DrawDockDrag(c);
+        finally { mouseX = pointer.X; mouseY = pointer.Y; }
         DrawPatternGalleryOverlay(c);
         DrawPatternEditingBanner(c);
         if (menu >= 0) DrawMenu(c);

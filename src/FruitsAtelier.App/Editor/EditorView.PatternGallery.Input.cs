@@ -19,6 +19,10 @@ public sealed partial class EditorView
     private double galleryRequestedTime = double.NaN, galleryStartedTime = double.NaN, galleryRequestedX;
     private int galleryDragVersion;
     private bool galleryDragSpeed;
+    private int galleryPopupHitStart, galleryPopupHitEnd;
+    private bool PatternGalleryPopupContains(float x, float y) => PatternGalleryInputAvailable
+        && !galleryDragging && galleryPopupId != Guid.Empty && menu < 0 && contextItems.Count == 0
+        && galleryPopupBounds.Contains(x, y);
     private sealed record GalleryPlacementResult(int Version, double Time, PreparedPatternPlacement? Placement,
         PatternPreviewData? Preview, string? Error);
     private sealed record GalleryDropResult(int Version, MapDocument? Document, Guid[] Ids, OsuWriteCache? Cache,
@@ -34,7 +38,13 @@ public sealed partial class EditorView
             {
                 galleryPreviewPanning = true; galleryPressedY = y; galleryScrollOrigin = galleryPreviewScroll;
             }
-            else if (button == 0) InvokeGalleryHit(x, y);
+            else if (button == 0)
+            {
+                // Blank popup space must not activate controls drawn underneath it.
+                for (int i = Math.Min(galleryPopupHitEnd, hits.Count) - 1; i >= galleryPopupHitStart; i--)
+                    if (hits[i].Bounds.Contains(x, y))
+                    { if (hits[i].Enabled) hits[i].Action(); break; }
+            }
             return true;
         }
         if (!galleryBounds.Contains(x, y))
@@ -125,7 +135,13 @@ public sealed partial class EditorView
             galleryPreviewScroll = Math.Clamp(galleryScrollOrigin + y - galleryPressedY, 0, galleryPreviewMaxScroll);
             return true;
         }
-        if (galleryPressedId == Guid.Empty) return false;
+        if (galleryPressedId == Guid.Empty)
+        {
+            if (!PatternGalleryPopupContains(x, y)) return false;
+            mouseX = x; mouseY = y;
+            HideCanvasBackgroundDim();
+            return true;
+        }
         if (!galleryDragging && Math.Abs(x - galleryPressedX) + Math.Abs(y - galleryPressedY) > 6)
         {
             galleryPopupId = Guid.Empty;
@@ -150,6 +166,7 @@ public sealed partial class EditorView
 
     private bool PatternGalleryPointerUp(float x, float y, int button)
     {
+        if (!WantsCapture && PatternGalleryPopupContains(x, y)) return true;
         if (button != 0) return false;
         if (!PatternGalleryInputAvailable && (galleryPreviewPanning || galleryPressedId != Guid.Empty))
         { CancelPatternGalleryInteraction(); return false; }
