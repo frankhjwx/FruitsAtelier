@@ -8,7 +8,7 @@ Windows와 macOS에서 사용할 수 있는 독립 osu!catch 비트맵 편집기
 
 [공식 웹사이트](https://fruitsatelier.himiko.moe/) · [다운로드](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**현재 버전: 1.2.0**
+**현재 버전: 1.2.1**
 
 ![FruitsAtelier의 편집 캔버스, 오브젝트 타임라인, Catch 미리 보기](assets/screenshots/twin-bloom.png)
 
@@ -33,7 +33,7 @@ Windows와 macOS에서 사용할 수 있는 독립 osu!catch 비트맵 편집기
 - **편집 가능한 스트림과 스택.** 곡선을 따라 지정한 비트 분할로 과일 스트림을 만들거나, 폭 변화를 설정해 좌우로 번갈아 배치되는 스택을 만들 수 있습니다. 부모 곡선과 개별 과일을 편집하거나 독립된 과일로 분리할 수도 있습니다. 둘 다 hit circle로 내보냅니다.
 - **Pattern Gallery.** 독립된 패턴 스냅샷을 저장하고 스킨 미리 보기에서 다른 비트맵으로 BPM에 맞춰 드래그하세요. `.fpt` 파일로 공유하고, 원래 비트맵의 저장하지 않은 변경 사항을 유지하면서 [메인 캔버스에서 패턴을 편집](docs/PATTERN_GALLERY.md)할 수 있습니다.
 
-Catch `.osu`는 v7–v14 및 stable과 호환되는 lazer v128을 읽을 수 있습니다. v7 비트맵은 기존 슬라이더 틱 규칙을 보존하도록 v7로 내보내며, 나머지는 v14로 내보냅니다. 1.2.0에서는 동영상과 스토리보드 재생을 지원하지 않습니다.
+Catch `.osu`는 v7–v14 및 stable과 호환되는 lazer v128을 읽을 수 있습니다. v7 비트맵은 기존 슬라이더 틱 규칙을 보존하도록 v7로 내보내며, 나머지는 v14로 내보냅니다. 1.2.1에서는 동영상과 스토리보드 재생을 지원하지 않습니다.
 
 ## 시작하기
 
