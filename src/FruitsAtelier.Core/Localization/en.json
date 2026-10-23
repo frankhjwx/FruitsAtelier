@@ -1855,5 +1855,7 @@
   "discussion.ageYearShort": "{0}y ago",
   "discussion.cachedOffline": "Showing saved discussions. Refresh to try again.",
   "discussion.cachedUpdating": "Showing saved discussions; updating…",
-  "discussion.sortCreated": "Creation time"
+  "discussion.sortCreated": "Creation time",
+  "discussion.copyLinkHint": "click to copy to clipboard",
+  "discussion.linkCopied": "copied to clipboard!"
 }

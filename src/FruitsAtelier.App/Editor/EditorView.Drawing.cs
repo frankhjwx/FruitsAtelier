@@ -181,6 +181,8 @@ public sealed partial class EditorView
         if (librarySettingsOpen) DrawLanguageMenu(c);
         DrawGalleryTags(c);
         DrawPatternNameDialog(c);
+        DrawDiscussionImagePreview(c);
+        DrawDiscussionLinkTooltip(c);
         DrawDiscardConfirmation(c);
         if (!librarySettingsOpen) DrawDifficultyTooltip(c);
     }

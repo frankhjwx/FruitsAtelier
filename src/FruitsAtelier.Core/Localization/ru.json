@@ -1855,5 +1855,7 @@
   "discussion.ageYearShort": "{0} г",
   "discussion.cachedOffline": "Showing saved discussions. Refresh to try again.",
   "discussion.cachedUpdating": "Showing saved discussions; updating…",
-  "discussion.sortCreated": "Дата создания"
+  "discussion.sortCreated": "Дата создания",
+  "discussion.copyLinkHint": "click to copy to clipboard",
+  "discussion.linkCopied": "copied to clipboard!"
 }

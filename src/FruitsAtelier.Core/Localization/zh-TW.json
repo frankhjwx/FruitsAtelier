@@ -1855,5 +1855,7 @@
   "discussion.ageYearShort": "{0}年前",
   "discussion.cachedOffline": "顯示已儲存的討論，可點擊重新整理重試。",
   "discussion.cachedUpdating": "正在更新，目前顯示已儲存的討論…",
-  "discussion.sortCreated": "建立時間"
+  "discussion.sortCreated": "建立時間",
+  "discussion.copyLinkHint": "點擊複製到剪貼簿",
+  "discussion.linkCopied": "已複製到剪貼簿！"
 }

@@ -29,7 +29,7 @@ public sealed partial class EditorView
     private DockWorkspace DockWorkspaceState => TimingPageVisible ? timingDockWorkspace : mappingDockWorkspace;
     private DockGroup PanelGroup(DockPanel panel) => DockWorkspaceState.Left.Panels.Contains(panel)
         ? DockWorkspaceState.Left : DockWorkspaceState.Right;
-    private bool DockContentInputAvailable => !GalleryTagsVisible && !PatternNameVisible && !ErrorVisible && !DiscardConfirmationVisible && !LibraryVisible
+    private bool DockContentInputAvailable => !DiscussionImageVisible && !GalleryTagsVisible && !PatternNameVisible && !ErrorVisible && !DiscardConfirmationVisible && !LibraryVisible
         && !ExportVisible && !SongSetupVisible && !SliderDialogVisible && !TimeJumpVisible && !TimingModal
         && !BananaEditVisible && !StreamDialogVisible && !MergeDialogVisible && !VolumeDialogVisible
         && !DistanceSnapDialogVisible && !HitsoundCopierVisible && !VersionHistoryVisible

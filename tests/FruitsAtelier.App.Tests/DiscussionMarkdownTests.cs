@@ -1,6 +1,7 @@
 using System.Net;
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.Core;
+using L = FruitsAtelier.Localization.Strings;
 
 internal static class DiscussionMarkdownTests
 {
@@ -45,14 +46,14 @@ internal static class DiscussionMarkdownTests
 
     private static void UiMedia(OsuDiscussionSnapshot source)
     {
-        const string url = "https://koiyuki.s-ul.eu/L1ONATEm";
         string path = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "discussion", "bullhorn.png");
         var posts = new DiscussionPost[] { new(501, 10, "**Bold** *italic* [osu!](https://osu.ppy.sh/)\n> Quote\n![](https://koiyuki.s-ul.eu/L1ONATEm)", false, null),
             new(502, 20, "![reply](https://koiyuki.s-ul.eu/L1ONATEm)", false, null) };
         var thread = new BeatmapDiscussion(500, 101, null, 10, 0, "mapper_note", false, false, null, posts);
         var snapshot = new OsuDiscussionSnapshot(777, 20, [thread], source.Users, source.Owners);
         var pending = new TaskCompletionSource<DiscussionImage?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var ui = new Ui(false); ui.View.DiscussionLoader = (_, _) => Task.FromResult(snapshot);
+        var clock = new CopyClock();
+        var ui = new Ui(false, clock); ui.View.DiscussionLoader = (_, _) => Task.FromResult(snapshot);
         int requests = 0; ui.View.DiscussionImageLoader = (_, _) => { Interlocked.Increment(ref requests); return pending.Task; };
         var opened = new List<string>(); ui.View.RequestVisitOsuWeb = opened.Add;
         ui.View.LoadProject(DiscussionTests.Project()); ui.View.ShowDiscussionPanel();
@@ -65,8 +66,50 @@ internal static class DiscussionMarkdownTests
         var panel = ui.View.DiscussionBounds;
         var inline = ui.Canvas.Images.Where(image => image.Path == path && image.Bounds.X > panel.X && image.Bounds.Width > 30).ToArray();
         Check(inline.Length == 2 && requests == 1, "main post and reply images share one background request");
-        foreach (var image in inline) ui.Click(image.Bounds.X + 5, image.Bounds.Y + 5);
-        Check(opened.SequenceEqual(new[] { url, url }) && ui.View.Document.ContentEquals(before) && !ui.View.IsDirty, "image clicks open originals without editing or seeking");
+        foreach (var image in inline)
+        {
+            double playhead = ui.View.PlayheadMs, viewStart = ui.View.ViewStartMs;
+            ui.Click(image.Bounds.X + 5, image.Bounds.Y + 5);
+            Check(ui.View.DiscussionImageVisible && opened.Count == 0, "images open inside the editor without external navigation");
+            var previewImage = ui.Canvas.Images.Last(texture => texture.Path == path);
+            Check(ui.View.DiscussionImageZoom == 1 && previewImage.Bounds.Width == 128 && previewImage.Bounds.Height == 128,
+                "image preview opens at 100 percent source size instead of fitting the window");
+            Check(ui.View.DiscussionImagePreviewBounds.Width < panel.Right * .6f, "image preview stays in a compact centered dialog");
+            var viewport = ui.View.DiscussionImageViewport; float cx = viewport.X + viewport.Width / 2, cy = viewport.Y + viewport.Height / 2;
+            float zoom = ui.View.DiscussionImageZoom;
+            ui.View.Wheel(cx, cy, 120, false); ui.Paint();
+            Check(ui.View.DiscussionImageZoom == zoom, "ordinary wheel does not zoom the preview or navigate the editor");
+            ui.View.Wheel(cx, cy, 120, true); ui.Paint();
+            Check(ui.View.DiscussionImageZoom > zoom, "Ctrl+wheel zooms the internal image preview");
+            ui.View.PointerDown(cx, cy, 0, false, false); Check(ui.View.WantsCapture, "image panning captures the pointer");
+            ui.View.PointerMove(cx + 40, cy + 30, false, false); ui.View.PointerUp(cx + 40, cy + 30, 0); ui.Paint();
+            Check(!ui.View.WantsCapture, "image panning releases capture");
+            ui.Key(46); ui.Key('A', ctrl: true); ui.Type("unwanted editor input");
+            Check(ui.View.PlayheadMs == playhead && ui.View.ViewStartMs == viewStart && ui.View.Document.ContentEquals(before) && !ui.View.IsDirty,
+                "preview input is isolated from editor content, selection shortcuts and timeline navigation");
+            ui.Key(27); Check(!ui.View.DiscussionImageVisible, "Escape closes the image preview");
+            ui.Click(image.Bounds.X + 5, image.Bounds.Y + 5);
+            ui.Click(image == inline[0] ? cx : 2, image == inline[0] ? cy : 2);
+            Check(!ui.View.DiscussionImageVisible && opened.Count == 0, "clicking either the image or the backdrop dismisses preview without external navigation");
+        }
+        var name = ui.Canvas.Texts.First(text => text.Value == "Yumeno Himiko" && text.X > panel.X);
+        ui.View.PointerMove(name.X + 3, name.Y + 5, false, false); ui.Paint();
+        Check(ui.Canvas.Lines.Any(line => Math.Abs(line.X1 - name.X) < .1 && Math.Abs(line.Y1 - name.Y - 16) < .1), "external profile links underline on hover");
+        ui.Click(name.X + 3, name.Y + 5);
+        Check(opened.SequenceEqual(new[] { "https://osu.ppy.sh/users/20" }), "mapper names open the corresponding osu user profile");
+        string? copied = null; ui.View.RequestCopyText = value => copied = value;
+        foreach (bool canvas in new[] { false, true })
+        {
+            var footer = ui.Canvas.Texts.First(text => text.Value == L.Get("discussion.permalink") && (canvas ? text.X < panel.X : text.X > panel.X));
+            ui.View.PointerMove(footer.X + 2, footer.Y + 4, false, false); ui.Paint();
+            Check(ui.Canvas.Texts.Any(text => text.Value == L.Get("discussion.copyLinkHint")), "permalink hover explains the clipboard action");
+            ui.Click(footer.X + 2, footer.Y + 4);
+            Check(copied is not null && copied.Contains("discussion#/500/") && opened.Count == 1
+                && ui.Canvas.Texts.Any(text => text.Value == L.Get("discussion.linkCopied")), "permalink copies its post URL and shows feedback without external navigation");
+            clock.Now += TimeSpan.FromSeconds(3);
+            Check(ui.View.DiscussionNeedsRedraw, "copy feedback requests one expiry frame"); ui.Paint();
+            Check(!ui.View.DiscussionNeedsRedraw && !ui.Canvas.Texts.Any(text => text.Value == L.Get("discussion.linkCopied")), "copy feedback expires without continuous redraw");
+        }
         int builds = ui.View.DiscussionLayoutBuilds; for (int i = 0; i < 5; i++) ui.Paint();
         Check(ui.View.DiscussionLayoutBuilds == builds, "loaded image geometry is reused on warm frames");
         ui.View.StopDiscussions();
@@ -104,6 +147,11 @@ internal static class DiscussionMarkdownTests
             Check(request.Headers.Authorization is null && !request.Headers.Contains("Cookie"), "image requests remain anonymous");
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(Bytes) });
         }
+    }
+    private sealed class CopyClock : TimeProvider
+    {
+        internal DateTimeOffset Now = DateTimeOffset.UtcNow;
+        public override DateTimeOffset GetUtcNow() => Now;
     }
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
 }

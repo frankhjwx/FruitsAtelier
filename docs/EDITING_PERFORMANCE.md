@@ -53,7 +53,8 @@ Discussion annotations reuse the timeline's committed parent durations and combo
 event numbers. Associations rebuild only when the committed conversion or online
 snapshot changes. Viewport movement queries time-sorted regions with prefix end
 times; quote wrapping and discussion text layout are cached independently of
-hover and playback. Project replacement cancels pending loads, and difficulty
+hover and playback. Text selection uses logical offsets in cached runs so visual
+wrapping does not change copied text. Project replacement cancels pending loads, and difficulty
 cache retirement releases annotation associations and quote layouts. Network and
 cache I/O run off the UI thread. Pending requests do not drive rendering; task
 completion and ready-avatar queues request frames, while relative posting ages

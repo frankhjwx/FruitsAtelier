@@ -41,6 +41,8 @@ internal static class DiscussionTests
                 L.SetLanguage(locale); UiChecks(snapshot);
             }
             TypeCardLayout(snapshot);
+            ObjectReferenceSelection(snapshot);
+            TextSelection(snapshot);
             UrlNavigation(snapshot);
             DiscussionMarkdownTests.Run(snapshot);
             LongAnnotationAtZero(snapshot);
@@ -105,7 +107,7 @@ internal static class DiscussionTests
             var list = ui.View.DiscussionListBounds; ui.View.Wheel(list.X + 40, list.Y + 40, -120, false); ui.Paint();
         }
         Check(times.IsSupersetOf(new double[] { 1000, 1500, 2000, 3200, 4000 }), "all reply timestamp links remain accessible while scrolling");
-        Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty && ui.View.SelectedObjectIds.Count == 0, "navigation preserves content and selection");
+        Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "discussion navigation and selection preserve content");
         float offset = ui.View.DiscussionScrollOffset;
         Select(ui, DiscussionCategory.GeneralAll); Check(ui.View.DiscussionSortByUpdate, "General defaults to last update");
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("discussion.sortCreated")) && !ui.Canvas.Texts.Any(t => t.Value == L.Get("discussion.sortTimeline") && t.Y > ui.View.DiscussionTabsBounds.Bottom && t.X > ui.View.DiscussionBounds.X), "General offers creation time rather than timeline sorting");
@@ -155,6 +157,83 @@ internal static class DiscussionTests
         ui.View.StopDiscussions();
     }
 
+    private static void ObjectReferenceSelection(OsuDiscussionSnapshot source)
+    {
+        var thread = new BeatmapDiscussion(600, 101, null, 10, 1000, "suggestion", false, true, null,
+            [new(601, 10, "00:01:000 (1,2,3)\n00:01:500\n00:01:000 (999)", false, null),
+                new(602, 20, "00:02:000 (4,5)\n00:04:000 (11)", false, null)]);
+        var review = source.Discussions.Single(d => d.Id == 6);
+        var snapshot = new OsuDiscussionSnapshot(777, 20, [thread, source.Discussions.Single(d => d.Id == 5),
+            review with { Posts = [review.Posts[0] with { Message = "00:03:000 (8,9,10)" }] }], source.Users, source.Owners);
+        var ui = new Ui(false); ui.View.DiscussionLoader = (_, _) => Task.FromResult(snapshot);
+        ui.View.LoadProject(Project()); ui.View.ShowDiscussionPanel(); Wait(ui);
+        var before = ui.View.Document.DeepClone(); var conversion = ui.View.Conversion;
+        ClickTime(1000);
+        Check(ui.View.SelectedObjectIds.ToHashSet().SetEquals(ui.View.Document.Fruits.Take(3).Select(f => f.Id)), "numbered timestamp selects its corresponding objects");
+        var selected = ui.View.SelectedObjectIds.ToHashSet(); ClickTime(1500);
+        Check(selected.SetEquals(ui.View.SelectedObjectIds), "time-only timestamp preserves selection");
+        ClickTime(1000, last: true);
+        Check(selected.SetEquals(ui.View.SelectedObjectIds), "unmatched object numbers preserve selection and still seek");
+        ClickTime(2000);
+        Check(ui.View.SelectedObjectIds.ToHashSet().SetEquals(ui.View.Document.Fruits.Skip(3).Take(2).Select(f => f.Id)), "reply references replace selection with their own objects");
+        ClickTime(4000);
+        Check(ui.View.SelectedObjectIds.Single() == ui.View.Document.Tracks.Single().Id, "slider references select the editable parent object");
+        var canvasLink = ui.Canvas.Texts.First(text => text.Value.StartsWith("00:01:000 (1,2,3)") && text.X < ui.View.DiscussionBounds.X);
+        ui.Click(canvasLink.X + 4, canvasLink.Y + 5);
+        Check(selected.SetEquals(ui.View.SelectedObjectIds) && ReferenceEquals(conversion, ui.View.Conversion)
+            && before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "canvas reference selection reuses conversion and leaves content unchanged");
+        Select(ui, DiscussionCategory.Reviews);
+        var link = ui.View.DiscussionReferenceHits.First(hit => hit.Discussion == 6);
+        ui.Click(link.Bounds.X + 2, link.Bounds.Y + 5);
+        Check(ui.View.CurrentDifficultyName == "Other" && ui.View.PlayheadMs == 3000
+            && ui.View.SelectedObjectIds.ToHashSet().SetEquals(ui.View.Document.Fruits.Skip(7).Take(3).Select(f => f.Id)), "cross-difficulty references select objects in the destination difficulty");
+        ui.View.StopDiscussions();
+        void ClickTime(double time, bool last = false)
+        {
+            var links = ui.View.DiscussionReferenceHits.Where(hit => hit.Time == time).ToArray();
+            var link = last ? links[^1] : links[0]; ui.Click(link.Bounds.X + 3, link.Bounds.Y + link.Bounds.Height / 2);
+            Check(ui.View.PlayheadMs == time, "numbered and plain references still seek");
+        }
+    }
+
+    private static void TextSelection(OsuDiscussionSnapshot source)
+    {
+        const string body = "Copy **this** paragraph with [a link](https://osu.ppy.sh/). 中文🙂 text.\nSecond line.";
+        const string plain = "Copy this paragraph with a link. 中文🙂 text.\nSecond line.";
+        var thread = new BeatmapDiscussion(700, 101, null, 10, 1000, "mapper_note", false, false, null,
+            [new(701, 10, body, false, null), new(702, 20, "Reply body.", false, null)]);
+        var snapshot = new OsuDiscussionSnapshot(777, 20, [thread], source.Users, source.Owners);
+        var ui = new Ui(false); ui.View.DiscussionLoader = (_, _) => Task.FromResult(snapshot);
+        string? copied = null; var opened = new List<string>();
+        ui.View.RequestCopyText = value => copied = value; ui.View.RequestVisitOsuWeb = opened.Add;
+        ui.View.LoadProject(Project()); ui.View.ShowDiscussionPanel(); Wait(ui);
+        var before = ui.View.Document.DeepClone(); double playhead = ui.View.PlayheadMs;
+        foreach (bool canvas in new[] { false, true })
+        {
+            float panelX = ui.View.DiscussionBounds.X;
+            var start = ui.Canvas.Texts.First(text => text.Value == "Copy" && (canvas ? text.X < panelX : text.X > panelX));
+            var end = ui.Canvas.Texts.First(text => text.Value == "line." && (canvas ? text.X < panelX : text.X > panelX));
+            Drag(start.X + 1, start.Y + 5, end.X + ((ICanvas)ui.Canvas).MeasureText(end.Value, 12) + 1, end.Y + 5);
+            ui.Key('C', ctrl: true);
+            Check(copied == plain && ui.View.SelectedDiscussionText == plain, "drag selection copies formatted body text with logical line breaks and Unicode intact");
+            ui.Key(46); Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "read-only discussion selection cannot delete beatmap objects");
+            ui.Key(27);
+            var link = ui.Canvas.Texts.First(text => text.Value == "a link" && (canvas ? text.X < panelX : text.X > panelX));
+            Drag(link.X + 1, link.Y + 5, link.X + ((ICanvas)ui.Canvas).MeasureText(link.Value, 12) + 1, link.Y + 5);
+            ui.Key('C', ctrl: true);
+            Check(copied == "a link" && opened.Count == 0 && ui.View.PlayheadMs == playhead, "dragging link text selects it without following the URL or seeking the card");
+            ui.Key('A', ctrl: true); ui.Key('C', ctrl: true);
+            Check(copied!.Contains(plain) && copied.Contains("Reply body."), "focused discussion select-all includes replies"); ui.Key(27);
+        }
+        ui.View.StopDiscussions();
+        void Drag(float x, float y, float endX, float endY)
+        {
+            ui.View.PointerDown(x, y, 0, false, false); Check(ui.View.WantsCapture, "discussion text drag captures the pointer");
+            ui.View.PointerMove(endX, endY, false, false); ui.View.PointerUp(endX, endY, 0); ui.Paint();
+            Check(!ui.View.WantsCapture && ui.Canvas.Fills.Any(fill => fill.Color == 0x3B708B), "discussion text selection is highlighted and releases capture");
+        }
+    }
+
     private static void UrlNavigation(OsuDiscussionSnapshot source)
     {
         const string url = "https://osu.ppy.sh/beatmapsets/2562136/discussion/-/generalAll/total";
@@ -172,6 +251,8 @@ internal static class DiscussionTests
             var segments = ui.Canvas.Texts.Where(t => t.Size == 12 && t.Color == 0xA6C5D0
                 && (canvas ? t.X >= quote.X && t.X < quote.Right && t.Y >= quote.Y && t.Y < quote.Bottom - 20 : t.X > panel.X)).ToArray();
             Check(segments.Length >= 4, "both main post and reply URLs wrap into clickable segments");
+            var hovered = segments[0]; ui.View.PointerMove(hovered.X + 2, hovered.Y + 5, false, false); ui.Paint();
+            Check(ui.Canvas.Lines.Any(line => Math.Abs(line.X1 - hovered.X) < .1 && Math.Abs(line.Y1 - hovered.Y - 15) < .1), "wrapped external URL segments underline on hover");
             foreach (var segment in segments) ui.Click(segment.X + 2, segment.Y + 5);
             Check(opened.Count == segments.Length && opened.All(value => value == url), "every wrapped segment opens the complete URL in panel and canvas");
             opened.Clear();

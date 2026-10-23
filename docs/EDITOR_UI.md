@@ -19,15 +19,23 @@ Timeline defaults to Timeline and offers Timeline / Last update. Each category
 retains its own choice. Collapse individual reply groups or use Collapse all /
 Expand all for the current category. Scroll position is retained per
 category and difficulty. The refresh button reloads the public snapshot;
-permalink opens the corresponding post on osu!. Each post footer places permalink
+permalink copies the corresponding post URL. Hovering it explains the clipboard
+action; clicking shows a brief copied confirmation. Each post footer places permalink
 on the left and a smaller, muted relative age on the right, updated every minute.
 
 Click a timestamped thread card to seek to its anchor. Timestamps in both posts
-and replies seek to their own references without selecting or changing objects.
+and replies seek to their own references. References with object numbers also select
+the matching editable objects, replacing the previous object selection. Matching
+uses the timestamp and current combo numbers; stale or ambiguous references still
+seek while preserving selection. Time-only links and card clicks preserve selection.
 A timestamp inside a review's embedded discussion switches to its
 referenced difficulty when that difficulty is loaded in the project.
 HTTP/HTTPS addresses in posts and replies are clickable in both the panel and
 canvas annotations. Wrapped segments open the complete address in the browser.
+Author names open the corresponding osu! user profile. External links underline
+on hover. Drag across body text to select it and use Ctrl+C to copy; Ctrl+A selects
+the focused discussion area's body text, including replies. Text selection keeps logical line
+breaks across visual wrapping and does not follow links or edit beatmap objects.
 
 Posts support the discussion toolbar's common Markdown formats: bold, italic,
 inline code, named links, images, blockquotes and fenced code blocks. Simple
@@ -35,9 +43,12 @@ headings, lists and strikethrough are also displayed. Code keeps its literal tex
 unsupported syntax remains readable text. HTML is not executed.
 
 Images use their Markdown address, including extensionless image-host URLs. PNG,
-JPEG and GIF (first frame) are fitted proportionally to the body width and open
-the original when clicked. They load in the background, with two concurrent
-downloads, a ten-second deadline and an 8 MiB file limit. Saved images in
+JPEG and GIF (first frame) are fitted proportionally to the body width. Clicking an
+image opens in a compact centered preview at 100% source size; Ctrl+wheel zooms
+around the pointer and dragging pans the enlarged image. Clicking anywhere or
+pressing Escape closes it. A drag pans without dismissing the preview. Preview
+input does not reach the beatmap editor. Images load in the background,
+with two concurrent downloads, a ten-second deadline and an 8 MiB file limit. Saved images in
 `Cache/DiscussionImages` remain available offline; failed images retain a clickable
 address and can be retried with refresh. Image discovery and cache I/O also run
 outside the UI thread. Image dimensions are limited to 4096 per side and 8 megapixels.

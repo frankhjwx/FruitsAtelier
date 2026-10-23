@@ -43,6 +43,13 @@ internal static class DiscussionRenderCheck
                     editor.PointerMove(size.Item1 - 600, handle.Y + 20, false, false);
                     editor.PointerUp(size.Item1 - 600, handle.Y + 20, 0); Paint();
                     editor.Wheel(list.X + 40, list.Y + 40, 12000, false); Paint("wide");
+                    if (dpi == 96)
+                    {
+                        var reference = editor.DiscussionReferenceHits.First(hit => hit.Time == 1000);
+                        editor.PointerDown(reference.Bounds.X + 4, reference.Bounds.Y + 5, 0, false, false);
+                        editor.PointerUp(reference.Bounds.X + 4, reference.Bounds.Y + 5, 0); Paint("object-reference-selection");
+                        if (editor.SelectedObjectIds.Count != 3 || editor.IsDirty) throw new InvalidOperationException("Native discussion reference object selection failed.");
+                    }
                 }
                 var zeroThread = snapshot.Discussions.First(d => d.Id == 3) with
                 {
@@ -107,6 +114,27 @@ internal static class DiscussionRenderCheck
                     editor.DiscussionLoader = (_, _) => Task.FromResult(images); editor.LoadDocument(map); editor.ShowDiscussionPanel();
                     watch.Restart(); do { Paint(); Thread.Sleep(1); } while ((editor.DiscussionSnapshot != images || editor.DiscussionImagesLoading) && watch.Elapsed.TotalSeconds < 5);
                     Select(DiscussionCategory.Timeline); Paint("markdown");
+                    var caption = editor.DiscussionRenderedTextBounds("Bold");
+                    editor.PointerDown(caption.X + 1, caption.Y + 5, 0, false, false);
+                    editor.PointerMove(caption.Right - 1, caption.Y + 5, false, false);
+                    editor.PointerUp(caption.Right - 1, caption.Y + 5, 0); Paint("text-selection");
+                    if (editor.SelectedDiscussionText.Length == 0) throw new InvalidOperationException("Native discussion text selection failed.");
+                    editor.KeyDown(27, false, false); Paint();
+                    var namedLink = editor.DiscussionRenderedTextBounds("osu! link");
+                    float footerX = namedLink.X + 3, footerY = namedLink.Y + 30;
+                    editor.PointerMove(footerX, footerY, false, false); Paint("permalink-hover");
+                    string? copied = null; editor.RequestCopyText = value => copied = value;
+                    editor.PointerDown(footerX, footerY, 0, false, false); editor.PointerUp(footerX, footerY, 0); Paint("permalink-copied");
+                    if (copied is null) throw new InvalidOperationException("Native discussion permalink copy failed.");
+                    editor.PointerDown(caption.X + 5, caption.Y - 15, 0, false, false);
+                    editor.PointerUp(caption.X + 5, caption.Y - 15, 0); Paint("image-preview");
+                    if (!editor.DiscussionImageVisible) throw new InvalidOperationException("Native discussion image preview failed.");
+                    if (editor.DiscussionImageZoom != 1) throw new InvalidOperationException("Native discussion image preview did not open at 100 percent.");
+                    var imageViewport = editor.DiscussionImageViewport;
+                    editor.Wheel(imageViewport.X + imageViewport.Width / 2, imageViewport.Y + imageViewport.Height / 2, 240, true); Paint("image-zoom");
+                    if (editor.DiscussionImageZoom <= 1) throw new InvalidOperationException("Native discussion image zoom failed.");
+                    editor.PointerDown(8, 8, 0, false, false); editor.PointerUp(8, 8, 0); Paint();
+                    if (editor.DiscussionImageVisible) throw new InvalidOperationException("Native image preview did not dismiss on a backdrop click.");
                 }
                 editor.StopDiscussions();
                 Console.WriteLine($"PASS discussions native {locale} {size.Item1}x{size.Item2} {dpi} DPI");

@@ -1855,5 +1855,7 @@
   "discussion.ageYearShort": "{0}年前",
   "discussion.cachedOffline": "显示已保存的讨论，可点击刷新重试。",
   "discussion.cachedUpdating": "正在更新，当前显示已保存的讨论…",
-  "discussion.sortCreated": "创建时间"
+  "discussion.sortCreated": "创建时间",
+  "discussion.copyLinkHint": "点击复制到剪贴板",
+  "discussion.linkCopied": "已复制到剪贴板！"
 }

@@ -20,6 +20,9 @@ public sealed partial class EditorView
     private long discussionSetId, discussionBeatmapId;
     private string? discussionError;
     private DateTimeOffset discussionRelativeRefresh;
+    private (long Post, bool Canvas)? discussionCopiedLink;
+    private DateTimeOffset discussionCopiedUntil;
+    private Rect discussionCopyFeedbackBounds, discussionCopyHoverBounds;
     private readonly Dictionary<long, string> discussionAvatars = [];
     private System.Collections.Concurrent.ConcurrentQueue<(long User, string Path)> discussionAvatarUpdates = new();
     private readonly Dictionary<(DiscussionCategory Category, long Beatmap), float> discussionScrolls = [];
@@ -45,6 +48,7 @@ public sealed partial class EditorView
         internal readonly List<(float Top, float Bottom, long Id)> Cards = [];
         internal readonly List<DiscussionPostBlock> PostBlocks = [];
         internal float[] LineEnds = [];
+        internal string SelectionText = "";
         internal float ContentHeight;
     }
     private readonly DiscussionLayout discussionPanelLayout = new();
@@ -59,11 +63,11 @@ public sealed partial class EditorView
     private (string Language, string Difficulty)? discussionTabLabelKey;
     private long? discussionFocused;
     private long? discussionRevealThread;
-    private sealed record DiscussionRun(float X, float Width, string Text, uint Colour, double? Time = null, long Discussion = 0, string? Url = null, DiscussionTextStyle Style = DiscussionTextStyle.None);
+    private sealed record DiscussionRun(float X, float Width, string Text, uint Colour, double? Time = null, long Discussion = 0, string? Url = null, DiscussionTextStyle Style = DiscussionTextStyle.None, IReadOnlyList<int>? Numbers = null, int TextStart = -1);
     private sealed record DiscussionLine(float Top, float Height, float Indent, IReadOnlyList<DiscussionRun> Runs,
         long? User = null, long? OwnerBeatmap = null, long? Toggle = null, float AuthorWidth = 0,
         long? Permalink = null, long Thread = 0, DateTimeOffset? PostedAt = null, long? Header = null, string? Icon = null, bool Reply = false,
-        DiscussionImage? Image = null, string? ImageUrl = null, bool Quoted = false, bool CodeBlock = false);
+        DiscussionImage? Image = null, string? ImageUrl = null, bool Quoted = false, bool CodeBlock = false, double? CardTime = null);
     private sealed record DiscussionPostBlock(float Top, float Bottom, float Indent, float Divider, uint Colour, bool Reply);
     private sealed record DiscussionAnchor(double Time, long Discussion, long User, string Message, IReadOnlyList<int> Numbers);
     internal Rect DiscussionBounds => discussionBounds;
@@ -84,7 +88,8 @@ public sealed partial class EditorView
     internal OsuDiscussionSnapshot? DiscussionSnapshot => discussionSnapshot;
     internal bool DiscussionLoading => discussionLoad is not null;
     public bool DiscussionNeedsRedraw => !LibraryVisible && !PatternEditingActive
-        && (!discussionAvatarUpdates.IsEmpty || !discussionImageUpdates.IsEmpty || discussionImageLoad is { IsCompleted: true } || discussionLoad is { IsCompleted: true } || discussionAvatarLoad is { IsCompleted: true } || discussionCacheLoad is { IsCompleted: true }
+        && (discussionCopiedLink is not null && timeProvider.GetUtcNow() >= discussionCopiedUntil
+            || !discussionAvatarUpdates.IsEmpty || !discussionImageUpdates.IsEmpty || discussionImageLoad is { IsCompleted: true } || discussionLoad is { IsCompleted: true } || discussionAvatarLoad is { IsCompleted: true } || discussionCacheLoad is { IsCompleted: true }
             || PanelVisible(DockPanel.Discussion) && discussionSnapshot is not null && timeProvider.GetUtcNow() >= discussionRelativeRefresh);
 
     public void ShowDiscussionPanel()
@@ -103,6 +108,9 @@ public sealed partial class EditorView
 
     private void PumpDiscussions()
     {
+        discussionCopyFeedbackBounds = discussionCopyHoverBounds = default;
+        discussionTextHits.Clear();
+        if (timeProvider.GetUtcNow() >= discussionCopiedUntil) discussionCopiedLink = null;
         if (LibraryVisible || !HasEditorProject || PatternEditingActive) return;
         if (timeProvider.GetUtcNow() >= discussionRelativeRefresh) discussionRelativeRefresh = timeProvider.GetUtcNow().AddMinutes(1);
         long set = DiscussionOnlineId(Document, "BeatmapSetID"), beatmap = DiscussionOnlineId(Document, "BeatmapID");
@@ -211,6 +219,10 @@ public sealed partial class EditorView
     {
         CancelDiscussionLoads(); discussionSnapshot = null; discussionUsingCache = false;
         discussionImages.Clear();
+        CloseDiscussionImage();
+        ClearDiscussionTextSelection();
+        discussionTextHits.Clear();
+        discussionCopiedLink = null;
         discussionSetId = discussionBeatmapId = 0; discussionError = null; discussionAvatars.Clear();
         discussionRoots = [[], [], [], []]; discussionTabLabelKey = null;
         discussionScrolls.Clear(); discussionQuoteScrolls.Clear(); discussionCollapsed.Clear(); discussionScroll = discussionTabScroll = 0;
@@ -221,7 +233,7 @@ public sealed partial class EditorView
     }
 
     private void InvalidateDiscussionLayout()
-    { discussionLayoutKey = null; discussionLines.Clear(); discussionCards.Clear(); discussionPostBlocks.Clear(); discussionContentHeight = 0; }
+    { ClearDiscussionTextSelection(); discussionLayoutKey = null; discussionLines.Clear(); discussionCards.Clear(); discussionPostBlocks.Clear(); discussionContentHeight = 0; }
 
     private void RefreshDiscussionAnchors()
     {
@@ -374,9 +386,19 @@ public sealed partial class EditorView
                 var imageBounds = new Rect(left, y, imageWidth, line.Height - 6);
                 if (!c.Image(image.Path, imageBounds)) c.Text(imageUrl, left, y + 2, 12, 0xA6C5D0, imageWidth);
                 var imageHit = DiscussionIntersection(imageBounds, viewport);
-                if (imageHit.Height > 0) Register(imageHit, () => RequestVisitOsuWeb?.Invoke(imageUrl));
+                if (imageHit.Height > 0) Register(imageHit, () => OpenDiscussionImage(image));
             }
-            if (line.User is { } userId) DrawDiscussionAuthor(c, line, left, y, userId, line.AuthorWidth);
+            if (line.User is { } userId)
+            {
+                DrawDiscussionAuthor(c, line, left, y, userId, line.AuthorWidth);
+                if (discussionSnapshot!.Users.TryGetValue(userId, out var author))
+                {
+                    float nameWidth = Math.Min(Math.Max(10, line.AuthorWidth - 37), c.MeasureText(author.Name, 12, true));
+                    var nameHit = DiscussionIntersection(new(left + 37, y, nameWidth, 19), viewport);
+                    if (DiscussionLinkHovered(nameHit)) c.Line(left + 37, y + 17, left + 37 + nameWidth, y + 17, Foreground);
+                    if (nameHit.Height > 0) Register(nameHit, () => RequestVisitOsuWeb?.Invoke($"https://osu.ppy.sh/users/{userId}"));
+                }
+            }
             if (line.Reply) DiscussionIcon(c, "reply", new(left - 12, y + 8, 9, 9), Muted);
             if (line.Icon is { } symbol) DiscussionIcon(c, symbol, new(left - 17, y + 3, 12, 12), line.Runs.FirstOrDefault()?.Colour ?? Muted);
             if (line.Header is { } headerId)
@@ -402,15 +424,30 @@ public sealed partial class EditorView
                 var r = new Rect(left + run.X, y, run.Width, line.Height);
                 if (run.Time is not null) c.Fill(r, 0x28413F, 3);
                 else if (run.Style.HasFlag(DiscussionTextStyle.Code)) c.Fill(r, 0x20262D, 2);
+                if (run.TextStart >= 0)
+                {
+                    var textBounds = new Rect(r.X + (run.Time is null ? 0 : 3), r.Y, Math.Max(0, run.Width - (run.Time is null ? 0 : 6)), r.Height);
+                    var textHit = DiscussionIntersection(textBounds, viewport);
+                    if (textHit.Width > 0 && textHit.Height > 0)
+                    {
+                        Action? click = run.Time is { } targetTime ? () => JumpToDiscussionTime(targetTime, run.Discussion, run.Numbers)
+                            : run.Url is { } targetUrl ? () => RequestVisitOsuWeb?.Invoke(targetUrl)
+                            : canvasQuote ? () => OpenDiscussion(line.Thread)
+                            : line.CardTime is { } anchorTime
+                                ? () => JumpToDiscussionTime(anchorTime, line.Thread) : null;
+                        discussionTextHits.Add(new(textHit, textBounds, layout, run, c, canvasQuote, click));
+                        DrawDiscussionTextSelection(c, layout, run, textBounds);
+                    }
+                }
                 c.StyledText(run.Text, r.X + (run.Time is null ? 0 : 3), r.Y + 2, 12, run.Colour, r.Width + 2,
                     run.Style.HasFlag(DiscussionTextStyle.Bold), run.Style.HasFlag(DiscussionTextStyle.Italic));
-                if (run.Url is not null) c.Line(r.X, r.Y + 17, r.Right, r.Y + 17, run.Colour, 1, .55f);
                 if (run.Style.HasFlag(DiscussionTextStyle.Strike)) c.Line(r.X, r.Y + 10, r.Right, r.Y + 10, run.Colour);
                 var clipped = DiscussionIntersection(r, viewport);
+                if (run.Url is not null && DiscussionLinkHovered(clipped)) c.Line(r.X, r.Y + 17, r.Right, r.Y + 17, run.Colour);
                 if (clipped.Height > 0 && run.Time is { } time)
                 {
                     if (!canvasQuote) discussionReferenceHits.Add((clipped, time, run.Discussion));
-                    Register(clipped, () => JumpToDiscussionTime(time, run.Discussion));
+                    Register(clipped, () => JumpToDiscussionTime(time, run.Discussion, run.Numbers));
                 }
                 if (clipped.Height > 0 && run.Url is { } url) Register(clipped, () => RequestVisitOsuWeb?.Invoke(url));
             }
@@ -420,7 +457,13 @@ public sealed partial class EditorView
                 string label = L.Get("discussion.permalink"); float labelWidth = c.MeasureText(label, 10);
                 c.Text(label, left, y + 2, 10, 0xA6C5D0, Math.Min(footerWidth, labelWidth + 1));
                 var link = DiscussionIntersection(new(left, y, Math.Min(footerWidth, labelWidth + 4), line.Height), viewport);
-                if (link.Height > 0) Register(link, () => RequestVisitOsuWeb?.Invoke($"https://osu.ppy.sh/beatmapsets/{discussionSetId}/discussion#/{line.Thread}/{postId}"));
+                if (link.Height > 0)
+                {
+                    Register(link, () => CopyDiscussionPermalink(postId, line.Thread, canvasQuote));
+                    if (DiscussionLinkHovered(link))
+                    { c.Line(left, y + 15, left + labelWidth, y + 15, 0xA6C5D0); discussionCopyHoverBounds = link; }
+                    if (discussionCopiedLink == (postId, canvasQuote)) discussionCopyFeedbackBounds = link;
+                }
                 if (line.PostedAt is { } date)
                 {
                     string age = DiscussionRelativeAge(date, timeProvider.GetUtcNow());
@@ -565,6 +608,8 @@ public sealed partial class EditorView
     {
         if (target is null) DiscussionLayoutBuilds++;
         var layout = target ?? discussionPanelLayout;
+        if (ReferenceEquals(discussionSelectedLayout, layout)) ClearDiscussionTextSelection();
+        var selectionText = new System.Text.StringBuilder();
         var lines = layout.Lines; var cards = layout.Cards; var postBlocks = layout.PostBlocks;
         lines.Clear(); cards.Clear(); postBlocks.Clear(); float y = 8;
         var snapshot = discussionSnapshot!; var threads = selectedThreads ?? discussionRoots[(int)discussionCategory];
@@ -578,6 +623,7 @@ public sealed partial class EditorView
         float end = 0; layout.LineEnds = lines.Select(line => end = Math.Max(end, line.Top + line.Height)).ToArray();
         postBlocks.Sort((a, b) => a.Top.CompareTo(b.Top));
         layout.ContentHeight = y + 8;
+        layout.SelectionText = selectionText.ToString();
 
         void Thread(BeatmapDiscussion thread, int depth)
         {
@@ -655,6 +701,7 @@ public sealed partial class EditorView
             float fullWidth = Math.Max(12, available - indent), width = Math.Max(12, available - indent - firstLineReserve), x = 0;
             var runs = new List<DiscussionRun>();
             DiscussionTextStyle style = DiscussionTextStyle.None;
+            int textPosition = selectionText.Length;
             bool quoted = false, codeBlock = false;
             float baseIndent = indent;
             foreach (var paragraph in DiscussionMarkdown.Parse(text))
@@ -666,6 +713,7 @@ public sealed partial class EditorView
                 int firstParagraphLine = lines.Count;
                 foreach (var span in paragraph.Spans)
                 {
+                    textPosition = selectionText.Length; selectionText.Append(span.Image ? span.Url : span.Text);
                     style = span.Style;
                     if (span.Image && span.Url is { } imageUrl)
                     {
@@ -682,28 +730,31 @@ public sealed partial class EditorView
                     }
                     if (span.Url is { } url) { Link(span.Text, null, url); continue; }
                     if (style.HasFlag(DiscussionTextStyle.Code)) { Plain(span.Text); continue; }
-                    var references = DiscussionText.References(span.Text).Select(r => (r.Start, r.Length, Time: (double?)r.TimeMs, Url: (string?)null))
-                        .Concat(DiscussionText.Urls(span.Text).Select(r => (r.Start, r.Length, Time: (double?)null, Url: (string?)r.Url))).OrderBy(r => r.Start);
+                    var references = DiscussionText.References(span.Text).Select(r => (r.Start, r.Length, Time: (double?)r.TimeMs, Url: (string?)null, Numbers: (IReadOnlyList<int>?)r.Numbers))
+                        .Concat(DiscussionText.Urls(span.Text).Select(r => (r.Start, r.Length, Time: (double?)null, Url: (string?)r.Url, Numbers: (IReadOnlyList<int>?)null))).OrderBy(r => r.Start);
                     int position = 0;
                     foreach (var reference in references)
                     {
                         Plain(span.Text[position..reference.Start]);
-                        Link(span.Text.Substring(reference.Start, reference.Length), reference.Time, reference.Url);
+                        Link(span.Text.Substring(reference.Start, reference.Length), reference.Time, reference.Url, reference.Numbers);
                         position = reference.Start + reference.Length;
                     }
                     Plain(span.Text[position..]);
                 }
                 if (runs.Count > 0 || lines.Count == firstParagraphLine) Flush();
+                selectionText.Append('\n');
             }
+            selectionText.Append('\n');
 
             float Measure(string value) => c.MeasureStyledText(value, 12, style.HasFlag(DiscussionTextStyle.Bold), style.HasFlag(DiscussionTextStyle.Italic));
             void Flush()
-            { lines.Add(new(y, 20, indent, runs.ToArray(), Icon: decorated ? null : symbol, Quoted: quoted, CodeBlock: codeBlock)); decorated = true; runs.Clear(); x = 0; width = fullWidth; y += 20; }
+            { lines.Add(new(y, 20, indent, runs.ToArray(), Thread: owner, Icon: decorated ? null : symbol, Quoted: quoted, CodeBlock: codeBlock, CardTime: byId.GetValueOrDefault(owner)?.Timestamp)); decorated = true; runs.Clear(); x = 0; width = fullWidth; y += 20; }
             void Plain(string value)
             {
                 foreach (System.Text.RegularExpressions.Match token in System.Text.RegularExpressions.Regex.Matches(value.Replace("\r", ""), @"\n|[^\S\n]+|[^\s]+"))
                 {
                     string word = token.Value;
+                    int wordStart = textPosition; textPosition += word.Length;
                     if (word == "\n") { Flush(); continue; }
                     bool space = char.IsWhiteSpace(word[0]);
                     float w = Measure(word);
@@ -711,37 +762,40 @@ public sealed partial class EditorView
                     if (w <= width)
                     {
                         if (x + w > width && x > 0) Flush();
-                        if (!space || x > 0 || style.HasFlag(DiscussionTextStyle.Code)) { runs.Add(new(x, w, word, colour, Style: style)); x += w; }
+                        if (!space || x > 0 || style.HasFlag(DiscussionTextStyle.Code)) { runs.Add(new(x, w, word, colour, Style: style, TextStart: wordStart)); x += w; }
                         continue;
                     }
                     // CJK paragraphs and long unbroken tokens wrap at grapheme boundaries.
-                    string chunk = ""; float chunkWidth = 0;
+                    string chunk = ""; float chunkWidth = 0; int chunkStart = wordStart;
                     foreach (int offset in StringInfo.ParseCombiningCharacters(word))
                     {
                         string glyph = StringInfo.GetNextTextElement(word, offset); float g = Measure(glyph);
                         if (x + chunkWidth + g > width && x + chunkWidth > 0) { Commit(); Flush(); }
+                        if (chunk.Length == 0) chunkStart = wordStart + offset;
                         chunk += glyph; chunkWidth += g;
                     }
                     Commit();
-                    void Commit() { if (chunk.Length == 0) return; runs.Add(new(x, chunkWidth, chunk, colour, Style: style)); x += chunkWidth; chunk = ""; chunkWidth = 0; }
+                    void Commit() { if (chunk.Length == 0) return; runs.Add(new(x, chunkWidth, chunk, colour, Style: style, TextStart: chunkStart)); x += chunkWidth; chunk = ""; chunkWidth = 0; }
                 }
             }
-            void Link(string value, double? time, string? url)
+            void Link(string value, double? time, string? url, IReadOnlyList<int>? numbers = null)
             {
+                int linkStart = textPosition; textPosition += value.Length;
                 float padding = time is null ? 0 : 6;
                 uint linkColour = url is null ? Accent : 0xA6C5D0;
                 float w = Measure(value) + padding;
                 if (x + w > width && x > 0) Flush();
-                if (w <= width) { runs.Add(new(x, w, value, linkColour, time, owner, url, style)); x += w + (time is null ? 0 : 3); return; }
+                if (w <= width) { runs.Add(new(x, w, value, linkColour, time, owner, url, style, numbers, linkStart)); x += w + (time is null ? 0 : 3); return; }
                 // Wrapped link segments retain the complete navigation target.
-                string chunk = ""; float size = padding;
+                string chunk = ""; float size = padding; int chunkStart = linkStart;
                 foreach (int offset in StringInfo.ParseCombiningCharacters(value))
                 {
                     string glyph = StringInfo.GetNextTextElement(value, offset); float g = Measure(glyph);
-                    if (size + g > width && chunk.Length > 0) { runs.Add(new(0, size, chunk, linkColour, time, owner, url, style)); Flush(); chunk = ""; size = padding; }
+                    if (size + g > width && chunk.Length > 0) { runs.Add(new(0, size, chunk, linkColour, time, owner, url, style, numbers, chunkStart)); Flush(); chunk = ""; size = padding; }
+                    if (chunk.Length == 0) chunkStart = linkStart + offset;
                     chunk += glyph; size += g;
                 }
-                if (chunk.Length > 0) { runs.Add(new(0, size, chunk, linkColour, time, owner, url, style)); x = size; }
+                if (chunk.Length > 0) { runs.Add(new(0, size, chunk, linkColour, time, owner, url, style, numbers, chunkStart)); x = size; }
             }
         }
     }
@@ -772,6 +826,7 @@ public sealed partial class EditorView
     private bool DiscussionPointerDown(float x, float y, int button)
     {
         if (button != 0 || !DockContentInputAvailable || menu >= 0 || contextItems.Count > 0) return false;
+        if (BeginDiscussionTextSelection(x, y)) return true;
         if (DiscussionQuotePointerDown(x, y)) return true;
         foreach (var marker in discussionMarkerHits)
             if (marker.Bounds.Contains(x, y)) { OpenDiscussion(marker.Discussion); return true; }
@@ -786,7 +841,7 @@ public sealed partial class EditorView
             * Math.Max(0, discussionContentHeight - discussionListBounds.Height);
     }
 
-    private void JumpToDiscussionTime(double time, long id)
+    private void JumpToDiscussionTime(double time, long id, IReadOnlyList<int>? numbers = null)
     {
         if (history.HasActiveTransaction || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
         var thread = discussionSnapshot?.Discussions.FirstOrDefault(d => d.Id == id);
@@ -798,6 +853,25 @@ public sealed partial class EditorView
             PumpDiscussions();
         }
         discussionFocused = thread?.ParentId ?? id; SeekTo(time);
+        if (numbers is { Count: > 0 }) SelectDiscussionObjects(time, numbers);
+    }
+
+    private void SelectDiscussionObjects(double time, IReadOnlyList<int> numbers)
+    {
+        EnsureConversion(); RefreshTimelineSources();
+        int first = -1;
+        for (int i = 0; i < timelineMarkers.Length && timelineMarkers[i].Start <= time + 1; i++)
+            if (Math.Abs(timelineMarkers[i].Start - time) <= 1
+                && timelineEventNumbers.GetValueOrDefault((timelineMarkers[i].Id, timelineMarkers[i].EventIndex)) == numbers[0])
+            { if (first >= 0) return; first = i; }
+        if (first < 0) return;
+        var ids = new List<Guid> { timelineMarkers[first].Id }; int next = 1;
+        for (int i = first + 1; i < timelineMarkers.Length && next < numbers.Count; i++)
+            if (timelineEventNumbers.GetValueOrDefault((timelineMarkers[i].Id, timelineMarkers[i].EventIndex)) == numbers[next])
+            { ids.Add(timelineMarkers[i].Id); next++; }
+        if (next != numbers.Count) return;
+        tool = Tool.Select; SelectObjects(ids);
+        StatusMessage = L.Get("editor.status.objectsSelected", objectSelection.Count);
     }
 
     private void OpenDiscussion(long id)

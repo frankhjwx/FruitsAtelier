@@ -1855,5 +1855,7 @@
   "discussion.ageYearShort": "{0} jr",
   "discussion.cachedOffline": "Showing saved discussions. Refresh to try again.",
   "discussion.cachedUpdating": "Showing saved discussions; updating…",
-  "discussion.sortCreated": "Aanmaaktijd"
+  "discussion.sortCreated": "Aanmaaktijd",
+  "discussion.copyLinkHint": "click to copy to clipboard",
+  "discussion.linkCopied": "copied to clipboard!"
 }

@@ -1855,5 +1855,7 @@
   "discussion.ageYearShort": "{0}년 전",
   "discussion.cachedOffline": "Showing saved discussions. Refresh to try again.",
   "discussion.cachedUpdating": "Showing saved discussions; updating…",
-  "discussion.sortCreated": "작성 시간"
+  "discussion.sortCreated": "작성 시간",
+  "discussion.copyLinkHint": "click to copy to clipboard",
+  "discussion.linkCopied": "copied to clipboard!"
 }
