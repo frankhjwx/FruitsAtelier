@@ -56,7 +56,7 @@ public sealed partial class EditorView
     }
 
     public bool PatternGalleryWantsCapture => galleryPressedId != Guid.Empty || galleryPreviewPanning;
-    public bool PatternGalleryNeedsRedraw => PatternEditingNeedsRedraw || PatternSourceNeedsRedraw || galleryIoTask is not null || galleryPreviewTask is not null
+    public bool PatternGalleryNeedsRedraw => GalleryTagAutosavePending || PatternEditingNeedsRedraw || PatternSourceNeedsRedraw || galleryIoTask is not null || galleryPreviewTask is not null
         || galleryPlacementTask is not null || galleryDropTask is not null || galleryDragging && !galleryDropChoosing || galleryPendingDirectory is not null
         || PatternGalleryAvailable && (GalleryFullPreviewMissing || galleryVisibleIds.Any(GalleryPreviewMissing));
     private bool GalleryPreviewMissing(Guid id) => id != Guid.Empty && !galleryPreviews.ContainsKey(id) && !galleryPreviewErrors.ContainsKey(id);
@@ -81,10 +81,11 @@ public sealed partial class EditorView
 
     public void ConfigurePatternGallery(string directory)
     {
-        if (PatternEditingActive || PatternEditingBusy || galleryIoTask is not null)
-        { galleryPendingDirectory = directory; return; }
+        if (PatternEditingActive || PatternEditingBusy || galleryIoTask is not null || GalleryTagAutosavePending)
+        { FlushGalleryTagAutosave(); galleryPendingDirectory = directory; return; }
         galleryPendingDirectory = null;
         galleryTagLayouts.Clear();
+        galleryTagEdits.Clear(); galleryCurrentTagEdit = null;
         CloseGalleryTags();
         galleryGeneration++;
         galleryStore = new PatternGalleryStore(directory);
@@ -195,11 +196,13 @@ public sealed partial class EditorView
                     gallerySelection.IntersectWith(galleryPatterns.Select(p => p.Id));
                     if (!galleryPatterns.Any(p => p.Id == galleryPopupId)) galleryPopupId = Guid.Empty;
                     if (result.Notice.Length > 0) StatusMessage = result.Notice;
+                    CompleteGalleryTagAutosave(true);
                 }
             }
             catch (Exception error) when (error is not OutOfMemoryException)
-            { galleryLoaded = true; StatusMessage = L.Get("gallery.failed", error.Message); }
+            { galleryLoaded = true; StatusMessage = L.Get("gallery.failed", error.Message); CompleteGalleryTagAutosave(false, StatusMessage); }
         }
+        PumpGalleryTagAutosave();
         if (galleryLoadRequested && !galleryLoaded && galleryIoTask is null && !PatternNameVisible && galleryStore is { } store)
             StartGalleryIo(() => ReloadGallery(store, ""));
         if (galleryFullPreviewId != galleryPopupId || !PatternGalleryAvailable)

@@ -141,9 +141,11 @@ internal static class PatternGalleryRenderCheck
                 editor.PointerDoubleClick(shortCard.X + 20, shortCard.Y + 20, false, false); Paint("details");
                 if (editor.PatternEditingActive) throw new InvalidOperationException("Double click entered pattern editing.");
                 Click(editor.PatternGalleryEditTagsBounds); Paint("tags");
-                if (!editor.GalleryTagsVisible) throw new InvalidOperationException("Edit Tags did not open the tag dialog.");
+                if (!editor.GalleryTagsVisible || editor.GalleryTagSaveBounds.Width > 0)
+                    throw new InvalidOperationException("Edit Tags did not open automatic tag editing.");
                 Click(editor.GalleryTagHueBounds); Paint("tag-colour");
                 editor.KeyDown(27, false, false); Paint();
+                Wait(() => !editor.PatternGalleryNeedsRedraw, "auto-save tag colour");
                 Click(editor.PatternGalleryEditPatternBounds); Paint("edit");
                 if (!editor.PatternEditingActive) throw new InvalidOperationException("Edit Pattern did not enter pattern editing.");
                 editor.DiscardPatternEditing(); Paint("returned");
@@ -249,6 +251,7 @@ internal static class PatternGalleryRenderCheck
         }
         patterns[1] = patterns[1].WithTags([new("Flow", 0x58D8C1), new("Jump", 0xFFB45C), new("Long pattern", 0x65A9FF),
             new("Repeated jump", 0xB58DFF), new("Wide jump", 0xED8DBB)]);
+        patterns[2] = patterns[2].WithTags(patterns[2].Tags.Append(new("Stream", 0x83CE77)));
         return patterns;
     }
 }

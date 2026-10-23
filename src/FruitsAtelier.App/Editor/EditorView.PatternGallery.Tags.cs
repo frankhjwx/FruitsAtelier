@@ -15,17 +15,13 @@ public sealed partial class EditorView
     internal Rect GalleryTagNameBounds => galleryTagNameBounds;
     internal Rect GalleryNewTagBounds { get; private set; }
     internal Rect GalleryTagListBounds { get; private set; }
-    private IReadOnlyList<PatternTag> GalleryDialogTags => galleryTagsPattern == Guid.Empty ? galleryTags
-        : galleryPatterns.FirstOrDefault(p => p.Id == galleryTagsPattern)?.Tags ?? [];
+    private IReadOnlyList<PatternTag> GalleryDialogTags => galleryTags;
     private PatternTag? GalleryExistingTagDraft => galleryTagCreating && galleryTagsPattern != Guid.Empty
         ? galleryTags.FirstOrDefault(t => string.Equals(t.Name, galleryTagName.Trim(), StringComparison.OrdinalIgnoreCase)) : null;
     internal Rect GalleryTagSaveBounds { get; private set; }
     internal Rect GalleryTagDeleteBounds { get; private set; }
     internal Rect GalleryTagPreviousBounds { get; private set; }
     internal Rect GalleryTagNextBounds { get; private set; }
-    private bool GalleryTagDraftChanged => galleryTagCreating || galleryTags.FirstOrDefault(t => t.Name == galleryTagSelected) is { } tag
-        && (galleryTagName != tag.Name || !uint.TryParse(galleryTagHex.Trim().TrimStart('#'), NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture, out uint colour) || colour != tag.Colour);
     private bool GalleryTagDraftValid => !string.IsNullOrWhiteSpace(galleryTagName) && galleryTagHex.Trim().TrimStart('#') is { Length: 6 } hex
         && uint.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out _);
     private bool GalleryTagTextFocused => GalleryTagsVisible && textEditor.Field is "gallery:tag-name" or "gallery:tag-hex";
@@ -47,14 +43,20 @@ public sealed partial class EditorView
 
     private void SelectGalleryTag(PatternTag? tag)
     {
-        galleryTagSelected = tag?.Name ?? ""; galleryTagName = galleryTagSelected;
+        FlushGalleryTagAutosave();
+        if (galleryCurrentTagEdit is { Pending: false } previous && galleryTagSaving?.Edit != previous) galleryTagEdits.Remove(previous);
+        galleryCurrentTagEdit = tag is null ? null : galleryTagEdits.FirstOrDefault(e => e.Saved.Name == tag.Name);
+        if (tag is not null && galleryCurrentTagEdit is null) { galleryCurrentTagEdit = new(tag); galleryTagEdits.Add(galleryCurrentTagEdit); }
+        galleryTagSelected = galleryCurrentTagEdit?.Saved.Name ?? "";
+        galleryTagName = galleryCurrentTagEdit?.Desired.Name ?? "";
         galleryTagCreating = tag is null; galleryTagError = ""; textEditor.Field = "";
-        (galleryTagHue, galleryTagSaturation, galleryTagValue) = ColourToHsv(tag?.Colour ?? 0x58D8C1, 0);
+        (galleryTagHue, galleryTagSaturation, galleryTagValue) = ColourToHsv(galleryCurrentTagEdit?.Desired.Colour ?? 0x58D8C1, 0);
         galleryTagHex = $"#{GalleryTagColour:X6}";
     }
 
     private void CloseGalleryTags()
     {
+        FlushGalleryTagAutosave();
         GalleryTagsVisible = false; galleryTagDrag = 0; textEditor.Field = "";
     }
 
@@ -85,10 +87,23 @@ public sealed partial class EditorView
         float top = list.Y + 6;
         foreach (var tag in listTags.Skip(galleryTagPage * rows).Take(rows))
         {
+            bool assigned = pattern?.Tags.Any(t => string.Equals(t.Name, tag.Name, StringComparison.OrdinalIgnoreCase)) == true;
+            var display = GalleryTagDisplay(tag);
             var row = new Rect(left + 5, top, listWidth - 10, 32);
-            Button(c, row, tag.Name, () => SelectGalleryTag(tag), active: !galleryTagCreating && galleryTagSelected == tag.Name,
-                fontSize: 12, textRightPadding: 28);
-            c.Fill(new(row.Right - 19, top + 12, 8, 8), tag.Colour, 2);
+            Button(c, row, display.Name, () =>
+            {
+                if (pattern is not null) SaveGalleryTags(pattern, assigned
+                    ? pattern.Tags.Where(t => !string.Equals(t.Name, tag.Name, StringComparison.OrdinalIgnoreCase)).ToArray()
+                    : pattern.Tags.Append(tag).ToArray());
+                SelectGalleryTag(tag);
+            }, active: pattern is null ? !galleryTagCreating && galleryTagSelected == tag.Name : assigned,
+                enabled: pattern is null || CanEditGalleryTags, fontSize: 12, textPadding: pattern is null ? 9 : 37, textRightPadding: 28);
+            if (pattern is not null)
+            {
+                c.Stroke(new(row.X + 8, top + 7, 18, 18), assigned ? Accent : Muted, radius: 3);
+                if (assigned) c.Text("✓", row.X + 10, top + 7, 12, Accent, 16);
+            }
+            c.Fill(new(row.Right - 19, top + 12, 8, 8), display.Colour, 2);
             top += 36;
         }
         GalleryNewTagBounds = new(left + 5, top, listWidth - 10, 32);
@@ -114,7 +129,7 @@ public sealed partial class EditorView
         c.Text(L.Get(galleryTagCreating ? "gallery.newTag" : "gallery.editTag"), x, box.Y + 78, 14, Foreground, rw, true);
         string state = galleryTagError.Length > 0 ? galleryTagError
             : GalleryExistingTagDraft is not null ? L.Get("gallery.existingTagHint")
-            : galleryTagCreating ? L.Get("gallery.tagDraftHint") : L.Get(GalleryTagDraftChanged ? "ui.unsaved" : "gallery.tagSaved");
+            : galleryTagCreating ? L.Get("gallery.tagDraftHint") : L.Get(galleryCurrentTagEdit?.Pending == true || galleryTagSaving?.Edit == galleryCurrentTagEdit ? "gallery.tagSaving" : "gallery.tagSaved");
         c.Text(state, x, box.Y + 100, 11, galleryTagError.Length > 0 ? 0xFF9A9Au : Muted, rw);
         c.Text(L.Get("gallery.tagName"), x, box.Y + 124, 12, Muted, rw);
         galleryTagNameBounds = new(x, box.Y + 144, rw, 32);
@@ -135,20 +150,23 @@ public sealed partial class EditorView
         }
         else c.Text($"#{GalleryTagColour:X6}", x + 10, swatch.Y + 7, 12, ink, rw - 20);
         c.Line(box.X + 20, footer, box.Right - 20, footer, Grid);
-        if (selected is not null && !galleryTagCreating)
+        if (selected is not null && !galleryTagCreating && pattern is null)
         {
             GalleryTagDeleteBounds = new(left, footer + 17, 140, 34);
-            GalleryTagActionButton(c, GalleryTagDeleteBounds, L.Get(pattern is null ? "gallery.deleteTag" : "gallery.removeTag"), () =>
+            GalleryTagActionButton(c, GalleryTagDeleteBounds, L.Get("gallery.deleteTag"), () =>
             {
-                if (pattern is null) EditGalleryTag(selected, null);
-                else SaveGalleryTags(pattern, pattern.Tags.Where(t => t.Name != selected.Name).ToArray());
+                ForgetGalleryTagEdit(selected);
+                EditGalleryTag(selected, null);
                 SelectGalleryTag(null);
             }, danger: true, enabled: CanEditGalleryTags);
         }
-        GalleryTagActionButton(c, new(box.Right - 272, footer + 17, 96, 34), L.Get(galleryTagCreating || GalleryTagDraftChanged ? "mac.cancel" : "gallery.close"), CloseGalleryTags);
-        GalleryTagSaveBounds = new(box.Right - 164, footer + 17, 144, 34);
-        GalleryTagActionButton(c, GalleryTagSaveBounds, L.Get(GalleryExistingTagDraft is not null ? "gallery.addTag" : galleryTagCreating ? "gallery.createTag" : "gallery.saveTagChanges"), SaveGalleryTagDraft,
-            primary: true, enabled: CanEditGalleryTags && GalleryTagDraftValid && GalleryTagDraftChanged);
+        GalleryTagActionButton(c, new(box.Right - (galleryTagCreating ? 272 : 116), footer + 17, 96, 34), L.Get(galleryTagCreating ? "mac.cancel" : "gallery.close"), CloseGalleryTags);
+        if (galleryTagCreating)
+        {
+            GalleryTagSaveBounds = new(box.Right - 164, footer + 17, 144, 34);
+            GalleryTagActionButton(c, GalleryTagSaveBounds, L.Get(GalleryExistingTagDraft is not null ? "gallery.addTag" : "gallery.createTag"), SaveGalleryTagDraft,
+                primary: true, enabled: CanEditGalleryTags && GalleryTagDraftValid);
+        }
     }
 
     private void GalleryTagActionButton(ICanvas c, Rect bounds, string label, Action action, bool primary = false, bool danger = false, bool enabled = true)
@@ -183,7 +201,7 @@ public sealed partial class EditorView
             galleryTagValue = 1 - Math.Clamp((y - galleryTagPalette.Y) / galleryTagPalette.Height, 0, 1);
         }
         else if (galleryTagDrag == 2) galleryTagHue = Math.Clamp((x - galleryTagHueTrack.X) / galleryTagHueTrack.Width, 0, .999999) * 360;
-        if (galleryTagDrag != 0) galleryTagHex = $"#{GalleryTagColour:X6}";
+        if (galleryTagDrag != 0) { galleryTagHex = $"#{GalleryTagColour:X6}"; QueueGalleryTagAutosave(); }
     }
 
     private void DrawGalleryTagField(ICanvas c, Rect bounds, string key, string value)
@@ -194,7 +212,8 @@ public sealed partial class EditorView
 
     private void SaveGalleryTagDraft()
     {
-        if (!CanEditGalleryTags || !GalleryTagDraftChanged || galleryStore is not { } store) return;
+        if (!galleryTagCreating) { QueueGalleryTagAutosave(); FlushGalleryTagAutosave(); return; }
+        if (!CanEditGalleryTags || galleryStore is not { } store) return;
         string name = galleryTagName.Trim(), hex = galleryTagHex.Trim().TrimStart('#');
         if (!ValidGalleryTagName(name)) { galleryTagError = L.Get("core.pattern.invalid"); return; }
         if (hex.Length != 6 || !uint.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint colour))
@@ -207,12 +226,8 @@ public sealed partial class EditorView
         if (galleryTags.Any(t => (galleryTagCreating || t.Name != galleryTagSelected) && string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase)))
         { galleryTagError = L.Get("gallery.tagExists"); return; }
         var tag = new PatternTag(name, colour);
-        if (galleryTagCreating)
-        {
-            Guid patternId = galleryTagsPattern;
-            StartGalleryIo(() => { store.AddTag(tag, patternId); return ReloadGallery(store, "", true); });
-        }
-        else if (galleryTags.FirstOrDefault(t => t.Name == galleryTagSelected) is { } selected) EditGalleryTag(selected, tag);
+        Guid patternId = galleryTagsPattern;
+        StartGalleryIo(() => { store.AddTag(tag, patternId); return ReloadGallery(store, "", true); });
         SelectGalleryTag(tag);
     }
 
@@ -225,6 +240,7 @@ public sealed partial class EditorView
         if (!GalleryTagTextFocused) return;
         if (textEditor.Field == "gallery:tag-name") { InputKey("gallery:tag-name", ref galleryTagName, key, ctrl, shift, 64, RequestPasteField); MatchExistingGalleryTag(); }
         else { InputKey("gallery:tag-hex", ref galleryTagHex, key, ctrl, shift, 7, RequestPasteField); UpdateGalleryTagHex(); }
+        QueueGalleryTagAutosave();
     }
 
     private void GalleryTagsText(string text)
@@ -235,6 +251,7 @@ public sealed partial class EditorView
         if (value.Length == 0) return;
         if (textEditor.Field == "gallery:tag-name") { galleryTagName = InsertInput("gallery:tag-name", galleryTagName, value, 64); MatchExistingGalleryTag(); }
         else { galleryTagHex = InsertInput("gallery:tag-hex", galleryTagHex, value, 7); UpdateGalleryTagHex(); }
+        QueueGalleryTagAutosave();
     }
 
     private void MatchExistingGalleryTag()

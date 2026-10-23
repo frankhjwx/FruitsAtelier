@@ -116,21 +116,21 @@ internal static class PatternGalleryOrganizationTests
         ui.ClickText(L.Get("gallery.editTags"));
         Check(ui.View.GalleryTagsVisible, "Edit Tags did not open the dedicated dialog");
         NewTag(); ui.Type("Custom"); ui.Key(13); Settle();
-        SelectTag("Custom"); SetColour("#65A9FF"); SaveTag(); Settle();
+        Check(ui.View.GalleryTagSaveBounds.Width == 0, "Existing tag editing still has a Save Changes button");
+        SetColour("#65A9FF"); Settle();
         Check(store.Load().Single(p => p.Id == jump.Id).Tags.Any(t => t.Name == "Custom" && t.Colour == 0x65A9FF), "New tag assignment did not persist");
         Check(ui.View.PatternGalleryPreviewBuildCount == builds, "Tag assignment rebuilt geometry");
         ui.Key(27); Check(!ui.View.GalleryTagsVisible && ui.View.PatternGalleryPreviewVisible, "Closing tags closed the detail preview");
         ui.Key(27); Open(stream);
         ui.ClickText(L.Get("gallery.editTags"));
-        Check(!ui.Canvas.Texts.Any(t => (t.Value == "Custom" || t.Value == "✓") && ui.View.GalleryTagListBounds.Contains(t.X, t.Y)), "Edit Tags includes unrelated tags or assignment checkboxes");
-        NewTag(); ui.Type("Custom"); ui.Paint();
-        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.addTag")), "Existing tag is not offered for direct addition");
-        SaveTag(); Settle();
-        Check(store.Load().Single(p => p.Id == stream.Id).Tags.Any(t => t.Name == "Custom" && t.Colour == 0x65A9FF), "Adding an existing tag lost its saved colour");
-        ui.ClickText(L.Get("gallery.removeTag")); Settle();
+        Check(new[] { "Custom", "Flow", "Jump", "Unused" }.All(name => ui.Canvas.Texts.Any(t => t.Value == name && ui.View.GalleryTagListBounds.Contains(t.X, t.Y))),
+            "Edit Tags does not show every available tag");
+        SelectTag("Custom"); Settle();
+        Check(store.Load().Single(p => p.Id == stream.Id).Tags.Any(t => t.Name == "Custom" && t.Colour == 0x65A9FF), "Selecting a tag did not assign it");
+        SelectTag("Custom"); Settle();
         Check(store.Load().Single(p => p.Id == stream.Id).Tags.All(t => t.Name != "Custom")
-            && store.Load().Single(p => p.Id == jump.Id).Tags.Any(t => t.Name == "Custom"), "Removing a pattern tag changed other patterns");
-        NewTag(); ui.Type("Custom"); ui.Key(13); Settle();
+            && store.Load().Single(p => p.Id == jump.Id).Tags.Any(t => t.Name == "Custom"), "Deselecting a tag changed other patterns");
+        SelectTag("Custom"); Settle();
         ui.Key(27); ui.Key(27);
         ManageTags();
         Check(ui.View.GalleryTagsVisible, "Manage Tags did not open the shared dialog");
@@ -146,17 +146,28 @@ internal static class PatternGalleryOrganizationTests
         Check(ui.View.WantsCapture, "Colour picker did not capture dragging");
         ui.View.PointerMove(palette.X + palette.Width / 2, palette.Y + palette.Height / 2, false, false);
         ui.View.PointerUp(palette.X + palette.Width / 2, palette.Y + palette.Height / 2, 0); ui.Paint();
-        Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Custom" && t.Colour == 0x65A9FF)) == 2,
-            "Colour dragging wrote before Save");
+        Settle();
+        uint draggedColour = store.Load().Single(p => p.Id == jump.Id).Tags.Single(t => t.Name == "Custom").Colour;
+        Check(draggedColour != 0x65A9FF && store.Load().Count(p => p.Tags.Any(t => t.Name == "Custom" && t.Colour == draggedColour)) == 2,
+            "Colour picker changes did not automatically persist to all assignments");
         ui.Key(27); ManageTags(); SelectTag("Custom");
-        Check(ui.Canvas.Texts.Any(t => t.Value == "#65A9FF"), "Closing the dialog persisted unsaved colour changes");
-        SetColour("#123ABC"); SaveTag(); Settle();
+        Check(ui.Canvas.Texts.Any(t => t.Value == $"#{draggedColour:X6}"), "Auto-saved colour was lost when closing the dialog");
+        SetColour("#123ABC"); ui.Key(27); Settle();
         Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Custom" && t.Colour == 0x123ABC)) == 2,
-            "Tag colour editing did not update all assignments");
+            "Closing the dialog discarded a pending automatic colour save");
+        ManageTags(); SelectTag("Custom");
         var nameField = ui.View.GalleryTagNameBounds;
-        ui.Click(nameField.X + 10, nameField.Y + 12); ui.Key('A', ctrl: true); ui.Type("Practice"); SaveTag(); Settle();
+        ui.Click(nameField.X + 10, nameField.Y + 12); ui.Key('A', ctrl: true); ui.Type("Flow"); ui.Paint(); Settle();
+        Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Custom")) == 2
+            && ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.tagExists")), "Invalid duplicate auto-rename changed a valid tag");
+        ui.Key('A', ctrl: true); ui.Type("Pra"); ui.Paint();
+        Thread.Sleep(275); ui.Paint(); ui.Type("ctice"); ui.Paint(); Settle();
         Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Practice")) == 2, "Tag rename did not persist across patterns");
-        ui.ClickText(L.Get("gallery.deleteTag")); Settle();
+        SetColour("#ABC123"); SelectTag("Flow"); SetColour("#223344"); ui.Key(27); Settle();
+        Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Practice" && t.Colour == 0xABC123)) == 2
+            && store.Load().Count(p => p.Tags.Any(t => t.Name == "Flow" && t.Colour == 0x223344)) == 2,
+            "Switching between tags lost queued auto-saves");
+        ManageTags(); SelectTag("Practice"); ui.ClickText(L.Get("gallery.deleteTag")); Settle();
         Check(store.Load().All(p => p.Tags.All(t => t.Name != "Practice")), "Tag removal left assignments");
         ui.Key(27);
         Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Gallery organization changed map content");
