@@ -115,6 +115,17 @@ it, and compares query construction with cached-page restoration using
 RecordingCanvas. It also creates isolated preview files for the four tabs and
 all configured FA/osu! Collections. The report excludes native drawing and image decoding.
 
+### Asynchronous fixture cleanup
+
+Before deleting a Library fixture or replacing its `EditorView`, stop file
+monitoring and call `CompleteLibraryCacheWrites()` on each view that used it.
+`CloseLibrary()` alone does not wait for background preview-cache writes.
+Deleting the root while a writer owns `library-preview-*.json.*.tmp` can fail
+with a Windows sharing violation. Likewise, wait for gallery I/O to complete
+before polling its archive contents; repeated reads can block atomic replacement
+on Windows. Wait for the owning operation rather than adding a fixed delay or
+ignoring cleanup failures.
+
 ### macOS resource fixture paths
 
 Tests that open or import maps, create workspaces, or copy resources through
