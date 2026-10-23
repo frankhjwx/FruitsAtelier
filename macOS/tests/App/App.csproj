@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><AssemblyName>FruitsAtelier.App.Tests</AssemblyName></PropertyGroup>
   <ItemGroup>
+    <None Include="../../../tests/FruitsAtelier.App.Tests/Fixtures/discussions.json" Link="Fixtures/discussions.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../../tests/FruitsAtelier.Audio.Tests/Fixtures/quiet-tone.ogg" Link="Fixtures/quiet-tone.ogg" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../../../src/FruitsAtelier.Mac/FruitsAtelier.Mac.csproj" />
     <Compile Include="../../../tests/FruitsAtelier.App.Tests/*.cs" Link="%(Filename)%(Extension)" />

@@ -159,6 +159,9 @@ public sealed partial class EditorView
             drag = DragKind.Pan; return true;
         }
         var point = OsuInputPoint(x, y, tool == Tool.Fruit || tool == Tool.Slider && osuDraftSlider is null, shift, useObjects: tool is Tool.Fruit or Tool.Slider || ctrl);
+        if (tool is Tool.Fruit or Tool.Slider or Tool.Banana && Document.CollaborationEditableRanges is { } allowedSections
+            && !CollaborationSectionEditing.Contains(allowedSections, OsuPlacementTime, OsuPlacementTime))
+        { SetNotice(L.Get("collab.locked")); return true; }
         if (button == 2)
         {
             if (osuDraftSlider is not null) { osuDraftPointer = point; FinishOsuSlider(); return true; }

@@ -73,6 +73,7 @@ internal static class CollaborationMappingUiTests
                 ExclusionReport();
                 ObjectSoundsOption();
                 AimodAfterSync();
+                ReverseActions();
             }
         }
         finally { L.SetLanguage(language); }
@@ -81,6 +82,67 @@ internal static class CollaborationMappingUiTests
         foreach (string text in new[] { "84771.521739", "1e3", "-1", "00:60:000", "00:00:1000", "2147483648" })
             Check(!FruitsAtelier.App.Editor.EditorView.TryParseCollaborationTime(text, out _), "Invalid timestamp " + text);
         ResourceUndo();
+    }
+
+    private static void ReverseActions()
+    {
+        var part = Difficulty("Part", 1200); var merged = Difficulty("Merged", 500);
+        var lockedTrack = new CurveTrack { Kind = CurveKind.Linear };
+        lockedTrack.Nodes.AddRange([new() { TimeMs = 1100, X = 300 }, new() { TimeMs = 1400, X = 350 }]);
+        part.Document.Tracks.Add(lockedTrack);
+        part.Document.BananaShowers.Add(new() { TimeMs = 2200, EndTimeMs = 2400 });
+        merged.Document.Fruits.Add(new() { TimeMs = 1800, X = 240 });
+        merged.Document.CollaborationReferences = [new(Guid.NewGuid(), part.Id, 0, 1000), new(Guid.NewGuid(), part.Id, 1500, 2000)];
+        var ui = new Ui(); ui.View.LoadProject(new BeatmapProject { Difficulties = [part, merged] });
+        ui.View.ShowCollaborationPanel(); ui.Paint();
+        Check(ui.Canvas.Texts.Count(t => t.Value == "Merged" && t.Y > ui.View.CollaborationPanelViewport.Y) == 1, "Same incoming difficulty is grouped");
+        ui.View.SynchronizeCollaborationFrom(merged.Id);
+        var watch = Stopwatch.StartNew();
+        while (ui.View.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { ui.Paint(); Thread.Sleep(1); }
+        Check(ui.View.Document.Fruits.Count == 3 && ui.View.Document.CollaborationReferences is null, "Reverse worker syncs both ranges");
+        Check(ui.View.Document.CollaborationEditableRanges?.Count == 2, "Reverse sync automatically locks outside both guest intervals");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.Fruits.Count == 1 && ui.View.Document.CollaborationEditableRanges is null, "Reverse sync and automatic lock undo together");
+        ui.Key('Y', ctrl: true);
+        Check(ui.View.Document.Fruits.Count == 3 && ui.View.Document.CollaborationEditableRanges?.Count == 2, "Reverse sync and automatic lock redo together");
+        var overlays = ui.Canvas.PaintCalls.Where(p => p.Color == 0xFF9BAA && p.FillBounds is not null).ToArray();
+        Check(overlays.Length >= 3 && overlays.All(p => p.Opacity == .30f), "Canvas and both timelines draw 30 percent pink overlays");
+        Check(overlays.Where(p => p.FillBounds!.Value.Y >= ui.Plot.Y && p.FillBounds.Value.Y < ui.Plot.Bottom)
+            .All(p => p.FillBounds!.Value.X == ui.View.PlayfieldBounds.X && p.FillBounds.Value.Width == ui.View.PlayfieldBounds.Width),
+            "Canvas lock overlay stays inside the playfield");
+        Guid lockedId = ui.View.Document.Fruits.Single(f => f.TimeMs == 1200).Id;
+        ui.Key('1'); ui.ClickMap(1200, 180);
+        Check(!ui.View.SelectedObjectIds.Contains(lockedId), "Locked canvas object cannot be clicked");
+        ui.ClickMap(1100, 300);
+        Check(ui.View.SelectedObjectIds.Count == 0 && ui.View.SelectedAnchorIds.Count == 0, "Locked FSlider anchors cannot be selected");
+        ui.ClickMap(1250, 325);
+        Check(ui.View.SelectedObjectIds.Count == 0, "Locked FSlider path cannot be selected");
+        ui.ClickMap(2300, 256);
+        Check(ui.View.SelectedObjectIds.Count == 0, "Locked spinner cannot be selected");
+        ui.Key('A', ctrl: true);
+        Check(ui.View.SelectedObjectIds.Count == 2 && !ui.View.SelectedObjectIds.Contains(lockedId), "Select all excludes locked objects");
+        var field = ui.View.PlayfieldBounds; var plot = ui.Plot;
+        ui.View.PointerDown(field.X + 3, plot.Bottom - 3, 0, false, false);
+        ui.View.PointerMove(field.Right - 3, plot.Y + 3, false, false);
+        ui.View.PointerUp(field.Right - 3, plot.Y + 3, 0); ui.Paint();
+        Check(!ui.View.SelectedObjectIds.Contains(lockedId), "Canvas marquee excludes locked objects");
+        ui.View.UpdateTransport(1200, 5000, true, false, false, null, null); ui.Paint();
+        var timeline = ui.View.ObjectTimelineBounds;
+        float lockedX = timeline.X + (float)((1200 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+        ui.Click(lockedX, timeline.Y + timeline.Height / 2);
+        Check(!ui.View.SelectedObjectIds.Contains(lockedId), "Locked timeline object cannot be clicked");
+        ui.View.ToggleOsuCanvas(); ui.Paint();
+        var osuPoint = ui.View.OsuCanvasScreen(180, 192); ui.Click(osuPoint.X, osuPoint.Y);
+        Check(!ui.View.SelectedObjectIds.Contains(lockedId), "Locked geometric canvas object cannot be clicked");
+        ui.View.ToggleOsuCanvas(); ui.Paint();
+        ui.View.RemoveNotesOutsideCollaborationSections(merged.Id); ui.Paint();
+        Check(ui.View.Document.Fruits.Select(f => f.TimeMs).Order().SequenceEqual(new double[] { 500, 1800 }), "Cleanup removes gap even when locked");
+        ui.Key('Z', ctrl: true); Check(ui.View.Document.Fruits.Count == 3, "Cleanup undo");
+        ui.View.ToggleCollaborationSectionLock(merged.Id);
+        Check(ui.View.Document.CollaborationEditableRanges is null, "Explicit unlock");
+        ui.Key('Z', ctrl: true); Check(ui.View.Document.CollaborationEditableRanges?.Count == 2, "Unlock undo");
+        var saved = ProjectSerializer.ReadProject(ProjectSerializer.Serialize(ui.View.CaptureProject()));
+        ui.View.LoadProject(saved); Check(ui.View.Document.CollaborationEditableRanges?.Count == 2, "UI restart retains section locks");
     }
 
     private static void AimodAfterSync()

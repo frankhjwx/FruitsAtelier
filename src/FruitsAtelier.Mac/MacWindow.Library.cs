@@ -51,12 +51,12 @@ internal sealed partial class MacWindow
     {
         View.RequestPatternImport = () => RunFile(async () =>
         {
-            var path = await Pick(L.Get("gallery.import"), ["*.fap"]);
+            var path = await Pick(L.Get("gallery.import"), ["*.fpt"]);
             if (path is not null) View.BeginPatternImport(path);
         });
         View.RequestPatternExport = selectedOnly => RunFile(async () =>
         {
-            var path = await SavePicker(L.Get("gallery.export"), "fap", "Patterns.fap");
+            var path = await SavePicker(L.Get("gallery.export"), "fpt", "Patterns.fpt");
             if (path is not null) View.BeginPatternExport(path, selectedOnly);
         });
         View.RequestFazOpen = path => RunFile(async () => { if (await ConfirmDiscard()) await OpenPath(path); });

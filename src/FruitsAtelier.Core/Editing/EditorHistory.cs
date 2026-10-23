@@ -25,12 +25,21 @@ public sealed class EditorHistory
     public bool CanUndo => undo.Count > 0;
     public bool CanRedo => redo.Count > 0;
     public bool HasActiveTransaction => transactionStart is not null;
+    public bool LastCommitBlockedBySectionLock { get; private set; }
+    public bool RejectLockedSectionEdit()
+    {
+        if (transactionStart is null || !CollaborationSectionEditing.ChangesLockedContent(transactionStart, Document)) return false;
+        Cancel();
+        LastCommitBlockedBySectionLock = true;
+        return true;
+    }
     public long ActiveTransactionVersion => transactionStart is null ? 0 : transactionVersion;
     public MapDocument CaptureTransactionStart() => transactionStart?.DeepClone()
         ?? throw new InvalidOperationException(L.Get("core.history.activeEdit"));
     public bool TryCommitPreparedTransaction(long version, MapDocument expected, MapDocument prepared)
     {
         if (!HasActiveTransaction || version != transactionVersion || !Document.ContentEquals(expected)) return false;
+        if (CollaborationSectionEditing.ChangesLockedContent(transactionStart!, prepared)) { Cancel(); return false; }
         Document = prepared;
         Commit(reconcileBreaks: false);
         return true;
@@ -89,6 +98,7 @@ public sealed class EditorHistory
     public void Begin(string label, Action<bool, MapDocument, MapDocument>? restoreRelated = null)
     {
         if (transactionStart is not null) throw new InvalidOperationException(L.Get("core.history.activeEdit"));
+        LastCommitBlockedBySectionLock = false;
         transactionStart = Document.DeepClone();
         transactionVersion++;
         transactionLabel = label;
@@ -99,7 +109,9 @@ public sealed class EditorHistory
 
     private void Commit(bool reconcileBreaks)
     {
+        LastCommitBlockedBySectionLock = false;
         if (transactionStart is null) return;
+        if (RejectLockedSectionEdit()) { LastCommitBlockedBySectionLock = true; return; }
         // Break changes belong to the same undo step as the notes that occupy them.
         if (reconcileBreaks) OsuTimeline.ReconcileBreaks(transactionStart, Document, breakSliderLengths);
         breakSliderLengths.Retain(Document);

@@ -20,7 +20,7 @@ internal static class PatternFolderUiTests
         var source = new MapDocument { IsDemo = false, DurationMs = 10000 };
         source.Fruits.Add(new() { TimeMs = 1000, X = 200 });
         var patterns = Enumerable.Range(0, 24).Select(i => PatternSnapshot.Capture(source, source.Fruits.Select(f => f.Id), $"Pattern {i:00}")).ToArray();
-        PatternArchive.WriteFile(patterns, Path.Combine(directory, "gallery.fap"));
+        PatternArchive.WriteFile(patterns, Path.Combine(directory, "gallery.fpt"));
         var store = new PatternGalleryStore(directory);
         Guid a = store.CreateFolder("A"), b = store.CreateFolder("B");
         var ui = new Ui(); ui.LoadDocument(source); ui.View.ConfigurePatternGallery(directory);
@@ -134,7 +134,7 @@ internal static class PatternFolderUiTests
         }
         Console.WriteLine($"Gallery zoom/pointer ({language}): {watch.Elapsed.TotalMilliseconds:F2} ms, {GC.GetAllocatedBytesForCurrentThread() - allocated} bytes / 100 interactions");
         Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Gallery organization changed map content");
-        string package = Path.Combine(directory, "Legacy.fap"); PatternArchive.WriteFile([patterns[0]], package);
+        string package = Path.Combine(directory, "Legacy.fpt"); PatternArchive.WriteFile([patterns[0]], package);
         ui.View.BeginPatternImport(package); ui.Paint(); ui.ClickText(L.Get("gallery.importExistingFolders")); ui.ClickObjectAction("Default"); Settle();
         Check(store.LoadContents().Folders!.Single(f => f.Id == PatternFolder.DefaultId).PatternIds.Count == 25, "Explicit import target was ignored");
         ui.View.BeginPatternImport(package); ui.Paint(); ui.ClickText(L.Get("gallery.importNewFolders")); Settle();

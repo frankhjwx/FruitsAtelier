@@ -20,6 +20,7 @@ public sealed partial class EditorView
     private Task<CollaborationPrepared>? collaborationTask;
     private BeatmapProject? collaborationSnapshot;
     private Guid collaborationTarget;
+    private Guid[] collaborationParticipants = [];
     private EditorHistory? collaborationOwner;
     private bool collaborationCompensation;
     private bool collaborationSyncObjectSounds = true;
@@ -66,13 +67,21 @@ public sealed partial class EditorView
         }).ToList() };
     }
 
-    public void SynchronizeCollaboration()
+    public void SynchronizeCollaboration() => StartCollaborationSync(null);
+
+    public void SynchronizeCollaborationFrom(Guid difficultyId) => StartCollaborationSync(difficultyId);
+
+    private void StartCollaborationSync(Guid? sourceId)
     {
         if (CollaborationBusy || !CommitCollaborationField() || !PrepareFileOperation()) return;
-        var references = Document.CollaborationReferences?.ToArray() ?? [];
+        var references = sourceId is { } source
+            ? (difficulties.FirstOrDefault(d => d.Id == source)?.History.Document.CollaborationReferences ?? [])
+                .Where(r => r.DifficultyId == difficulties[activeDifficulty].Id).Select(r => r with { DifficultyId = source }).ToArray()
+            : Document.CollaborationReferences?.ToArray() ?? [];
         if (!references.Any(r => r.DifficultyId != Guid.Empty)) return;
         collaborationSnapshot = CollaborationProjectSnapshot(Document, references);
         collaborationTarget = difficulties[activeDifficulty].Id; collaborationOwner = history;
+        collaborationParticipants = references.Select(r => r.DifficultyId).Append(collaborationTarget).Distinct().ToArray();
         var snapshot = collaborationSnapshot; var target = collaborationTarget; bool compensate = compensateTinyDroplets;
         bool syncObjectSounds = collaborationSyncObjectSounds;
         collaborationCompensation = compensate;
@@ -82,7 +91,9 @@ public sealed partial class EditorView
         collaborationTask = Task.Run(() =>
         {
             var cache = new OsuWriteCache();
-            var candidate = CollaborationMapping.Synchronize(snapshot, target, references, compensate, cache, syncObjectSounds);
+            var candidate = sourceId is { } from
+                ? CollaborationMapping.SynchronizeFromReferencingDifficulty(snapshot, target, from, compensate, cache, syncObjectSounds)
+                : CollaborationMapping.Synchronize(snapshot, target, references, compensate, cache, syncObjectSounds);
             return new CollaborationPrepared(candidate.Document, candidate.Resources, cache, cache.Convert(candidate.Document, compensate), OsuBeatmapWriter.Serialize(candidate.Document, compensate, cache), candidate.ExcludedObjects);
         });
     }
@@ -98,8 +109,7 @@ public sealed partial class EditorView
             if (snapshot is null || !ReferenceEquals(history, collaborationOwner) || difficulties[activeDifficulty].Id != collaborationTarget) return;
             if (collaborationCompensation != compensateTinyDroplets || collaborationLanguage != L.Language)
                 throw new InvalidDataException(L.Get("collab.stale"));
-            var needed = snapshot.Difficulties.Single(d => d.Id == collaborationTarget).Document.CollaborationReferences!
-                .Select(r => r.DifficultyId).Append(collaborationTarget).ToHashSet();
+            var needed = collaborationParticipants.ToHashSet();
             foreach (var before in snapshot.Difficulties.Where(d => needed.Contains(d.Id)))
             {
                 var current = difficulties.FirstOrDefault(d => d.Id == before.Id);
@@ -230,22 +240,63 @@ public sealed partial class EditorView
         return true;
     }
 
+    private List<CollaborationEditRange> ReferencedCollaborationRanges(Guid sourceId)
+    {
+        var references = difficulties.Single(d => d.Id == sourceId).History.Document.CollaborationReferences ?? [];
+        return CollaborationSectionEditing.Ranges(references.Where(r => r.DifficultyId == difficulties[activeDifficulty].Id),
+            references.Select(r => r.EndMs).DefaultIfEmpty().Max());
+    }
+
+    public void RemoveNotesOutsideCollaborationSections(Guid sourceId)
+    {
+        if (CollaborationBusy || !CommitCollaborationField() || !PrepareFileOperation()) return;
+        var ranges = ReferencedCollaborationRanges(sourceId);
+        if (ranges.Count == 0) return;
+        var candidate = Document.DeepClone();
+        CollaborationSectionEditing.RemoveOutside(candidate, ranges);
+        EditorHistory.PrepareDetachedCommit(Document, candidate);
+        history.RestoreVersion(L.Get("collab.removeOutside"), candidate);
+        Select(Guid.Empty);
+    }
+
+    public void ToggleCollaborationSectionLock(Guid sourceId)
+    {
+        if (CollaborationBusy || !CommitCollaborationField() || !PrepareFileOperation()) return;
+        var ranges = ReferencedCollaborationRanges(sourceId);
+        if (ranges.Count == 0) return;
+        var candidate = Document.DeepClone();
+        candidate.CollaborationEditableRanges = (Document.CollaborationEditableRanges ?? []).SequenceEqual(ranges) ? null : ranges;
+        history.RestoreVersion(L.Get("collab.lockOutside"), candidate);
+        Select(Guid.Empty);
+    }
+
+    private void UnlockCollaborationSections()
+    {
+        if (CollaborationBusy || !CommitCollaborationField() || !PrepareFileOperation()) return;
+        var candidate = Document.DeepClone(); candidate.CollaborationEditableRanges = null;
+        history.RestoreVersion(L.Get("collab.unlockSections"), candidate);
+    }
+
     private void DrawCollaborationPanel(ICanvas c, Rect bounds)
     {
         var horizontal = PrepareDockHorizontal(DockPanel.CollaborationMapping, bounds, 332);
         collaborationBounds = horizontal.Viewport;
         var references = Document.CollaborationReferences ?? [];
         var incoming = difficulties.SelectMany(d => (d.History.Document.CollaborationReferences ?? [])
-            .Where(r => r.DifficultyId == difficulties[activeDifficulty].Id).Select(r => (Difficulty: d, Reference: r))).ToArray();
+            .Where(r => r.DifficultyId == difficulties[activeDifficulty].Id).Select(r => (Difficulty: d, Reference: r)))
+            .GroupBy(item => item.Difficulty).ToArray();
         collaborationContentHeight = (references.Count == 0 ? 250 : 308 + references.Count * 40)
-            + 60 + Math.Max(1, incoming.Length) * 68 + 60;
+            + 60 + (incoming.Length == 0 ? 68 : incoming.Sum(g => 154 + g.Count() * 24)) + 60;
         collaborationPanelScroll = Math.Clamp(collaborationPanelScroll, 0, Math.Max(0, collaborationContentHeight - collaborationBounds.Height));
         float x = bounds.X - horizontal.Offset, w = horizontal.ContentWidth;
         float y = bounds.Y - collaborationPanelScroll;
         int firstHit = hits.Count;
         CollaborationStartBounds = default;
         c.Clip(collaborationBounds);
-        c.Text(CurrentDifficultyName, x, y + 4, 15, Foreground, w, true);
+        bool sectionLock = Document.CollaborationEditableRanges is not null;
+        c.Text(CurrentDifficultyName, x, y + 4, 15, Foreground, sectionLock ? w - 120 : w, true);
+        if (sectionLock) Button(c, new(x + w - 116, y, 116, 28), L.Get("collab.unlockSections"), UnlockCollaborationSections,
+            enabled: !CollaborationBusy, fontSize: 11);
         if (references.Count > 0)
         {
             c.Text(L.Get("collab.completeObjects"), x, y + 34, 12, Muted, w);
@@ -309,14 +360,25 @@ public sealed partial class EditorView
         c.Text(L.Get("collab.targets"), x, y + 16, 14, Foreground, w, true);
         y += 58;
         if (incoming.Length == 0) { c.Text(L.Get("collab.noTargets"), x, y + 8, 12, Muted, w); y += 68; }
-        foreach (var item in incoming)
+        foreach (var group in incoming)
         {
-            Button(c, new(x, y, w, 30), item.Difficulty.Name, () =>
+            var difficulty = group.Key;
+            Button(c, new(x, y, w, 30), difficulty.Name, () =>
             {
-                if (CommitCollaborationField()) { SwitchDifficulty(difficulties.IndexOf(item.Difficulty)); collaborationField = ""; }
+                if (CommitCollaborationField()) { SwitchDifficulty(difficulties.IndexOf(difficulty)); collaborationField = ""; }
             }, enabled: !CollaborationBusy);
-            c.Text(L.Get("collab.interval", Time(item.Reference.StartMs), Time(item.Reference.EndMs)), x + 8, y + 37, 12, Muted, w - 8);
-            y += 68;
+            y += 37;
+            foreach (var item in group.OrderBy(item => item.Reference.StartMs))
+            {
+                c.Text(L.Get("collab.interval", Time(item.Reference.StartMs), Time(item.Reference.EndMs)), x + 8, y, 12, Muted, w - 8);
+                y += 24;
+            }
+            Button(c, new(x, y, w, 30), L.Get("collab.syncFrom"), () => SynchronizeCollaborationFrom(difficulty.Id), enabled: !CollaborationBusy);
+            Button(c, new(x, y + 34, w, 30), L.Get("collab.removeOutside"), () => RemoveNotesOutsideCollaborationSections(difficulty.Id), enabled: !CollaborationBusy, fontSize: 11);
+            bool locked = (Document.CollaborationEditableRanges ?? []).SequenceEqual(ReferencedCollaborationRanges(difficulty.Id));
+            Button(c, new(x, y + 68, w, 30), L.Get(locked ? "collab.unlockSections" : "collab.lockOutside"),
+                () => ToggleCollaborationSectionLock(difficulty.Id), active: locked, enabled: !CollaborationBusy, fontSize: 11);
+            y += 117;
         }
         c.Text(CollaborationBusy ? L.Get("collab.checking") : collaborationError, x, y + 16, 12,
             CollaborationBusy ? Muted : Error, w);

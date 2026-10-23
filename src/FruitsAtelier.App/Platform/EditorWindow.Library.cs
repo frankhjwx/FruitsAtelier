@@ -14,7 +14,7 @@ internal sealed partial class EditorWindow
         view.RequestPatternExport = selectedOnly => FileOperation(() =>
         {
             var path = MapFileDialog.Select(hwnd, true, L.Get("gallery.export"), MapFileDialog.PatternFilter,
-                "Patterns.fap", "fap");
+                "Patterns.fpt", "fpt");
             if (path is not null) view.BeginPatternExport(path, selectedOnly);
         });
         view.RequestFazOpen = path => ConfirmDiscard(() => OpenPath(path));

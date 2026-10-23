@@ -60,6 +60,7 @@ public sealed partial class EditorView
 
     private void SelectAnchors(CurveTrack track, IEnumerable<Guid> ids, Guid primary = default)
     {
+        if (!CanSelectCollaborationObject(track.Id)) { Select(Guid.Empty); return; }
         if (draftTrack == Guid.Empty) tool = Tool.Select;
         RestoreTemporarySnap();
         soundEdge = null; distanceObject = null; clickedCoordinate = null; timelineFruit = null;

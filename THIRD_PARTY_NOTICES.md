@@ -284,3 +284,12 @@ format, checked against `osu.Game/Database/LegacyCollectionImporter.cs` at
 [ppy/osu revision 44819244af116e8ae08fe2cbd29c6e489b5c9d4e](https://github.com/ppy/osu/blob/44819244af116e8ae08fe2cbd29c6e489b5c9d4e/osu.Game/Database/LegacyCollectionImporter.cs).
 The existing ppy Pty Ltd MIT notice above and retained
 `src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt` cover osu! source references.
+
+## Discussion type and action icons
+
+Discussion icons are Font Awesome Free 5.15.4 SVGs from Fonticons, Inc., commit
+`7d3d774145ac38663f6d1effc6def0334b68ab7e` of
+[FortAwesome/Font-Awesome](https://github.com/FortAwesome/Font-Awesome/tree/7d3d774145ac38663f6d1effc6def0334b68ab7e).
+The icon artwork is licensed under CC BY 4.0. Original SVGs, white PNG renderings,
+source attribution and the upstream licence notice ship in
+[assets/icons/discussion](assets/icons/discussion/README.md).

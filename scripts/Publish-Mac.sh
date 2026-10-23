@@ -9,7 +9,7 @@ mkdir -p "$FA_APP/Contents/MacOS" "$FA_APP/Contents/Resources"
 cp "$FA_ROOT/assets/branding/app-icon.icns" "$FA_APP/Contents/Resources/AppIcon.icns"
 cp "$FA_ROOT/assets/branding/faz-file.icns" "$FA_APP/Contents/Resources/FazFile.icns"
 cp "$FA_ROOT/assets/branding/fad-file.icns" "$FA_APP/Contents/Resources/FadFile.icns"
-cp "$FA_ROOT/assets/branding/fap-file.icns" "$FA_APP/Contents/Resources/FapFile.icns"
+cp "$FA_ROOT/assets/branding/fpt-file.icns" "$FA_APP/Contents/Resources/FptFile.icns"
 "$FA_DOTNET" publish "$FA_ROOT/src/FruitsAtelier.Mac" -c Release -r "$FA_RID" --self-contained true -o "$FA_APP/Contents/MacOS" -p:NuGetLockFilePath=packages.publish.lock.json
 cat > "$FA_APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -44,8 +44,8 @@ cat > "$FA_APP/Contents/Info.plist" <<PLIST
 </dict><dict>
 <key>CFBundleTypeName</key><string>Fruits Atelier Patterns</string>
 <key>CFBundleTypeRole</key><string>None</string>
-<key>CFBundleTypeIconFile</key><string>FapFile.icns</string>
-<key>LSItemContentTypes</key><array><string>io.github.frankhjwx.fruitsatelier.fap</string></array>
+<key>CFBundleTypeIconFile</key><string>FptFile.icns</string>
+<key>LSItemContentTypes</key><array><string>io.github.frankhjwx.fruitsatelier.fpt</string></array>
 </dict></array>
 <key>UTExportedTypeDeclarations</key><array><dict>
 <key>UTTypeIdentifier</key><string>io.github.frankhjwx.fruitsatelier.faz</string>
@@ -58,10 +58,10 @@ cat > "$FA_APP/Contents/Info.plist" <<PLIST
 <key>UTTypeDescription</key><string>Fruits Atelier Difficulty</string>
 <key>UTTypeTagSpecification</key><dict><key>public.filename-extension</key><array><string>fad</string></array><key>public.mime-type</key><string>application/x-fruitsatelier-difficulty</string></dict>
 </dict><dict>
-<key>UTTypeIdentifier</key><string>io.github.frankhjwx.fruitsatelier.fap</string>
+<key>UTTypeIdentifier</key><string>io.github.frankhjwx.fruitsatelier.fpt</string>
 <key>UTTypeConformsTo</key><array><string>public.zip-archive</string></array>
 <key>UTTypeDescription</key><string>Fruits Atelier Patterns</string>
-<key>UTTypeTagSpecification</key><dict><key>public.filename-extension</key><array><string>fap</string></array><key>public.mime-type</key><string>application/x-fruitsatelier-patterns</string></dict>
+<key>UTTypeTagSpecification</key><dict><key>public.filename-extension</key><array><string>fpt</string></array><key>public.mime-type</key><string>application/x-fruitsatelier-patterns</string></dict>
 </dict></array>
 </dict></plist>
 PLIST

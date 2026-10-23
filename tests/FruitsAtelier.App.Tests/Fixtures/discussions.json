@@ -1,0 +1,36 @@
+{
+  "beatmapset": {
+    "id": 777,
+    "user_id": 20,
+    "beatmaps": [{"id":101,"owners":[{"id":20}]},{"id":102,"owners":[{"id":30}]}],
+    "related_users": [
+      {"id":10,"username":"-Miya","avatar_url":"","groups":[{"name":"Beatmap Nominators","short_name":"BN","colour":"#A347EB","playmodes":["fruits"]}]},
+      {"id":20,"username":"Yumeno Himiko","avatar_url":"","groups":[]},
+      {"id":30,"username":"Reviewer 中文","avatar_url":"","groups":[{"name":"Nomination Assessment Team","short_name":"NAT","colour":"#EB8C47","playmodes":["fruits"]},{"name":"Global Moderation Team","short_name":"GMT","colour":"#99EB47"}]}
+    ],
+    "discussions": [
+      {"id":1,"beatmap_id":null,"parent_id":null,"user_id":10,"message_type":"problem","timestamp":null,"resolved":true,"can_be_resolved":true,"posts":[
+        {"id":11,"user_id":10,"message":"Please check the song title and artist metadata.","system":false,"created_at":"2026-10-01T12:00:00Z"},
+        {"id":12,"user_id":20,"message":"Updated the title for every difficulty.","system":false,"created_at":"2026-10-02T12:00:00Z"}]},
+      {"id":2,"beatmap_id":101,"parent_id":null,"user_id":30,"message_type":"problem","timestamp":null,"resolved":true,"can_be_resolved":true,"posts":[
+        {"id":21,"user_id":30,"message":"Combo Colours","system":false,"created_at":"2026-10-01T12:00:00Z"},
+        {"id":22,"user_id":20,"message":"ok added","system":false,"created_at":"2026-10-02T12:00:00Z"}]},
+      {"id":3,"beatmap_id":101,"parent_id":null,"user_id":10,"message_type":"suggestion","timestamp":1000,"resolved":true,"can_be_resolved":true,"posts":[
+        {"id":31,"user_id":10,"message":"00:01:000 (1,2,3) - since the vocal is stronger perhaps twist this pattern a little bit?","system":false,"created_at":"2026-10-01T12:00:00Z"},
+        {"id":32,"user_id":10,"message":"00:02:000 (4,5,6,7,8) - Also check this transition. 中文回复。","system":false,"created_at":"2026-10-01T12:01:00Z"},
+        {"id":33,"user_id":20,"message":"Adjusted 00:01:500 (2,3) and 00:03.200 (8,9,10) for consistency.","system":false,"created_at":"2026-10-02T12:00:00Z"},
+        {"id":34,"user_id":20,"message":{"type":"resolved","value":true},"system":true,"created_at":"2026-10-02T12:01:00Z"}]},
+      {"id":4,"beatmap_id":102,"parent_id":null,"user_id":30,"message_type":"problem","timestamp":4500,"resolved":false,"can_be_resolved":true,"posts":[
+        {"id":41,"user_id":30,"message":"00:04:500 (1) - Shorten this dash.","system":false,"created_at":"2026-10-01T12:00:00Z"}]},
+      {"id":5,"beatmap_id":null,"parent_id":null,"user_id":30,"message_type":"review","timestamp":null,"resolved":false,"can_be_resolved":false,"posts":[
+        {"id":51,"user_id":30,"message":"[{\"type\":\"paragraph\",\"text\":\"Overall review: the transitions are smooth.\"},{\"type\":\"embed\",\"discussion_id\":6},{\"type\":\"paragraph\",\"text\":\"Please also check the ending.\"}]","system":false,"created_at":"2026-10-01T12:00:00Z"},
+        {"id":52,"user_id":20,"message":"Thank you for the review.","system":false,"created_at":"2026-10-02T12:00:00Z"}]},
+      {"id":6,"beatmap_id":102,"parent_id":5,"user_id":30,"message_type":"suggestion","timestamp":3000,"resolved":false,"can_be_resolved":true,"posts":[
+        {"id":61,"user_id":30,"message":"00:03:000 (2,3) - Review of the other difficulty.","system":false,"created_at":"2026-10-01T12:00:00Z"},
+        {"id":62,"user_id":20,"message":"I'll check this section.","system":false,"created_at":"2026-10-02T12:00:00Z"}]},
+      {"id":7,"beatmap_id":101,"parent_id":null,"user_id":30,"message_type":"problem","timestamp":4000,"resolved":false,"can_be_resolved":true,"posts":[
+        {"id":71,"user_id":30,"message":"00:04:000 (11) - Reduce this distance to improve the transition.","system":false,"created_at":"2026-10-01T12:00:00Z"},
+        {"id":72,"user_id":20,"message":"I will compare it with 00:02:000 (4,5) first.","system":false,"created_at":"2026-10-02T12:00:00Z"}]}
+    ]
+  }
+}

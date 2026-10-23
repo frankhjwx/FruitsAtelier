@@ -273,6 +273,7 @@ public sealed partial class MapDocument
         var copy = new MapDocument
         {
             Name = Name, DurationMs = DurationMs, CollaborationReferences = CollaborationReferences?.ToList(),
+            CollaborationEditableRanges = CollaborationEditableRanges?.ToList(),
             BeatLengthMs = BeatLengthMs, TimingOffsetMs = TimingOffsetMs, ApproachRate = ApproachRate,
             CircleSize = CircleSize, SliderMultiplier = SliderMultiplier, OverrideSliderMultiplier = OverrideSliderMultiplier,
             SliderMultiplierOverride = SliderMultiplierOverride,

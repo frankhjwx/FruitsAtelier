@@ -2,6 +2,30 @@
 
 ## SDKs and builds
 
+`App.Tests --discussions-check` verifies anonymous snapshot transport, shared and
+per-difficulty categories, complete replies and review embeds, team badges,
+timestamp and wrapped HTTP/HTTPS link navigation, tab overflow, retained scroll, annotation bounds and slider
+duration, full long annotations at zero, negative view navigation with nonnegative
+editing, relative posting ages and footer alignment, type/status icons, independent
+category sorting, cache recovery, offline refresh retention, stalled headers/body
+reads, unchanged content and conversion, and retirement of stale requests.
+It also covers Markdown emphasis, links, literal code, quotes, extensionless image
+transport and caching, pending-image idle frames, invalid-image fallback, shared
+post/reply image requests, image navigation and retired image requests.
+Interaction checks include object selection from numbered timestamps, destination
+difficulty selection, image preview zoom/pan and input isolation, profile links,
+hand/text cursor feedback, whole-link hover underlines across wrapped segments,
+permalink clipboard hints and expiring confirmation, and body
+text selection/copy across formatted text, Unicode, replies and canvas annotations.
+On Windows, `FruitsAtelier.App.exe --render-check --discussions-render-check`
+captures compact and wide discussions, replies, type icons, offline states and
+canvas quotes in English and
+Chinese at 980×620 and 1440×900 with 96/144/192 DPI under
+`artifacts/tests/discussions/native`.
+The native check includes Markdown and image cards; pass
+`--discussions-image-fixture=<absolute-image-path>` to use a local image fixture
+without network access.
+
 `App.Tests --fad-check` verifies portable difficulty packages, local resource
 conflicts, matching, adding difficulties, native merge choices, undo/redo, Library
 rejection and the FAZ export chooser. `FruitsAtelier.App.exe --render-check
@@ -156,7 +180,7 @@ macOS path behavior.
 `Core.Tests --pattern-placement-check` checks beat-relative placement, optional
 horizontal speed preservation, bounds, stream/stack data, destination droplet
 settings, saved AR, hyperdash starts and deterministic previews. `Formats.Tests --pattern-gallery-check`
-checks snapshot isolation, AR-preserving `.fap` round trips, rename/delete persistence,
+checks snapshot isolation, AR-preserving `.fpt` round trips, rename/delete persistence,
 validation and atomic gallery writes, folder migration, copy/move identity isolation,
 folder merges/deletion, Default preservation, version 4 folder packages and import collisions.
 `App.Tests --pattern-gallery-check` checks gallery input, placement choices/cancellation,
@@ -168,7 +192,7 @@ detail-page editing, single/multiple-object context capture and source navigatio
 It also checks range selection across offscreen cards, category switching and merging,
 cross-folder clipboard shortcuts, Move to submenus with scrolling and multi-selection,
 single/multiple-card category dragging, preview-title rename, selection-only context exports,
-external FAP drops and the new/existing-folder import submenu,
+external FPT drops and the new/existing-folder import submenu,
 conditional folder menus, folder rename/deletion with keep/delete/cancel choices,
 import destinations, 50% minimum card zoom, two-column maximum sizing and geometry reuse.
 `FruitsAtelier.App.exe --render-check --pattern-gallery-render-check` checks the
@@ -238,6 +262,11 @@ that section replacement never accumulates timing lines.
 `App.Tests --collaboration-check` checks the dockable panel, active-difficulty
 configuration, reverse references, osu! timestamps, integer milliseconds,
 clipboard input, manual synchronization and automatic AiMod refresh after sync.
+It also checks grouped incoming ranges, reverse synchronization, cleanup and lock
+undo, saved locks and 30% pink overlays confined to the canvas playfield. The
+Formats collaboration suite checks reverse timing and metadata, disjoint-range
+replacement, locked insertions/deletions/moves and lock schemas. The canvas feedback
+performance benchmark compares the same mixed fixture with section locks off/on.
 On Windows, `FruitsAtelier.App.exe --render-check --collaboration-render-check`
 checks native panel input and synchronization in English and Chinese at two
 window sizes and 96/144/192 DPI. Captures are written under
@@ -1160,6 +1189,8 @@ label separation in English and Chinese at narrow and standard widths. Native
 Catch endpoint labels alongside NC.
 
 `App.Tests --same-time-placement-check` checks optional same-time placement in both canvases,
+Catch slider replacement across X coordinates and the 2 ms boundary, draft cancellation,
+circle retention when dragging an existing slider's head or moving the whole slider,
 native circle/slider/spinner replacement, preview/export equivalence, project
 roundtrips, undo/redo and Experimental setting
 persistence and cancellation. Native `--render-check --experimental-snap-render-check`

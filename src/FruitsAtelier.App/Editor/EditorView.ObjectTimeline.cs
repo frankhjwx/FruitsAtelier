@@ -45,7 +45,7 @@ public sealed partial class EditorView
     private BreakPeriod breakEditOriginal, breakEditPreview;
     private BreakPeriod[] breakPeriods = [];
     private bool IsTimelineTail((Guid Id, double Time, Rect Bounds) item, float x, float y)
-        => !IsReadOnlySlider(item.Id) && item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - item.Bounds.Height / 2)) <= Math.Min(10, item.Bounds.Height / 2)
+        => CanSelectCollaborationObject(item.Id) && !IsReadOnlySlider(item.Id) && item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - item.Bounds.Height / 2)) <= Math.Min(10, item.Bounds.Height / 2)
         && (Document.Tracks.Any(t => t.Id == item.Id && t.Nodes.Count > 1 && t.StreamSnapDivisor is null)
             || Document.ImportedSliders.Any(s => s.Id == item.Id)
             || Document.BananaShowers.Any(s => s.Id == item.Id));
@@ -534,6 +534,7 @@ public sealed partial class EditorView
         c.Line(head, objectTimeline.Y, head, objectTimeline.Bottom, Gold, 2);
         c.Line(objectTimeline.X, objectTimeline.Bottom - 1, objectTimeline.Right, objectTimeline.Bottom - 1, Grid);
         DrawTimelineBookmarks(c, objectTimeline, start, end);
+        DrawCollaborationLocks(c, objectTimeline, start, end);
         c.Unclip();
     }
 

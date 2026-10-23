@@ -9,6 +9,8 @@ internal static class CanvasFeedbackPerformance
     {
         var map = Fixture();
         foreach (bool osu in new[] { false, true }) RunPlacement(map, osu);
+        map.CollaborationEditableRanges = [new(0, 10000), new(30000, 40000), new(60000, 90000, true)];
+        foreach (bool osu in new[] { false, true }) RunPlacement(map, osu);
     }
 
     private static MapDocument Fixture()
@@ -44,7 +46,7 @@ internal static class CanvasFeedbackPerformance
             if (i >= 20) { pointer.Add(dispatch); paint.Add(render); allocated.Add(GC.GetAllocatedBytesForCurrentThread() - before); }
         }
         pointer.Sort(); paint.Sort(); allocated.Sort();
-        Console.WriteLine($"{(osu ? "osu" : "Catch")} movement placement CPU: pointer p50={pointer[40]:F4}ms p95={pointer[76]:F4}ms; "
+        Console.WriteLine($"{(osu ? "osu" : "Catch")} sectionLock={map.CollaborationEditableRanges is not null} movement placement CPU: pointer p50={pointer[40]:F4}ms p95={pointer[76]:F4}ms; "
             + $"paint p50={paint[40]:F3}ms p95={paint[76]:F3}ms; allocation p50={allocated[40]}B (recording canvas, native GPU excluded).");
         if (!ui.View.Document.ContentEquals(map)) throw new Exception("Movement placement benchmark edited its fixture.");
     }

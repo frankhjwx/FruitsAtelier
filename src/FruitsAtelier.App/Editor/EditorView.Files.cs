@@ -38,8 +38,9 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         if (PatternEditingActive) throw new InvalidOperationException(L.Get("gallery.finishEditing"));
-        patternRestoringTransport = null;
         project.Validate();
+        StopDiscussions();
+        patternRestoringTransport = null;
         if (MapTemplatesVisible) CloseMapTemplates(false);
         ClearFadReview();
         objectClipboard = null; clipboardDifficulty = null; ObjectClipboardText = "";

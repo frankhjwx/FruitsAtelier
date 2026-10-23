@@ -7,12 +7,13 @@ namespace FruitsAtelier.Core.Patterns;
 public sealed partial class PatternGalleryStore
 {
     private readonly string directory;
-    private string ArchivePath => Path.Combine(directory, "gallery.fap");
+    private string ArchivePath => Path.Combine(directory, "gallery.fpt");
     public PatternGalleryStore(string directory) => this.directory = Path.GetFullPath(directory);
 
     public PatternArchive.Contents LoadContents()
     {
-        var contents = File.Exists(ArchivePath) ? PatternArchive.ReadContentsFile(ArchivePath) : new([], []);
+        string path = File.Exists(ArchivePath) ? ArchivePath : Path.Combine(directory, "gallery.fap");
+        var contents = File.Exists(path) ? PatternArchive.ReadContentsFile(path) : new([], []);
         var folders = contents.Folders?.ToList() ?? [new(PatternFolder.DefaultId, PatternFolder.DefaultName, contents.Patterns.Select(p => p.Id).ToArray())];
         if (folders.All(f => f.Id != PatternFolder.DefaultId)) folders.Insert(0, new(PatternFolder.DefaultId, PatternFolder.DefaultName, []));
         if (folders.Any(f => f.Id == PatternFolder.DefaultId && f.Name != PatternFolder.DefaultName

@@ -35,7 +35,7 @@ internal static class PackageCheck
             checks.Add("Native SQLite");
             if (Localization.Strings.Validate().Count != 0) throw new InvalidOperationException("Localization validation failed.");
             checks.Add("Embedded localization");
-            foreach (string asset in new[] { "branding/mark.png", "branding/app-icon.ico", "branding/fap-file.ico", "icons/tools/select.png", "icons/tools/fslider.png" })
+            foreach (string asset in new[] { "branding/mark.png", "branding/app-icon.ico", "branding/fpt-file.ico", "icons/tools/select.png", "icons/tools/fslider.png" })
                 if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "assets", asset))) throw new FileNotFoundException(asset);
             checks.Add("Editor assets");
             var failures = new List<string>();

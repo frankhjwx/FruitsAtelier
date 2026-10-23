@@ -8,7 +8,7 @@
 
 [官网](https://fruitsatelier.himiko.moe/) · [下载](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**当前版本：1.2.0**
+**当前版本：1.2.1**
 
 ![水果工坊的编辑画布、物件时间轴与 Catch 预览](assets/screenshots/twin-bloom.png)
 
@@ -31,9 +31,9 @@
 - **DPB 与距离吸附**：用 Distance Per Beat（每拍距离）定义水平间距基准，同时配置最多八档距离吸附。节拍吸附控制时间，网格吸附控制水平位置。
 - **移动指示与分析**：查看前后物件间距，在画布上识别站立、走路、冲刺和超级冲刺连接。通过全曲 Movement strain 曲线定位运动负荷较高的段落；AiMod 可检查接水果物件吸附、计时、资源和谱面集元数据。
 - **可编辑的 Stream 与 Stack**：沿滑条曲线按指定节拍细分生成水果串，或用宽度包络生成交替排列的叠果。保留可编辑的父曲线，调整单个水果，或拆分成独立水果；两者均导出为 hit circle。
-- **Pattern Gallery**：保存独立的 Pattern 快照，浏览皮肤预览，按目标 BPM 拖入其他谱面，并分享 `.fap` 文件。[在主画布编辑 Pattern](docs/PATTERN_GALLERY.md) 时，原谱面的未保存内容会保留。
+- **Pattern Gallery**：保存独立的 Pattern 快照，浏览皮肤预览，按目标 BPM 拖入其他谱面，并分享 `.fpt` 文件。[在主画布编辑 Pattern](docs/PATTERN_GALLERY.md) 时，原谱面的未保存内容会保留。
 
-支持读取 v7–v14 及兼容 stable 的 lazer v128 Catch `.osu`。v7 谱面导出保留 v7，以保留旧版滑条水滴规则；其余导出为 v14。1.2.0 暂不提供视频与故事板播放。
+支持读取 v7–v14 及兼容 stable 的 lazer v128 Catch `.osu`。v7 谱面导出保留 v7，以保留旧版滑条水滴规则；其余导出为 v14。1.2.1 暂不提供视频与故事板播放。
 
 ## 开始使用
 

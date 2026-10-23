@@ -25,7 +25,7 @@ internal static class CollaborationRenderCheck
                 a.Document.BananaShowers.Add(new() { TimeMs = 500, EndTimeMs = 1500 });
                 c.Document.CollaborationReferences = [new(Guid.NewGuid(), a.Id, 0, 1000), new(Guid.NewGuid(), b.Id, 1000, 2000),
                     new(Guid.NewGuid(), Guid.Empty, 2000, 5000)];
-                d.Document.CollaborationReferences = [new(Guid.NewGuid(), a.Id, 0, 1000)];
+                d.Document.CollaborationReferences = [new(Guid.NewGuid(), a.Id, 0, 1000), new(Guid.NewGuid(), a.Id, 3000, 4000)];
                 var editor = new EditorView(false);
                 editor.LoadProject(new BeatmapProject { Name = "Collaboration", Difficulties = [a, b, c, d] });
                 editor.SwitchDifficulty(2); editor.ShowAimod();
@@ -62,6 +62,9 @@ internal static class CollaborationRenderCheck
                 if (editor.CurrentDifficultyName != "Mapper A" || editor.PlayheadMs != 500) throw new InvalidOperationException("Native report navigation failed.");
                 editor.KeyDown(27, false, false);
                 editor.SwitchDifficulty(0); Paint("source");
+                editor.ToggleCollaborationSectionLock(d.Id); Paint("locked");
+                if (editor.Document.CollaborationEditableRanges?.Count != 2) throw new InvalidOperationException("Native section lock failed.");
+                editor.ToggleCollaborationSectionLock(d.Id); Paint("unlocked");
                 Console.WriteLine($"PASS collaboration native {locale} {size.Item1}x{size.Item2} {dpi} DPI");
                 void Paint(string? state = null)
                 {

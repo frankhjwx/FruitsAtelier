@@ -15,7 +15,7 @@ internal static class PatternGalleryOrganizationTests
         var jump = PatternSnapshot.Capture(source, source.Fruits.Select(f => f.Id), "Wide jump").WithTags([new("Jump", 0xFFB45C)]);
         var stream = PatternSnapshot.Capture(source, source.Fruits.Select(f => f.Id), "Stream").WithTags([new("Flow", 0x58D8C1)]);
         var both = PatternSnapshot.Capture(source, source.Fruits.Select(f => f.Id), "Both").WithTags([new("Flow", 0x58D8C1), new("Jump", 0xFFB45C)]);
-        PatternArchive.WriteFile([jump, stream, both], Path.Combine(directory, "gallery.fap"));
+        PatternArchive.WriteFile([jump, stream, both], Path.Combine(directory, "gallery.fpt"));
         var store = new PatternGalleryStore(directory);
         var ui = new Ui();
         var map = new MapDocument { IsDemo = false, DurationMs = 10000 };

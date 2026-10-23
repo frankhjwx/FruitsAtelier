@@ -5,7 +5,7 @@ const sharp = require('sharp');
 const root = path.resolve(__dirname, '../assets/branding');
 (async () => {
     const name = process.argv[2] || 'faz-file';
-    if (!['faz-file', 'fad-file', 'fap-file'].includes(name)) throw new Error('Unknown file icon');
+    if (!['faz-file', 'fad-file', 'fpt-file'].includes(name)) throw new Error('Unknown file icon');
     const source = path.join(root, name + '.svg');
     await sharp(source).png().toFile(path.join(root, name + '.png'));
     const sizes = [16, 24, 32, 48, 64, 128, 256];

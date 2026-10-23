@@ -43,15 +43,26 @@ internal static class ToolPaletteTests
         FruitReplacement();
         foreach (var mode in Enum.GetValues<SliderEditingMode>())
         foreach (bool preserve in new[] { false, true })
+        foreach (double headX in new[] { 100.0, 350.0 })
         {
             var ui = Empty(); ui.View.SetSliderEditingMode(mode);
             var map = new MapDocument { DurationMs = 12000 };
-            map.Fruits.Add(new() { TimeMs = 1000, X = 100 });
+            foreach (double offset in new[] { -2.01, -2, -1.5, 0, 1.5, 2, 2.01 })
+                map.Fruits.Add(new() { TimeMs = 1000 + offset, X = 100 });
             ui.LoadDocument(map); ui.View.LibrarySettings.PreserveSameTimeObjects = preserve;
-            ui.Key('B'); ui.ClickMap(1000, 100); ui.ClickMap(1500, 200); Right(ui, 2000, 250);
-            Check(ui.View.Document.Tracks.Count == 1 && ui.View.Document.Fruits.Count == (preserve ? 1 : 0),
-                "Catch slider completion ignored same-time preference.");
+            ui.Key('B'); ui.ClickMap(1000, headX); ui.ClickMap(1500, 200);
+            Check(map.Fruits.Select(f => f.Id).SequenceEqual(ui.View.Document.Fruits.Select(f => f.Id)),
+                "Catch slider draft removed fruits before completion.");
+            ui.Key(27); Check(map.ContentEquals(ui.View.Document), "Cancelling a Catch slider changed content.");
+            ui.Key('B'); ui.ClickMap(1000, headX); ui.ClickMap(1500, 200); Right(ui, 2000, 250);
+            Check(ui.View.Document.Tracks.Count == 1 && ui.View.Document.Fruits.Select(f => f.Id).SequenceEqual(
+                map.Fruits.Where(f => preserve || Math.Abs(f.TimeMs - 1000) > 2).Select(f => f.Id)),
+                $"Catch slider replacement failed: mode={mode}, preserve={preserve}, headX={headX}.");
+            var after = ui.View.Document.DeepClone();
+            Check(OsuBeatmapWriter.Serialize(after).ObjectSequenceMatches, "Catch slider replacement export differs.");
+            Check(ProjectSerializer.Read(ProjectSerializer.Serialize(after)).ContentEquals(after), "Catch slider replacement roundtrip changed content.");
             ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Catch slider placement undo failed.");
+            ui.Key('Y', ctrl: true); Check(after.ContentEquals(ui.View.Document), "Catch slider placement redo failed.");
         }
         foreach (bool withParents in new[] { false, true })
         {

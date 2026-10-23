@@ -60,6 +60,7 @@ public sealed partial class EditorView
         PumpPatternEditing();
         PumpPatternSource();
         PumpPatternGallery();
+        PumpDiscussions();
         PumpLegacyDropletRefresh();
         if (ConversionNeedsRedraw) PumpDeferredConversion();
         CompleteSliderMultiplierValidation();
@@ -95,7 +96,7 @@ public sealed partial class EditorView
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
         if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawLibraryCollectionDialog(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
         LayoutDockPanels();
-        plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight + PatternEditingBannerHeight, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight - PatternEditingBannerHeight));
+        plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight + PatternEditingBannerHeight, Math.Max(50, canvas.Width - 198 - DiscussionCanvasReserve), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight - PatternEditingBannerHeight));
         overview = new(420, TransportTop + 10 + (TransportRowHeight - OverviewHeight) / 2, Math.Max(100, width - 448), OverviewHeight);
         if (!IsLazerEditing)
         {
@@ -107,6 +108,12 @@ public sealed partial class EditorView
         ClampView();
         AdvanceLazerPresentationGesture();
         EnsureConversion();
+        PrepareDiscussionRegions();
+        if (!history.HasActiveTransaction && Document.CollaborationEditableRanges is not null)
+        {
+            if (selectedTrack != Guid.Empty && !CanSelectCollaborationObject(selectedTrack)) Select(Guid.Empty);
+            else if (objectSelection.Any(id => !CanSelectCollaborationObject(id))) SelectObjects(objectSelection, selection);
+        }
         PumpRandomDock();
         AdvanceBoxScroll();
         UpdatePlacementHyperdash();
@@ -125,9 +132,11 @@ public sealed partial class EditorView
             else
             {
                 DrawCanvas(c);
+                DrawCollaborationCanvasLock(c);
                 DrawToolPalette(c);
                 DrawDistanceReadout(c);
                 DrawAssistPalette(c);
+                DrawDiscussionMarkers(c);
                 DrawSelectionBox(c);
                 DrawCoordinateReadout(c);
             }
@@ -141,6 +150,7 @@ public sealed partial class EditorView
                 DrawCanvasBackgroundDim(c);
             }
             DrawTransport(c);
+            if (!TimingPageVisible) DrawDiscussionOverview(c);
             DrawTimelineResizers(c);
             DrawStatus(c);
             DrawUpdateNotice(c);
@@ -171,6 +181,8 @@ public sealed partial class EditorView
         if (librarySettingsOpen) DrawLanguageMenu(c);
         DrawGalleryTags(c);
         DrawPatternNameDialog(c);
+        DrawDiscussionImagePreview(c);
+        DrawDiscussionLinkTooltip(c);
         DrawDiscardConfirmation(c);
         if (!librarySettingsOpen) DrawDifficultyTooltip(c);
     }
@@ -333,6 +345,7 @@ public sealed partial class EditorView
         }
         DrawCanvasTimingMarkers(c, axisLabelRows);
         DrawCanvasBookmarks(c, axisLabelRows);
+        DrawDiscussionHighlights(c);
         foreach (var label in axisLabels)
         {
             float labelY = Math.Clamp(label.Y - 7, plot.Y, plot.Bottom - 14);
@@ -708,6 +721,7 @@ public sealed partial class EditorView
         c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, 0xFFFFFF, 2);
         c.Fill(new(headX - 2, overview.Y - 5, 4, 6), 0xFFFFFF);
         DrawTimelineBookmarks(c, overview, 0, TimelineDurationMs);
+        DrawCollaborationLocks(c, overview, 0, TimelineDurationMs);
         DrawBookmarkToolbar(c);
     }
 

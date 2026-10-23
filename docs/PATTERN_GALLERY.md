@@ -100,7 +100,7 @@ The colour picker uses the same saturation/value chart and hue strip as Song Set
 the hex field accepts an exact `#RRGGBB` value. Existing tags need no save action.
 **Cancel** discards only an uncreated new tag.
 Tag changes persist in the gallery without changing the source map or rebuilding
-preview geometry. Tags are shared with `.fap` packages; existing local colours
+preview geometry. Tags are shared with `.fpt` packages; existing local colours
 take precedence when importing another pattern with the same tag name.
 
 ## Capture and sharing
@@ -118,13 +118,13 @@ time are retained alongside the authoring data, AR and timing context.
 The card context menu's **Export** shares only the selected patterns, including multiple selections.
 The category context menu exports the selected folders.
 Whole-gallery export includes unassigned tags and patterns hidden by filters.
-Folders, including empty folders, travel inside the `.fap` package. A flat export
+Folders, including empty folders, travel inside the `.fpt` package. A flat export
 containing only Default's patterns receives a folder named after the export filename;
 explicit folder exports preserve the folder name.
 
 After choosing an import file, select **Import into New Folder** (the default choice)
 or open **Import into existing folders** and choose a category from its submenu,
-including Default. Dropping a `.fap` file from the file manager into an open editor
+including Default. Dropping a `.fpt` file from the file manager into an open editor
 opens the gallery and the same destination menu. Import one package at a time.
 New folders preserve package names;
 conflicts are resolved case-insensitively by appending ` (1)`, ` (2)`, and so on.
@@ -135,11 +135,14 @@ Packages contain authoring data, not audio, backgrounds,
 skins or local source paths. Custom sample references do not bundle sample files.
 
 Pattern packages have a dedicated orange document icon. Windows registers the icon
-for `.fap` on normal application startup; the macOS bundle declares the same file type
-and icon. The editable master is `assets/branding/fap-file.svg`; regenerate its PNG,
-ICO and ICNS with `node scripts/Generate-FazIcon.cjs fap-file` with `sharp` on `NODE_PATH`.
+for `.fpt` on normal application startup; the macOS bundle declares the same file type
+and icon. The editable master is `assets/branding/fpt-file.svg`; regenerate its PNG,
+ICO and ICNS with `node scripts/Generate-FazIcon.cjs fpt-file` with `sharp` on `NODE_PATH`.
 
-The local gallery lives in `Patterns/gallery.fap` under the configured workspace.
+The local gallery lives in `Patterns/gallery.fpt` under the configured workspace.
+Existing galleries are read from their previous filename when the current file is
+absent; the next change saves the gallery with the current extension. Older pattern
+packages can still be dropped into the editor and are validated before import.
 Local source-file hints are stored separately in `Patterns/sources.local.json`.
 Packages are ZIP files containing `manifest.json` and one project document per
 pattern. Version 4 stores a flat folder catalog with IDs, names and pattern IDs.

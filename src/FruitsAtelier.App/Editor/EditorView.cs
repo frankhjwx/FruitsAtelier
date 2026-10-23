@@ -123,7 +123,7 @@ public sealed partial class EditorView
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectNotes != savedProjectNotes || projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
     public bool IsEditingText => PatternNameVisible || GalleryTagTextFocused || GallerySearchFocused || MapTemplatesVisible || addDifficultyConfirmation || CollaborationFocused || RandomDockFocused || SongDockFocused || NotesFocused || PatternDockEditing && (stackNumericField >= 0 || bananaEditField >= 0) || BananaEditVisible && bananaEditField >= 0 || HitsoundCopierVisible && copierNewDiff && copierNameFocused || StreamDialogVisible && stackMode && stackNumericField >= 0 || timingField.Length > 0 || SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || RotationVisible || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
-    public bool WantsCapture => galleryTagOrderPressed is not null || galleryTagDrag != 0 || PatternGalleryWantsCapture || templatePointer || collaborationReportDragging || rotationWindowDragging || rotationDragging || aimodGesture != AimodGesture.None || dockHorizontalDrag is not null || randomDragging || notesSelecting || dockPressed is not null || acknowledgementsScrollDragging || canvasDimDragging || movementPanelPointer || backgroundDimDragging || workspaceScrollDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || stackPointDragging >= 0 || stackFruitDragging >= 0 || SliderHoldNeedsRedraw || sliderHoldConsumed;
+    public bool WantsCapture => discussionTextPressed is not null || discussionPreviewDragging || discussionQuoteDrag is not null || discussionScrollbarDragging || galleryTagOrderPressed is not null || galleryTagDrag != 0 || PatternGalleryWantsCapture || templatePointer || collaborationReportDragging || rotationWindowDragging || rotationDragging || aimodGesture != AimodGesture.None || dockHorizontalDrag is not null || randomDragging || notesSelecting || dockPressed is not null || acknowledgementsScrollDragging || canvasDimDragging || movementPanelPointer || backgroundDimDragging || workspaceScrollDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || stackPointDragging >= 0 || stackFruitDragging >= 0 || SliderHoldNeedsRedraw || sliderHoldConsumed;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;
@@ -314,7 +314,7 @@ public sealed partial class EditorView
         if (IsLazerEditing || AudioPlaying || pinPlayhead) { FollowPlayhead(); return; }
         // Blank time before the start and after the end keeps the playback line fixed at both endpoints.
         double padding = plot.Height * EffectivePlaybackLineFromBottom / pixelsPerMs;
-        viewStart = Math.Clamp(viewStart, -padding, Math.Max(-padding, TimelineDurationMs - padding));
+        viewStart = Math.Clamp(viewStart, -DiscussionViewPadding(padding), Math.Max(-padding, TimelineDurationMs - padding));
         // Float pointer deltas can leave a sub-microsecond remainder when navigating back to zero.
         if (Math.Abs(viewStart) < 0.001) viewStart = 0;
     }
@@ -459,7 +459,7 @@ public sealed partial class EditorView
             { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }
             if (Document.DerandomizeDroplets is null && Document.ImportedSliders.Count < importedBefore)
                 Document.DerandomizeDroplets = Document.DerandomizeFSliderDroplets;
-            CommitContentHistory(); return true;
+            CommitContentHistory(); return !history.LastCommitBlockedBySectionLock;
         }
         catch (ArgumentException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }
         catch (InvalidOperationException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }
@@ -493,7 +493,7 @@ public sealed partial class EditorView
         if (track.Nodes.Count < 2) { StatusMessage = L.Get("editor.status.needTwoAnchors"); return; }
         var head = track.Nodes[0];
         if (!LibrarySettings.PreserveSameTimeObjects)
-            Document.Fruits.RemoveAll(fruit => fruit.TimeMs == head.TimeMs && fruit.X == head.X);
+            Document.Fruits.RemoveAll(fruit => Math.Abs(fruit.TimeMs - head.TimeMs) <= 2);
         Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
         // Completion can append an endpoint after the last render; retain that final draft while validation runs.
         UpdateDraftConversion();

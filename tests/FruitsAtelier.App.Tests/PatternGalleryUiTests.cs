@@ -160,8 +160,8 @@ internal static class PatternGalleryUiTests
             Wait(() => !ui.View.PatternGalleryNeedsRedraw
                 && store.Load().Any(p => p.Id == snapshot.Id && p.Name == "Renamed gallery pattern"), ui);
             Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Rename changed the destination map");
-            ui.View.BeginPatternExport(Path.Combine(directory, "shared.fap"), false);
-            Wait(() => File.Exists(Path.Combine(directory, "shared.fap")) && !ui.View.PatternGalleryNeedsRedraw, ui);
+            ui.View.BeginPatternExport(Path.Combine(directory, "shared.fpt"), false);
+            Wait(() => File.Exists(Path.Combine(directory, "shared.fpt")) && !ui.View.PatternGalleryNeedsRedraw, ui);
             Check(ui.View.BeginPatternEditing(snapshot), "Pattern edit session did not open");
             ui.View.OpenSongSetup(); ui.Paint();
             ui.Key(83, ctrl: true);
@@ -206,7 +206,7 @@ internal static class PatternGalleryUiTests
     {
         string directory = Path.GetFullPath(Path.Combine("artifacts/tests/pattern-gallery-drop", Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(directory);
-        PatternArchive.WriteFile(patterns, Path.Combine(directory, "gallery.fap"));
+        PatternArchive.WriteFile(patterns, Path.Combine(directory, "gallery.fpt"));
         var ui = new Ui();
         ui.LoadDocument(target.DeepClone());
         ui.View.ConfigurePatternGallery(directory);
@@ -328,7 +328,7 @@ internal static class PatternGalleryUiTests
         source.Fruits.AddRange([new() { TimeMs = 1000, X = 30 }, new() { TimeMs = 1010, X = 140 },
             new() { TimeMs = 1200, X = 80 }]);
         var saved = PatternSnapshot.Capture(source, source.Fruits.Select(f => f.Id), "Left-side import");
-        PatternArchive.WriteFile([saved], Path.Combine(directory, "gallery.fap"));
+        PatternArchive.WriteFile([saved], Path.Combine(directory, "gallery.fpt"));
         ui.View.ConfigurePatternGallery(directory); ui.Resize(1440, 900); ui.Paint();
         PaintScheduledFrames(ui);
         var card = ui.View.PatternGalleryCardBounds(saved.Id);
@@ -365,7 +365,7 @@ internal static class PatternGalleryUiTests
         var patterns = Enumerable.Range(0, 80).Select(i => PatternSnapshot.Capture(source, [track.Id], $"Dense {i:00}")).ToArray();
         var full = PatternPreview.Create(patterns[0]);
         Check(full.Paths.Sum(path => path.Count) > 60000 && full.Objects.Count > 512, "Dense fixture does not exercise full geometry eviction");
-        PatternArchive.WriteFile(patterns, Path.Combine(directory, "gallery.fap"));
+        PatternArchive.WriteFile(patterns, Path.Combine(directory, "gallery.fpt"));
         ui.View.ConfigurePatternGallery(directory); ui.Paint();
         var initialGrid = ui.View.PatternGalleryGridBounds;
         ui.View.Wheel(initialGrid.X + 10, initialGrid.Y + 10, -12000, true); ui.Paint();

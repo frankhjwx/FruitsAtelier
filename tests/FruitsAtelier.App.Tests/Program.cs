@@ -2,6 +2,7 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 if (args.Length == 2 && args[0] == "--history-save-performance") { HistorySavePerformance.Run(args[1]); return 0; }
+if (args.Contains("--discussions-check")) { DiscussionTests.Run(); return 0; }
 if (args.Contains("--storage-check")) { StorageSettingsTests.Run(); return 0; }
 if (args.Contains("--history-maintenance-check")) { DeferredHistoryUiTests.Run(); return 0; }
 if (args.Length == 3 && args[0] == "--library-search-profile") { LibrarySearchTests.Profile(args[1], args[2]); return 0; }
@@ -129,7 +130,7 @@ if (args.Contains("--distance-snap-check"))
 if (args.Contains("--object-snap-check")) { ObjectSnapTests.Run(); Console.WriteLine("PASS Object snap ranges, placement and preferences"); return 0; }
 
 
-if (args.Contains("--same-time-placement-check")) { ToolPaletteTests.SameTimePlacement(); OsuCanvasInputTests.SameTimePlacement(); ExperimentalSnapTests.Run(); Console.WriteLine("PASS same-time placement and experimental settings"); return 0; }
+if (args.Contains("--same-time-placement-check")) { ToolPaletteTests.SameTimePlacement(); SliderHeadReplacementTests.OnCompletion(); OsuCanvasInputTests.SameTimePlacement(); ExperimentalSnapTests.Run(); Console.WriteLine("PASS same-time placement and experimental settings"); return 0; }
 
 if (args.Contains("--experimental-snap-check")) { ExperimentalSnapTests.Run(); Console.WriteLine("PASS Experimental snap settings, wheel and Stream/Stack"); return 0; }
 
@@ -276,6 +277,7 @@ if (args.Contains("--lazer-editing-check"))
 var tests = new (string Name, Action Run)[]
 {
     ("Pattern Gallery preserves previews, placement and editing sessions", () => { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); }),
+    ("Discussions, replies, annotations and timestamp navigation", DiscussionTests.Run),
     ("Collab Mapping panel edits per-difficulty references and synchronizes sources", CollaborationMappingUiTests.Run),
     ("osu canvas renders standard objects and retains source identities", OsuCanvasRenderTests.Run),
     ("osu canvas edits native geometry and enforces slider representations", OsuCanvasInputTests.Run),
@@ -376,7 +378,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay bound arrows control gameplay and movement preserves volume fading", VolumePopoverTests.GameplayBindingsAndFade),
     ("Testplay volume bars accept clicks and drags after keyboard and wheel shortcuts", VolumePopoverTests.TestplayPointer),
     ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
-    ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
+    ("Completing an FSlider replaces same-time fruits across coordinates and undoes atomically", SliderHeadReplacementTests.OnCompletion),
     ("Final stream fruit accepts lower-half hit and box movement translates the stream", StreamFruitDragTests.Run),
     ("Stream middle fruits edit isolated samples and endpoints drag with undo and cancellation", StreamFruitDragTests.EditEvents),
     ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),

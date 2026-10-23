@@ -1,9 +1,93 @@
 # Editing Controls
 
+## Discussion
+
+Open **Layout → Discussion** to browse the public osu! discussions for the map's
+online BeatmapSetID. Reviews and General (All Difficulties) belong to the mapset;
+General (difficulty name) and Timeline belong to the active BeatmapID. The four
+tabs stay on one line; use their arrows or the mouse wheel to reveal hidden tabs.
+
+Threads show author avatars, mapper and team badges, full posts and replies,
+and resolution records. Team badges use mode icons beside their labels. Discussion
+types and Pending/Resolved states have separate icons; vote icons show the public
+counts. In wider panels, the main post's action icons share its first body line,
+with 25px of clearance; following lines use the full body width. A single type icon uses a
+narrower background than a type-and-state pair.
+
+General and Reviews default to Last update and offer Creation time / Last update.
+Timeline defaults to Timeline and offers Timeline / Last update. Each category
+retains its own choice. Collapse individual reply groups or use Collapse all /
+Expand all for the current category. Scroll position is retained per
+category and difficulty. The refresh button reloads the public snapshot;
+permalink copies the corresponding post URL. Hovering it explains the clipboard
+action; clicking shows a brief copied confirmation. Each post footer places permalink
+on the left and a smaller, muted relative age on the right, updated every minute.
+
+Click a timestamped thread card to seek to its anchor. Timestamps in both posts
+and replies seek to their own references. References with object numbers also select
+the matching editable objects, replacing the previous object selection. Matching
+uses the timestamp and current combo numbers; stale or ambiguous references still
+seek while preserving selection. Time-only links and card clicks preserve selection.
+A timestamp inside a review's embedded discussion switches to its
+referenced difficulty when that difficulty is loaded in the project.
+HTTP/HTTPS addresses in posts and replies are clickable in both the panel and
+canvas annotations. Wrapped segments open the complete address in the browser.
+Author names, including names in resolved/reopened records, open the corresponding
+osu! user profile. Hovering an external link
+underlines all of its wrapped segments together. Links, author names and permalinks
+use a hand cursor; body text uses the text-selection cursor. Drag across body text
+to select it and use Ctrl+C to copy; Ctrl+A selects
+the focused discussion area's body text, including replies. Text selection keeps logical line
+breaks across visual wrapping and does not follow links or edit beatmap objects.
+
+Posts support the discussion toolbar's common Markdown formats: bold, italic,
+inline code, named links, images, blockquotes and fenced code blocks. Simple
+headings, lists and strikethrough are also displayed. Code keeps its literal text;
+unsupported syntax remains readable text. HTML is not executed.
+
+Images use their Markdown address, including extensionless image-host URLs. PNG,
+JPEG and GIF (first frame) are fitted proportionally to the body width. Clicking an
+image opens in a compact centered preview at 100% source size; Ctrl+wheel zooms
+around the pointer and dragging pans the enlarged image. Clicking anywhere or
+pressing Escape closes it. A drag pans without dismissing the preview. Preview
+input does not reach the beatmap editor. Images load in the background,
+with two concurrent downloads, a ten-second deadline and an 8 MiB file limit. Saved images in
+`Cache/DiscussionImages` remain available offline; failed images retain a clickable
+address and can be retried with refresh. Image discovery and cache I/O also run
+outside the UI thread. Image dimensions are limited to 4096 per side and 8 megapixels.
+
+The formatting subset follows osu!web's
+[discussion format definitions](https://github.com/ppy/osu-web/blob/1798caf054d175cb6ead549d4b2daf58f85ed203/resources/js/beatmap-discussions/markdown-format.ts)
+and [Markdown renderers](https://github.com/ppy/osu-web/blob/1798caf054d175cb6ead549d4b2daf58f85ed203/resources/js/markdown/renderers.tsx).
+
+The Catch canvas shows discussion markers automatically. With Discussion open,
+quotes appear beside X=512, before the assist tools. Orange bands indicate pending
+threads; pale green bands indicate resolved threads. Bands cover X=0–512 and a
+circle diameter vertically, or the full referenced object interval including
+slider duration. Object numbers are matched against the current timeline; when
+the local revision no longer matches, the timestamp remains the anchor. Click a
+quote or marker to reveal its thread in the panel. Canvas annotations also show
+complete posts, replies, badges and resolution records; scroll inside a card or
+drag its scrollbar to read long threads. Each visible thread appears once, with
+all of its referenced regions highlighted. Cards remain inside the canvas even
+when anchored at 0ms. With Discussion open, the paused Catch canvas can scroll
+into negative viewing time to leave room around the opening notes. Playback seeks,
+placements and note time edits still use nonnegative time.
+
+Discussion requests use the anonymous public endpoint without login or cookies.
+Requests and cache I/O run in the background. The workspace stores public snapshots
+in `Cache/Discussions` and avatars in `Cache/DiscussionAvatars`. A saved snapshot is
+shown immediately while a fresh one loads. Failed refreshes retain the current
+discussions and show an inline retry status. Waiting requests do not continuously
+redraw the editor; completed loads and individual ready avatars trigger updates.
+Requests have a deadline covering headers and body reads, and changing mapsets or
+closing the editor cancels pending work. Editing remains available while loading
+or offline. Maps without online IDs show an empty-state explanation.
+
 ## Pattern Gallery
 
 Use **Layout → Pattern Gallery** to save consecutive selections, browse skinned
-previews, filter by search and coloured tags, drag patterns into a map, or share `.fap` packages.
+previews, filter by search and coloured tags, drag patterns into a map, or share `.fpt` packages.
 Click a card and choose **Edit Pattern** in its details to edit the snapshot while retaining the previous map's unsaved
 work. See [Pattern Gallery](PATTERN_GALLERY.md) for placement, source navigation,
 editing sessions and storage details.
@@ -103,6 +187,32 @@ and all target difficulties that directly reference the current difficulty.
 Selecting a target opens that difficulty. The panel supports multiple sources and
 multiple targets, including separate non-overlapping ranges from the same source.
 All referenced difficulties must belong to the same project.
+
+**Maps referencing this difficulty** groups all ranges from the same difficulty
+under one heading. **Sync from this difficulty** copies that difficulty's current
+objects, section timing and optional object hitsounds back into every range that
+references the active difficulty. It also copies song metadata (title, artist,
+creator, source, tags and beatmap-set ID), preserving the active difficulty's
+name, version, beatmap ID and reference list. A successful reverse sync automatically
+locks all time outside this guest's referenced ranges. Synchronization and the
+updated lock form one undo step. Failed synchronization leaves the lock unchanged.
+
+**Remove all notes other than collab sections** keeps complete objects inside the
+listed ranges and removes all other objects and their hitsound overrides in one
+undo step. **Lock all sections other than referenced sections** makes those ranges
+editable and protects all remaining time, including empty gaps. Objects must fit
+fully inside an editable range; edits that move into or change a locked range are
+rejected. Locked objects cannot be clicked, box-selected, selected with Select All,
+or manipulated in either canvas or the object timeline. Applying a lock clears
+selection. Timing edits must also preserve the effective timing in locked gaps.
+Explicit collaboration synchronization and cleanup can update locked content.
+Locks are saved per difficulty and support undo. **Unlock sections** clears them;
+the panel's header also offers unlocking if the referencing difficulty was removed.
+Locks capture the ranges when applied; apply the lock again after changing references.
+
+Locked time uses warm pink rectangles at 30% opacity in both timelines and inside
+the canvas playfield. The Catch canvas limits shading to X=0–512; the geometric
+osu! canvas shades its playfield when the playhead is in locked time.
 
 The full-width **Sync references** button and **Sync object hitsounds** option form
 the sync group. A separator divides it from **Generate sections from bookmarks**,
@@ -359,7 +469,10 @@ preference. Enabling it allows fruits at the same time with
 independent X coordinates; previews retain the existing objects too. Changing the
 preference leaves existing content and undo history unchanged. Placement remains
 one undo step, and turning it off restores replacement for subsequent placements.
-Completing a Catch FSlider also retains a fruit at its exact head when enabled.
+Completing a Catch FSlider replaces fruits starting within 2 ms of its head,
+regardless of X coordinate, unless the preference is enabled. Drafting and
+cancelling the slider leave those fruits unchanged; replacement commits with the slider.
+Adjusting an existing slider's head or moving the slider does not replace fruits.
 
 ## Experimental lazer editing
 

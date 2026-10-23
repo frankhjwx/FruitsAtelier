@@ -34,6 +34,9 @@ public interface ICanvas
     void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1, float opacity = 1);
     float MeasureText(string text, float size, bool bold = false) => text.Length * size * 0.6f;
     void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false);
+    float MeasureStyledText(string text, float size, bool bold, bool italic) => MeasureText(text, size, bold);
+    void StyledText(string text, float x, float y, float size, uint color, float maxWidth, bool bold, bool italic)
+        => Text(text, x, y, size, color, maxWidth, bold);
     void TextOpacity(string text, float x, float y, float size, uint color, float maxWidth, bool bold, float opacity)
     {
         if (opacity > 0) Text(text, x, y, size, color, maxWidth, bold);

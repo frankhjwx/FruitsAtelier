@@ -204,6 +204,8 @@ public sealed partial class EditorView
             {
                 if (difficulties[pair.Key].History.HasActiveTransaction) throw new InvalidOperationException(L.Get("copier.stalePreview"));
                 OsuBeatmapReader.Validate(pair.Value);
+                if (!copierNewDiff && CollaborationSectionEditing.ChangesLockedContent(difficulties[pair.Key].History.Document, pair.Value))
+                    throw new InvalidOperationException(L.Get("collab.locked"));
             }
             resources.Apply(); applied = true;
             if (copierNewDiff)

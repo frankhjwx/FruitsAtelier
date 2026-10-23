@@ -49,6 +49,17 @@ the winning offset; pointer updates do not rebuild DS references from moved cont
 
 ## Full-map work and cache ownership
 
+Discussion annotations reuse the timeline's committed parent durations and combo
+event numbers. Associations rebuild only when the committed conversion or online
+snapshot changes. Viewport movement queries time-sorted regions with prefix end
+times; quote wrapping and discussion text layout are cached independently of
+hover and playback. Text selection uses logical offsets in cached runs so visual
+wrapping does not change copied text. Project replacement cancels pending loads, and difficulty
+cache retirement releases annotation associations and quote layouts. Network and
+cache I/O run off the UI thread. Pending requests do not drive rendering; task
+completion and ready-avatar queues request frames, while relative posting ages
+refresh once per minute when the panel is visible.
+
 Replacing a difficulty releases its conversion, export/read-back and presentation
 caches, including when returning to the library. The next frame releases its
 renderer geometry and background resources before drawing the new content.
@@ -321,6 +332,13 @@ Before handing off an editing change:
    performance guarantees in this document.
 
 ## Dock inspectors and live editing
+
+Collaboration selection locks retain one set of selectable parent IDs per editor,
+keyed by the conversion snapshot and editable-range list. The set reads the object
+timeline's existing parent intervals; pointer hit tests reuse it without rebuilding
+slider geometry. Lock overlays iterate only the configured ranges. Transaction
+validation checks changes against locked content at commit, including pasted and
+retimed parents and timing inherited into locked gaps.
 
 Rotation previews retain one history transaction and restore only the selected
 objects from its baseline for each new angle. Repeated values reuse the preview.
