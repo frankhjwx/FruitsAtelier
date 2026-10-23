@@ -468,7 +468,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
-        if (GalleryTagsVisible) { mouseX = x; mouseY = y; if (!PatternNameVisible) MoveGalleryTagColour(x, y); return; }
+        if (GalleryTagsVisible) { mouseX = x; mouseY = y; if (!PatternNameVisible) { if (textSelecting && GalleryTagTextFocused) MoveInputSelection(x); else MoveGalleryTagColour(x, y); } return; }
         if (PatternGalleryPointerMove(x, y)) return;
         if (templatePointer) { mouseX = x; mouseY = y; MoveMapTemplate(x, y); return; }
         if (CollaborationReportVisible) { mouseX = x; mouseY = y; if (collaborationReportDragging) MoveCollaborationReport(x, y); return; }
@@ -634,7 +634,7 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
-        if (GalleryTagsVisible) { if (button == 0) { if (!PatternNameVisible) MoveGalleryTagColour(x, y); galleryTagDrag = 0; } return; }
+        if (GalleryTagsVisible) { if (button == 0) { if (!PatternNameVisible) MoveGalleryTagColour(x, y); galleryTagDrag = 0; textSelecting = false; } return; }
         if (PatternGalleryPointerUp(x, y, button)) return;
         if (templatePointer && button == 0)
         {
@@ -1202,7 +1202,7 @@ public sealed partial class EditorView
     private void KeyDownCore(int virtualKey, bool ctrl, bool shift)
     {
         if (PatternNameVisible && !ErrorVisible) { PatternNameKey(virtualKey, ctrl, shift); return; }
-        if (GalleryTagsVisible && !ErrorVisible) { if (virtualKey == 27) CloseGalleryTags(); return; }
+        if (GalleryTagsVisible && !ErrorVisible) { GalleryTagsKey(virtualKey, ctrl, shift); return; }
         if (PatternEditingKeyDown(virtualKey, ctrl)) return;
         if (PatternGalleryKeyDown(virtualKey, ctrl, shift)) return;
         if (CollaborationReportVisible && !ErrorVisible && !DiscardConfirmationVisible)
@@ -1548,7 +1548,7 @@ public sealed partial class EditorView
     private void TextInputCore(char value)
     {
         if (PatternNameVisible && !ErrorVisible) { PatternNameText(value.ToString()); return; }
-        if (GalleryTagsVisible) return;
+        if (GalleryTagsVisible) { GalleryTagsText(value.ToString()); return; }
         if (GallerySearchFocused) { GallerySearchText(value.ToString()); return; }
         if (AcknowledgementsVisible) return;
         if (MapTemplatesVisible && !ErrorVisible) { MapTemplatesText(value.ToString()); return; }

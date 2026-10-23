@@ -41,6 +41,17 @@ internal static class PatternGalleryRenderCheck
                 Wait(() => editor.PatternGalleryCount == patterns.Count && editor.PatternGalleryPreviewCacheCount >= 4
                     && !editor.PatternGalleryNeedsRedraw, "load and preview gallery");
                 Paint("grid");
+                if (editor.PatternGallerySearchBounds.Y != editor.PatternGalleryTagsBounds.Y)
+                    throw new InvalidOperationException("Search and Tags are not on the same row.");
+                Click(editor.PatternGalleryTagsBounds); Paint("tags-menu");
+                Click(editor.PatternGalleryManageTagsMenuBounds); Paint("manage-tags");
+                if (!editor.GalleryTagsVisible) throw new InvalidOperationException("Tags menu did not open Manage Tags.");
+                Click(editor.GalleryNewTagBounds);
+                foreach (char character in locale == "en" ? "Practice" : "\u7ec3\u4e60") editor.TextInput(character);
+                Click(editor.GalleryTagHueBounds); Paint("new-tag");
+                editor.KeyDown(27, false, false); Paint();
+                if (new PatternGalleryStore(gallery).LoadContents().Tags.Count != 2)
+                    throw new InvalidOperationException("Closing a new tag draft persisted it.");
                 Click(editor.PatternGallerySearchBounds);
                 foreach (char character in "Studio Fruit") editor.TextInput(character);
                 Paint("search");

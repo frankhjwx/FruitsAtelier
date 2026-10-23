@@ -36,7 +36,12 @@ public sealed partial class EditorView
     private bool galleryPreviewPanning;
     private long galleryUseCounter;
     private int galleryPreviewBuildCount;
-    private sealed record GalleryLoad(IReadOnlyList<PatternSnapshot> Patterns, string Notice, bool PreservePreviews = false);
+    private sealed record GalleryLoad(IReadOnlyList<PatternSnapshot> Patterns, string Notice, bool PreservePreviews, IReadOnlyList<PatternTag> Tags);
+    private static GalleryLoad ReloadGallery(PatternGalleryStore store, string notice, bool preservePreviews = false)
+    {
+        var contents = store.LoadContents();
+        return new(contents.Patterns, notice, preservePreviews, contents.Tags);
+    }
     private sealed record GalleryPreviewResult(Guid Id, GalleryPreview? Preview, PatternPreviewData? FullPreview, string? Error);
     private sealed class GalleryPreview(PatternPreviewData data, double circleSize, double tickRate, int streams, int stacks)
     {
@@ -66,6 +71,7 @@ public sealed partial class EditorView
     internal Rect PatternGalleryGridBounds => galleryGridBounds;
     internal Rect PatternGalleryPreviewBounds => galleryLargePreviewBounds;
     internal Rect PatternGallerySearchBounds => gallerySearchBounds;
+    internal Rect PatternGalleryTagsBounds => galleryTagsBounds;
     internal Rect PatternGalleryEditPatternBounds { get; private set; }
     internal Rect PatternGalleryEditTagsBounds { get; private set; }
     internal Rect PatternGalleryCardBounds(Guid id) => galleryCards.FirstOrDefault(card => card.Id == id).Bounds;
@@ -104,7 +110,7 @@ public sealed partial class EditorView
         StartGalleryIo(() =>
         {
             int count = store.Import(path);
-            return new(store.Load(), L.Get("gallery.imported", count));
+            return ReloadGallery(store, L.Get("gallery.imported", count));
         });
     }
 
@@ -116,7 +122,7 @@ public sealed partial class EditorView
         StartGalleryIo(() =>
         {
             store.Export(path, ids);
-            return new(store.Load(), L.Get("gallery.exported"));
+            return ReloadGallery(store, L.Get("gallery.exported"));
         });
     }
 
@@ -130,7 +136,7 @@ public sealed partial class EditorView
         {
             var snapshot = PatternSnapshot.Capture(source, ids, name);
             store.Add(snapshot); store.RememberSource(snapshot.Id, sourcePath);
-            return new(store.Load(), L.Get("gallery.saved"));
+            return ReloadGallery(store, L.Get("gallery.saved"));
         });
     }
 
@@ -150,7 +156,7 @@ public sealed partial class EditorView
             {
                 var snapshot = PatternSnapshot.Capture(source, ids, name.Trim());
                 store.Add(snapshot); store.RememberSource(snapshot.Id, sourcePath);
-                return new(store.Load(), L.Get("gallery.saved"));
+                return ReloadGallery(store, L.Get("gallery.saved"));
             });
         });
     }
@@ -180,7 +186,7 @@ public sealed partial class EditorView
                 var result = io.GetAwaiter().GetResult();
                 if (galleryIoGeneration == galleryGeneration)
                 {
-                    galleryPatterns = result.Patterns; galleryLoaded = true;
+                    galleryPatterns = result.Patterns; galleryTags = result.Tags.ToArray(); galleryLoaded = true;
                     if (!result.PreservePreviews)
                     { galleryPreviews.Clear(); galleryPreviewErrors.Clear(); galleryFullPreview = null; galleryFullPreviewId = Guid.Empty; }
                     RefreshGallerySearchIndex();
@@ -194,7 +200,7 @@ public sealed partial class EditorView
             { galleryLoaded = true; StatusMessage = L.Get("gallery.failed", error.Message); }
         }
         if (galleryLoadRequested && !galleryLoaded && galleryIoTask is null && !PatternNameVisible && galleryStore is { } store)
-            StartGalleryIo(() => new(store.Load(), ""));
+            StartGalleryIo(() => ReloadGallery(store, ""));
         if (galleryFullPreviewId != galleryPopupId || !PatternGalleryAvailable)
         { galleryFullPreview = null; galleryFullPreviewId = Guid.Empty; }
         if (galleryPreviewTask is { IsCompleted: true } previewTask)
@@ -253,13 +259,13 @@ public sealed partial class EditorView
         bool ready = galleryStore is not null && galleryLoaded && galleryIoTask is null && !PatternEditingBusy;
         DrawGallerySearchAndFilters(c, bounds, ready);
         float gap = 5, unit = Math.Max(20, (bounds.Width - gap * 2) / 3);
-        Button(c, new(bounds.X, bounds.Y + 68, unit, 28), L.Get("gallery.save"), RequestSavePattern,
+        Button(c, new(bounds.X, bounds.Y + 34, unit, 28), L.Get("gallery.save"), RequestSavePattern,
             enabled: ready && CanSavePatternSelection, fontSize: 11);
-        Button(c, new(bounds.X + unit + gap, bounds.Y + 68, unit, 28), L.Get("gallery.import"),
+        Button(c, new(bounds.X + unit + gap, bounds.Y + 34, unit, 28), L.Get("gallery.import"),
             () => RequestPatternImport?.Invoke(), enabled: ready, fontSize: 11);
-        Button(c, new(bounds.X + (unit + gap) * 2, bounds.Y + 68, unit, 28), L.Get("gallery.export"),
-            () => RequestPatternExport?.Invoke(false), enabled: ready && galleryPatterns.Count > 0, fontSize: 11);
-        galleryGridBounds = new(bounds.X, bounds.Y + 104, bounds.Width, Math.Max(0, bounds.Height - 130));
+        Button(c, new(bounds.X + (unit + gap) * 2, bounds.Y + 34, unit, 28), L.Get("gallery.export"),
+            () => RequestPatternExport?.Invoke(false), enabled: ready && (galleryPatterns.Count > 0 || galleryTags.Length > 0), fontSize: 11);
+        galleryGridBounds = new(bounds.X, bounds.Y + 70, bounds.Width, Math.Max(0, bounds.Height - 96));
         if (galleryFilteredPatterns.Count == 0)
         {
             c.Text(L.Get(!ready ? "gallery.loading" : galleryPatterns.Count == 0 ? "gallery.empty" : "gallery.noMatches"),

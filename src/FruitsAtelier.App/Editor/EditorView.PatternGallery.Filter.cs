@@ -8,10 +8,12 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private string galleryQuery = "";
-    private Rect gallerySearchBounds;
+    private Rect gallerySearchBounds, galleryTagsBounds;
     private (PatternSnapshot Pattern, string Search)[] gallerySearchIndex = [];
     private PatternTag[] galleryTags = [];
     private readonly HashSet<string> galleryTagFilter = new(StringComparer.OrdinalIgnoreCase);
+    internal Rect PatternGalleryManageTagsMenuBounds => contextItems.Count > 0 && contextItems[^1].Label == L.Get("gallery.manageTags")
+        ? ContextItemBounds(contextItems.Count - 1) : default;
     private bool GallerySearchFocused => textEditor.Field == "gallery:search" && PatternGalleryInputAvailable;
     private bool CanSavePatternSelection => CanCopySelection && !PatternEditingActive && !PatternEditingBusy
         && galleryIoTask is null && RequestPatternName is not null;
@@ -22,8 +24,7 @@ public sealed partial class EditorView
 
     private void RefreshGallerySearchIndex()
     {
-        galleryTags = galleryPatterns.SelectMany(p => p.Tags).DistinctBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+        galleryTags = galleryTags.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToArray();
         galleryTagFilter.IntersectWith(galleryTags.Select(t => t.Name));
         gallerySearchIndex = galleryPatterns.Select(p => (p, LibraryDatabase.Normalize(string.Join(" ",
             p.Name, p.Source.Artist, p.Source.Title, p.Source.Creator, p.Source.Difficulty, string.Join(" ", p.Tags.Select(t => t.Name)))))).ToArray();
@@ -50,17 +51,16 @@ public sealed partial class EditorView
 
     private void DrawGallerySearchAndFilters(ICanvas c, Rect bounds, bool ready)
     {
-        gallerySearchBounds = new(bounds.X, bounds.Y, bounds.Width, 28);
+        float tagsWidth = Math.Min(120, bounds.Width * .35f);
+        gallerySearchBounds = new(bounds.X, bounds.Y, Math.Max(20, bounds.Width - tagsWidth - 5), 28);
         c.Fill(gallerySearchBounds, Surface, 4); c.Stroke(gallerySearchBounds, GallerySearchFocused ? Accent : Grid, radius: 4);
-        DrawInputText(c, new(bounds.X + 9, bounds.Y + 6, bounds.Width - 18, 20), galleryQuery, 12, GallerySearchFocused, "gallery:search");
+        DrawInputText(c, new(bounds.X + 9, bounds.Y + 6, gallerySearchBounds.Width - 18, 20), galleryQuery, 12, GallerySearchFocused, "gallery:search");
         if (galleryQuery.Length == 0 && !GallerySearchFocused)
-            c.Text(L.Get("library.search"), bounds.X + 9, bounds.Y + 6, 12, Muted, bounds.Width - 18);
+            c.Text(L.Get("library.search"), bounds.X + 9, bounds.Y + 6, 12, Muted, gallerySearchBounds.Width - 18);
         hits.Add(new(gallerySearchBounds, () => FocusInput("gallery:search", galleryQuery, mouseX), true));
-        float half = (bounds.Width - 5) / 2;
-        Button(c, new(bounds.X, bounds.Y + 34, half, 28), L.Get("gallery.filterTags", galleryTagFilter.Count),
+        galleryTagsBounds = new(gallerySearchBounds.Right + 5, bounds.Y, tagsWidth, 28);
+        Button(c, galleryTagsBounds, L.Get("gallery.filterTags", galleryTagFilter.Count),
             () => ShowGalleryTagFilter(), enabled: ready, active: galleryTagFilter.Count > 0, fontSize: 11);
-        Button(c, new(bounds.X + half + 5, bounds.Y + 34, half, 28), L.Get("gallery.manageTags"),
-            () => ShowGalleryTagManager(), enabled: ready && CanEditGalleryTags, fontSize: 11);
     }
 
     private void ShowGalleryTagFilter(int page = 0)
@@ -74,7 +74,8 @@ public sealed partial class EditorView
                 ApplyGalleryFilter(); ShowGalleryTagFilter(page);
             }, Color: tag.Colour, Active: galleryTagFilter.Contains(tag.Name)));
         GalleryTagPaging(page, ShowGalleryTagFilter);
-        PositionGalleryMenu(galleryBounds.X, galleryBounds.Y + 64);
+        contextItems.Add(new(L.Get("gallery.manageTags"), ShowGalleryTagManager, CanEditGalleryTags));
+        PositionGalleryMenu(gallerySearchBounds.Right + 5, galleryBounds.Y + 30);
     }
 
     private IEnumerable<PatternTag> GalleryTagPage(int page) => galleryTags.Skip(page * 8).Take(8);
@@ -96,7 +97,7 @@ public sealed partial class EditorView
     private void SaveGalleryTags(PatternSnapshot pattern, PatternTag[] tags)
     {
         if (!CanEditGalleryTags || galleryStore is not { } store) return;
-        StartGalleryIo(() => { store.Replace(pattern.WithTags(tags)); return new(store.Load(), "", true); });
+        StartGalleryIo(() => { store.Replace(pattern.WithTags(tags)); return ReloadGallery(store, "", true); });
     }
 
     private void ShowGalleryTagManager() => OpenGalleryTags(Guid.Empty);
@@ -104,7 +105,7 @@ public sealed partial class EditorView
     private void EditGalleryTag(PatternTag tag, PatternTag? replacement)
     {
         if (!CanEditGalleryTags || galleryStore is not { } store) return;
-        StartGalleryIo(() => { store.EditTag(tag.Name, replacement); return new(store.Load(), "", true); });
+        StartGalleryIo(() => { store.EditTag(tag.Name, replacement); return ReloadGallery(store, "", true); });
     }
 
     private void RequestGalleryText(string title, string initial, Action<string?> completion)

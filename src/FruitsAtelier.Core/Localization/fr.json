@@ -1729,6 +1729,7 @@
   "gallery.manageTags": "Gérer les étiquettes",
   "gallery.editPattern": "Modifier le motif",
   "gallery.editTags": "Modifier les étiquettes",
+  "gallery.tagName": "Nom du tag",
   "gallery.newTag": "Nouvelle étiquette",
   "gallery.renameTag": "Renommer l’étiquette",
   "gallery.tagColour": "Couleur de l’étiquette",

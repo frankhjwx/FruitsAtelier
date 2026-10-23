@@ -1729,6 +1729,7 @@
   "gallery.manageTags": "タグを管理",
   "gallery.editPattern": "パターンを編集",
   "gallery.editTags": "タグを編集",
+  "gallery.tagName": "タグ名",
   "gallery.newTag": "新しいタグ",
   "gallery.renameTag": "タグ名を変更",
   "gallery.tagColour": "タグの色",

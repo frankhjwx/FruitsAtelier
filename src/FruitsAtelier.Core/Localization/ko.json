@@ -1729,6 +1729,7 @@
   "gallery.manageTags": "태그 관리",
   "gallery.editPattern": "패턴 편집",
   "gallery.editTags": "태그 편집",
+  "gallery.tagName": "태그 이름",
   "gallery.newTag": "새 태그",
   "gallery.renameTag": "태그 이름 변경",
   "gallery.tagColour": "태그 색상",

@@ -1729,6 +1729,7 @@
   "gallery.manageTags": "管理标签",
   "gallery.editPattern": "编辑 Pattern",
   "gallery.editTags": "编辑标签",
+  "gallery.tagName": "标签名称",
   "gallery.newTag": "新建标签",
   "gallery.renameTag": "重命名标签",
   "gallery.tagColour": "标签颜色",

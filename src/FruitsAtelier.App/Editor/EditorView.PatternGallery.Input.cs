@@ -83,7 +83,7 @@ public sealed partial class EditorView
                 StartGalleryIo(() =>
                 {
                     store.Replace(pattern.WithName(name));
-                    return new(store.Load(), "", true);
+                    return ReloadGallery(store, "", true);
                 });
             });
             if (PatternNameVisible)
@@ -95,7 +95,7 @@ public sealed partial class EditorView
         contextItems.Add(new(L.Get("gallery.delete"), () =>
         {
             if (galleryIoTask is not null || galleryStore is not { } store) return;
-            StartGalleryIo(() => { store.Delete(id); return new(store.Load(), ""); });
+            StartGalleryIo(() => { store.Delete(id); return ReloadGallery(store, ""); });
         }));
         PositionGalleryMenu(x, y);
     }

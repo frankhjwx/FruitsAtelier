@@ -16,21 +16,24 @@ of its original playfield position. This alignment does not change saved coordin
 Right-click a card to rename or delete the saved pattern. Renaming retains its
 identity, source information and geometry; deleting removes it from the local gallery.
 
-The gallery toolbar has three rows: search; tag filtering and tag management;
-then **Save selection**, **Import patterns**, and **Export**. Search follows Library
-matching: case-insensitive Unicode normalization and whitespace-separated words
+The gallery toolbar has two rows: search and **Tags**; then **Save selection**,
+**Import patterns**, and **Export**. The **Tags** menu contains tag filters and
+**Manage tags**. Search follows Library matching: case-insensitive Unicode normalization and whitespace-separated words
 that must all occur in the pattern name, source artist/title/mapper/difficulty or
 tag names. Ctrl+F focuses the search field. Selecting multiple tags requires all
 selected tags; **All patterns** clears the tag filter. Filters affect browsing only.
 
 Use **Edit Tags** in a pattern's details to assign existing tags or create one.
-Each tag has a name and colour. **Manage tags** renames, recolours or removes a
-tag across every assigned pattern. Both **Edit Tags** and **Manage tags** open a
+Each tag has a name and colour. **Tags → Manage tags** creates tags independently
+of patterns and renames, recolours or removes a tag across every assigned pattern.
+Choose **New tag**, enter its name and colour in the dialog, then **Save**.
+Unassigned tags remain available after reopening the gallery or removing their last
+assignment. Both **Edit Tags** and **Manage tags** open a
 dedicated tag dialog. From **Edit Tags**, use the checkboxes to assign tags to the
-current pattern. Select a tag to rename or delete it, or choose a colour using the
-same saturation/value chart and hue strip as Song Setup. Click the hex colour
-swatch to enter an exact `#RRGGBB` value. Colour changes are previewed locally until
-**Save** is pressed; closing the dialog discards unsaved colour changes.
+current pattern. Select a tag to edit its name and colour in place or delete it.
+The colour picker uses the same saturation/value chart and hue strip as Song Setup;
+the hex field accepts an exact `#RRGGBB` value. Name and colour changes are previewed
+locally until **Save** is pressed; closing the dialog discards unsaved changes.
 Tag changes persist in the gallery without changing the source map or rebuilding
 preview geometry. Tags are shared with `.fap` packages; existing local colours
 take precedence when importing another pattern with the same tag name.
@@ -47,17 +50,18 @@ adjustments remain editable. Source artist, title, difficulty, creator and start
 time are retained alongside the authoring data, AR and timing context.
 
 **Export** creates a `.fap` (Fruits Atelier Pattern) package of the complete gallery,
-including patterns hidden by search or tag filters. **Import** merges a package into the gallery. Identical entries with the
-same ID are skipped; different content using an existing ID is rejected without
+including unassigned tags and patterns hidden by search or tag filters. **Import**
+merges a package into the gallery. Identical entries with the same ID are skipped; different content using an existing ID is rejected without
 replacing the gallery. Packages contain authoring data, not audio, backgrounds,
 skins or local source paths. Custom sample references do not bundle sample files.
 
 The local gallery lives in `Patterns/gallery.fap` under the configured workspace.
 Local source-file hints are stored separately in `Patterns/sources.local.json`.
 Packages are ZIP files containing `manifest.json` and one project document per
-pattern. Untagged exports use version 1; tagged exports use version 2. Both versions
-can be imported. Import validates IDs, names, tags, exact archive entries and bounded sizes
-before publishing the complete result. Writes use a temporary file and atomic
+pattern. Untagged exports use version 1; packages whose tags are all assigned use
+version 2. Packages containing unassigned tags use version 3, with a gallery tag
+catalog in the manifest. All three versions can be imported. Import validates IDs,
+names, tags, exact archive entries and bounded sizes before publishing the complete result. Writes use a temporary file and atomic
 replacement. The package limit is 4,096 patterns, 64 MiB compressed and 256 MiB
 expanded; individual documents also obey the project format's limits.
 

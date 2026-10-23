@@ -79,7 +79,7 @@ internal static class PatternGalleryTests
         Expect<InvalidDataException>(() => PatternArchive.Read(malicious));
         using var future = new MemoryStream();
         using (var zip = new ZipArchive(future, ZipArchiveMode.Create, true))
-        using (var writer = new StreamWriter(zip.CreateEntry("manifest.json").Open(), new UTF8Encoding(false))) writer.Write("{\"Version\":3,\"Patterns\":[]}");
+        using (var writer = new StreamWriter(zip.CreateEntry("manifest.json").Open(), new UTF8Encoding(false))) writer.Write("{\"Version\":4,\"Patterns\":[]}");
         future.Position = 0;
         Expect<InvalidDataException>(() => PatternArchive.Read(future));
 
@@ -88,6 +88,25 @@ internal static class PatternGalleryTests
         try
         {
             var store = new PatternGalleryStore(Path.Combine(directory, "Patterns"));
+            var independent = new PatternGalleryStore(Path.Combine(directory, "Independent"));
+            independent.AddTag(new("Unused", 0x123ABC));
+            Check(independent.Load().Count == 0 && independent.LoadContents().Tags.SequenceEqual([new PatternTag("Unused", 0x123ABC)]),
+                "A tag persists without any pattern");
+            Expect<InvalidOperationException>(() => independent.AddTag(new("unused", 1)));
+            Expect<InvalidDataException>(() => independent.AddTag(new("Invalid", 0x1000000)));
+            independent.EditTag("Unused", new("Practice", 0x65A9FF));
+            string tagsOnly = Path.Combine(directory, "tags-only.fap"); independent.Export(tagsOnly);
+            var tagImport = new PatternGalleryStore(Path.Combine(directory, "TagImport"));
+            tagImport.Import(tagsOnly);
+            Check(tagImport.LoadContents().Tags.SequenceEqual([new PatternTag("Practice", 0x65A9FF)]), "Unassigned tags survive export and import");
+            tagImport.Add(snapshot.WithTags([new("practice", 0xFFFFFF)]));
+            Check(tagImport.Load().Single().Tags.Single() == new PatternTag("Practice", 0x65A9FF), "Locally created tags supply the canonical imported colour and name");
+            tagImport.Replace(tagImport.Load().Single().WithTags([]));
+            Check(tagImport.LoadContents().Tags.Count == 1, "Removing the last assignment removed the tag definition");
+            tagImport.Delete(snapshot.Id);
+            Check(tagImport.LoadContents().Tags.Count == 1, "Deleting a pattern removed an independent tag");
+            tagImport.EditTag("Practice", null);
+            Check(tagImport.LoadContents().Tags.Count == 0, "Unused tag deletion did not persist");
             var tagStore = new PatternGalleryStore(Path.Combine(directory, "Tags"));
             tagStore.Add(snapshot);
             var taggedSecond = PatternSnapshot.Capture(map, [before.Id], "Tagged second").WithTags([new("Stream", 0x58D8C1)]);

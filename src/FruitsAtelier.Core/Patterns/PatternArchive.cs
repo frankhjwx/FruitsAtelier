@@ -20,15 +20,25 @@ public static class PatternArchive
     };
     private sealed record Entry(Guid Id, string Name, PatternSource Source,
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] PatternTag[]? Tags = null);
-    private sealed record Manifest(int Version, Entry[] Patterns);
+    private sealed record Manifest(int Version, Entry[] Patterns,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] PatternTag[]? Tags = null);
+    public sealed record Contents(IReadOnlyList<PatternSnapshot> Patterns, IReadOnlyList<PatternTag> Tags);
 
     public static IReadOnlyList<PatternSnapshot> ReadFile(string path)
     {
         using var stream = File.OpenRead(path);
-        return Read(stream);
+        return ReadContents(stream).Patterns;
     }
 
-    public static IReadOnlyList<PatternSnapshot> Read(Stream stream)
+    public static Contents ReadContentsFile(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return ReadContents(stream);
+    }
+
+    public static IReadOnlyList<PatternSnapshot> Read(Stream stream) => ReadContents(stream).Patterns;
+
+    public static Contents ReadContents(Stream stream)
     {
         if (!stream.CanSeek || stream.Length > MaximumArchiveBytes) throw Invalid("limit");
         try
@@ -43,7 +53,7 @@ public static class PatternArchive
             }
             var manifestEntry = archive.GetEntry("manifest.json") ?? throw Invalid("invalid");
             var manifest = JsonSerializer.Deserialize<Manifest>(ReadEntry(manifestEntry, MaximumManifestBytes), Options);
-            if (manifest?.Version is not (1 or 2) || manifest.Patterns is null || manifest.Patterns.Length > MaximumPatterns)
+            if (manifest?.Version is not (1 or 2 or 3) || manifest.Patterns is null || manifest.Patterns.Length > MaximumPatterns)
                 throw Invalid("invalid");
             var ids = new HashSet<Guid>();
             var expected = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -61,35 +71,49 @@ public static class PatternArchive
                 var document = ProjectSerializer.Read(text);
                 patterns.Add(new(item.Id, item.Name, item.Source, document, item.Tags));
             }
-            return patterns.AsReadOnly();
+            var tags = ValidateTags(manifest.Tags ?? []);
+            if (manifest.Version < 3 && manifest.Tags is not null) throw Invalid("invalid");
+            var catalog = tags.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
+            foreach (var tag in patterns.SelectMany(p => p.Tags))
+                if (!catalog.TryAdd(tag.Name, tag) && manifest.Version == 3 && catalog[tag.Name] != tag) throw Invalid("invalid");
+            return new(patterns.AsReadOnly(), Array.AsReadOnly(catalog.Values.ToArray()));
         }
         catch (JsonException ex) { throw new InvalidDataException(L.Get("core.pattern.invalid"), ex); }
     }
 
-    public static void WriteFile(IEnumerable<PatternSnapshot> patterns, string path)
+    public static void WriteFile(IEnumerable<PatternSnapshot> patterns, string path, IEnumerable<PatternTag>? tags = null)
     {
         string destination = Path.GetFullPath(path);
         string temporary = Path.Combine(Path.GetDirectoryName(destination)!, "." + Path.GetFileName(path) + "." + Guid.NewGuid().ToString("N") + ".tmp");
         try
         {
             using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None))
-                Write(patterns, stream);
+                Write(patterns, stream, tags);
             File.Move(temporary, destination, overwrite: true);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
-    public static void Write(IEnumerable<PatternSnapshot> patterns, Stream stream)
+    public static void Write(IEnumerable<PatternSnapshot> patterns, Stream stream, IEnumerable<PatternTag>? tags = null)
     {
         var items = patterns.Take(MaximumPatterns + 1).ToArray();
         if (items.Length > MaximumPatterns) throw Invalid("limit");
         if (items.Select(p => p.Id).Distinct().Count() != items.Length) throw Invalid("invalid");
+        var catalog = ValidateTags(tags ?? []);
+        var byName = catalog.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
+        var assigned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var tag in items.SelectMany(p => p.Tags))
+        {
+            assigned.Add(tag.Name);
+            if (!byName.TryAdd(tag.Name, tag) && byName[tag.Name] != tag) throw Invalid("invalid");
+        }
+        bool hasUnused = byName.Keys.Any(name => !assigned.Contains(name));
         long expanded = 0;
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
-            int version = items.Any(p => p.Tags.Count > 0) ? 2 : 1;
+            int version = hasUnused ? 3 : items.Any(p => p.Tags.Count > 0) ? 2 : 1;
             string manifest = JsonSerializer.Serialize(new Manifest(version, items.Select(p => new Entry(p.Id, p.Name, p.Source,
-                p.Tags.Count == 0 ? null : p.Tags.ToArray())).ToArray()), Options);
+                p.Tags.Count == 0 ? null : p.Tags.ToArray())).ToArray(), hasUnused ? ValidateTags(byName.Values).ToArray() : null), Options);
             if (Encoding.UTF8.GetByteCount(manifest) > MaximumManifestBytes) throw Invalid("limit");
             WriteEntry("manifest.json", manifest);
             foreach (var item in items) WriteEntry(DocumentPath(item.Id), ProjectSerializer.Serialize(item.CreateDocument()));
@@ -104,6 +128,16 @@ public static class PatternArchive
             }
         }
         if (stream.CanSeek && stream.Length > MaximumArchiveBytes) throw Invalid("limit");
+    }
+
+    private static List<PatternTag> ValidateTags(IEnumerable<PatternTag> tags)
+    {
+        var items = tags.Take(MaximumPatterns + 1).ToList();
+        if (items.Count > MaximumPatterns || items.Any(t => t is null || string.IsNullOrWhiteSpace(t.Name)
+            || t.Name.Length > 64 || t.Name.Any(char.IsControl) || t.Colour > 0xFFFFFF)
+            || items.Select(t => t.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != items.Count)
+            throw Invalid("invalid");
+        return items.Select(t => t with { Name = t.Name.Trim() }).OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     private static string DocumentPath(Guid id) => $"patterns/{id:N}.catchproj";

@@ -1729,6 +1729,7 @@
   "gallery.manageTags": "Управление тегами",
   "gallery.editPattern": "Изменить паттерн",
   "gallery.editTags": "Изменить теги",
+  "gallery.tagName": "Название тега",
   "gallery.newTag": "Новый тег",
   "gallery.renameTag": "Переименовать тег",
   "gallery.tagColour": "Цвет тега",

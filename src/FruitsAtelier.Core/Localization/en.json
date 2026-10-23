@@ -1729,6 +1729,7 @@
   "gallery.manageTags": "Manage tags",
   "gallery.editPattern": "Edit Pattern",
   "gallery.editTags": "Edit Tags",
+  "gallery.tagName": "Tag name",
   "gallery.newTag": "New tag",
   "gallery.renameTag": "Rename tag",
   "gallery.tagColour": "Tag colour",

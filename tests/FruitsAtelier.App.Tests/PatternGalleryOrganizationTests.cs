@@ -31,6 +31,18 @@ internal static class PatternGalleryOrganizationTests
         Check(prompts == 0, "Save selection is enabled without selected objects");
         ui.View.RequestPatternName = namePrompt;
 
+        Check(ui.View.PatternGalleryTagsBounds.Y == ui.View.PatternGallerySearchBounds.Y
+            && ui.View.PatternGalleryTagsBounds.X > ui.View.PatternGallerySearchBounds.Right
+            && !ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.manageTags")), "Gallery toolbar does not place Tags beside Search with Manage Tags in its menu");
+        ManageTags();
+        ui.ClickText(L.Get("gallery.newTag")); ui.Type("Unused"); SetColour("#AB12CD"); ui.ClickText(L.Get("mac.save")); Settle();
+        Check(store.LoadContents().Tags.Any(t => t.Name == "Unused" && t.Colour == 0xAB12CD)
+            && store.Load().All(p => p.Tags.All(t => t.Name != "Unused")), "Independent tag creation assigned a pattern or lost its colour");
+        ui.Key(27);
+        ui.View.ConfigurePatternGallery(directory); ui.Paint(); Settle();
+        ManageTags(); SelectTag("Unused");
+        Check(ui.Canvas.Texts.Any(t => t.Value == "#AB12CD"), "Unassigned tags did not survive gallery reload");
+        ui.Key(27);
         ui.Key('F', ctrl: true); ui.Type("ＳＮＯＷ mapper"); ui.Paint();
         Check(ui.View.PatternGalleryFilteredCount == 3, "Gallery search does not use Library normalization and all-word matching");
         ui.Key('A', ctrl: true); ui.View.TextInput('\u0001'); ui.Paint();
@@ -72,7 +84,7 @@ internal static class PatternGalleryOrganizationTests
         var tagText = ui.Canvas.Texts.First(t => t.Value == "Custom");
         ui.Click(tagText.X - 20, tagText.Y + 4); Settle();
         ui.Key(27); ui.Key(27);
-        ui.ClickText(L.Get("gallery.manageTags"));
+        ManageTags();
         Check(ui.View.GalleryTagsVisible, "Manage Tags did not open the shared dialog");
         SelectTag("Custom");
         var hue = ui.View.GalleryTagHueBounds;
@@ -86,12 +98,13 @@ internal static class PatternGalleryOrganizationTests
         ui.View.PointerUp(palette.X + palette.Width / 2, palette.Y + palette.Height / 2, 0); ui.Paint();
         Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Custom" && t.Colour == 0x65A9FF)) == 2,
             "Colour dragging wrote before Save");
-        ui.Key(27); ui.ClickText(L.Get("gallery.manageTags")); SelectTag("Custom");
+        ui.Key(27); ManageTags(); SelectTag("Custom");
         Check(ui.Canvas.Texts.Any(t => t.Value == "#65A9FF"), "Closing the dialog persisted unsaved colour changes");
         SetColour("#123ABC"); ui.ClickText(L.Get("mac.save")); Settle();
         Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Custom" && t.Colour == 0x123ABC)) == 2,
             "Tag colour editing did not update all assignments");
-        ui.ClickText(L.Get("gallery.renameTag")); ui.Key('A', ctrl: true); ui.Type("Practice"); ui.Key(13); Settle();
+        var nameField = ui.View.GalleryTagNameBounds;
+        ui.Click(nameField.X + 10, nameField.Y + 12); ui.Key('A', ctrl: true); ui.Type("Practice"); ui.ClickText(L.Get("mac.save")); Settle();
         Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Practice")) == 2, "Tag rename did not persist across patterns");
         ui.ClickText(L.Get("gallery.deleteTag")); Settle();
         Check(store.Load().All(p => p.Tags.All(t => t.Name != "Practice")), "Tag removal left assignments");
@@ -117,6 +130,10 @@ internal static class PatternGalleryOrganizationTests
             var bounds = ui.View.PatternGalleryCardBounds(pattern.Id);
             ui.Click(bounds.X + 20, bounds.Y + 20); Settle();
         }
+        void ManageTags()
+        {
+            ui.ClickText(L.Get("gallery.filterTags", 0)); ui.ClickText(L.Get("gallery.manageTags"));
+        }
         void SelectTag(string name)
         {
             var row = ui.Canvas.Texts.First(t => t.Value == name);
@@ -126,7 +143,7 @@ internal static class PatternGalleryOrganizationTests
         {
             var swatch = ui.Canvas.Texts.Last(t => t.Value.StartsWith("#", StringComparison.Ordinal) && t.Value.Length == 7);
             ui.Click(swatch.X + 20, swatch.Y + 5);
-            ui.Key('A', ctrl: true); ui.Type(hex); ui.Key(13); ui.Paint();
+            ui.Key('A', ctrl: true); ui.Type(hex); ui.Paint();
         }
         void Capture(string name, int count)
         {

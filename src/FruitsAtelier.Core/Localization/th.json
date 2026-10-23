@@ -1729,6 +1729,7 @@
   "gallery.manageTags": "จัดการแท็ก",
   "gallery.editPattern": "แก้ไขแพตเทิร์น",
   "gallery.editTags": "แก้ไขแท็ก",
+  "gallery.tagName": "ชื่อแท็ก",
   "gallery.newTag": "แท็กใหม่",
   "gallery.renameTag": "เปลี่ยนชื่อแท็ก",
   "gallery.tagColour": "สีแท็ก",
