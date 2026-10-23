@@ -459,7 +459,7 @@ public sealed partial class EditorView
             { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }
             if (Document.DerandomizeDroplets is null && Document.ImportedSliders.Count < importedBefore)
                 Document.DerandomizeDroplets = Document.DerandomizeFSliderDroplets;
-            CommitContentHistory(); return true;
+            CommitContentHistory(); return !history.LastCommitBlockedBySectionLock;
         }
         catch (ArgumentException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }
         catch (InvalidOperationException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }

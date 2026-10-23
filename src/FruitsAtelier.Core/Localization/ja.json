@@ -1,4 +1,9 @@
 {
+  "collab.locked": "この編集はロックされたコラボ区間に影響します。",
+  "collab.lockOutside": "参照区間以外をすべてロック",
+  "collab.removeOutside": "コラボ区間外のすべてのノーツを削除",
+  "collab.syncFrom": "この難易度から同期",
+  "collab.unlockSections": "区間のロックを解除",
   "settings.importSettings": "インポート設定",
   "library.myMaps": "自分の譜面",
   "library.myMapsSetup": "設定で作成者のユーザー名を入力してください。",

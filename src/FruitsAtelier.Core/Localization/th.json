@@ -1,4 +1,9 @@
 {
+  "collab.locked": "การแก้ไขนี้ส่งผลต่อช่วงคอลแลบที่ถูกล็อกไว้",
+  "collab.lockOutside": "ล็อกทุกช่วงนอกช่วงที่อ้างอิง",
+  "collab.removeOutside": "ลบโน้ตทั้งหมดนอกช่วงคอลแลบ",
+  "collab.syncFrom": "ซิงค์จากระดับความยากนี้",
+  "collab.unlockSections": "ปลดล็อกช่วง",
   "settings.importSettings": "การตั้งค่าการนำเข้า",
   "library.myMaps": "บีตแมปของฉัน",
   "library.myMapsSetup": "กรอกชื่อผู้สร้างของคุณในการตั้งค่า",

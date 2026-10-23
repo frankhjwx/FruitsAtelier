@@ -1,4 +1,9 @@
 {
+  "collab.locked": "Edit ini memengaruhi bagian kolaborasi yang terkunci.",
+  "collab.lockOutside": "Kunci semua bagian di luar rentang yang dirujuk",
+  "collab.removeOutside": "Hapus semua note di luar bagian kolaborasi",
+  "collab.syncFrom": "Sinkronkan dari difficulty ini",
+  "collab.unlockSections": "Buka kunci bagian",
   "settings.importSettings": "Pengaturan impor",
   "library.myMaps": "Map Saya",
   "library.myMapsSetup": "Isi nama pengguna mapper di Pengaturan.",

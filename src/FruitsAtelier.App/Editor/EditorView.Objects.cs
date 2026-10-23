@@ -112,6 +112,7 @@ public sealed partial class EditorView
         if (!showTargets) return Guid.Empty;
         foreach (var track in Document.Tracks.AsEnumerable().Reverse())
         {
+            if (!CanSelectCollaborationObject(track.Id)) continue;
             foreach (var node in track.Nodes)
                 if (Near(Point(node), x, y, 9)) return track.Id;
             for (int segment = 0; segment < track.Nodes.Count - 1; segment++)
@@ -138,7 +139,7 @@ public sealed partial class EditorView
 
     private BananaShower? HitBananaRectangle(float x, float y)
         => Document.BananaShowers.AsEnumerable().Reverse()
-            .FirstOrDefault(shower => shower.Id != draftBanana && BananaRectangle(shower).Contains(x, y));
+            .FirstOrDefault(shower => shower.Id != draftBanana && CanSelectCollaborationObject(shower.Id) && BananaRectangle(shower).Contains(x, y));
 
     private bool TryBeginSelectedBananaHandle(float x, float y)
     {

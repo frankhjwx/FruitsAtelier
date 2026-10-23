@@ -63,6 +63,7 @@ public sealed class PatternSnapshot
         copy.BananaShowers.RemoveAll(s => !selected.Contains(s.Id));
         copy.HitsoundOverrides.RemoveAll(h => !selected.Contains(h.SourceId));
         copy.CollaborationReferences = null;
+        copy.CollaborationEditableRanges = null;
         return new(Guid.NewGuid(), name, source, copy);
 
         string Metadata(string key, string fallback = "") => OsuBeatmapReader.Setting(document, "Metadata", key) ?? fallback;
@@ -82,6 +83,7 @@ public sealed class PatternSnapshot
         document.AudioPath = null;
         document.IsDemo = false;
         document.CollaborationReferences = null;
+        document.CollaborationEditableRanges = null;
         // Timing and selected object lines remain authoritative; unrelated map assets and objects do not.
         document.OriginalSections.RemoveAll(s => s.Name is not ("Metadata" or "Difficulty" or "General"));
         foreach (var section in document.OriginalSections.Where(s => s.Name == "General"))

@@ -1,4 +1,9 @@
 {
+  "collab.locked": "Это изменение затрагивает заблокированную совместную секцию.",
+  "collab.lockOutside": "Заблокировать все секции вне указанных интервалов",
+  "collab.removeOutside": "Удалить все ноты вне совместных секций",
+  "collab.syncFrom": "Синхронизировать из этой сложности",
+  "collab.unlockSections": "Разблокировать секции",
   "settings.importSettings": "Настройки импорта",
   "library.myMaps": "Мои карты",
   "library.myMapsSetup": "Укажите имена маппера в настройках.",

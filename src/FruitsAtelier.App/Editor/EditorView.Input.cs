@@ -276,6 +276,10 @@ public sealed partial class EditorView
             return;
         }
         if (!plot.Contains(x, y)) return;
+        if (!IsOsuCanvas && tool is Tool.Fruit or Tool.Slider or Tool.Banana
+            && Document.CollaborationEditableRanges is { } allowedSections
+            && !CollaborationSectionEditing.Contains(allowedSections, MapAt(x, y, true).TimeMs, MapAt(x, y, true).TimeMs))
+        { SetNotice(L.Get("collab.locked")); return; }
         if (!IsOsuCanvas && HitCatchObject(x, y) is { } readOnlyHit && IsReadOnlySlider(readOnlyHit.SourceId))
         {
             PickObject(readOnlyHit.SourceId, ctrl);
@@ -424,11 +428,11 @@ public sealed partial class EditorView
         }
         if (showTargets)
         {
-            foreach (var track in Document.Tracks.AsEnumerable().Reverse())
+            foreach (var track in Document.Tracks.AsEnumerable().Reverse().Where(t => CanSelectCollaborationObject(t.Id)))
                 foreach (var node in track.Nodes)
                     if (Near(Point(node), x, y, 9))
                     { PickObject(track.Id, ctrl); return; }
-            foreach (var track in Document.Tracks)
+            foreach (var track in Document.Tracks.Where(t => CanSelectCollaborationObject(t.Id)))
                 for (int s = 0; s < track.Nodes.Count - 1; s++)
                 {
                     if (!SegmentNearPointer(track, s, y)) continue;

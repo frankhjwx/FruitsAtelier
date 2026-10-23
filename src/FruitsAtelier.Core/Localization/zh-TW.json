@@ -1,4 +1,9 @@
 {
+  "collab.locked": "此編輯涉及已鎖定的合作區間。",
+  "collab.lockOutside": "鎖定引用區間以外的全部區間",
+  "collab.removeOutside": "移除合作區間以外的全部物件",
+  "collab.syncFrom": "從此難度同步",
+  "collab.unlockSections": "解鎖區間",
   "settings.importSettings": "匯入設定",
   "library.myMaps": "我的圖譜",
   "library.myMapsSetup": "請在設定中填寫你的作圖使用者名稱以查看自己的圖譜。",

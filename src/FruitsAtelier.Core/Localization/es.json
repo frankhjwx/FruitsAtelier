@@ -1,4 +1,9 @@
 {
+  "collab.locked": "Esta edición afecta a una sección colaborativa bloqueada.",
+  "collab.lockOutside": "Bloquear las secciones fuera de los intervalos referenciados",
+  "collab.removeOutside": "Eliminar las notas fuera de las secciones colaborativas",
+  "collab.syncFrom": "Sincronizar desde esta dificultad",
+  "collab.unlockSections": "Desbloquear secciones",
   "settings.importSettings": "Ajustes de importación",
   "library.myMaps": "Mis mapas",
   "library.myMapsSetup": "Introduce tus nombres de mapper en Ajustes.",

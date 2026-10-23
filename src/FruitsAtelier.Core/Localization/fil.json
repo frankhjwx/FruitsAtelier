@@ -1,4 +1,9 @@
 {
+  "collab.locked": "Nakaaapekto ang edit na ito sa naka-lock na collab section.",
+  "collab.lockOutside": "I-lock ang mga section sa labas ng mga reference interval",
+  "collab.removeOutside": "Alisin ang lahat ng note sa labas ng mga collab section",
+  "collab.syncFrom": "I-sync mula sa difficulty na ito",
+  "collab.unlockSections": "I-unlock ang mga section",
   "settings.importSettings": "Mga setting ng pag-import",
   "library.myMaps": "Aking mga mapa",
   "library.myMapsSetup": "Ilagay ang iyong mga mapper username sa Settings.",

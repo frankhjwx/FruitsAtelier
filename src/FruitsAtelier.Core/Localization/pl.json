@@ -1,4 +1,9 @@
 {
+  "collab.locked": "Ta zmiana dotyczy zablokowanej sekcji współpracy.",
+  "collab.lockOutside": "Zablokuj sekcje poza wskazanymi zakresami",
+  "collab.removeOutside": "Usuń wszystkie nuty poza sekcjami współpracy",
+  "collab.syncFrom": "Synchronizuj z tego poziomu trudności",
+  "collab.unlockSections": "Odblokuj sekcje",
   "settings.importSettings": "Ustawienia importu",
   "library.myMaps": "Moje mapy",
   "library.myMapsSetup": "Wpisz nazwy mappera w ustawieniach.",

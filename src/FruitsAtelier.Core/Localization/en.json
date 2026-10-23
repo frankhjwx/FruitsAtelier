@@ -1,4 +1,9 @@
 {
+  "collab.locked": "This edit affects a locked collaboration section.",
+  "collab.lockOutside": "Lock all sections other than referenced sections",
+  "collab.removeOutside": "Remove all notes other than collab sections",
+  "collab.syncFrom": "Sync from this difficulty",
+  "collab.unlockSections": "Unlock sections",
   "settings.importSettings": "Import Settings",
   "library.myMaps": "My Maps",
   "library.myMapsSetup": "Set your mapper usernames in Settings to see your maps.",

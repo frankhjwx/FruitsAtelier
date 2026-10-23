@@ -1,4 +1,9 @@
 {
+  "collab.locked": "Deze bewerking raakt een vergrendelde samenwerkingssectie.",
+  "collab.lockOutside": "Alle secties buiten de verwezen bereiken vergrendelen",
+  "collab.removeOutside": "Alle noten buiten samenwerkingssecties verwijderen",
+  "collab.syncFrom": "Synchroniseren vanuit deze moeilijkheid",
+  "collab.unlockSections": "Secties ontgrendelen",
   "settings.importSettings": "Importinstellingen",
   "library.myMaps": "Mijn maps",
   "library.myMapsSetup": "Vul je mappernamen in bij Instellingen.",

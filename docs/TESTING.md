@@ -238,6 +238,11 @@ that section replacement never accumulates timing lines.
 `App.Tests --collaboration-check` checks the dockable panel, active-difficulty
 configuration, reverse references, osu! timestamps, integer milliseconds,
 clipboard input, manual synchronization and automatic AiMod refresh after sync.
+It also checks grouped incoming ranges, reverse synchronization, cleanup and lock
+undo, saved locks and 30% pink overlays confined to the canvas playfield. The
+Formats collaboration suite checks reverse timing and metadata, disjoint-range
+replacement, locked insertions/deletions/moves and lock schemas. The canvas feedback
+performance benchmark compares the same mixed fixture with section locks off/on.
 On Windows, `FruitsAtelier.App.exe --render-check --collaboration-render-check`
 checks native panel input and synchronization in English and Chinese at two
 window sizes and 96/144/192 DPI. Captures are written under

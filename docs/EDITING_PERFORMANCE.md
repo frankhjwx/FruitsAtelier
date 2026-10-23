@@ -322,6 +322,13 @@ Before handing off an editing change:
 
 ## Dock inspectors and live editing
 
+Collaboration selection locks retain one set of selectable parent IDs per editor,
+keyed by the conversion snapshot and editable-range list. The set reads the object
+timeline's existing parent intervals; pointer hit tests reuse it without rebuilding
+slider geometry. Lock overlays iterate only the configured ranges. Transaction
+validation checks changes against locked content at commit, including pasted and
+retimed parents and timing inherited into locked gaps.
+
 Rotation previews retain one history transaction and restore only the selected
 objects from its baseline for each new angle. Repeated values reuse the preview.
 Catch validation uses a preview-owned conversion cache; canvas rendering uses the

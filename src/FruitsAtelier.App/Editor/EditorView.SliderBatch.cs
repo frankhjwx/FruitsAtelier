@@ -80,6 +80,8 @@ public sealed partial class EditorView
         var results = task.Result;
         if (results.Any(r => !difficulties.Contains(r.Session) || !r.Before.ContentEquals(r.Session.History.Document)))
         { SetNotice(L.Get("sliderBatch.changed")); return; }
+        if (results.Any(r => CollaborationSectionEditing.ChangesLockedContent(r.Before, r.After)))
+        { SetNotice(L.Get("collab.locked")); return; }
         int count = 0;
         foreach (var result in results)
         {

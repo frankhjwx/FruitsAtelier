@@ -1,4 +1,9 @@
 {
+  "collab.locked": "Cette modification affecte une section collaborative verrouillée.",
+  "collab.lockOutside": "Verrouiller les sections hors des intervalles référencés",
+  "collab.removeOutside": "Supprimer les notes hors des sections collaboratives",
+  "collab.syncFrom": "Synchroniser depuis cette difficulté",
+  "collab.unlockSections": "Déverrouiller les sections",
   "settings.importSettings": "Paramètres d’importation",
   "library.myMaps": "Mes maps",
   "library.myMapsSetup": "Renseignez vos noms de mapper dans les paramètres.",

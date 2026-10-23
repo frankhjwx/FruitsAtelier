@@ -74,6 +74,13 @@ cloning, dirty comparison and each difficulty's undo history. Reverse references
 are derived from the loaded project's difficulty IDs rather than stored twice.
 See [Collab Mapping](EDITOR_UI.md#collab-mapping) for synchronization rules.
 
+`CollaborationEditableRanges` stores a difficulty's optional interval lock as
+ordered, non-overlapping editable ranges with an explicit inclusive-end flag.
+Null disables the lock. Schema 39 (single difficulty) and 40 (multiple difficulties)
+preserve this state through save, clone and undo; unlocked documents retain their
+content-derived schema. Pattern snapshots omit interval locks. Locks do not affect
+exported gameplay, and their overlays require no object conversion during painting.
+
 ## Authoritative and derived data
 
 | Category | Contents | Rule |

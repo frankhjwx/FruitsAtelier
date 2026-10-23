@@ -107,6 +107,11 @@ public sealed partial class EditorView
         ClampView();
         AdvanceLazerPresentationGesture();
         EnsureConversion();
+        if (!history.HasActiveTransaction && Document.CollaborationEditableRanges is not null)
+        {
+            if (selectedTrack != Guid.Empty && !CanSelectCollaborationObject(selectedTrack)) Select(Guid.Empty);
+            else if (objectSelection.Any(id => !CanSelectCollaborationObject(id))) SelectObjects(objectSelection, selection);
+        }
         PumpRandomDock();
         AdvanceBoxScroll();
         UpdatePlacementHyperdash();
@@ -125,6 +130,7 @@ public sealed partial class EditorView
             else
             {
                 DrawCanvas(c);
+                DrawCollaborationCanvasLock(c);
                 DrawToolPalette(c);
                 DrawDistanceReadout(c);
                 DrawAssistPalette(c);
@@ -708,6 +714,7 @@ public sealed partial class EditorView
         c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, 0xFFFFFF, 2);
         c.Fill(new(headX - 2, overview.Y - 5, 4, 6), 0xFFFFFF);
         DrawTimelineBookmarks(c, overview, 0, TimelineDurationMs);
+        DrawCollaborationLocks(c, overview, 0, TimelineDurationMs);
         DrawBookmarkToolbar(c);
     }
 

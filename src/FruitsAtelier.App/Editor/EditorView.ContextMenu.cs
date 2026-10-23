@@ -156,6 +156,7 @@ public sealed partial class EditorView
         SliderLocation? result = null;
         foreach (var track in Document.Tracks.Where(t => t.Nodes.Count >= 2 && (sourceId is null || t.Id == sourceId)))
         {
+            if (!CanSelectCollaborationObject(track.Id)) continue;
             double duration = track.Nodes[^1].TimeMs - track.Nodes[0].TimeMs;
             for (int span = 0; span < track.SpanCount; span++)
             {
@@ -177,6 +178,7 @@ public sealed partial class EditorView
         EnsureConversion();
         foreach (var slider in conversion!.Sliders.Where(s => s.IsImported && s.Path.Count >= 2 && (sourceId is null || s.SourceId == sourceId)))
         {
+            if (!CanSelectCollaborationObject(slider.SourceId)) continue;
             double duration = slider.DurationMs / slider.SpanCount;
             var path = ImportedCurvePath(slider);
             var distances = ImportedCurveDistances(slider);

@@ -18,7 +18,13 @@ public sealed partial class EditorView
     {
         PumpLegacyDropletRefresh();
         if (LegacyDropletRefreshBusy || !history.HasActiveTransaction) return;
-        if (!history.TransactionNeedsLegacyDropletRefresh) { history.Commit(); return; }
+        if (!history.TransactionNeedsLegacyDropletRefresh)
+        {
+            history.Commit();
+            if (history.LastCommitBlockedBySectionLock) SetNotice(L.Get("collab.locked"));
+            return;
+        }
+        if (history.RejectLockedSectionEdit()) { SetNotice(L.Get("collab.locked")); return; }
         var owner = history;
         long version = owner.ActiveTransactionVersion;
         var before = owner.CaptureTransactionStart();

@@ -22,7 +22,8 @@ public sealed partial class EditorView
     private bool notesLockFlyout;
     private Rect notesLockFlyoutBounds;
     public bool DropletSelectionLocked => dropletSelectionLocked;
-    private bool CanSelectSlider(Guid id) => !LibrarySettings.LockSlidersToCanvas || !IsReadOnlySlider(id);
+    private bool CanSelectSlider(Guid id) => CanSelectCollaborationObject(id)
+        && (!LibrarySettings.LockSlidersToCanvas || !IsReadOnlySlider(id));
     private bool EffectiveGridSnap => !UsesSpeedDistanceSnap && (gridSnap ^ (shiftHeld && !altHeld));
     public (double? Previous, double? Next) DistanceReadout { get; private set; }
 

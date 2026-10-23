@@ -55,11 +55,51 @@ internal static class CollaborationMappingTests
         BoundaryTiming();
         ObjectVelocityAndSectionSamples();
         FinalSectionEnd();
+        ReverseSyncAndSectionLocks();
         Console.WriteLine("PASS collaboration objects, samples, timing, graph, schemas, repeated sync and undo");
     }
 
     private static MapDocument Synchronize(BeatmapProject project, Guid target, IReadOnlyList<CollaborationReference> references)
         => CollaborationMapping.Synchronize(project, target, references).Document;
+
+    private static void ReverseSyncAndSectionLocks()
+    {
+        var part = Difficulty("Part", 500, 1, 60, 100, 500, 1200, 1700, 2200);
+        var merged = Difficulty("Merged", 400, 2, 80, 200, 700, 1200, 1800, 2200);
+        merged.Document.CollaborationReferences = [new(Guid.NewGuid(), part.Id, 0, 1000),
+            new(Guid.NewGuid(), part.Id, 1500, 2000), new(Guid.NewGuid(), Guid.Empty, 2000, 3000)];
+        merged.Document.TimingPoints.Add(new() { TimeMs = 1600, BeatLengthMs = 450 });
+        SongSetup.Set(merged.Document, "Metadata", "Title", "Updated song");
+        SongSetup.Set(part.Document, "Metadata", "Version", "Part");
+        var project = new BeatmapProject { Difficulties = [part, merged] };
+        var synced = CollaborationMapping.SynchronizeFromReferencingDifficulty(project, part.Id, merged.Id).Document;
+        Check(synced.Fruits.Select(f => f.TimeMs).Order().SequenceEqual(new double[] { 200, 700, 1200, 1800, 2200 }), "Reverse sync replaces both ranges and retains gaps");
+        Check(synced.CollaborationReferences is null && SongSetup.Get(synced, "Metadata", "Title") == "Updated song"
+            && SongSetup.Get(synced, "Metadata", "Version") == "Part", "Reverse sync metadata and reference identity");
+        Check(synced.TimingPoints.Any(p => p.TimeMs == 1600 && p.BeatLengthMs == 450), "Reverse sync timing in second range");
+        part.Document = synced;
+        Check(CollaborationMapping.SynchronizeFromReferencingDifficulty(project, part.Id, merged.Id).Document.ContentEquals(synced), "Reverse sync idempotence");
+        var ranges = CollaborationSectionEditing.Ranges(merged.Document.CollaborationReferences.Take(2), 3000);
+        var cleaned = synced.DeepClone(); CollaborationSectionEditing.RemoveOutside(cleaned, ranges);
+        Check(cleaned.Fruits.Select(f => f.TimeMs).Order().SequenceEqual(new double[] { 200, 700, 1800 }), "Remove outside union of ranges");
+        synced.CollaborationEditableRanges = ranges;
+        Check(ProjectSerializer.Read(ProjectSerializer.Serialize(synced)).ContentEquals(synced), "Saved interval locks roundtrip");
+        Check(ProjectSerializer.ReadProject(ProjectSerializer.Serialize(project)).Difficulties[0].Document.ContentEquals(synced), "Project interval locks roundtrip");
+        var history = new EditorHistory(synced);
+        foreach (double time in new[] { 1200d, 2000, 2200 })
+        {
+            history.Begin("locked insertion"); history.Document.Fruits.Add(new() { TimeMs = time }); history.Commit();
+            Check(history.Document.ContentEquals(synced), "Empty locked ranges reject insertion at " + time);
+        }
+        history.Begin("locked deletion"); history.Document.Fruits.RemoveAll(f => f.TimeMs == 1200); history.Commit();
+        Check(history.Document.ContentEquals(synced), "Locked deletion rejected");
+        history.Begin("move into lock"); history.Document.Fruits.First(f => f.TimeMs == 200).TimeMs = 1100; history.Commit();
+        Check(history.Document.ContentEquals(synced), "Moving into locked gap rejected");
+        history.Begin("allowed second section"); history.Document.Fruits.First(f => f.TimeMs == 1800).X = 300; history.Commit();
+        Check(!history.Document.ContentEquals(synced), "Second referenced section is editable");
+        history.Undo(); Check(history.Document.ContentEquals(synced), "Section edit undo"); history.Redo();
+        Check(history.Document.Fruits.First(f => f.TimeMs == 1800).X == 300, "Section edit redo");
+    }
 
     private static void FinalSectionEnd()
     {

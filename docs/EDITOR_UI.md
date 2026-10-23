@@ -104,6 +104,30 @@ Selecting a target opens that difficulty. The panel supports multiple sources an
 multiple targets, including separate non-overlapping ranges from the same source.
 All referenced difficulties must belong to the same project.
 
+**Maps referencing this difficulty** groups all ranges from the same difficulty
+under one heading. **Sync from this difficulty** copies that difficulty's current
+objects, section timing and optional object hitsounds back into every range that
+references the active difficulty. It also copies song metadata (title, artist,
+creator, source, tags and beatmap-set ID), preserving the active difficulty's
+name, version, beatmap ID and reference list. This is an explicit, undoable sync.
+
+**Remove all notes other than collab sections** keeps complete objects inside the
+listed ranges and removes all other objects and their hitsound overrides in one
+undo step. **Lock all sections other than referenced sections** makes those ranges
+editable and protects all remaining time, including empty gaps. Objects must fit
+fully inside an editable range; edits that move into or change a locked range are
+rejected. Locked objects cannot be clicked, box-selected, selected with Select All,
+or manipulated in either canvas or the object timeline. Applying a lock clears
+selection. Timing edits must also preserve the effective timing in locked gaps.
+Explicit collaboration synchronization and cleanup can update locked content.
+Locks are saved per difficulty and support undo. **Unlock sections** clears them;
+the panel's header also offers unlocking if the referencing difficulty was removed.
+Locks capture the ranges when applied; apply the lock again after changing references.
+
+Locked time uses warm pink rectangles at 30% opacity in both timelines and inside
+the canvas playfield. The Catch canvas limits shading to X=0–512; the geometric
+osu! canvas shades its playfield when the playhead is in locked time.
+
 The full-width **Sync references** button and **Sync object hitsounds** option form
 the sync group. A separator divides it from **Generate sections from bookmarks**,
 the section list. **Add Section** sits below all section rows. Use it, select the source, and

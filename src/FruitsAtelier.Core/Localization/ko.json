@@ -1,4 +1,9 @@
 {
+  "collab.locked": "이 편집은 잠긴 협업 구간에 영향을 줍니다.",
+  "collab.lockOutside": "참조 구간 이외의 모든 구간 잠금",
+  "collab.removeOutside": "협업 구간 밖의 모든 노트 삭제",
+  "collab.syncFrom": "이 난이도에서 동기화",
+  "collab.unlockSections": "구간 잠금 해제",
   "settings.importSettings": "가져오기 설정",
   "library.myMaps": "내 비트맵",
   "library.myMapsSetup": "설정에서 매퍼 사용자 이름을 입력하세요.",

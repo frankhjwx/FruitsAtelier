@@ -1,4 +1,9 @@
 {
+  "collab.locked": "此编辑涉及已锁定的合作区间。",
+  "collab.lockOutside": "锁定引用区间以外的全部区间",
+  "collab.removeOutside": "移除合作区间以外的全部物件",
+  "collab.syncFrom": "从此难度同步",
+  "collab.unlockSections": "解锁区间",
   "settings.importSettings": "导入设置",
   "library.myMaps": "我的谱面",
   "library.myMapsSetup": "请在设置中填写你的作图用户名以查看自己的谱面。",

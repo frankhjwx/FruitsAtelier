@@ -9,6 +9,22 @@ public static class CollaborationMapping
         double SectionStartMs, double SectionEndMs);
     public sealed record Result(MapDocument Document, HitsoundResourcePlan Resources, IReadOnlyList<ExcludedObject> ExcludedObjects);
 
+    public static Result SynchronizeFromReferencingDifficulty(BeatmapProject project, Guid targetId, Guid sourceId,
+        bool compensateTinyDroplets = true, OsuWriteCache? outputCache = null, bool synchronizeObjectHitsounds = true)
+    {
+        var source = project.Difficulties.Single(d => d.Id == sourceId).Document;
+        var target = project.Difficulties.Single(d => d.Id == targetId).Document;
+        var references = (source.CollaborationReferences ?? []).Where(r => r.DifficultyId == targetId)
+            .Select(r => r with { DifficultyId = sourceId }).ToArray();
+        if (references.Length == 0) throw new InvalidDataException(L.Get("collab.missing"));
+        var result = Synchronize(project, targetId, references, compensateTinyDroplets, outputCache,
+            synchronizeObjectHitsounds, source.CollaborationReferences!.Max(r => r.EndMs));
+        result.Document.CollaborationReferences = target.CollaborationReferences?.ToList();
+        foreach (string key in new[] { "Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Source", "Tags", "BeatmapSetID" })
+            SongSetup.Set(result.Document, "Metadata", key, SongSetup.Get(source, "Metadata", key));
+        return result;
+    }
+
     public static List<CollaborationReference> SectionsFromBookmarks(MapDocument document, double? durationMs = null)
     {
         double duration = durationMs ?? document.DurationMs;
@@ -33,7 +49,7 @@ public static class CollaborationMapping
 
     public static Result Synchronize(BeatmapProject project, Guid targetId,
         IReadOnlyList<CollaborationReference> references, bool compensateTinyDroplets = true, OsuWriteCache? outputCache = null,
-        bool synchronizeObjectHitsounds = true)
+        bool synchronizeObjectHitsounds = true, double? finalSectionEnd = null)
     {
         ValidateReferences(project, targetId, references);
         var byId = project.Difficulties.ToDictionary(d => d.Id);
@@ -42,7 +58,7 @@ public static class CollaborationMapping
         result.CollaborationReferences = references.Count == 0 ? null : references.ToList();
         var assigned = references.Where(r => r.DifficultyId != Guid.Empty).ToArray();
         if (assigned.Length == 0) return new(result, HitsoundResourcePlan.Combine([]), []);
-        double finalEnd = references.Max(r => r.EndMs);
+        double finalEnd = finalSectionEnd ?? references.Max(r => r.EndMs);
         LegacySliderVelocityEditing.Capture(result);
         var targetTiming = new TimingMap.Lookup(target);
         foreach (var track in result.Tracks.Where(t => t.Nodes.Count > 0))
