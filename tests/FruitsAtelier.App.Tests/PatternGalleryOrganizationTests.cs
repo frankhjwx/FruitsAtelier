@@ -35,7 +35,7 @@ internal static class PatternGalleryOrganizationTests
             && ui.View.PatternGalleryTagsBounds.X > ui.View.PatternGallerySearchBounds.Right
             && !ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.manageTags")), "Gallery toolbar does not place Tags beside Search with Manage Tags in its menu");
         ManageTags();
-        ui.ClickText(L.Get("gallery.newTag")); ui.Type("Unused"); SetColour("#AB12CD"); ui.ClickText(L.Get("mac.save")); Settle();
+        NewTag(); ui.Type("Unused"); SetColour("#AB12CD"); SaveTag(); Settle();
         Check(store.LoadContents().Tags.Any(t => t.Name == "Unused" && t.Colour == 0xAB12CD)
             && store.Load().All(p => p.Tags.All(t => t.Name != "Unused")), "Independent tag creation assigned a pattern or lost its colour");
         ui.Key(27);
@@ -43,6 +43,22 @@ internal static class PatternGalleryOrganizationTests
         ManageTags(); SelectTag("Unused");
         Check(ui.Canvas.Texts.Any(t => t.Value == "#AB12CD"), "Unassigned tags did not survive gallery reload");
         ui.Key(27);
+        string emptyDirectory = Path.Combine(directory, "Empty");
+        var emptyStore = new PatternGalleryStore(emptyDirectory);
+        ui.View.ConfigurePatternGallery(emptyDirectory); ui.Paint(); Settle(); ManageTags();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.emptyTags"))
+            && !ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.noMatches")), "Empty tag list shows a pattern search diagnostic");
+        Check(ui.View.GalleryTagPreviousBounds.Width == 0 && ui.View.GalleryTagDeleteBounds.Width == 0,
+            "Empty tag list shows paging or destructive actions");
+        SaveTag(); Settle(); Check(emptyStore.LoadContents().Tags.Count == 0, "Blank draft was created");
+        ui.Key(27);
+        for (int i = 0; i < 18; i++) emptyStore.AddTag(new($"Tag{i:00}", 0x58D8C1));
+        ui.View.ConfigurePatternGallery(emptyDirectory); ui.Paint(); Settle(); ManageTags();
+        Check(ui.View.GalleryTagNextBounds.Width > 0, "Multi-page tags have no next-page control");
+        var next = ui.View.GalleryTagNextBounds;
+        ui.Click(next.X + 10, next.Y + 10);
+        Check(ui.Canvas.Texts.Any(t => t.Value == "Tag08") && !ui.Canvas.Texts.Any(t => t.Value == "Tag01"), "Paging does not replace the visible tag list");
+        ui.Key(27); ui.View.ConfigurePatternGallery(directory); ui.Paint(); Settle();
         ui.Key('F', ctrl: true); ui.Type("ＳＮＯＷ mapper"); ui.Paint();
         Check(ui.View.PatternGalleryFilteredCount == 3, "Gallery search does not use Library normalization and all-word matching");
         ui.Key('A', ctrl: true); ui.View.TextInput('\u0001'); ui.Paint();
@@ -74,8 +90,8 @@ internal static class PatternGalleryOrganizationTests
         int builds = ui.View.PatternGalleryPreviewBuildCount;
         ui.ClickText(L.Get("gallery.editTags"));
         Check(ui.View.GalleryTagsVisible, "Edit Tags did not open the dedicated dialog");
-        ui.ClickText(L.Get("gallery.newTag")); ui.Type("Custom"); ui.Key(13); Settle();
-        SelectTag("Custom"); SetColour("#65A9FF"); ui.ClickText(L.Get("mac.save")); Settle();
+        NewTag(); ui.Type("Custom"); ui.Key(13); Settle();
+        SelectTag("Custom"); SetColour("#65A9FF"); SaveTag(); Settle();
         Check(store.Load().Single(p => p.Id == jump.Id).Tags.Any(t => t.Name == "Custom" && t.Colour == 0x65A9FF), "New tag assignment did not persist");
         Check(ui.View.PatternGalleryPreviewBuildCount == builds, "Tag assignment rebuilt geometry");
         ui.Key(27); Check(!ui.View.GalleryTagsVisible && ui.View.PatternGalleryPreviewVisible, "Closing tags closed the detail preview");
@@ -86,6 +102,8 @@ internal static class PatternGalleryOrganizationTests
         ui.Key(27); ui.Key(27);
         ManageTags();
         Check(ui.View.GalleryTagsVisible, "Manage Tags did not open the shared dialog");
+        Check(ui.View.GalleryTagPreviousBounds.Width == 0 && ui.View.GalleryTagNextBounds.Width == 0,
+            "Single-page tag list shows unnecessary paging controls");
         SelectTag("Custom");
         var hue = ui.View.GalleryTagHueBounds;
         var palette = ui.View.GalleryTagPaletteBounds;
@@ -100,11 +118,11 @@ internal static class PatternGalleryOrganizationTests
             "Colour dragging wrote before Save");
         ui.Key(27); ManageTags(); SelectTag("Custom");
         Check(ui.Canvas.Texts.Any(t => t.Value == "#65A9FF"), "Closing the dialog persisted unsaved colour changes");
-        SetColour("#123ABC"); ui.ClickText(L.Get("mac.save")); Settle();
+        SetColour("#123ABC"); SaveTag(); Settle();
         Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Custom" && t.Colour == 0x123ABC)) == 2,
             "Tag colour editing did not update all assignments");
         var nameField = ui.View.GalleryTagNameBounds;
-        ui.Click(nameField.X + 10, nameField.Y + 12); ui.Key('A', ctrl: true); ui.Type("Practice"); ui.ClickText(L.Get("mac.save")); Settle();
+        ui.Click(nameField.X + 10, nameField.Y + 12); ui.Key('A', ctrl: true); ui.Type("Practice"); SaveTag(); Settle();
         Check(store.Load().Count(p => p.Tags.Any(t => t.Name == "Practice")) == 2, "Tag rename did not persist across patterns");
         ui.ClickText(L.Get("gallery.deleteTag")); Settle();
         Check(store.Load().All(p => p.Tags.All(t => t.Name != "Practice")), "Tag removal left assignments");
@@ -129,6 +147,18 @@ internal static class PatternGalleryOrganizationTests
         {
             var bounds = ui.View.PatternGalleryCardBounds(pattern.Id);
             ui.Click(bounds.X + 20, bounds.Y + 20); Settle();
+        }
+        void NewTag()
+        {
+            var bounds = ui.View.GalleryNewTagBounds;
+            Check(bounds.Y < ui.View.GalleryTagNameBounds.Y, "New Tag is not in the dialog header");
+            ui.Click(bounds.X + 10, bounds.Y + 10);
+        }
+        void SaveTag()
+        {
+            ui.Paint();
+            var bounds = ui.View.GalleryTagSaveBounds;
+            ui.Click(bounds.X + 10, bounds.Y + 10);
         }
         void ManageTags()
         {

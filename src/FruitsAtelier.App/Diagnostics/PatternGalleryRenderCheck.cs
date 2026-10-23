@@ -163,6 +163,20 @@ internal static class PatternGalleryRenderCheck
                 Wait(() => editor.PatternGalleryCount == patterns.Count && !editor.PatternGalleryNeedsRedraw, "delete pattern");
                 Paint("deleted");
                 if (!map.ContentEquals(editor.Document)) throw new InvalidOperationException("Gallery management changed the map.");
+                string emptyGallery = Path.Combine(gallery, "empty");
+                editor.ConfigurePatternGallery(emptyGallery); Paint();
+                Wait(() => !editor.PatternGalleryNeedsRedraw, "load empty tags");
+                Click(editor.PatternGalleryTagsBounds); Click(editor.PatternGalleryManageTagsMenuBounds); Paint("empty-tags");
+                if (editor.GalleryTagPreviousBounds.Width > 0 || editor.GalleryTagDeleteBounds.Width > 0)
+                    throw new InvalidOperationException("Empty tags show irrelevant actions.");
+                editor.KeyDown(27, false, false); Paint();
+                var tagStore = new PatternGalleryStore(emptyGallery);
+                for (int i = 0; i < 18; i++) tagStore.AddTag(new($"Tag{i:00}", 0x58D8C1));
+                editor.ConfigurePatternGallery(emptyGallery); Paint();
+                Wait(() => !editor.PatternGalleryNeedsRedraw, "load paged tags");
+                Click(editor.PatternGalleryTagsBounds); Click(editor.PatternGalleryManageTagsMenuBounds); Paint("paged-tags");
+                Click(editor.GalleryTagNextBounds); Paint("paged-tags-next");
+                editor.KeyDown(27, false, false); Paint();
                 Console.WriteLine($"PASS native Pattern Gallery {locale} {size.Item1}x{size.Item2} {dpi} DPI");
 
                 void ClickContext(int row) => Click(new(Math.Clamp(contextX, 8, Math.Max(8, size.Item1 - 308)) + 6,
