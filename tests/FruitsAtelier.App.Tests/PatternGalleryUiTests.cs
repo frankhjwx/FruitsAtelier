@@ -163,6 +163,7 @@ internal static class PatternGalleryUiTests
             DenseThumbnailScheduling(ui, Path.Combine(directory, "dense"));
             LegacyOverrideDrops();
             PatternGalleryOrganizationTests.Run();
+            PatternGalleryTagPreviewTests.Run();
         }
         finally { Directory.Delete(directory, true); }
     }

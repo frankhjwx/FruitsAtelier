@@ -52,7 +52,7 @@ internal static class PatternGalleryRenderCheck
                 foreach (char character in locale == "en" ? "Practice" : "\u7ec3\u4e60") editor.TextInput(character);
                 Click(editor.GalleryTagHueBounds); Paint("new-tag");
                 editor.KeyDown(27, false, false); Paint();
-                if (new PatternGalleryStore(gallery).LoadContents().Tags.Count != 2)
+                if (new PatternGalleryStore(gallery).LoadContents().Tags.Count != patterns.SelectMany(p => p.Tags).DistinctBy(t => t.Name).Count())
                     throw new InvalidOperationException("Closing a new tag draft persisted it.");
                 Click(editor.PatternGallerySearchBounds);
                 foreach (char character in "Studio Fruit") editor.TextInput(character);
@@ -247,6 +247,8 @@ internal static class PatternGalleryRenderCheck
                 .Concat(map.ImportedSliders.Select(s => s.Id)).Concat(map.BananaShowers.Select(b => b.Id)), names[index])
                 .WithTags([index % 2 == 0 ? new("Flow", 0x58D8C1) : new("Jump", 0xFFB45C)]));
         }
+        patterns[1] = patterns[1].WithTags([new("Flow", 0x58D8C1), new("Jump", 0xFFB45C), new("Long pattern", 0x65A9FF),
+            new("Repeated jump", 0xB58DFF), new("Wide jump", 0xED8DBB)]);
         return patterns;
     }
 }

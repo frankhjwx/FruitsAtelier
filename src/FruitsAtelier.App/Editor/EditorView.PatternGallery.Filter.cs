@@ -24,6 +24,7 @@ public sealed partial class EditorView
 
     private void RefreshGallerySearchIndex()
     {
+        galleryTagLayouts.Clear();
         galleryTags = galleryTags.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToArray();
         galleryTagFilter.IntersectWith(galleryTags.Select(t => t.Name));
         gallerySearchIndex = galleryPatterns.Select(p => (p, LibraryDatabase.Normalize(string.Join(" ",

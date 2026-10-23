@@ -84,6 +84,7 @@ public sealed partial class EditorView
         if (PatternEditingActive || PatternEditingBusy || galleryIoTask is not null)
         { galleryPendingDirectory = directory; return; }
         galleryPendingDirectory = null;
+        galleryTagLayouts.Clear();
         CloseGalleryTags();
         galleryGeneration++;
         galleryStore = new PatternGalleryStore(directory);
@@ -295,7 +296,7 @@ public sealed partial class EditorView
                 galleryCards.Add((pattern.Id, card)); galleryVisibleIds.Add(pattern.Id);
                 c.Fill(card, Surface, 5);
                 c.Stroke(card, gallerySelection.Contains(pattern.Id) ? Accent : Grid, gallerySelection.Contains(pattern.Id) ? 2 : 1, 5);
-                var image = new Rect(card.X + 6, card.Y + 6, card.Width - 12, cellHeight - 41);
+                var image = new Rect(card.X + 6, card.Y + 6, card.Width - 12, cellHeight - (pattern.Tags.Count > 0 ? 61 : 41));
                 if (galleryPreviews.TryGetValue(pattern.Id, out var preview))
                 {
                     preview.LastUsed = ++galleryUseCounter;
@@ -303,8 +304,11 @@ public sealed partial class EditorView
                 }
                 else c.Text(galleryPreviewErrors.ContainsKey(pattern.Id) ? "!" : "…", image.X + image.Width / 2 - 5, image.Y + image.Height / 2 - 10, 18, Muted);
                 c.Text(pattern.Name, card.X + 7, card.Bottom - 23, 12, Foreground, card.Width - 14);
-                for (int tag = 0; tag < Math.Min(4, pattern.Tags.Count); tag++)
-                    c.Circle(card.Right - 10 - tag * 9, card.Y + 10, 3, pattern.Tags[tag].Colour);
+                if (pattern.Tags.Count > 0)
+                {
+                    var tags = new Rect(card.X + 7, card.Bottom - 45, card.Width - 14, 18);
+                    DrawGalleryTagChips(c, GalleryTagsLayout(c, pattern, tags.Width, false), tags);
+                }
             }
         c.Unclip();
         DrawGalleryScrollbar(c, galleryGridBounds, galleryScroll, galleryMaxScroll);
@@ -313,6 +317,7 @@ public sealed partial class EditorView
 
     private void DrawPatternGalleryOverlay(ICanvas c)
     {
+        galleryPreviewTagsBounds = default;
         if (!PatternGalleryAvailable) { galleryPopupBounds = galleryLargePreviewBounds = default; return; }
         DrawGalleryGhost(c);
         if (galleryDragging || galleryPopupId == Guid.Empty) return;
@@ -326,10 +331,11 @@ public sealed partial class EditorView
         c.Fill(new(left + 5, top + 5, popupWidth, popupHeight), 0x000000, 7, .35f);
         c.Fill(galleryPopupBounds, Background, 7); c.Stroke(galleryPopupBounds, Accent, 1, 7);
         c.Text(pattern.Name, left + 16, top + 14, 16, Foreground, popupWidth - 65, true);
+        float tagsHeight = DrawGalleryPopupTags(c, pattern, left + 16, top + 36, popupWidth - 32, popupHeight);
+        float previewTop = top + Math.Max(56, 36 + tagsHeight);
         Button(c, new(left + popupWidth - 36, top + 8, 28, 28), "×", () => galleryPopupId = Guid.Empty);
-        c.Text(L.Get("gallery.scrollHint"), left + 16, top + 36, 10, Muted, popupWidth - 32);
         float metadataTop = top + popupHeight - 112;
-        galleryLargePreviewBounds = new(left + 12, top + 56, popupWidth - 24, Math.Max(50, metadataTop - top - 66));
+        galleryLargePreviewBounds = new(left + 12, previewTop, popupWidth - 24, Math.Max(1, metadataTop - previewTop - 10));
         c.Fill(galleryLargePreviewBounds, Surface, 3);
         if (galleryPreviews.TryGetValue(pattern.Id, out var preview))
         {
@@ -340,9 +346,9 @@ public sealed partial class EditorView
                 DrawGalleryPreview(c, full, galleryLargePreviewBounds, false, galleryPreviewScroll);
                 DrawGalleryScrollbar(c, galleryLargePreviewBounds, galleryPreviewMaxScroll - galleryPreviewScroll, galleryPreviewMaxScroll);
             }
-            else c.Text(L.Get("gallery.loading"), left + 25, top + 70, 12, Muted, popupWidth - 50);
+            else c.Text(L.Get("gallery.loading"), left + 25, galleryLargePreviewBounds.Y + 14, 12, Muted, popupWidth - 50);
         }
-        else c.Text(galleryPreviewErrors.GetValueOrDefault(pattern.Id) ?? L.Get("gallery.loading"), left + 25, top + 70, 12, Muted, popupWidth - 50);
+        else c.Text(galleryPreviewErrors.GetValueOrDefault(pattern.Id) ?? L.Get("gallery.loading"), left + 25, galleryLargePreviewBounds.Y + 14, 12, Muted, popupWidth - 50);
         c.Text(L.Get("gallery.sourceSummary", pattern.Source.Artist, pattern.Source.Title, pattern.Source.Creator, pattern.Source.Difficulty),
             left + 16, metadataTop, 11, Foreground, popupWidth - 32);
         float footerWidth = (popupWidth - 30) / 2;

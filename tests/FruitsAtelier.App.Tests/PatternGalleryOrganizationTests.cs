@@ -70,7 +70,7 @@ internal static class PatternGalleryOrganizationTests
         var allLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("gallery.allTags"));
         var noneLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("gallery.noTags"));
         var manageLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("gallery.manageTags"));
-        var tagLabel = ui.Canvas.Texts.Single(t => t.Value == "Jump");
+        var tagLabel = ui.Canvas.Texts.Last(t => t.Value == "Jump");
         Check(allLabel.Y == noneLabel.Y && noneLabel.Y == manageLabel.Y && allLabel.X < noneLabel.X && noneLabel.X < manageLabel.X
             && tagLabel.Y > manageLabel.Y + 32, "Tag filter actions are not one row above the tag separator");
         float hoverX = noneLabel.X + 4, hoverY = noneLabel.Y + 5;
@@ -86,9 +86,9 @@ internal static class PatternGalleryOrganizationTests
         Check(ui.View.PatternGalleryFilteredCount == 3, "All did not match patterns with any selected tag");
         ui.ClickText(L.Get("gallery.noTags"));
         Check(ui.View.PatternGalleryFilteredCount == 3, "None did not clear the tag selection"); ui.Key(27);
-        ui.ClickText(L.Get("gallery.tagFilters")); ui.ClickText("Jump"); ui.Key(27);
+        ui.ClickText(L.Get("gallery.tagFilters")); ui.ClickObjectAction("Jump"); ui.Key(27);
         Check(ui.View.PatternGalleryFilteredCount == 2, "Tag filtering did not retain assigned patterns");
-        ui.ClickText(L.Get("gallery.tagFilters")); ui.ClickText("Flow"); ui.Key(27);
+        ui.ClickText(L.Get("gallery.tagFilters")); ui.ClickObjectAction("Flow"); ui.Key(27);
         Check(ui.View.PatternGalleryFilteredCount == 3 && ui.View.PatternGalleryCardBounds(jump.Id).Width > 0
             && ui.View.PatternGalleryCardBounds(stream.Id).Width > 0 && ui.View.PatternGalleryCardBounds(both.Id).Width > 0,
             "Multiple tags must match any selected tag");
@@ -122,7 +122,7 @@ internal static class PatternGalleryOrganizationTests
         ui.Key(27); Check(!ui.View.GalleryTagsVisible && ui.View.PatternGalleryPreviewVisible, "Closing tags closed the detail preview");
         ui.Key(27); Open(stream);
         ui.ClickText(L.Get("gallery.editTags"));
-        Check(!ui.Canvas.Texts.Any(t => t.Value == "Custom" || t.Value == "✓"), "Edit Tags includes unrelated tags or assignment checkboxes");
+        Check(!ui.Canvas.Texts.Any(t => (t.Value == "Custom" || t.Value == "✓") && ui.View.GalleryTagListBounds.Contains(t.X, t.Y)), "Edit Tags includes unrelated tags or assignment checkboxes");
         NewTag(); ui.Type("Custom"); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.addTag")), "Existing tag is not offered for direct addition");
         SaveTag(); Settle();
@@ -199,7 +199,7 @@ internal static class PatternGalleryOrganizationTests
         }
         void SelectTag(string name)
         {
-            var row = ui.Canvas.Texts.First(t => t.Value == name);
+            var row = ui.Canvas.Texts.First(t => t.Value == name && ui.View.GalleryTagListBounds.Contains(t.X, t.Y));
             ui.Click(row.X + 5, row.Y + 5);
         }
         void SetColour(string hex)

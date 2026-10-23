@@ -2,7 +2,11 @@
 
 Open **Layout → Pattern Gallery** to show the dockable gallery. The default layout
 includes it in the right dock. Cards fill the panel, with a skin-rendered thumbnail
-above each pattern name. Cards have a fixed size; resizing the dock changes the
+above each pattern name. A single row of coloured tag names sits immediately above
+the name; a `+N` chip represents tags that do not fit. The enlarged preview displays
+all tags below its title, replacing the scroll/zoom hint and wrapping as needed. If the tags exceed the available
+header space, scroll within the tag area to read the remaining tags independently
+of the pattern preview. Cards have a fixed size; resizing the dock changes the
 number of columns and wraps the cards without resizing the thumbnails.
 Select a card to open a larger preview beside the panel;
 use the wheel or drag vertically within that preview to inspect a long pattern.

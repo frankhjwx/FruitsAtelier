@@ -174,6 +174,7 @@ public sealed partial class EditorView
             {
                 galleryPopupId = galleryPressedId;
                 galleryPreviewScroll = 0;
+                galleryPreviewTagsScroll = 0;
                 galleryPreviewZoom = 1;
             }
             galleryPressedId = Guid.Empty;
@@ -198,6 +199,11 @@ public sealed partial class EditorView
         if (!PatternGalleryInputAvailable || menu >= 0 || contextItems.Count > 0) return false;
         if (galleryPopupId != Guid.Empty && galleryPopupBounds.Contains(x, y))
         {
+            if (galleryPreviewTagsBounds.Contains(x, y))
+            {
+                galleryPreviewTagsScroll = Math.Clamp(galleryPreviewTagsScroll - delta / 120 * 36, 0, galleryPreviewTagsMaximum);
+                return true;
+            }
             if (alt)
             {
                 if (galleryLargePreviewBounds.Contains(x, y) && galleryFullPreviewId == galleryPopupId && galleryFullPreview is { } data)
