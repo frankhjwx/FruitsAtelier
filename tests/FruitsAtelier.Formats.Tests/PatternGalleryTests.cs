@@ -111,7 +111,17 @@ internal static class PatternGalleryTests
             tagStore.Add(snapshot);
             var taggedSecond = PatternSnapshot.Capture(map, [before.Id], "Tagged second").WithTags([new("Stream", 0x58D8C1)]);
             tagStore.Add(taggedSecond);
+            tagStore.ReorderTags(["Stream", "Jump"]);
+            Check(tagStore.LoadContents().Tags.Select(t => t.Name).SequenceEqual(["Stream", "Jump"]), "Assigned tag order survives archive reload");
+            Expect<InvalidDataException>(() => tagStore.ReorderTags(["Stream", "Stream"]));
+            Expect<InvalidDataException>(() => tagStore.ReorderTags(["Jump"]));
+            string ordered = Path.Combine(directory, "ordered.fap");
+            tagStore.Export(ordered, [snapshot.Id]);
+            var orderedImport = new PatternGalleryStore(Path.Combine(directory, "OrderedImport"));
+            orderedImport.Import(ordered);
+            Check(orderedImport.LoadContents().Tags.Select(t => t.Name).SequenceEqual(["Stream", "Jump"]), "Selected export and import retain catalog order");
             tagStore.EditTag("Stream", new("Flow", 0x65A9FF));
+            Check(tagStore.LoadContents().Tags.Select(t => t.Name).SequenceEqual(["Flow", "Jump"]), "Renaming a tag changes its saved position");
             Check(tagStore.Load().All(p => p.Tags.Any(t => t.Name == "Flow" && t.Colour == 0x65A9FF)), "Tag rename and colour edits update all assignments");
             Expect<InvalidOperationException>(() => tagStore.EditTag("Flow", new("Jump", 1)));
             tagStore.EditTag("Flow", null);

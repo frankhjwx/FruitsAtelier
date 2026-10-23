@@ -468,7 +468,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
-        if (GalleryTagsVisible) { mouseX = x; mouseY = y; if (!PatternNameVisible) { if (textSelecting && GalleryTagTextFocused) MoveInputSelection(x); else MoveGalleryTagColour(x, y); } return; }
+        if (GalleryTagsVisible) { mouseX = x; mouseY = y; if (!PatternNameVisible) { if (MoveGalleryTagOrder(x, y)) return; if (textSelecting && GalleryTagTextFocused) MoveInputSelection(x); else MoveGalleryTagColour(x, y); } return; }
         if (PatternGalleryPointerMove(x, y)) return;
         if (templatePointer) { mouseX = x; mouseY = y; MoveMapTemplate(x, y); return; }
         if (CollaborationReportVisible) { mouseX = x; mouseY = y; if (collaborationReportDragging) MoveCollaborationReport(x, y); return; }
@@ -634,7 +634,7 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
-        if (GalleryTagsVisible) { if (button == 0) { if (!PatternNameVisible) MoveGalleryTagColour(x, y); galleryTagDrag = 0; textSelecting = false; } return; }
+        if (GalleryTagsVisible) { if (button == 0) { if (EndGalleryTagOrder(x, y)) return; if (!PatternNameVisible) MoveGalleryTagColour(x, y); galleryTagDrag = 0; textSelecting = false; } return; }
         if (PatternGalleryPointerUp(x, y, button)) return;
         if (templatePointer && button == 0)
         {
@@ -1606,6 +1606,7 @@ public sealed partial class EditorView
     public void CancelInteraction(bool preserveTestplay = false)
     {
         CancelPatternGalleryInteraction();
+        CancelGalleryTagOrder();
         FinishMapTemplateDrag(cancel: true);
         CancelRotation();
         rotationDragging = false;

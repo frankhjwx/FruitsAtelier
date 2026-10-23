@@ -179,6 +179,13 @@ internal static class PatternGalleryRenderCheck
                 editor.ConfigurePatternGallery(emptyGallery); Paint();
                 Wait(() => !editor.PatternGalleryNeedsRedraw, "load paged tags");
                 Click(editor.PatternGalleryTagsBounds); Click(editor.PatternGalleryManageTagsMenuBounds); Paint("paged-tags");
+                var tagList = editor.GalleryTagListBounds;
+                editor.PointerDown(tagList.X + 40, tagList.Y + 20, 0, false, false);
+                editor.PointerMove(tagList.X + 40, tagList.Y + 106, false, false); Paint("tag-reorder");
+                editor.PointerUp(tagList.X + 40, tagList.Y + 106, 0); Paint();
+                Wait(() => !editor.PatternGalleryNeedsRedraw, "save tag order");
+                if (!tagStore.LoadContents().Tags.Take(3).Select(t => t.Name).SequenceEqual(new[] { "Tag01", "Tag02", "Tag00" }))
+                    throw new InvalidOperationException("Dragging Manage Tags did not persist its order.");
                 Click(editor.GalleryTagNextBounds); Paint("paged-tags-next");
                 editor.KeyDown(27, false, false); Paint();
                 Console.WriteLine($"PASS native Pattern Gallery {locale} {size.Item1}x{size.Item2} {dpi} DPI");

@@ -5,13 +5,15 @@ includes it in the right dock. Cards fill the panel, with a skin-rendered thumbn
 above each pattern name. A single row of coloured tag names sits immediately above
 the name; a `+N` chip represents tags that do not fit. The enlarged preview displays
 source information below its title, followed by all tags with a compact **Edit Tags** button beside them.
-Tags wrap as needed. **Edit Pattern** and **Go to Original Map** share one row of outlined buttons below the preview.
+When a tag row does not fit, names longer than five Unicode characters show their
+first five characters followed by an ellipsis. A row that fits retains full names.
+Expanded tags wrap as needed; cards keep the `+N` overflow indicator. **Edit Pattern** and **Go to Original Map** share one row of outlined buttons below the preview.
 If the tags exceed the available
 header space, scroll within the tag area to read the remaining tags independently
 of the pattern preview. Cards have a fixed size; resizing the dock changes the
 number of columns and wraps the cards without resizing the thumbnails.
 Select a card to open a larger preview beside the panel;
-use the wheel or drag vertically within that preview to inspect a long pattern.
+use the wheel, left-button drag or middle-button drag vertically within that preview to inspect a long pattern.
 The enlarged panel blocks pointer input and hover feedback from controls underneath it.
 The enlarged preview follows the canvas scroll direction, including the reverse-scroll setting.
 Its scrollbar starts at the bottom and moves upward when browsing later objects above.
@@ -47,7 +49,11 @@ available tags with checkboxes: click a row to assign or unassign its tag to the
 current pattern. Creating a tag assigns it immediately. Unassigned tags remain
 available after reopening the gallery or removing their last assignment.
 **Manage Tags** edits shared names and colours and can delete a tag throughout the
-gallery. Empty lists explain how to create a tag, and paging controls appear only
+gallery. Drag a row in **Manage Tags** to change its position; the insertion line
+marks the destination. While dragging, hover a paging arrow to reach another page.
+Releasing outside the list cancels the move. Order saves automatically and is used
+by the tag picker and preview labels; name and colour edits retain that position.
+Empty lists explain how to create a tag, and paging controls appear only
 when the list spans multiple pages.
 
 The colour picker uses the same saturation/value chart and hue strip as Song Setup;
@@ -77,9 +83,9 @@ skins or local source paths. Custom sample references do not bundle sample files
 The local gallery lives in `Patterns/gallery.fap` under the configured workspace.
 Local source-file hints are stored separately in `Patterns/sources.local.json`.
 Packages are ZIP files containing `manifest.json` and one project document per
-pattern. Untagged exports use version 1; packages whose tags are all assigned use
-version 2. Packages containing unassigned tags use version 3, with a gallery tag
-catalog in the manifest. All three versions can be imported. Import validates IDs,
+pattern. Untagged exports use version 1. Version 2 stores pattern tags without a
+gallery catalog. Packages with a gallery tag catalog use version 3; catalog array
+order preserves the user-defined tag order, including unassigned tags. All three versions can be imported. Import validates IDs,
 names, tags, exact archive entries and bounded sizes before publishing the complete result. Writes use a temporary file and atomic
 replacement. The package limit is 4,096 patterns, 64 MiB compressed and 256 MiB
 expanded; individual documents also obey the project format's limits.
@@ -115,8 +121,9 @@ visible, while streams and stacks appear as their generated fruits.
 
 ## Editing and source navigation
 
-Click a card to open its details. The footer shows **Artist - Title (Mapper)
-[Difficulty]**, then **Edit Pattern** and **Edit Tags**, followed by **Go to Original Map**.
+Click a card to open its details. **Artist - Title (Mapper) [Difficulty]** appears
+below the title, followed by tags and **Edit Tags**. **Edit Pattern** and
+**Go to Original Map** share the footer row.
 Choose **Edit Pattern** to edit its snapshot in the main canvas. Only that pattern's
 objects are present. The **Editing pattern** banner identifies the mode and offers
 **Save and return**, **Discard and return**, and **Go to Original Map**.

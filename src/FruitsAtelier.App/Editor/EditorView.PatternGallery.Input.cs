@@ -19,6 +19,7 @@ public sealed partial class EditorView
     private double galleryRequestedTime = double.NaN, galleryStartedTime = double.NaN, galleryRequestedX;
     private int galleryDragVersion;
     private bool galleryDragSpeed;
+    private int galleryPreviewPanButton;
     private int galleryPopupHitStart, galleryPopupHitEnd;
     private bool PatternGalleryPopupContains(float x, float y) => PatternGalleryInputAvailable
         && !galleryDragging && galleryPopupId != Guid.Empty && menu < 0 && contextItems.Count == 0
@@ -34,8 +35,9 @@ public sealed partial class EditorView
         if (GallerySearchFocused && !gallerySearchBounds.Contains(x, y)) textEditor.Field = "";
         if (galleryPopupId != Guid.Empty && galleryPopupBounds.Contains(x, y))
         {
-            if (button == 0 && galleryLargePreviewBounds.Contains(x, y))
+            if (button is 0 or 1 && galleryLargePreviewBounds.Contains(x, y))
             {
+                galleryPreviewPanButton = button;
                 galleryPreviewPanning = true; galleryPressedY = y; galleryScrollOrigin = galleryPreviewScroll;
             }
             else if (button == 0)
@@ -167,10 +169,10 @@ public sealed partial class EditorView
     private bool PatternGalleryPointerUp(float x, float y, int button)
     {
         if (!WantsCapture && PatternGalleryPopupContains(x, y)) return true;
+        if (galleryPreviewPanning && button == galleryPreviewPanButton) { galleryPreviewPanning = false; return true; }
         if (button != 0) return false;
         if (!PatternGalleryInputAvailable && (galleryPreviewPanning || galleryPressedId != Guid.Empty))
         { CancelPatternGalleryInteraction(); return false; }
-        if (galleryPreviewPanning) { galleryPreviewPanning = false; return true; }
         if (galleryPressedId == Guid.Empty) return false;
         if (galleryDragging)
         {

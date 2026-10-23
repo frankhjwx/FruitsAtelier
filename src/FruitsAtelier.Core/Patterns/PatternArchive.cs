@@ -101,19 +101,17 @@ public static class PatternArchive
         if (items.Select(p => p.Id).Distinct().Count() != items.Length) throw Invalid("invalid");
         var catalog = ValidateTags(tags ?? []);
         var byName = catalog.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
-        var assigned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var tag in items.SelectMany(p => p.Tags))
         {
-            assigned.Add(tag.Name);
             if (!byName.TryAdd(tag.Name, tag) && byName[tag.Name] != tag) throw Invalid("invalid");
         }
-        bool hasUnused = byName.Keys.Any(name => !assigned.Contains(name));
+        bool hasCatalog = catalog.Count > 0;
         long expanded = 0;
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
-            int version = hasUnused ? 3 : items.Any(p => p.Tags.Count > 0) ? 2 : 1;
+            int version = hasCatalog ? 3 : items.Any(p => p.Tags.Count > 0) ? 2 : 1;
             string manifest = JsonSerializer.Serialize(new Manifest(version, items.Select(p => new Entry(p.Id, p.Name, p.Source,
-                p.Tags.Count == 0 ? null : p.Tags.ToArray())).ToArray(), hasUnused ? ValidateTags(byName.Values).ToArray() : null), Options);
+                p.Tags.Count == 0 ? null : p.Tags.ToArray())).ToArray(), hasCatalog ? ValidateTags(byName.Values).ToArray() : null), Options);
             if (Encoding.UTF8.GetByteCount(manifest) > MaximumManifestBytes) throw Invalid("limit");
             WriteEntry("manifest.json", manifest);
             foreach (var item in items) WriteEntry(DocumentPath(item.Id), ProjectSerializer.Serialize(item.CreateDocument()));
@@ -137,7 +135,7 @@ public static class PatternArchive
             || t.Name.Length > 64 || t.Name.Any(char.IsControl) || t.Colour > 0xFFFFFF)
             || items.Select(t => t.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != items.Count)
             throw Invalid("invalid");
-        return items.Select(t => t with { Name = t.Name.Trim() }).OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        return items.Select(t => t with { Name = t.Name.Trim() }).ToList();
     }
 
     private static string DocumentPath(Guid id) => $"patterns/{id:N}.catchproj";

@@ -48,7 +48,7 @@ public sealed partial class EditorView
 
     private void PumpGalleryTagAutosave()
     {
-        if (galleryIoTask is not null || PatternEditingBusy || galleryTagDrag != 0 || galleryStore is not { } store) return;
+        if (galleryIoTask is not null || PatternEditingBusy || galleryTagDrag != 0 || galleryTagOrderPressed is not null || galleryStore is not { } store) return;
         var edit = galleryTagEdits.FirstOrDefault(e => e.Pending && e.Due <= timeProvider.GetUtcNow());
         if (edit is null) return;
         string from = edit.Saved.Name;

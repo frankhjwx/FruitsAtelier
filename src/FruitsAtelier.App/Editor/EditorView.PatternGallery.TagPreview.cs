@@ -21,7 +21,19 @@ public sealed partial class EditorView
         if (galleryTagLayouts.TryGetValue(key, out var cached)) return cached;
         if (galleryTagLayouts.Count >= 128) galleryTagLayouts.Clear();
         var chips = new List<GalleryTagChip>();
-        var sizes = pattern.Tags.Select(t => MathF.Ceiling(c.MeasureText(t.Name, 10)) + 14).ToArray();
+        var ranks = galleryTags.Select((t, i) => (t.Name, i)).ToDictionary(t => t.Name, t => t.i, StringComparer.OrdinalIgnoreCase);
+        var tags = pattern.Tags.OrderBy(t => ranks.GetValueOrDefault(t.Name, int.MaxValue)).ToArray();
+        var labels = tags.Select(t => t.Name).ToArray();
+        var sizes = labels.Select(t => MathF.Ceiling(c.MeasureText(t, 10)) + 14).ToArray();
+        if (sizes.Sum() + Math.Max(0, sizes.Length - 1) * 4 > width)
+        {
+            labels = labels.Select(name =>
+            {
+                var characters = StringInfo.ParseCombiningCharacters(name);
+                return characters.Length > 5 ? name[..characters[5]] + "…" : name;
+            }).ToArray();
+            sizes = labels.Select(t => MathF.Ceiling(c.MeasureText(t, 10)) + 14).ToArray();
+        }
         if (!expanded)
         {
             int visible = pattern.Tags.Count;
@@ -39,7 +51,7 @@ public sealed partial class EditorView
             float x = 0;
             for (int i = 0; i < visible; i++)
             {
-                chips.Add(new([pattern.Tags[i].Name], pattern.Tags[i].Colour, new(x, 0, sizes[i], 18)));
+                chips.Add(new([labels[i]], tags[i].Colour, new(x, 0, sizes[i], 18)));
                 x += sizes[i] + 4;
             }
             if (visible < pattern.Tags.Count)
@@ -54,10 +66,10 @@ public sealed partial class EditorView
             for (int i = 0; i < pattern.Tags.Count; i++)
             {
                 float chipWidth = Math.Min(width, sizes[i]);
-                var lines = GalleryTagLines(c, pattern.Tags[i].Name, chipWidth - 14);
+                var lines = GalleryTagLines(c, labels[i], chipWidth - 14);
                 float chipHeight = lines.Length * 12 + 6;
                 if (x > 0 && x + chipWidth > width) { x = 0; y += rowHeight + 4; rowHeight = 0; }
-                chips.Add(new(lines, pattern.Tags[i].Colour, new(x, y, chipWidth, chipHeight)));
+                chips.Add(new(lines, tags[i].Colour, new(x, y, chipWidth, chipHeight)));
                 x += chipWidth + 4; rowHeight = Math.Max(rowHeight, chipHeight);
             }
         }

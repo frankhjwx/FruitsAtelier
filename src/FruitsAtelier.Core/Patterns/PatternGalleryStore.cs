@@ -81,7 +81,9 @@ public sealed class PatternGalleryStore
         var selected = ids?.ToHashSet();
         if (selected is not null && selected.Except(all.Select(p => p.Id)).Any())
             throw new InvalidOperationException(L.Get("core.pattern.missing"));
-        PatternArchive.WriteFile(selected is null ? all : all.Where(p => selected.Contains(p.Id)), path, selected is null ? contents.Tags : null);
+        var exporting = selected is null ? all : all.Where(p => selected.Contains(p.Id)).ToArray();
+        var usedTags = exporting.SelectMany(p => p.Tags).Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        PatternArchive.WriteFile(exporting, path, selected is null ? contents.Tags : contents.Tags.Where(t => usedTags.Contains(t.Name)));
     }
 
     public void Delete(Guid id)
@@ -103,9 +105,20 @@ public sealed class PatternGalleryStore
         var updated = patterns.Select(p => p.Tags.Any(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase))
             ? p.WithTags(p.Tags.Where(t => !string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase))
                 .Concat(replacement is null ? [] : new[] { replacement })) : p).ToArray();
-        var tags = contents.Tags.Where(t => !string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase))
-            .Concat(replacement is null ? [] : new[] { replacement });
+        var tags = contents.Tags.SelectMany(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase)
+            ? replacement is null ? Array.Empty<PatternTag>() : new[] { replacement } : new[] { t });
         PatternArchive.WriteFile(updated, ArchivePath, tags);
+    }
+
+    public void ReorderTags(IEnumerable<string> names)
+    {
+        var contents = LoadContents();
+        var order = names.ToArray();
+        var tags = contents.Tags.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
+        if (order.Length != tags.Count || order.Distinct(StringComparer.OrdinalIgnoreCase).Count() != tags.Count
+            || order.Any(name => !tags.ContainsKey(name)))
+            throw new InvalidDataException(L.Get("core.pattern.invalid"));
+        PatternArchive.WriteFile(contents.Patterns, ArchivePath, order.Select(name => tags[name]));
     }
 
     private int Merge(IEnumerable<PatternSnapshot> incoming, IEnumerable<PatternTag>? importedTags = null)

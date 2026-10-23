@@ -72,6 +72,13 @@ internal static class PatternGalleryUiTests
                 ui.View.Wheel(preview.X + 20, preview.Y + 20, -forward, false); ui.Paint();
                 Check(ui.View.PatternGalleryPreviewScroll == 0, "Reverse wheel did not return to the preview start");
             }
+            ui.View.PointerDown(preview.X + 20, preview.Y + 20, 1, false, false);
+            Check(ui.View.WantsCapture, "Middle-button preview pan did not capture the pointer");
+            ui.View.PointerMove(preview.X + 20, preview.Y + 80, false, false); ui.Paint();
+            Check(ui.View.PatternGalleryPreviewScroll > 0, "Middle-button preview pan did not move the pattern");
+            ui.View.PointerUp(preview.X + 20, preview.Y + 80, 1);
+            Check(!ui.View.WantsCapture, "Middle-button preview pan retained pointer capture after release");
+            ui.View.Wheel(preview.X + 20, preview.Y + 20, ui.View.LibrarySettings.ReverseCanvasScroll ? -12000 : 12000, false); ui.Paint();
             ui.View.LibrarySettings.ReverseCanvasScroll = reverseScroll;
             int zoomBuilds = ui.View.PatternGalleryPreviewBuildCount;
             float initialRadius = ui.Canvas.Operations.Where(o => o.Clip == preview && o.Dot?.Color == 0xFFFFFF)

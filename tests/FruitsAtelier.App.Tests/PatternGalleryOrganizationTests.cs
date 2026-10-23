@@ -58,6 +58,26 @@ internal static class PatternGalleryOrganizationTests
         var next = ui.View.GalleryTagNextBounds;
         ui.Click(next.X + 10, next.Y + 10);
         Check(ui.Canvas.Texts.Any(t => t.Value == "Tag08") && !ui.Canvas.Texts.Any(t => t.Value == "Tag01"), "Paging does not replace the visible tag list");
+        DragTag("Tag08", "Tag10", after: true);
+        Check(emptyStore.LoadContents().Tags.Skip(8).Take(3).Select(t => t.Name).SequenceEqual(["Tag09", "Tag10", "Tag08"]),
+            "Dragging a tag did not persist its insertion position");
+        var unchangedOrder = emptyStore.LoadContents().Tags.ToArray();
+        var cancelLabel = ui.Canvas.Texts.Single(t => t.Value == "Tag09" && ui.View.GalleryTagListBounds.Contains(t.X, t.Y));
+        ui.View.PointerDown(cancelLabel.X + 4, cancelLabel.Y + 8, 0, false, false);
+        ui.View.PointerMove(0, 0, false, false); ui.View.PointerUp(0, 0, 0); ui.Paint();
+        Check(unchangedOrder.SequenceEqual(emptyStore.LoadContents().Tags) && !ui.View.WantsCapture,
+            "Dropping a tag outside the list reordered tags or retained capture");
+        var dragLabel = ui.Canvas.Texts.Single(t => t.Value == "Tag09" && ui.View.GalleryTagListBounds.Contains(t.X, t.Y));
+        ui.View.PointerDown(dragLabel.X + 4, dragLabel.Y + 8, 0, false, false);
+        var previousPage = ui.View.GalleryTagPreviousBounds;
+        ui.View.PointerMove(previousPage.X + 10, previousPage.Y + 10, false, false); ui.Paint();
+        var firstLabel = ui.Canvas.Texts.Single(t => t.Value == "Tag00" && ui.View.GalleryTagListBounds.Contains(t.X, t.Y));
+        ui.View.PointerMove(firstLabel.X + 4, firstLabel.Y - 5, false, false); ui.Paint();
+        ui.View.PointerUp(firstLabel.X + 4, firstLabel.Y - 5, 0); ui.Paint(); Settle();
+        Check(emptyStore.LoadContents().Tags[0].Name == "Tag09" && !ui.View.WantsCapture, "Dragging across tag pages lost the insertion or pointer capture");
+        ui.Key(27); ManageTags();
+        Check(ui.Canvas.Texts.Where(t => ui.View.GalleryTagListBounds.Contains(t.X, t.Y)).First().Value == "Tag09",
+            "Reopening Manage Tags reset the custom order");
         ui.Key(27); ui.View.ConfigurePatternGallery(directory); ui.Paint(); Settle();
         ui.Key('F', ctrl: true); ui.Type("ＳＮＯＷ mapper"); ui.Paint();
         Check(ui.View.PatternGalleryFilteredCount == 3, "Gallery search does not use Library normalization and all-word matching");
@@ -226,6 +246,15 @@ internal static class PatternGalleryOrganizationTests
                 "Object menu contains inspector category labels");
             ui.ClickObjectAction(L.Get("gallery.saveToGallery")); ui.Type(name); ui.Key(13); Settle();
             Check(store.Load().Single(p => p.Name == name).ObjectCount == count, "Object menu captured the wrong selection");
+        }
+        void DragTag(string from, string to, bool after)
+        {
+            var row = ui.Canvas.Texts.Single(t => t.Value == from && ui.View.GalleryTagListBounds.Contains(t.X, t.Y));
+            var target = ui.Canvas.Texts.Single(t => t.Value == to && ui.View.GalleryTagListBounds.Contains(t.X, t.Y));
+            float x = row.X + 4, y = target.Y + (after ? 22 : -5);
+            ui.View.PointerDown(x, row.Y + 8, 0, false, false);
+            ui.View.PointerMove(x, y, false, false); ui.Paint();
+            ui.View.PointerUp(x, y, 0); ui.Paint(); Settle();
         }
         void Settle()
         {
