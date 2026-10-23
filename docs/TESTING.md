@@ -1160,6 +1160,8 @@ label separation in English and Chinese at narrow and standard widths. Native
 Catch endpoint labels alongside NC.
 
 `App.Tests --same-time-placement-check` checks optional same-time placement in both canvases,
+Catch slider replacement across X coordinates and the 2 ms boundary, draft cancellation,
+circle retention when dragging an existing slider's head or moving the whole slider,
 native circle/slider/spinner replacement, preview/export equivalence, project
 roundtrips, undo/redo and Experimental setting
 persistence and cancellation. Native `--render-check --experimental-snap-render-check`

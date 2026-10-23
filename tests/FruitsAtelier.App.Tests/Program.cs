@@ -129,7 +129,7 @@ if (args.Contains("--distance-snap-check"))
 if (args.Contains("--object-snap-check")) { ObjectSnapTests.Run(); Console.WriteLine("PASS Object snap ranges, placement and preferences"); return 0; }
 
 
-if (args.Contains("--same-time-placement-check")) { ToolPaletteTests.SameTimePlacement(); OsuCanvasInputTests.SameTimePlacement(); ExperimentalSnapTests.Run(); Console.WriteLine("PASS same-time placement and experimental settings"); return 0; }
+if (args.Contains("--same-time-placement-check")) { ToolPaletteTests.SameTimePlacement(); SliderHeadReplacementTests.OnCompletion(); OsuCanvasInputTests.SameTimePlacement(); ExperimentalSnapTests.Run(); Console.WriteLine("PASS same-time placement and experimental settings"); return 0; }
 
 if (args.Contains("--experimental-snap-check")) { ExperimentalSnapTests.Run(); Console.WriteLine("PASS Experimental snap settings, wheel and Stream/Stack"); return 0; }
 
@@ -376,7 +376,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay bound arrows control gameplay and movement preserves volume fading", VolumePopoverTests.GameplayBindingsAndFade),
     ("Testplay volume bars accept clicks and drags after keyboard and wheel shortcuts", VolumePopoverTests.TestplayPointer),
     ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
-    ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
+    ("Completing an FSlider replaces same-time fruits across coordinates and undoes atomically", SliderHeadReplacementTests.OnCompletion),
     ("Final stream fruit accepts lower-half hit and box movement translates the stream", StreamFruitDragTests.Run),
     ("Stream middle fruits edit isolated samples and endpoints drag with undo and cancellation", StreamFruitDragTests.EditEvents),
     ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),

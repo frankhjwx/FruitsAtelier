@@ -359,7 +359,10 @@ preference. Enabling it allows fruits at the same time with
 independent X coordinates; previews retain the existing objects too. Changing the
 preference leaves existing content and undo history unchanged. Placement remains
 one undo step, and turning it off restores replacement for subsequent placements.
-Completing a Catch FSlider also retains a fruit at its exact head when enabled.
+Completing a Catch FSlider replaces fruits starting within 2 ms of its head,
+regardless of X coordinate, unless the preference is enabled. Drafting and
+cancelling the slider leave those fruits unchanged; replacement commits with the slider.
+Adjusting an existing slider's head or moving the slider does not replace fruits.
 
 ## Experimental lazer editing
 
