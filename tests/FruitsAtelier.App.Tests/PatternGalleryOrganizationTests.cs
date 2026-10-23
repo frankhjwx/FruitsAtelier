@@ -97,8 +97,15 @@ internal static class PatternGalleryOrganizationTests
         ui.Key(27); Check(!ui.View.GalleryTagsVisible && ui.View.PatternGalleryPreviewVisible, "Closing tags closed the detail preview");
         ui.Key(27); Open(stream);
         ui.ClickText(L.Get("gallery.editTags"));
-        var tagText = ui.Canvas.Texts.First(t => t.Value == "Custom");
-        ui.Click(tagText.X - 20, tagText.Y + 4); Settle();
+        Check(!ui.Canvas.Texts.Any(t => t.Value == "Custom" || t.Value == "✓"), "Edit Tags includes unrelated tags or assignment checkboxes");
+        NewTag(); ui.Type("Custom"); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.addTag")), "Existing tag is not offered for direct addition");
+        SaveTag(); Settle();
+        Check(store.Load().Single(p => p.Id == stream.Id).Tags.Any(t => t.Name == "Custom" && t.Colour == 0x65A9FF), "Adding an existing tag lost its saved colour");
+        ui.ClickText(L.Get("gallery.removeTag")); Settle();
+        Check(store.Load().Single(p => p.Id == stream.Id).Tags.All(t => t.Name != "Custom")
+            && store.Load().Single(p => p.Id == jump.Id).Tags.Any(t => t.Name == "Custom"), "Removing a pattern tag changed other patterns");
+        NewTag(); ui.Type("Custom"); ui.Key(13); Settle();
         ui.Key(27); ui.Key(27);
         ManageTags();
         Check(ui.View.GalleryTagsVisible, "Manage Tags did not open the shared dialog");
@@ -151,7 +158,8 @@ internal static class PatternGalleryOrganizationTests
         void NewTag()
         {
             var bounds = ui.View.GalleryNewTagBounds;
-            Check(bounds.Y < ui.View.GalleryTagNameBounds.Y, "New Tag is not in the dialog header");
+            Check(ui.View.GalleryTagListBounds.Contains(bounds.X, bounds.Y)
+                && bounds.Bottom <= ui.View.GalleryTagListBounds.Bottom, "New Tag is outside the tag list");
             ui.Click(bounds.X + 10, bounds.Y + 10);
         }
         void SaveTag()

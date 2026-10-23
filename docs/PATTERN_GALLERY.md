@@ -26,15 +26,19 @@ selected tags; **All patterns** clears the tag filter. Filters affect browsing o
 Use **Edit Tags** in a pattern's details to assign existing tags or create one.
 Each tag has a name and colour. **Tags → Manage tags** creates tags independently
 of patterns and renames, recolours or removes a tag across every assigned pattern.
-Choose **New tag** in the dialog header, enter its name and colour, then
+Choose **New tag** after the final visible tag in the list, enter its name and colour, then
 **Create tag**. Selecting an existing tag switches to editing; **Save changes** is
 available when the name or colour has changed. The footer separates deletion from
 the primary action. Empty lists explain how to create a tag, and paging controls
 appear only when the list spans multiple pages.
 Unassigned tags remain available after reopening the gallery or removing their last
 assignment. Both **Edit Tags** and **Manage tags** open a
-dedicated tag dialog. From **Edit Tags**, use the checkboxes to assign tags to the
-current pattern. Select a tag to edit its name and colour in place or delete it.
+dedicated tag dialog. **Edit Tags** lists the current pattern's tags without
+assignment checkboxes. Creating a tag adds it to the pattern immediately. To reuse
+an existing tag, choose **New tag** and enter its name; **Add tag** uses that tag's
+saved name and colour. **Remove tag** removes only the current pattern's assignment;
+**Manage tags → Delete tag** removes the tag throughout the gallery. Select a tag
+to edit its shared name and colour in place.
 The colour picker uses the same saturation/value chart and hue strip as Song Setup;
 the hex field accepts an exact `#RRGGBB` value. Name and colour changes are previewed
 locally until **Create tag** or **Save changes** is pressed; **Cancel** discards the draft.
