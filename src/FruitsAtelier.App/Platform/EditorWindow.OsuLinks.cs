@@ -27,6 +27,12 @@ internal sealed partial class EditorWindow
 
     private void PollOsuLinks()
     {
+        if (osuBrowser is not null)
+        {
+            if (view.UpdateBrowserState(osuBrowser.State)) Invalidate();
+            while (osuBrowser.EditorLinks.TryDequeue(out var entry))
+            { view.HandleBrowserEditorLink(entry.Link, entry.Page); Invalidate(); }
+        }
         if (Environment.TickCount64 >= nextOsuLinkCheck)
         {
             bool wasRequired = view.OsuLinkFallbackRequired;

@@ -24,6 +24,11 @@
         "resolved": "3.1.0",
         "contentHash": "z7aeg8oHln2CuNulfhiLYxCVMPEwBl3rzicjvIX+4sUuCwvXw5oXQEtbiU2c0z4qYL5L3Kmx0mMA/+t/SbY67w=="
       },
+      "Microsoft.Web.WebView2": {
+        "type": "Transitive",
+        "resolved": "1.0.4258.31",
+        "contentHash": "sHVZ2MQrHT1J3q5/6csn0fIP27rzpTO/RRC+wPQDrZheB7T4t2n+vVbY6SdCKr4WRV9s/gmBM3PPMWWJtoDzMg=="
+      },
       "Microsoft.Win32.Registry": {
         "type": "Transitive",
         "resolved": "4.7.0",
@@ -200,7 +205,8 @@
       "fruitsatelier.app": {
         "type": "Project",
         "dependencies": {
-          "FruitsAtelier.Core": "[1.0.1, )",
+          "FruitsAtelier.Core": "[1.2.1, )",
+          "Microsoft.Web.WebView2": "[1.0.4258.31, )",
           "NAudio.Core": "[2.2.1, )",
           "NAudio.Vorbis": "[1.5.0, )",
           "NAudio.Wasapi": "[2.2.1, )",

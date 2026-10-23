@@ -40,6 +40,7 @@ internal static class DiscussionTests
             {
                 L.SetLanguage(locale); UiChecks(snapshot);
             }
+            BrowserTab(snapshot);
             TypeCardLayout(snapshot);
             ResolutionProfileLinks(snapshot);
             ObjectReferenceSelection(snapshot);
@@ -52,6 +53,67 @@ internal static class DiscussionTests
         }
         finally { L.SetLanguage(language); }
         Console.WriteLine("PASS Discussion scopes, replies, reviews, timestamps, annotation ranges, overflow and request lifetime");
+    }
+
+    private static void BrowserTab(OsuDiscussionSnapshot snapshot)
+    {
+        var ui = new Ui(false); ui.Resize(1440, 900);
+        ui.View.DiscussionLoader = (_, _) => Task.FromResult(snapshot);
+        ui.View.LoadProject(Project());
+        var layout = ui.View.CaptureDockLayouts();
+        layout.Mapping!.Right!.Active = "OsuWeb"; layout.Mapping.Right.Collapsed = false;
+        ui.View.LibrarySettings.DockLayouts = layout; ui.View.RestoreDockLayouts(); Wait(ui);
+        var original = ui.View.Document.DeepClone();
+        string page = "https://osu.ppy.sh/beatmapsets/777/discussion/101/timeline";
+        Check(ui.View.BrowserUrl == page && ui.View.BrowserViewport.Width > 0, "web tab opens current difficulty discussions");
+        ui.View.UpdateBrowserPage(page); ui.Paint();
+        Check(ui.View.DiscussionQuoteBounds.Count > 0, "matching web discussion shows native note annotations");
+        Check(ui.View.HandleBrowserEditorLink("osu://edit/00:01:000%20(1)", page)
+            && ui.View.PlayheadMs == 1000 && ui.View.SelectedObjectIds.Contains(ui.View.Document.Fruits[0].Id), "web timestamp seeks and selects its note");
+        foreach (string other in new[] { "https://osu.ppy.sh/beatmapsets/777#fruits/101", "https://osu.ppy.sh/beatmapsets/777/discussion/102/timeline", "https://osu.ppy.sh/beatmapsets/778/discussion/101/timeline", "https://example.org/beatmapsets/777/discussion/101/timeline" })
+        {
+            ui.View.UpdateBrowserPage(other); ui.Paint();
+            Check(ui.View.DiscussionQuoteBounds.Count == 0, "unrelated web pages hide note annotation cards");
+        }
+        Check(!ui.View.HandleBrowserEditorLink("osu://edit/00:01:500", "https://example.org/beatmapsets/777/discussion/101/timeline"), "external pages cannot drive editor navigation");
+        var commands = new List<BrowserCommand>(); string? copied = null;
+        ui.View.RequestBrowserCommand = commands.Add; ui.View.RequestCopyText = text => copied = text;
+        ui.View.UpdateBrowserState(new(page, true, true)); ui.Paint();
+        var address = ui.View.BrowserAddressBounds;
+        double zoom = ui.View.PixelsPerMs, position = ui.View.PlayheadMs;
+        foreach (float x in new[] { address.X - 77, address.X - 47, address.X - 17, address.Right + 17 })
+        {
+            ui.Click(x, address.Y + 14);
+            ui.View.PointerDoubleClick(x, address.Y + 14, false, false);
+            ui.View.PointerDown(x, address.Y + 14, 2, false, false); ui.View.PointerUp(x, address.Y + 14, 2);
+            ui.View.Wheel(x, address.Y + 14, 120, true);
+            Check(!ui.View.WantsCapture, "toolbar never starts a canvas or browser drag");
+        }
+        Check(commands.SequenceEqual(new[] { BrowserCommand.Back, BrowserCommand.Forward, BrowserCommand.Refresh, BrowserCommand.External }), "toolbar dispatches each command once without click-through");
+        ui.Click(address.X + 4, address.Y + 12);
+        Check(copied == page && ui.View.BrowserCopyOpacity == 1, "address copies the full URL with green feedback");
+        Check(ui.View.PixelsPerMs == zoom && ui.View.PlayheadMs == position, "toolbar wheel and double click leave canvas navigation unchanged");
+        ui.View.OpenSettings(); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0, "settings and its full-screen dimmer cover the browser");
+        ui.Key(27); ui.Paint();
+        Check(ui.View.Document.ContentEquals(original) && !ui.View.IsDirty, "browser navigation does not modify content");
+        var otherTab = ui.View.CaptureDockLayouts();
+        otherTab.Mapping!.Right!.Active = "CollaborationMapping";
+        otherTab.Mapping.Right.Panels = [.. otherTab.Mapping.Right.Panels!, "CollaborationMapping"];
+        ui.View.LibrarySettings.DockLayouts = otherTab; ui.View.RestoreDockLayouts(); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionQuoteBounds.Count == 0 && ui.View.DiscussionMarkerHits.Count == 0
+            && !ui.Canvas.Fills.Any(f => f.Color is 0xA6D9AE or 0xE6AA64 && Math.Abs(f.Bounds.Width - ui.View.PlayfieldBounds.Width) < .1),
+            "switching to another tab clears web viewport, quotes and highlight bands in the next frame");
+        ui.View.ShowError("fixture"); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0, "native browser yields to editor modal overlays");
+        ui.View.StopDiscussions();
+
+        var praise = new OsuDiscussionSnapshot(777, 20, [new BeatmapDiscussion(900, 101, null, 10, 1000, "praise", false, false, null, [new(901, 10, "00:01:000 (1)", false, null)])], snapshot.Users, snapshot.Owners);
+        var positive = new Ui(false); positive.View.DiscussionLoader = (_, _) => Task.FromResult(praise);
+        positive.View.LoadProject(Project()); positive.View.ShowDiscussionPanel(); Wait(positive);
+        Check(positive.Canvas.Fills.Any(f => f.Color == 0xA6D9AE && Math.Abs(f.Bounds.Width - positive.View.PlayfieldBounds.Width) < .1)
+            && !positive.Canvas.Fills.Any(f => f.Color == 0xE6AA64), "praise uses green annotation bands and borders without a resolved flag");
+        positive.View.StopDiscussions();
     }
 
     private static void UiChecks(OsuDiscussionSnapshot snapshot)

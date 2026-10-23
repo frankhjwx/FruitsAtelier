@@ -8,7 +8,7 @@ public sealed partial class EditorView
     private string savedDockLayout = "";
     internal EditorDockLayouts CaptureDockLayouts() => new()
     {
-        Mapping = Capture(mappingDockWorkspace), Timing = Capture(timingDockWorkspace)
+        Version = 2, Mapping = Capture(mappingDockWorkspace), Timing = Capture(timingDockWorkspace)
     };
     private static DockWorkspaceLayout Capture(DockWorkspace workspace) => new()
     {
@@ -33,10 +33,13 @@ public sealed partial class EditorView
     }
     internal void RestoreDockLayouts()
     {
-        if (LibrarySettings.DockLayouts is { Version: 1 } layouts)
+        if (LibrarySettings.DockLayouts is { Version: 1 or 2 } layouts)
         {
             Restore(mappingDockWorkspace, layouts.Mapping);
             Restore(timingDockWorkspace, layouts.Timing);
+            if (layouts.Version == 1 && !mappingDockWorkspace.Left.Panels.Contains(DockPanel.OsuWeb)
+                && !mappingDockWorkspace.Right.Panels.Contains(DockPanel.OsuWeb))
+                mappingDockWorkspace.Right.Panels.Add(DockPanel.OsuWeb);
         }
         savedDockLayout = JsonSerializer.Serialize(CaptureDockLayouts());
         RefreshLoadedAimod();

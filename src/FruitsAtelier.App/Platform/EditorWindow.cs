@@ -13,6 +13,7 @@ internal sealed partial class EditorWindow : IDisposable
     private readonly EditorView view = new(loadDemo: false);
     private D2DCanvas? canvas;
     private nint hwnd;
+    private OsuBrowserWindow? osuBrowser;
     private float uiDpi = 168;
     private float dpi = 96;
     private bool failed, disposed, painting, recoveringRenderer;
@@ -118,6 +119,10 @@ internal sealed partial class EditorWindow : IDisposable
             Diagnostics.RenderCheck.ProfileMap(canvas, view, profileMap, uiDpi, profileStartMs);
             Native.DestroyWindow(hwnd);
             return 0;
+        }
+        if (renderCheck && Environment.GetCommandLineArgs().Contains("--browser-render-check"))
+        {
+            Diagnostics.BrowserRenderCheck.Run(canvas); Native.DestroyWindow(hwnd); return 0;
         }
         if (renderCheck && Environment.GetCommandLineArgs().Contains("--text-resources-render-check"))
         {
@@ -454,6 +459,7 @@ internal sealed partial class EditorWindow : IDisposable
                         view.Performance.End(EditorPerformanceStage.ViewRender, phase);
                         phase = view.Performance.Start();
                         framePending = !canvas.End(lowLatency: immediatePresentation, capture: screenshotPending ? CopyScreenshot : null);
+                        UpdateBrowserViewport();
                         view.Performance.End(EditorPerformanceStage.Submit, phase);
                         view.Performance.Record(EditorPerformanceStage.Frame, renderTimer.Elapsed.TotalMilliseconds);
                         if (!framePending) RecordInputSubmission();
@@ -491,7 +497,7 @@ internal sealed partial class EditorWindow : IDisposable
                     Invalidate();
                 }
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
-                if ((view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
+                if ((view.BrowserFeedbackNeedsRedraw || view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
                     || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.DiscussionNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
                     || canvas?.SliderRasterNeedsRedraw == true) && !Native.IsIconic(window)) Invalidate();
                 return 0;
@@ -648,6 +654,7 @@ internal sealed partial class EditorWindow : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        osuBrowser?.Dispose();
         view.CompleteLibraryCacheWrites();
         view.StopFileMonitoring();
         view.StopDiscussions();

@@ -9,10 +9,29 @@ The application uses C# 12 / .NET 8. Windows and macOS share the editor, data mo
 | Entry point | `FruitsAtelier.App`, `net8.0-windows` | `FruitsAtelier.Mac`, `net8.0` |
 | Window and input | Win32, DPI messages, native file dialogs | Avalonia desktop window and file picker |
 | Drawing | DX11 / DXGI, Direct2D / DirectWrite, Vortice 3.6.2 | Avalonia 11.3.7, `MacCanvas` implements `ICanvas` |
+| Embedded website | WebView2 on a dedicated STA loop, child HWND | WKWebView hosted by Avalonia NativeControlHost |
 | PNG | Windows Imaging Component | Avalonia bitmaps |
 | Audio | NAudio shared-mode WASAPI; Media Foundation / NVorbis / WAV reader | AVAudioEngine music with AVAudioUnitTimePitch; separate PCM hitsound mixer; NVorbis for OGG |
 
 See [Building and Testing](TESTING.md) for SDK selection and build commands, and [Third-party notices](../THIRD_PARTY_NOTICES.md) for package versions and licenses.
+
+## Embedded osu! browser
+
+`EditorView.Browser` owns the dock toolbar, copy feedback, viewport and timestamp
+routing. Platform hosts own website navigation and session storage. The shared
+renderer draws all toolbar controls outside the native webpage rectangle. Active
+editor overlays suppress that rectangle instead of competing with native child
+views for drawing order. Website URLs and navigation state cross into the editor;
+HTML, cookies and authentication tokens do not.
+
+Windows uses Microsoft.Web.WebView2 1.0.4258.31 and an installed Evergreen WebView2
+Runtime. Its dedicated profile is `%LOCALAPPDATA%/FruitsAtelier/Browser/osu`.
+Browser shutdown disposes views and waits briefly for the browser process to finish
+writing profile data. macOS uses the persistent `WKWebsiteDataStore.defaultDataStore`
+owned by the FA application identity, separate from Safari. The AppKit/WebKit bridge
+is compiled alongside the native audio bridge in `libFruitsAtelierAudio.dylib`.
+Both hosts keep the embedded view alive while its tab is hidden. Public discussion
+annotations continue using the anonymous snapshot service, independently of login.
 
 ## Source layout
 

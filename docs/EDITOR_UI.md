@@ -1,5 +1,39 @@
 # Editing Controls
 
+## osu! Web
+
+Open the **osu! Web** dock tab to use the official osu! website inside FA. The tab
+starts on the active map's difficulty-specific Discussion page. It can be moved,
+closed and restored from **Layout**, like the other dock tabs. Maps without online
+IDs show an unavailable-page message. If only BeatmapID is known, the website's
+beatmap redirect opens its page.
+
+The toolbar contains Back, Forward, Refresh, a read-only address field, and Open
+in browser, in that order. Refresh returns to the active difficulty's Discussion
+page. Click the address to copy its complete URL; the address turns green and a
+copy confirmation appears, then both fade together after a short hold. The address
+cannot be edited. Normal website navigation stays in the tab, and links requesting
+a new window open a browser child window sharing the same session. External opening
+uses the system browser and its separate session. Library cards' **Visit webpage**
+actions continue to open the system browser.
+
+Website timestamp links seek and select notes in FA using the linked difficulty
+when it is available in the current project. While the tab is on the current map
+and difficulty's Discussion page, the Canvas shows the same public discussion
+annotations as the Discussion tab. Info pages and unrelated discussions do not
+activate these annotations. Praise and resolved discussions use green annotations;
+unresolved Problem and Suggestion annotations use amber.
+
+Editor overlays, including Settings, temporarily hide the embedded webpage so the
+whole overlay and its dimmer remain above it. Hiding or switching tabs retains the
+webpage and its draft. Navigating to another map or refreshing can replace the page.
+Website permissions, submission validation and errors are handled by osu! itself;
+FA does not automate submissions or retry them.
+
+The browser retains cookies and website storage across app restarts. Log out from
+the website to end the session. Website-side expiry or revocation can still require
+signing in again. FA does not copy browser credentials into project files.
+
 ## Discussion
 
 Open **Layout → Discussion** to browse the public osu! discussions for the map's

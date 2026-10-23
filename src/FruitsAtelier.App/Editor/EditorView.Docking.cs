@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping, PatternGallery, Discussion }
+    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping, PatternGallery, Discussion, OsuWeb }
     private sealed class DockGroup(DockPanel panel, float width)
     {
         public readonly List<DockPanel> Panels = [panel];
@@ -20,7 +20,7 @@ public sealed partial class EditorView
         public readonly DockGroup Left = new(DockPanel.MovementStrain, DifficultyCurveWidth);
         public readonly DockGroup Right = CreateRightDock();
         private static DockGroup CreateRightDock()
-        { var group = new DockGroup(DockPanel.Preview, 360); group.Panels.AddRange([DockPanel.Notes, DockPanel.SongSetup, DockPanel.PatternGallery, DockPanel.Discussion]); return group; }
+        { var group = new DockGroup(DockPanel.Preview, 360); group.Panels.AddRange([DockPanel.Notes, DockPanel.SongSetup, DockPanel.PatternGallery, DockPanel.Discussion, DockPanel.OsuWeb]); return group; }
         public (float X, float Y)? MovementPosition;
         public int PreviewMod, PreviewDisplayMode;
     }
@@ -81,7 +81,7 @@ public sealed partial class EditorView
     }
     private static string DockTitle(DockPanel panel) => L.Get(panel switch
     {
-        DockPanel.Discussion => "discussion.title", DockPanel.PatternGallery => "dock.gallery", DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
+        DockPanel.OsuWeb => "browser.tab", DockPanel.Discussion => "discussion.title", DockPanel.PatternGallery => "dock.gallery", DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
         DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title", DockPanel.CollaborationMapping => "collab.title",
         DockPanel.RandomizeDroplets => "randomize.title", DockPanel.SliderInspector => "inspector.title", _ => "difficulty.curve.title"
     });
@@ -114,6 +114,7 @@ public sealed partial class EditorView
         state.Right.Panels.Add(DockPanel.SongSetup);
         state.Right.Panels.Add(DockPanel.PatternGallery);
         state.Right.Panels.Add(DockPanel.Discussion);
+        state.Right.Panels.Add(DockPanel.OsuWeb);
     }
     private bool DockTabContext(float x, float y)
     {
@@ -242,6 +243,8 @@ public sealed partial class EditorView
                             Math.Max(0, bounds.Width - 40), Math.Max(0, bounds.Height - 78));
                         DrawDifficultyCurve(c, DifficultyCurveGraphBounds);
                     }
+                    else if (group.Active == DockPanel.OsuWeb)
+                        DrawBrowserPanel(c, bounds);
                     else if (group.Active == DockPanel.Discussion)
                         DrawDiscussionPanel(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.PatternGallery)

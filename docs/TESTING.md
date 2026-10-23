@@ -1,5 +1,27 @@
 # Building and Testing
 
+## Embedded browser checks
+
+`App.Tests --discussions-check` includes the osu! Web tab's initial Discussion URL,
+scoped Canvas annotations, timestamp selection, toolbar command order, input
+isolation, address copying, Settings coverage, and green Praise annotations.
+`App.Tests --docking-check` covers the default tab and retained layout.
+
+On Windows, `FruitsAtelier.App --render-check --browser-render-check` renders the
+shared toolbar, synchronized copy-feedback fade and Settings in English and Chinese
+at compact and wide sizes. Images go to `artifacts/tests/browser/native`.
+`FruitsAtelier.App --browser-check <artifact-directory> write` followed by `read`
+checks synthetic persistent cookies and localStorage across separate processes.
+The `embed` mode checks native child placement, text editing and retained drafts
+across hide/show. These checks use hidden windows without taskbar entries and
+isolated fixture profiles. Screenshots are generated from test controls; they do
+not capture other desktop windows. They do not log in or submit website content.
+The optional `web` mode loads a fixed public beatmap in a separate anonymous profile.
+
+Windows requires an installed WebView2 Runtime for browser checks. macOS requires
+native WebKit build validation on macOS, plus manual session persistence and native
+view/input checks; a C# compile on Windows does not validate the Objective-C bridge.
+
 ## SDKs and builds
 
 `App.Tests --discussions-check` verifies anonymous snapshot transport, shared and

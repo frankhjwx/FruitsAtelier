@@ -895,7 +895,7 @@ public sealed partial class EditorView
 
     private void DrawDiscussionOverview(ICanvas c)
     {
-        if (PatternEditingActive || discussionAnchors.Length == 0 || TimelineDurationMs <= 0) return;
+        if (!DiscussionAnnotationsVisible || PatternEditingActive || discussionAnchors.Length == 0 || TimelineDurationMs <= 0) return;
         c.Clip(overview); float previous = float.NegativeInfinity;
         foreach (var anchor in discussionAnchors)
         {

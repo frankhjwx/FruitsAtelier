@@ -40,11 +40,12 @@ internal static class DockPersistenceTests
         reopened.ClickText(L.Get("dock.layout")); reopened.ClickText(L.Get("dock.resetLayout"));
         var reset = reopened.View.LibrarySettings.DockLayouts!;
         Check(reset.Mapping!.Left!.Panels!.SequenceEqual(["MovementStrain"])
-            && reset.Mapping.Right!.Panels!.SequenceEqual(["Preview", "Notes", "SongSetup", "PatternGallery", "Discussion"]), "Reset replaces remembered layout with defaults");
+            && reset.Mapping.Right!.Panels!.SequenceEqual(["Preview", "Notes", "SongSetup", "PatternGallery", "Discussion", "OsuWeb"]), "Reset replaces remembered layout with defaults");
         var oldSettings = JsonSerializer.Deserialize<LibrarySettings>("{}")!;
         Check(oldSettings.DockLayouts is null, "Existing settings need no migration");
         reopened.View.LibrarySettings.DockLayouts = new()
         {
+            Version = 2,
             Mapping = new()
             {
                 Left = new() { Panels = ["Preview", "Preview", "UnknownPanel"], Active = "UnknownPanel", Width = -20 },
