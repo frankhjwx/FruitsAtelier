@@ -1149,7 +1149,7 @@ lock, X/Y controls, 200% scale, horizontal pan and dense 1/48 timeline in Englis
 and Chinese at two sizes and three DPI values under
 `artifacts/tests/canvas-scale-native`.
 
-`App.Tests --conversion-docks-check` verifies direct conversion shortcuts, object action menus, live editing and merge undo. `FruitsAtelier.App.exe --render-check --conversion-docks-render-check` captures the English/Chinese layouts at narrow and standard dock widths under `artifacts/tests/conversion-docks`.
+`App.Tests --conversion-docks-check` verifies direct conversion shortcuts, object action menus, live editing and merge undo. It compares right-click, long-press, Shift+F and timeline menus for fruits, FSliders, Legacy Sliders, streams, stacks, banana showers and multi-object selections, including enabled states, shortcuts, conversion reuse and delete/undo. `FruitsAtelier.App.exe --render-check --conversion-docks-render-check` captures the English/Chinese layouts and right-click/long-press menus at narrow and standard dock widths under `artifacts/tests/conversion-docks`.
 
 `App.Tests --difficulty-tabs-check` verifies initial SR sorting, manual tab ordering,
 pin/unpin, group boundaries, cancellation, rating refresh, keyboard navigation,

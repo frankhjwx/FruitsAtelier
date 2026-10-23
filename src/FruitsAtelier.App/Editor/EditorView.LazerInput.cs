@@ -226,31 +226,16 @@ public sealed partial class EditorView
         if (button != 2) return false;
         Guid id = objectTimeline.Contains(x, y) ? timelineObjects.LastOrDefault(o => o.Bounds.Contains(x, y)).Id
             : HitCatchObject(x, y)?.SourceId ?? HitSliderLocation(x, y)?.Id ?? HitBananaRectangle(x, y)?.Id ?? Guid.Empty;
-        MapPoint? extensionTarget = null;
         if (plot.Contains(x, y) && SelectedTrack is { } selected && (id == Guid.Empty || id == selected.Id) && !notesLocked)
         {
             var point = MapAt(x, y, true, clampX: false);
             if (point.TimeMs >= CurveMath.EndTimeMs(selected) + CurveMath.MinimumAnchorSpacingMs)
             {
-                extensionTarget = point;
                 if (id == Guid.Empty) id = selected.Id;
             }
         }
         if (id == Guid.Empty) { SelectObjects([]); return true; }
-        if (!objectSelection.Contains(id)) SelectObjects([id]);
-        contextItems.Clear();
-        contextItems.Add(new(L.Get("editor.command.cut"), () => CutSelection(), Shortcut: "Ctrl+X"));
-        contextItems.Add(new(L.Get("editor.command.copy"), () => CopySelection(), Shortcut: "Ctrl+C"));
-        contextItems.Add(new(L.Get("editor.command.delete"), DeleteSelectedObjects, Shortcut: "Delete"));
-        if (extensionTarget is { } target && SelectedTrack is { } extend)
-            contextItems.Add(new(L.Get("editor.command.extendSlider"), () => ExtendSlider(extend.Id, target)));
-        if (Document.Tracks.Any(t => t.Id == id) || Document.ImportedSliders.Any(s => s.Id == id))
-        {
-            RefreshSliderInspector();
-            foreach (var action in SliderInspectorActions().Where(a => a.Kind >= 0)) contextItems.Add(new(action.Label, action.Action, action.Enabled, SliderAction: action.Kind));
-        }
-        AddGalleryCaptureContextItem();
-        contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 280)), Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 280, ContextMenuHeight);
+        OpenObjectContextMenu(id, x, y);
         return true;
     }
 

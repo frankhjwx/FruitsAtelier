@@ -172,7 +172,8 @@ public sealed partial class EditorView
             ? objectSelection.First() : Guid.Empty;
         noteHoldTarget = hit is { Kind: CatchObjectKind.Fruit } && (boxedSlider == Guid.Empty || hit.SourceId == boxedSlider) ? hit : null;
         sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
-        Guid id = boxedSlider != Guid.Empty ? boxedSlider : hit?.SourceId ?? (showTargets ? HitSliderLocation(x, y)?.Id : null) ?? Guid.Empty;
+        Guid id = boxedSlider != Guid.Empty ? boxedSlider : hit?.SourceId ?? (showTargets ? HitSliderLocation(x, y)?.Id : null)
+            ?? HitBananaRectangle(x, y)?.Id ?? Guid.Empty;
         if (!Document.Tracks.Any(t => t.Id == id) && !Document.ImportedSliders.Any(t => t.Id == id)
             && !Document.Fruits.Any(f => f.Id == id) && !Document.BananaShowers.Any(s => s.Id == id)) return;
         if (tool == Tool.Slider && SelectedTrack?.Id != id) return;
@@ -213,15 +214,27 @@ public sealed partial class EditorView
     }
 
     private void OpenSliderActions(Guid id)
+        => OpenObjectContextMenu(id, sliderHoldX, sliderHoldY);
+
+    private void OpenObjectContextMenu(Guid id, float x, float y)
     {
         if (!objectSelection.Contains(id)) SelectObjects([id]);
         RefreshSliderInspector();
         menu = -1; contextItems.Clear();
+        contextItems.Add(new(L.Get("editor.command.cut"), () => CutSelection(), Shortcut: "Ctrl+X"));
+        contextItems.Add(new(L.Get("editor.command.copy"), () => CopySelection(), Shortcut: "Ctrl+C"));
+        contextItems.Add(new(L.Get("editor.command.delete"), DeleteSelectedObjects, Shortcut: "Delete"));
+        if (IsLazerEditing && plot.Contains(x, y) && SelectedTrack is { } selected && selected.Id == id && !notesLocked)
+        {
+            var target = MapAt(x, y, true, clampX: false);
+            if (target.TimeMs >= CurveMath.EndTimeMs(selected) + CurveMath.MinimumAnchorSpacingMs)
+                contextItems.Add(new(L.Get("editor.command.extendSlider"), () => ExtendSlider(selected.Id, target)));
+        }
         foreach (var action in SliderInspectorActions().Where(a => a.Kind >= 0))
             contextItems.Add(new(action.Label, action.Action, action.Enabled, SliderAction: action.Kind));
         AddGalleryCaptureContextItem();
-        contextBounds = new(Math.Clamp(sliderHoldX, 0, Math.Max(0, width - 280)),
-            Math.Clamp(sliderHoldY, 0, Math.Max(0, height - ContextMenuHeight)), 280, ContextMenuHeight);
+        contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 280)),
+            Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 280, ContextMenuHeight);
     }
 
     private void DrawSliderHold(ICanvas c)

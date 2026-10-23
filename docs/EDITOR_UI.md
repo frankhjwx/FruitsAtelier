@@ -1852,7 +1852,10 @@ Zoom is local to the dialog and does not change object timing or create undo his
 
 Open Slider Inspector from Layout. Long-press an object in a selection or press
 Shift+F to open its compact action list; choosing an editing function opens the
-corresponding dock. Ctrl+Shift+M focuses the merge controls in Slider Inspector. It follows the current selection and shows type, start/end times,
+corresponding dock. In lazer editing, right-clicking an object on the Catch canvas
+or object timeline opens the same list, including Cut, Copy, Delete and the
+selection's conversion and structure actions. The list supports single fruits,
+sliders, streams, stacks and multi-object selections. Ctrl+Shift+M focuses the merge controls in Slider Inspector. It follows the current selection and shows type, start/end times,
 duration, spans, control-point count, exported SV and exported path length.
 Multiple sliders show value ranges. Managed streams and stacks have no exported
 slider SV. These properties are read-only.
