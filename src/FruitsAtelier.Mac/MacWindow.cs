@@ -85,6 +85,12 @@ internal sealed partial class MacWindow : Window
         View.RequestStopHitsounds = hitsounds.Stop;
         Width = 1440; Height = 900; MinWidth = 980; MinHeight = 620;
         editorRoot.Children.Add(editor); Content = editorRoot; Title = View.WindowTitle;
+        View.RequestClearBrowserData = () =>
+        {
+            if (osuBrowser is not null) { editorRoot.Children.Remove(osuBrowser); osuBrowser = null; }
+            MacOsuBrowser.Close();
+            return MacOsuBrowser.ClearDataAsync();
+        };
         AddHandler(PointerPressedEvent, (_, e) =>
         {
             if (View.StartupHeaderDraggable && e.GetPosition(this).Y < (View.FirstRunSetupComplete ? 32 : 60) &&

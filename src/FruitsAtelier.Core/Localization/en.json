@@ -1,4 +1,11 @@
 {
+  "browser.settings": "Web",
+  "browser.clearData": "Clear local user data",
+  "browser.clearHint": "Deletes cookies, website storage, cache and browsing data in FA’s embedded browser. Browser windows and unsent drafts will close. You will need to sign in again. External browsers and beatmap projects are unaffected.",
+  "browser.clearing": "Clearing…",
+  "browser.cleared": "Local browser data cleared. Sign in again when needed.",
+  "browser.clearFailed": "Could not clear browser data. Please try again.",
+
   "browser.refreshDiscussion": "Refresh current difficulty discussions",
   "browser.tab": "osu! Web",
   "browser.noMap": "This map has no online page.",

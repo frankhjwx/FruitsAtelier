@@ -216,7 +216,7 @@ internal sealed class OsuBrowserWindow : IDisposable
             }
         }
 
-        private async Task Initialize()
+        internal async Task Initialize()
         {
             Directory.CreateDirectory(profile);
             var environment = sharedEnvironment ?? await CoreWebView2Environment.CreateAsync(userDataFolder: profile);
@@ -292,6 +292,11 @@ internal sealed class OsuBrowserWindow : IDisposable
                 string persisted = await core.ExecuteScriptAsync("document.cookie.includes('fa_test=persisted') && localStorage.getItem('fa_test') === 'persisted'");
                 if (persisted != "true") throw new InvalidOperationException("Cross-process persistence check failed: " + await core.ExecuteScriptAsync("JSON.stringify({cookie: document.cookie, storage:localStorage.getItem('fa_test')})"));
             }
+            if (mode == "empty")
+            {
+                string empty = await core.ExecuteScriptAsync("!document.cookie.includes('fa_test=') && localStorage.getItem('fa_test') === null");
+                if (empty != "true") throw new InvalidOperationException("Clearing browser data retained fixture cookies or local storage.");
+            }
             await Task.Delay(mode == "web" ? 5000 : 500);
             using var screenshot = File.Create(Path.Combine(directory, mode + ".png"));
             await core.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, screenshot);
@@ -307,6 +312,34 @@ internal sealed class OsuBrowserWindow : IDisposable
             if (message.Msg == ViewportChangedMessage) { ViewportChanges++; Invalidate(); }
             base.WndProc(ref message);
         }
+    }
+
+    internal static Task ClearProfileAsync(string? profile = null)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var worker = new Thread(() =>
+        {
+            try
+            {
+                using var window = new BrowserForm(profile) { AllowClose = true, ShowInTaskbar = false, Opacity = 0 };
+                Exception? failure = null;
+                window.Shown += async (_, _) =>
+                {
+                    try
+                    {
+                        await window.Initialize();
+                        await window.browser.CoreWebView2.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.AllProfile);
+                    }
+                    catch (Exception error) { failure = error; }
+                    finally { window.Close(); }
+                };
+                Forms.Application.Run(window);
+                if (failure is null) completion.TrySetResult(); else completion.TrySetException(failure);
+            }
+            catch (Exception error) { completion.TrySetException(error); }
+        }) { IsBackground = true, Name = "Clear osu! browser data" };
+        worker.SetApartmentState(ApartmentState.STA); worker.Start();
+        return completion.Task;
     }
 
     private static int RunEmbeddedCheck(string directory)
@@ -401,7 +434,8 @@ internal sealed class OsuBrowserWindow : IDisposable
     internal static int RunCheck(string directory, string mode)
     {
         if (mode == "embed") return RunEmbeddedCheck(Path.GetFullPath(directory));
-        if (mode is not ("write" or "read" or "web")) throw new ArgumentException("Unknown browser check mode.");
+        if (mode == "clear") { ClearProfileAsync(Path.Combine(Path.GetFullPath(directory), "fixture-profile")).GetAwaiter().GetResult(); return 0; }
+        if (mode is not ("write" or "read" or "web" or "empty")) throw new ArgumentException("Unknown browser check mode.");
         directory = Path.GetFullPath(directory); Directory.CreateDirectory(directory);
         using var window = new BrowserForm(Path.Combine(directory, mode == "web" ? "anonymous-profile" : "fixture-profile")) { AllowClose = true, ShowInTaskbar = false, Opacity = 0 };
         int result = 1;

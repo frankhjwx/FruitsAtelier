@@ -7,6 +7,31 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public Action<BrowserCommand>? RequestBrowserCommand { get; set; }
+    public Func<Task>? RequestClearBrowserData { get; set; }
+    private Task? browserClearTask;
+    private string? browserClearStatus;
+    private bool BrowserClearing => browserClearTask is not null;
+    private void DrawBrowserSettings(ICanvas c)
+    {
+        float y = SettingsParagraph(c, L.Get("browser.clearHint"), SettingsTop + 128);
+        SettingsButton(c, new(SettingsContentX, y + 16, SettingsContentWidth, SettingsControlHeight),
+            L.Get(BrowserClearing ? "browser.clearing" : "browser.clearData"), () =>
+            {
+                if (BrowserClearing || RequestClearBrowserData is null) return;
+                browserClearStatus = null;
+                try { browserClearTask = RequestClearBrowserData(); }
+                catch { browserClearStatus = "browser.clearFailed"; }
+            }, enabled: !BrowserClearing && RequestClearBrowserData is not null);
+        if (browserClearStatus is { } status) SettingsParagraph(c, L.Get(status), y + 64);
+    }
+    private void PumpBrowserClear()
+    {
+        if (browserClearTask is not { IsCompleted: true } task) return;
+        browserClearStatus = task.IsCompletedSuccessfully ? "browser.cleared" : "browser.clearFailed";
+        _ = task.Exception;
+        browserClearTask = null;
+        UpdateBrowserState(new());
+    }
     private BrowserState browserState = new();
     private (long Set, long Map, bool Discussion) browserContext;
     private string? browserPage;
@@ -17,12 +42,12 @@ public sealed partial class EditorView
     private float browserCopiedPainted;
     internal float BrowserCopyOpacity => browserCopiedAt is { } started
         ? (float)Math.Clamp((2 - timeProvider.GetElapsedTime(started).TotalSeconds) / .4, 0, 1) : 0;
-    public bool BrowserFeedbackNeedsRedraw => BrowserContentAvailable && browserCopiedPainted > 0;
+    public bool BrowserFeedbackNeedsRedraw => BrowserClearing || BrowserContentAvailable && browserCopiedPainted > 0;
     private bool BrowserContentAvailable => PanelVisible(DockPanel.OsuWeb) && DockContentInputAvailable
         && !librarySettingsOpen && !StartupDialogVisible && !CollaborationReportVisible && !RotationVisible
         && !MapTemplatesVisible && !addDifficultyConfirmation && !OsuLinkPickerVisible && !OsuLinkFallbackRequired
         && !PatternGalleryPreviewVisible && !panelMenuOpen && !volumePopoverOpen && !languageMenuOpen
-        && !updatesPage && !resourcePage && syncPage != "resolve"
+        && !BrowserClearing && !updatesPage && !resourcePage && syncPage != "resolve"
         && menu < 0 && contextItems.Count == 0 && !dockDragging;
     private bool BrowserToolbarContains(float x, float y) => BrowserContentAvailable && browserToolbar.Contains(x, y);
     private bool BrowserToolbarPointer(float x, float y, int button)

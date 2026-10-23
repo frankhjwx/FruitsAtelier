@@ -179,3 +179,7 @@ void fa_browser_close(void) {
     fa_browser = nil;
     fa_timestamp = NULL;
 }
+void fa_browser_clear_data(void (*completion)(void)) {
+    [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes]
+        modifiedSince:[NSDate distantPast] completionHandler:^{ completion(); }];
+}

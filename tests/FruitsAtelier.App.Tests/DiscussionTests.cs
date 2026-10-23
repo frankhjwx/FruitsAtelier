@@ -96,6 +96,16 @@ internal static class DiscussionTests
         ui.View.OpenSettings(); ui.Paint();
         Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionQuoteBounds.Count == 0
             && ui.View.DiscussionMarkerHits.Count == 0, "settings and its full-screen dimmer cover browser annotations too");
+        var clearing = new TaskCompletionSource(); int clearRequests = 0;
+        ui.View.RequestClearBrowserData = () => { clearRequests++; return clearing.Task; };
+        ui.ClickText(L.Get("browser.settings")); ui.ClickText(L.Get("browser.clearData"));
+        Check(clearRequests == 1 && ui.View.BrowserFeedbackNeedsRedraw, "Web settings starts asynchronous data clearing");
+        ui.Paint(); clearing.SetResult(); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("browser.cleared"))), "Web settings reports clearing only after completion");
+        ui.View.RequestClearBrowserData = () => Task.FromException(new IOException("fixture"));
+        ui.ClickText(L.Get("browser.clearData")); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("browser.clearFailed"))), "clearing failures remain visible and retryable");
+        ui.View.UpdateBrowserPage(page);
         ui.Key(27); ui.Paint();
         var expanded = ui.View.CaptureDockLayouts();
         var collapsed = ui.View.CaptureDockLayouts(); collapsed.Mapping!.Right!.Collapsed = true;

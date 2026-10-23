@@ -14,6 +14,8 @@ shared toolbar, synchronized copy-feedback fade and Settings in English and Chin
 at compact and wide sizes. Images go to `artifacts/tests/browser/native`.
 `FruitsAtelier.App --browser-check <artifact-directory> write` followed by `read`
 checks synthetic persistent cookies and localStorage across separate processes.
+On the same isolated fixture directory, `clear` followed by `empty` verifies that
+the browser clearing API removes those cookies and localStorage across processes.
 The `embed` mode checks native child placement, text editing and retained drafts
 across hide/show, and owner repaint notifications after hiding, moving and resizing.
 These checks use hidden windows without taskbar entries and

@@ -1,4 +1,11 @@
 {
+  "browser.settings": "Web",
+  "browser.clearData": "清除本機使用者資料",
+  "browser.clearHint": "刪除 FA 內嵌瀏覽器的 Cookie、網站儲存、快取和瀏覽資料。瀏覽器視窗及未提交的草稿將關閉，之後需要重新登入。不影響外部瀏覽器和譜面專案。",
+  "browser.clearing": "正在清除…",
+  "browser.cleared": "本機瀏覽器資料已清除，需要時請重新登入。",
+  "browser.clearFailed": "無法清除瀏覽器資料，請重試。",
+
   "browser.refreshDiscussion": "重新整理並返回目前難度的討論頁",
   "browser.tab": "osu! 網頁",
   "browser.noMap": "這張圖譜沒有線上頁面。",

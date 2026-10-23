@@ -40,6 +40,11 @@ internal sealed partial class EditorWindow : IDisposable
         ConfigureFiles();
         ConfigureOsuLinks();
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
+        view.RequestClearBrowserData = () =>
+        {
+            var previous = osuBrowser; osuBrowser = null;
+            return Task.Run(async () => { previous?.Dispose(); await OsuBrowserWindow.ClearProfileAsync(); });
+        };
         view.RequestPasteTime = () => view.PasteTimeJumpText(Native.ReadClipboardText(hwnd), view.TimeJumpSession);
         view.RequestPasteSongSetup = () => view.PasteSongSetupText(Native.ReadClipboardText(hwnd), view.SongSetupInputSession);
         view.RequestPasteTiming = () => view.PasteTimingText(Native.ReadClipboardText(hwnd), view.TimingInputSession);

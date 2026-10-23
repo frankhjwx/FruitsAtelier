@@ -1,4 +1,11 @@
 {
+  "browser.settings": "Web",
+  "browser.clearData": "ローカルユーザーデータを削除",
+  "browser.clearHint": "FA 内蔵ブラウザーの Cookie、サイトデータ、キャッシュ、閲覧データを削除します。ブラウザーウィンドウと未送信の下書きは閉じられ、再ログインが必要になります。外部ブラウザーや譜面プロジェクトには影響しません。",
+  "browser.clearing": "削除中…",
+  "browser.cleared": "ブラウザーデータを削除しました。必要に応じて再ログインしてください。",
+  "browser.clearFailed": "ブラウザーデータを削除できませんでした。再試行してください。",
+
   "browser.refreshDiscussion": "現在の難易度のディスカッションを再読み込み",
   "browser.tab": "osu! Web",
   "browser.noMap": "この譜面にはオンラインページがありません。",

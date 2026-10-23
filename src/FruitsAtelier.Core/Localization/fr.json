@@ -1,4 +1,11 @@
 {
+  "browser.settings": "Web",
+  "browser.clearData": "Effacer les données utilisateur locales",
+  "browser.clearHint": "Supprime les cookies, données de sites, cache et données de navigation du navigateur intégré à FA. Les fenêtres et brouillons non envoyés seront fermés. Une reconnexion sera nécessaire. Les navigateurs externes et projets ne sont pas affectés.",
+  "browser.clearing": "Suppression…",
+  "browser.cleared": "Données du navigateur effacées. Reconnectez-vous si nécessaire.",
+  "browser.clearFailed": "Impossible d’effacer les données. Réessayez.",
+
   "browser.refreshDiscussion": "Actualiser les discussions de la difficulté actuelle",
   "browser.tab": "osu! Web",
   "browser.noMap": "Cette beatmap ne possède pas de page en ligne.",

@@ -1,4 +1,11 @@
 {
+  "browser.settings": "Web",
+  "browser.clearData": "로컬 사용자 데이터 삭제",
+  "browser.clearHint": "FA 내장 브라우저의 쿠키, 사이트 저장소, 캐시 및 탐색 데이터를 삭제합니다. 브라우저 창과 제출하지 않은 초안이 닫히며 다시 로그인해야 합니다. 외부 브라우저와 비트맵 프로젝트에는 영향을 주지 않습니다.",
+  "browser.clearing": "삭제 중…",
+  "browser.cleared": "브라우저 데이터가 삭제되었습니다. 필요할 때 다시 로그인하세요.",
+  "browser.clearFailed": "브라우저 데이터를 삭제하지 못했습니다. 다시 시도하세요.",
+
   "browser.refreshDiscussion": "현재 난이도의 토론 새로 고침",
   "browser.tab": "osu! 웹",
   "browser.noMap": "이 비트맵에는 온라인 페이지가 없습니다.",

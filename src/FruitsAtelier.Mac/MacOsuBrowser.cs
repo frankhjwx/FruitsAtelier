@@ -62,4 +62,17 @@ internal sealed class MacOsuBrowser : NativeControlHost
 
     [DllImport("libFruitsAtelierAudio.dylib", EntryPoint = "fa_browser_close")]
     internal static extern void Close();
+
+    private static TaskCompletionSource? clearCompletion;
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void ClearCallback();
+    private static readonly ClearCallback cleared = () => clearCompletion?.TrySetResult();
+    internal static Task ClearDataAsync()
+    {
+        clearCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        ClearNative(cleared);
+        return clearCompletion.Task;
+    }
+    [DllImport("libFruitsAtelierAudio.dylib", EntryPoint = "fa_browser_clear_data")]
+    private static extern void ClearNative(ClearCallback callback);
 }

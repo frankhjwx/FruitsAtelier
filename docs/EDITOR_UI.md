@@ -30,8 +30,12 @@ webpage and its draft. Navigating to another map or refreshing can replace the p
 Website permissions, submission validation and errors are handled by osu! itself;
 FA does not automate submissions or retry them.
 
-The browser retains cookies and website storage across app restarts. Log out from
-the website to end the session. Website-side expiry or revocation can still require
+The browser retains cookies and website storage across app restarts.
+Use **Settings → Web → Clear local user data** to erase the embedded
+browser's cookies, website storage, cache and browsing data. Clearing closes its
+windows and unsent drafts and requires signing in again. It does not clear external
+browser profiles or beatmap projects. Completion and failure are shown in the Web page.
+You can also log out from the website to end the session. Website-side expiry or revocation can still require
 signing in again. FA does not copy browser credentials into project files.
 
 ## Discussion

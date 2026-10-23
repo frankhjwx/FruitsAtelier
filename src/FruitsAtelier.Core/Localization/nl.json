@@ -1,4 +1,11 @@
 {
+  "browser.settings": "Web",
+  "browser.clearData": "Lokale gebruikersgegevens wissen",
+  "browser.clearHint": "Wist cookies, websiteopslag, cache en browsegegevens van de ingebouwde FA-browser. Browservensters en niet-verzonden concepten worden gesloten. Opnieuw aanmelden is nodig. Externe browsers en projecten blijven behouden.",
+  "browser.clearing": "Wissen…",
+  "browser.cleared": "Browsergegevens gewist. Meld je indien nodig opnieuw aan.",
+  "browser.clearFailed": "Wissen mislukt. Probeer het opnieuw.",
+
   "browser.refreshDiscussion": "Discussies van de huidige moeilijkheid vernieuwen",
   "browser.tab": "osu! Web",
   "browser.noMap": "Deze beatmap heeft geen online pagina.",

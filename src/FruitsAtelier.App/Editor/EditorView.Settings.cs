@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, Experimental, OsuLinks, Updates }
+    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, Experimental, OsuLinks, Web, Updates }
     private SettingsCategory settingsCategory;
     private bool draftAudioDiagnostics, draftAudioDiagnosticFrames;
     private string draftAudioDiagnosticProfile = "event-10";
@@ -212,7 +212,7 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
         c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "osuLinks.title", "update.title"];
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "osuLinks.title", "browser.settings", "update.title"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
@@ -230,6 +230,9 @@ public sealed partial class EditorView
         c.Text(L.Get(categories[(int)settingsCategory]), SettingsContentX, SettingsTop + 82, 24, Foreground, SettingsContentWidth, true);
         switch (settingsCategory)
         {
+            case SettingsCategory.Web:
+                DrawBrowserSettings(c);
+                break;
             case SettingsCategory.OsuLinks:
                 DrawOsuLinkSettings(c);
                 break;
@@ -343,7 +346,7 @@ public sealed partial class EditorView
                 DrawAudioSettings(c);
                 break;
         }
-        if (settingsCategory == SettingsCategory.OsuLinks) return;
+        if (settingsCategory is SettingsCategory.OsuLinks or SettingsCategory.Web) return;
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);
         c.Text(libraryError, SettingsContentX, r.Bottom - 116, 13, Error, SettingsContentWidth);
         bool canApply = SettingsChanged && (!SettingsRootsChanged || scanTask is null && searchTask is null);

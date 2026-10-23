@@ -49,6 +49,10 @@ internal static class BrowserRenderCheck
                 if (editor.BrowserFeedbackNeedsRedraw) throw new InvalidOperationException("Expired copy feedback keeps redrawing.");
                 editor.OpenSettings(); Paint("settings");
                 if (editor.BrowserViewport.Width > 0) throw new InvalidOperationException("Browser covers settings.");
+                editor.RequestClearBrowserData = () => Task.CompletedTask;
+                var settings = editor.SettingsBounds;
+                editor.PointerDown(settings.X + 40, settings.Y + 78 + 8 * 48 + 16, 0, false, false);
+                editor.PointerUp(settings.X + 40, settings.Y + 78 + 8 * 48 + 16, 0); Paint("web-settings");
                 editor.StopDiscussions();
 
                 void Paint(string name)
