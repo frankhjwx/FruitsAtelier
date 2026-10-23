@@ -1720,7 +1720,7 @@
   "gallery.export": "导出",
   "gallery.exportAll": "导出整个图库",
   "gallery.exportSelected": "导出所选 Pattern",
-  "gallery.fileType": "Fruits Atelier Pattern (*.fap)",
+  "gallery.fileType": "Fruits Atelier Pattern (*.fpt)",
   "gallery.empty": "在谱面中选择连续对象，保存第一个 Pattern。",
   "gallery.loading": "正在加载 Pattern…",
   "gallery.namePrompt": "为 Pattern 命名",

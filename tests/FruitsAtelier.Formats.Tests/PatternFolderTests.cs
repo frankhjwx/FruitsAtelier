@@ -14,6 +14,7 @@ internal static class PatternFolderTests
         var store = new PatternGalleryStore(directory);
         Check(store.LoadContents().Folders!.Single() is { Name: "Default" } folder && folder.PatternIds.SequenceEqual([pattern.Id]), "Legacy entries migrate into Default");
         Guid a = store.CreateFolder("A"), b = store.CreateFolder("B");
+        Check(File.Exists(Path.Combine(directory, "gallery.fpt")), "Gallery changes use the current extension");
         store.TransferPatterns([pattern.Id], a, true);
         var contents = store.LoadContents();
         Guid copy = contents.Folders!.Single(f => f.Id == a).PatternIds.Single();
@@ -27,7 +28,7 @@ internal static class PatternFolderTests
         Check(contents.Folders!.Single(f => f.Id == PatternFolder.DefaultId).PatternIds.Count == 0
             && contents.Folders!.Single(f => f.Id == b).PatternIds.SequenceEqual([pattern.Id])
             && contents.Patterns.Single(p => p.Id == copy).Name == "First", "Move, rename and tag edits retain membership and copy isolation");
-        string package = Path.Combine(directory, "folders.fap");
+        string package = Path.Combine(directory, "folders.fpt");
         store.Export(package, folderIds: [a, b]);
         var exported = PatternArchive.ReadContentsFile(package);
         Check(exported.Folders!.Select(f => f.Name).SequenceEqual(["A", "B"]) && exported.Patterns.Count == 2, "Selected folders export their contents");
@@ -42,7 +43,7 @@ internal static class PatternFolderTests
         Guid target = store.CreateFolder("Target");
         store.MergeFolders([PatternFolder.DefaultId, target], target);
         Check(store.LoadContents().Folders!.Single(f => f.Id == PatternFolder.DefaultId).PatternIds.Count == 0, "Merging Default into another folder preserves empty Default");
-        byte[] before = File.ReadAllBytes(Path.Combine(directory, "gallery.fap"));
+        byte[] before = File.ReadAllBytes(Path.Combine(directory, "gallery.fpt"));
         Expect(() => store.RenameFolder(PatternFolder.DefaultId, "Other"));
         Expect(() => store.DeleteFolder(PatternFolder.DefaultId));
         Expect(() => store.DeleteFolder(Guid.NewGuid()));
@@ -50,7 +51,7 @@ internal static class PatternFolderTests
         Expect(() => store.TransferPatterns([Guid.NewGuid()], target, false));
         Expect(() => store.Import(package, Guid.NewGuid()));
         Expect(() => store.CreateFolder("\n"));
-        Check(before.SequenceEqual(File.ReadAllBytes(Path.Combine(directory, "gallery.fap"))), "Failed operations leave the archive unchanged");
+        Check(before.SequenceEqual(File.ReadAllBytes(Path.Combine(directory, "gallery.fpt"))), "Failed operations leave the archive unchanged");
         var retained = store.LoadContents();
         var deletedIds = retained.Folders!.Single(f => f.Id == target).PatternIds.ToHashSet();
         store.DeleteFolder(target);
@@ -76,12 +77,12 @@ internal static class PatternFolderTests
         Expect(() => PatternArchive.Write([pattern], missing, folders: [new(Guid.NewGuid(), "Bad", [])]));
         var legacyStore = new PatternGalleryStore(Path.Combine(directory, "Legacy"));
         legacyStore.Add(pattern);
-        string named = Path.Combine(directory, "My patterns.fap"); legacyStore.Export(named);
+        string named = Path.Combine(directory, "My patterns.fpt"); legacyStore.Export(named);
         Check(PatternArchive.ReadContentsFile(named).Folders!.Single().Name == "My patterns", "Flat exports acquire the export filename");
         Guid empty = legacyStore.CreateFolder("Empty");
         legacyStore.Export(named, folderIds: [empty]);
         Check(PatternArchive.ReadContentsFile(named).Folders!.Single().PatternIds.Count == 0, "Empty folders survive sharing");
-        string legacy = Path.Combine(directory, "Old pack.fap"); PatternArchive.WriteFile([pattern], legacy);
+        string legacy = Path.Combine(directory, "Old pack.fpt"); PatternArchive.WriteFile([pattern], legacy);
         legacyStore.Import(legacy);
         Check(legacyStore.LoadContents().Folders!.Any(f => f.Name == "Old pack"), "Legacy imports acquire the package filename");
         Console.WriteLine("PASS Pattern folders: migration, transfers, merges, sharing and atomic validation");

@@ -1720,7 +1720,7 @@
   "gallery.export": "書き出し",
   "gallery.exportAll": "ギャラリーを書き出す",
   "gallery.exportSelected": "選択を書き出す",
-  "gallery.fileType": "Fruits Atelier パターン (*.fap)",
+  "gallery.fileType": "Fruits Atelier パターン (*.fpt)",
   "gallery.empty": "譜面内の連続したオブジェクトを選択し、最初のパターンを保存してください。",
   "gallery.loading": "パターンを読み込み中…",
   "gallery.namePrompt": "パターンに名前を付ける",

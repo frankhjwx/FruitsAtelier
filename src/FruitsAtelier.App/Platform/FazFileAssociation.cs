@@ -34,9 +34,9 @@ internal static class FazFileAssociation
         Ensure(difficultyId + @"\DefaultIcon", "\"" + Path.Combine(Path.GetDirectoryName(iconPath)!, "fad-file.ico") + "\"");
         Ensure(difficultyId + @"\shell\open\command", "\"" + executable + "\" \"%1\"");
         const string patternId = "FruitsAtelier.PatternArchive";
-        Ensure(".fap", patternId);
+        Ensure(".fpt", patternId);
         Ensure(patternId, "Fruits Atelier Patterns");
-        Ensure(patternId + @"\DefaultIcon", "\"" + Path.Combine(Path.GetDirectoryName(iconPath)!, "fap-file.ico") + "\"");
+        Ensure(patternId + @"\DefaultIcon", "\"" + Path.Combine(Path.GetDirectoryName(iconPath)!, "fpt-file.ico") + "\"");
         return changed;
 
         void Ensure(string path, string value)

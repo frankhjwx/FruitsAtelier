@@ -1720,7 +1720,7 @@
   "gallery.export": "Exporter",
   "gallery.exportAll": "Exporter la galerie",
   "gallery.exportSelected": "Exporter la sélection",
-  "gallery.fileType": "Motifs Fruits Atelier (*.fap)",
+  "gallery.fileType": "Motifs Fruits Atelier (*.fpt)",
   "gallery.empty": "Sélectionnez des objets consécutifs dans la beatmap et enregistrez votre premier motif.",
   "gallery.loading": "Chargement des motifs…",
   "gallery.namePrompt": "Nommer ce motif",

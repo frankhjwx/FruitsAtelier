@@ -1720,7 +1720,7 @@
   "gallery.export": "ส่งออก",
   "gallery.exportAll": "ส่งออกแกลเลอรี",
   "gallery.exportSelected": "ส่งออกที่เลือก",
-  "gallery.fileType": "แพตเทิร์น Fruits Atelier (*.fap)",
+  "gallery.fileType": "แพตเทิร์น Fruits Atelier (*.fpt)",
   "gallery.empty": "เลือกวัตถุที่ต่อเนื่องกันในบีตแมป แล้วบันทึกแพตเทิร์นแรกของคุณ",
   "gallery.loading": "กำลังโหลดแพตเทิร์น…",
   "gallery.namePrompt": "ตั้งชื่อแพตเทิร์นนี้",

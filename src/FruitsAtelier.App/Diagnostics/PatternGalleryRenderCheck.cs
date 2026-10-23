@@ -24,7 +24,7 @@ internal static class PatternGalleryRenderCheck
                 string gallery = Path.Combine(run, $"{locale}-{size.Item1}-{dpi}");
                 Directory.CreateDirectory(gallery);
                 var patterns = Fixtures(locale);
-                PatternArchive.WriteFile(patterns, Path.Combine(gallery, "gallery.fap"));
+                PatternArchive.WriteFile(patterns, Path.Combine(gallery, "gallery.fpt"));
                 var folderStore = new PatternGalleryStore(gallery);
                 Guid practiceFolder = folderStore.CreateFolder(locale == "en" ? "Practice" : "\u7ec3\u4e60");
                 Guid sharedFolder = folderStore.CreateFolder(locale == "en" ? "Shared" : "\u5206\u4eab");
@@ -91,7 +91,7 @@ internal static class PatternGalleryRenderCheck
                 editor.KeyDown(27, false, false); Paint();
                 var defaultFolder = editor.PatternGalleryFolderBounds(PatternFolder.DefaultId);
                 Click(defaultFolder);
-                editor.BeginPatternImport(Path.Combine(gallery, "gallery.fap")); Paint("folder-import-destination");
+                editor.BeginPatternImport(Path.Combine(gallery, "gallery.fpt")); Paint("folder-import-destination");
                 Click(editor.PatternGalleryContextItemBounds(1)); Paint("folder-import-existing");
                 editor.KeyDown(27, false, false); Paint();
                 var dragCard = editor.PatternGalleryCardBounds(patterns[0].Id);

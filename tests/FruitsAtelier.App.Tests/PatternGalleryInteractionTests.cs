@@ -21,7 +21,7 @@ internal static class PatternGalleryInteractionTests
         var map = new MapDocument { IsDemo = false, DurationMs = 10000 };
         map.Fruits.Add(new() { TimeMs = 1000, X = 200 });
         var patterns = Enumerable.Range(0, 3).Select(i => PatternSnapshot.Capture(map, map.Fruits.Select(f => f.Id), $"Pattern {i}")).ToArray();
-        PatternArchive.WriteFile(patterns, Path.Combine(directory, "gallery.fap"));
+        PatternArchive.WriteFile(patterns, Path.Combine(directory, "gallery.fpt"));
         var store = new PatternGalleryStore(directory);
         Guid target = store.CreateFolder("Target");
         var ui = new Ui(); ui.LoadDocument(map); ui.View.ConfigurePatternGallery(directory);
@@ -36,7 +36,7 @@ internal static class PatternGalleryInteractionTests
         Check(store.Load().Single(p => p.Id == patterns[0].Id).Name == "Renamed", "Title rename did not persist");
         ui.Key(27);
 
-        string exportPath = Path.Combine(directory, "selected.fap");
+        string exportPath = Path.Combine(directory, "selected.fpt");
         ui.View.RequestPatternExport = selectedOnly => { Check(selectedOnly, "Context export must use selection"); ui.View.BeginPatternExport(exportPath, selectedOnly); };
         Context(ui.View.PatternGalleryCardBounds(patterns[0].Id)); ui.ClickObjectAction(L.Get("gallery.export")); Settle();
         Check(PatternArchive.ReadContentsFile(exportPath).Patterns.Count == 1, "Single selection export included other patterns");
@@ -54,16 +54,19 @@ internal static class PatternGalleryInteractionTests
         Check(store.LoadContents().Folders!.Single(f => f.Id == target).PatternIds.SequenceEqual([patterns[1].Id]), "Single-card drag moved the wrong patterns");
         Click(ui.View.PatternGalleryFolderBounds(PatternFolder.DefaultId)); Settle();
 
-        string importPath = Path.Combine(directory, "incoming.FAP"); PatternArchive.WriteFile([patterns[2]], importPath);
+        string importPath = Path.Combine(directory, "incoming.FPT"); PatternArchive.WriteFile([patterns[2]], importPath);
         ui.ClickText(L.Get("dock.layout")); ui.ClickText("✓ " + L.Get("dock.gallery"));
-        Check(ui.View.CanDropFile(importPath), "Editor rejects external FAP drop with hidden gallery");
+        Check(ui.View.CanDropFile(importPath), "Editor rejects external FPT drop with hidden gallery");
+        string legacyPath = Path.Combine(directory, "legacy.FAP"); File.Copy(importPath, legacyPath);
+        Check(ui.View.CanDropFile(legacyPath), "Legacy pattern packages remain droppable");
+        importPath = legacyPath;
         ui.View.DropLibraryFiles([importPath]); Settle();
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.importNewFolders"))
             && ui.Canvas.Texts.Any(t => t.Value == L.Get("gallery.importExistingFolders")), "Drop must show the two import choices");
         ui.ClickText(L.Get("gallery.importExistingFolders")); ui.ClickObjectAction("Target"); Settle();
         Check(store.LoadContents().Folders!.Single(f => f.Id == target).PatternIds.Count == 2, "Dropped archive did not import into selected folder");
         ui.View.DropLibraryFiles([importPath]); Settle(); ui.ClickText(L.Get("gallery.importNewFolders")); Settle();
-        Check(store.LoadContents().Folders!.Any(f => f.Name == "incoming"), "New-folder drop import failed");
+        Check(store.LoadContents().Folders!.Any(f => f.Name == "legacy"), "New-folder drop import failed");
         ui.View.ShowDiscardConfirmation(_ => { }); ui.Paint();
         Check(!ui.View.CanDropFile(importPath), "External import bypassed a modal"); ui.Key(27);
         Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty && !ui.View.WantsCapture, "Gallery actions changed map content or retained capture");

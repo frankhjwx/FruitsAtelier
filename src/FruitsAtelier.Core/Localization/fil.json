@@ -1720,7 +1720,7 @@
   "gallery.export": "I-export",
   "gallery.exportAll": "I-export ang gallery",
   "gallery.exportSelected": "I-export ang pinili",
-  "gallery.fileType": "Mga pattern ng Fruits Atelier (*.fap)",
+  "gallery.fileType": "Mga pattern ng Fruits Atelier (*.fpt)",
   "gallery.empty": "Pumili ng magkakasunod na object sa beatmap at i-save ang iyong unang pattern.",
   "gallery.loading": "Naglo-load ng mga pattern…",
   "gallery.namePrompt": "Pangalanan ang pattern",

@@ -1720,7 +1720,7 @@
   "gallery.export": "Export",
   "gallery.exportAll": "Export gallery",
   "gallery.exportSelected": "Export selected",
-  "gallery.fileType": "Fruits Atelier patterns (*.fap)",
+  "gallery.fileType": "Fruits Atelier patterns (*.fpt)",
   "gallery.empty": "Select consecutive objects in the map and save your first pattern.",
   "gallery.loading": "Loading patterns…",
   "gallery.namePrompt": "Name this pattern",

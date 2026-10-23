@@ -6,10 +6,10 @@ using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.Core.Patterns;
 
-/// <summary>The versioned .fap package contains metadata and complete project document encodings.</summary>
+/// <summary>The versioned .fpt package contains metadata and complete project document encodings.</summary>
 public static class PatternArchive
 {
-    public const string Extension = ".fap";
+    public const string Extension = ".fpt";
     public const int MaximumPatterns = 4096;
     public const long MaximumArchiveBytes = 64 * 1024 * 1024;
     public const long MaximumExpandedBytes = 256 * 1024 * 1024;

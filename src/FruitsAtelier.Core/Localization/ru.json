@@ -1720,7 +1720,7 @@
   "gallery.export": "Экспорт",
   "gallery.exportAll": "Экспорт галереи",
   "gallery.exportSelected": "Экспорт выделенного",
-  "gallery.fileType": "Паттерны Fruits Atelier (*.fap)",
+  "gallery.fileType": "Паттерны Fruits Atelier (*.fpt)",
   "gallery.empty": "Выберите последовательные объекты на карте и сохраните первый паттерн.",
   "gallery.loading": "Загрузка паттернов…",
   "gallery.namePrompt": "Название паттерна",

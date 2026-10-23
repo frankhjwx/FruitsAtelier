@@ -156,7 +156,7 @@ macOS path behavior.
 `Core.Tests --pattern-placement-check` checks beat-relative placement, optional
 horizontal speed preservation, bounds, stream/stack data, destination droplet
 settings, saved AR, hyperdash starts and deterministic previews. `Formats.Tests --pattern-gallery-check`
-checks snapshot isolation, AR-preserving `.fap` round trips, rename/delete persistence,
+checks snapshot isolation, AR-preserving `.fpt` round trips, rename/delete persistence,
 validation and atomic gallery writes, folder migration, copy/move identity isolation,
 folder merges/deletion, Default preservation, version 4 folder packages and import collisions.
 `App.Tests --pattern-gallery-check` checks gallery input, placement choices/cancellation,
@@ -168,7 +168,7 @@ detail-page editing, single/multiple-object context capture and source navigatio
 It also checks range selection across offscreen cards, category switching and merging,
 cross-folder clipboard shortcuts, Move to submenus with scrolling and multi-selection,
 single/multiple-card category dragging, preview-title rename, selection-only context exports,
-external FAP drops and the new/existing-folder import submenu,
+external FPT drops and the new/existing-folder import submenu,
 conditional folder menus, folder rename/deletion with keep/delete/cancel choices,
 import destinations, 50% minimum card zoom, two-column maximum sizing and geometry reuse.
 `FruitsAtelier.App.exe --render-check --pattern-gallery-render-check` checks the

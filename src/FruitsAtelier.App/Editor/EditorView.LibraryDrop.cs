@@ -17,7 +17,7 @@ public sealed partial class EditorView
         && !PatternNameVisible && !GalleryTagsVisible && !PatternEditingActive && !PatternEditingBusy && !WantsCapture
         && (galleryStore is not null || !string.IsNullOrWhiteSpace(LibrarySettings.Workspace))
         && galleryPendingImportPath is null && galleryIoTask is null;
-    public static bool IsPatternArchive(string path) => Path.GetExtension(path).Equals(".fap", StringComparison.OrdinalIgnoreCase);
+    public static bool IsPatternArchive(string path) => Path.GetExtension(path).ToLowerInvariant() is ".fpt" or ".fap";
     public static bool IsBackgroundImage(string path) => Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".bmp";
 
     public bool CanDropFile(string path) => CanDropBackground && IsBackgroundImage(path)

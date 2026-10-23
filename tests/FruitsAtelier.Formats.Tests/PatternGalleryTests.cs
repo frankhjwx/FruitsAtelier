@@ -95,7 +95,7 @@ internal static class PatternGalleryTests
             Expect<InvalidOperationException>(() => independent.AddTag(new("unused", 1)));
             Expect<InvalidDataException>(() => independent.AddTag(new("Invalid", 0x1000000)));
             independent.EditTag("Unused", new("Practice", 0x65A9FF));
-            string tagsOnly = Path.Combine(directory, "tags-only.fap"); independent.Export(tagsOnly);
+            string tagsOnly = Path.Combine(directory, "tags-only.fpt"); independent.Export(tagsOnly);
             var tagImport = new PatternGalleryStore(Path.Combine(directory, "TagImport"));
             tagImport.Import(tagsOnly);
             Check(tagImport.LoadContents().Tags.SequenceEqual([new PatternTag("Practice", 0x65A9FF)]), "Unassigned tags survive export and import");
@@ -115,7 +115,7 @@ internal static class PatternGalleryTests
             Check(tagStore.LoadContents().Tags.Select(t => t.Name).SequenceEqual(["Stream", "Jump"]), "Assigned tag order survives archive reload");
             Expect<InvalidDataException>(() => tagStore.ReorderTags(["Stream", "Stream"]));
             Expect<InvalidDataException>(() => tagStore.ReorderTags(["Jump"]));
-            string ordered = Path.Combine(directory, "ordered.fap");
+            string ordered = Path.Combine(directory, "ordered.fpt");
             tagStore.Export(ordered, [snapshot.Id]);
             var orderedImport = new PatternGalleryStore(Path.Combine(directory, "OrderedImport"));
             orderedImport.Import(ordered);
@@ -128,19 +128,19 @@ internal static class PatternGalleryTests
             Check(tagStore.Load().All(p => p.Tags.All(t => t.Name != "Flow")), "Tag deletion removes all assignments");
             Check(store.Load().Count == 0 && store.Add(snapshot) && !store.Add(restored), "Persistent store deduplicates repeated import");
             var second = PatternSnapshot.Capture(map, [before.Id], "Second"); store.Add(second);
-            string export = Path.Combine(directory, "selected.fap"); store.Export(export, [snapshot.Id]);
+            string export = Path.Combine(directory, "selected.fpt"); store.Export(export, [snapshot.Id]);
             Check(PatternArchive.ReadFile(export).Select(p => p.Id).SequenceEqual([snapshot.Id]), "Selected export contains only selected patterns");
-            string all = Path.Combine(directory, "all.fap"); store.Export(all);
+            string all = Path.Combine(directory, "all.fpt"); store.Export(all);
             store.RememberSource(snapshot.Id, Path.Combine(directory, "original.osu"));
             Check(store.SourcePath(snapshot.Id) == Path.Combine(directory, "original.osu"), "Local source hint persists");
             var imported = new PatternGalleryStore(Path.Combine(directory, "Imported"));
             Check(imported.Import(all) == 2 && imported.Import(all) == 2 && imported.Load().Count == 4,
                 "Repeated import creates independent folders and patterns");
             Check(imported.SourcePath(snapshot.Id) is null, "Sharing never includes local source paths");
-            byte[] prior = File.ReadAllBytes(Path.Combine(directory, "Patterns", "gallery.fap"));
-            string invalid = Path.Combine(directory, "invalid.fap"); File.WriteAllText(invalid, "invalid zip");
+            byte[] prior = File.ReadAllBytes(Path.Combine(directory, "Patterns", "gallery.fpt"));
+            string invalid = Path.Combine(directory, "invalid.fpt"); File.WriteAllText(invalid, "invalid zip");
             Expect<InvalidDataException>(() => store.Import(invalid));
-            Check(File.ReadAllBytes(Path.Combine(directory, "Patterns", "gallery.fap")).SequenceEqual(prior), "Invalid imports leave the gallery unchanged");
+            Check(File.ReadAllBytes(Path.Combine(directory, "Patterns", "gallery.fpt")).SequenceEqual(prior), "Invalid imports leave the gallery unchanged");
             var edited = snapshot.CreateDocument(); edited.Fruits[0].TimeMs = 1200; edited.Fruits[0].X = 333;
             store.Replace(snapshot.WithDocument(edited));
             var replacement = store.Load().Single(p => p.Id == snapshot.Id);

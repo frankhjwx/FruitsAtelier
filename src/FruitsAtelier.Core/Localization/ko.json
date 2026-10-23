@@ -1720,7 +1720,7 @@
   "gallery.export": "내보내기",
   "gallery.exportAll": "갤러리 내보내기",
   "gallery.exportSelected": "선택 항목 내보내기",
-  "gallery.fileType": "Fruits Atelier 패턴 (*.fap)",
+  "gallery.fileType": "Fruits Atelier 패턴 (*.fpt)",
   "gallery.empty": "비트맵에서 연속된 오브젝트를 선택하여 첫 패턴을 저장하세요.",
   "gallery.loading": "패턴 불러오는 중…",
   "gallery.namePrompt": "패턴 이름 지정",

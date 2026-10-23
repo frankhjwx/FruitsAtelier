@@ -1720,7 +1720,7 @@
   "gallery.export": "Exportar",
   "gallery.exportAll": "Exportar galería",
   "gallery.exportSelected": "Exportar selección",
-  "gallery.fileType": "Patrones de Fruits Atelier (*.fap)",
+  "gallery.fileType": "Patrones de Fruits Atelier (*.fpt)",
   "gallery.empty": "Selecciona objetos consecutivos en el beatmap y guarda tu primer patrón.",
   "gallery.loading": "Cargando patrones…",
   "gallery.namePrompt": "Ponle nombre al patrón",
