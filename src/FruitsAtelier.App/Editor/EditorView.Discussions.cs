@@ -413,7 +413,7 @@ public sealed partial class EditorView
                 if (canvasQuote || thread.ParentId is not null) DrawDiscussionTypeIcons(c, thread, canvasQuote ? left : edge - 112, y + 2);
                 if (canvasQuote && contentWidth - line.Indent < 100) continue;
                 float x = Math.Max(left + (canvasQuote ? 32 : 0), edge - (canvasQuote ? 60 : 80));
-                DiscussionIcon(c, "thumbs-up", new(x, y + 2, 11, 11), thread.UpVotes > 0 ? 0x88CC22u : Muted);
+                DiscussionIcon(c, "thumbs-up", new(x, y + 2, 11, 11), Muted);
                 c.Text(thread.UpVotes.ToString(CultureInfo.InvariantCulture), x + 14, y + 1, 10, Muted, 18);
                 DiscussionIcon(c, "thumbs-down", new(x + 31, y + 2, 11, 11), Muted);
                 c.Text(thread.DownVotes.ToString(CultureInfo.InvariantCulture), x + 45, y + 1, 10, Muted, 18);
