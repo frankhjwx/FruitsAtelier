@@ -4,7 +4,9 @@ Open **Layout → Pattern Gallery** to show the dockable gallery. The default la
 includes it in the right dock. Cards fill the panel, with a skin-rendered thumbnail
 above each pattern name. A single row of coloured tag names sits immediately above
 the name; a `+N` chip represents tags that do not fit. The enlarged preview displays
-all tags below its title, replacing the scroll/zoom hint and wrapping as needed. If the tags exceed the available
+source information below its title, followed by all tags with a compact **Edit Tags** button beside them.
+Tags wrap as needed. **Edit Pattern** and **Go to Original Map** share one row of outlined buttons below the preview.
+If the tags exceed the available
 header space, scroll within the tag area to read the remaining tags independently
 of the pattern preview. Cards have a fixed size; resizing the dock changes the
 number of columns and wraps the cards without resizing the thumbnails.

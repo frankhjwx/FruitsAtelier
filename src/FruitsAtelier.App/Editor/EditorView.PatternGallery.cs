@@ -334,12 +334,19 @@ public sealed partial class EditorView
         c.Fill(new(left + 5, top + 5, popupWidth, popupHeight), 0x000000, 7, .35f);
         c.Fill(galleryPopupBounds, Background, 7); c.Stroke(galleryPopupBounds, Accent, 1, 7);
         c.Text(pattern.Name, left + 16, top + 14, 16, Foreground, popupWidth - 65, true);
-        float tagsHeight = DrawGalleryPopupTags(c, pattern, left + 16, top + 36, popupWidth - 32, popupHeight);
-        float previewTop = top + Math.Max(56, 36 + tagsHeight);
+        c.Text(L.Get("gallery.sourceSummary", pattern.Source.Artist, pattern.Source.Title, pattern.Source.Creator, pattern.Source.Difficulty),
+            left + 16, top + 44, 11, Muted, popupWidth - 32);
         galleryPopupHitStart = hits.Count;
         Button(c, new(left + popupWidth - 36, top + 8, 28, 28), "×", () => galleryPopupId = Guid.Empty);
-        float metadataTop = top + popupHeight - 112;
-        galleryLargePreviewBounds = new(left + 12, previewTop, popupWidth - 24, Math.Max(1, metadataTop - previewTop - 10));
+        string editTags = L.Get("gallery.editTags");
+        float editTagsWidth = MathF.Ceiling(c.MeasureText(editTags, 10)) + 14;
+        PatternGalleryEditTagsBounds = new(left + popupWidth - 16 - editTagsWidth, top + 70, editTagsWidth, 18);
+        float tagsHeight = DrawGalleryPopupTags(c, pattern, left + 16, top + 70,
+            popupWidth - 40 - editTagsWidth, popupHeight);
+        PopupButton(PatternGalleryEditTagsBounds, editTags, () => ShowGalleryTagAssignments(pattern.Id), CanEditGalleryTags, 10, 7);
+        float previewTop = top + 70 + Math.Max(26, tagsHeight);
+        float footerTop = top + popupHeight - 40;
+        galleryLargePreviewBounds = new(left + 12, previewTop, popupWidth - 24, Math.Max(1, footerTop - previewTop - 12));
         c.Fill(galleryLargePreviewBounds, Surface, 3);
         if (galleryPreviews.TryGetValue(pattern.Id, out var preview))
         {
@@ -353,18 +360,20 @@ public sealed partial class EditorView
             else c.Text(L.Get("gallery.loading"), left + 25, galleryLargePreviewBounds.Y + 14, 12, Muted, popupWidth - 50);
         }
         else c.Text(galleryPreviewErrors.GetValueOrDefault(pattern.Id) ?? L.Get("gallery.loading"), left + 25, galleryLargePreviewBounds.Y + 14, 12, Muted, popupWidth - 50);
-        c.Text(L.Get("gallery.sourceSummary", pattern.Source.Artist, pattern.Source.Title, pattern.Source.Creator, pattern.Source.Difficulty),
-            left + 16, metadataTop, 11, Foreground, popupWidth - 32);
-        float footerWidth = (popupWidth - 30) / 2;
-        PatternGalleryEditPatternBounds = new(left + 12, metadataTop + 26, footerWidth, 28);
-        PatternGalleryEditTagsBounds = new(left + 18 + footerWidth, metadataTop + 26, footerWidth, 28);
-        Button(c, PatternGalleryEditPatternBounds, L.Get("gallery.editPattern"),
-            () => BeginPatternEditing(pattern), enabled: galleryIoTask is null && !PatternEditingActive && !PatternEditingBusy, fontSize: 11);
-        Button(c, PatternGalleryEditTagsBounds, L.Get("gallery.editTags"),
-            () => ShowGalleryTagAssignments(pattern.Id), enabled: CanEditGalleryTags, fontSize: 11);
-        Button(c, new(left + 12, metadataTop + 62, popupWidth - 24, 28), L.Get("gallery.jumpSource"),
-            () => RequestPatternSource?.Invoke(pattern), enabled: RequestPatternSource is not null, fontSize: 11);
+        float footerWidth = (popupWidth - 32) / 2;
+        PatternGalleryEditPatternBounds = new(left + 12, footerTop, footerWidth, 28);
+        PopupButton(PatternGalleryEditPatternBounds, L.Get("gallery.editPattern"),
+            () => BeginPatternEditing(pattern), galleryIoTask is null && !PatternEditingActive && !PatternEditingBusy);
+        PopupButton(new(left + 20 + footerWidth, footerTop, footerWidth, 28), L.Get("gallery.jumpSource"),
+            () => RequestPatternSource?.Invoke(pattern), RequestPatternSource is not null);
         galleryPopupHitEnd = hits.Count;
+
+        void PopupButton(Rect bounds, string label, Action action, bool enabled, float fontSize = 11, float padding = 9)
+        {
+            c.Fill(bounds, Surface, 3);
+            c.Stroke(bounds, Grid, 1, 3);
+            Button(c, bounds, label, action, enabled: enabled, fontSize: fontSize, textPadding: padding);
+        }
     }
 
     private void DrawGalleryPreview(ICanvas c, PatternPreviewData data, Rect bounds, bool thumbnail, float scroll)
