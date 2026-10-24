@@ -69,7 +69,7 @@ These rules follow the [official format document](https://github.com/ppy/osu-wik
 Standalone circles with a one-millisecond integer offset from a supported beat
 grid are corrected in both conversion and export. The active red line owns that
 grid. Already snapped circles, offsets larger than one millisecond, times before
-the first red line, and corrections onto an occupied parent head retain their
+the first red line, corrections across red-line grids, and corrections onto an occupied parent head retain their
 times. Saved authoring data and undo history keep their original precision.
 Stream/Stack subdivisions multiply the whole division count before dividing by
 the snap divisor, preventing intermediate floating-point rounding from moving an

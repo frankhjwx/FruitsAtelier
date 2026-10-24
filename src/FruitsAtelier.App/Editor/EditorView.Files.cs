@@ -39,6 +39,8 @@ public sealed partial class EditorView
     {
         if (PatternEditingActive) throw new InvalidOperationException(L.Get("gallery.finishEditing"));
         project.Validate();
+        timingAlignmentChecksEnabled = false; timingAlignmentChecked.Clear();
+        timingAlignmentPlan = null; timingAlignmentSource = null;
         StopDiscussions();
         patternRestoringTransport = null;
         if (MapTemplatesVisible) CloseMapTemplates(false);
@@ -118,6 +120,7 @@ public sealed partial class EditorView
 
     private void ResetDifficultyView()
     {
+        timingAlignmentPlan = null; timingAlignmentSource = null;
         RestoreTemporarySnap();
         RestoreSnapPreferences();
         CloseAimod();

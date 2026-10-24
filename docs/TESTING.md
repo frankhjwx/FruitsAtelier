@@ -1,5 +1,14 @@
 # Building and Testing
 
+`Core.Tests --timing-alignment-check` covers read-only detection, red-line chains,
+parent movement with retained durations, idempotence and undo. `App.Tests
+--timing-alignment-check` checks workspace opening, initial difficulty selection,
+localized counts, modal input, keep/align choices, undo/redo, project replacement
+and one prompt per difficulty per open. Windows `--render-check
+--timing-alignment-render-check` renders and operates the dialog in English and
+Chinese at two window sizes and three DPI scales; captures go to
+`artifacts/tests/timing-alignment-native`.
+
 `Formats.Tests --export-snap-check` checks one-millisecond circle correction after
 red-line resets, source preservation, cached export equivalence, occupied heads,
 exact Stream/Stack grid times, and unused timing pruning with slider-body and

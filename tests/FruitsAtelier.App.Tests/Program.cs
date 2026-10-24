@@ -1,6 +1,7 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--timing-alignment-check")) { TimingAlignmentUiTests.Run(); return 0; }
 if (args.Contains("--project-deletion-check")) { ProjectDeletionTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--history-save-performance") { HistorySavePerformance.Run(args[1]); return 0; }
 if (args.Contains("--discussions-check")) { DiscussionTests.Run(); return 0; }
@@ -277,6 +278,7 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Opening a map offers undoable object and timing alignment", TimingAlignmentUiTests.Run),
     ("Pattern Gallery preserves previews, placement and editing sessions", () => { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); }),
     ("Discussions, replies, annotations and timestamp navigation", DiscussionTests.Run),
     ("Collab Mapping panel edits per-difficulty references and synchronizes sources", CollaborationMappingUiTests.Run),

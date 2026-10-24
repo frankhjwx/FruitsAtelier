@@ -1393,6 +1393,11 @@ public sealed partial class EditorView
         if (RotationVisible) { RotationKey(virtualKey, ctrl, shift); return; }
         if (SliderDialogVisible)
         {
+            if (TimingAlignmentPromptVisible)
+            {
+                if (virtualKey is 13 or 27) AnswerTimingAlignment(virtualKey == 13);
+                return;
+            }
             if (virtualKey == 27)
             { if (SliderImportPromptVisible) AnswerSliderImport(false); else if (SliderConversionBusy) CancelSliderConversion(); else sliderBatchErrors = []; }
             return;

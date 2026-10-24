@@ -1879,5 +1879,12 @@
   "discussion.cachedUpdating": "正在更新，目前顯示已儲存的討論…",
   "discussion.sortCreated": "建立時間",
   "discussion.copyLinkHint": "點擊複製到剪貼簿",
-  "discussion.linkCopied": "已複製到剪貼簿！"
+  "discussion.linkCopied": "已複製到剪貼簿！",
+  "timingAlignment.title": "Possible 1 ms offsets",
+  "timingAlignment.objects": "Hit objects with a possible 1 ms offset: {0}.",
+  "timingAlignment.points": "Timing lines with a possible 1 ms offset: {0}.",
+  "timingAlignment.question": "Align them to the nearest beat grid? You can undo this change.",
+  "timingAlignment.keep": "Keep original",
+  "timingAlignment.align": "Align automatically",
+  "timingAlignment.undo": "Align 1 ms offsets"
 }

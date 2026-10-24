@@ -30,6 +30,10 @@ internal static class ExportSnapTests
         controls.Fruits.AddRange([new() { TimeMs = 999, X = 100 }, new() { TimeMs = 1001, X = 200 }]);
         Check(OsuBeatmapWriter.Serialize(controls).ReadBack.Fruits.Select(f => f.TimeMs).SequenceEqual(new[] { 999d, 1001 }),
             "Two distinct heads cannot converge onto one grid point");
+        controls.Fruits.Clear(); controls.Fruits.Add(new() { TimeMs = 2168, X = 100 });
+        controls.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 1000 }, new() { TimeMs = 2169, BeatLengthMs = 500 }]);
+        Check(OsuBeatmapWriter.Serialize(controls).ReadBack.Fruits[0].TimeMs == 2168,
+            "A nearby red line cannot pull a note across its active timing grid");
 
         var streamMap = new MapDocument { BeatLengthMs = 500, DurationMs = 40000 };
         var stream = new CurveTrack { StreamSnapDivisor = 3 };

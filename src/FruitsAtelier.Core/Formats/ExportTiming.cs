@@ -8,6 +8,7 @@ internal static class ExportTiming
     {
         if (!double.IsFinite(time) || time < 0) return time;
         if (timing.RedTimes.Length > 0 && time < timing.RedTimes[0]) return time;
+        var state = timing.At(time);
         double integer = OsuBeatmapWriter.QuantizeTime(time);
         double best = integer, distance = double.PositiveInfinity;
         foreach (int divisor in divisors)
@@ -16,6 +17,7 @@ internal static class ExportTiming
             double candidate = OsuBeatmapWriter.QuantizeTime(grid);
             if (candidate == integer) return time;
             if (Math.Abs(candidate - integer) != 1 || Math.Abs(grid - time) >= distance) continue;
+            if (timing.At(grid).OffsetMs != state.OffsetMs) continue;
             best = candidate; distance = Math.Abs(grid - time);
         }
         return best == integer ? time : time + (best - integer);

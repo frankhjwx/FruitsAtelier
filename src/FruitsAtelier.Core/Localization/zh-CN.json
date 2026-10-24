@@ -1879,5 +1879,12 @@
   "discussion.cachedUpdating": "正在更新，当前显示已保存的讨论…",
   "discussion.sortCreated": "创建时间",
   "discussion.copyLinkHint": "点击复制到剪贴板",
-  "discussion.linkCopied": "已复制到剪贴板！"
+  "discussion.linkCopied": "已复制到剪贴板！",
+  "timingAlignment.title": "发现疑似 1 ms 偏移",
+  "timingAlignment.objects": "{0} 个物件疑似偏离节拍线 1 ms。",
+  "timingAlignment.points": "{0} 条时间轴线疑似偏离节拍线 1 ms。",
+  "timingAlignment.question": "是否自动对齐到最近的节拍线？此修改可以撤销。",
+  "timingAlignment.keep": "保留原数据",
+  "timingAlignment.align": "自动对齐",
+  "timingAlignment.undo": "对齐 1 ms 偏移"
 }

@@ -314,8 +314,9 @@ internal static class CanvasFeedbackTests
     }
     private static void MovementBeatRange()
     {
-        foreach (var (previous, next, changing, expected) in new[] { (1000d, 3000d, false, 2), (999d, 3001d, false, 0),
-            (999d, 3000d, false, 1), (1000d, 3001d, false, 1), (1000d, 2250d, true, 2), (999d, 2251d, true, 0) })
+        // Outside-window fixtures stay beyond automatic one-millisecond snap correction.
+        foreach (var (previous, next, changing, expected) in new[] { (1000d, 3000d, false, 2), (998d, 3002d, false, 0),
+            (998d, 3000d, false, 1), (1000d, 3002d, false, 1), (1000d, 2250d, true, 2), (998d, 2252d, true, 0) })
         {
             double time = changing ? 1750 : 2000;
             var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500, ApproachRate = 0 };

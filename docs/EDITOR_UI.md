@@ -4,6 +4,21 @@ Settings combines protocol handling and browser data controls in **osu! Links & 
 New settings categories appear before the fixed **Experimental**, **Application updates**
 navigation tail; Experimental stays second to last when application updates are available.
 
+## 1 ms alignment on open
+
+Opening a map checks each difficulty when it is first shown, after slider import
+questions finish. Suspected one-millisecond offsets open a prompt with separate
+hit-object and timing-line counts. **Align automatically** applies the changes as
+one undo step and marks that difficulty as edited; it does not save automatically.
+FSlider and banana-shower heads move with their endpoints. Red-line checks use the
+preceding red line's grid and retain the first red line as the timing anchor.
+
+**Keep original** or Escape keeps the opened data. A difficulty is asked once per
+project open, including when switching away and back. Reopening the project checks
+again. Objects with larger offsets and corrections that would merge distinct
+parent heads or timing lines retain their times. Export's automatic correction of
+standalone circles remains independent of this optional authoring-data alignment.
+
 ## osu! Web
 
 Open **Discussion**, right-click its dock tab and select **osu! Web** to use the

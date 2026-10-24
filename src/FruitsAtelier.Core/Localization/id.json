@@ -1879,5 +1879,12 @@
   "discussion.cachedUpdating": "Showing saved discussions; updating…",
   "discussion.sortCreated": "Waktu dibuat",
   "discussion.copyLinkHint": "click to copy to clipboard",
-  "discussion.linkCopied": "copied to clipboard!"
+  "discussion.linkCopied": "copied to clipboard!",
+  "timingAlignment.title": "Possible 1 ms offsets",
+  "timingAlignment.objects": "Hit objects with a possible 1 ms offset: {0}.",
+  "timingAlignment.points": "Timing lines with a possible 1 ms offset: {0}.",
+  "timingAlignment.question": "Align them to the nearest beat grid? You can undo this change.",
+  "timingAlignment.keep": "Keep original",
+  "timingAlignment.align": "Align automatically",
+  "timingAlignment.undo": "Align 1 ms offsets"
 }

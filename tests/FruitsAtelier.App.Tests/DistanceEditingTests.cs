@@ -246,7 +246,7 @@ internal static class DistanceEditingTests
             Strings.SetLanguage(language);
             var map = Fruits(); map.Fruits.Clear(); map.DistancePerBeatOverride = 192;
             double interval = 60000.0 / 145 / 4;
-            map.BeatLengthMs = 60000.0 / 145; map.TimingPoints.Clear();
+            map.BeatLengthMs = 60000.0 / 145; map.TimingOffsetMs = 1000.2; map.TimingPoints.Clear();
             map.Fruits.AddRange([new Fruit { TimeMs = 1000.2, X = 256 },
                 new Fruit { TimeMs = 1000.2 + interval, X = 96 },
                 new Fruit { TimeMs = 1000.2 + interval * 2, X = 256 }]);
@@ -272,19 +272,22 @@ internal static class DistanceEditingTests
         var map = Fruits(); map.Fruits.Clear();
         for (int i = 0; i < 50; i++) map.Fruits.Add(new Fruit { TimeMs = 1000 + i * 40, X = 256 });
         var ui = new Ui(); ui.LoadDocument(map); ui.ClickText(Strings.Get("movement.analysis"));
-        var visibility = new Dictionary<int, bool>();
+        var events = ui.View.Conversion.Objects;
+        var midpoints = events.Zip(events.Skip(1)).Select(p => (p.First.TimeMs + p.Second.TimeMs) / 2).ToArray();
+        var visibility = new Dictionary<double, bool>();
         for (int frame = 0; frame < 100; frame++)
         {
             double start = 800 + frame * 13;
             double playhead = start + ui.View.CanvasPlotBounds.Height * .25 / ui.View.PixelsPerMs;
             ui.View.UpdateTransport(playhead, 10000, true, true, false, null, "fixture.wav"); ui.Paint();
             var plot = ui.View.CanvasPlotBounds;
-            var visible = ui.View.DistanceLabelBounds.Select(r => (int)Math.Round(ui.View.ViewStartMs + (plot.Bottom - r.Y - 9) / ui.View.PixelsPerMs)).ToHashSet();
-            foreach (int time in Enumerable.Range(0, 49).Select(i => 1020 + i * 40))
+            var visible = ui.View.DistanceLabelBounds.Select(r => ui.View.ViewStartMs + (plot.Bottom - r.Y - 9) / ui.View.PixelsPerMs).ToArray();
+            foreach (double time in midpoints)
             {
                 double y = plot.Bottom - (time - ui.View.ViewStartMs) * ui.View.PixelsPerMs;
                 if (y < plot.Y + 30 || y > plot.Bottom - 30) continue;
-                bool shown = visible.Contains(time);
+                // Fractional midpoints are reconstructed from float screen coordinates.
+                bool shown = visible.Any(t => Math.Abs(t - time) < .01);
                 if (visibility.TryGetValue(time, out bool before)) Check(before == shown, $"DS label at {time} flickered during playback");
                 visibility[time] = shown;
             }
