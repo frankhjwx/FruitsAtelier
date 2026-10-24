@@ -1,9 +1,55 @@
 # Editing Controls
 
+Settings combines protocol handling and browser data controls in **osu! Links & Web**.
+New settings categories appear before the fixed **Experimental**, **Application updates**
+navigation tail; Experimental stays second to last when application updates are available.
+
+## osu! Web
+
+Open **Discussion**, right-click its dock tab and select **osu! Web** to use the
+official osu! website inside FA. Select **Read only** in the same menu to return
+to the native public discussion reader (the default). The mode is saved as a user
+preference. Discussion can be moved, closed and restored from **Layout**. Web mode
+starts on the active map's difficulty-specific Discussion page. Maps without online
+IDs show an unavailable-page message. If only BeatmapID is known, the website's
+beatmap redirect opens its page.
+
+The toolbar contains Back, Forward, Refresh, a read-only address field, and Open
+in browser, in that order. Refresh returns to the active difficulty's Discussion
+page. Click the address to copy its complete URL; the address turns green and a
+copy confirmation appears, then both fade together after a short hold. The address
+cannot be edited. Normal website navigation stays in the tab, and links requesting
+a new window open a browser child window sharing the same session. External opening
+uses the system browser and its separate session. Library cards' **Visit webpage**
+actions continue to open the system browser.
+
+Website timestamp links seek and select notes in FA using the linked difficulty
+when it is available in the current project. Successful jumps return keyboard focus
+to the editor, so Space and editor shortcuts work without clicking the canvas first.
+While the tab is on the current map
+and difficulty's Discussion page, the Canvas shows the same public discussion
+annotations as Read only mode. Info pages and unrelated discussions do not
+activate these annotations. Praise and resolved discussions use green annotations;
+unresolved Problem and Suggestion annotations use amber.
+
+Editor overlays, including Settings, temporarily hide the embedded webpage so the
+whole overlay and its dimmer remain above it. Hiding or switching tabs retains the
+webpage and its draft. Navigating to another map or refreshing can replace the page.
+Website permissions, submission validation and errors are handled by osu! itself;
+FA does not automate submissions or retry them.
+
+The browser retains cookies and website storage across app restarts.
+Use **Settings → osu! Links & Web → Clear local user data and cookies** to erase the embedded
+browser's cookies, website storage, cache and browsing data. Clearing closes its
+windows and unsent drafts and requires signing in again. It does not clear external
+browser profiles or beatmap projects. Completion and failure are shown in the same settings page.
+You can also log out from the website to end the session. Website-side expiry or revocation can still require
+signing in again. FA does not copy browser credentials into project files.
+
 ## Discussion
 
-Open **Layout → Discussion** to browse the public osu! discussions for the map's
-online BeatmapSetID. Reviews and General (All Difficulties) belong to the mapset;
+Open **Layout → Discussion** in **Read only** mode to browse the public osu!
+discussions for the map's online BeatmapSetID. Reviews and General (All Difficulties) belong to the mapset;
 General (difficulty name) and Timeline belong to the active BeatmapID. The four
 tabs stay on one line; use their arrows or the mouse wheel to reveal hidden tabs.
 
@@ -60,15 +106,22 @@ The formatting subset follows osu!web's
 [discussion format definitions](https://github.com/ppy/osu-web/blob/1798caf054d175cb6ead549d4b2daf58f85ed203/resources/js/beatmap-discussions/markdown-format.ts)
 and [Markdown renderers](https://github.com/ppy/osu-web/blob/1798caf054d175cb6ead549d4b2daf58f85ed203/resources/js/markdown/renderers.tsx).
 
-The Catch canvas shows discussion markers automatically. With Discussion open,
-quotes appear beside X=512, before the assist tools. Orange bands indicate pending
+The Catch canvas shows discussion markers automatically. Its lower-left
+**Show canvas annotations** button sits above Background Dim and shares its hover
+fade. It is available while Discussion is open in either mode, defaults to on, and
+saves its state as a user preference. Turning it off hides cards and markers and
+releases their canvas space; green and amber note-interval bands remain visible.
+
+With Discussion open, quotes appear beside X=512, before the assist tools. Orange bands indicate pending
 threads; pale green bands indicate resolved threads. Bands cover X=0–512 and a
 circle diameter vertically, or the full referenced object interval including
 slider duration. Object numbers are matched against the current timeline; when
 the local revision no longer matches, the timestamp remains the anchor. Click a
 quote or marker to reveal its thread in the panel. Canvas annotations also show
 complete posts, replies, badges and resolution records; scroll inside a card or
-drag its scrollbar to read long threads. Each visible thread appears once, with
+drag its scrollbar to read long threads. Cards without an internal scroll range
+pass wheel input to the canvas, including annotations shown from osu! Web.
+Each visible thread appears once, with
 all of its referenced regions highlighted. Cards remain inside the canvas even
 when anchored at 0ms. With Discussion open, the paused Catch canvas can scroll
 into negative viewing time to leave room around the opening notes. Playback seeks,
@@ -1852,7 +1905,10 @@ Zoom is local to the dialog and does not change object timing or create undo his
 
 Open Slider Inspector from Layout. Long-press an object in a selection or press
 Shift+F to open its compact action list; choosing an editing function opens the
-corresponding dock. Ctrl+Shift+M focuses the merge controls in Slider Inspector. It follows the current selection and shows type, start/end times,
+corresponding dock. In lazer editing, right-clicking an object on the Catch canvas
+or object timeline opens the same list, including Cut, Copy, Delete and the
+selection's conversion and structure actions. The list supports single fruits,
+sliders, streams, stacks and multi-object selections. Ctrl+Shift+M focuses the merge controls in Slider Inspector. It follows the current selection and shows type, start/end times,
 duration, spans, control-point count, exported SV and exported path length.
 Multiple sliders show value ranges. Managed streams and stacks have no exported
 slider SV. These properties are read-only.

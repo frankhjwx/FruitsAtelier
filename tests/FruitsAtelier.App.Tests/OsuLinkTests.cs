@@ -60,7 +60,7 @@ internal static class OsuLinkTests
                 ui.View.ReadOsuLinkApplications = () => applications;
                 ui.View.ReadOsuLinkSettings = () => (selectedId, bound, applications.Any(a => a.Id == selectedId));
                 ui.View.RequestSelectOsuLinkFallback = id => { choices++; selectedId = id; };
-                ui.ClickText(L.Get("osuLinks.title"));
+                ui.ClickText(L.Get("osuLinks.webTitle"));
                 var selector = ui.View.OsuLinkTargetButtonBounds;
                 ui.Click(selector.X + 12, selector.Y + 12);
                 Check(ui.Canvas.Texts.Any(t => t.Value == "osu!stable") && ui.Canvas.Texts.Any(t => t.Value == "osu!(lazer)"), "registered application list");

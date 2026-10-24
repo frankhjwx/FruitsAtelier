@@ -90,7 +90,7 @@ public sealed partial class EditorView
     public bool DiscussionNeedsRedraw => !LibraryVisible && !PatternEditingActive
         && (discussionCopiedLink is not null && timeProvider.GetUtcNow() >= discussionCopiedUntil
             || !discussionAvatarUpdates.IsEmpty || !discussionImageUpdates.IsEmpty || discussionImageLoad is { IsCompleted: true } || discussionLoad is { IsCompleted: true } || discussionAvatarLoad is { IsCompleted: true } || discussionCacheLoad is { IsCompleted: true }
-            || PanelVisible(DockPanel.Discussion) && discussionSnapshot is not null && timeProvider.GetUtcNow() >= discussionRelativeRefresh);
+            || DiscussionReadOnlyVisible && discussionSnapshot is not null && timeProvider.GetUtcNow() >= discussionRelativeRefresh);
 
     public void ShowDiscussionPanel()
     {
@@ -413,7 +413,7 @@ public sealed partial class EditorView
                 if (canvasQuote || thread.ParentId is not null) DrawDiscussionTypeIcons(c, thread, canvasQuote ? left : edge - 112, y + 2);
                 if (canvasQuote && contentWidth - line.Indent < 100) continue;
                 float x = Math.Max(left + (canvasQuote ? 32 : 0), edge - (canvasQuote ? 60 : 80));
-                DiscussionIcon(c, "thumbs-up", new(x, y + 2, 11, 11), thread.UpVotes > 0 ? 0x88CC22u : Muted);
+                DiscussionIcon(c, "thumbs-up", new(x, y + 2, 11, 11), Muted);
                 c.Text(thread.UpVotes.ToString(CultureInfo.InvariantCulture), x + 14, y + 1, 10, Muted, 18);
                 DiscussionIcon(c, "thumbs-down", new(x + 31, y + 2, 11, 11), Muted);
                 c.Text(thread.DownVotes.ToString(CultureInfo.InvariantCulture), x + 45, y + 1, 10, Muted, 18);
@@ -819,13 +819,14 @@ public sealed partial class EditorView
 
     private bool WheelDiscussions(float x, float y, float delta)
     {
-        if (!DockContentInputAvailable || !PanelVisible(DockPanel.Discussion)) return false;
+        if (!DockContentInputAvailable) return false;
         foreach (var quote in discussionQuoteViews)
-            if (quote.Bounds.Contains(x, y))
+            if (DiscussionAnnotationsVisible && quote.Maximum > 0 && quote.Bounds.Contains(x, y))
             {
                 discussionQuoteScrolls[quote.Id] = Math.Clamp(discussionQuoteScrolls.GetValueOrDefault(quote.Id) - delta / 120 * 60, 0, quote.Maximum);
                 return true;
             }
+        if (!DiscussionReadOnlyVisible) return false;
         if (discussionTabsBounds.Contains(x, y)) { discussionTabScroll = Math.Clamp(discussionTabScroll - delta / 120 * 48, 0, discussionTabMaximum); return true; }
         if (!discussionListBounds.Contains(x, y)) return false;
         discussionScroll = Math.Clamp(discussionScroll - delta / 120 * 60, 0, Math.Max(0, discussionContentHeight - discussionListBounds.Height)); return true;
@@ -838,7 +839,7 @@ public sealed partial class EditorView
         if (DiscussionQuotePointerDown(x, y)) return true;
         foreach (var marker in discussionMarkerHits)
             if (marker.Bounds.Contains(x, y)) { OpenDiscussion(marker.Discussion); return true; }
-        if (!PanelVisible(DockPanel.Discussion) || !discussionScrollbarTrack.Contains(x, y) || discussionScrollbarThumb.Height <= 0) return false;
+        if (!DiscussionReadOnlyVisible || !discussionScrollbarTrack.Contains(x, y) || discussionScrollbarThumb.Height <= 0) return false;
         discussionScrollbarOffset = discussionScrollbarThumb.Contains(x, y) ? y - discussionScrollbarThumb.Y : discussionScrollbarThumb.Height / 2;
         discussionScrollbarDragging = true; MoveDiscussionScrollbar(y); return true;
     }
@@ -890,12 +891,13 @@ public sealed partial class EditorView
         if (thread.ParentId is { } parent) { id = parent; discussionCategory = DiscussionCategory.Reviews; }
         else discussionCategory = thread.Timestamp is not null ? DiscussionCategory.Timeline : DiscussionCategory.General;
         discussionCollapsed.Remove(id); discussionFocused = discussionRevealThread = id;
+        if (LibrarySettings.DiscussionWebMode) SetDiscussionWebMode(false);
         InvalidateDiscussionLayout(); discussionRevealTab = true; ShowDiscussionPanel();
     }
 
     private void DrawDiscussionOverview(ICanvas c)
     {
-        if (PatternEditingActive || discussionAnchors.Length == 0 || TimelineDurationMs <= 0) return;
+        if (!DiscussionAnnotationsVisible || PatternEditingActive || discussionAnchors.Length == 0 || TimelineDurationMs <= 0) return;
         c.Clip(overview); float previous = float.NegativeInfinity;
         foreach (var anchor in discussionAnchors)
         {

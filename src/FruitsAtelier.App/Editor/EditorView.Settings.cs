@@ -7,7 +7,17 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, Experimental, OsuLinks, Updates }
+    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, OsuLinks, Experimental, Updates }
+    // New categories precede the fixed Experimental / Updates tail regardless of enum placement.
+    private static readonly SettingsCategory[] SettingsNavigation = Enum.GetValues<SettingsCategory>()
+        .Where(category => category is not (SettingsCategory.Experimental or SettingsCategory.Updates))
+        .Concat([SettingsCategory.Experimental, SettingsCategory.Updates]).ToArray();
+    private static string SettingsCategoryKey(SettingsCategory category) => category switch
+    {
+        SettingsCategory.OsuLinks => "osuLinks.webTitle",
+        SettingsCategory.Updates => "update.title",
+        _ => "settings." + char.ToLowerInvariant(category.ToString()[0]) + category.ToString()[1..]
+    };
     private SettingsCategory settingsCategory;
     private bool draftAudioDiagnostics, draftAudioDiagnosticFrames;
     private string draftAudioDiagnosticProfile = "event-10";
@@ -212,12 +222,11 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
         c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "osuLinks.title", "update.title"];
-        for (int i = 0; i < categories.Length; i++)
+        for (int i = 0; i < SettingsNavigation.Length; i++)
         {
-            var category = (SettingsCategory)i;
+            var category = SettingsNavigation[i];
             if (category == SettingsCategory.Updates && RequestUpdateCheck is null) continue;
-            Button(c, new(r.X + 16, r.Y + 78 + i * 48, 182, 38), L.Get(categories[i]), () =>
+            Button(c, new(r.X + 16, r.Y + 78 + i * 48, 182, 38), L.Get(SettingsCategoryKey(category)), () =>
             {
                 FinishVolumeDrag(); FinishBackgroundDimDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
                 settingsCategory = category; workspaceScroll = 0;
@@ -227,11 +236,15 @@ public sealed partial class EditorView
                     RequestUpdateCheck?.Invoke();
             }, settingsCategory == category, fontSize: SettingsTextSize);
         }
-        c.Text(L.Get(categories[(int)settingsCategory]), SettingsContentX, SettingsTop + 82, 24, Foreground, SettingsContentWidth, true);
+        c.Text(L.Get(SettingsCategoryKey(settingsCategory)), SettingsContentX, SettingsTop + 82, 24, Foreground, SettingsContentWidth, true);
         switch (settingsCategory)
         {
             case SettingsCategory.OsuLinks:
                 DrawOsuLinkSettings(c);
+                float webTop = OsuLinkClearButtonBounds.Bottom + 32;
+                c.Line(SettingsContentX, webTop, SettingsContentX + SettingsContentWidth, webTop, Grid);
+                c.Text(L.Get("browser.settings"), SettingsContentX, webTop + 16, SettingsSectionSize, Foreground, SettingsContentWidth, true);
+                DrawBrowserSettings(c, webTop + 48);
                 break;
             case SettingsCategory.General:
                 workspaceScrollBounds = new(SettingsContentX, SettingsTop + 116, SettingsContentWidth + 12, SettingsBounds.Height - 208);

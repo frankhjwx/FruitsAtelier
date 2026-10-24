@@ -1,5 +1,34 @@
 # Building and Testing
 
+## Embedded browser checks
+
+`App.Tests --discussions-check` covers the Discussion tab's Read only / osu! Web
+context-menu modes, preference persistence, legacy tab migration, canvas annotation
+visibility with retained note-interval bands, and the website's initial Discussion URL,
+scoped Canvas annotations, timestamp selection, toolbar command order, input
+isolation, address copying, Settings coverage, and green Praise annotations.
+Browser lifecycle regressions cover dock collapse, dragging to the left dock,
+Timing, Library and full-screen errors, including removal of stale annotation hit targets.
+`App.Tests --docking-check` covers the default tab and retained layout.
+
+On Windows, `FruitsAtelier.App --render-check --browser-render-check` renders the
+shared toolbar, synchronized copy-feedback fade and Settings in English and Chinese
+at compact and wide sizes. Images go to `artifacts/tests/browser/native`.
+`FruitsAtelier.App --browser-check <artifact-directory> write` followed by `read`
+checks synthetic persistent cookies and localStorage across separate processes.
+On the same isolated fixture directory, `clear` followed by `empty` verifies that
+the browser clearing API removes those cookies and localStorage across processes.
+The `embed` mode checks native child placement, text editing and retained drafts
+across hide/show, and owner repaint notifications after hiding, moving and resizing.
+These checks use hidden windows without taskbar entries and
+isolated fixture profiles. Screenshots are generated from test controls; they do
+not capture other desktop windows. They do not log in or submit website content.
+The optional `web` mode loads a fixed public beatmap in a separate anonymous profile.
+
+Windows requires an installed WebView2 Runtime for browser checks. macOS requires
+native WebKit build validation on macOS, plus manual session persistence and native
+view/input checks; a C# compile on Windows does not validate the Objective-C bridge.
+
 ## SDKs and builds
 
 `App.Tests --discussions-check` verifies anonymous snapshot transport, shared and
@@ -296,6 +325,9 @@ insertions and per-property unresolved/resolved colours.
 `App.Tests --faz-check` checks portable project modes, native roundtrips, exact
 identity/metadata matching, complete-folder coverage, resource isolation, ownership,
 repeated imports, automatic file registration, archive validation and modal entry points.
+`App.Tests --project-deletion-check` checks recycling failures, backup retention,
+complete project/history/resource restoration and native system recycling. The native
+fixture is left in the system Recycle Bin / Trash for restore verification.
 `FruitsAtelier.App.exe --render-check
 --faz-render-check` checks the native import dialog in English and Chinese at two
 window sizes and DPI levels, including project-card selection and pagination,
@@ -1149,7 +1181,7 @@ lock, X/Y controls, 200% scale, horizontal pan and dense 1/48 timeline in Englis
 and Chinese at two sizes and three DPI values under
 `artifacts/tests/canvas-scale-native`.
 
-`App.Tests --conversion-docks-check` verifies direct conversion shortcuts, object action menus, live editing and merge undo. `FruitsAtelier.App.exe --render-check --conversion-docks-render-check` captures the English/Chinese layouts at narrow and standard dock widths under `artifacts/tests/conversion-docks`.
+`App.Tests --conversion-docks-check` verifies direct conversion shortcuts, object action menus, live editing and merge undo. It compares right-click, long-press, Shift+F and timeline menus for fruits, FSliders, Legacy Sliders, streams, stacks, banana showers and multi-object selections, including enabled states, shortcuts, conversion reuse and delete/undo. `FruitsAtelier.App.exe --render-check --conversion-docks-render-check` captures the English/Chinese layouts and right-click/long-press menus at narrow and standard dock widths under `artifacts/tests/conversion-docks`.
 
 `App.Tests --difficulty-tabs-check` verifies initial SR sorting, manual tab ordering,
 pin/unpin, group boundaries, cancellation, rating refresh, keyboard navigation,

@@ -13,6 +13,8 @@ namespace FruitsAtelier.Mac;
 internal sealed partial class MacWindow : Window
 {
     private readonly EditorControl editor = new();
+    private readonly Panel editorRoot = new();
+    private MacOsuBrowser? osuBrowser;
     private readonly MacAudio audio;
     private readonly MacHitsoundPlayer hitsounds;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(16) };
@@ -82,7 +84,13 @@ internal sealed partial class MacWindow : Window
         View.PreloadProjectHitsounds();
         View.RequestStopHitsounds = hitsounds.Stop;
         Width = 1440; Height = 900; MinWidth = 980; MinHeight = 620;
-        Content = editor; Title = View.WindowTitle;
+        editorRoot.Children.Add(editor); Content = editorRoot; Title = View.WindowTitle;
+        View.RequestClearBrowserData = () =>
+        {
+            if (osuBrowser is not null) { editorRoot.Children.Remove(osuBrowser); osuBrowser = null; }
+            MacOsuBrowser.Close();
+            return MacOsuBrowser.ClearDataAsync();
+        };
         AddHandler(PointerPressedEvent, (_, e) =>
         {
             if (View.StartupHeaderDraggable && e.GetPosition(this).Y < (View.FirstRunSetupComplete ? 32 : 60) &&
@@ -145,7 +153,7 @@ internal sealed partial class MacWindow : Window
         View.RequestTogglePlayback = TogglePlayback;
         View.RequestPlaybackSpeed = speed => { View.ResetHitsounds(); audio.SetPlaybackSpeed(speed); View.StartHitsounds(audio.State.PositionMs); PollAudio(); };
         View.RequestSeek = time => { audio.Seek(time); PollAudio(); };
-        timer.Tick += (_, _) => PollAudio();
+        timer.Tick += (_, _) => { PollAudio(); UpdateBrowserViewport(); };
         Opened += async (_, _) =>
         {
             if (View.StartupDialogVisible) ResizeForSetup(true);
@@ -177,7 +185,7 @@ internal sealed partial class MacWindow : Window
             e.Cancel = true;
             RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
         };
-        Closed += (_, _) => { View.CleanupFazOnExit(); View.SaveLibraryMemory(); View.ReleaseWaveform(); timer.Stop(); setupAudio?.Dispose(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
+        Closed += (_, _) => { if (osuBrowser is not null) { editorRoot.Children.Remove(osuBrowser); MacOsuBrowser.Close(); } View.CleanupFazOnExit(); View.SaveLibraryMemory(); View.ReleaseWaveform(); timer.Stop(); setupAudio?.Dispose(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
         Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); View.CheckFilesOnActivation(); View.RefreshOsuLinkSettings(refreshApplications: true); editor.Refresh(); };
         Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); editor.Refresh(); };
     }
@@ -189,6 +197,44 @@ internal sealed partial class MacWindow : Window
         pendingStartupPath = null;
         RunFile(() => OpenPath(path));
     }
+    private void UpdateBrowserViewport()
+    {
+        if (!OperatingSystem.IsMacOS()) return;
+        var bounds = View.BrowserViewport;
+        bool show = bounds.Width > 0 && bounds.Height > 0;
+        if (!show)
+        {
+            if (osuBrowser is { IsVisible: true }) { osuBrowser.IsVisible = false; editor.Refresh(); }
+            return;
+        }
+        if (osuBrowser is null)
+        {
+            osuBrowser = new MacOsuBrowser { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+            View.RequestBrowserCommand = command => osuBrowser.Execute(command, View.BrowserUrl);
+            osuBrowser.EditorLink = (link, page) =>
+            {
+                if (View.HandleBrowserEditorLink(link, page))
+                {
+                    Activate();
+                    MacOsuBrowser.FocusEditor();
+                    editor.Focus();
+                }
+                editor.Refresh();
+            };
+            editorRoot.Children.Add(osuBrowser);
+        }
+        float scale = View.UiScaleFactor;
+        var margin = new Thickness(bounds.X * scale, bounds.Y * scale, 0, 0);
+        bool moved = !osuBrowser.IsVisible || osuBrowser.Margin != margin
+            || osuBrowser.Width != bounds.Width * scale || osuBrowser.Height != bounds.Height * scale;
+        osuBrowser.Margin = margin;
+        osuBrowser.Width = bounds.Width * scale; osuBrowser.Height = bounds.Height * scale;
+        osuBrowser.IsVisible = true;
+        if (moved) Dispatcher.UIThread.Post(editor.Refresh, DispatcherPriority.Background);
+        if (View.BrowserUrl is { } url) osuBrowser.Open(url);
+        if (View.UpdateBrowserState(osuBrowser.State)) editor.Refresh();
+    }
+
     private void PollAudio()
     {
         PollOsuLinks();
@@ -204,7 +250,7 @@ internal sealed partial class MacWindow : Window
             _ = audio.LoadAsync(View.Document.AudioPath); state = audio.State;
         }
         View.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, state.Error is null ? null : L.Reformat(state.Error), state.FilePath);
-        if (View.OsuLinkNoticeNeedsRedraw || View.DiscussionNeedsRedraw || View.SynchronizationNeedsRedraw || View.ConversionNeedsRedraw || View.WaveformNeedsRedraw || View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.SliderMultiplierValidationBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
+        if (View.BrowserFeedbackNeedsRedraw || View.OsuLinkNoticeNeedsRedraw || View.DiscussionNeedsRedraw || View.SynchronizationNeedsRedraw || View.ConversionNeedsRedraw || View.WaveformNeedsRedraw || View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.SliderMultiplierValidationBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
             editor.Refresh();
         lastReady = state.CanPlay; lastPosition = state.PositionMs; lastError = state.Error;
     }

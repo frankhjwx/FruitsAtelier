@@ -123,6 +123,15 @@ public sealed partial class EditorView
         if (editField >= 0 && !CommitField()) return true;
         bool left = ReferenceEquals(PanelGroup(tab.Panel), DockWorkspaceState.Left);
         contextItems.Clear(); menu = -1;
+        if (tab.Panel == DockPanel.Discussion)
+        {
+            contextItems.Add(new("", () => { }, Actions:
+            [
+                new(L.Get("discussion.readOnly"), () => SetDiscussionWebMode(false), Active: !LibrarySettings.DiscussionWebMode),
+                new(L.Get("browser.tab"), () => SetDiscussionWebMode(true), Active: LibrarySettings.DiscussionWebMode)
+            ]));
+            AddContextSeparator();
+        }
         contextItems.Add(new(L.Get("dock.closeTab"), () => RemoveDockPanel(tab.Panel)));
         AddContextSeparator();
         contextItems.Add(new(L.Get("dock.panels"), () => { }, Enabled: false, Heading: true));
@@ -242,6 +251,8 @@ public sealed partial class EditorView
                             Math.Max(0, bounds.Width - 40), Math.Max(0, bounds.Height - 78));
                         DrawDifficultyCurve(c, DifficultyCurveGraphBounds);
                     }
+                    else if (group.Active == DockPanel.Discussion && LibrarySettings.DiscussionWebMode)
+                        DrawBrowserPanel(c, bounds);
                     else if (group.Active == DockPanel.Discussion)
                         DrawDiscussionPanel(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.PatternGallery)

@@ -152,6 +152,7 @@ public sealed partial class EditorView
                     if (fields[i].Bounds.Contains(x, y)) { FocusField(i); FocusInput("numeric:" + i, editBuffer, x); return; }
             return;
         }
+        if (BrowserToolbarPointer(x, y, button)) return;
         if (SongDockPointer(x, y, button, shift)) return;
         if (CollaborationPointer(x, y, button)) return;
         if (DiscussionPointerDown(x, y, button)) return;
@@ -793,6 +794,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (BrowserToolbarContains(x, y)) return;
         if (PatternNameVisible || GalleryTagsVisible || PatternEditingBusy) return;
         if (PatternGalleryPopupContains(x, y) || PatternGalleryInputAvailable
             && (galleryGridBounds.Contains(x, y) || galleryCategoryBounds.Contains(x, y))) return;
@@ -955,6 +957,7 @@ public sealed partial class EditorView
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
+        if (BrowserToolbarContains(x, y)) return;
         if (DiscussionImageVisible) { DiscussionImageWheel(x, y, delta, ctrl); return; }
         if (PatternNameVisible || GalleryTagsVisible) return;
         if (PatternGalleryWheel(x, y, delta, ctrl, alt || altHeld)) return;

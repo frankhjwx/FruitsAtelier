@@ -13,6 +13,8 @@ public sealed class LibrarySettings
     public List<MapTemplate> MapTemplates { get; set; } = [];
     public bool NewDifficultyUseSource { get; set; }
     public EditorDockLayouts? DockLayouts { get; set; }
+    public bool DiscussionWebMode { get; set; }
+    public bool ShowCanvasDiscussionAnnotations { get; set; } = true;
     public const int CurrentFirstRunSetupVersion = 1;
     public int FirstRunSetupVersion { get; set; }
     [System.Text.Json.Serialization.JsonIgnore]

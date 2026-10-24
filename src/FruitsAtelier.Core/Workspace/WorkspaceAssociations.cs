@@ -56,12 +56,17 @@ public static class WorkspaceAssociations
             throw new InvalidOperationException(L.Get("sync.duplicate", path));
     }
 
-    public static void DeleteLocalProject(string directory, bool keepBackup = false)
+    public static void DeleteLocalProject(string directory, bool keepBackup = false, Action<IReadOnlyList<string>>? recycle = null)
     {
         lock (WorkspaceProject.Gate)
         {
             var session = WorkspaceProject.Open(directory);
-            if (!keepBackup) { WorkspaceProjectDeletion.Delete(session); return; }
+            if (!keepBackup)
+            {
+                if (recycle is null) throw new IOException(L.Get("library.deleteUnavailable"));
+                WorkspaceProjectDeletion.Delete(session, recycle);
+                return;
+            }
             string backup = WorkspaceSynchronization.Archive(session, "delete-local-project");
             Directory.Move(session.Directory, Path.Combine(backup, "retired-project"));
         }

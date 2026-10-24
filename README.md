@@ -8,7 +8,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 [Website](https://fruitsatelier.himiko.moe/) · [Download](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**Current version: 1.2.1**
+**Current version: 1.2.2**
 
 ![FruitsAtelier's editing canvas, object timeline, and Catch preview](assets/screenshots/twin-bloom.png)
 
@@ -33,7 +33,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 - **Editable streams and stacks.** Turn a slider curve into a fruit stream at a chosen beat subdivision, or an alternating stack with a variable width envelope. Keep the parent curve editable, adjust individual fruits, or separate the pattern into independent fruits. Both export as hit circles.
 - **Pattern Gallery.** Save independent pattern snapshots, browse skinned previews, drag them into another map at its BPM, and share `.fpt` packages. [Edit patterns](docs/PATTERN_GALLERY.md) in the main canvas while retaining your current map's unsaved work.
 
-Catch `.osu` import supports versions 7–14 and stable-compatible lazer v128. Version 7 maps retain v7 on export to preserve their slider ticks; other maps export as v14. Video and storyboard playback are not available in 1.2.1.
+Catch `.osu` import supports versions 7–14 and stable-compatible lazer v128. Version 7 maps retain v7 on export to preserve their slider ticks; other maps export as v14. Video and storyboard playback are not available in 1.2.2.
 
 ## Get started
 

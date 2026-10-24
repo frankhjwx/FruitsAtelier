@@ -8,7 +8,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private const uint DiscussionPendingColour = 0xE6AA64, DiscussionResolvedColour = 0xA6D9AE;
-    private sealed record DiscussionRegion(double Start, double End, DiscussionAnchor Anchor, bool Resolved);
+    private sealed record DiscussionRegion(double Start, double End, DiscussionAnchor Anchor, uint Colour);
     private sealed record DiscussionSource(double Start, double End, int Number);
     private DiscussionRegion[] discussionRegions = [];
     private double[] discussionRegionEnds = [];
@@ -29,7 +29,7 @@ public sealed partial class EditorView
     internal IReadOnlyList<(double Start, double End, long Discussion)> DiscussionHighlightRanges
         => discussionRegions.Select(r => (r.Start, r.End, r.Anchor.Discussion)).ToArray();
 
-    private float DiscussionCanvasReserve => PanelVisible(DockPanel.Discussion) && !IsOsuCanvas
+    private float DiscussionCanvasReserve => DiscussionQuotesVisible && !IsOsuCanvas
         ? Math.Min(190, Math.Max(0, canvas.Width - 198 - MinimumPlayfieldWidth)) : 0;
 
     private void ClearDiscussionRegions()
@@ -69,8 +69,8 @@ public sealed partial class EditorView
                     if (sources[i].Number == anchor.Numbers[next]) { candidateEnd = Math.Max(candidateEnd, sources[i].End); next++; }
                 if (next == anchor.Numbers.Count) { start = sources[found].Start; end = candidateEnd; }
             }
-            bool resolved = byId.TryGetValue(anchor.Discussion, out var thread) && thread.Resolved;
-            regions.Add(new(start, end, anchor, resolved));
+            bool positive = byId.TryGetValue(anchor.Discussion, out var thread) && (thread.Resolved || thread.MessageType == "praise");
+            regions.Add(new(start, end, anchor, positive ? DiscussionResolvedColour : DiscussionPendingColour));
         }
         discussionRegions = regions.OrderBy(r => r.Start).ThenBy(r => r.Anchor.Discussion).ToArray();
         discussionRegionEnds = new double[discussionRegions.Length]; double maximum = double.NegativeInfinity;
@@ -101,7 +101,7 @@ public sealed partial class EditorView
 
     private void DrawDiscussionHighlights(ICanvas c)
     {
-        if (!PanelVisible(DockPanel.Discussion) || IsOsuCanvas || PatternEditingActive) return;
+        if (!DiscussionAnnotationsVisible || IsOsuCanvas || PatternEditingActive) return;
         VisibleDiscussionRegions();
         float radius = (float)(CatchSize.FruitRadius(Document.CircleSize) * CanvasObjectWidth / 512);
         var field = Playfield;
@@ -112,7 +112,7 @@ public sealed partial class EditorView
             float top = Screen(new(region.End, 0)).Y - radius, bottom = Screen(new(region.Start, 0)).Y + radius;
             var rect = DiscussionIntersection(new(field.X, top, field.Width, Math.Max(radius * 2, bottom - top)),
                 new(field.X, plot.Y, field.Width, plot.Height));
-            uint colour = region.Resolved ? DiscussionResolvedColour : DiscussionPendingColour;
+            uint colour = region.Colour;
             c.Fill(rect, colour, opacity: discussionFocused == region.Anchor.Discussion ? .2f : .11f);
             c.Line(rect.X, rect.Y, rect.X, rect.Bottom, colour, 2, .7f);
         }
@@ -120,12 +120,12 @@ public sealed partial class EditorView
     }
 
     private double DiscussionViewPadding(double normal)
-        => PanelVisible(DockPanel.Discussion) && !IsOsuCanvas && !IsLazerEditing
+        => DiscussionAnnotationsVisible && !IsOsuCanvas && !IsLazerEditing
             ? Math.Max(normal, plot.Height * .9 / pixelsPerMs) : normal;
 
     private bool ScrollDiscussionPreroll(double steps, int surface)
     {
-        if (surface != 0 || !PanelVisible(DockPanel.Discussion) || AudioPlaying || IsOsuCanvas || IsLazerEditing
+        if (surface != 0 || !DiscussionAnnotationsVisible || AudioPlaying || IsOsuCanvas || IsLazerEditing
             || drag != DragKind.None || playhead != 0) return false;
         double padding = plot.Height * EffectivePlaybackLineFromBottom / pixelsPerMs;
         if (steps > 0 && viewStart >= -padding) return false;
@@ -137,12 +137,12 @@ public sealed partial class EditorView
     private void DrawDiscussionMarkers(ICanvas c)
     {
         discussionMarkerHits.Clear(); discussionQuoteBounds.Clear(); discussionQuoteActions.Clear(); discussionQuoteViews.Clear();
-        if (PatternEditingActive || IsOsuCanvas || discussionRegions.Length == 0) return;
+        if (!DiscussionQuotesVisible || PatternEditingActive || IsOsuCanvas || discussionRegions.Length == 0) return;
         VisibleDiscussionRegions();
         var field = Playfield;
         float right = Math.Min(assistPalette.Width > 0 ? assistPalette.X - 8 : canvas.Right - 126, CanvasRenderBounds.Right - 6);
         float left = field.Right + 8, quoteWidth = Math.Max(0, right - left);
-        bool quotes = PanelVisible(DockPanel.Discussion) && quoteWidth >= 80;
+        bool quotes = DiscussionAnnotationsVisible && quoteWidth >= 80;
         var groups = discussionVisibleRegions.GroupBy(item => item.Region.Anchor.Discussion)
             .Select(group =>
             {
@@ -155,7 +155,7 @@ public sealed partial class EditorView
         foreach (var item in groups)
         {
             var region = item.Region; var anchor = region.Anchor;
-            uint colour = region.Resolved ? DiscussionResolvedColour : DiscussionPendingColour;
+            uint colour = region.Colour;
             float anchorY = Math.Clamp(item.Y, plot.Y + 2, plot.Bottom - 2);
             var thread = discussionSnapshot!.Discussions.First(d => d.Id == anchor.Discussion);
             if (!quotes)

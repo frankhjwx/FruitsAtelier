@@ -45,6 +45,7 @@ internal static class DockPersistenceTests
         Check(oldSettings.DockLayouts is null, "Existing settings need no migration");
         reopened.View.LibrarySettings.DockLayouts = new()
         {
+            Version = 2,
             Mapping = new()
             {
                 Left = new() { Panels = ["Preview", "Preview", "UnknownPanel"], Active = "UnknownPanel", Width = -20 },

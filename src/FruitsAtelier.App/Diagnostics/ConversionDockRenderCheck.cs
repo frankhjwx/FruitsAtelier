@@ -7,6 +7,13 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class ConversionDockRenderCheck
 {
+    private sealed class ManualTime : TimeProvider
+    {
+        public long Ticks;
+        public override long TimestampFrequency => 1000;
+        public override long GetTimestamp() => Ticks;
+    }
+
     internal static void Run(D2DCanvas canvas)
     {
         string language = L.Language;
@@ -18,7 +25,8 @@ internal static class ConversionDockRenderCheck
                 L.SetLanguage(locale);
                 var map = new MapDocument();
                 map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 180 }, new() { TimeMs = 2000, X = 300 }]);
-                var view = new EditorView(false); view.LoadDocument(map); Paint(); view.KeyDown(65, true, false);
+                var clock = new ManualTime();
+                var view = new EditorView(false, timeProvider: clock); view.LoadDocument(map); Paint(); view.KeyDown(65, true, false);
                 view.ShowSliderInspector(); Paint();
                 var layout = view.CaptureDockLayouts(); layout.Mapping!.Right!.Width = panelWidth;
                 view.LibrarySettings.DockLayouts = layout; view.RestoreDockLayouts(); Paint("actions");
@@ -26,6 +34,19 @@ internal static class ConversionDockRenderCheck
                 if (view.MergeDialogVisible || !view.Document.ContentEquals(map)) throw new InvalidOperationException("Merge shortcut must open the dock without changing content.");
                 view.KeyDown(70, false, true); Paint("menu");
                 view.KeyDown(27, false, false);
+                view.LibrarySettings.LazerEditing = true;
+                view.UpdateTransport(500, 10000, true, false, false, null, null); Paint();
+                var plot = view.PlayfieldBounds;
+                float x = plot.X + 100f / 512 * plot.Width;
+                float y = plot.Bottom - (float)((1000 - view.ViewStartMs) * view.PixelsPerMs);
+                view.PointerDown(x, y, 2, false, false); view.PointerUp(x, y, 2); Paint("right-click");
+                view.KeyDown(27, false, false);
+                view.PointerDown(x, y, 0, false, false); Paint();
+                clock.Ticks += 1000; Paint();
+                view.PointerUp(x, y, 0); Paint("long-press");
+                if (!view.Document.ContentEquals(map)) throw new InvalidOperationException("Opening object menus must preserve content.");
+                view.KeyDown(27, false, false);
+                view.LibrarySettings.LazerEditing = false;
                 var sliderMap = new MapDocument(); var track = new CurveTrack { Kind = CurveKind.Linear };
                 track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 2000, X = 300 }]); sliderMap.Tracks.Add(track);
                 view.LoadDocument(sliderMap); view.CloseLibrary(); Paint(); view.KeyDown(65, true, false); view.KeyDown(70, true, true); Paint("stream");

@@ -23,6 +23,15 @@ static class SettingsTests
                 ui.View.RequestSetupLink = links.Add;
                 ui.View.UpdateStatus = new(FruitsAtelier.App.Editor.UpdatePhase.Ready, "0.9.6", 100);
                 ui.View.OpenSettings(); ui.Paint();
+                var navigationLabels = new[] { "settings.general", "settings.workspace", "settings.appearance", "settings.audio",
+                    "settings.testplay", "settings.mappingCanvas", "osuLinks.webTitle", "settings.experimental", "update.title" }.Select(key => L.Get(key)).ToHashSet();
+                var navigationTail = ui.Canvas.Texts.Where(t => t.X < ui.View.SettingsBounds.X + 230
+                    && t.Y > ui.View.SettingsBounds.Y + 60 && navigationLabels.Contains(t.Value)).OrderBy(t => t.Y).TakeLast(2).Select(t => t.Value).ToArray();
+                Check(navigationTail.SequenceEqual(new[] { L.Get("settings.experimental"), L.Get("update.title") }),
+                    "Experimental and application updates stay at the end of settings navigation");
+                ui.ClickText(L.Get("osuLinks.webTitle"));
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("browser.clearData"))
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("osuLinks.fallback")), "merged page exposes protocol and browser controls together");
                 foreach (string category in new[] { "settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "update.title" })
                 {
                     var navigation = ui.Canvas.Texts.Single(t => t.Value == L.Get(category) && t.X < ui.View.SettingsBounds.X + 230);

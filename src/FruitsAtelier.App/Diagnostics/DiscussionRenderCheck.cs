@@ -34,6 +34,19 @@ internal static class DiscussionRenderCheck
                 var plot = editor.CanvasPlotBounds;
                 editor.Wheel(plot.X, plot.Bottom, (float)(120 * Math.Log(.09 / editor.PixelsPerMs) / Math.Log(1.16)), false, false, true);
                 Paint("timeline");
+                var toggle = editor.CanvasDiscussionToggleBounds;
+                editor.PointerMove(toggle.X + 12, toggle.Y + 16, false, false); Paint();
+                Thread.Sleep(170); Paint("canvas-controls");
+                editor.PointerDown(toggle.X + 12, toggle.Y + 16, 0, false, false);
+                editor.PointerUp(toggle.X + 12, toggle.Y + 16, 0); Paint("annotations-hidden");
+                if (editor.DiscussionQuoteBounds.Count != 0 || editor.DiscussionMarkerHits.Any(h => h.Bounds.Y >= editor.CanvasPlotBounds.Y && h.Bounds.Y < editor.CanvasPlotBounds.Bottom))
+                    throw new InvalidOperationException("Hidden canvas annotations retain hit targets.");
+                editor.PointerDown(toggle.X + 12, toggle.Y + 16, 0, false, false);
+                editor.PointerUp(toggle.X + 12, toggle.Y + 16, 0); Paint();
+                var discussionTab = editor.DockTabBounds(EditorView.DockPanel.Discussion);
+                editor.PointerDown(discussionTab.X + 10, discussionTab.Y + 10, 2, false, false);
+                editor.PointerUp(discussionTab.X + 10, discussionTab.Y + 10, 2); Paint("mode-menu");
+                editor.KeyDown(27, false, false); Paint();
                 var list = editor.DiscussionListBounds;
                 editor.Wheel(list.X + 40, list.Y + 40, -480, false); Paint("replies");
                 if (size.Item1 == 1440)

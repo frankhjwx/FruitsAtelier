@@ -39,7 +39,9 @@ internal static class DiscussionTests
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(locale); UiChecks(snapshot);
+                DiscussionModes(snapshot);
             }
+            BrowserTab(snapshot);
             TypeCardLayout(snapshot);
             ResolutionProfileLinks(snapshot);
             ObjectReferenceSelection(snapshot);
@@ -52,6 +54,166 @@ internal static class DiscussionTests
         }
         finally { L.SetLanguage(language); }
         Console.WriteLine("PASS Discussion scopes, replies, reviews, timestamps, annotation ranges, overflow and request lifetime");
+    }
+
+    private static void DiscussionModes(OsuDiscussionSnapshot snapshot)
+    {
+        var ui = new Ui(false); ui.Resize(1440, 900);
+        ui.View.DiscussionLoader = (_, _) => Task.FromResult(snapshot);
+        ui.View.LoadProject(Project()); ui.View.ShowDiscussionPanel(); Wait(ui);
+        var original = ui.View.Document.DeepClone();
+        var settings = ui.View.LibrarySettings;
+        Check(!settings.DiscussionWebMode && settings.ShowCanvasDiscussionAnnotations
+            && ui.View.DiscussionQuoteBounds.Count > 0 && ui.View.BrowserViewport.Width == 0, "Discussion defaults to Read only with canvas annotations");
+        int saves = 0; ui.View.RequestViewPreference = () => saves++;
+        foreach (bool web in new[] { true, false })
+        {
+            var tab = ui.View.DockTabBounds(EditorView.DockPanel.Discussion);
+            ui.View.PointerDown(tab.X + 10, tab.Y + 10, 2, false, false);
+            ui.View.PointerUp(tab.X + 10, tab.Y + 10, 2); ui.Paint();
+            ui.ClickText(L.Get(web ? "browser.tab" : "discussion.readOnly"));
+            ui.View.UpdateBrowserPage(ui.View.BrowserUrl); ui.Paint();
+            Check(settings.DiscussionWebMode == web && (ui.View.BrowserViewport.Width > 0) == web,
+                "Discussion context menu switches the native reader and embedded website");
+            Check(ui.View.DiscussionQuoteBounds.Count > 0, "both modes show annotations when enabled");
+            var toggle = ui.View.CanvasDiscussionToggleBounds;
+            float visibleWidth = ui.View.CanvasPlotBounds.Width;
+            ui.Click(toggle.X + 10, toggle.Y + 16); ui.Paint();
+            Check(!settings.ShowCanvasDiscussionAnnotations && ui.View.DiscussionQuoteBounds.Count == 0
+                && !ui.View.DiscussionMarkerHits.Any(h => h.Bounds.Y >= ui.View.CanvasPlotBounds.Y && h.Bounds.Y < ui.View.CanvasPlotBounds.Bottom)
+                && ui.View.CanvasPlotBounds.Width > visibleWidth,
+                "hiding annotations removes cards and canvas hit targets and releases canvas space");
+            Check(ui.Canvas.Fills.Any(f => f.Color is 0xA6D9AE or 0xE6AA64
+                && Math.Abs(f.Bounds.Width - ui.View.PlayfieldBounds.Width) < .1), "note interval bands remain visible with annotations hidden");
+            var restored = System.Text.Json.JsonSerializer.Deserialize<LibrarySettings>(System.Text.Json.JsonSerializer.Serialize(settings))!;
+            Check(restored.DiscussionWebMode == web && !restored.ShowCanvasDiscussionAnnotations, "mode and hidden annotations survive preference serialization");
+            ui.Click(toggle.X + 10, toggle.Y + 16); ui.Paint();
+            Check(settings.ShowCanvasDiscussionAnnotations && ui.View.DiscussionQuoteBounds.Count > 0, "annotations can be shown again");
+        }
+        Check(saves >= 6 && ui.View.Document.ContentEquals(original) && !ui.View.IsDirty, "mode and annotation controls save preferences without content edits");
+        var legacy = ui.View.CaptureDockLayouts();
+        legacy.Mapping!.Left!.Panels = ["OsuWeb"]; legacy.Mapping.Left.Active = "OsuWeb";
+        legacy.Mapping.Left.Collapsed = false;
+        settings.DockLayouts = legacy; ui.View.RestoreDockLayouts(); ui.Paint();
+        var migrated = ui.View.CaptureDockLayouts();
+        Check(settings.DiscussionWebMode && migrated.Mapping!.Left!.Active == "Discussion"
+            && migrated.Mapping.Left.Panels!.Concat(migrated.Mapping.Right!.Panels!).Count(p => p == "Discussion") == 1,
+            "legacy web tab migrates into one Discussion tab and retains its dock and mode");
+        settings.DiscussionWebMode = false; ui.View.RestoreDockLayouts();
+        Check(!settings.DiscussionWebMode, "normalized legacy layouts retain a subsequent Read only preference");
+        legacy.Mapping.Left.Panels = ["Discussion"]; legacy.Mapping.Left.Active = "Discussion";
+        legacy.Mapping.Right!.Panels = ["Preview", "OsuWeb"]; legacy.Mapping.Right.Active = "OsuWeb";
+        settings.DockLayouts = legacy; ui.View.RestoreDockLayouts(); ui.Paint();
+        migrated = ui.View.CaptureDockLayouts();
+        Check(settings.DiscussionWebMode && migrated.Mapping!.Right!.Active == "Discussion"
+            && !migrated.Mapping.Left!.Panels!.Contains("Discussion"), "an active legacy web tab on the right retains its dock when both tabs existed");
+        ui.View.StopDiscussions();
+    }
+
+    private static void BrowserTab(OsuDiscussionSnapshot snapshot)
+    {
+        var ui = new Ui(false); ui.Resize(1440, 900);
+        ui.View.DiscussionLoader = (_, _) => Task.FromResult(snapshot);
+        ui.View.LoadProject(Project());
+        var layout = ui.View.CaptureDockLayouts();
+        ui.View.LibrarySettings.DiscussionWebMode = true;
+        layout.Mapping!.Right!.Active = "Discussion"; layout.Mapping.Right.Collapsed = false;
+        ui.View.LibrarySettings.DockLayouts = layout; ui.View.RestoreDockLayouts(); Wait(ui);
+        var original = ui.View.Document.DeepClone();
+        string page = "https://osu.ppy.sh/beatmapsets/777/discussion/101/timeline";
+        Check(ui.View.BrowserUrl == page && ui.View.BrowserViewport.Width > 0, "web tab opens current difficulty discussions");
+        ui.View.UpdateBrowserPage(page); ui.Paint();
+        Check(ui.View.DiscussionQuoteBounds.Count > 0, "matching web discussion shows native note annotations");
+        Check(ui.View.HandleBrowserEditorLink("osu://edit/00:01:000%20(1)", page)
+            && ui.View.PlayheadMs == 1000 && ui.View.SelectedObjectIds.Contains(ui.View.Document.Fruits[0].Id), "web timestamp seeks and selects its note");
+        foreach (string other in new[] { "https://osu.ppy.sh/beatmapsets/777#fruits/101", "https://osu.ppy.sh/beatmapsets/777/discussion/102/timeline", "https://osu.ppy.sh/beatmapsets/778/discussion/101/timeline", "https://example.org/beatmapsets/777/discussion/101/timeline" })
+        {
+            ui.View.UpdateBrowserPage(other); ui.Paint();
+            Check(ui.View.DiscussionQuoteBounds.Count == 0, "unrelated web pages hide note annotation cards");
+        }
+        Check(!ui.View.HandleBrowserEditorLink("osu://edit/00:01:500", "https://example.org/beatmapsets/777/discussion/101/timeline"), "external pages cannot drive editor navigation");
+        var commands = new List<BrowserCommand>(); string? copied = null;
+        ui.View.RequestBrowserCommand = commands.Add; ui.View.RequestCopyText = text => copied = text;
+        ui.View.UpdateBrowserState(new(page, true, true)); ui.Paint();
+        var address = ui.View.BrowserAddressBounds;
+        double zoom = ui.View.PixelsPerMs, position = ui.View.PlayheadMs;
+        foreach (float x in new[] { address.X - 77, address.X - 47, address.X - 17, address.Right + 17 })
+        {
+            ui.Click(x, address.Y + 14);
+            ui.View.PointerDoubleClick(x, address.Y + 14, false, false);
+            ui.View.PointerDown(x, address.Y + 14, 2, false, false); ui.View.PointerUp(x, address.Y + 14, 2);
+            ui.View.Wheel(x, address.Y + 14, 120, true);
+            Check(!ui.View.WantsCapture, "toolbar never starts a canvas or browser drag");
+        }
+        Check(commands.SequenceEqual(new[] { BrowserCommand.Back, BrowserCommand.Forward, BrowserCommand.Refresh, BrowserCommand.External }), "toolbar dispatches each command once without click-through");
+        ui.Click(address.X + 4, address.Y + 12);
+        Check(copied == page && ui.View.BrowserCopyOpacity == 1, "address copies the full URL with green feedback");
+        Check(ui.View.PixelsPerMs == zoom && ui.View.PlayheadMs == position, "toolbar wheel and double click leave canvas navigation unchanged");
+        ui.View.OpenSettings(); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionQuoteBounds.Count == 0
+            && ui.View.DiscussionMarkerHits.Count == 0, "settings and its full-screen dimmer cover browser annotations too");
+        var clearing = new TaskCompletionSource(); int clearRequests = 0;
+        ui.View.RequestClearBrowserData = () => { clearRequests++; return clearing.Task; };
+        ui.ClickText(L.Get("osuLinks.webTitle")); ui.ClickText(L.Get("browser.clearData"));
+        Check(clearRequests == 1 && ui.View.BrowserFeedbackNeedsRedraw, "Web settings starts asynchronous data clearing");
+        ui.Paint(); clearing.SetResult(); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("browser.cleared"))), "Web settings reports clearing only after completion");
+        ui.View.RequestClearBrowserData = () => Task.FromException(new IOException("fixture"));
+        ui.ClickText(L.Get("browser.clearData")); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("browser.clearFailed"))), "clearing failures remain visible and retryable");
+        ui.View.UpdateBrowserPage(page);
+        ui.Key(27); ui.Paint();
+        var expanded = ui.View.CaptureDockLayouts();
+        var collapsed = ui.View.CaptureDockLayouts(); collapsed.Mapping!.Right!.Collapsed = true;
+        ui.View.LibrarySettings.DockLayouts = collapsed; ui.View.RestoreDockLayouts(); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionMarkerHits.Count == 0, "collapsed tools hide browser and annotations");
+        ui.View.LibrarySettings.DockLayouts = expanded; ui.View.RestoreDockLayouts(); ui.Paint();
+        var tab = ui.View.DockTabBounds(EditorView.DockPanel.Discussion);
+        ui.View.PointerDown(tab.X + 10, tab.Y + 10, 0, false, false);
+        ui.View.PointerMove(8, 200, false, false); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionMarkerHits.Count == 0, "dragging a browser tab hides the native surface and annotations");
+        ui.View.PointerUp(8, 200, 0); ui.Paint();
+        Check(ui.View.BrowserViewport.Width > 0 && ui.View.BrowserViewport.Right < ui.View.CanvasPlotBounds.X,
+            "browser viewport follows a tab dropped into the left dock");
+        ui.Key(114); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionMarkerHits.Count == 0, "Timing clears native browser and annotation hit targets");
+        ui.ClickText(L.Get("timing.panel") + " ▾"); ui.ClickText(L.Get("timing.detailsPanel")); ui.Paint();
+        ui.View.LibrarySettings.DockLayouts = expanded; ui.View.RestoreDockLayouts(); ui.Paint();
+        Check(ui.View.Document.ContentEquals(original) && !ui.View.IsDirty, "browser navigation does not modify content");
+        var otherTab = ui.View.CaptureDockLayouts();
+        otherTab.Mapping!.Right!.Active = "CollaborationMapping";
+        otherTab.Mapping.Right.Panels = [.. otherTab.Mapping.Right.Panels!, "CollaborationMapping"];
+        ui.View.LibrarySettings.DockLayouts = otherTab; ui.View.RestoreDockLayouts(); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionQuoteBounds.Count == 0 && ui.View.DiscussionMarkerHits.Count == 0
+            && !ui.Canvas.Fills.Any(f => f.Color is 0xA6D9AE or 0xE6AA64 && Math.Abs(f.Bounds.Width - ui.View.PlayfieldBounds.Width) < .1),
+            "switching to another tab clears web viewport, quotes and highlight bands in the next frame");
+        ui.View.LibrarySettings.DockLayouts = expanded; ui.View.RestoreDockLayouts(); ui.Paint();
+        Check(ui.View.BrowserViewport.Width > 0, "browser is restored before the full-screen error transition");
+        ui.View.ShowError("fixture"); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionQuoteBounds.Count == 0
+            && ui.View.DiscussionMarkerHits.Count == 0, "full-screen error clears native viewport and stale annotation targets");
+        ui.Key(27); ui.Paint();
+        ui.View.ShowLibrary(); ui.Paint();
+        Check(ui.View.BrowserViewport.Width == 0 && ui.View.DiscussionMarkerHits.Count == 0, "Library cannot retain the editor browser viewport");
+        ui.View.StopDiscussions();
+
+        var praise = new OsuDiscussionSnapshot(777, 20, [new BeatmapDiscussion(900, 101, null, 10, 1000, "praise", false, false, null, [new(901, 10, "00:01:000 (1)", false, null)])], snapshot.Users, snapshot.Owners);
+        var positive = new Ui(false); positive.View.DiscussionLoader = (_, _) => Task.FromResult(praise);
+        positive.View.LoadProject(Project()); positive.View.ShowDiscussionPanel(); Wait(positive);
+        Check(positive.Canvas.Fills.Any(f => f.Color == 0xA6D9AE && Math.Abs(f.Bounds.Width - positive.View.PlayfieldBounds.Width) < .1)
+            && !positive.Canvas.Fills.Any(f => f.Color == 0xE6AA64), "praise uses green annotation bands and borders without a resolved flag");
+        foreach (bool web in new[] { false, true })
+        {
+            positive.View.LibrarySettings.DiscussionWebMode = web;
+            var shortLayout = positive.View.CaptureDockLayouts(); shortLayout.Mapping!.Right!.Active = "Discussion";
+            positive.View.LibrarySettings.DockLayouts = shortLayout; positive.View.RestoreDockLayouts();
+            positive.View.UpdateBrowserPage(page); positive.Paint();
+            Check(positive.View.DiscussionQuoteScrollState.Single().Maximum == 0, "short annotation needs no internal scrolling");
+            var card = positive.View.DiscussionQuoteBounds.Single(); double beforeScroll = positive.View.ViewStartMs;
+            positive.View.Wheel(card.X + 10, card.Y + 10, -120, false); positive.Paint();
+            Check(positive.View.ViewStartMs != beforeScroll, "wheel over a short annotation scrolls the canvas in " + (web ? "osu! Web" : "Read only"));
+        }
+        positive.View.StopDiscussions();
     }
 
     private static void UiChecks(OsuDiscussionSnapshot snapshot)
@@ -326,6 +488,18 @@ internal static class DiscussionTests
         var quote = ui.View.DiscussionQuoteBounds[0];
         Check(quote.Y >= ui.Plot.Y && quote.Bottom <= ui.Plot.Bottom, "long zero-time annotation remains entirely within the canvas");
         Check(ui.View.DiscussionQuoteScrollState.Single().Maximum > 500, "complete long discussion has an internal scroll range");
+        foreach (bool web in new[] { true, false })
+        {
+            ui.View.LibrarySettings.DiscussionWebMode = web;
+            var layout = ui.View.CaptureDockLayouts(); layout.Mapping!.Right!.Active = "Discussion";
+            ui.View.LibrarySettings.DockLayouts = layout; ui.View.RestoreDockLayouts();
+            ui.View.UpdateBrowserPage(ui.View.BrowserUrl); ui.Paint();
+            quote = ui.View.DiscussionQuoteBounds.Single(); double startTime = ui.View.ViewStartMs;
+            ui.View.Wheel(quote.X + 20, quote.Y + 30, -120, false); ui.Paint();
+            Check(ui.View.DiscussionQuoteScrollState.Single().Scroll > 0 && ui.View.ViewStartMs == startTime,
+                "long annotation scrolls internally without moving the canvas in " + (web ? "osu! Web" : "Read only"));
+            ui.View.Wheel(quote.X + 20, quote.Y + 30, 120, false); ui.Paint();
+        }
         ui.View.PointerDown(quote.Right - 5, quote.Bottom - 12, 0, false, false);
         Check(ui.View.WantsCapture, "annotation scrollbar captures pointer dragging");
         ui.View.PointerMove(quote.Right - 5, quote.Y + 5, false, false);
