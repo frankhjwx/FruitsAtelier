@@ -12,6 +12,10 @@ public sealed partial class EditorView
     private double? canvasDimLeftAt;
     private double CanvasDimNowMs => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
     public Rect CanvasBackgroundDimBounds => new(canvas.X + 82, plot.Bottom - 40, Math.Min(320, Math.Max(0, canvas.Width - 104)), 32);
+    internal Rect CanvasDiscussionToggleBounds => PanelVisible(DockPanel.Discussion) && !IsOsuCanvas
+        ? new(CanvasBackgroundDimBounds.X, CanvasBackgroundDimBounds.Y - 36, CanvasBackgroundDimBounds.Width, 32) : default;
+    private Rect CanvasOverlayControlsBounds => CanvasDiscussionToggleBounds.Width > 0
+        ? new(CanvasBackgroundDimBounds.X, CanvasDiscussionToggleBounds.Y, CanvasBackgroundDimBounds.Width, 68) : CanvasBackgroundDimBounds;
     public Rect CanvasBackgroundDimSliderBounds
     {
         get
@@ -25,7 +29,7 @@ public sealed partial class EditorView
         && menu < 0 && contextItems.Count == 0 && !panelMenuOpen && !volumePopoverOpen
         && !PatternGalleryPopupContains(mouseX, mouseY)
         && CanvasBackgroundDimBounds.Width >= 160;
-    private bool PointerOverCanvasBackgroundDim => CanUseCanvasBackgroundDim && CanvasBackgroundDimBounds.Contains(mouseX, mouseY);
+    private bool PointerOverCanvasBackgroundDim => CanUseCanvasBackgroundDim && CanvasOverlayControlsBounds.Contains(mouseX, mouseY);
     internal float CanvasBackgroundDimOpacity => canvasDimFadeFrom + (canvasDimFadeTarget - canvasDimFadeFrom)
         * (float)Math.Clamp((CanvasDimNowMs - canvasDimFadeAt) / 150, 0, 1);
 
@@ -42,7 +46,7 @@ public sealed partial class EditorView
     private void AdvanceCanvasBackgroundDim()
     {
         if (!CanUseCanvasBackgroundDim) { HideCanvasBackgroundDim(); return; }
-        var r = CanvasBackgroundDimBounds;
+        var r = CanvasOverlayControlsBounds;
         bool near = canvasDimDragging || new Rect(r.X - 18, r.Y - 12, r.Width + 36, r.Height + 24).Contains(mouseX, mouseY);
         double now = CanvasDimNowMs;
         if (near)
@@ -66,7 +70,15 @@ public sealed partial class EditorView
     private bool BeginCanvasBackgroundDimPointer(float x, float y, int button)
     {
         AdvanceCanvasBackgroundDim();
-        if (!CanUseCanvasBackgroundDim || !CanvasBackgroundDimBounds.Contains(x, y)) return false;
+        if (!CanUseCanvasBackgroundDim || !CanvasOverlayControlsBounds.Contains(x, y)) return false;
+        if (button == 0 && CanvasDiscussionToggleBounds.Contains(x, y))
+        {
+            LibrarySettings.ShowCanvasDiscussionAnnotations = !LibrarySettings.ShowCanvasDiscussionAnnotations;
+            discussionQuoteDrag = null;
+            ClearDiscussionTextSelection();
+            RequestViewPreference?.Invoke();
+            return true;
+        }
         if (button == 0 && CanvasBackgroundDimSliderBounds.Contains(x, y))
         {
             canvasDimDragStart = LibrarySettings.MappingCanvasBackgroundDim;
@@ -80,7 +92,7 @@ public sealed partial class EditorView
     {
         AdvanceCanvasBackgroundDim();
         if (canvasDimDragging) { UpdateCanvasBackgroundDimDrag(x); return true; }
-        return CanUseCanvasBackgroundDim && CanvasBackgroundDimBounds.Contains(x, y);
+        return CanUseCanvasBackgroundDim && CanvasOverlayControlsBounds.Contains(x, y);
     }
 
     private void UpdateCanvasBackgroundDimDrag(float x)
@@ -119,6 +131,13 @@ public sealed partial class EditorView
         AdvanceCanvasBackgroundDim();
         float opacity = canvasDimPaintedOpacity = CanvasBackgroundDimOpacity;
         if (opacity <= 0) return;
+        var toggle = CanvasDiscussionToggleBounds;
+        if (toggle.Width > 0)
+        {
+            c.Fill(toggle, 0, 5, .65f * opacity);
+            c.TextOpacity((LibrarySettings.ShowCanvasDiscussionAnnotations ? "✓ " : "") + L.Get("discussion.showCanvasAnnotations"),
+                toggle.X + 10, toggle.Y + 8, 12, Foreground, toggle.Width - 20, false, opacity);
+        }
         var r = CanvasBackgroundDimBounds;
         c.Fill(r, 0, 5, .65f * opacity);
         c.TextOpacity(L.Get("settings.canvasBackgroundDimLabel"), r.X + 10, r.Y + 8, 12, Foreground, 110, false, opacity);

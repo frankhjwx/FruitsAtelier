@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "Удалить папку и паттерны",
   "gallery.importExistingFolders": "Импорт в существующую папку",
   "gallery.oneFile": "Импортируйте по одному архиву паттернов.",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "Показывать аннотации на холсте",
   "discussion.title": "Обсуждение",
   "discussion.reviews": "Рецензии",
   "discussion.generalAll": "Общее (все сложности)",

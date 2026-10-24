@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "Hapus folder dan pola",
   "gallery.importExistingFolders": "Impor ke folder yang ada",
   "gallery.oneFile": "Impor satu arsip pola setiap kali.",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "Tampilkan anotasi kanvas",
   "discussion.title": "Diskusi",
   "discussion.reviews": "Ulasan",
   "discussion.generalAll": "Umum (semua tingkat kesulitan)",

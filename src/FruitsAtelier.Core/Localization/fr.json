@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "Supprimer le dossier et les motifs",
   "gallery.importExistingFolders": "Importer dans un dossier existant",
   "gallery.oneFile": "Importez une archive de motifs à la fois.",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "Afficher les annotations du canevas",
   "discussion.title": "Discussion",
   "discussion.reviews": "Évaluations",
   "discussion.generalAll": "Général (toutes les difficultés)",

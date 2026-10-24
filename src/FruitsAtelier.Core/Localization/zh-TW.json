@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "刪除資料夾及其中的 patterns",
   "gallery.importExistingFolders": "匯入現有資料夾",
   "gallery.oneFile": "每次只能匯入一個 pattern 檔案。",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "顯示畫布批註",
   "discussion.title": "討論",
   "discussion.reviews": "審閱",
   "discussion.generalAll": "一般（所有難度）",

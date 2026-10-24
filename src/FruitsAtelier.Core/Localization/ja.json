@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "フォルダーとパターンを削除",
   "gallery.importExistingFolders": "既存のフォルダーにインポート",
   "gallery.oneFile": "パターンアーカイブは一度に1つずつインポートしてください。",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "キャンバスの注釈を表示",
   "discussion.title": "ディスカッション",
   "discussion.reviews": "レビュー",
   "discussion.generalAll": "全般（全難易度）",

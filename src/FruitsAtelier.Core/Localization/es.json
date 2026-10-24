@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "Eliminar carpeta y patrones",
   "gallery.importExistingFolders": "Importar en carpetas existentes",
   "gallery.oneFile": "Importa un archivo de patrones cada vez.",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "Mostrar anotaciones en el lienzo",
   "discussion.title": "Discusión",
   "discussion.reviews": "Revisiones",
   "discussion.generalAll": "General (todas las dificultades)",

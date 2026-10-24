@@ -6,9 +6,11 @@ navigation tail; Experimental stays second to last when application updates are 
 
 ## osu! Web
 
-Open the **osu! Web** dock tab to use the official osu! website inside FA. The tab
-starts on the active map's difficulty-specific Discussion page. It can be moved,
-closed and restored from **Layout**, like the other dock tabs. Maps without online
+Open **Discussion**, right-click its dock tab and select **osu! Web** to use the
+official osu! website inside FA. Select **Read only** in the same menu to return
+to the native public discussion reader (the default). The mode is saved as a user
+preference. Discussion can be moved, closed and restored from **Layout**. Web mode
+starts on the active map's difficulty-specific Discussion page. Maps without online
 IDs show an unavailable-page message. If only BeatmapID is known, the website's
 beatmap redirect opens its page.
 
@@ -26,7 +28,7 @@ when it is available in the current project. Successful jumps return keyboard fo
 to the editor, so Space and editor shortcuts work without clicking the canvas first.
 While the tab is on the current map
 and difficulty's Discussion page, the Canvas shows the same public discussion
-annotations as the Discussion tab. Info pages and unrelated discussions do not
+annotations as Read only mode. Info pages and unrelated discussions do not
 activate these annotations. Praise and resolved discussions use green annotations;
 unresolved Problem and Suggestion annotations use amber.
 
@@ -46,8 +48,8 @@ signing in again. FA does not copy browser credentials into project files.
 
 ## Discussion
 
-Open **Layout → Discussion** to browse the public osu! discussions for the map's
-online BeatmapSetID. Reviews and General (All Difficulties) belong to the mapset;
+Open **Layout → Discussion** in **Read only** mode to browse the public osu!
+discussions for the map's online BeatmapSetID. Reviews and General (All Difficulties) belong to the mapset;
 General (difficulty name) and Timeline belong to the active BeatmapID. The four
 tabs stay on one line; use their arrows or the mouse wheel to reveal hidden tabs.
 
@@ -104,8 +106,13 @@ The formatting subset follows osu!web's
 [discussion format definitions](https://github.com/ppy/osu-web/blob/1798caf054d175cb6ead549d4b2daf58f85ed203/resources/js/beatmap-discussions/markdown-format.ts)
 and [Markdown renderers](https://github.com/ppy/osu-web/blob/1798caf054d175cb6ead549d4b2daf58f85ed203/resources/js/markdown/renderers.tsx).
 
-The Catch canvas shows discussion markers automatically. With Discussion open,
-quotes appear beside X=512, before the assist tools. Orange bands indicate pending
+The Catch canvas shows discussion markers automatically. Its lower-left
+**Show canvas annotations** button sits above Background Dim and shares its hover
+fade. It is available while Discussion is open in either mode, defaults to on, and
+saves its state as a user preference. Turning it off hides cards and markers and
+releases their canvas space; green and amber note-interval bands remain visible.
+
+With Discussion open, quotes appear beside X=512, before the assist tools. Orange bands indicate pending
 threads; pale green bands indicate resolved threads. Bands cover X=0–512 and a
 circle diameter vertically, or the full referenced object interval including
 slider duration. Object numbers are matched against the current timeline; when

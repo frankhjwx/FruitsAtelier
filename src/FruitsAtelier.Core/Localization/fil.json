@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "Tanggalin ang folder at mga pattern",
   "gallery.importExistingFolders": "I-import sa kasalukuyang mga folder",
   "gallery.oneFile": "Mag-import ng isang pattern archive sa bawat pagkakataon.",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "Ipakita ang mga anotasyon sa canvas",
   "discussion.title": "Talakayan",
   "discussion.reviews": "Mga pagsusuri",
   "discussion.generalAll": "Pangkalahatan (lahat ng difficulty)",

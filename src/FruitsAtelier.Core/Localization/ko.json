@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "폴더와 패턴 삭제",
   "gallery.importExistingFolders": "기존 폴더로 가져오기",
   "gallery.oneFile": "패턴 파일을 한 번에 하나씩 가져오세요.",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "캔버스 주석 표시",
   "discussion.title": "토론",
   "discussion.reviews": "리뷰",
   "discussion.generalAll": "일반 (모든 난이도)",

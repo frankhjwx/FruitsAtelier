@@ -42,7 +42,8 @@ public sealed partial class EditorView
     internal float BrowserCopyOpacity => browserCopiedAt is { } started
         ? (float)Math.Clamp((2 - timeProvider.GetElapsedTime(started).TotalSeconds) / .4, 0, 1) : 0;
     public bool BrowserFeedbackNeedsRedraw => BrowserClearing || BrowserContentAvailable && browserCopiedPainted > 0;
-    private bool BrowserContentAvailable => PanelVisible(DockPanel.OsuWeb) && DockContentInputAvailable
+    private bool DiscussionReadOnlyVisible => PanelVisible(DockPanel.Discussion) && !LibrarySettings.DiscussionWebMode;
+    private bool BrowserContentAvailable => PanelVisible(DockPanel.Discussion) && LibrarySettings.DiscussionWebMode && DockContentInputAvailable
         && !librarySettingsOpen && !StartupDialogVisible && !CollaborationReportVisible && !RotationVisible
         && !MapTemplatesVisible && !addDifficultyConfirmation && !OsuLinkPickerVisible && !OsuLinkFallbackRequired
         && !PatternGalleryPreviewVisible && !panelMenuOpen && !volumePopoverOpen && !languageMenuOpen
@@ -81,8 +82,20 @@ public sealed partial class EditorView
                 && context.Map > 0 && context.Map == DiscussionOnlineId(Document, "BeatmapID");
         }
     }
-    private bool DiscussionAnnotationsVisible => PanelVisible(DockPanel.Discussion)
+    private bool DiscussionAnnotationsVisible => DiscussionReadOnlyVisible
         || BrowserContentAvailable && BrowserDiscussionMatches;
+    private bool DiscussionQuotesVisible => DiscussionAnnotationsVisible && LibrarySettings.ShowCanvasDiscussionAnnotations;
+
+    private void SetDiscussionWebMode(bool web)
+    {
+        LibrarySettings.DiscussionWebMode = web;
+        discussionReferenceHits.Clear(); discussionTabHits.Clear();
+        discussionScrollbarDragging = false;
+        discussionQuoteDrag = null;
+        ClearDiscussionTextSelection();
+        discussionHandHits.Clear(); discussionBodyHits.Clear(); discussionTextHits.Clear();
+        RequestViewPreference?.Invoke();
+    }
 
     public bool HandleBrowserEditorLink(string link, string page)
     {

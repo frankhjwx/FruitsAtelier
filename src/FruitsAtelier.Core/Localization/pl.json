@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "Usuń folder i wzory",
   "gallery.importExistingFolders": "Importuj do istniejących folderów",
   "gallery.oneFile": "Importuj po jednym archiwum wzorów.",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "Pokaż adnotacje na płótnie",
   "discussion.title": "Dyskusja",
   "discussion.reviews": "Recenzje",
   "discussion.generalAll": "Ogólne (wszystkie trudności)",

@@ -32,7 +32,8 @@ internal static class BrowserRenderCheck
                 SongSetup.Set(map, "Metadata", "BeatmapSetID", "777"); SongSetup.Set(map, "Metadata", "BeatmapID", "101");
                 editor.LoadDocument(map);
                 var layout = editor.CaptureDockLayouts();
-                layout.Mapping!.Right!.Active = "OsuWeb"; layout.Mapping.Right.Collapsed = false;
+                editor.LibrarySettings.DiscussionWebMode = true;
+                layout.Mapping!.Right!.Active = "Discussion"; layout.Mapping.Right.Collapsed = false;
                 layout.Mapping.Right.Width = width == 980 ? 260 : 600;
                 editor.LibrarySettings.DockLayouts = layout; editor.RestoreDockLayouts();
                 editor.UpdateBrowserState(new(editor.BrowserUrl, true, true));

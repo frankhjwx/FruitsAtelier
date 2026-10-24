@@ -29,7 +29,7 @@ public sealed partial class EditorView
     internal IReadOnlyList<(double Start, double End, long Discussion)> DiscussionHighlightRanges
         => discussionRegions.Select(r => (r.Start, r.End, r.Anchor.Discussion)).ToArray();
 
-    private float DiscussionCanvasReserve => DiscussionAnnotationsVisible && !IsOsuCanvas
+    private float DiscussionCanvasReserve => DiscussionQuotesVisible && !IsOsuCanvas
         ? Math.Min(190, Math.Max(0, canvas.Width - 198 - MinimumPlayfieldWidth)) : 0;
 
     private void ClearDiscussionRegions()
@@ -137,7 +137,7 @@ public sealed partial class EditorView
     private void DrawDiscussionMarkers(ICanvas c)
     {
         discussionMarkerHits.Clear(); discussionQuoteBounds.Clear(); discussionQuoteActions.Clear(); discussionQuoteViews.Clear();
-        if (!DiscussionAnnotationsVisible || PatternEditingActive || IsOsuCanvas || discussionRegions.Length == 0) return;
+        if (!DiscussionQuotesVisible || PatternEditingActive || IsOsuCanvas || discussionRegions.Length == 0) return;
         VisibleDiscussionRegions();
         var field = Playfield;
         float right = Math.Min(assistPalette.Width > 0 ? assistPalette.X - 8 : canvas.Right - 126, CanvasRenderBounds.Right - 6);

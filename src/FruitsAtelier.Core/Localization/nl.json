@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "Map en patronen verwijderen",
   "gallery.importExistingFolders": "Importeren in bestaande mappen",
   "gallery.oneFile": "Importeer één patroonarchief tegelijk.",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "Annotaties op canvas tonen",
   "discussion.title": "Discussie",
   "discussion.reviews": "Beoordelingen",
   "discussion.generalAll": "Algemeen (alle moeilijkheden)",

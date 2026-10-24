@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "ลบโฟลเดอร์และแพตเทิร์น",
   "gallery.importExistingFolders": "นำเข้าโฟลเดอร์ที่มีอยู่",
   "gallery.oneFile": "นำเข้าไฟล์แพตเทิร์นครั้งละหนึ่งไฟล์",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "แสดงคำอธิบายประกอบบนแคนวาส",
   "discussion.title": "การสนทนา",
   "discussion.reviews": "บทวิจารณ์",
   "discussion.generalAll": "ทั่วไป (ทุกระดับความยาก)",

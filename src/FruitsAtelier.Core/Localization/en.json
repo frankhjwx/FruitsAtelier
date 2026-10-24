@@ -1832,6 +1832,8 @@
   "gallery.deleteFolderPatterns": "Delete folder and patterns",
   "gallery.importExistingFolders": "Import into existing folders",
   "gallery.oneFile": "Import one pattern archive at a time.",
+  "discussion.readOnly": "Read only",
+  "discussion.showCanvasAnnotations": "Show canvas annotations",
   "discussion.title": "Discussion",
   "discussion.reviews": "Reviews",
   "discussion.generalAll": "General (All Difficulties)",

@@ -2,7 +2,9 @@
 
 ## Embedded browser checks
 
-`App.Tests --discussions-check` includes the osu! Web tab's initial Discussion URL,
+`App.Tests --discussions-check` covers the Discussion tab's Read only / osu! Web
+context-menu modes, preference persistence, legacy tab migration, canvas annotation
+visibility with retained note-interval bands, and the website's initial Discussion URL,
 scoped Canvas annotations, timestamp selection, toolbar command order, input
 isolation, address copying, Settings coverage, and green Praise annotations.
 Browser lifecycle regressions cover dock collapse, dragging to the left dock,
