@@ -52,7 +52,7 @@ internal static class SliderStreamTests
 
     public static void ExportedMillisecondsDriveHyperdash()
     {
-        var map = new MapDocument { CircleSize = 4, DurationMs = 12000 };
+        var map = new MapDocument { CircleSize = 4, DurationMs = 12000, TimingOffsetMs = 1 };
         var first = new Fruit { TimeMs = 11013.936, X = 460.5 };
         var second = new Fruit { TimeMs = 11099.251, X = 317.958, SourceOrder = 1 };
         map.Fruits.AddRange([first, second]);

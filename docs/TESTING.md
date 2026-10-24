@@ -1,5 +1,10 @@
 # Building and Testing
 
+`Formats.Tests --export-snap-check` checks one-millisecond circle correction after
+red-line resets, source preservation, cached export equivalence, occupied heads,
+exact Stream/Stack grid times, and unused timing pruning with slider-body and
+five-millisecond tail sample preservation.
+
 ## Embedded browser checks
 
 `App.Tests --discussions-check` covers the Discussion tab's Read only / osu! Web

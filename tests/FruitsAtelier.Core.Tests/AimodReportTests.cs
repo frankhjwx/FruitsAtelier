@@ -55,7 +55,8 @@ internal static class AimodReportTests
     private static void OverlapBoundaries()
     {
         var map = new MapDocument { SliderMultiplier = 1 };
-        map.TimingPoints.Add(new() { BeatLengthMs = 500 });
+        // Keep overlap fixtures outside the automatic one-millisecond grid correction.
+        map.TimingPoints.Add(new() { TimeMs = 3, BeatLengthMs = 500 });
         var slider = new ImportedSlider { TimeMs = 1000, PixelLength = 100.3, SpanCount = 2 };
         slider.ControlPoints.AddRange([new(0, 192), new(200, 192)]);
         map.ImportedSliders.Add(slider);

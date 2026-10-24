@@ -130,7 +130,8 @@ public static class TimingEditing
 
     public static void Resnap(MapDocument map, int divisor, double start = double.NegativeInfinity, double end = double.PositiveInfinity)
     {
-        TransformObjects(map, time => (TimingMap.Snap(map, time, divisor), 1), start, end);
+        var timing = new TimingMap.Lookup(map);
+        TransformObjects(map, time => (timing.Snap(time, divisor), 1), start, end);
         Validate(map);
     }
 

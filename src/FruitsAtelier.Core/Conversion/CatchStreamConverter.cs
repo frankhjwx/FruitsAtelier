@@ -34,7 +34,8 @@ public static class CatchStreamConverter
             return Finish();
         }
 
-        TimingMap.Lookup? timing = null;
+        document = ExportTiming.Prepare(document, out var preparedTiming);
+        TimingMap.Lookup? timing = preparedTiming;
         hardRockCompensation = document.DerandomizeDropletsForHardRock
             && (document.DerandomizeFSliderDroplets || document.Tracks.Any(t => t.StreamSnapDivisor is null && t.DropletMode is not null && !t.RandomizesDroplets(document)));
         if (document.LegacySliderTicks && hardRockCompensation)
