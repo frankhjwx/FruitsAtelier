@@ -171,6 +171,11 @@ License texts and Skia/HarfBuzz third-party notices are in
 Avalonia source version: `0834dbbbb9252406b08f2e74e8f328cc5ba502ee`.
 No Avalonia source files were copied into the editor.
 
+Tmds.DBus.Protocol is pinned to the 0.21.3 security backport (MIT;
+https://github.com/tmds/Tmds.DBus, revision
+`8cb04f66c330b64244e996ff68f685f27f7381a0`) for Avalonia's D-Bus integration.
+Its license is retained in `src/FruitsAtelier.Mac/Licenses/Tmds.DBus.Protocol.txt`.
+
 OGG decoding reuses NVorbis 0.10.4 under the existing license above.
 `Native/Audio.m` is project-owned glue to the system AVFoundation framework.
 The self-contained local bundle also includes Microsoft's .NET runtime and its
@@ -194,8 +199,8 @@ interpolation is independently implemented as gamma-2.2 RGB interpolation.
 
 ## Workspace database
 
-- Microsoft.Data.Sqlite / Microsoft.Data.Sqlite.Core 8.0.22: MIT; https://github.com/dotnet/efcore.
-- SQLitePCLRaw core, bundle_e_sqlite3, provider.e_sqlite3 and lib.e_sqlite3 2.1.6: Apache-2.0; https://github.com/ericsink/SQLitePCL.raw.
+- Microsoft.Data.Sqlite / Microsoft.Data.Sqlite.Core 8.0.32: MIT; https://github.com/dotnet/efcore.
+- SQLitePCLRaw core, bundle_e_sqlite3, provider.e_sqlite3 and lib.e_sqlite3 2.1.13: Apache-2.0; https://github.com/ericsink/SQLitePCL.raw.
 - SQLite native engine: public domain; https://sqlite.org/copyright.html.
 
 Package versions are pinned in the project and lock files. License texts are included under `Core/Workspace/Licenses` and distributed with the desktop application.

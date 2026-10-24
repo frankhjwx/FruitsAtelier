@@ -15,6 +15,8 @@
     <ProjectReference Include="../FruitsAtelier.Core/FruitsAtelier.Core.csproj" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.7" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.7" />
+    <!-- Use the security backport for Avalonia's transitive D-Bus dependency. -->
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
     <PackageReference Include="NVorbis" Version="0.10.4" />
     <Compile Include="../FruitsAtelier.App/Editor/*.cs" Link="Editor/%(Filename)%(Extension)" />
     <Compile Include="../FruitsAtelier.App/Skinning/CatchSkin.cs" Link="Skinning/CatchSkin.cs" />
