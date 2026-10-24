@@ -1598,6 +1598,7 @@
   "sliderSnap.command": "Изменить привязку концов слайдера",
   "sliderSnap.invalid": "Недопустимый делитель привязки концов слайдера.",
   "sliderSnap.range": "Конец слайдера должен быть позже начала.",
+  "library.recycleFailed": "Could not move all project files to the Recycle Bin / Trash. No permanent deletion was attempted.",
   "library.keepDeletedBackup": "Keep a recovery backup",
   "inspector.section.timing": "Время и привязка",
   "inspector.section.conversion": "Преобразование",

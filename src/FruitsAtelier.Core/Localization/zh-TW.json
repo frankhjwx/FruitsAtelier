@@ -1598,6 +1598,7 @@
   "sliderSnap.command": "修改 slider 起止吸附",
   "sliderSnap.invalid": "Slider 起止吸附分拍無效。",
   "sliderSnap.range": "Slider 終點必須晚於起點。",
+  "library.recycleFailed": "無法將全部專案檔案移至系統垃圾桶。未嘗試永久刪除。",
   "library.keepDeletedBackup": "Keep a recovery backup",
   "inspector.section.timing": "時間與吸附",
   "inspector.section.conversion": "轉換",

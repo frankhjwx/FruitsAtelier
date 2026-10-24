@@ -1598,6 +1598,7 @@
   "sliderSnap.command": "Eindpuntsnap van slider wijzigen",
   "sliderSnap.invalid": "Ongeldige deler voor eindpuntsnap van slider.",
   "sliderSnap.range": "Het einde van de slider moet na het begin liggen.",
+  "library.recycleFailed": "Could not move all project files to the Recycle Bin / Trash. No permanent deletion was attempted.",
   "library.keepDeletedBackup": "Keep a recovery backup",
   "inspector.section.timing": "Tijd en snap",
   "inspector.section.conversion": "Conversie",

@@ -1598,6 +1598,7 @@
   "sliderSnap.command": "Baguhin ang snap ng mga dulo ng slider",
   "sliderSnap.invalid": "Hindi wastong divisor ng snap ng mga dulo ng slider.",
   "sliderSnap.range": "Dapat mas huli ang dulo ng slider kaysa simula nito.",
+  "library.recycleFailed": "Could not move all project files to the Recycle Bin / Trash. No permanent deletion was attempted.",
   "library.keepDeletedBackup": "Keep a recovery backup",
   "inspector.section.timing": "Oras at snap",
   "inspector.section.conversion": "Conversion",

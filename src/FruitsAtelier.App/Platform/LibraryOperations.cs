@@ -143,7 +143,7 @@ public static class LibraryOperations
         if (!WorkspaceProject.Within(projects, project) || project == Path.GetFullPath(projects))
             throw new IOException(FruitsAtelier.Localization.Strings.Get("library.deleteUnavailable"));
         WorkspaceProject.RejectLinks(project);
-        WorkspaceAssociations.DeleteLocalProject(project, keepBackup);
+        WorkspaceAssociations.DeleteLocalProject(project, keepBackup, SystemTrash.Recycle);
         new LibraryDatabase(settings.Workspace, settings.Songs).ReindexProjects();
     }
     public static void OpenExternalPath(string path)

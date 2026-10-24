@@ -1598,6 +1598,7 @@
   "sliderSnap.command": "Modifier l’alignement des extrémités du slider",
   "sliderSnap.invalid": "Diviseur d’alignement des extrémités du slider invalide.",
   "sliderSnap.range": "La fin du slider doit suivre son début.",
+  "library.recycleFailed": "Could not move all project files to the Recycle Bin / Trash. No permanent deletion was attempted.",
   "library.keepDeletedBackup": "Keep a recovery backup",
   "inspector.section.timing": "Temps et alignement",
   "inspector.section.conversion": "Conversion",

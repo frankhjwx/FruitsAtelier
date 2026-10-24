@@ -1598,6 +1598,7 @@
   "sliderSnap.command": "เปลี่ยนสแนปจุดเริ่มและจุดจบของสไลเดอร์",
   "sliderSnap.invalid": "ตัวหารสแนปจุดเริ่มและจุดจบของสไลเดอร์ไม่ถูกต้อง",
   "sliderSnap.range": "จุดจบของสไลเดอร์ต้องอยู่หลังจุดเริ่ม",
+  "library.recycleFailed": "Could not move all project files to the Recycle Bin / Trash. No permanent deletion was attempted.",
   "library.keepDeletedBackup": "Keep a recovery backup",
   "inspector.section.timing": "เวลาและสแนป",
   "inspector.section.conversion": "การแปลง",

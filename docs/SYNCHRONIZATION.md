@@ -302,10 +302,11 @@ local data. Cancelling the confirmation also preserves the current edits.
 The library's **Delete local project** action removes the workspace project and
 its source association, while keeping the source maps in All songs and in
 My Maps when their mapper matches a configured username. Opening a source map again creates a new workspace project. Project deletion
-removes local files and version history by default; **Keep a recovery backup** is
+moves local files and version history to the system Recycle Bin / Trash by default; **Keep a recovery backup** is
 unchecked initially. Selecting it retains a recovery copy under `.sync-history`.
-Unreferenced FAZ and audio-import resource directories are removed with permanent
-project deletion. Individual difficulty deletion retains recovery copies.
+Unreferenced FAZ and audio-import resource directories also go to the Recycle Bin /
+Trash. A recycling failure stops deletion without falling back to permanent removal.
+Restore all affected folders to their original locations, then refresh the Library. Individual difficulty deletion retains recovery copies.
 
 Deletion archives saved and current authoring and the external file first. A
 deletion journal permits rollback of an interrupted external removal. Empty

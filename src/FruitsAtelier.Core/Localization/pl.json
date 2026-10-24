@@ -1598,6 +1598,7 @@
   "sliderSnap.command": "Zmień przyciąganie końców slidera",
   "sliderSnap.invalid": "Nieprawidłowy dzielnik przyciągania końców slidera.",
   "sliderSnap.range": "Koniec slidera musi następować po początku.",
+  "library.recycleFailed": "Could not move all project files to the Recycle Bin / Trash. No permanent deletion was attempted.",
   "library.keepDeletedBackup": "Keep a recovery backup",
   "inspector.section.timing": "Czas i przyciąganie",
   "inspector.section.conversion": "Konwersja",

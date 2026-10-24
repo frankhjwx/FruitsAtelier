@@ -1598,6 +1598,7 @@
   "sliderSnap.command": "Ubah snap ujung slider",
   "sliderSnap.invalid": "Pembagi snap ujung slider tidak valid.",
   "sliderSnap.range": "Akhir slider harus setelah awalnya.",
+  "library.recycleFailed": "Could not move all project files to the Recycle Bin / Trash. No permanent deletion was attempted.",
   "library.keepDeletedBackup": "Keep a recovery backup",
   "inspector.section.timing": "Waktu dan snap",
   "inspector.section.conversion": "Konversi",

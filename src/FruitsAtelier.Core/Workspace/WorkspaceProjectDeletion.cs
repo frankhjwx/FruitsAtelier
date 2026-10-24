@@ -2,7 +2,7 @@ namespace FruitsAtelier.Core;
 
 internal static class WorkspaceProjectDeletion
 {
-    internal static void Delete(WorkspaceSession session)
+    internal static void Delete(WorkspaceSession session, Action<IReadOnlyList<string>> recycle)
     {
         string workspace = Path.GetDirectoryName(session.Directory)!;
         string resources = Path.Combine(workspace, "Resources");
@@ -37,9 +37,20 @@ internal static class WorkspaceProjectDeletion
         {
             candidates.Clear();
         }
-        Remove(session.Directory, workspace);
-        Remove(history, Path.Combine(workspace, ".sync-history"));
-        foreach (string resource in candidates) Remove(resource, resources);
+        var paths = new List<string>();
+        Add(session.Directory, workspace);
+        Add(history, Path.Combine(workspace, ".sync-history"));
+        foreach (string resource in candidates) Add(resource, resources);
+        recycle(paths);
+
+        void Add(string path, string root)
+        {
+            if (!WorkspaceProject.Within(root, path) || WorkspaceSynchronization.Paths.Equals(root, path))
+                throw new IOException(FruitsAtelier.Localization.Strings.Get("library.deleteUnavailable"));
+            if (!Directory.Exists(path)) return;
+            ValidateTree(path);
+            paths.Add(path);
+        }
 
         void PreserveReferences(System.Text.Json.JsonElement value, string file)
         {
@@ -59,17 +70,13 @@ internal static class WorkspaceProjectDeletion
         }
     }
 
-    private static void Remove(string path, string root)
+    private static void ValidateTree(string path)
     {
-        if (!WorkspaceProject.Within(root, path) || WorkspaceSynchronization.Paths.Equals(root, path)) throw new IOException(FruitsAtelier.Localization.Strings.Get("library.deleteUnavailable"));
         WorkspaceProject.RejectLinks(path);
-        if (!Directory.Exists(path)) return;
         foreach (string entry in Directory.EnumerateFileSystemEntries(path))
         {
             WorkspaceProject.RejectLinks(entry);
-            if (Directory.Exists(entry)) Remove(entry, path);
-            else File.Delete(entry);
+            if (Directory.Exists(entry)) ValidateTree(entry);
         }
-        Directory.Delete(path);
     }
 }

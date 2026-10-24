@@ -323,6 +323,9 @@ insertions and per-property unresolved/resolved colours.
 `App.Tests --faz-check` checks portable project modes, native roundtrips, exact
 identity/metadata matching, complete-folder coverage, resource isolation, ownership,
 repeated imports, automatic file registration, archive validation and modal entry points.
+`App.Tests --project-deletion-check` checks recycling failures, backup retention,
+complete project/history/resource restoration and native system recycling. The native
+fixture is left in the system Recycle Bin / Trash for restore verification.
 `FruitsAtelier.App.exe --render-check
 --faz-render-check` checks the native import dialog in English and Chinese at two
 window sizes and DPI levels, including project-card selection and pagination,

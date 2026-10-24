@@ -1598,6 +1598,7 @@
   "sliderSnap.command": "Cambiar ajuste de extremos del slider",
   "sliderSnap.invalid": "Divisor de ajuste de extremos del slider no válido.",
   "sliderSnap.range": "El final del slider debe ser posterior al inicio.",
+  "library.recycleFailed": "Could not move all project files to the Recycle Bin / Trash. No permanent deletion was attempted.",
   "library.keepDeletedBackup": "Keep a recovery backup",
   "inspector.section.timing": "Tiempo y ajuste",
   "inspector.section.conversion": "Conversión",

@@ -1,6 +1,7 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--project-deletion-check")) { ProjectDeletionTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--history-save-performance") { HistorySavePerformance.Run(args[1]); return 0; }
 if (args.Contains("--discussions-check")) { DiscussionTests.Run(); return 0; }
 if (args.Contains("--storage-check")) { StorageSettingsTests.Run(); return 0; }
@@ -569,6 +570,7 @@ var tests = new (string Name, Action Run)[]
     ("Library caches survive restart and retain unchanged stars during reconciliation", LibraryPersistentCacheTests.Run),
     ("Library tabs and FA/osu! Collections retain independent cached pages across restart", LibraryCategoryCacheTests.Run),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
+    ("Project deletion preserves backups or uses system recycling", ProjectDeletionTests.Run),
     ("FAZ archives preserve native projects and explicit local associations", FazTests.Run),
     ("FAD archives exchange native difficulties through merge review", FadTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),

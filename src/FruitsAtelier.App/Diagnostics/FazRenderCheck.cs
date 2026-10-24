@@ -55,7 +55,7 @@ internal static class FazRenderCheck
             if (view.DiscardConfirmationVisible) throw new InvalidOperationException("FAZ modal did not cancel.");
             bool? retained = null;
             view.ShowDeleteProjectConfirmation((confirmed, keep) => { if (confirmed) retained = keep; });
-            Paint();
+            Paint(true, "-delete");
             float deleteX = (size.Item1 - 500) / 2f, deleteY = (size.Item2 - 200) / 2f;
             view.PointerDown(deleteX + 350, deleteY + 160, 0, false, false); view.PointerUp(deleteX + 350, deleteY + 160, 0);
             if (retained != false) throw new InvalidOperationException("Deletion must default to no backup.");
@@ -76,13 +76,13 @@ internal static class FazRenderCheck
                 throw new InvalidOperationException("Linked FAZ differences must open the resolve panel.");
             Paint(); view.StopFileMonitoring();
             LibraryOperations.DeleteProject(view.WorkspaceSession!.Directory, settings);
-            void Paint(bool capture = false)
+            void Paint(bool capture = false, string suffix = "")
             {
                 canvas.Begin(); view.Render(canvas, size.Item1, size.Item2);
                 canvas.End(capture: !capture ? null : () =>
                 {
                     var frame = canvas.CapturePixels();
-                    using var writer = new BinaryWriter(File.Create(Path.Combine(folder, $"{locale}-{size.Item1}-{dpi}.bmp")));
+                    using var writer = new BinaryWriter(File.Create(Path.Combine(folder, $"{locale}-{size.Item1}-{dpi}{suffix}.bmp")));
                     writer.Write((ushort)0x4D42); writer.Write(54 + frame.Pixels.Length); writer.Write(0); writer.Write(54);
                     writer.Write(40); writer.Write(frame.Width); writer.Write(-frame.Height); writer.Write((ushort)1); writer.Write((ushort)32);
                     writer.Write(0); writer.Write(frame.Pixels.Length); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(frame.Pixels);
