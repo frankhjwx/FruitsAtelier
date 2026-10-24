@@ -125,8 +125,11 @@ public sealed partial class EditorView
         contextItems.Clear(); menu = -1;
         if (tab.Panel == DockPanel.Discussion)
         {
-            contextItems.Add(new(L.Get("discussion.readOnly"), () => SetDiscussionWebMode(false), Active: !LibrarySettings.DiscussionWebMode));
-            contextItems.Add(new(L.Get("browser.tab"), () => SetDiscussionWebMode(true), Active: LibrarySettings.DiscussionWebMode));
+            contextItems.Add(new("", () => { }, Actions:
+            [
+                new(L.Get("discussion.readOnly"), () => SetDiscussionWebMode(false), Active: !LibrarySettings.DiscussionWebMode),
+                new(L.Get("browser.tab"), () => SetDiscussionWebMode(true), Active: LibrarySettings.DiscussionWebMode)
+            ]));
             AddContextSeparator();
         }
         contextItems.Add(new(L.Get("dock.closeTab"), () => RemoveDockPanel(tab.Panel)));
