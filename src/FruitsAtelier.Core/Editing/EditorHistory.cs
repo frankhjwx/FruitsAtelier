@@ -21,6 +21,7 @@ public sealed class EditorHistory
     }
 
     public MapDocument Document { get; private set; }
+    public long ContentRevision { get; private set; }
     public bool IsDirty => !Document.ContentEquals(baseline);
     public bool CanUndo => undo.Count > 0;
     public bool CanRedo => redo.Count > 0;
@@ -119,6 +120,7 @@ public sealed class EditorHistory
         {
             undo.Push(new Change(transactionLabel, transactionStart, Document.DeepClone(), transactionRelated));
             redo.Clear();
+            ContentRevision++;
         }
         transactionStart = null;
         transactionLabel = "";
@@ -144,6 +146,7 @@ public sealed class EditorHistory
         {
             undo.Push(new Change(label, transactionStart!, Document.DeepClone(), transactionRelated));
             redo.Clear();
+            ContentRevision++;
         }
         transactionStart = null;
         transactionLabel = "";
@@ -159,6 +162,7 @@ public sealed class EditorHistory
         try { change.RestoreRelated?.Invoke(false, previous, Document); }
         catch { Document = previous; undo.Push(change); throw; }
         redo.Push(change);
+        ContentRevision++;
     }
 
     public void Redo()
@@ -170,10 +174,12 @@ public sealed class EditorHistory
         try { change.RestoreRelated?.Invoke(true, previous, Document); }
         catch { Document = previous; redo.Push(change); throw; }
         undo.Push(change);
+        ContentRevision++;
     }
 
     public void Reset(MapDocument document)
     {
+        ContentRevision++;
         Document = document.DeepClone();
         breakSliderLengths.Retain(Document);
         baseline = Document.DeepClone();
@@ -189,6 +195,7 @@ public sealed class EditorHistory
     public void RebaseSharedMetadata(Action<MapDocument> update)
     {
         update(Document);
+        ContentRevision++;
         foreach (var change in undo.Concat(redo)) { update(change.Before); update(change.After); }
         if (transactionStart is not null) update(transactionStart);
     }

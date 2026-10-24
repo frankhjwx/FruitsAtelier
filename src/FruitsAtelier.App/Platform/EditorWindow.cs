@@ -509,7 +509,7 @@ internal sealed partial class EditorWindow : IDisposable
                 }
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.BrowserFeedbackNeedsRedraw || view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
-                    || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.DiscussionNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
+                    || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.DiscussionNeedsRedraw || view.MapsetVerifierNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
                     || canvas?.SliderRasterNeedsRedraw == true) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: RefreshUiScale(window); Invalidate(); return 0; // WM_SIZE
@@ -673,7 +673,7 @@ internal sealed partial class EditorWindow : IDisposable
         osuBrowser?.Dispose();
         view.CompleteLibraryCacheWrites();
         view.StopFileMonitoring();
-        view.StopDiscussions();
+        view.StopDiscussions(); view.StopMapsetVerifier();
         view.CleanupFazOnExit();
         updates?.Dispose();
         view.ReleaseWaveform();

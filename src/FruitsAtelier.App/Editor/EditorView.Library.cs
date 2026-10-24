@@ -139,6 +139,7 @@ public sealed partial class EditorView
             ResetHitsounds();
             LoadProject(BeatmapProject.FromDocuments([new MapDocument { IsDemo = false }]));
             HasEditorProject = false;
+            CloseMapsetVerifier();
         }
         hits.Clear(); fields.Clear();
         revealLibrarySelection = true;

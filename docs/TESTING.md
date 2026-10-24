@@ -1,5 +1,13 @@
 # Building and Testing
 
+For Mapset Verifier changes, prepare the pinned engine with
+`python scripts/Build-MapsetVerifier.py`, then run `App.Tests
+--mapset-verifier-check` and `App.Tests --mapset-verifier-engine-check`.
+On Windows run `FruitsAtelier.App --render-check --mapset-verifier-render-check`
+for native layout and timestamp input. See [Mapset Verifier](MAPSET_VERIFIER.md).
+The focused suite also checks the one-second edit debounce, undo/redo, idle frame
+behavior and cancellation of reports superseded by newer content.
+
 `Core.Tests --timing-alignment-check` covers read-only detection, red-line chains,
 parent movement with retained durations, idempotence and undo. `App.Tests
 --timing-alignment-check` checks workspace opening, initial difficulty selection,

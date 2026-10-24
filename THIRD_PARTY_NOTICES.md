@@ -301,3 +301,15 @@ Discussion icons are Font Awesome Free 5.15.4 SVGs from Fonticons, Inc., commit
 The icon artwork is licensed under CC BY 4.0. Original SVGs, white PNG renderings,
 source attribution and the upstream licence notice ship in
 [assets/icons/discussion](assets/icons/discussion/README.md).
+
+## Mapset Verifier engine
+
+The separately bundled `mapset-verifier/` component hosts
+[Naxesss/MapsetVerifier](https://github.com/Naxesss/MapsetVerifier) under GPL-3.0.
+The authoritative release and archive SHA-256 are pinned in
+`eng/mapset-verifier.json`. Its license is bundled as
+`mapset-verifier/LICENSE.MapsetVerifier.txt`; corresponding upstream and adapter
+source and build scripts are included under `mapset-verifier/source/`.
+Dependency license metadata/texts are under `mapset-verifier/licenses/`.
+The adapter source in `tools/MapsetVerifier.Host/` is GPL-3.0. The editor uses
+standalone file/JSON communication and retains its own source license.

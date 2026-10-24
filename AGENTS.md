@@ -21,6 +21,8 @@
 
 ## Validation and Documentation
 
+- At the start of AI development, check the latest stable Mapset Verifier release with `python scripts/Update-MapsetVerifier.py`. If the pin changes, prepare the engine and refresh its locks with `python scripts/Build-MapsetVerifier.py --update-locks --runtime <rid>` for `win-x64`, `osx-arm64` and `osx-x64`, then run the Mapset Verifier and affected desktop regressions before delivering the update. Retain the existing pin and report the limitation when the upstream check is unavailable. See [Mapset Verifier](docs/MAPSET_VERIFIER.md) for the update and packaging contract.
+
 - Commit and push intermediate bug fixes to `dev` unless the user explicitly requests another destination.
 - Run the affected checks described in [Building and Testing](docs/TESTING.md). Follow its [macOS resource fixture path rules](docs/TESTING.md#macos-resource-fixture-paths) when adding resource or workspace tests. Launch the application to check window and input changes.
 - Automated audio tests output silent PCM while retaining the device clock and sample comparisons before muting. Do not change the system volume.

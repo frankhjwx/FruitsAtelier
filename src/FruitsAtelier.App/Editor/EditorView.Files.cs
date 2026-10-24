@@ -53,6 +53,7 @@ public sealed partial class EditorView
         libraryOpenTask = null; libraryOpenCompleted = null; libraryOpenDifficultyPath = null; pendingLibraryDifficultyPath = null;
         CloseVersionHistory();
         CloseAimod();
+        CloseMapsetVerifier();
         CloseHitsoundCopier();
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
@@ -144,6 +145,7 @@ public sealed partial class EditorView
         pinPlayhead = true;
         StatusMessage = L.Get("editor.status.documentOpened", document.Name, document.TimingPoints.Count);
         RefreshLoadedAimod();
+        EnsureMapsetVerifierReport();
     }
 
     public BeatmapProject CaptureProject() => new()

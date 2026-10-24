@@ -193,7 +193,7 @@ internal sealed partial class MacWindow : Window
             setupAudio?.Dispose();
             hitsounds.Dispose();
             if (osuBrowser is not null) { editorRoot.Children.Remove(osuBrowser); MacOsuBrowser.Close(); }
-            View.CleanupFazOnExit(); View.SaveLibraryMemory(); View.ReleaseWaveform(); editor.Dispose();
+            View.StopMapsetVerifier(); View.CleanupFazOnExit(); View.SaveLibraryMemory(); View.ReleaseWaveform(); editor.Dispose();
         };
         Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); View.CheckFilesOnActivation(); View.RefreshOsuLinkSettings(refreshApplications: true); editor.Refresh(); };
         Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); editor.Refresh(); };
@@ -259,7 +259,7 @@ internal sealed partial class MacWindow : Window
             _ = audio.LoadAsync(View.Document.AudioPath); state = audio.State;
         }
         View.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, state.Error is null ? null : L.Reformat(state.Error), state.FilePath);
-        if (View.BrowserFeedbackNeedsRedraw || View.OsuLinkNoticeNeedsRedraw || View.DiscussionNeedsRedraw || View.SynchronizationNeedsRedraw || View.ConversionNeedsRedraw || View.WaveformNeedsRedraw || View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.SliderMultiplierValidationBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
+        if (View.BrowserFeedbackNeedsRedraw || View.OsuLinkNoticeNeedsRedraw || View.DiscussionNeedsRedraw || View.MapsetVerifierNeedsRedraw || View.SynchronizationNeedsRedraw || View.ConversionNeedsRedraw || View.WaveformNeedsRedraw || View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.SliderMultiplierValidationBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
             editor.Refresh();
         lastReady = state.CanPlay; lastPosition = state.PositionMs; lastError = state.Error;
     }

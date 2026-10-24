@@ -21,6 +21,8 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 ./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.2.2-win-x64.zip
 ```
 
+Publication requires Python 3 to prepare the pinned [Mapset Verifier engine](MAPSET_VERIFIER.md); the engine, licenses and corresponding source are included in the package.
+
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
 `releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`

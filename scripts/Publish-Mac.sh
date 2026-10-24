@@ -11,6 +11,9 @@ cp "$FA_ROOT/assets/branding/faz-file.icns" "$FA_APP/Contents/Resources/FazFile.
 cp "$FA_ROOT/assets/branding/fad-file.icns" "$FA_APP/Contents/Resources/FadFile.icns"
 cp "$FA_ROOT/assets/branding/fpt-file.icns" "$FA_APP/Contents/Resources/FptFile.icns"
 "$FA_DOTNET" publish "$FA_ROOT/src/FruitsAtelier.Mac" -c Release -r "$FA_RID" --self-contained true -o "$FA_APP/Contents/MacOS" -p:NuGetLockFilePath=packages.publish.lock.json
+python3 "$FA_ROOT/scripts/Build-MapsetVerifier.py" --runtime "$FA_RID"
+mkdir -p "$FA_APP/Contents/MacOS/mapset-verifier"
+cp -R "$FA_ROOT/artifacts/mapset-verifier/$FA_RID/." "$FA_APP/Contents/MacOS/mapset-verifier/"
 cat > "$FA_APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -992,6 +992,11 @@ public sealed partial class EditorView
         }
         if (WheelDockTabs(x, y, delta)) return;
         if (WheelDiscussions(x, y, delta)) return;
+        if (MapsetVerifierVisible && DockContentInputAvailable && verifierBounds.Contains(x, y))
+        {
+            verifierScroll = Math.Clamp(verifierScroll - delta / 120 * 60, 0, Math.Max(0, verifierContentHeight - verifierBody.Height));
+            return;
+        }
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
             if (aimodScrollTrack.Contains(x, y) || shiftHeld)

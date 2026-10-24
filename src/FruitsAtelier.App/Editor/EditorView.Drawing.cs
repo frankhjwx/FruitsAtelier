@@ -65,6 +65,7 @@ public sealed partial class EditorView
         PumpPatternSource();
         PumpPatternGallery();
         PumpDiscussions();
+        PumpMapsetVerifier();
         PumpLegacyDropletRefresh();
         if (ConversionNeedsRedraw) PumpDeferredConversion();
         CompleteSliderMultiplierValidation();
@@ -796,6 +797,7 @@ public sealed partial class EditorView
             Item(L.Get("randomize.title"), ShowRandomDock, ClipboardInteractionReady);
             Item(L.Get("slider.clearInternalNodes"), ClearSliderNodes, CanClearSliderNodes);
             Item(L.Get("aimod.title"), ShowAimod, ClipboardInteractionReady);
+            Item(L.Get("mv.title"), ShowMapsetVerifier, ClipboardInteractionReady);
         }
         else if (menu == 5)
         {

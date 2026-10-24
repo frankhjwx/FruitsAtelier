@@ -1029,6 +1029,16 @@ internal static class RenderCheck
             AppLog.Write("Conversion dock rendering checks passed.");
             return;
         }
+        if (Environment.GetCommandLineArgs().Contains("--mapset-verifier-render-check"))
+        {
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (980, 620), (1600, 1000) })
+            {
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                MapsetVerifierRenderCheck.Run(canvas, size.Item1, size.Item2, dpi);
+            }
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--timing-alignment-render-check"))
         {
             foreach (int dpi in new[] { 96, 144, 192 })

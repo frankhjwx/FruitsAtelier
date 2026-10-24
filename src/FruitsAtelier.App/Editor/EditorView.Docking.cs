@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping, PatternGallery, Discussion }
+    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping, PatternGallery, Discussion, MapsetVerifier }
     private sealed class DockGroup(DockPanel panel, float width)
     {
         public readonly List<DockPanel> Panels = [panel];
@@ -81,7 +81,7 @@ public sealed partial class EditorView
     }
     private static string DockTitle(DockPanel panel) => L.Get(panel switch
     {
-        DockPanel.Discussion => "discussion.title", DockPanel.PatternGallery => "dock.gallery", DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
+        DockPanel.MapsetVerifier => "mv.title", DockPanel.Discussion => "discussion.title", DockPanel.PatternGallery => "dock.gallery", DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
         DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title", DockPanel.CollaborationMapping => "collab.title",
         DockPanel.RandomizeDroplets => "randomize.title", DockPanel.SliderInspector => "inspector.title", _ => "difficulty.curve.title"
     });
@@ -100,6 +100,7 @@ public sealed partial class EditorView
         if (TimingPageVisible || DockPanelExists(panel)) return;
         var group = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
         group.Panels.Add(panel); group.Active = panel; group.Collapsed = false;
+        if (panel == DockPanel.MapsetVerifier) EnsureMapsetVerifierReport();
         if (panel == DockPanel.Aimod) RefreshAimod();
         if (panel == DockPanel.PatternGallery) EnsurePatternGalleryLoaded();
     }
@@ -267,6 +268,8 @@ public sealed partial class EditorView
                         DrawSongDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.CollaborationMapping)
                         DrawCollaborationPanel(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                    else if (group.Active == DockPanel.MapsetVerifier)
+                        DrawMapsetVerifier(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.Aimod)
                         DrawAimodPanel(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.Notes)
@@ -345,6 +348,7 @@ public sealed partial class EditorView
             }
         }
         dockPressed = null; dockDragging = false;
+        EnsureMapsetVerifierReport();
     }
 
     private void DrawDockDrag(ICanvas c)

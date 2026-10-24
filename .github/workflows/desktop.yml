@@ -41,6 +41,16 @@ jobs:
         if: steps.validation.outputs.reused != 'true'
         with:
           global-json-file: global.json
+      - uses: actions/setup-python@v5
+        if: steps.validation.outputs.reused != 'true'
+        with:
+          python-version: '3.x'
+      - name: Prepare pinned Mapset Verifier engine
+        if: steps.validation.outputs.reused != 'true'
+        run: |
+          python ../scripts/Test-MapsetVerifierUpdate.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python ../scripts/Build-MapsetVerifier.py
       - run: dotnet build ../FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
         if: steps.validation.outputs.reused != 'true'
       - name: Existing platform-independent and editor regression
@@ -51,6 +61,15 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
           dotnet run --no-build --project ../tests/FruitsAtelier.Formats.Tests -c Release -- --skip-external-fixtures
+      - name: Mapset Verifier regression
+        if: steps.validation.outputs.reused != 'true'
+        run: |
+          dotnet run --no-build --project ../tests/FruitsAtelier.App.Tests -c Release -- --mapset-verifier-check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --no-build --project ../tests/FruitsAtelier.App.Tests -c Release -- --mapset-verifier-engine-check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $check = Start-Process -FilePath ../src/FruitsAtelier.App/bin/Release/net10.0-windows/FruitsAtelier.App.exe -ArgumentList @('--render-check', '--mapset-verifier-render-check') -WindowStyle Hidden -Wait -PassThru
+          exit $check.ExitCode
       - name: Hitsound PCM regression (no audio device)
         if: steps.validation.outputs.reused != 'true'
         run: dotnet run --no-build --project ../tests/FruitsAtelier.Audio.Tests -c Release -- --hitsound-check
@@ -86,6 +105,18 @@ jobs:
         if: steps.validation.outputs.reused != 'true'
         with:
           global-json-file: macOS/global.json
+      - uses: actions/setup-python@v5
+        if: steps.validation.outputs.reused != 'true'
+        with:
+          python-version: '3.x'
+      - name: Prepare pinned Mapset Verifier engine
+        if: steps.validation.outputs.reused != 'true'
+        run: python scripts/Build-MapsetVerifier.py
+      - name: Mapset Verifier regression
+        if: steps.validation.outputs.reused != 'true'
+        run: |
+          dotnet run --project macOS/tests/App -c Release -- --mapset-verifier-check
+          dotnet run --project macOS/tests/App -c Release -- --mapset-verifier-engine-check
       - name: Mac regression
         run: bash scripts/Test-Mac.sh --skip-device-tests
         if: steps.validation.outputs.reused != 'true'

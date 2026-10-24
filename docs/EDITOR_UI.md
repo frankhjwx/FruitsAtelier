@@ -2005,3 +2005,9 @@ Dock tab names retain their natural width. When tabs overflow, left/right arrows
 or the mouse wheel over the tab bar scroll the strip. Wheel up scrolls left and
 wheel down scrolls right without changing the active panel. Selecting a panel
 through Layout reveals its active tab.
+
+## Mapset Verifier
+
+The independent Mapset Verifier dock displays General and current-difficulty
+issues with grouped check titles and clickable timestamps. See
+[Mapset Verifier](MAPSET_VERIFIER.md) for refresh, upstream updates and engine setup.

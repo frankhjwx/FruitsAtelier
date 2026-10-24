@@ -364,3 +364,9 @@ conversion pipeline rather than starting a separate export for each repaint.
 DockHorizontal owns per-panel content width, viewport clipping and scrollbar
 input. Panels with a minimum content width can reuse it without tying their
 content geometry to the resizable dock width.
+
+Mapset Verifier observes per-history content revisions and difficulty membership;
+it does not compare/export complete documents to detect edits. It debounces
+committed changes for one second and clones documents once at check submission.
+Export, media copying and upstream checks run off the UI thread. Pending delays
+request a frame only when due and visible; retired workers cannot publish.
