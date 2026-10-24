@@ -34,6 +34,10 @@ internal static class ExportSnapTests
         controls.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 1000 }, new() { TimeMs = 2169, BeatLengthMs = 500 }]);
         Check(OsuBeatmapWriter.Serialize(controls).ReadBack.Fruits[0].TimeMs == 2168,
             "A nearby red line cannot pull a note across its active timing grid");
+        controls.TimingPoints.Clear(); controls.Fruits[0].TimeMs = Math.BitDecrement(1000d);
+        Check(CatchStreamConverter.Convert(controls).Objects[0].TimeMs == 1000
+            && OsuBeatmapWriter.Serialize(controls).ReadBack.Fruits[0].TimeMs == 1000,
+            "Floating-point noise below an integer grid point does not become a fractional one-ms offset internally");
 
         var streamMap = new MapDocument { BeatLengthMs = 500, DurationMs = 40000 };
         var stream = new CurveTrack { StreamSnapDivisor = 3 };

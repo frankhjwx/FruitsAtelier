@@ -3,7 +3,7 @@ namespace FruitsAtelier.Core;
 internal static class ExportTiming
 {
     private static readonly int[] divisors = [16, 12, 9, 7, 5, 24, 32, 48];
-    // Match stable's integer grid without pulling deliberately off-grid objects by more than one millisecond.
+    // Only repair one-millisecond offsets in exported integer timestamps.
     internal static double CorrectHead(TimingMap.Lookup timing, double time)
     {
         if (!double.IsFinite(time) || time < 0) return time;
@@ -20,7 +20,7 @@ internal static class ExportTiming
             if (timing.At(grid).OffsetMs != state.OffsetMs) continue;
             best = candidate; distance = Math.Abs(grid - time);
         }
-        return best == integer ? time : time + (best - integer);
+        return best == integer ? time : best;
     }
 
     internal static MapDocument Prepare(MapDocument document, out TimingMap.Lookup timing)
