@@ -297,7 +297,8 @@ internal sealed class OsuBrowserWindow : IDisposable
                 string empty = await core.ExecuteScriptAsync("!document.cookie.includes('fa_test=') && localStorage.getItem('fa_test') === null");
                 if (empty != "true") throw new InvalidOperationException("Clearing browser data retained fixture cookies or local storage.");
             }
-            await Task.Delay(mode == "web" ? 5000 : 500);
+            // Let the browser commit the fixture cookie before the short-lived writer exits.
+            await Task.Delay(mode == "web" ? 5000 : mode == "write" ? 3000 : 500);
             using var screenshot = File.Create(Path.Combine(directory, mode + ".png"));
             await core.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, screenshot);
             File.WriteAllText(Path.Combine(directory, mode + ".txt"), $"PASS {mode}; runtime {core.Environment.BrowserVersionString}; profile {profile}");
