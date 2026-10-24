@@ -48,7 +48,7 @@
 
 ### macOS
 
-从源码构建需要 .NET SDK **8.0.419** 和 Xcode Command Line Tools。在仓库根目录运行：
+从源码构建需要 .NET SDK **10.0.400** 和 Xcode Command Line Tools。在仓库根目录运行：
 
 ```bash
 bash scripts/Install-Mac-SDK.sh
@@ -69,7 +69,7 @@ bash scripts/Install-Mac-SDK.sh
 
 ## 开发
 
-项目使用 C# 12 与 .NET 8。Windows 源码构建使用 `global.json` 指定的 SDK **10.0.400**，运行 [Run-Editor.cmd](Run-Editor.cmd) 构建并启动。macOS 脚本使用 `macOS/` 下指定的 SDK。
+项目使用 C# 12 与 .NET 10。Windows 源码构建使用 `global.json` 指定的 SDK **10.0.400**，运行 [Run-Editor.cmd](Run-Editor.cmd) 构建并启动。macOS 脚本使用 `macOS/` 下指定的 SDK。
 
 - [构建与测试](docs/TESTING.md) · [打包与发布](docs/RELEASING.md)
 - [编辑操作](docs/EDITOR_UI.md) · [工程与文件](docs/WORKSPACE.md)

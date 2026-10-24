@@ -48,7 +48,7 @@ Catch `.osu`는 v7–v14 및 stable과 호환되는 lazer v128을 읽을 수 있
 
 ### macOS
 
-소스 빌드에는 .NET SDK **8.0.419**와 Xcode Command Line Tools가 필요합니다. 저장소의 루트에서 실행하세요.
+소스 빌드에는 .NET SDK **10.0.400**와 Xcode Command Line Tools가 필요합니다. 저장소의 루트에서 실행하세요.
 
 ```bash
 bash scripts/Install-Mac-SDK.sh
@@ -69,7 +69,7 @@ bash scripts/Install-Mac-SDK.sh
 
 ## 개발
 
-C# 12와 .NET 8을 사용합니다. Windows 소스 빌드는 `global.json`에 지정된 SDK **10.0.400**을 사용하며, [Run-Editor.cmd](Run-Editor.cmd)로 빌드하고 실행할 수 있습니다. macOS 스크립트는 `macOS/`에 지정된 SDK를 사용합니다.
+C# 12와 .NET 10을 사용합니다. Windows 소스 빌드는 `global.json`에 지정된 SDK **10.0.400**을 사용하며, [Run-Editor.cmd](Run-Editor.cmd)로 빌드하고 실행할 수 있습니다. macOS 스크립트는 `macOS/`에 지정된 SDK를 사용합니다.
 
 - [빌드와 테스트](docs/TESTING.md) · [패키징과 릴리스](docs/RELEASING.md)
 - [편집 조작](docs/EDITOR_UI.md) · [작업 공간과 파일](docs/WORKSPACE.md)

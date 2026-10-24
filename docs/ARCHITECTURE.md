@@ -2,11 +2,11 @@
 
 ## Platforms and dependencies
 
-The application uses C# 12 / .NET 8. Windows and macOS share the editor, data model, and file formats, while providing separate windowing, drawing, and audio implementations.
+The application uses C# 12 / .NET 10. Windows and macOS share the editor, data model, and file formats, while providing separate windowing, drawing, and audio implementations.
 
 | Layer | Windows | macOS |
 | --- | --- | --- |
-| Entry point | `FruitsAtelier.App`, `net8.0-windows` | `FruitsAtelier.Mac`, `net8.0` |
+| Entry point | `FruitsAtelier.App`, `net10.0-windows` | `FruitsAtelier.Mac`, `net10.0` |
 | Window and input | Win32, DPI messages, native file dialogs | Avalonia desktop window and file picker |
 | Drawing | DX11 / DXGI, Direct2D / DirectWrite, Vortice 3.6.2 | Avalonia 11.3.7, `MacCanvas` implements `ICanvas` |
 | Embedded website | WebView2 on a dedicated STA loop, child HWND | WKWebView hosted by Avalonia NativeControlHost |

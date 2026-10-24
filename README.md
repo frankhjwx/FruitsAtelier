@@ -48,7 +48,7 @@ Updater-enabled installations can use **Settings > Application updates > Check f
 
 ### macOS
 
-Build from source with .NET SDK **8.0.419** and Xcode Command Line Tools. From the repository root:
+Build from source with .NET SDK **10.0.400** and Xcode Command Line Tools. From the repository root:
 
 ```bash
 bash scripts/Install-Mac-SDK.sh
@@ -69,7 +69,7 @@ Join [Discord](https://discord.gg/Dwe7bshYHY) to try the editor and share feedba
 
 ## Development
 
-The editor uses C# 12 and .NET 8. Windows source builds use SDK **10.0.400**, pinned in `global.json`; run [Run-Editor.cmd](Run-Editor.cmd) to build and launch. macOS scripts use the SDK pinned under `macOS/`.
+The editor uses C# 12 and .NET 10. Windows source builds use SDK **10.0.400**, pinned in `global.json`; run [Run-Editor.cmd](Run-Editor.cmd) to build and launch. macOS scripts use the SDK pinned under `macOS/`.
 
 - [Building and testing](docs/TESTING.md) · [Packaging and releases](docs/RELEASING.md)
 - [Editing controls](docs/EDITOR_UI.md) · [Workspace and files](docs/WORKSPACE.md)

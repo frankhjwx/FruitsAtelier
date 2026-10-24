@@ -36,7 +36,7 @@ The application uses the following NuGet packages, pinned by project files and `
 
 The WebView2 SDK license is retained in `src/FruitsAtelier.App/Platform/Licenses/WebView2.txt` and copied to Windows outputs. The browser runtime is supplied by Microsoft Edge WebView2 on Windows and system WebKit on macOS.
 
-Package metadata is available in the restored package `.nuspec` files under `artifacts/packages`. Windows builds use the installed .NET 8 runtime; the self-contained macOS bundle includes it. Audio source references and limits are recorded in [Audio/REFERENCE.md](src/FruitsAtelier.App/Audio/REFERENCE.md); licence texts in `Audio/Licenses` are copied to builds.
+Package metadata is available in the restored package `.nuspec` files under `artifacts/packages`. Source builds use the installed .NET 10 runtime; self-contained Windows and macOS packages include it. Audio source references and limits are recorded in [Audio/REFERENCE.md](src/FruitsAtelier.App/Audio/REFERENCE.md); licence texts in `Audio/Licenses` are copied to builds.
 
 Source and notices: [Vortice.Windows](https://github.com/amerkoleci/Vortice.Windows), [Vortice.Mathematics](https://github.com/amerkoleci/Vortice.Mathematics), [SharpGenTools](https://github.com/SharpGenTools/SharpGenTools).
 

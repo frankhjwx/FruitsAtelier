@@ -10,4 +10,4 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-start "" "%~dp0src\FruitsAtelier.App\bin\Release\net8.0-windows\FruitsAtelier.App.exe"
+start "" "%~dp0src\FruitsAtelier.App\bin\Release\net10.0-windows\FruitsAtelier.App.exe"

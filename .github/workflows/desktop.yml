@@ -40,8 +40,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         if: steps.validation.outputs.reused != 'true'
         with:
-          dotnet-version: 8.0.419
-      # Use the Mac SDK pin solely for CI; the existing Windows SDK pin and launcher stay unchanged.
+          global-json-file: global.json
       - run: dotnet build ../FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
         if: steps.validation.outputs.reused != 'true'
       - name: Existing platform-independent and editor regression
@@ -55,11 +54,6 @@ jobs:
       - name: Hitsound PCM regression (no audio device)
         if: steps.validation.outputs.reused != 'true'
         run: dotnet run --no-build --project ../tests/FruitsAtelier.Audio.Tests -c Release -- --hitsound-check
-      - name: Install the release SDK
-        if: steps.validation.outputs.reused != 'true'
-        uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
       - name: Build and check the distributable Windows package
         if: steps.validation.outputs.reused != 'true'
         run: |
@@ -71,7 +65,7 @@ jobs:
           ../scripts/Publish-Windows.ps1 -Version 0.0.2-alpha.2 -OutputDirectory ../artifacts/update-feed
           ../scripts/Test-WindowsUpdate.ps1 -Archive ../artifacts/releases/FruitsAtelier-0.0.2-alpha.1-win-x64.zip -FeedDirectory ../artifacts/update-feed -ExpectedVersion 0.0.2-alpha.2
   macos:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Find identical validated source
@@ -91,7 +85,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         if: steps.validation.outputs.reused != 'true'
         with:
-          dotnet-version: 8.0.419
+          global-json-file: macOS/global.json
       - name: Mac regression
         run: bash scripts/Test-Mac.sh --skip-device-tests
         if: steps.validation.outputs.reused != 'true'

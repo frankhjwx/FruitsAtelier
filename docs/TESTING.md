@@ -76,12 +76,12 @@ rejection and the FAZ export chooser. `FruitsAtelier.App.exe --render-check
 native merge review and Library error in English and Chinese at two window sizes
 and 96/144/192 DPI under `artifacts/tests/fad-native`.
 
-The project targets .NET 8 with C# 12. Two `global.json` entry points pin SDK versions:
+The project targets .NET 10 with C# 12. Two `global.json` entry points pin SDK versions:
 
 | Entry point | SDK | Purpose |
 | --- | --- | --- |
 | Repository root | 10.0.400 | Windows launch scripts and root builds |
-| `macOS/` | 8.0.419 | Mac scripts and Windows/macOS CI |
+| `macOS/` | 10.0.400 | Mac scripts and desktop CI |
 
 Build on Windows from the repository root:
 
@@ -89,7 +89,7 @@ Build on Windows from the repository root:
 dotnet build FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
 ```
 
-To build the Windows solution with SDK 8.0.419, enter `macOS/` first:
+Desktop CI also builds from `macOS/`, which pins the same SDK:
 
 ```powershell
 cd macOS

@@ -4,7 +4,7 @@ The Mac host uses Avalonia desktop windows, AVAudioPlayer for music, and a persi
 
 ## Running from source
 
-Install .NET SDK **8.0.419** and Xcode Command Line Tools (`xcrun clang`). A project-local SDK can be installed from the repository root:
+Install .NET SDK **10.0.400** and Xcode Command Line Tools (`xcrun clang`). A project-local SDK can be installed from the repository root:
 
 ```bash
 bash scripts/Install-Mac-SDK.sh

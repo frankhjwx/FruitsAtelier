@@ -11,7 +11,7 @@
 
 ## Code Conventions
 
-- Use C# 12 / .NET 8. SDK and NuGet versions are pinned in project configuration and lock files.
+- Use C# 12 / .NET 10. SDK and NuGet versions are pinned in project configuration and lock files.
 - Windows uses Win32 / DirectX / WASAPI; macOS uses Avalonia / AVAudioPlayer. Account for both platforms when changing shared editor code, and keep Core free of platform dependencies.
 - `.catchproj` stores anchors, handles, and imported source context; converted paths and preview objects are derived from this data. Preserve compatibility with older projects when changing the persistence model.
 - The editor's Y coordinate represents time; an exported slider's geometric Y is a path coordinate. Keep beat snapping separate from SliderTickRate.

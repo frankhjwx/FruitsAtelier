@@ -48,7 +48,7 @@ Catch の `.osu` は v7–v14 と stable 互換の lazer v128 を読み込めま
 
 ### macOS
 
-ソースからのビルドには .NET SDK **8.0.419** と Xcode Command Line Tools が必要です。リポジトリのルートで実行してください。
+ソースからのビルドには .NET SDK **10.0.400** と Xcode Command Line Tools が必要です。リポジトリのルートで実行してください。
 
 ```bash
 bash scripts/Install-Mac-SDK.sh
@@ -69,7 +69,7 @@ bash scripts/Install-Mac-SDK.sh
 
 ## 開発
 
-C# 12 と .NET 8 を使用しています。Windows のソースビルドには `global.json` で指定された SDK **10.0.400** を使用します。[Run-Editor.cmd](Run-Editor.cmd) でビルドして起動できます。macOS のスクリプトは `macOS/` 配下で指定された SDK を使用します。
+C# 12 と .NET 10 を使用しています。Windows のソースビルドには `global.json` で指定された SDK **10.0.400** を使用します。[Run-Editor.cmd](Run-Editor.cmd) でビルドして起動できます。macOS のスクリプトは `macOS/` 配下で指定された SDK を使用します。
 
 - [ビルドとテスト](docs/TESTING.md) · [パッケージ作成とリリース](docs/RELEASING.md)
 - [編集操作](docs/EDITOR_UI.md) · [ワークスペースとファイル](docs/WORKSPACE.md)
