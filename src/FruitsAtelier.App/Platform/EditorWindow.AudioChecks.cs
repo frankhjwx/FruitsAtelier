@@ -6,6 +6,48 @@ namespace FruitsAtelier.App.Platform;
 
 internal sealed partial class EditorWindow
 {
+    private static void CheckAudioShutdown()
+    {
+        string directory = Path.Combine(Artifacts, "tests", "audio-shutdown-native");
+        Directory.CreateDirectory(directory);
+        string path = Path.Combine(directory, "shutdown.wav");
+        using (var writer = new WaveFileWriter(path, new WaveFormat(44100, 16, 2)))
+            writer.Write(new byte[44100 * 4], 0, 44100 * 4);
+        foreach (bool playing in new[] { false, true })
+        {
+            using var window = new EditorWindow();
+            window.audio.Dispose();
+            var music = new AudioResetCheckOutput();
+            var setup = new AudioResetCheckOutput();
+            window.audio = new AudioTransport(0, () => music);
+            window.setupAudio = new AudioTransport(0, () => setup);
+            foreach (var transport in new[] { window.audio, window.setupAudio })
+            {
+                if (!transport.LoadAsync(path).GetAwaiter().GetResult()) throw new InvalidOperationException(transport.Error);
+                if (playing) transport.Play();
+                transport.WaitForCommandsAsync().GetAwaiter().GetResult();
+            }
+            var cacheWrite = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            typeof(Editor.EditorView).GetField("libraryPreviewSave",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .SetValue(window.view, cacheWrite.Task);
+            var observer = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.WhenAll(music.Released.Task, setup.Released.Task).WaitAsync(TimeSpan.FromSeconds(2));
+                    return music.PlaybackState == PlaybackState.Stopped && setup.PlaybackState == PlaybackState.Stopped;
+                }
+                catch (TimeoutException) { return false; }
+                finally { cacheWrite.TrySetResult(true); }
+            });
+            window.Dispose();
+            if (!observer.GetAwaiter().GetResult())
+                throw new InvalidOperationException("Window shutdown waited for cache writes before releasing audio.");
+        }
+        AppLog.Write("Audio shutdown check passed: paused and playing outputs released before blocked cache writes.");
+    }
+
     private void CheckDifficultyAudioReset()
     {
         string directory = Path.Combine(Artifacts, "tests", "audio-switch-native");
@@ -69,6 +111,7 @@ internal sealed partial class EditorWindow
 
     private sealed class AudioResetCheckOutput : IWavePlayer, IWavePosition
     {
+        public TaskCompletionSource<bool> Released { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public WaveFormat OutputWaveFormat { get; private set; } = new(44100, 16, 2);
         public PlaybackState PlaybackState { get; private set; }
         public float Volume { get; set; } = 1;
@@ -78,6 +121,6 @@ internal sealed partial class EditorWindow
         public void Play() => PlaybackState = PlaybackState.Playing;
         public void Pause() => PlaybackState = PlaybackState.Paused;
         public void Stop() { PlaybackState = PlaybackState.Stopped; PlaybackStopped?.Invoke(this, new()); }
-        public void Dispose() { }
+        public void Dispose() => Released.TrySetResult(true);
     }
 }

@@ -640,6 +640,11 @@ audio device is used by this focused check.
 
 ## Window checks
 
+On Windows, `FruitsAtelier.App.exe --render-check --audio-shutdown-check` checks
+paused and playing window disposal with silent injected music and setup outputs.
+Both outputs must be stopped and disposed while a pending library cache write is
+still blocked, so background cleanup cannot extend playback after window closure.
+
 `FruitsAtelier.App.exe --render-check --workspace-save-render-check` verifies the
 once-per-project Songs export offer and repeated saves after reopening, in English
 and Chinese at two window sizes. Its workspace fixtures stay under `artifacts/`.

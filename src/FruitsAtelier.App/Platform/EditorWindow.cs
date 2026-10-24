@@ -129,6 +129,10 @@ internal sealed partial class EditorWindow : IDisposable
         {
             Diagnostics.BrowserRenderCheck.Run(canvas); Native.DestroyWindow(hwnd); return 0;
         }
+        if (renderCheck && Environment.GetCommandLineArgs().Contains("--audio-shutdown-check"))
+        {
+            CheckAudioShutdown(); Native.DestroyWindow(hwnd); return 0;
+        }
         if (renderCheck && Environment.GetCommandLineArgs().Contains("--text-resources-render-check"))
         {
             Diagnostics.RenderCheck.Run(canvas, view, hwnd);
@@ -661,19 +665,20 @@ internal sealed partial class EditorWindow : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        // Browser shutdown and cache writes can wait for seconds; release playback before those waits.
+        view.StopTestplay();
+        audio.Dispose();
+        setupAudio?.Dispose();
+        hitsounds.Dispose();
         osuBrowser?.Dispose();
         view.CompleteLibraryCacheWrites();
         view.StopFileMonitoring();
         view.StopDiscussions();
         view.CleanupFazOnExit();
         updates?.Dispose();
-        view.StopTestplay();
         view.ReleaseWaveform();
         if (largeBrandIcon != 0) { Native.DestroyIcon(largeBrandIcon); largeBrandIcon = 0; }
         if (smallBrandIcon != 0) { Native.DestroyIcon(smallBrandIcon); smallBrandIcon = 0; }
-        hitsounds.Dispose();
-        setupAudio?.Dispose();
-        audio.Dispose();
         canvas?.Dispose();
         FlushPerformance(force: true);
         AppLog.Write($"Window closed. Frames={frames}");

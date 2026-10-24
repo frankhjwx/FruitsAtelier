@@ -185,7 +185,16 @@ internal sealed partial class MacWindow : Window
             e.Cancel = true;
             RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
         };
-        Closed += (_, _) => { if (osuBrowser is not null) { editorRoot.Children.Remove(osuBrowser); MacOsuBrowser.Close(); } View.CleanupFazOnExit(); View.SaveLibraryMemory(); View.ReleaseWaveform(); timer.Stop(); setupAudio?.Dispose(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
+        Closed += (_, _) =>
+        {
+            timer.Stop();
+            View.StopTestplay();
+            audio.Dispose();
+            setupAudio?.Dispose();
+            hitsounds.Dispose();
+            if (osuBrowser is not null) { editorRoot.Children.Remove(osuBrowser); MacOsuBrowser.Close(); }
+            View.CleanupFazOnExit(); View.SaveLibraryMemory(); View.ReleaseWaveform(); editor.Dispose();
+        };
         Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); View.CheckFilesOnActivation(); View.RefreshOsuLinkSettings(refreshApplications: true); editor.Refresh(); };
         Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); editor.Refresh(); };
     }
