@@ -94,6 +94,11 @@ release; drafts and prereleases are excluded. Run with `--update-locks` on the
 build script when accepting a changed pin, for `win-x64`, `osx-arm64` and `osx-x64`.
 `Run-Editor.cmd` and ordinary builds neither select a newer version nor perform
 upstream update checks. An offline session can continue using the existing pin.
+The upstream check requires network access to `api.github.com`, and a changed pin
+also downloads its source from `codeload.github.com`. Run it with network-enabled
+execution permissions when the agent sandbox restricts network access. If a
+restricted run reports DNS resolution failure (`getaddrinfo failed`), retry with
+the required permissions before treating the upstream check as unavailable.
 
 ## GitHub update PRs
 
