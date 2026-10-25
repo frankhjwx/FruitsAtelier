@@ -11,7 +11,7 @@
 
 ## Code Conventions
 
-- Use C# 12 / .NET 8. SDK and NuGet versions are pinned in project configuration and lock files.
+- Use C# 12 / .NET 10. SDK and NuGet versions are pinned in project configuration and lock files.
 - Windows uses Win32 / DirectX / WASAPI; macOS uses Avalonia / AVAudioPlayer. Account for both platforms when changing shared editor code, and keep Core free of platform dependencies.
 - `.catchproj` stores anchors, handles, and imported source context; converted paths and preview objects are derived from this data. Preserve compatibility with older projects when changing the persistence model.
 - The editor's Y coordinate represents time; an exported slider's geometric Y is a path coordinate. Keep beat snapping separate from SliderTickRate.
@@ -20,6 +20,8 @@
 - When introducing or adapting external code, record its source and pinned revision, retain licenses, and update third-party notices.
 
 ## Validation and Documentation
+
+- At the start of AI development, check the latest stable Mapset Verifier release with `python scripts/Update-MapsetVerifier.py`. If the pin changes, prepare the engine and refresh its locks with `python scripts/Build-MapsetVerifier.py --update-locks --runtime <rid>` for `win-x64`, `osx-arm64` and `osx-x64`, then run the Mapset Verifier and affected desktop regressions before delivering the update. Retain the existing pin and report the limitation when the upstream check is unavailable. See [Mapset Verifier](docs/MAPSET_VERIFIER.md) for the update and packaging contract.
 
 - Commit and push intermediate bug fixes to `dev` unless the user explicitly requests another destination.
 - Run the affected checks described in [Building and Testing](docs/TESTING.md). Follow its [macOS resource fixture path rules](docs/TESTING.md#macos-resource-fixture-paths) when adding resource or workspace tests. Launch the application to check window and input changes.

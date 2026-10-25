@@ -247,6 +247,7 @@ public sealed partial class EditorView
 
     private void RetirePatternContextWork()
     {
+        CloseMapsetVerifier();
         var cancellation = syncCancellation;
         cancellation?.Cancel(); syncCancellation = null;
         if (syncTask is { } oldSync)

@@ -28,6 +28,7 @@ public static partial class WorkspaceSynchronization
         a.DurationMs = b.DurationMs = Math.Max(a.DurationMs, b.DurationMs);
         if (!a.ContentEquals(b))
             merge.Conflicts.Add(new("$objects:native", string.Join('\n', ObjectLines(localOutput.Text)), string.Join('\n', ObjectLines(externalOutput.Text))));
+        WorkspaceEventReview.Prepare(merge);
         return merge;
     }
 
@@ -39,8 +40,9 @@ public static partial class WorkspaceSynchronization
         var result = (choices.GetValueOrDefault("$objects:native") ? merge.External.Document : merge.Local).DeepClone();
         var fields = new Dictionary<string, string?>(merge.Fields);
         var outside = Fields(merge.External.Document);
-        foreach (var conflict in merge.Conflicts.Where(c => !c.Key.StartsWith('$')))
+        foreach (var conflict in merge.Conflicts.Where(c => !c.Key.StartsWith('$') && !(merge.EventReview is not null && c.Key.StartsWith("Events/"))))
             if (choices.GetValueOrDefault(conflict.Key)) fields[conflict.Key] = outside.GetValueOrDefault(conflict.Key);
+        if (merge.EventReview is { } events) fields["Events/"] = events.Resolve(choices);
         ApplyFields(result, fields, merge.Local.SourcePath ?? merge.External.Path);
         var timing = (choices.GetValueOrDefault("TimingPoints/") ? merge.External.Document : merge.Local).DeepClone();
         result.TimingPoints.Clear(); result.TimingPoints.AddRange(timing.TimingPoints);

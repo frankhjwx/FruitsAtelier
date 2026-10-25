@@ -15,14 +15,16 @@ public static class SliderFruitStream
             throw new CatchConversionException(L.Get("stream.invalidSnap"));
         if (track.Stack is { IsValid: false }) throw new CatchConversionException(L.Get("stack.invalid"));
         double start = track.Nodes[0].TimeMs, end = CurveMath.EndTimeMs(track);
-        double step = timing.At(start).BeatLengthMs / track.StreamSnapDivisor.Value;
+        double beatLength = timing.At(start).BeatLengthMs;
+        double step = beatLength / track.StreamSnapDivisor.Value;
         double intervals = (end - start) / step;
         if (!double.IsFinite(intervals) || intervals < 0 || intervals >= LegacyCatchRules.MaximumNestedObjects)
             throw new CatchConversionException(L.Get("stream.tooMany"));
         var result = new List<ConvertedCatchObject>();
         for (int index = 0; index <= Math.Floor(intervals + 1e-8); index++)
         {
-            double time = Math.Min(end, start + index * step);
+            double time = Math.Min(end, start + index * beatLength / track.StreamSnapDivisor.Value);
+            time = ExportTiming.CorrectHead(timing, time);
             double target = CurveMath.PositionAtTime(track, time);
             if (track.Stack is { } stack)
             {

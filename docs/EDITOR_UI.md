@@ -4,6 +4,21 @@ Settings combines protocol handling and browser data controls in **osu! Links & 
 New settings categories appear before the fixed **Experimental**, **Application updates**
 navigation tail; Experimental stays second to last when application updates are available.
 
+## 1 ms alignment on open
+
+Opening a map checks each difficulty when it is first shown, after slider import
+questions finish. Suspected one-millisecond offsets open a prompt with separate
+hit-object and timing-line counts. **Align automatically** applies the changes as
+one undo step and marks that difficulty as edited; it does not save automatically.
+FSlider and banana-shower heads move with their endpoints. Red-line checks use the
+preceding red line's grid and retain the first red line as the timing anchor.
+
+**Keep original** or Escape keeps the opened data. A difficulty is asked once per
+project open, including when switching away and back. Reopening the project checks
+again. Objects with larger offsets and corrections that would merge distinct
+parent heads or timing lines retain their times. Export's automatic correction of
+standalone circles remains independent of this optional authoring-data alignment.
+
 ## osu! Web
 
 Open **Discussion**, right-click its dock tab and select **osu! Web** to use the
@@ -1497,7 +1512,7 @@ In both modes, drag the slider tail in the object timeline to change reverses. D
 
 ## Banana showers
 
-With N, left-click to set the start, then right-click at a later time to finish. Esc or switching tools cancels. A yellow snapped-time line marks banana placement. A banana shower appears as a time rectangle spanning the playfield. Drag its body to move it or its top/bottom handles to change start/end times. The upper object timeline also allows dragging its tail to change the end time; Shift bypasses beat snapping, Esc cancels, and release commits one undo step. RNG generates individual banana X positions.
+With N, left-click to set the start, then right-click at a later time to finish. Esc or switching tools cancels. A yellow snapped-time line marks banana placement. A banana shower appears as a time rectangle spanning the playfield. Drag its body to move it or its start/end boundary lines to change start/end times independently; the centered handles mark these boundaries. Shift bypasses beat snapping. The upper object timeline also allows dragging its begin or tail marker to change the start or end time independently; Shift bypasses beat snapping, Esc cancels, and release commits one undo step. RNG generates individual banana X positions.
 
 ## Files and playback
 
@@ -1990,3 +2005,9 @@ Dock tab names retain their natural width. When tabs overflow, left/right arrows
 or the mouse wheel over the tab bar scroll the strip. Wheel up scrolls left and
 wheel down scrolls right without changing the active panel. Selecting a panel
 through Layout reveals its active tab.
+
+## Mapset Verifier
+
+The independent Mapset Verifier dock displays General and current-difficulty
+issues with grouped check titles and clickable timestamps. See
+[Mapset Verifier](MAPSET_VERIFIER.md) for refresh, upstream updates and engine setup.

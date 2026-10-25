@@ -156,6 +156,7 @@ public sealed partial class EditorView
         if (SongDockPointer(x, y, button, shift)) return;
         if (CollaborationPointer(x, y, button)) return;
         if (DiscussionPointerDown(x, y, button)) return;
+        if (VerifierPointerDown(x, y, button)) return;
         if (NotesPointer(x, y, button, shift)) return;
         if (PatternDockPointer(x, y, button)) return;
         if (CanvasScalePointerDown(x, y, button)) return;
@@ -343,7 +344,7 @@ public sealed partial class EditorView
                 InsertControlPoint(new(insertTrack.Id, CurveMath.FirstSpanTime(insertTrack, point.TimeMs)), point.X);
             return;
         }
-        if (!ctrl && TryBeginSelectedBananaHandle(x, y)) return;
+        if (!ctrl && TryBeginBananaBoundaryDrag(x, y)) return;
         if (tool != Tool.Slider && !ctrl && showTargets && objectSelection.Count == 1 && SelectedTrack is { } selectedObject)
         {
             foreach (var node in selectedObject.Nodes)
@@ -479,6 +480,7 @@ public sealed partial class EditorView
         if (discussionTextPressed is not null) { mouseX = x; mouseY = y; MoveDiscussionTextSelection(x, y); return; }
         if (discussionQuoteDrag is not null) { MoveDiscussionQuoteScrollbar(y); return; }
         if (discussionScrollbarDragging) { MoveDiscussionScrollbar(y); return; }
+        if (verifierScrollbarDragging) { mouseX = x; mouseY = y; MoveVerifierScrollbar(y); return; }
         if (GalleryTagsVisible) { mouseX = x; mouseY = y; if (!PatternNameVisible) { if (MoveGalleryTagOrder(x, y)) return; if (textSelecting && GalleryTagTextFocused) MoveInputSelection(x); else MoveGalleryTagColour(x, y); } return; }
         if (PatternGalleryPointerMove(x, y)) return;
         if (templatePointer) { mouseX = x; mouseY = y; MoveMapTemplate(x, y); return; }
@@ -576,7 +578,7 @@ public sealed partial class EditorView
             if (!TryBeginSliderEndpointTimeDrag(y)) { MoveSliderObject(x); return; }
         }
         if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
-        if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
+        if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y, shift); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
         var p = new MapPoint(Math.Clamp(raw.TimeMs, 0, EditableDurationMs), SnapX(raw.X));
         if (SelectedTrack is { } track && SelectedAnchor is { } node)
@@ -649,6 +651,7 @@ public sealed partial class EditorView
         if (discussionTextPressed is not null) { EndDiscussionTextSelection(x, y); return; }
         if (discussionQuoteDrag is not null) { MoveDiscussionQuoteScrollbar(y); discussionQuoteDrag = null; return; }
         if (discussionScrollbarDragging) { MoveDiscussionScrollbar(y); discussionScrollbarDragging = false; return; }
+        if (verifierScrollbarDragging && button == 0) { MoveVerifierScrollbar(y); verifierScrollbarDragging = false; return; }
         if (GalleryTagsVisible) { if (button == 0) { if (EndGalleryTagOrder(x, y)) return; if (!PatternNameVisible) MoveGalleryTagColour(x, y); galleryTagDrag = 0; textSelecting = false; } return; }
         if (PatternGalleryPointerUp(x, y, button)) return;
         if (templatePointer && button == 0)
@@ -992,6 +995,11 @@ public sealed partial class EditorView
         }
         if (WheelDockTabs(x, y, delta)) return;
         if (WheelDiscussions(x, y, delta)) return;
+        if (MapsetVerifierVisible && DockContentInputAvailable && verifierBounds.Contains(x, y))
+        {
+            verifierScroll = Math.Clamp(verifierScroll - delta / 120 * 60, 0, Math.Max(0, verifierContentHeight - verifierBody.Height));
+            return;
+        }
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
             if (aimodScrollTrack.Contains(x, y) || shiftHeld)
@@ -1393,6 +1401,11 @@ public sealed partial class EditorView
         if (RotationVisible) { RotationKey(virtualKey, ctrl, shift); return; }
         if (SliderDialogVisible)
         {
+            if (TimingAlignmentPromptVisible)
+            {
+                if (virtualKey is 13 or 27) AnswerTimingAlignment(virtualKey == 13);
+                return;
+            }
             if (virtualKey == 27)
             { if (SliderImportPromptVisible) AnswerSliderImport(false); else if (SliderConversionBusy) CancelSliderConversion(); else sliderBatchErrors = []; }
             return;
@@ -1631,6 +1644,7 @@ public sealed partial class EditorView
         discussionPreviewDragging = false;
         ClearDiscussionTextSelection();
         discussionScrollbarDragging = false; discussionQuoteDrag = null;
+        verifierScrollbarDragging = false;
         CancelPatternGalleryInteraction();
         CancelGalleryTagOrder();
         FinishMapTemplateDrag(cancel: true);

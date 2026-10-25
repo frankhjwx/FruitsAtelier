@@ -20,13 +20,16 @@ $payload = Join-Path $staging $package
 New-Item -ItemType Directory -Path $payload, $OutputDirectory -Force | Out-Null
 Push-Location $repo
 try {
+    & python scripts/Build-MapsetVerifier.py --runtime win-x64
+    if ($LASTEXITCODE -ne 0) { throw 'Mapset Verifier preparation failed.' }
+    Copy-Item -LiteralPath (Join-Path $repo 'artifacts/mapset-verifier/win-x64') -Destination (Join-Path $payload 'mapset-verifier') -Recurse
     $commit = (& git rev-parse HEAD).Trim()
     if ($LASTEXITCODE -ne 0) { throw 'Cannot determine source commit.' }
     $dirty = [bool](& git status --porcelain --untracked-files=normal)
     $sdk = (& dotnet --version).Trim()
     if ($LASTEXITCODE -ne 0) { throw 'The pinned .NET SDK is required; see global.json.' }
     & dotnet publish src/FruitsAtelier.App/FruitsAtelier.App.csproj -c Release -r win-x64 --self-contained true `
-        -o $payload -p:PublishProfile=WindowsRelease -p:NuGetLockFilePath=packages.win-x64.lock.json -p:RestoreLockedMode=true `
+        -o $payload "-p:BaseOutputPath=$staging/build/" -p:PublishProfile=WindowsRelease -p:NuGetLockFilePath=packages.win-x64.lock.json -p:RestoreLockedMode=true `
         "-p:Version=$Version" "-p:FileVersion=$numericVersion.0" "-p:AssemblyVersion=$numericVersion.0" "-p:SourceRevisionId=$commit"
     if ($LASTEXITCODE -ne 0) { throw 'Windows publish failed.' }
     $manifest = [ordered]@{ version = $Version; commit = $commit; dirty = $dirty; runtimeIdentifier = 'win-x64'; sdk = $sdk; audioDiagnostics = $AudioDiagnostics.IsPresent }

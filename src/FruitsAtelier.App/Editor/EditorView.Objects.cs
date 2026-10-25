@@ -141,20 +141,26 @@ public sealed partial class EditorView
         => Document.BananaShowers.AsEnumerable().Reverse()
             .FirstOrDefault(shower => shower.Id != draftBanana && CanSelectCollaborationObject(shower.Id) && BananaRectangle(shower).Contains(x, y));
 
-    private bool TryBeginSelectedBananaHandle(float x, float y)
+    private bool TryBeginBananaBoundaryDrag(float x, float y)
     {
-        if (objectSelection.Count != 1 || SelectedBananaShower is not { } shower || shower.Id == draftBanana) return false;
-        float centerX = Playfield.X + Playfield.Width / 2;
+        if (draftBanana != Guid.Empty || notesLocked || x < Playfield.X - 10 || x > Playfield.Right + 10) return false;
+        var shower = objectSelection.Count == 1 ? SelectedBananaShower : null;
+        if (shower is null && tool == Tool.Select && objectSelection.Count <= 1)
+            shower = Document.BananaShowers.AsEnumerable().Reverse().FirstOrDefault(item =>
+                CanSelectCollaborationObject(item.Id) && (MathF.Abs(y - Screen(new(item.TimeMs, 256)).Y) <= 10
+                    || MathF.Abs(y - Screen(new(item.EndTimeMs, 256)).Y) <= 10));
+        if (shower is null || !CanSelectCollaborationObject(shower.Id)) return false;
         float startY = Screen(new(shower.TimeMs, 256)).Y;
         float endY = Screen(new(shower.EndTimeMs, 256)).Y;
         DragKind kind;
         double boundary;
-        if (MathF.Abs(x - centerX) <= 10 && MathF.Abs(y - endY) <= 10)
+        if (MathF.Abs(y - endY) <= 10)
         { kind = DragKind.BananaEnd; boundary = shower.EndTimeMs; }
-        else if (MathF.Abs(x - centerX) <= 10 && MathF.Abs(y - startY) <= 10)
+        else if (MathF.Abs(y - startY) <= 10)
         { kind = DragKind.BananaStart; boundary = shower.TimeMs; }
         else return false;
 
+        SelectObjects([shower.Id], shower.Id);
         history.Begin(L.Get("editor.command.resizeBanana"));
         objectDragStart = Document.DeepClone();
         objectDragPrepared = true;
@@ -164,12 +170,12 @@ public sealed partial class EditorView
         return true;
     }
 
-    private void MoveBananaBoundary(float x, float y)
+    private void MoveBananaBoundary(float x, float y, bool shift)
     {
         if (objectDragStart is null || SelectedBananaShower is not { } target) return;
         var source = objectDragStart.BananaShowers.Single(item => item.Id == target.Id);
         double rawTime = (Transform.ToMap(x, y) - dragOffset).TimeMs;
-        double time = snap ? TimingMap.Snap(Document, rawTime, divisor) : rawTime;
+        double time = snap && !shift ? SnapTiming().Snap(rawTime, divisor) : rawTime;
         if (drag == DragKind.BananaStart)
             target.TimeMs = Math.Clamp(time, 0, Math.Max(0, source.EndTimeMs - 0.001));
         else

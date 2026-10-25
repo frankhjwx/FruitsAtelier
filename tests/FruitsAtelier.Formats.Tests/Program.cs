@@ -1,6 +1,7 @@
 using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
+if (args.Contains("--export-snap-check")) { ExportSnapTests.Run(); Console.WriteLine("PASS export snap correction and stream grid"); return 0; }
 if (args.Contains("--pattern-gallery-check")) { PatternGalleryTests.Run(); return 0; }
 if (args.Contains("--slider-import-policy-check")) { SliderImportPolicyTests.Run(); Console.WriteLine("PASS unified slider import policy"); return 0; }
 if (args.Contains("--slider-reimport-check")) { SliderReimportTests.Run(); Console.WriteLine("PASS compensated osu reimport and fitted FSlider playback"); return 0; }
@@ -15,6 +16,12 @@ if (args.Contains("--full-sync-check"))
         || c.Item1.Contains("sound and combo") || c.Item1.Contains("exported curves keep") || c.Item1.Contains("uploaded IDs")))
     { run(); Console.WriteLine("PASS " + name); }
     VersionHistoryTests.Run(); return 0;
+}
+if (args.Contains("--break-sync-check"))
+{
+    foreach (var (name, run) in SynchronizationTests.Cases().Where(c => c.Item1.Contains("break", StringComparison.OrdinalIgnoreCase)))
+    { run(); Console.WriteLine("PASS " + name); }
+    return 0;
 }
 if (args.Contains("--semantic-sync-check"))
 {
@@ -73,6 +80,7 @@ if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Circle and spinner export correction and stream grid agree with internal playback", ExportSnapTests.Run),
     ("Pattern snapshots and FPT packages preserve independent authoring data", PatternGalleryTests.Run),
     ("Slider import modes and compensated baselines remain stable through conversion", SliderImportPolicyTests.Run),
     ("Reimported compensated sliders recover straight playback", SliderReimportTests.Run),

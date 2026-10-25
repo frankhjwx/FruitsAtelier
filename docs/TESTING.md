@@ -1,5 +1,36 @@
 # Building and Testing
 
+For Mapset Verifier changes, prepare the pinned engine with
+`python scripts/Build-MapsetVerifier.py`, then run `App.Tests
+--mapset-verifier-check` and `App.Tests --mapset-verifier-engine-check`.
+On Windows run `FruitsAtelier.App --render-check --mapset-verifier-render-check`
+for native layout and timestamp input. See [Mapset Verifier](MAPSET_VERIFIER.md).
+The focused suite also checks the one-second edit debounce, undo/redo, idle frame
+behavior and cancellation of reports superseded by newer content.
+It covers category status icons, severity filters, compact toolbar alignment,
+chevrons, timestamp hand cursors, thumb/track scrolling and pointer-capture release.
+The native verifier check exercises scrolling and captures both category views.
+Copy checks cover complete group messages, hover cursors, clipboard confirmation,
+repeat clicks, fade completion and idle redraws. Severity checks cover exclusive
+selection, switching levels and clicking the active level to restore all issues.
+
+`Core.Tests --timing-alignment-check` covers read-only detection, red-line chains,
+parent movement, spinner head/tail alignment, positive-duration guards, idempotence
+and undo. `App.Tests
+--timing-alignment-check` checks workspace opening, initial difficulty selection,
+localized counts, modal input, keep/align choices, undo/redo, project replacement
+and one prompt per difficulty per open, including spinner-only offsets. Windows `--render-check
+--timing-alignment-render-check` renders and operates the dialog in English and
+Chinese at two window sizes and three DPI scales; captures go to
+`artifacts/tests/timing-alignment-native`.
+
+`Formats.Tests --export-snap-check` checks one-millisecond circle correction after
+red-line resets and spinner head/tail correction, including a head one millisecond
+before the first red line, collision/positive-duration guards, unchanged authoring
+data, cached/idempotent export and downstream banana/slider RNG agreement. It also
+checks exact Stream/Stack grid times and unused timing pruning with slider-body
+and five-millisecond tail sample preservation.
+
 ## Embedded browser checks
 
 `App.Tests --discussions-check` covers the Discussion tab's Read only / osu! Web
@@ -62,12 +93,12 @@ rejection and the FAZ export chooser. `FruitsAtelier.App.exe --render-check
 native merge review and Library error in English and Chinese at two window sizes
 and 96/144/192 DPI under `artifacts/tests/fad-native`.
 
-The project targets .NET 8 with C# 12. Two `global.json` entry points pin SDK versions:
+The project targets .NET 10 with C# 12. Two `global.json` entry points pin SDK versions:
 
 | Entry point | SDK | Purpose |
 | --- | --- | --- |
 | Repository root | 10.0.400 | Windows launch scripts and root builds |
-| `macOS/` | 8.0.419 | Mac scripts and Windows/macOS CI |
+| `macOS/` | 10.0.400 | Mac scripts and desktop CI |
 
 Build on Windows from the repository root:
 
@@ -75,7 +106,7 @@ Build on Windows from the repository root:
 dotnet build FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
 ```
 
-To build the Windows solution with SDK 8.0.419, enter `macOS/` first:
+Desktop CI also builds from `macOS/`, which pins the same SDK:
 
 ```powershell
 cd macOS
@@ -311,9 +342,19 @@ when an external conflict is detected.
 `Formats.Tests --semantic-sync-check` runs the synchronization regressions, including
 playable slider equivalence, position tolerance, independent SV capture and
 normalized timing choices. `FruitsAtelier.App.exe --render-check
---semantic-sync-render-check` exercises the English and Chinese timing and playable-object tables at
+--semantic-sync-render-check` exercises the English and Chinese break, timing and playable-object tables at
 two window sizes and captures unresolved/resolved cells under
 `artifacts/tests/semantic-sync-native`.
+
+`App.Tests --sync-details-check` also checks break start/end/duration columns,
+aligned additions, changed-cell highlighting, independent break choices and
+storyboard command preservation at both window sizes in English and Chinese.
+It also checks neutral unchanged background borders and row clicks on break
+start, end and duration cells, including switching a resolved choice, row-only
+outlines and applying mixed FA/osu! break choices.
+`Formats.Tests --break-sync-check` focuses on mixed break/event resolution,
+additions/deletions, native and baseline-free comparisons, restart retention and
+later edits, alongside the break writeback and save-rewrite regressions.
 
 `Formats.Tests --fa-only-check` checks default compatibility, per-difficulty persistence, source exclusion, portable snapshots, individual saves, stale export rejection, source-change and deletion-failure isolation, and reenabling generation. `App.Tests --fa-only-check` checks new-difficulty defaults and FA-only selection, Song Setup dock and modal controls, keep/delete/cancel choices, independent policies and restart in English and Chinese at two sizes. Native synchronization checks capture the creation choice, FA Settings and file-removal confirmation.
 
@@ -639,6 +680,11 @@ fade, and queued pause/play/seek requests preserve playback intent. No physical
 audio device is used by this focused check.
 
 ## Window checks
+
+On Windows, `FruitsAtelier.App.exe --render-check --audio-shutdown-check` checks
+paused and playing window disposal with silent injected music and setup outputs.
+Both outputs must be stopped and disposed while a pending library cache write is
+still blocked, so background cleanup cannot extend playback after window closure.
 
 `FruitsAtelier.App.exe --render-check --workspace-save-render-check` verifies the
 once-per-project Songs export offer and repeated saves after reopening, in English

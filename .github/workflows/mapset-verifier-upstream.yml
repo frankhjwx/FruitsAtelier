@@ -1,0 +1,64 @@
+name: Mapset Verifier upstream
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+concurrency:
+  group: mapset-verifier-upstream
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Check latest stable release
+        id: upstream
+        run: python scripts/Update-MapsetVerifier.py
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Prepare engine and dependency locks
+        if: steps.upstream.outputs.changed == 'true'
+        shell: pwsh
+        run: |
+          foreach ($rid in @('win-x64', 'osx-arm64', 'osx-x64')) {
+            python scripts/Build-MapsetVerifier.py --runtime $rid --update-locks
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Create update PR
+        if: steps.upstream.outputs.changed == 'true'
+        id: pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          base: dev
+          branch: codex/update-mapset-verifier
+          commit-message: Update pinned Mapset Verifier release
+          title: Update Mapset Verifier to ${{ steps.upstream.outputs.tag }}
+          body: |
+            Updates the pinned stable Mapset Verifier release and engine dependency locks.
+
+            Desktop regression runs on this branch. Review compatibility and check output before merging. Merging does not publish a FruitsAtelier release.
+          add-paths: |
+            eng/mapset-verifier.json
+            tools/MapsetVerifier.Host/packages.*.lock.json
+            tools/MapsetVerifier.Host/upstream-locks/
+      # PRs created with GITHUB_TOKEN do not trigger pull_request workflows.
+      - name: Run desktop regression on the PR head
+        if: steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              ...context.repo, workflow_id: 'desktop.yml', ref: 'codex/update-mapset-verifier'
+            });

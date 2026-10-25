@@ -512,12 +512,15 @@ internal static class CollaborationMappingTests
     }
     private static void Sounds(MapDocument document, (double Time, int Bank, int Volume)[] expected)
     {
-        var readback = OsuBeatmapWriter.Serialize(document).ReadBack;
+        var output = OsuBeatmapWriter.Serialize(document);
+        var readback = output.ReadBack;
         var events = CatchStreamConverter.Convert(readback).Objects;
         var resolver = new HitsoundResolver(readback, events);
         foreach (var item in expected)
         {
-            var sample = resolver.Describe(events.Single(o => o.TimeMs == Math.Truncate(item.Time)));
+            var original = document.Fruits.Single(f => f.TimeMs == item.Time);
+            var fruit = readback.Fruits.Single(f => output.ObjectSources[f.SourceOrder] == original.Id);
+            var sample = resolver.Describe(events.Single(o => o.SourceId == fruit.Id));
             Check(sample.NormalSet == item.Bank && sample.Volume == item.Volume, $"Exported sound at {item.Time}");
         }
     }

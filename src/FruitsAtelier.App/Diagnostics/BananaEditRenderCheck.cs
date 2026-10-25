@@ -57,6 +57,36 @@ internal static class BananaEditRenderCheck
                 reports.Add(new { locale, dpi, width, height, medianMs = frames[40], p95Ms = frames[76], allocatedBytesPerFrame = (GC.GetAllocatedBytesForCurrentThread() - allocation) / 100 });
                 view.KeyDown('Z', true, false); Paint();
                 if (!view.Document.ContentEquals(map)) throw new InvalidOperationException("Native banana undo failed.");
+                var rangeMap = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
+                rangeMap.BananaShowers.Add(new() { TimeMs = 500, EndTimeMs = 1000 });
+                view.LoadDocument(rangeMap); Paint();
+                var plot = view.CanvasPlotBounds;
+                view.Wheel(plot.X, plot.Bottom, (float)(120 * Math.Log(.09 / view.PixelsPerMs) / Math.Log(1.16)), false, false, true); Paint();
+                plot = view.CanvasPlotBounds;
+                float panY = plot.Bottom - 1, panTo = panY - (float)(view.ViewStartMs * view.PixelsPerMs);
+                view.PointerDown(plot.X, panY, 1, false, false);
+                view.PointerMove(plot.X, panTo, false, false); view.PointerUp(plot.X, panTo, 1); Paint();
+                foreach (var move in new[] { (From: 500d, To: 625d, X: .2f), (From: 1000d, To: 1125d, X: .8f) })
+                {
+                    float x = view.PlayfieldBounds.X + view.PlayfieldBounds.Width * move.X;
+                    float y = view.CanvasPlotBounds.Bottom - (float)((move.From - view.ViewStartMs) * view.PixelsPerMs);
+                    float to = y - (float)((move.To - move.From) * view.PixelsPerMs);
+                    view.PointerDown(x, y, 0, false, false); view.PointerMove(x, to, false, false);
+                    view.PointerUp(x, to, 0); Paint();
+                }
+                if (Math.Abs(view.Document.BananaShowers[0].TimeMs - 625) > .01 || Math.Abs(view.Document.BananaShowers[0].EndTimeMs - 1125) > .01)
+                    throw new InvalidOperationException($"Native canvas spinner boundaries failed: {locale}/{dpi}, {view.Document.BananaShowers[0].TimeMs}-{view.Document.BananaShowers[0].EndTimeMs}, viewport={view.ViewStartMs}, scale={view.PixelsPerMs}, plot={view.CanvasPlotBounds}.");
+                Capture("canvas-boundaries");
+                view.UpdateTransport(875, 10000, true, false, false, null, null); Paint();
+                var timeline = view.ObjectTimelineBounds;
+                float headX = timeline.X + (float)((625 - view.ObjectTimelineStartMs) * view.ObjectTimelinePixelsPerMs);
+                float headY = timeline.Y + timeline.Height * 27 / 64;
+                float headTo = headX + (float)(125 * view.ObjectTimelinePixelsPerMs);
+                view.PointerDown(headX, headY, 0, false, false); view.PointerMove(headTo, headY, false, false);
+                view.PointerUp(headTo, headY, 0); Paint();
+                if (Math.Abs(view.Document.BananaShowers[0].TimeMs - 750) > .01 || Math.Abs(view.Document.BananaShowers[0].EndTimeMs - 1125) > .01)
+                    throw new InvalidOperationException("Native timeline spinner begin did not preserve end.");
+                Capture("timeline-begin");
                 view.NewProject();
                 void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
                 void Capture(string name)

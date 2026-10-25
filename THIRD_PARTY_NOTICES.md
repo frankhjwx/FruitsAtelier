@@ -36,7 +36,7 @@ The application uses the following NuGet packages, pinned by project files and `
 
 The WebView2 SDK license is retained in `src/FruitsAtelier.App/Platform/Licenses/WebView2.txt` and copied to Windows outputs. The browser runtime is supplied by Microsoft Edge WebView2 on Windows and system WebKit on macOS.
 
-Package metadata is available in the restored package `.nuspec` files under `artifacts/packages`. Windows builds use the installed .NET 8 runtime; the self-contained macOS bundle includes it. Audio source references and limits are recorded in [Audio/REFERENCE.md](src/FruitsAtelier.App/Audio/REFERENCE.md); licence texts in `Audio/Licenses` are copied to builds.
+Package metadata is available in the restored package `.nuspec` files under `artifacts/packages`. Source builds use the installed .NET 10 runtime; self-contained Windows and macOS packages include it. Audio source references and limits are recorded in [Audio/REFERENCE.md](src/FruitsAtelier.App/Audio/REFERENCE.md); licence texts in `Audio/Licenses` are copied to builds.
 
 Source and notices: [Vortice.Windows](https://github.com/amerkoleci/Vortice.Windows), [Vortice.Mathematics](https://github.com/amerkoleci/Vortice.Mathematics), [SharpGenTools](https://github.com/SharpGenTools/SharpGenTools).
 
@@ -171,6 +171,11 @@ License texts and Skia/HarfBuzz third-party notices are in
 Avalonia source version: `0834dbbbb9252406b08f2e74e8f328cc5ba502ee`.
 No Avalonia source files were copied into the editor.
 
+Tmds.DBus.Protocol is pinned to the 0.21.3 security backport (MIT;
+https://github.com/tmds/Tmds.DBus, revision
+`8cb04f66c330b64244e996ff68f685f27f7381a0`) for Avalonia's D-Bus integration.
+Its license is retained in `src/FruitsAtelier.Mac/Licenses/Tmds.DBus.Protocol.txt`.
+
 OGG decoding reuses NVorbis 0.10.4 under the existing license above.
 `Native/Audio.m` is project-owned glue to the system AVFoundation framework.
 The self-contained local bundle also includes Microsoft's .NET runtime and its
@@ -194,8 +199,8 @@ interpolation is independently implemented as gamma-2.2 RGB interpolation.
 
 ## Workspace database
 
-- Microsoft.Data.Sqlite / Microsoft.Data.Sqlite.Core 8.0.22: MIT; https://github.com/dotnet/efcore.
-- SQLitePCLRaw core, bundle_e_sqlite3, provider.e_sqlite3 and lib.e_sqlite3 2.1.6: Apache-2.0; https://github.com/ericsink/SQLitePCL.raw.
+- Microsoft.Data.Sqlite / Microsoft.Data.Sqlite.Core 8.0.32: MIT; https://github.com/dotnet/efcore.
+- SQLitePCLRaw core, bundle_e_sqlite3, provider.e_sqlite3 and lib.e_sqlite3 2.1.13: Apache-2.0; https://github.com/ericsink/SQLitePCL.raw.
 - SQLite native engine: public domain; https://sqlite.org/copyright.html.
 
 Package versions are pinned in the project and lock files. License texts are included under `Core/Workspace/Licenses` and distributed with the desktop application.
@@ -296,3 +301,15 @@ Discussion icons are Font Awesome Free 5.15.4 SVGs from Fonticons, Inc., commit
 The icon artwork is licensed under CC BY 4.0. Original SVGs, white PNG renderings,
 source attribution and the upstream licence notice ship in
 [assets/icons/discussion](assets/icons/discussion/README.md).
+
+## Mapset Verifier engine
+
+The separately bundled `mapset-verifier/` component hosts
+[Naxesss/MapsetVerifier](https://github.com/Naxesss/MapsetVerifier) under GPL-3.0.
+The authoritative release and archive SHA-256 are pinned in
+`eng/mapset-verifier.json`. Its license is bundled as
+`mapset-verifier/LICENSE.MapsetVerifier.txt`; corresponding upstream and adapter
+source and build scripts are included under `mapset-verifier/source/`.
+Dependency license metadata/texts are under `mapset-verifier/licenses/`.
+The adapter source in `tools/MapsetVerifier.Host/` is GPL-3.0. The editor uses
+standalone file/JSON communication and retains its own source license.

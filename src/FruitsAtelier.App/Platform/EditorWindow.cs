@@ -129,6 +129,10 @@ internal sealed partial class EditorWindow : IDisposable
         {
             Diagnostics.BrowserRenderCheck.Run(canvas); Native.DestroyWindow(hwnd); return 0;
         }
+        if (renderCheck && Environment.GetCommandLineArgs().Contains("--audio-shutdown-check"))
+        {
+            CheckAudioShutdown(); Native.DestroyWindow(hwnd); return 0;
+        }
         if (renderCheck && Environment.GetCommandLineArgs().Contains("--text-resources-render-check"))
         {
             Diagnostics.RenderCheck.Run(canvas, view, hwnd);
@@ -505,7 +509,7 @@ internal sealed partial class EditorWindow : IDisposable
                 }
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.BrowserFeedbackNeedsRedraw || view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
-                    || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.DiscussionNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
+                    || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.DiscussionNeedsRedraw || view.MapsetVerifierNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
                     || canvas?.SliderRasterNeedsRedraw == true) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: RefreshUiScale(window); Invalidate(); return 0; // WM_SIZE
@@ -554,7 +558,7 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0020: // WM_SETCURSOR
                 if ((lParam.ToInt64() & 0xffff) == 1)
-                { Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelinePanelResizeCursor ? 32645 : view.DiscussionHandCursor ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512))); return 1; }
+                { Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelinePanelResizeCursor ? 32645 : (view.DiscussionHandCursor || view.MapsetVerifierHandCursor) ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512))); return 1; }
                 break;
             case 0x02A3: // WM_MOUSELEAVE
                 view.PointerLeave(); Invalidate(); return 0;
@@ -563,7 +567,7 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.TrackMouseEvent(ref tracking);
                 view.SetModifiers(Native.Alt, Native.Shift);
                 view.PointerMove(x, y, Native.Shift, Native.Control);
-                Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelinePanelResizeCursor ? 32645 : view.DiscussionHandCursor ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512)));
+                Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelinePanelResizeCursor ? 32645 : (view.DiscussionHandCursor || view.MapsetVerifierHandCursor) ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512)));
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0202:
             case 0x0205:
@@ -661,19 +665,20 @@ internal sealed partial class EditorWindow : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        // Browser shutdown and cache writes can wait for seconds; release playback before those waits.
+        view.StopTestplay();
+        audio.Dispose();
+        setupAudio?.Dispose();
+        hitsounds.Dispose();
         osuBrowser?.Dispose();
         view.CompleteLibraryCacheWrites();
         view.StopFileMonitoring();
-        view.StopDiscussions();
+        view.StopDiscussions(); view.StopMapsetVerifier();
         view.CleanupFazOnExit();
         updates?.Dispose();
-        view.StopTestplay();
         view.ReleaseWaveform();
         if (largeBrandIcon != 0) { Native.DestroyIcon(largeBrandIcon); largeBrandIcon = 0; }
         if (smallBrandIcon != 0) { Native.DestroyIcon(smallBrandIcon); smallBrandIcon = 0; }
-        hitsounds.Dispose();
-        setupAudio?.Dispose();
-        audio.Dispose();
         canvas?.Dispose();
         FlushPerformance(force: true);
         AppLog.Write($"Window closed. Frames={frames}");

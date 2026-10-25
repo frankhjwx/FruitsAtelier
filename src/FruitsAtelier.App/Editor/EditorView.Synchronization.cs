@@ -629,6 +629,7 @@ public sealed partial class EditorView
     {
         syncChoices[key] = external;
         syncRoundChoices.Add(key);
+        if (syncTab == "Events") syncRow = Math.Max(0, merge.Conflicts.FindIndex(c => c.Key == key));
         syncPreviewRevision++; syncResultPane = null;
         if (syncTab == "Objects")
             for (int offset = 1; offset < merge.Conflicts.Count; offset++)

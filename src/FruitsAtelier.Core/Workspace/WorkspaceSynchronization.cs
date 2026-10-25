@@ -41,6 +41,7 @@ public sealed class WorkspaceMerge
     public List<WorkspaceSyncConflict> Conflicts { get; } = [];
     internal Dictionary<string, string?> Fields { get; } = [];
     internal string? ExternalTiming { get; set; }
+    public WorkspaceEventReview? EventReview { get; internal set; }
     internal bool Compensate { get; set; }
     internal List<(string Key, Guid[] Sources, string[] Lines)> Objects { get; } = [];
     internal Dictionary<Guid, int> ExternalOrders { get; } = [];
@@ -346,6 +347,7 @@ public static partial class WorkspaceSynchronization
         if (AudioHash(local.AudioPath) != AudioHash(external.Document.AudioPath))
             merge.Conflicts.Add(new("$audio", local.AudioPath ?? "", external.Document.AudioPath ?? ""));
         merge.Conflicts.AddRange(objects);
+        WorkspaceEventReview.Prepare(merge);
         return merge;
     }
 
@@ -536,6 +538,7 @@ public static partial class WorkspaceSynchronization
                 merge.Conflicts.Add(new(key, string.Join('\n', ours), string.Join('\n', retained.ExternalLines)));
             }
         }
+        WorkspaceEventReview.Prepare(merge, baseFields.GetValueOrDefault("Events/"));
         var ordered = merge.Conflicts.OrderBy(c => merge.PreviouslyResolved.Contains(c.Key)).ToArray();
         merge.Conflicts.Clear(); merge.Conflicts.AddRange(ordered);
         return merge;
@@ -551,9 +554,10 @@ public static partial class WorkspaceSynchronization
         WorkspaceTimingSynchronization.NormalizeDocument(result);
         var fields = new Dictionary<string, string?>(merge.Fields);
         var outside = Fields(merge.External.Document);
-        foreach (var conflict in merge.Conflicts.Where(c => !c.Key.StartsWith('$')))
+        foreach (var conflict in merge.Conflicts.Where(c => !c.Key.StartsWith('$') && !(merge.EventReview is not null && c.Key.StartsWith("Events/"))))
             if (externalChoices.GetValueOrDefault(conflict.Key)) fields[conflict.Key] = conflict.Key == "TimingPoints/"
                 ? merge.ExternalTiming ?? outside.GetValueOrDefault(conflict.Key) : outside.GetValueOrDefault(conflict.Key);
+        if (merge.EventReview is { } events) fields["Events/"] = events.Resolve(externalChoices);
         ApplyFields(result, fields, merge.External.Path);
         foreach (var group in merge.Objects)
         {

@@ -107,6 +107,7 @@ public static class OsuBeatmapWriter
         var authoring = document;
         var bananaExpansion = BananaShowerExpansion.Create(document);
         if (bananaExpansion is not null) document = bananaExpansion.Document;
+        document = ExportTiming.Prepare(document, out _);
         cache?.ParsedSliders.Begin();
         var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache?.Source);
         if (!converted.Success) throw new InvalidDataException(L.Get("core.writer.incompletePrefix") + string.Join(L.Get("core.diagnostics.separator"), converted.Diagnostics));
@@ -114,7 +115,10 @@ public static class OsuBeatmapWriter
         var generated = converted.Sliders.Where(s => tracks.ContainsKey(s.SourceId)).ToArray();
         if (generated.Length != document.Tracks.Count(t => t.StreamSnapDivisor is null)) throw new InvalidDataException(L.Get("core.writer.sliderCount"));
         var diagnostics = converted.Diagnostics.ToList();
-        double maxTime = 0, maxCoordinate = 0;
+        double maxTime = authoring.Fruits.Zip(document.Fruits)
+            .Where(p => p.First.TimeMs != p.Second.TimeMs)
+            .Select(p => Math.Abs(p.First.TimeMs - QuantizeTime(p.Second.TimeMs))).DefaultIfEmpty(0).Max();
+        double maxCoordinate = 0;
         var lines = new List<(double Time, int Order, Guid SourceId, string Text)>();
         var streamIds = document.Tracks.Where(t => t.StreamSnapDivisor is not null).ToDictionary(t => t.Id);
         foreach (var item in converted.Objects.Where(o => streamIds.ContainsKey(o.SourceId)))
@@ -233,6 +237,7 @@ public static class OsuBeatmapWriter
             timing = timing.Select(p => p.DeepClone()).ToList();
             HitsoundCopier.ApplyToExport(document, converted.Objects, lines, timing);
         }
+        if (timingSliders.Length > 0) timing = RemoveUnusedInheritedTiming(timing, converted, document);
         var output = document.DeepClone();
         SetNumber(output, "Editor", "DistanceSpacing", document.DistanceSpacing);
         Set(output, "General", "Mode", "2");
@@ -461,6 +466,54 @@ public static class OsuBeatmapWriter
             return first;
         }
 
+        static int LowerBound(double[] values, double time)
+        {
+            int low = 0, high = values.Length;
+            while (low < high)
+            {
+                int middle = low + (high - low) / 2;
+                if (values[middle] < time) low = middle + 1; else high = middle;
+            }
+            return low;
+        }
+    }
+
+    private static List<TimingPoint> RemoveUnusedInheritedTiming(List<TimingPoint> points,
+        CatchConversionResult converted, MapDocument document)
+    {
+        var ordered = points.OrderBy(p => p.TimeMs).ToArray();
+        var heads = converted.Sliders.Select(s => QuantizeTime(s.StartTimeMs)).Order().ToArray();
+        var intervals = converted.Sliders.Select(s => (Start: QuantizeTime(s.StartTimeMs), End: QuantizeTime(s.StartTimeMs) + s.DurationMs))
+            .Concat(converted.Objects.Where(o => o.IsStandalone).Select(o => (Start: o.TimeMs, End: o.TimeMs)))
+            .Concat(document.BananaShowers.Select(s => (Start: s.TimeMs, End: s.EndTimeMs)))
+            .OrderBy(p => p.Start).ToArray();
+        var starts = intervals.Select(p => p.Start).ToArray();
+        var ends = new double[intervals.Length];
+        for (int i = 0; i < ends.Length; i++) ends[i] = Math.Max(intervals[i].End, i == 0 ? double.NegativeInfinity : ends[i - 1]);
+        var result = new List<TimingPoint>();
+        for (int i = 0; i < ordered.Length; i++)
+        {
+            var point = ordered[i];
+            double next = i + 1 < ordered.Length ? ordered[i + 1].TimeMs : double.PositiveInfinity;
+            if (point.Uninherited || result.Count == 0 || next == point.TimeMs
+                || i > 0 && ordered[i - 1].TimeMs == point.TimeMs)
+            { result.Add(point); continue; }
+            var previous = result[^1];
+            bool svChanged = Velocity(point) != Velocity(previous)
+                || double.IsNaN(point.BeatLengthMs) != double.IsNaN(previous.BeatLengthMs);
+            int head = LowerBound(heads, Math.Floor(point.TimeMs) - 1);
+            bool usesSv = svChanged && head < heads.Length && heads[head] < next;
+            bool samplesChanged = point.SampleSet != previous.SampleSet || point.SampleIndex != previous.SampleIndex
+                || point.Volume != previous.Volume;
+            // Legacy edge samples can look five milliseconds ahead; slider bodies use samples throughout their lifetime.
+            int last = LowerBound(starts, next) - 1;
+            bool usesSamples = samplesChanged && last >= 0 && ends[last] >= Math.Floor(point.TimeMs) - 5;
+            if (usesSv || usesSamples || point.Effects != previous.Effects) result.Add(point);
+        }
+        return result;
+
+        static double Velocity(TimingPoint point) => point.BeatLengthMs < 0
+            ? Math.Clamp(100 / -point.BeatLengthMs, LegacyCatchRules.MinimumSliderVelocityMultiplier, LegacyCatchRules.MaximumSliderVelocityMultiplier) : 1;
         static int LowerBound(double[] values, double time)
         {
             int low = 0, high = values.Length;

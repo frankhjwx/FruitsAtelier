@@ -139,6 +139,7 @@ public sealed partial class EditorView
             ResetHitsounds();
             LoadProject(BeatmapProject.FromDocuments([new MapDocument { IsDemo = false }]));
             HasEditorProject = false;
+            CloseMapsetVerifier();
         }
         hits.Clear(); fields.Clear();
         revealLibrarySelection = true;
@@ -297,6 +298,7 @@ public sealed partial class EditorView
     public void LoadWorkspace(WorkspaceSession session, bool checkAdditionalDifficulties = false)
     {
         LoadProject(session.Project); WorkspaceSession = session; CheckWorkspaceResources();
+        CheckTimingAlignmentOnOpen();
         libraryProjectsNeedReindex = true; QueueLibrarySearch(); CloseLibrary();
         if (session.Project.Difficulties.Any(d => d.Document.SliderImportState == SliderImportState.Pending)) PrepareImportedSliders(true);
         else if (checkAdditionalDifficulties) RefreshSynchronization();

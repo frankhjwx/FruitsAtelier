@@ -2,11 +2,11 @@
 
 ## Platforms and dependencies
 
-The application uses C# 12 / .NET 8. Windows and macOS share the editor, data model, and file formats, while providing separate windowing, drawing, and audio implementations.
+The application uses C# 12 / .NET 10. Windows and macOS share the editor, data model, and file formats, while providing separate windowing, drawing, and audio implementations.
 
 | Layer | Windows | macOS |
 | --- | --- | --- |
-| Entry point | `FruitsAtelier.App`, `net8.0-windows` | `FruitsAtelier.Mac`, `net8.0` |
+| Entry point | `FruitsAtelier.App`, `net10.0-windows` | `FruitsAtelier.Mac`, `net10.0` |
 | Window and input | Win32, DPI messages, native file dialogs | Avalonia desktop window and file picker |
 | Drawing | DX11 / DXGI, Direct2D / DirectWrite, Vortice 3.6.2 | Avalonia 11.3.7, `MacCanvas` implements `ICanvas` |
 | Embedded website | WebView2 on a dedicated STA loop, child HWND | WKWebView hosted by Avalonia NativeControlHost |
@@ -152,6 +152,9 @@ Core handles text and project serialization. Hosts handle dialogs, archive extra
 Skin archives are limited to 256 MiB, selected files to 16 MiB each and 64 MiB total, and ZIP entries to 20000. Imported skin archives and extracted images are stored under `workspace/Skins`. Extraction preserves resource paths relative to a single `skin.ini`, including nested numeric fonts in lazer legacy exports; archives without configuration must keep selected resources in one folder. The versioned cache prevents reuse of older flattened extracts. Users configure their own default skin `.osk` file in Settings; no default skin is copied into build outputs or packages. See [Skins](../assets/skins/README.md).
 
 ## Audio and lifecycle
+
+Window shutdown stops testplay and releases music, setup preview and hitsound
+outputs before waiting for browser shutdown or filesystem cleanup on both platforms.
 
 Windows `AudioTransport` serializes load, play, pause, and seek operations on a worker; the UI reads immutable state snapshots. MP3 decoding fills a bounded PCM cache continuously. Pause holds the published position captured when requested and rebuilds output at that source frame; later seeks take precedence. Seek and EOF replay also rebuild output. SoundTouch.Net 2.3.2 changes music tempo while preserving pitch; timestamped hitsounds are mixed afterward at their original sample speed. Device elapsed time is multiplied by tempo to recover map time. Changing speed rebuilds output at its consumed position. See the [Windows audio reference](../src/FruitsAtelier.App/Audio/REFERENCE.md).
 

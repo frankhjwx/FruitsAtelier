@@ -11,7 +11,7 @@ elif command -v dotnet >/dev/null 2>&1; then
     FA_DOTNET="$(command -v dotnet)"
     unset DOTNET_ROOT
 else
-    echo 'Install .NET SDK 8.0.419, or run: bash scripts/Install-Mac-SDK.sh'
+    echo 'Install .NET SDK 10.0.400, or run: bash scripts/Install-Mac-SDK.sh'
     exit 1
 fi
 cd "$FA_ROOT/macOS"

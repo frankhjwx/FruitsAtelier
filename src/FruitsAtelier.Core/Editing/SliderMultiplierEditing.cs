@@ -44,7 +44,8 @@ public static class SliderMultiplierEditing
         foreach (var slider in readBack.ImportedSliders) slider.Id = before.ObjectSources[slider.SourceOrder];
         var bananaIds = before.ReadBack.BananaShowers.ToDictionary(s => s.SourceOrder, s => s.Id);
         foreach (var shower in readBack.BananaShowers) shower.Id = bananaIds[shower.SourceOrder];
-        var converted = CatchStreamConverter.Convert(readBack, false, cache?.MultiplierReadBack);
+        // SV-only changes may add a red line; verify the already-exported timestamps without snapping them again.
+        var converted = CatchStreamConverter.Convert(readBack, false, cache?.MultiplierReadBack, normalizeTiming: false);
         var hardRock = converted.Success ? CatchPreviewMods.HardRock(readBack, converted) : [];
         return Finish(before, text, readBack, converted, hardRock);
     }

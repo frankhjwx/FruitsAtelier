@@ -85,6 +85,10 @@ public static class TimingEditing
 
     public static void TransformObjects(MapDocument map, Func<double, (double Time, double Scale)> transform,
         double start = double.NegativeInfinity, double end = double.PositiveInfinity)
+        => TransformObjects(map, transform, start, end, transformSpinners: true);
+
+    internal static void TransformObjects(MapDocument map, Func<double, (double Time, double Scale)> transform,
+        double start, double end, bool transformSpinners)
     {
         bool Contains(double time) => time >= start && time < end;
         foreach (var fruit in map.Fruits.Where(f => Contains(f.TimeMs))) fruit.TimeMs = transform(fruit.TimeMs).Time;
@@ -101,7 +105,7 @@ public static class TimingEditing
             var next = transform(old);
             TransformTrack(track, old, next.Time, next.Scale);
         }
-        foreach (var shower in map.BananaShowers.Where(s => Contains(s.TimeMs)))
+        foreach (var shower in map.BananaShowers.Where(s => transformSpinners && Contains(s.TimeMs)))
         {
             var next = transform(shower.TimeMs);
             shower.EndTimeMs = next.Time + (shower.EndTimeMs - shower.TimeMs) * next.Scale;
@@ -130,7 +134,8 @@ public static class TimingEditing
 
     public static void Resnap(MapDocument map, int divisor, double start = double.NegativeInfinity, double end = double.PositiveInfinity)
     {
-        TransformObjects(map, time => (TimingMap.Snap(map, time, divisor), 1), start, end);
+        var timing = new TimingMap.Lookup(map);
+        TransformObjects(map, time => (timing.Snap(time, divisor), 1), start, end);
         Validate(map);
     }
 

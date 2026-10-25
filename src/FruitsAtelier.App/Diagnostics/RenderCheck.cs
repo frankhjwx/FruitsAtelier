@@ -1029,6 +1029,27 @@ internal static class RenderCheck
             AppLog.Write("Conversion dock rendering checks passed.");
             return;
         }
+        if (Environment.GetCommandLineArgs().Contains("--mapset-verifier-render-check"))
+        {
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (980, 620), (1600, 1000) })
+            {
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                MapsetVerifierRenderCheck.Run(canvas, size.Item1, size.Item2, dpi);
+            }
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--timing-alignment-render-check"))
+        {
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (1440, 900), (980, 620) })
+            {
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                TimingAlignmentRenderCheck.Run(canvas, size.Item1, size.Item2, dpi);
+            }
+            AppLog.Write("On-open timing alignment native rendering and input checks passed.");
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--aimod-render-check"))
         {
             foreach (int dpi in new[] { 96, 144, 192 })

@@ -92,7 +92,7 @@ Pause applies a 5 ms linear fade to the mixed PCM and waits for the device clock
 
 Every Media Foundation decoder in this application is created through `MediaFoundationAudioReader`. Its shared lease owns startup and shuts down the process subsystem only after all active decode operations finish. Cached readers retain PCM without retaining a Media Foundation decoder. Additional Media Foundation users in this process must share that lifetime boundary.
 
-Fixed dependencies compatible with the application's .NET 8 target (NAudio and NVorbis are MIT licensed):
+Fixed dependencies compatible with the application's .NET 10 target (NAudio and NVorbis are MIT licensed):
 
 - `NAudio.Core`, `NAudio.WinMM`, `NAudio.Wasapi` **2.2.1**. The WinForms package is not used. References: [WasapiOut](https://github.com/naudio/NAudio/blob/v2.2.1/NAudio.Wasapi/WasapiOut.cs), [MediaFoundationReader](https://github.com/naudio/NAudio/blob/v2.2.1/NAudio.Wasapi/MediaFoundationReader.cs), [MediaFoundationApi lifecycle](https://github.com/naudio/NAudio/blob/v2.2.1/NAudio.Wasapi/MediaFoundation/MediaFoundationHelpers.cs).
 - `NAudio.Vorbis` **1.5.0** and `NVorbis` **0.10.4**. Reference: [VorbisWaveReader](https://github.com/naudio/Vorbis/blob/v1.5.0/NAudio.Vorbis/VorbisWaveReader.cs).

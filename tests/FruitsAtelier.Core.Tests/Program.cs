@@ -1,4 +1,5 @@
 using FruitsAtelier.Core;
+if (args.Contains("--timing-alignment-check")) { TimingAlignmentTests.Run(); Console.WriteLine("PASS timing alignment detection, parents and undo"); return 0; }
 if (args.Contains("--deferred-history-check")) { DeferredHistoryTests.Run(); WorkspaceStorageTests.Run(); HistoryCompressionTests.Run(); return 0; }
 if (args.Contains("--pattern-placement-check")) { PatternPlacementTests.Run(); Console.WriteLine("PASS Pattern placement and preview"); return 0; }
 if (args.Contains("--slider-recovery-check")) { SliderRecoveryTests.Run(); return 0; }
@@ -42,6 +43,7 @@ if (args.Length == 2 && args[0] == "--benchmark-history")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Timing alignment detects objects and timing lines and preserves undo", TimingAlignmentTests.Run),
     ("Pattern placement preserves beats, geometry, settings, snapshots and history", PatternPlacementTests.Run),
     ("Compact arc editing preserves trajectory, endpoint identity, export and history", SliderModeTests.CompactArcConversion),
     ("Imported geometry follows snapshot inputs and shares readonly derived paths", ImportedGeometryMemoTests.Run),

@@ -39,6 +39,8 @@ public sealed partial class EditorView
     {
         if (PatternEditingActive) throw new InvalidOperationException(L.Get("gallery.finishEditing"));
         project.Validate();
+        timingAlignmentChecksEnabled = false; timingAlignmentChecked.Clear();
+        timingAlignmentPlan = null; timingAlignmentSource = null;
         StopDiscussions();
         patternRestoringTransport = null;
         if (MapTemplatesVisible) CloseMapTemplates(false);
@@ -51,6 +53,7 @@ public sealed partial class EditorView
         libraryOpenTask = null; libraryOpenCompleted = null; libraryOpenDifficultyPath = null; pendingLibraryDifficultyPath = null;
         CloseVersionHistory();
         CloseAimod();
+        CloseMapsetVerifier();
         CloseHitsoundCopier();
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
@@ -118,6 +121,7 @@ public sealed partial class EditorView
 
     private void ResetDifficultyView()
     {
+        timingAlignmentPlan = null; timingAlignmentSource = null;
         RestoreTemporarySnap();
         RestoreSnapPreferences();
         CloseAimod();
@@ -141,6 +145,7 @@ public sealed partial class EditorView
         pinPlayhead = true;
         StatusMessage = L.Get("editor.status.documentOpened", document.Name, document.TimingPoints.Count);
         RefreshLoadedAimod();
+        EnsureMapsetVerifierReport();
     }
 
     public BeatmapProject CaptureProject() => new()

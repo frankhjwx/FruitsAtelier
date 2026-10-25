@@ -8,7 +8,7 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 
 [公式サイト](https://fruitsatelier.himiko.moe/) · [ダウンロード](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**現在のバージョン：1.2.2**
+**現在のバージョン：1.2.3**
 
 ![FruitsAtelier の編集キャンバス、オブジェクトタイムライン、Catch プレビュー](assets/screenshots/twin-bloom.png)
 
@@ -33,7 +33,7 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 - **編集可能なストリームとスタック。** 曲線に沿って指定の拍分割でフルーツを生成したり、幅の変化を設定して左右交互のスタックを作成したりできます。親曲線や個別のフルーツを編集し、独立したフルーツに分割することもできます。どちらも hit circle として出力されます。
 - **Pattern Gallery。** 独立したパターンのスナップショットを保存し、スキン付きプレビューから別の譜面へ BPM に合わせてドラッグできます。`.fpt` 形式で共有し、元の譜面の未保存の変更を保持したまま[メインキャンバスで編集](docs/PATTERN_GALLERY.md)できます。
 
-Catch の `.osu` は v7–v14 と stable 互換の lazer v128 を読み込めます。v7 の譜面は旧スライダーティックの規則を保つため v7 で出力し、それ以外は v14 で出力します。1.2.2 では動画とストーリーボードの再生に対応していません。
+Catch の `.osu` は v7–v14 と stable 互換の lazer v128 を読み込めます。v7 の譜面は旧スライダーティックの規則を保つため v7 で出力し、それ以外は v14 で出力します。1.2.3 では動画とストーリーボードの再生に対応していません。
 
 ## はじめに
 
@@ -48,7 +48,7 @@ Catch の `.osu` は v7–v14 と stable 互換の lazer v128 を読み込めま
 
 ### macOS
 
-ソースからのビルドには .NET SDK **8.0.419** と Xcode Command Line Tools が必要です。リポジトリのルートで実行してください。
+ソースからのビルドには .NET SDK **10.0.400** と Xcode Command Line Tools が必要です。リポジトリのルートで実行してください。
 
 ```bash
 bash scripts/Install-Mac-SDK.sh
@@ -69,7 +69,7 @@ bash scripts/Install-Mac-SDK.sh
 
 ## 開発
 
-C# 12 と .NET 8 を使用しています。Windows のソースビルドには `global.json` で指定された SDK **10.0.400** を使用します。[Run-Editor.cmd](Run-Editor.cmd) でビルドして起動できます。macOS のスクリプトは `macOS/` 配下で指定された SDK を使用します。
+C# 12 と .NET 10 を使用しています。Windows のソースビルドには `global.json` で指定された SDK **10.0.400** を使用します。[Run-Editor.cmd](Run-Editor.cmd) でビルドして起動できます。macOS のスクリプトは `macOS/` 配下で指定された SDK を使用します。
 
 - [ビルドとテスト](docs/TESTING.md) · [パッケージ作成とリリース](docs/RELEASING.md)
 - [編集操作](docs/EDITOR_UI.md) · [ワークスペースとファイル](docs/WORKSPACE.md)

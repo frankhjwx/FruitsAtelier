@@ -4,6 +4,41 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: independent break choices preserve mixed events across restart", () => Run(f =>
+        {
+            string original = Fixture().Replace("[HitObjects]", "[Events]\n// Background\n0,0,\"bg.png\",0,0\n// Breaks\n2,5000,6000\n2,9000,10000\n2,13000,14000\n// Storyboard\nSprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\n[HitObjects]");
+            f.Diff.Document = OsuBeatmapReader.Read(original, f.Source);
+            File.WriteAllText(f.Source, original);
+            var entry = f.Session.Manifest.Difficulties[0];
+            entry.Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory);
+            File.WriteAllText(f.Source, original.Replace("5000,6000", "5000,6500").Replace("9000,10000", "9000,11000")
+                .Replace("2,13000,14000\n", "").Replace("[HitObjects]", "2,17000,18000\n[HitObjects]").Replace("bg.png", "other.png"));
+            var review = f.Merge();
+            Check(review.Conflicts.Count == 5, "four break changes and the other event block are independent conflicts");
+            var choices = review.Conflicts.ToDictionary(c => c.Key, c => c.Key != "Events/" && !c.Key.StartsWith("Events/break/5000/"));
+            Reject(() => WorkspaceSynchronization.Resolve(review, choices.Where(c => !c.Key.StartsWith("Events/break/17000/")).ToDictionary()));
+            var result = WorkspaceSynchronization.Resolve(review, choices);
+            Check(OsuTimeline.Breaks(result).Select(b => (b.StartMs, b.EndMs)).SequenceEqual(new[] { (5000, 6000), (9000, 11000), (17000, 18000) }), "mixed choices apply edits, deletion and addition independently");
+            string events = WorkspaceSynchronization.Fields(result)["Events/"]!;
+            Check(events.Contains("// Background\n0,0,\"bg.png\",0,0") && events.Contains(" F,0,0,500,0,1"), "other event source and storyboard indentation survive mixed break choices");
+            var noBaseline = WorkspaceSynchronization.CompareWithoutBaseline(f.Diff.Document, review.External, f.Session.Directory, true);
+            var native = WorkspaceSynchronization.CompareNativeDifficulty(f.Diff.Document, review.External.Document, f.Source, true);
+            foreach (var comparison in new[] { noBaseline, native })
+                Check(OsuTimeline.Breaks(WorkspaceSynchronization.Resolve(comparison, comparison.Conflicts.ToDictionary(c => c.Key, c => choices.GetValueOrDefault(c.Key))))
+                    .Select(b => (b.StartMs, b.EndMs)).SequenceEqual(OsuTimeline.Breaks(result).Select(b => (b.StartMs, b.EndMs))), "baseline-free and native review support mixed break choices");
+            WorkspaceSynchronization.Accept(f.Session, entry, review.External, result, true, review: review, choices: choices);
+            f.Diff.Document = result;
+            var retained = f.Merge();
+            Check(!retained.RequiresResolution && retained.PreviouslyResolved.Contains("Events/break/5000/0") && retained.PreviouslyResolved.Contains("Events/"), "retained break and background choices are recognized independently");
+            WorkspaceProject.Save(f.Session, f.Session.Project);
+            var reopened = WorkspaceProject.Open(f.Session.Directory);
+            Check(!WorkspaceSynchronization.Merge(reopened.Manifest.Difficulties[0], reopened.Project.Difficulties[0].Document,
+                WorkspaceSynchronization.ReadStable(f.Source), reopened.Directory, true).RequiresResolution, "mixed event decisions survive project restart");
+            File.WriteAllText(f.Source, File.ReadAllText(f.Source).Replace("9000,11000", "9000,11500"));
+            var next = f.Merge();
+            Check(next.Conflicts.Count(c => !next.PreviouslyResolved.Contains(c.Key)) == 1
+                && next.Conflicts.Single(c => !next.PreviouslyResolved.Contains(c.Key)).Key == "Events/break/9000/0", "a later break edit does not reopen retained break or background decisions");
+        }));
         yield return ("Sync: playable slider comparison includes droplets and a one pixel tolerance", () => Run(f =>
         {
             string text = Fixture() + "\n100,192,2500,2,0,L|200:292,1,140\n";
@@ -487,7 +522,7 @@ internal static class SynchronizationTests
                 saved.Replace(" F,0,0,500,0,1", " F,0,0,501,0,1") })
             {
                 File.WriteAllText(f.Source, changed);
-                Check(f.Merge().Conflicts.Any(c => c.Key == "Events/"), "actual break and storyboard edits remain reviewable");
+                Check(f.Merge().Conflicts.Any(c => c.Key.StartsWith("Events/")), "actual break and storyboard edits remain reviewable");
             }
         }));
         yield return ("Sync: ordinary combo edits and timing order remain visible", () => Run(f =>

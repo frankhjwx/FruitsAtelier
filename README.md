@@ -8,7 +8,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 [Website](https://fruitsatelier.himiko.moe/) · [Download](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**Current version: 1.2.2**
+**Current version: 1.2.3**
 
 ![FruitsAtelier's editing canvas, object timeline, and Catch preview](assets/screenshots/twin-bloom.png)
 
@@ -33,7 +33,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 - **Editable streams and stacks.** Turn a slider curve into a fruit stream at a chosen beat subdivision, or an alternating stack with a variable width envelope. Keep the parent curve editable, adjust individual fruits, or separate the pattern into independent fruits. Both export as hit circles.
 - **Pattern Gallery.** Save independent pattern snapshots, browse skinned previews, drag them into another map at its BPM, and share `.fpt` packages. [Edit patterns](docs/PATTERN_GALLERY.md) in the main canvas while retaining your current map's unsaved work.
 
-Catch `.osu` import supports versions 7–14 and stable-compatible lazer v128. Version 7 maps retain v7 on export to preserve their slider ticks; other maps export as v14. Video and storyboard playback are not available in 1.2.2.
+Catch `.osu` import supports versions 7–14 and stable-compatible lazer v128. Version 7 maps retain v7 on export to preserve their slider ticks; other maps export as v14. Video and storyboard playback are not available in 1.2.3.
 
 ## Get started
 
@@ -48,7 +48,7 @@ Updater-enabled installations can use **Settings > Application updates > Check f
 
 ### macOS
 
-Build from source with .NET SDK **8.0.419** and Xcode Command Line Tools. From the repository root:
+Build from source with .NET SDK **10.0.400** and Xcode Command Line Tools. From the repository root:
 
 ```bash
 bash scripts/Install-Mac-SDK.sh
@@ -69,7 +69,7 @@ Join [Discord](https://discord.gg/Dwe7bshYHY) to try the editor and share feedba
 
 ## Development
 
-The editor uses C# 12 and .NET 8. Windows source builds use SDK **10.0.400**, pinned in `global.json`; run [Run-Editor.cmd](Run-Editor.cmd) to build and launch. macOS scripts use the SDK pinned under `macOS/`.
+The editor uses C# 12 and .NET 10. Windows source builds use SDK **10.0.400**, pinned in `global.json`; run [Run-Editor.cmd](Run-Editor.cmd) to build and launch. macOS scripts use the SDK pinned under `macOS/`.
 
 - [Building and testing](docs/TESTING.md) · [Packaging and releases](docs/RELEASING.md)
 - [Editing controls](docs/EDITOR_UI.md) · [Workspace and files](docs/WORKSPACE.md)

@@ -63,7 +63,6 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-          dotnet-version: 8.0.419
       - name: Build regression suites
         if: steps.validation.outputs.reused != 'true'
         run: dotnet build FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
