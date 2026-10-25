@@ -39,6 +39,17 @@ boundaries and undo/redo. Related-offset prompts cover current-section/all-secti
 choices, cancellation, direct single-category fixes and one-step undo. Native
 captures include title-row fix buttons and these prompts at the tested sizes and DPI scales.
 
+`App.Tests --break-overlap-check` covers overview Shift-drag additions, Insert
+Break Time, both edge-drag directions, merged previews, cancellation and one-step
+undo/redo. It also places multiple objects inside a break, drags the resulting
+fragments' start/end boundaries, and deletes those objects to check recombination.
+Compression-only placements at either end check recovery after deleting the note,
+including manual edge drags and preservation of the opposite boundary.
+`Core.Tests --break-overlap-check` additionally covers batch and staged deletion,
+retained outer boundaries and separation by remaining objects, as well as existing
+overlapping Events, chained, contained and duplicate ranges, touching boundaries,
+comments, unrelated events and project/export persistence.
+
 ## Embedded browser checks
 
 `App.Tests --discussions-check` covers the Discussion tab's Read only / osu! Web

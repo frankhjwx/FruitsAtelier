@@ -129,6 +129,9 @@ intervals and the candidate interval. They share the transaction's break algorit
 without cloning a document or exporting the map. The interval cache follows the
 conversion snapshot; projected breaks follow the placement snapshot, committed
 break array and AR. Leaving placement restores committed break filtering.
+Vacated parent intervals query sorted occupied starts and prefix end times when
+associating manually resized break fragments, avoiding a full-map scan per
+removed parent in an empty gap.
 
 Lazer distance guide colours retain a sorted playable fruit/droplet array and
 movement prefix contexts, keyed by playable snapshot identity, CS and excluded

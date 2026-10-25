@@ -1,4 +1,5 @@
 using FruitsAtelier.Core;
+if (args.Contains("--break-overlap-check")) { TimelineMetadataTests.Run(); Console.WriteLine("PASS Break split, edited boundaries, merge, history and persistence"); return 0; }
 if (args.Contains("--timing-alignment-check")) { TimingAlignmentTests.Run(); Console.WriteLine("PASS timing alignment detection, parents and undo"); return 0; }
 if (args.Contains("--deferred-history-check")) { DeferredHistoryTests.Run(); WorkspaceStorageTests.Run(); HistoryCompressionTests.Run(); return 0; }
 if (args.Contains("--pattern-placement-check")) { PatternPlacementTests.Run(); Console.WriteLine("PASS Pattern placement and preview"); return 0; }

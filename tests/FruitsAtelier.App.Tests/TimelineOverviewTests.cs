@@ -142,6 +142,55 @@ internal static class TimelineOverviewTests
         Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual([new BreakPeriod(1200, 3250)]), "Shortened break deletion did not undo");
     }
 
+    public static void OverlappingBreakEditing()
+    {
+        var map = new MapDocument { DurationMs = 8000, IsDemo = false };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 200 });
+        map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 7000, X = 200 }]);
+        OsuTimeline.AddBreak(map, 2000, 3000);
+        OsuTimeline.AddBreak(map, 4000, 5000);
+        var ui = new Ui(overview: false);
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(3500, 8000, true, false, false, null, null); ui.Paint();
+        var timeline = ui.View.ObjectTimelineBounds;
+        float X(double time) => timeline.X + (float)((time - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+        float y = timeline.Y + 40;
+        foreach (var edge in new[] { (From: 3000, To: 4500), (From: 4000, To: 2500) })
+        {
+            ui.View.PointerDown(X(edge.From), y, 0, false, false);
+            ui.View.PointerMove(X(edge.To), y, false, false); ui.Paint();
+            Check(ui.Canvas.Fills.Count(f => f.Color == 0x858585 && f.Bounds.Y == timeline.Y) == 1,
+                "Overlapping edge previews must draw one break core.");
+            Check(ui.View.Document.ContentEquals(map), "A merged preview must leave committed Events unchanged.");
+            ui.Key(27);
+            Check(ui.View.Document.ContentEquals(map), "Escape must cancel the merge.");
+            ui.View.PointerDown(X(edge.From), y, 0, false, false);
+            ui.View.PointerMove(X(edge.To), y, false, false);
+            ui.View.PointerUp(X(edge.To), y, 0); ui.Paint();
+            Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual([new BreakPeriod(2000, 5000)]),
+                "Dragging either edge across another break must merge their ranges.");
+            ui.Key('Z', ctrl: true);
+            Check(ui.View.Document.ContentEquals(map), "One undo must restore both original breaks.");
+            ui.Key('Y', ctrl: true);
+            Check(OsuTimeline.Breaks(ui.View.Document).Count == 1, "Redo must restore the merge.");
+            ui.Key('Z', ctrl: true);
+        }
+        var overview = ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
+        float OverviewX(double time) => overview.X + (float)(time / ui.View.TimelineDurationMs) * overview.Width;
+        ui.View.PointerDown(OverviewX(2900), overview.Y + 25, 0, true, false);
+        ui.View.PointerMove(OverviewX(4100), overview.Y + 25, true, false);
+        ui.View.PointerUp(OverviewX(4100), overview.Y + 25, 0); ui.Paint();
+        Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual([new BreakPeriod(2000, 5000)]),
+            "Overview Shift-drag must merge all intersected breaks.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.ContentEquals(map), "Overview merge must undo in one step.");
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("timeline.insertBreak"));
+        Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual([new BreakPeriod(1200, 6250)]),
+            "Insert Break Time must merge shorter breaks in the same gap.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.ContentEquals(map), "Insert merge must undo in one step.");
+    }
+
     public static void InsertBreakButton()
     {
         var map = new MapDocument { DurationMs = 5000, IsDemo = false };

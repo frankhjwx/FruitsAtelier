@@ -132,7 +132,7 @@ public sealed partial class EditorView
         double previousEnd = timelineEnds[previous], nextStart = timelineStarts[next];
         int start = OsuTimeline.BreakStartAfter(previousEnd);
         int end = (int)Math.Clamp(Math.Floor(nextStart - CatchScrollTiming.PreemptMs(Document.ApproachRate)), 0, int.MaxValue);
-        if (end - (long)start < 400 || breakPeriods.Any(period => period.StartMs < end && period.EndMs > start)) return null;
+        if (end - (long)start < 400 || breakPeriods.Any(period => period.StartMs <= start && period.EndMs >= end)) return null;
         return new(start, end);
     }
 
@@ -147,6 +147,16 @@ public sealed partial class EditorView
         if (drag != DragKind.BreakEdge || breakEditIndex >= breakPeriods.Length) return breakPeriods;
         var periods = (BreakPeriod[])breakPeriods.Clone();
         periods[breakEditIndex] = breakEditPreview;
+        if (breakEditPreview.EndMs - (long)breakEditPreview.StartMs < 400) return periods;
+        Array.Sort(periods, (a, b) => a.StartMs.CompareTo(b.StartMs));
+        int count = 0;
+        foreach (var period in periods)
+        {
+            if (count > 0 && period.StartMs < periods[count - 1].EndMs)
+                periods[count - 1] = new(periods[count - 1].StartMs, Math.Max(periods[count - 1].EndMs, period.EndMs));
+            else periods[count++] = period;
+        }
+        Array.Resize(ref periods, count);
         return periods;
     }
 
@@ -222,20 +232,17 @@ public sealed partial class EditorView
 
     private void MoveBreakEdge(float x)
     {
-        var periods = breakPeriods;
         var neighbors = BreakNeighborTimes(breakEditOriginal);
         double raw = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale;
         int target = (int)Math.Clamp(Math.Round(snap ? TimingMap.Snap(Document, raw, divisor) : raw), 0, int.MaxValue);
         if (breakEditStart)
         {
             int minimum = (int)Math.Clamp(Math.Ceiling(neighbors.PreviousEnd ?? 0), 0, breakEditOriginal.EndMs);
-            if (breakEditIndex > 0) minimum = Math.Max(minimum, periods[breakEditIndex - 1].EndMs);
             breakEditPreview = breakEditOriginal with { StartMs = Math.Clamp(target, Math.Min(minimum, breakEditOriginal.EndMs), breakEditOriginal.EndMs) };
         }
         else
         {
             int maximum = (int)Math.Clamp(Math.Floor(neighbors.NextStart ?? TimelineDurationMs), breakEditOriginal.StartMs, int.MaxValue);
-            if (breakEditIndex + 1 < periods.Length) maximum = Math.Min(maximum, periods[breakEditIndex + 1].StartMs);
             breakEditPreview = breakEditOriginal with { EndMs = Math.Clamp(target, breakEditOriginal.StartMs, Math.Max(maximum, breakEditOriginal.StartMs)) };
         }
     }
@@ -529,7 +536,8 @@ public sealed partial class EditorView
             ? (breakEditIndex, breakEditStart) : BreakEdgeAt(mouseX, mouseY);
         if (highlightedEdge is { } edge)
         {
-            float edgeX = X(edge.Start ? breaks[edge.Index].StartMs : breaks[edge.Index].EndMs);
+            var highlightedPeriod = drag == DragKind.BreakEdge ? breakEditPreview : breaks[edge.Index];
+            float edgeX = X(edge.Start ? highlightedPeriod.StartMs : highlightedPeriod.EndMs);
             c.Line(edgeX, objectTimeline.Y + 2, edgeX, objectTimeline.Bottom - 2, 0xE8ECED, 2, .8f);
         }
         DrawTimelinePreviewMarker(c, objectTimeline, start, end);

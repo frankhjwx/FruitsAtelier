@@ -93,6 +93,14 @@ if (args.Contains("--break-preview-check"))
     Console.WriteLine("PASS Break projection, movement preview, placement and undo"); return 0;
 }
 
+if (args.Contains("--break-overlap-check"))
+{
+    TimelineOverviewTests.OverlappingBreakEditing(); TimelineOverviewTests.BreakEdgeEditing(); TimelineOverviewTests.InsertBreakButton();
+    BreakRecalculationTests.SplitEditedBreakDeletion();
+    BreakRecalculationTests.CompressedEditedBreakDeletion();
+    Console.WriteLine("PASS Overlapping break additions, edge previews, cancellation and undo"); return 0;
+}
+
 if (args.Contains("--timeline-layout-check"))
 {
     TimelineLayoutTests.Run(); TimelineOverviewTests.TransportControls(); TimelineOverviewTests.Run(); TimelineOverviewTests.DetailMarkers();
@@ -566,6 +574,9 @@ var tests = new (string Name, Action Run)[]
     ("Timing menu sets an undoable preview point", TimelineOverviewTests.PreviewPointMenu),
     ("Snap toolbar inserts an undoable break between objects", TimelineOverviewTests.InsertBreakButton),
     ("Upper timeline break edges drag, preview, cancel and remove short breaks", TimelineOverviewTests.BreakEdgeEditing),
+    ("Overlapping break additions and edge edits merge with undo", TimelineOverviewTests.OverlappingBreakEditing),
+    ("Split breaks merge after object deletion and manual edge drags", BreakRecalculationTests.SplitEditedBreakDeletion),
+    ("Compressed breaks recover after object deletion and manual edge drags", BreakRecalculationTests.CompressedEditedBreakDeletion),
     ("Bottom transport controls play, pause, stop and test", TimelineOverviewTests.TransportControls),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
     ("Map import preferences persist remembered choices and require uncertain FA decisions", MapImportSettingsTests.Run),
