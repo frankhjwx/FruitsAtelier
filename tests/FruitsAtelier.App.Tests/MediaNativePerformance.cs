@@ -184,7 +184,7 @@ internal static class MediaNativePerformance
                 nextFrameMs = Math.Max(nextFrameMs + 1000d / 120, completedMs);
                 frames.Add(new(completedMs, now, completedMs - previousMs, updateMs, Stopwatch.GetElapsedTime(renderStart).TotalMilliseconds, submitted,
                     canvas.StoryboardSprites, canvas.StoryboardDrawCalls, canvas.StoryboardTextureBytes, canvas.MediaNeedsRedraw,
-                    view.PlayheadMs, seekDurationMs is null ? null : DisplayMatches(view)));
+                    view.PlayheadMs, DisplayMatches(view)));
                 if (canvas.StoryboardTextureBytes > 512L * 1024 * 1024) throw new Exception("Storyboard textures exceeded their transient seek budget.");
                 previousMs = completedMs;
                 if (completedMs >= (seconds.Count + 1) * 1000)

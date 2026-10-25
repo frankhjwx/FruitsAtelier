@@ -1,6 +1,8 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--storyboard-image-cache-check")) return StoryboardImageCacheTests.Run();
+if (args.Length == 4 && args[0] == "--storyboard-first-playback") return StoryboardFirstPlaybackTests.Run(args[1], args[2], int.Parse(args[3]));
 if (args.Contains("--media-toggle-check")) return MediaToggleTests.Run();
 if (args.Length == 2 && args[0] == "--media-toggle-native-check") return MediaToggleNativeTests.Run(args[1]);
 if (args.Contains("--media-toggle-audio-check")) { StoryboardAudioTests.Run(s => s.EnableVideoStoryboard = false); return StoryboardAudioTests.Run(toggleDuringPlayback: true); }

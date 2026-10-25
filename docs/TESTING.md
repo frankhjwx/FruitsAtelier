@@ -8,6 +8,14 @@ substitution, looping and trigger-relative animation at arbitrary timestamps.
 muted WASAPI mixer and music clock, including pause, seek and playback speed.
 Audio output remains muted by the harness; do not change system volume.
 
+`App.Tests --storyboard-image-cache-check` uses a controlled decoder to verify
+that current-frame requests take priority over queued prefetch, including multiple
+required images and repeated preparation without duplicate decoding.
+`App.Tests --storyboard-first-playback <Platter.osu> <output-directory> <seed>`
+checks the Wings of Courage storyboard's first s15/4–7 transitions after randomized
+forward/backward seeks in a fresh hidden native renderer. Odd seeds add bounded
+decoder delays. Reports record target/display images, pending work and cache sizes.
+
 On Windows, use `App.Tests --storyboard-native-pixels <output-directory>` for
 native sprite colour/alpha checks. Use `App.Tests --media-native-profile
 <difficulty.osu> <report.json> <full-duration-ms>` for a hidden native renderer

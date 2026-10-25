@@ -52,9 +52,11 @@ internal sealed class StoryboardImageCache(Func<string, StoryboardImageCache.Pix
         {
             if (!cache.TryGetValue(path, out var value))
             {
-                if (demand && !disposed && !IsUnavailable(path) && path != loadingPath && !pending.Contains(path))
+                if (demand && !disposed && !IsUnavailable(path) && !string.Equals(path, loadingPath, StringComparison.OrdinalIgnoreCase)
+                    && (pending.Count == 0 || !string.Equals(path, pending.Peek(), StringComparison.OrdinalIgnoreCase)))
                 {
-                    pending = new(new[] { path }.Concat(pending));
+                    // A current-frame image may already be queued behind speculative preloads.
+                    pending = new(new[] { path }.Concat(pending.Where(p => !string.Equals(p, path, StringComparison.OrdinalIgnoreCase))));
                     if (!running) { running = true; _ = Task.Run(Load); }
                 }
                 return null;
