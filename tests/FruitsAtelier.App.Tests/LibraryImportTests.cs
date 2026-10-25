@@ -116,7 +116,7 @@ static class LibraryImportTests
         Check(!LibrarySettings.Load(Path.Combine(root, "settings.json")).RomanisedMetadata, "Preference survives reload");
         using (var search = new LibraryDatabase(settings.Workspace, settings.Songs).SearchSnapshot("原始标题"))
             Check(search.Count == 1, "Metadata preference does not restrict Unicode search");
-        ui.View.LoadDocument(OsuBeatmapReader.ReadFile(source)); ui.View.CloseLibrary(); ui.Paint();
+        ui.View.LoadDocument(OsuBeatmapReader.ReadFile(source)); ui.View.CloseLibrary(); ui.PaintUntilReady();
         var before = ui.View.Document.DeepClone();
         Check(ui.View.WindowTitle.Contains("原始作者 - 原始标题"), "Window title follows Unicode setting");
         settings.RomanisedMetadata = true;

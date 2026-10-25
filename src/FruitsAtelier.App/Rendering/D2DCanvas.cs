@@ -146,6 +146,8 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
 
     public void Begin()
     {
+        storyboardUploadBytes = 0; StoryboardDrawCalls = 0; StoryboardSprites = 0;
+        videoFrameRequested = false;
         if (displayDiagnostics is not null)
         {
             frameBeganMs = Audio.AudioDiagnosticLog.NowMs;
@@ -664,6 +666,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
 
     public void ReleaseDifficultyResources()
     {
+        ReleaseMedia();
         ClearPatternRasters();
         foreach (var layout in textLayouts.Values) layout.Layout.Dispose();
         textLayouts.Clear();

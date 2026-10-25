@@ -437,7 +437,7 @@
   "core.writer.originalObject": "Les données de l'objet d'origine du FSlider ne sont pas valides.",
   "core.writer.readBackError": "Différence de conversion maximale après relecture : temps {0} ms, X {1}. Pas encore comparé au client stable.",
   "core.writer.readBackPrefix": "La conversion catch a échoué après la relecture du fichier exporté : ",
-  "core.writer.resources": "Les références aux ressources conservent leur texte original ; l'appelant copie l'audio, les arrière-plans et les échantillons lors de l'exportation vers un autre répertoire. Les références vidéo et storyboard sont conservées sous forme de texte uniquement, sans chargement ni rendu.",
+  "core.writer.resources": "Les références aux ressources conservent leur texte original. Le programme appelant copie les médias et les échantillons lors de l’export vers un autre dossier. La lecture charge les vidéos et storyboards séparément des données éditables enregistrées.",
   "core.writer.rounding": "Quantification entière maximale : temps {0} ms, coordonnées {1} ; les temps sont tronqués vers zéro, les points médians sont coordonnés en s'éloignant de zéro.",
   "core.writer.sequenceChanged": "La quantification a modifié la séquence d'objets réelle : objets {0} avant l'exportation et {1} après relecture. Le nombre, le type, la source ou l'ordre diffèrent ; inspectez le résultat exporté.",
   "core.writer.sliderCount": "Le nombre Slider généré ne correspond pas aux pistes créées.",
@@ -1924,5 +1924,8 @@
   "timing.lockSv": "Verrouiller SV",
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
-  "timing.finishDraft": "Appliquez ou annulez les modifications de timing avant de changer l’affichage SV."
+  "timing.finishDraft": "Appliquez ou annulez les modifications de timing avant de changer l’affichage SV.",
+  "media.storyboardDiagnostics": "Storyboard : {0} commandes ou ressources non valides ont été ignorées.",
+  "media.storyboardFailed": "Impossible de charger le storyboard : {0}",
+  "media.loading": "Préparation des ressources de la beatmap…"
 }

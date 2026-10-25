@@ -77,7 +77,9 @@ internal static class ProjectTests
             var view = new EditorView();
             view.LoadProject(project);
             var canvas = new RecordingCanvas();
-            view.Render(canvas, 980, 620);
+            var opening = System.Diagnostics.Stopwatch.StartNew();
+            do { canvas.Clear(); view.Render(canvas, 980, 620); if (!view.LibraryOpening) break; Thread.Sleep(5); } while (opening.Elapsed.TotalSeconds < 10);
+            Check(!view.LibraryOpening, "The imported project finishes opening before tab interaction");
             var second = canvas.Texts.Single(t => t.Value == project.Difficulties[1].Name);
             view.PointerDown(second.X + 2, second.Y + 2, 0, false, false);
             view.PointerUp(second.X + 2, second.Y + 2, 0);

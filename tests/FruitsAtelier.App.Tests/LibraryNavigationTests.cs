@@ -40,6 +40,7 @@ internal static class LibraryNavigationTests
             view.PointerDown(selected.X + 2, selected.Y + 2, 0, false, false); view.PointerUp(selected.X + 2, selected.Y + 2, 0);
             Paint(); var position = Titles();
             view.PointerDoubleClick(selected.X + 2, selected.Y + 2, false, false); Paint();
+            Ready();
             Check(!view.LibraryVisible && view.HasEditorProject, "map opens directly");
             string projectDirectory = view.WorkspaceSession!.Directory;
             view.ChangeAudioPath("unsaved.ogg"); var before = view.Document.DeepClone();
@@ -50,7 +51,7 @@ internal static class LibraryNavigationTests
             Check(Titles().SequenceEqual(position), "return restores selected map position: " + string.Join("; ", position.Select(t => t.Value + "@" + t.Y)) + " -> " + string.Join("; ", Titles().Select(t => t.Value + "@" + t.Y)));
             view.RefreshLibrary(); Settle(); Check(Titles().SequenceEqual(position), "scan preserves position");
             Check(!canvas.Texts.Any(t => t.Value == L.Get("library.editor")), "Library has no editor resume button");
-            view.LoadWorkspace(WorkspaceProject.Open(projectDirectory)); Paint();
+            view.LoadWorkspace(WorkspaceProject.Open(projectDirectory)); Ready();
             Click(L.Get("ui.view")); Click(L.Get("ui.edit"));
             Check(canvas.Texts.Any(t => t.Value == L.Get("sliderBatch.menu")), "one click switches open menus");
             view.KeyDown(27, false, false); Paint();
@@ -68,6 +69,12 @@ internal static class LibraryNavigationTests
             Check(Titles().SequenceEqual(position), "restarting restores category and scroll");
 
             void Paint() { canvas.Clear(); view.Render(canvas, 980, 620); }
+            void Ready()
+            {
+                var timer = System.Diagnostics.Stopwatch.StartNew();
+                do { Paint(); if (!view.LibraryOpening) return; Thread.Sleep(5); } while (timer.Elapsed.TotalSeconds < 10);
+                throw new TimeoutException("The selected Library project did not finish opening media.");
+            }
             RecordingCanvas.Label[] Titles() => canvas.Texts.Where(t => t.X == 314 && t.Value.StartsWith("Navigation ", StringComparison.Ordinal)).ToArray();
             void Click(string text)
             {

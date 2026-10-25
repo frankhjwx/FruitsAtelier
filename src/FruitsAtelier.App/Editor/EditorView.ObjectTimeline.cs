@@ -262,6 +262,7 @@ public sealed partial class EditorView
     {
         if (!double.IsFinite(speed) || speed < .1 || speed > 1.5 || speed == PlaybackSpeed) return;
         testplay?.SetPlaybackSpeed(speed);
+        ResetHitsounds();
         PlaybackSpeed = speed;
         RequestPlaybackSpeed?.Invoke(speed);
     }

@@ -32,6 +32,8 @@ The application uses the following NuGet packages, pinned by project files and `
 | NAudio.Core / NAudio.WinMM / NAudio.Wasapi | 2.2.1 | MIT |
 | NAudio.Vorbis | 1.5.0 | MIT |
 | NVorbis | 0.10.4 | MIT |
+| FFmpeg.AutoGen | 4.3.0.1 | LGPL-3.0 |
+| ppy.osu.Framework.NativeLibs (FFmpeg libraries only) | 2025.806.0-nativelibs | MIT package; FFmpeg LGPL-2.1-or-later |
 | TagLibSharp | 2.3.0 | LGPL-2.1-only |
 
 The WebView2 SDK license is retained in `src/FruitsAtelier.App/Platform/Licenses/WebView2.txt` and copied to Windows outputs. The browser runtime is supplied by Microsoft Edge WebView2 on Windows and system WebKit on macOS.
@@ -39,6 +41,22 @@ The WebView2 SDK license is retained in `src/FruitsAtelier.App/Platform/Licenses
 Package metadata is available in the restored package `.nuspec` files under `artifacts/packages`. Source builds use the installed .NET 10 runtime; self-contained Windows and macOS packages include it. Audio source references and limits are recorded in [Audio/REFERENCE.md](src/FruitsAtelier.App/Audio/REFERENCE.md); licence texts in `Audio/Licenses` are copied to builds.
 
 Source and notices: [Vortice.Windows](https://github.com/amerkoleci/Vortice.Windows), [Vortice.Mathematics](https://github.com/amerkoleci/Vortice.Mathematics), [SharpGenTools](https://github.com/SharpGenTools/SharpGenTools).
+
+Video decoding dynamically loads FFmpeg 4.3.3 from the pinned native package at
+osu!framework revision `a7b203bee6289e15d29490ec1d578dbc07257290`. FFmpeg's
+source is available as the
+[4.3.3 release archive](https://ffmpeg.org/releases/ffmpeg-4.3.3.tar.xz);
+the upstream package's build scripts are in
+[`osu.Framework.NativeLibs/scripts/ffmpeg`](https://github.com/ppy/osu-framework/tree/a7b203bee6289e15d29490ec1d578dbc07257290/osu.Framework.NativeLibs/scripts/ffmpeg).
+Only `avcodec`, `avformat`, `avutil` and `swscale` are redistributed; BASS and other
+native runtimes in that package are excluded. FFmpeg.AutoGen's binding source is
+maintained at [Ruslan-B/FFmpeg.AutoGen revision 02622b8c80e4c3beeae4cad38cae13c8aafe1c1c](https://github.com/Ruslan-B/FFmpeg.AutoGen/tree/02622b8c80e4c3beeae4cad38cae13c8aafe1c1c);
+the distributed binding version is pinned to the 4.3.0.1 NuGet package and its lock-file hash.
+License texts are retained in `src/FruitsAtelier.App/Media/Licenses` and copied to
+application outputs. These external shared libraries may be replaced with
+ABI-compatible modified builds, including for debugging those modifications.
+The video AVIO, timestamp and seek compatibility references are recorded in
+[Media/REFERENCE.md](src/FruitsAtelier.App/Media/REFERENCE.md).
 
 The editor owns its models, curve editing and transactions. Catch conversion and gameplay calculations adapt MIT-licensed osu!lazer algorithms; the original osu!framework host and drawable classes are not bundled.
 
@@ -301,6 +319,29 @@ Discussion icons are Font Awesome Free 5.15.4 SVGs from Fonticons, Inc., commit
 The icon artwork is licensed under CC BY 4.0. Original SVGs, white PNG renderings,
 source attribution and the upstream licence notice ship in
 [assets/icons/discussion](assets/icons/discussion/README.md).
+
+## Legacy storyboards and Catch storyboard health
+
+`src/FruitsAtelier.Core/Storyboards/StoryboardScene.cs` and shared editor playback
+reference MIT-licensed [ppy/osu revision 48c4800e3ae4ee752452cdff83bd3787ccf3105f](https://github.com/ppy/osu/tree/48c4800e3ae4ee752452cdff83bd3787ccf3105f):
+`Beatmaps/Formats/LegacyStoryboardDecoder.cs`, `Storyboards/Commands`,
+`StoryboardSprite.cs`, `StoryboardExtensions.cs`, `StoryboardVideo.cs`,
+`Storyboards/Drawables/DrawableStoryboard.cs`, `DrawableStoryboardSprite.cs`,
+`DrawableStoryboardVideo.cs`, `StoryboardTriggerController.cs`,
+`Screens/Play/DimmableStoryboard.cs` and `Graphics/Containers/UserDimContainer.cs`.
+`CatchStoryboardPlayback.cs` adapts hit-sample trigger matching and Catch health
+from `Rulesets.Catch/Scoring/CatchHealthProcessor.cs`,
+`Rulesets/Scoring/LegacyDrainingHealthProcessor.cs` and `DrainingHealthProcessor.cs`.
+The ppy copyright and MIT text remain in `Core/Gameplay/LICENSE.osu.txt` and
+`Core/Conversion/LICENCE.osu.txt`.
+
+`StoryboardEasing.cs` and `StoryboardEasingKind.cs` adapt
+`Graphics/Transforms/DefaultEasingFunction.cs` and `Graphics/Easing.cs` from
+[ppy/osu-framework revision e01524d1492885d8b00ac88b38e7963d76d7d454](https://github.com/ppy/osu-framework/tree/e01524d1492885d8b00ac88b38e7963d76d7d454),
+copyright ppy Pty Ltd, MIT. Its license remains in
+`Core/Conversion/LICENCE.osu-framework.txt`. No osu! gameplay/framework runtime
+is needed by storyboard parsing or evaluation. Mapset media retain their authors'
+licenses and are not bundled as test fixtures.
 
 ## Mapset Verifier engine
 

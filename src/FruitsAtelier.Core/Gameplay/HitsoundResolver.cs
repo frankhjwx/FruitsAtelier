@@ -13,7 +13,7 @@ public sealed class HitsoundResolver
     private readonly int defaultSet;
     private readonly Dictionary<(Guid, int), EventHitsound> overrides;
     private readonly Dictionary<Guid, CurveTrack> streams;
-    public HitsoundResolver(MapDocument document, IReadOnlyList<ConvertedCatchObject> objects, IEnumerable<string>? skinFolders = null)
+    public HitsoundResolver(MapDocument document, IReadOnlyList<ConvertedCatchObject> objects, IEnumerable<string>? skinFolders = null, bool inspectResources = true)
     {
         overrides = document.HitsoundOverrides.ToDictionary(s => (s.SourceId, s.EventIndex), s => s);
         streams = document.Tracks.Where(t => t.StreamSnapDivisor is not null).ToDictionary(t => t.Id);
@@ -30,7 +30,7 @@ public sealed class HitsoundResolver
         string? set = document.OriginalSections.Where(s => s.Name == "General").SelectMany(s => s.Lines)
             .Select(l => l.Split(':', 2)).Where(p => p.Length == 2 && p[0].Trim() == "SampleSet").Select(p => p[1].Trim()).LastOrDefault();
         defaultSet = set?.ToLowerInvariant() switch { "soft" => 2, "drum" => 3, _ => 1 };
-        foreach (string folder in skinFolders ?? [])
+        foreach (string folder in inspectResources ? skinFolders ?? [] : [])
         {
             try
             {
@@ -44,7 +44,7 @@ public sealed class HitsoundResolver
             catch (UnauthorizedAccessException) { }
         }
         string? root = Path.GetDirectoryName(document.SourcePath ?? document.AudioPath);
-        if (root is not null && Directory.Exists(root))
+        if (inspectResources && root is not null && Directory.Exists(root))
         {
             try
             {

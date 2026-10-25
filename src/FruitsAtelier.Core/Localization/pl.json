@@ -437,7 +437,7 @@
   "core.writer.originalObject": "Oryginalne dane obiektu FSlider są nieprawidłowe.",
   "core.writer.readBackError": "Maksymalna różnica konwersji po ponownym odczycie: czas {0} ms, X {1}. Jeszcze nie w porównaniu ze stabilnym klientem.",
   "core.writer.readBackPrefix": "Konwersja catch nie powiodła się po ponownym wczytaniu wyeksportowanego pliku: ",
-  "core.writer.resources": "Odniesienia do zasobów zachowują swój oryginalny tekst; osoba wywołująca kopiuje dźwięk, tła i próbki podczas eksportowania do innego katalogu. Odniesienia do filmów i scenorysów są zachowywane wyłącznie jako tekst, bez ładowania i renderowania.",
+  "core.writer.resources": "Odwołania do zasobów zachowują oryginalny tekst. Przy eksporcie do innego folderu wywołujący kopiuje multimedia i próbki. Odtwarzanie wczytuje filmy i storyboardy niezależnie od zapisanych danych edycji.",
   "core.writer.rounding": "Maksymalna kwantyzacja całkowita: czas {0} ms, współrzędne {1}; czasy są obcinane w kierunku zera, punkty środkowe współrzędnych zaokrąglane są od zera.",
   "core.writer.sequenceChanged": "Kwantyzacja zmieniła rzeczywistą sekwencję obiektów: obiekty {0} przed eksportem i {1} po ponownym odczycie. Liczba, typ, źródło lub kolejność są różne; sprawdź wyeksportowany wynik.",
   "core.writer.sliderCount": "Wygenerowana liczba Slider nie jest zgodna z autorskimi utworami.",
@@ -1924,5 +1924,8 @@
   "timing.lockSv": "Zablokuj SV",
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
-  "timing.finishDraft": "Zastosuj lub anuluj zmiany timingu przed przełączeniem widoku SV."
+  "timing.finishDraft": "Zastosuj lub anuluj zmiany timingu przed przełączeniem widoku SV.",
+  "media.storyboardDiagnostics": "Storyboard: pominięto {0} nieprawidłowych poleceń lub zasobów.",
+  "media.storyboardFailed": "Nie udało się wczytać storyboardu: {0}",
+  "media.loading": "Przygotowywanie zasobów mapy…"
 }

@@ -459,7 +459,7 @@
   "core.writer.originalObject": "FSlider 的原始对象信息无效。",
   "core.writer.readBackError": "回读转换最大差异：时间 {0} ms，X {1}。尚未经 stable 客户端对照。",
   "core.writer.readBackPrefix": "输出回读后的 Catch 转换失败：",
-  "core.writer.resources": "资源引用保留原文；跨目录输出由调用方复制音频、背景和样本。视频/故事板只保留文本，不加载或渲染。",
+  "core.writer.resources": "资源引用保留原文；跨目录输出由调用方复制媒体和样本。播放时独立加载视频与故事板资源，不改变保存的编辑数据。",
   "core.writer.rounding": "整数写出最大量化误差：时间 {0} ms，坐标 {1}；时间向零截断，坐标中点远离零取整。",
   "core.writer.sequenceChanged": "量化改变实际对象序列：输出前 {0} 个，回读后 {1} 个；数量、类型、来源或次序不同，需检查导出结果。",
   "core.writer.sliderCount": "生成 slider 数量与创作曲线不一致。",
@@ -1924,5 +1924,8 @@
   "timing.lockSv": "锁定 SV",
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV（×）",
-  "timing.finishDraft": "请先应用或取消 Timing 编辑，再切换 SV 显示。"
+  "timing.finishDraft": "请先应用或取消 Timing 编辑，再切换 SV 显示。",
+  "media.storyboardDiagnostics": "故事板：已跳过 {0} 条无效指令或资源。",
+  "media.storyboardFailed": "无法载入故事板：{0}",
+  "media.loading": "正在准备谱面资源…"
 }

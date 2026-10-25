@@ -1261,6 +1261,9 @@ public sealed partial class EditorView
         if (AudioDiagnosticMarkerKeyDown(virtualKey, ctrl, shift)) return;
         if (FullscreenKeyDown(virtualKey, ctrl, shift)) return;
         if (VersionHistoryVisible) { VersionHistoryKey(virtualKey); return; }
+        if (virtualKey == 27 && mediaOpening && !mediaExitPending && !ContentConfirmationVisible
+            && !ErrorVisible && libraryOpenTask is null)
+        { ShowLibrary(); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
             return;

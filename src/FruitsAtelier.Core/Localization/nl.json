@@ -437,7 +437,7 @@
   "core.writer.originalObject": "De oorspronkelijke objectgegevens van de FSlider zijn ongeldig.",
   "core.writer.readBackError": "Maximaal conversieverschil na herlezen: tijd {0} ms, X {1}. Nog niet vergeleken met de stabiele klant.",
   "core.writer.readBackPrefix": "Catch-conversie mislukt na het opnieuw lezen van het geëxporteerde bestand: ",
-  "core.writer.resources": "Bronreferenties behouden hun originele tekst; de beller kopieert audio, achtergronden en voorbeelden bij het exporteren naar een andere map. Video- en storyboardreferenties worden alleen als tekst bewaard, zonder laden of renderen.",
+  "core.writer.resources": "Bronverwijzingen behouden hun oorspronkelijke tekst. Bij export naar een andere map kopieert de aanroeper media en samples. Video en storyboard worden voor het afspelen apart van de opgeslagen bewerkingsgegevens geladen.",
   "core.writer.rounding": "Maximale kwantisering van gehele getallen: tijd {0} ms, coördinaten {1}; tijden worden afgekapt richting nul, coördinaatmiddelpunten ronden af ​​van nul.",
   "core.writer.sequenceChanged": "Kwantisering veranderde de feitelijke objectvolgorde: {0}-objecten vóór export en {1} na opnieuw lezen. Aantal, type, bron of volgorde verschilt; het geëxporteerde resultaat inspecteren.",
   "core.writer.sliderCount": "Het gegenereerde aantal Slider komt niet overeen met de geschreven tracks.",
@@ -1924,5 +1924,8 @@
   "timing.lockSv": "SV vergrendelen",
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
-  "timing.finishDraft": "Pas timingwijzigingen toe of annuleer ze voordat je de SV-weergave wisselt."
+  "timing.finishDraft": "Pas timingwijzigingen toe of annuleer ze voordat je de SV-weergave wisselt.",
+  "media.storyboardDiagnostics": "Storyboard: {0} ongeldige opdrachten of bronnen overgeslagen.",
+  "media.storyboardFailed": "Storyboard kon niet worden geladen: {0}",
+  "media.loading": "Beatmapbronnen voorbereiden…"
 }

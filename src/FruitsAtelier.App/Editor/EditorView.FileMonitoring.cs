@@ -20,6 +20,7 @@ public sealed partial class EditorView
 
     public void StopFileMonitoring()
     {
+        RetireStoryboard();
         acceptedFileCheck = null;
         fileMonitor?.Dispose(); fileMonitor = null;
         historyCompressionEnabled = false;
@@ -54,6 +55,15 @@ public sealed partial class EditorView
         ConfigureFileMonitoring();
         if (fileMonitor is null || !fileMonitor.IsReady(DateTime.UtcNow)) return;
         var changes = fileMonitor.Drain(DateTime.UtcNow);
+        if (storyboardDirectory is { } mediaDirectory && (changes.FullScan || changes.Paths.Any(path =>
+            WorkspaceProject.Within(mediaDirectory, path) && Path.GetExtension(path).ToLowerInvariant() is ".osb" or ".png" or ".jpg" or ".jpeg" or ".mp4" or ".m4v" or ".avi" or ".flv" or ".mov" or ".mpg" or ".wmv")))
+        {
+            RetireStoryboard(preserveDisplay: true); RefreshStoryboard();
+            // Rewritten media can keep its filename; path-keyed renderer pixels must be retired.
+            if (changes.Paths.Any(path => WorkspaceProject.Within(mediaDirectory, path)
+                && Path.GetExtension(path).ToLowerInvariant() is ".png" or ".jpg" or ".jpeg" or ".mp4" or ".m4v" or ".avi" or ".flv" or ".mov" or ".mpg" or ".wmv"))
+                difficultyGraphicsReleasePending = true;
+        }
         if (changes.FullScan) libraryRescanRequested = true;
         foreach (string path in changes.Paths)
         {

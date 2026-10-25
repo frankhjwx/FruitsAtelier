@@ -39,8 +39,9 @@ public sealed partial class EditorView
 
     public void StartTestplay()
     {
+        bool mediaCanDefer = mediaOpening && libraryOpenTask is null && !AudioProjectCreating && workspaceSaveTask is null && syncCommitTask is null;
         if (IsTestplaying || !HasEditorProject || LibraryVisible || ExportVisible || ErrorVisible ||
-            DiscardConfirmationVisible || SliderDialogVisible || (RotationVisible || TimeJumpVisible) || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
+            ContentConfirmationVisible || SynchronizationBlocksInput && !mediaCanDefer || SliderDialogVisible || (RotationVisible || TimeJumpVisible) || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
             drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading) return;
         EnsureConversion();
         if (deferredConversion)
@@ -49,6 +50,7 @@ public sealed partial class EditorView
             return;
         }
         if (!conversion!.Success) return;
+        if (DeferMediaPlayback(true)) return;
         if (IsLazerEditing && !AudioPlaying && TestplayRealtime < lazerSeekStarted + 300)
             SeekTo(LazerPresentationTime);
         testplayReturnPosition = playhead;
@@ -97,6 +99,9 @@ public sealed partial class EditorView
 
     private void BeginTestplay(CatchTestplay session, bool audioAlreadyPlaying, bool startPaused = false)
     {
+        var storyboardPlayback = storyboardTestplay = storyboardTemplate?.Fork(testplayStart);
+        storyboardTriggerVersion = -1; storyboardFrameTime = double.NaN;
+        storyboardSamplePosition = testplayStart - .001; storyboardSamplesThrough = null;
         comboCurrent = comboPrevious = 0; comboChangedAt = double.NegativeInfinity;
         var resolver = new HitsoundResolver(Document, PreviewObjects(), HitsoundSkinFolders);
         var sounds = PreviewObjects().ToDictionary(item => (item.SourceId, item.EventIndex), resolver.Resolve);
@@ -120,7 +125,7 @@ public sealed partial class EditorView
                     if (scheduleSound is not null) scheduleSound(sound, item.TimeMs);
                     else playSound?.Invoke(sound);
                 }
-            });
+            }, judged: (item, hit) => storyboardPlayback?.Judge(item, hit), advanced: time => storyboardPlayback?.Advance(time));
         if (startPaused) testplay.TogglePause();
         if (RequestRunTestplay is null)
             foreach (int key in heldEditorKeys) testplay.SetKey(key, true);
@@ -144,7 +149,7 @@ public sealed partial class EditorView
         double returnTime = atCurrentPosition && testplay is not null ? testplay.TransportPosition : testplayReturnPosition;
         testplay?.Cancel();
         testplayDriver?.Dispose(); testplayDriver = null;
-        testplay = null; testplayFrame = null;
+        testplay = null; testplayFrame = null; storyboardTestplay = null; storyboardTriggerVersion = -1; storyboardFrameTime = double.NaN;
         testplayQuickRetryHeld = false;
         testplayResumeAt = null;
         testplayAutoNotice = null;
@@ -182,6 +187,7 @@ public sealed partial class EditorView
     {
         if (testplay is null) return;
         double time = testplay.TogglePause();
+        ResetHitsounds();
         if (TestplayPaused) FadeTestplayMenu(1, opening: true);
         ResetTestplayPointer();
         testplayMenuSelection = 0;
@@ -225,6 +231,7 @@ public sealed partial class EditorView
             testplayAutoNoticeAt = TestplayRealtime;
         }
         playhead = testplayFrame.TimeMs;
+        UpdateStoryboardSamples(playhead, !testplay.Paused);
         UpdateBackgroundDim();
         foreach (var change in testplayFrame.ComboChanges)
         {
@@ -296,6 +303,7 @@ public sealed partial class EditorView
         DrawCatchLighting(c, frame.Lighting, playhead, x, fieldWidth, catchY, PreviewCircleSize);
         if (LibrarySettings.ShowTestplayCombo) DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
         c.Unclip();
+        DrawStoryboardOverlay(c, new(0, 0, width, height), CurrentBackgroundDim);
         DrawTestplayInformation(c, frame);
         if (testplayAutoNotice is { } notice)
         {

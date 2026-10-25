@@ -10,7 +10,8 @@ public sealed partial class EditorView
     private bool addDifficultyConfirmation, faOnlyConfirmation, newDifficultyFaOnly;
     private bool offerSongsExport;
     private bool keepDeletedProjectBackup;
-    public bool DiscardConfirmationVisible => MapTemplatesVisible || FazVisible || discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput || previousSaveRestore is not null;
+    private bool ContentConfirmationVisible => MapTemplatesVisible || FazVisible || discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || previousSaveRestore is not null;
+    public bool DiscardConfirmationVisible => ContentConfirmationVisible || SynchronizationBlocksInput;
 
     public void ShowDiscardConfirmation(Action<int> answer)
     {

@@ -18,6 +18,11 @@
     <!-- Use the security backport for Avalonia's transitive D-Bus dependency. -->
     <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
     <PackageReference Include="NVorbis" Version="0.10.4" />
+    <PackageReference Include="FFmpeg.AutoGen" Version="4.3.0.1" />
+    <PackageReference Include="ppy.osu.Framework.NativeLibs" Version="2025.806.0-nativelibs" ExcludeAssets="runtime" GeneratePathProperty="true" />
+    <Content Include="$(Pkgppy_osu_Framework_NativeLibs)/runtimes/osx/native/libav*.dylib;$(Pkgppy_osu_Framework_NativeLibs)/runtimes/osx/native/libswscale*.dylib" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Compile Include="../FruitsAtelier.App/Media/*.cs" Link="Media/%(Filename)%(Extension)" />
+    <Content Include="../FruitsAtelier.App/Media/Licenses/*.txt" Link="Media/Licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Compile Include="../FruitsAtelier.App/Editor/*.cs" Link="Editor/%(Filename)%(Extension)" />
     <Compile Include="../FruitsAtelier.App/Skinning/CatchSkin.cs" Link="Skinning/CatchSkin.cs" />
     <Compile Include="../FruitsAtelier.App/Rendering/ICanvas.cs" Link="Rendering/ICanvas.cs" />

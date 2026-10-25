@@ -41,11 +41,11 @@ internal static class TimingAlignmentUiTests
                 ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
                 ui.View.LoadWorkspace(session);
                 Check(ui.View.SwitchDifficulty(1), "Initial difficulty selection completes before prompting");
-                ui.Paint(); Check(ui.View.TimingAlignmentPromptVisible, "Workspace opening automatically requests the check");
+                ui.PaintUntilReady(); Check(ui.View.TimingAlignmentPromptVisible, "Workspace opening automatically requests the check");
                 ui.View.AnswerTimingAlignment(false); ui.Paint();
                 Check(ui.View.SwitchDifficulty(0), "Difficulty navigation resumes after answering");
-                ui.Paint(); Check(ui.View.TimingAlignmentPromptVisible, "Another difficulty gets its own first-open check");
-                ui.View.AnswerTimingAlignment(false); ui.Paint(); ui.View.SwitchDifficulty(1); ui.Paint();
+                ui.PaintUntilReady(); Check(ui.View.TimingAlignmentPromptVisible, "Another difficulty gets its own first-open check");
+                ui.View.AnswerTimingAlignment(false); ui.Paint(); ui.View.SwitchDifficulty(1); ui.PaintUntilReady();
                 Check(!ui.View.TimingAlignmentPromptVisible, "Previously answered difficulties do not repeat");
                 ui.View.StopFileMonitoring(); ui.View.NewProject();
                 var spinner = new MapDocument { IsDemo = false, DurationMs = 5000 };
@@ -64,7 +64,7 @@ internal static class TimingAlignmentUiTests
                 ui.Key(89, true); Check(ui.View.Document.BananaShowers[0].TimeMs == 387, "Spinner prompt correction supports redo");
                 ui.View.NewProject();
                 var spinnerSession = WorkspaceProject.Create(Path.Combine(root, "SpinnerWorkspace"), BeatmapProject.FromDocuments([spinner]), songs);
-                ui.View.LoadWorkspace(spinnerSession); ui.Paint();
+                ui.View.LoadWorkspace(spinnerSession); ui.PaintUntilReady();
                 Check(ui.View.TimingAlignmentPromptVisible && ui.View.TimingAlignmentObjectCount == 1,
                     "Opening a saved spinner workspace automatically prompts without a manual check command");
                 ui.View.AnswerTimingAlignment(false); ui.View.StopFileMonitoring(); ui.View.NewProject();

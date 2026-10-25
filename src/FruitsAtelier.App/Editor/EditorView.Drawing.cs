@@ -35,11 +35,14 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        storyboardRenderFrame++;
+        PumpStoryboardGameplay();
         PumpBrowserClear();
         // Full-screen pages can return before laying out docks; never reuse their previous native viewport.
         browserRenderedViewport = browserToolbar = default;
         discussionMarkerHits.Clear(); discussionQuoteBounds.Clear(); discussionQuoteActions.Clear(); discussionQuoteViews.Clear();
         RenderContent(c, width, height);
+        ReportMediaError(c);
         DrawOsuLinkNotice(c);
         DrawOsuLinkFallback(c);
     }
@@ -83,14 +86,20 @@ public sealed partial class EditorView
         LegacyConversionBounds = StreamConversionBounds = default;
         distanceLabelBounds.Clear(); PreviousDistanceFieldBounds = NextDistanceFieldBounds = XCoordinateFieldBounds = null;
         AdvanceCanvasBackgroundDim();
+        if (difficultyGraphicsReleasePending) { c.ReleaseDifficultyResources(); difficultyGraphicsReleasePending = false; }
         if (IsTestplaying)
         {
             AdvanceTestplay();
-            if (IsTestplaying) { DrawTestplay(c); return; }
+            if (IsTestplaying) { if (!DrawMediaOpening(c)) DrawTestplay(c); return; }
         }
         if (ErrorVisible) { DrawError(c); return; }
         PumpSliderBatch();
         PumpLibrary();
+        if (!LibraryVisible)
+        {
+            EnsureConversion();
+            if (DrawMediaOpening(c)) return;
+        }
         if (FirstRunSetupVisible)
         {
             DrawFirstRunSetup(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c);
@@ -138,6 +147,8 @@ public sealed partial class EditorView
             else
             {
                 DrawCanvas(c);
+                DrawStoryboardOverlay(c, new(leftPanel.Right, canvas.Y + 38,
+                    canvas.Right - leftPanel.Right, plot.Bottom - canvas.Y - 38), LibrarySettings.MappingCanvasBackgroundDim / 100f);
                 DrawCollaborationCanvasLock(c);
                 DrawToolPalette(c);
                 DrawDistanceReadout(c);
@@ -624,6 +635,7 @@ public sealed partial class EditorView
             DrawCatchObject(c, item, fieldLeft + (float)(item.X / 512) * fieldWidth, y, fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
         }
         c.Unclip();
+        DrawStoryboardOverlay(c, stage, LibrarySettings.BackgroundDim / 100f);
     }
 
     private void DrawKiaiBadge(ICanvas c)

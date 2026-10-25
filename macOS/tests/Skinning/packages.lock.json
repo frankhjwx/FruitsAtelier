@@ -97,6 +97,11 @@
           "Avalonia.Skia": "11.3.7"
         }
       },
+      "FFmpeg.AutoGen": {
+        "type": "Transitive",
+        "resolved": "4.3.0.1",
+        "contentHash": "koM5zqdZZHGAVK0faNZgi9HjCrHrMRGaTqmTEbvMSx3YeNIZBd62JQMZjAE0HlQ3NsLnRvXigVJtwRidOnosUw=="
+      },
       "HarfBuzzSharp": {
         "type": "Transitive",
         "resolved": "8.3.1.1",
@@ -152,6 +157,11 @@
         "type": "Transitive",
         "resolved": "0.10.4",
         "contentHash": "WYnil3DhQHzjCY0dM9I2B3r1vWip90AOuQd25KE4NrjPQBg0tBJFluRLm5YPnO5ZLDmwrfosY8jCQGQRmWI/Pg=="
+      },
+      "ppy.osu.Framework.NativeLibs": {
+        "type": "Transitive",
+        "resolved": "2025.806.0-nativelibs",
+        "contentHash": "andr6OYdjUCpglWMdKoXarGVcgQFza3oRZ8LMJFHjv31N2tO6v9DTs6gZdJB8YWuOBMn77A6Eg3Hy38UZhD9IA=="
       },
       "SkiaSharp": {
         "type": "Transitive",
@@ -234,9 +244,11 @@
         "dependencies": {
           "Avalonia.Desktop": "[11.3.7, )",
           "Avalonia.Themes.Fluent": "[11.3.7, )",
-          "FruitsAtelier.Core": "[1.2.2, )",
+          "FFmpeg.AutoGen": "[4.3.0.1, )",
+          "FruitsAtelier.Core": "[1.2.3, )",
           "NVorbis": "[0.10.4, )",
-          "Tmds.DBus.Protocol": "[0.21.3, )"
+          "Tmds.DBus.Protocol": "[0.21.3, )",
+          "ppy.osu.Framework.NativeLibs": "[2025.806.0-nativelibs, )"
         }
       }
     }

@@ -437,7 +437,7 @@
   "core.writer.originalObject": "Los datos del objeto original del FSlider no son válidos.",
   "core.writer.readBackError": "Diferencia de conversión máxima después de la relectura: tiempo {0} ms, X {1}. Aún no comparado con el cliente estable.",
   "core.writer.readBackPrefix": "La conversión de captura falló después de volver a leer el archivo exportado: ",
-  "core.writer.resources": "Las referencias de recursos conservan su texto original; la persona que llama copia audio, fondos y muestras al exportar a otro directorio. Las referencias de videos y guiones gráficos se conservan solo como texto, sin cargarse ni renderizarse.",
+  "core.writer.resources": "Las referencias a recursos conservan su texto original. Quien realiza la exportación copia los medios y las muestras a la carpeta de destino. La reproducción carga los vídeos y storyboards por separado de los datos de edición guardados.",
   "core.writer.rounding": "Cuantización entera máxima: tiempo {0} ms, coordenadas {1}; los tiempos se truncan hacia cero, los puntos medios de las coordenadas se redondean alejándose de cero.",
   "core.writer.sequenceChanged": "La cuantificación cambió la secuencia real de objetos: objetos {0} antes de la exportación y {1} después de la relectura. El recuento, el tipo, la fuente o el orden difieren; inspeccionar el resultado exportado.",
   "core.writer.sliderCount": "El recuento de Slider generado no coincide con las pistas creadas.",
@@ -1924,5 +1924,8 @@
   "timing.lockSv": "Bloquear SV",
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
-  "timing.finishDraft": "Aplica o cancela los cambios de timing antes de cambiar la vista SV."
+  "timing.finishDraft": "Aplica o cancela los cambios de timing antes de cambiar la vista SV.",
+  "media.storyboardDiagnostics": "Storyboard: se omitieron {0} comandos o recursos no válidos.",
+  "media.storyboardFailed": "No se pudo cargar el storyboard: {0}",
+  "media.loading": "Preparando los recursos del mapa…"
 }

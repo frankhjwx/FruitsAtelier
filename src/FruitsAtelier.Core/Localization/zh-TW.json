@@ -437,7 +437,7 @@
   "core.writer.originalObject": "FSlider的原始物件資料無效。",
   "core.writer.readBackError": "重讀後最大轉換差：時間{0} ms，X {1}。尚未與穩定客戶端進行比較。",
   "core.writer.readBackPrefix": "重新讀取導出的檔案後發現轉換失敗：",
-  "core.writer.resources": "資源引用保留其原始文字；匯出到另一個目錄時，呼叫者會複製音訊、背景和樣本。影片和故事板引用僅保留為文本，而不載入或渲染。",
+  "core.writer.resources": "資源引用保留原文；跨目錄輸出由呼叫方複製媒體和樣本。播放時獨立載入影片與故事板資源，不改變儲存的編輯資料。",
   "core.writer.rounding": "最大整數化：時間{0} ms，座標{1}；時間向零截斷，座標中點遠離零。",
   "core.writer.sequenceChanged": "量化更改了實際物件順序：導出前的 {0} 物件和重新讀取後的 {1}。數量、類型、來源或順序不同；檢查導出的結果。",
   "core.writer.sliderCount": "產生的 滑條 計數與創作的曲目不符。",
@@ -1924,5 +1924,8 @@
   "timing.lockSv": "鎖定 SV",
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV（×）",
-  "timing.finishDraft": "請先套用或取消 Timing 編輯，再切換 SV 顯示。"
+  "timing.finishDraft": "請先套用或取消 Timing 編輯，再切換 SV 顯示。",
+  "media.storyboardDiagnostics": "故事板：已略過 {0} 條無效指令或資源。",
+  "media.storyboardFailed": "無法載入故事板：{0}",
+  "media.loading": "正在準備譜面資源…"
 }

@@ -92,12 +92,12 @@ internal static class FeedbackInteractionTests
         var project = BeatmapProject.FromDocuments([map, other]);
         var session = WorkspaceProject.Create(workspace, project, "");
         var ui = new Ui(false); ui.View.LibrarySettings.Workspace = workspace;
-        ui.View.LoadWorkspace(session); ui.Paint();
+        ui.View.LoadWorkspace(session); ui.PaintUntilReady();
         ui.Key('L', ctrl: true); Wait(ui);
         Check(!ui.View.DiscardConfirmationVisible && ui.View.Document.Fruits[0].X == 100, "First save offered an invalid rollback.");
         project.Difficulties[0].Document.Fruits[0].X = 300;
         WorkspaceProject.Save(session, project);
-        ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory)); ui.Paint();
+        ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory)); ui.PaintUntilReady();
         ui.View.Document.Fruits[0].X = 400;
         WorkspaceVersionHistory.ArchiveCurrent(ui.View.WorkspaceSession!, ui.View.CaptureProject());
         ui.Key('L', ctrl: true); Wait(ui);

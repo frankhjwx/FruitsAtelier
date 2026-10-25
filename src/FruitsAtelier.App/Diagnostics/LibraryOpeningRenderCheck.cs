@@ -12,7 +12,10 @@ internal static class LibraryOpeningRenderCheck
     {
         string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "library-opening", Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(root);
-        var session = WorkspaceProject.Create(root, BeatmapProject.FromDocuments([new MapDocument { Name = "Library open", IsDemo = false }, new MapDocument { Name = "Second", IsDemo = false }]), "");
+        var first = new MapDocument { Name = "Library open", IsDemo = false };
+        var second = new MapDocument { Name = "Second", IsDemo = false };
+        foreach (var document in new[] { first, second }) SongSetup.Set(document, "Metadata", "Creator", "LibraryFixtureMapper");
+        var session = WorkspaceProject.Create(root, BeatmapProject.FromDocuments([first, second]), "");
         var gate = typeof(WorkspaceProject).GetField("Gate", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!.GetValue(null)!;
         string language = L.Language;
         try
@@ -23,7 +26,7 @@ internal static class LibraryOpeningRenderCheck
             {
                 L.SetLanguage(locale);
                 var view = new EditorView(false);
-                view.InitializeLibrary(true, new LibrarySettings { Workspace = root });
+                view.InitializeLibrary(true, new LibrarySettings { Workspace = root, MapperUsernames = ["LibraryFixtureMapper"] });
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
                 WaitForLibrary();
                 view.PointerDown(40, 150, 0, false, false); view.PointerUp(40, 150, 0);
@@ -61,7 +64,7 @@ internal static class LibraryOpeningRenderCheck
                     canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
                     view.PointerDown(50, 50, 0, false, false); view.PointerUp(50, 50, 0);
                     if (!view.LibraryOpening || view.HasEditorProject || completed != 0 || view.PrepareFileOperation())
-                        throw new InvalidOperationException("Pending library open did not isolate input.");
+                        throw new InvalidOperationException($"Pending library open did not isolate input: opening={view.LibraryOpening}, editor={view.HasEditorProject}, completed={completed}.");
                     if (timer.Elapsed > TimeSpan.FromSeconds(2))
                         throw new InvalidOperationException("Pending library open blocked native rendering.");
                     AppLog.Write($"Library opening native pending frame passed: {locale}, {size}, DPI={dpi}, {timer.Elapsed.TotalMilliseconds:F2} ms.");

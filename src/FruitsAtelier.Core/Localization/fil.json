@@ -437,7 +437,7 @@
   "core.writer.originalObject": "Di-wasto ang orihinal na object data ng FSlider.",
   "core.writer.readBackError": "Pinakamataas na pagkakaiba sa conversion pagkatapos ng muling pagbabasa: oras {0} ms, X {1}. Hindi pa kumpara sa matatag na kliyente.",
   "core.writer.readBackPrefix": "Nabigo ang catch conversion pagkatapos basahin muli ang na-export na file: ",
-  "core.writer.resources": "Ang mga sanggunian sa mapagkukunan ay nagpapanatili ng kanilang orihinal na teksto; kinokopya ng tumatawag ang audio, mga background, at mga sample kapag nag-e-export sa ibang direktoryo. Ang mga sanggunian sa video at storyboard ay pinananatili bilang teksto lamang, nang hindi naglo-load o nagre-render.",
+  "core.writer.resources": "Pinapanatili ng mga resource reference ang orihinal na teksto. Kinokopya ng tumatawag ang media at mga sample kapag nag-e-export sa ibang folder. Hiwalay na nilo-load ang video at storyboard sa naka-save na data ng pag-edit.",
   "core.writer.rounding": "Maximum integer quantization: oras {0} ms, coordinate {1}; beses na pinutol patungo sa zero, i-coordinate ang mga midpoint na umiikot palayo sa zero.",
   "core.writer.sequenceChanged": "Binago ng quantization ang aktwal na pagkakasunud-sunod ng bagay: {0} na mga bagay bago i-export at {1} pagkatapos muling basahin. Nag-iiba ang bilang, uri, pinagmulan, o pagkakasunud-sunod; suriin ang na-export na resulta.",
   "core.writer.sliderCount": "Ang nabuong bilang ng Slider ay hindi tumutugma sa mga isinulat na track.",
@@ -1924,5 +1924,8 @@
   "timing.lockSv": "I-lock ang SV",
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
-  "timing.finishDraft": "Ilapat o kanselahin ang mga timing edit bago palitan ang SV display."
+  "timing.finishDraft": "Ilapat o kanselahin ang mga timing edit bago palitan ang SV display.",
+  "media.storyboardDiagnostics": "Storyboard: nilaktawan ang {0} di-wastong command o resource.",
+  "media.storyboardFailed": "Hindi ma-load ang storyboard: {0}",
+  "media.loading": "Inihahanda ang mga resource ng beatmap…"
 }

@@ -33,7 +33,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 - **Editable streams and stacks.** Turn a slider curve into a fruit stream at a chosen beat subdivision, or an alternating stack with a variable width envelope. Keep the parent curve editable, adjust individual fruits, or separate the pattern into independent fruits. Both export as hit circles.
 - **Pattern Gallery.** Save independent pattern snapshots, browse skinned previews, drag them into another map at its BPM, and share `.fpt` packages. [Edit patterns](docs/PATTERN_GALLERY.md) in the main canvas while retaining your current map's unsaved work.
 
-Catch `.osu` import supports versions 7–14 and stable-compatible lazer v128. Version 7 maps retain v7 on export to preserve their slider ticks; other maps export as v14. Video and storyboard playback are not available in 1.2.3.
+Catch `.osu` import supports versions 7–14 and stable-compatible lazer v128. Version 7 maps retain v7 on export to preserve their slider ticks; other maps export as v14. Video and storyboard playback follows the song transport in the mapping canvas, Catch preview and testplay, including storyboard samples and gameplay triggers. Preview hitsound triggers follow actual sound playback; seeking alone does not activate them.
 
 ## Get started
 

@@ -437,7 +437,7 @@
   "core.writer.originalObject": "FSlider의 원래 개체 데이터가 유효하지 않습니다.",
   "core.writer.readBackError": "다시 읽은 후 최대 변환 차이: 시간 {0} ms, X {1}. 아직 안정적인 클라이언트와 비교되지 않았습니다.",
   "core.writer.readBackPrefix": "내보낸 파일을 다시 읽은 후 Catch 변환에 실패했습니다. ",
-  "core.writer.resources": "리소스 참조는 원본 텍스트를 유지합니다. 호출자는 다른 디렉토리로 내보낼 때 오디오, 배경 및 샘플을 복사합니다. 비디오 및 스토리보드 참조는 로드나 렌더링 없이 텍스트로만 유지됩니다.",
+  "core.writer.resources": "리소스 참조는 원본 텍스트를 유지합니다. 다른 폴더로 내보낼 때 호출자가 미디어와 샘플을 복사합니다. 재생 시 동영상과 스토리보드 리소스는 저장된 편집 데이터와 별도로 로드됩니다.",
   "core.writer.rounding": "최대 정수 양자화: 시간 {0} ms, 좌표 {1}; 시간은 0을 향해 잘리고, 좌표 중간점은 0에서 멀어지는 방향으로 반올림됩니다.",
   "core.writer.sequenceChanged": "양자화는 실제 개체 시퀀스를 변경했습니다. 내보내기 전의 {0} 개체와 다시 읽은 후의 {1}입니다. 개수, 유형, 소스 또는 순서가 다릅니다. 내보낸 결과를 검사합니다.",
   "core.writer.sliderCount": "생성된 슬라이더 개수가 작성된 트랙과 일치하지 않습니다.",
@@ -1924,5 +1924,8 @@
   "timing.lockSv": "SV 잠금",
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
-  "timing.finishDraft": "SV 표시를 전환하기 전에 타이밍 편집을 적용하거나 취소하세요."
+  "timing.finishDraft": "SV 표시를 전환하기 전에 타이밍 편집을 적용하거나 취소하세요.",
+  "media.storyboardDiagnostics": "스토리보드: 잘못된 명령 또는 리소스 {0}개를 건너뛰었습니다.",
+  "media.storyboardFailed": "스토리보드를 불러올 수 없습니다: {0}",
+  "media.loading": "비트맵 리소스를 준비하는 중…"
 }

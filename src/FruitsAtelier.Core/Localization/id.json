@@ -437,7 +437,7 @@
   "core.writer.originalObject": "Data objek asli FSlider tidak valid.",
   "core.writer.readBackError": "Perbedaan konversi maksimum setelah membaca ulang: waktu {0} ms, X {1}. Belum dibandingkan dengan klien stabil.",
   "core.writer.readBackPrefix": "Konversi tangkapan gagal setelah membaca ulang file yang diekspor: ",
-  "core.writer.resources": "Referensi sumber daya mempertahankan teks aslinya; pemanggil menyalin audio, latar belakang, dan sampel saat mengekspor ke direktori lain. Referensi video dan storyboard dipertahankan sebagai teks saja, tanpa memuat atau merender.",
+  "core.writer.resources": "Referensi sumber daya mempertahankan teks aslinya. Pemanggil menyalin media dan sampel saat mengekspor ke folder lain. Pemutaran memuat video dan storyboard secara terpisah dari data penyuntingan yang disimpan.",
   "core.writer.rounding": "Kuantisasi bilangan bulat maksimum: waktu {0} ms, koordinat {1}; kali terpotong menuju nol, koordinat titik tengah membulat menjauh dari nol.",
   "core.writer.sequenceChanged": "Kuantisasi mengubah urutan objek sebenarnya: objek {0} sebelum diekspor dan {1} setelah dibaca ulang. Jumlah, jenis, sumber, atau urutannya berbeda; memeriksa hasil yang diekspor.",
   "core.writer.sliderCount": "Jumlah Slider yang dihasilkan tidak cocok dengan trek yang dibuat.",
@@ -1924,5 +1924,8 @@
   "timing.lockSv": "Kunci SV",
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
-  "timing.finishDraft": "Terapkan atau batalkan perubahan timing sebelum mengganti tampilan SV."
+  "timing.finishDraft": "Terapkan atau batalkan perubahan timing sebelum mengganti tampilan SV.",
+  "media.storyboardDiagnostics": "Storyboard: {0} perintah atau sumber daya tidak valid dilewati.",
+  "media.storyboardFailed": "Storyboard tidak dapat dimuat: {0}",
+  "media.loading": "Menyiapkan sumber daya beatmap…"
 }

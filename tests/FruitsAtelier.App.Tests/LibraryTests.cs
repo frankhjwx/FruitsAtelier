@@ -36,7 +36,11 @@ internal static class LibraryTests
             Check(!view.HasEditorProject && view.WorkspaceSession is null, "returning to library closes the editor project");
             string? exportName = null;
             view.RequestWorkspaceExport = (overwrite, name) => { Check(!overwrite, "First export creates the osu file"); exportName = name; };
-            view.LoadWorkspace(WorkspaceProject.Open(savedDirectory)); view.ShowWorkspaceExport(); canvas.Clear(); view.Render(canvas, 980, 620);
+            view.LoadWorkspace(WorkspaceProject.Open(savedDirectory));
+            var exportOpeningDeadline = DateTime.UtcNow.AddSeconds(10);
+            do { canvas.Clear(); view.Render(canvas, 980, 620); if (!view.LibraryOpening) break; Thread.Sleep(5); } while (DateTime.UtcNow < exportOpeningDeadline);
+            Check(!view.LibraryOpening, "The reopened project finishes opening before Songs export");
+            view.ShowWorkspaceExport(); canvas.Clear(); view.Render(canvas, 980, 620);
             Check(!view.ExportVisible && exportName == view.CurrentDifficultyName, "First Songs export uses the current name without an export dialog");
             view.CloseLibrary();
             Check(Directory.GetFiles(songs).Length == 0, "navigation and saving never write Songs");
@@ -145,6 +149,9 @@ internal static class LibraryTests
             view.CloseLibrary();
         }
         view.LoadWorkspace(WorkspaceProject.Open(directory));
+        var openingDeadline = DateTime.UtcNow.AddSeconds(10);
+        do { canvas.Clear(); view.Render(canvas, 980, 620); if (!view.LibraryOpening) break; Thread.Sleep(5); } while (DateTime.UtcNow < openingDeadline);
+        Check(!view.LibraryOpening, "The optional Songs fixture finishes opening before export interaction");
         bool exported = false; view.RequestWorkspaceExport = (_, _) => exported = true;
         view.ShowWorkspaceExport(); canvas.Clear(); view.Render(canvas, 980, 620);
         Click(view, canvas, L.Get("library.exportCreate"));

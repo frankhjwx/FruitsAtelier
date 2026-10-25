@@ -1,5 +1,41 @@
 # Building and Testing
 
+## Video and storyboard playback
+
+`Core.Tests --storyboard-check` checks legacy commands, easing endpoints, variable
+substitution, looping and trigger-relative animation at arbitrary timestamps.
+`App.Tests --storyboard-audio-check` checks storyboard samples through the actual
+muted WASAPI mixer and music clock, including pause, seek and playback speed.
+Audio output remains muted by the harness; do not change system volume.
+
+On Windows, use `App.Tests --storyboard-native-pixels <output-directory>` for
+native sprite colour/alpha checks. Use `App.Tests --media-native-profile
+<difficulty.osu> <report.json> <full-duration-ms>` for a hidden native renderer
+profile. Pass the full audio/storyboard duration explicitly, including intros and
+outros outside the hit-object range. Reports distinguish UI CPU and allocations
+from completed GPU frames, and include memory samples and per-second gaps.
+`App.Tests --media-video-corpus <inventory.json> <report.json>` exercises existing
+video files through the packaged decoder. The inventory contains a `videos` array
+whose entries provide `path` and `format.duration` (a string in seconds).
+Local mapsets and media are read-only;
+write reports and captures only under ignored `artifacts/`.
+
+Media changes require cold open and warm playback on representative heavy
+storyboards, alternating distant forward/backward seeks, and difficulty retirement
+while loads are pending. Include storyboard samples, actual hit/miss triggers,
+Pass/Fail transitions, alpha/colour/flip/rotation, animation and loop boundaries,
+preview triggers absent on a paused seek, actual dispatch followed by historical
+backward/forward seeks, and scheduling cancelled before consumption. Exercise
+pause and seek immediately before and after a sample timestamp, including zero
+output volume, without replacing consumed device-clock checks with scheduling logs.
+Include
+both widescreen flags, 4:3/16:9/narrow viewports, video start/end fades and
+background dim at 0/50/100. Check that opening stays in its loading overlay until
+the first image frame is ready, a seek retains the prior complete media frame
+while immediately updating audio and the playhead, missing media completes
+preparation with a diagnostic, and repeated seeks do not
+grow worker queues, decoded-image memory or native textures without bound.
+
 For Mapset Verifier changes, prepare the pinned engine with
 `python scripts/Build-MapsetVerifier.py`, then run `App.Tests
 --mapset-verifier-check` and `App.Tests --mapset-verifier-engine-check`.

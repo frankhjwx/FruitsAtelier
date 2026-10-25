@@ -140,7 +140,11 @@ Exporting a new difficulty to Songs saves your edits in a new workspace difficul
 
 Use **Library** or Esc to return to the library. Unsaved work prompts for Save, Discard or Cancel. Missing-resource messages indicate that a referenced file needs to be restored or relinked.
 
-Version 0.9 does not provide video or storyboard playback. Imported timing and slider velocity are supported. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
+Video and storyboards follow the current song position in the mapping canvas, Catch preview and testplay. Opening waits for storyboard preparation before showing the editor; Esc can return to the library through the usual Save/Discard/Cancel choices. Pausing, changing playback speed and seeking also affect media. Seeking moves audio, objects and the playhead immediately; the previous complete media picture remains until the requested picture is ready. Keep the mapset's `.osb` and referenced images, video and sound files with its difficulty. Storyboards without widescreen support keep black side bars outside their 4:3 area.
+
+Storyboard samples use the hitsound output; video audio is muted because the song transport provides music. In the ordinary preview, hitsound triggers activate only after playback actually dispatches the corresponding sound. Seeking alone does not activate them. Already triggered events remain recorded for the current difficulty session: seeking before their event time shows the earlier state, and seeking forward can reproduce their effect. Changing difficulty clears this history. Output volume does not affect whether a dispatched sound counts, and ordinary preview remains in Pass.
+
+Testplay uses actual catch judgements and Catch health with the osu!lazer legacy-drain calculation for Pass/Fail layers and Passing/Failing triggers. This health drives storyboard presentation without ending editor testplay. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
 
 ## 04 / Keyboard reference
 

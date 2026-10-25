@@ -1,4 +1,6 @@
 using FruitsAtelier.Core;
+if (args.Contains("--storyboard-check")) return StoryboardTests.Run();
+if (args.Length == 3 && args[0] == "--storyboard-random-access") return StoryboardTests.Corpus(args[1], args[2]);
 if (args.Contains("--break-overlap-check")) { TimelineMetadataTests.Run(); Console.WriteLine("PASS Break split, edited boundaries, merge, history and persistence"); return 0; }
 if (args.Contains("--timing-alignment-check")) { TimingAlignmentTests.Run(); Console.WriteLine("PASS timing alignment detection, parents and undo"); return 0; }
 if (args.Contains("--deferred-history-check")) { DeferredHistoryTests.Run(); WorkspaceStorageTests.Run(); HistoryCompressionTests.Run(); return 0; }
@@ -44,6 +46,7 @@ if (args.Length == 2 && args[0] == "--benchmark-history")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Storyboard commands, arbitrary timestamps, health and owning judgements preserve their semantics", () => { if (StoryboardTests.Run() != 0) throw new Exception("Storyboard compatibility regression failed."); }),
     ("Timing alignment detects objects and timing lines and preserves undo", TimingAlignmentTests.Run),
     ("Pattern placement preserves beats, geometry, settings, snapshots and history", PatternPlacementTests.Run),
     ("Compact arc editing preserves trajectory, endpoint identity, export and history", SliderModeTests.CompactArcConversion),

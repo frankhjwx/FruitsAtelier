@@ -122,6 +122,7 @@ static class WorkspaceSaveTests
         string target = reopened.Manifest.Difficulties.Single().ExportTarget!;
         Check(reopened.Project.Difficulties.Single().Id == id && File.Exists(target), "Songs association survives restart");
         ui.View.LoadWorkspace(reopened);
+        ui.PaintUntilReady();
         var history = (EditorHistory)ui.View.GetType().GetProperty("history", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
         history.Begin("add local fruit"); ui.View.Document.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 }); history.Commit(); ui.Paint();
         ui.View.ShowWorkspaceExport(); ui.Paint();

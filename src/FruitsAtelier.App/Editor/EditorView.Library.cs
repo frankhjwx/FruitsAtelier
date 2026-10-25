@@ -99,20 +99,22 @@ public sealed partial class EditorView
     public void ShowLibrary()
     {
         if (ResolvePatternSessionsBeforeLeaving(ShowLibrary)) return;
-        if (LibraryOpening) return;
+        if (libraryOpenTask is not null) return;
+        bool previousExitPending = mediaExitPending;
+        mediaExitPending = true;
         if (WaitForSynchronization(ready => { if (ready) ShowLibrary(); })) return;
-        if (DiscardConfirmationVisible || !PrepareFileOperation()) return;
+        if (DiscardConfirmationVisible || !PrepareFileOperation()) { mediaExitPending = previousExitPending; return; }
         if (HasEditorProject && IsDirty)
         {
             ShowDiscardConfirmation(answer =>
             {
-                if (answer == 2) return;
+                if (answer == 2) { mediaExitPending = false; return; }
                 try
                 {
                     if (answer == 7) LeaveEditor();
-                    else if (answer == 6) BeginWorkspaceSave(saved => { if (saved) LeaveEditor(); });
+                    else if (answer == 6) BeginWorkspaceSave(saved => { if (saved) LeaveEditor(); else mediaExitPending = false; });
                 }
-                catch (Exception error) { ShowError(L.Reformat(error.Message)); }
+                catch (Exception error) { mediaExitPending = false; ShowError(L.Reformat(error.Message)); }
             });
             return;
         }

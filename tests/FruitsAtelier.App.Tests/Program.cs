@@ -1,6 +1,15 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--media-integration-check")) return MediaIntegrationTests.Run();
+if (args.Contains("--media-loading-regression-check")) return MediaIntegrationTests.Run(finalFour: true);
+if (args.Contains("--storyboard-presentation-check")) return StoryboardPresentationTests.Run();
+if (args.Length == 2 && args[0] == "--storyboard-editor-check") return StoryboardEditorTests.Run(args[1]);
+if (args.Length == 3 && args[0] == "--storyboard-native-pixels") return StoryboardNativePixels.Run(args[1], args[2]);
+if (args.Contains("--storyboard-audio-check")) return StoryboardAudioTests.Run();
+if (args.Length == 3 && args[0] == "--media-video-corpus") return MediaVideoTests.Corpus(args[1], args[2]);
+if (args.Length is 3 or 4 or 5 && args[0] == "--media-native-profile") return MediaNativePerformance.Run(args[1], args[2], args.Length >= 4 ? double.Parse(args[3], System.Globalization.CultureInfo.InvariantCulture) : null, args.Length == 5 ? double.Parse(args[4], System.Globalization.CultureInfo.InvariantCulture) : 0);
+if (args.Length == 4 && args[0] == "--media-native-seek") return MediaNativePerformance.Run(args[1], args[2], 10000, seekDurationMs: double.Parse(args[3], System.Globalization.CultureInfo.InvariantCulture));
 if (args.Contains("--mapset-verifier-engine-check")) { MapsetVerifierTests.Engine(); return 0; }
 if (args.Contains("--mapset-verifier-check")) { MapsetVerifierTests.Run(); return 0; }
 if (args.Contains("--timing-alignment-check")) { TimingAlignmentUiTests.Run(); return 0; }
@@ -1360,7 +1369,7 @@ sealed class Ui
         View = new(timeProvider: timeProvider);
         View.LibrarySettings.TestplayStartupDelaySeconds = 0;
         View.SetSliderEditingMode(SliderEditingMode.PenTool);
-        Paint();
+        PaintUntilReady();
         if (!lockDropletSelection)
         {
             var button = View.AssistButtonBounds[6];
@@ -1373,8 +1382,14 @@ sealed class Ui
     public void LoadDocument(MapDocument document)
     {
         View.LoadDocument(document);
-        Paint();
+        PaintUntilReady();
         ShowFixtureOverview();
+    }
+    public void PaintUntilReady()
+    {
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        do { Paint(); if (!View.LibraryOpening) return; Thread.Sleep(5); } while (timer.Elapsed.TotalSeconds < 10);
+        throw new TimeoutException("The editor did not finish preparing its opening media.");
     }
     private void ShowFixtureOverview()
     {

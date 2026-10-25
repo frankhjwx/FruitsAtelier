@@ -459,7 +459,7 @@
   "core.writer.originalObject": "The FSlider's original object data is invalid.",
   "core.writer.readBackError": "Maximum conversion difference after re-reading: time {0} ms, X {1}. Not yet compared with the stable client.",
   "core.writer.readBackPrefix": "Catch conversion failed after re-reading the exported file: ",
-  "core.writer.resources": "Resource references retain their original text; the caller copies audio, backgrounds, and samples when exporting to another directory. Video and storyboard references are retained as text only, without loading or rendering.",
+  "core.writer.resources": "Resource references retain their original text; the caller copies media and samples when exporting to another directory. Playback loads video and storyboard resources separately from the saved authoring data.",
   "core.writer.rounding": "Maximum integer quantization: time {0} ms, coordinates {1}; times truncate toward zero, coordinate midpoints round away from zero.",
   "core.writer.sequenceChanged": "Quantization changed the actual object sequence: {0} objects before export and {1} after re-reading. Count, type, source, or order differs; inspect the exported result.",
   "core.writer.sliderCount": "The generated slider count does not match the authored tracks.",
@@ -1924,5 +1924,8 @@
   "timing.lockSv": "Lock SV",
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
-  "timing.finishDraft": "Apply or cancel timing edits before switching the SV display."
+  "timing.finishDraft": "Apply or cancel timing edits before switching the SV display.",
+  "media.storyboardDiagnostics": "Storyboard: {0} invalid commands or resources were skipped.",
+  "media.storyboardFailed": "Storyboard could not be loaded: {0}",
+  "media.loading": "Preparing map resources…"
 }

@@ -34,6 +34,7 @@ internal static class DifficultySaveTests
             ui.View.SwitchDifficulty(1);
             History(ui).Begin("other difficulty"); ui.View.Document.Fruits[0].X = 200; History(ui).Commit();
             ui.View.SwitchDifficulty(0);
+            ui.PaintUntilReady();
             History(ui).Begin("saved edit"); ui.View.Document.Fruits[0].X = 300; History(ui).Commit();
             var untouched = session.Manifest.Difficulties.Skip(1).SelectMany(e => new[] { e.File, e.SyncFile })
                 .OfType<string>().ToDictionary(f => f, f => (Text: File.ReadAllText(Path.Combine(session.Directory, f)), Time: File.GetLastWriteTimeUtc(Path.Combine(session.Directory, f))));
@@ -46,6 +47,7 @@ internal static class DifficultySaveTests
             Check(task is not null, "Ordinary save uses the current-difficulty worker");
             Check(ui.View.SwitchDifficulty(1) && ui.View.Document.Fruits[0].X == 200, "Difficulty navigation and unsaved edits remain available during saving");
             Check(ui.View.SwitchDifficulty(0), "Return to the saving difficulty");
+            ui.PaintUntilReady();
             History(ui).Begin("newer edit"); ui.View.Document.Fruits[0].X = 400; History(ui).Commit();
             Check(task!.Wait(TimeSpan.FromSeconds(30)), "Save finishes without pumping UI");
             ui.Paint();
@@ -111,7 +113,7 @@ internal static class DifficultySaveTests
         ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
         try
         {
-            ui.Paint();
+            ui.PaintUntilReady();
             for (int i = 0; i < 5; i++)
             {
                 ui.Key('2');

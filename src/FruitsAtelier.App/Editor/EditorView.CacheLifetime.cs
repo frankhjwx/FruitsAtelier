@@ -23,6 +23,7 @@ public sealed partial class EditorView
 
     private void ReleaseDifficultyCaches()
     {
+        RetireStoryboard();
         ClearDiscussionRegions();
         difficultyGraphicsReleasePending = true;
         projectMemoryReclaimPending = true;
