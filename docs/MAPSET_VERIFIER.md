@@ -32,7 +32,7 @@ runs in a cancellable standalone process with a three-minute timeout.
 
 ## Local preparation and AI development
 
-The engine is a separate self-contained GPL-3.0 executable. The editor exchanges
+The engine is a separate GPL-3.0 program. The editor exchanges
 request/result JSON files and does not reference upstream assemblies. The pin in
 `eng/mapset-verifier.json` specifies release, immutable commit and archive SHA-256.
 Prepare that exact version with Python 3 and the pinned .NET SDK:
@@ -42,14 +42,31 @@ python scripts/Build-MapsetVerifier.py
 ```
 
 Local builds locate the engine under `artifacts/mapset-verifier/<runtime>/`.
-Windows and Mac publication scripts prepare and bundle the pinned engine, its
-licenses and corresponding source under `mapset-verifier/`. The adapter source
-and its build instructions are in `tools/MapsetVerifier.Host/`.
+Windows and Mac publication scripts bundle the pinned engine and licenses under
+`mapset-verifier/`. They publish the engine without its own .NET runtime. A separate
+`FruitsAtelier.MapsetVerifier.Launcher` process next to the editor uses the editor's
+bundled runtime and version; an assembly load context resolves MV's managed and
+native dependencies from its own directory. The editor does not load MV assemblies.
+Local engine preparation without `--shared-runtime` still produces a standalone
+self-contained executable for development checks.
+
+`Upstream.Build.targets` removes `Serilog.AspNetCore` from the upstream logging
+project's package references. The command-line host retains Serilog and its sinks
+without importing the ASP.NET Core shared framework. Upstream source files remain
+unchanged; the adapted dependency locks record the resulting graph.
+
+`FruitsAtelier-MapsetVerifier-TAG-source.zip` is generated beside the engine outputs
+and copied beside release packages as a separate attachment. It contains the full
+pinned upstream archive, adapter and launcher sources/licenses, build override,
+dependency locks, SDK configuration and build script. Keep it available alongside
+the binary Release; `mapset-verifier/SOURCE.txt` identifies the attachment and its
+download location. The adapter build instructions are in `tools/MapsetVerifier.Host/`.
 
 The Mac app keeps the engine in `Contents/MacOS/mapset-verifier/` and its
-dependency licenses and corresponding source in
+dependency licenses in
 `Contents/Resources/mapset-verifier/`, so resource directories are not treated as
 nested code bundles during signing. Packaging verifies the complete app signature.
+The corresponding-source ZIP is placed beside the app under `artifacts/macos/`.
 
 AI development follows the upstream-check rule in [AGENTS.md](../AGENTS.md).
 `python scripts/Update-MapsetVerifier.py` explicitly checks GitHub's latest formal

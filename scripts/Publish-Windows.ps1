@@ -20,9 +20,6 @@ $payload = Join-Path $staging $package
 New-Item -ItemType Directory -Path $payload, $OutputDirectory -Force | Out-Null
 Push-Location $repo
 try {
-    & python scripts/Build-MapsetVerifier.py --runtime win-x64
-    if ($LASTEXITCODE -ne 0) { throw 'Mapset Verifier preparation failed.' }
-    Copy-Item -LiteralPath (Join-Path $repo 'artifacts/mapset-verifier/win-x64') -Destination (Join-Path $payload 'mapset-verifier') -Recurse
     $commit = (& git rev-parse HEAD).Trim()
     if ($LASTEXITCODE -ne 0) { throw 'Cannot determine source commit.' }
     $dirty = [bool](& git status --porcelain --untracked-files=normal)
@@ -32,6 +29,14 @@ try {
         -o $payload "-p:BaseOutputPath=$staging/build/" -p:PublishProfile=WindowsRelease -p:NuGetLockFilePath=packages.win-x64.lock.json -p:RestoreLockedMode=true `
         "-p:Version=$Version" "-p:FileVersion=$numericVersion.0" "-p:AssemblyVersion=$numericVersion.0" "-p:SourceRevisionId=$commit"
     if ($LASTEXITCODE -ne 0) { throw 'Windows publish failed.' }
+    & python scripts/Build-MapsetVerifier.py --runtime win-x64 --shared-runtime $payload
+    if ($LASTEXITCODE -ne 0) { throw 'Mapset Verifier preparation failed.' }
+    Copy-Item -LiteralPath (Join-Path $repo 'artifacts/mapset-verifier/win-x64-shared') -Destination (Join-Path $payload 'mapset-verifier') -Recurse
+    $verifierPin = Get-Content -LiteralPath (Join-Path $repo 'eng/mapset-verifier.json') -Raw | ConvertFrom-Json
+    $verifierSource = "FruitsAtelier-MapsetVerifier-$($verifierPin.tag)-source.zip"
+    Copy-Item -LiteralPath (Join-Path $repo "artifacts/mapset-verifier/$verifierSource") -Destination $OutputDirectory
+    $sourceDigest = (Get-FileHash -LiteralPath (Join-Path $OutputDirectory $verifierSource) -Algorithm SHA256).Hash.ToLowerInvariant()
+    "$sourceDigest  $verifierSource" | Set-Content -LiteralPath (Join-Path $OutputDirectory "$verifierSource.sha256") -Encoding ascii
     $manifest = [ordered]@{ version = $Version; commit = $commit; dirty = $dirty; runtimeIdentifier = 'win-x64'; sdk = $sdk; audioDiagnostics = $AudioDiagnostics.IsPresent }
     $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $payload 'build-info.json') -Encoding utf8
     Copy-Item -LiteralPath (Join-Path $repo 'docs/WINDOWS-PACKAGE.txt') -Destination (Join-Path $payload 'START-HERE.txt')

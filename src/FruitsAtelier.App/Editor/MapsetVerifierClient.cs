@@ -13,6 +13,8 @@ public sealed record MapsetVerifierDifficulty(Guid Id, string Name, string Inter
 public sealed record MapsetVerifierReport(int Schema, MapsetVerifierIssue[] General, MapsetVerifierDifficulty[] Difficulties)
 {
     public string UpstreamTag { get; init; } = "";
+    public string RuntimeDirectory { get; init; } = "";
+    public string RuntimeVersion { get; init; } = "";
 }
 public sealed record MapsetVerifierText(string Text, double? TimeMs = null);
 
@@ -60,7 +62,9 @@ public static partial class MapsetVerifierClient
     public static async Task<MapsetVerifierReport> AnalyzeAsync(MapsetVerifierInput[] inputs, bool compensation, CancellationToken cancellation)
     {
         string engine = EngineDirectory;
-        string executable = Path.Combine(engine, "FruitsAtelier.MapsetVerifier" + (OperatingSystem.IsWindows() ? ".exe" : ""));
+        string launcher = Path.Combine(AppContext.BaseDirectory, "FruitsAtelier.MapsetVerifier.Launcher" + (OperatingSystem.IsWindows() ? ".exe" : ""));
+        string executable = File.Exists(launcher) ? launcher
+            : Path.Combine(engine, "FruitsAtelier.MapsetVerifier" + (OperatingSystem.IsWindows() ? ".exe" : ""));
         if (!File.Exists(executable)) throw new FileNotFoundException("python scripts/Build-MapsetVerifier.py", executable);
         var temporary = Directory.CreateTempSubdirectory("fa-mapset-verifier-");
         try

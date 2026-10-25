@@ -11,6 +11,18 @@ $destination = Join-Path $repo "artifacts/package-check/用户 Release $([Guid]:
 Expand-Archive -LiteralPath $Archive -DestinationPath $destination
 $current = Join-Path $destination 'current'
 $manifest = Get-Content -LiteralPath (Join-Path $current 'build-info.json') -Raw | ConvertFrom-Json
+$verifierPin = Get-Content -LiteralPath (Join-Path $current 'mapset-verifier/upstream.json') -Raw | ConvertFrom-Json
+$sourceName = "FruitsAtelier-MapsetVerifier-$($verifierPin.tag)-source.zip"
+$sourceArchive = Join-Path (Split-Path $Archive -Parent) $sourceName
+$sourceHash = ((Get-Content -LiteralPath "$sourceArchive.sha256" -Raw).Trim() -split '\s+')[0]
+if ((Get-FileHash -LiteralPath $sourceArchive -Algorithm SHA256).Hash -ne $sourceHash) { throw 'MV source attachment checksum mismatch.' }
+$sourceZip = [IO.Compression.ZipFile]::OpenRead($sourceArchive)
+try {
+    foreach ($sourceFile in @('eng/mapset-verifier.json', 'global.json', 'Directory.Build.props', 'scripts/Build-MapsetVerifier.py', 'tools/MapsetVerifier.Host/Program.cs', 'tools/MapsetVerifier.Host/Upstream.Build.targets', 'tools/MapsetVerifier.Launcher/Program.cs', "artifacts/upstream/mapset-verifier-$($verifierPin.commit).zip")) {
+        if (!$sourceZip.GetEntry($sourceFile)) { throw "MV source attachment missing: $sourceFile" }
+    }
+} finally { $sourceZip.Dispose() }
+Write-Host 'PASS: separate Mapset Verifier corresponding-source attachment and checksum.'
 $diagnosticsEnabled = $manifest.PSObject.Properties.Name -contains 'audioDiagnostics' -and [bool]$manifest.audioDiagnostics
 $diagnosticMarker = Test-Path -LiteralPath (Join-Path $current 'audio-diagnostics.enabled')
 if ($diagnosticMarker -ne $diagnosticsEnabled) { throw 'Audio diagnostic marker does not match the package manifest.' }

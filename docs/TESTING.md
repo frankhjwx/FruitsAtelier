@@ -5,6 +5,10 @@ For Mapset Verifier changes, prepare the pinned engine with
 --mapset-verifier-check` and `App.Tests --mapset-verifier-engine-check`.
 On Windows run `FruitsAtelier.App --render-check --mapset-verifier-render-check`
 for native layout and timestamp input. See [Mapset Verifier](MAPSET_VERIFIER.md).
+The extracted Windows package check runs the real engine with system runtime
+discovery disabled, requires its runtime path/version to match the editor, and
+checks the separate source attachment and its checksum. The engine directory
+must contain neither a second runtime nor the source archive.
 The focused suite also checks the one-second edit debounce, undo/redo, idle frame
 behavior and cancellation of reports superseded by newer content.
 It covers category status icons, severity filters, compact toolbar alignment,

@@ -24,7 +24,7 @@ The script prefers `artifacts/dotnet/dotnet`, otherwise uses `dotnet` on PATH, a
 bash scripts/Publish-Mac.sh
 ```
 
-The output is `artifacts/macos/FruitsAtelier.app`, includes the .NET runtime, and can be launched by double-clicking. The script builds for the local architecture and applies ad-hoc signing. Public distribution additionally requires Developer ID signing and notarization.
+The output is `artifacts/macos/FruitsAtelier.app`, includes the .NET runtime, and can be launched by double-clicking. Mapset Verifier uses that same bundled runtime through its separate launcher. Its corresponding-source ZIP is generated beside the app; distribute it alongside the app as described in [Mapset Verifier](MAPSET_VERIFIER.md). The script builds for the local architecture and applies ad-hoc signing. Public distribution additionally requires Developer ID signing and notarization.
 
 Outside the repository, caches and logs are written to `~/Library/Application Support/FruitsAtelier`.
 
