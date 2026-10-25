@@ -28,11 +28,15 @@ internal static class ResourcePollingTests
                 .GetField("resourceErrors", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(view)!).Contains(path);
             Task Queue()
             {
-                typeof(EditorView).GetField("nextResourceCheck", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(view, DateTime.MinValue);
-                Paint();
+                view.CheckWorkspaceResources();
                 return (Task)typeof(EditorView).GetField("resourceCheckTask", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(view)!;
             }
-            void Finish(Task task) { Check(task.Wait(TimeSpan.FromSeconds(5)), "Resource poll did not finish."); Paint(); }
+            void Finish(Task? task)
+            {
+                // Rendering can publish a completed poll before the test reads its task.
+                if (task is not null) Check(task.Wait(TimeSpan.FromSeconds(5)), "Resource poll did not finish.");
+                Paint();
+            }
             view.CheckWorkspaceResources();
             var requested = (Task?)typeof(EditorView).GetField("resourceCheckTask", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(view);
             Check(requested is not null, "Explicit resource checks must queue background work.");
