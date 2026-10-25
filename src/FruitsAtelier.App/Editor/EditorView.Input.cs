@@ -344,7 +344,7 @@ public sealed partial class EditorView
                 InsertControlPoint(new(insertTrack.Id, CurveMath.FirstSpanTime(insertTrack, point.TimeMs)), point.X);
             return;
         }
-        if (!ctrl && TryBeginSelectedBananaHandle(x, y)) return;
+        if (!ctrl && TryBeginBananaBoundaryDrag(x, y)) return;
         if (tool != Tool.Slider && !ctrl && showTargets && objectSelection.Count == 1 && SelectedTrack is { } selectedObject)
         {
             foreach (var node in selectedObject.Nodes)
@@ -578,7 +578,7 @@ public sealed partial class EditorView
             if (!TryBeginSliderEndpointTimeDrag(y)) { MoveSliderObject(x); return; }
         }
         if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
-        if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
+        if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y, shift); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
         var p = new MapPoint(Math.Clamp(raw.TimeMs, 0, EditableDurationMs), SnapX(raw.X));
         if (SelectedTrack is { } track && SelectedAnchor is { } node)

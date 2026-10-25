@@ -40,6 +40,7 @@ public sealed partial class EditorView
     private ImportedSlider? tailImportedBefore;
     private double tailStart, tailEnd, tailSpanDuration;
     private double tailPointerOffset;
+    private bool timelineBananaStart;
     private int breakEditIndex;
     private bool breakEditStart;
     private BreakPeriod breakEditOriginal, breakEditPreview;
@@ -49,20 +50,29 @@ public sealed partial class EditorView
         && (Document.Tracks.Any(t => t.Id == item.Id && t.Nodes.Count > 1 && t.StreamSnapDivisor is null)
             || Document.ImportedSliders.Any(s => s.Id == item.Id)
             || Document.BananaShowers.Any(s => s.Id == item.Id));
+    private bool IsTimelineBananaStart((Guid Id, double Time, Rect Bounds) item, float x, float y)
+        => CanSelectCollaborationObject(item.Id) && item.Bounds.Contains(x, y)
+        && Math.Abs(x - (item.Bounds.X + item.Bounds.Height / 2)) <= Math.Min(10, item.Bounds.Height / 2)
+        && Document.BananaShowers.Any(s => s.Id == item.Id);
     public bool TimelineResizeCursor => !TimeJumpVisible && !LibraryVisible && !ExportVisible && !SliderDialogVisible && !DiscardConfirmationVisible && !ErrorVisible
         && !PatternGalleryPopupContains(mouseX, mouseY) && !PatternGalleryWantsCapture
         && (drag is DragKind.TimelineTail or DragKind.BreakEdge || menu < 0 && contextItems.Count == 0 && objectTimeline.Contains(mouseX, mouseY)
             && (BreakEdgeAt(mouseX, mouseY) is not null || timelineObjects.AsEnumerable().Reverse().Where(i => i.Bounds.Contains(mouseX, mouseY)).Take(1)
-                .Any(i => IsTimelineTail(i, mouseX, mouseY))));
+                .Any(i => IsTimelineTail(i, mouseX, mouseY) || IsTimelineBananaStart(i, mouseX, mouseY))));
 
     private void MoveTimelineTail(float x, bool shift)
     {
         double end = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale - tailPointerOffset;
         if (Document.BananaShowers.FirstOrDefault(s => s.Id == tailId) is { } shower)
         {
-            if (snap && !shift) end = TimingMap.Snap(Document, end, divisor);
-            shower.EndTimeMs = Math.Clamp(end, Math.Min(EditableDurationMs, tailStart + .001), EditableDurationMs);
-            Document.DurationMs = Math.Max(Document.DurationMs, shower.EndTimeMs);
+            if (snap && !shift) end = SnapTiming().Snap(end, divisor);
+            if (timelineBananaStart)
+                shower.TimeMs = Math.Clamp(end, 0, Math.Max(0, tailEnd - .001));
+            else
+            {
+                shower.EndTimeMs = Math.Clamp(end, Math.Min(EditableDurationMs, tailStart + .001), EditableDurationMs);
+                Document.DurationMs = Math.Max(Document.DurationMs, shower.EndTimeMs);
+            }
             return;
         }
         if (EndpointSnap(tailId) is not null)
@@ -506,7 +516,7 @@ public sealed partial class EditorView
                     }
                 }
             }
-            Ring(left, timelineEventNumbers[(item.Id, item.EventIndex)], edge: timelinePatterns.Contains(item.Id) ? null : 0);
+            Ring(left, timelineEventNumbers.TryGetValue((item.Id, item.EventIndex), out int number) ? number : null, edge: timelinePatterns.Contains(item.Id) ? null : 0);
         }
         foreach (var period in breaks)
         {
@@ -573,7 +583,8 @@ public sealed partial class EditorView
                 double markerX = objectTimeline.X+(markerSource.Start+edge*spanDuration-ObjectTimelineStartMs)*objectTimelineScale;
                 if (Math.Abs(x-markerX)<=item.Bounds.Height/2) soundEdge = (item.Id,edge);
             }
-            if (!notesLocked && !toggle && IsTimelineTail(item, x, y))
+            bool bananaStart = IsTimelineBananaStart(item, x, y) && !IsTimelineTail(item, x, y);
+            if (!notesLocked && !toggle && (bananaStart || IsTimelineTail(item, x, y)))
             {
                 var source = timelineSources.First(o => o.Id == item.Id);
                 int spans = Document.Tracks.FirstOrDefault(t => t.Id == item.Id)?.SpanCount
@@ -582,7 +593,8 @@ public sealed partial class EditorView
                 tailImportedBefore = Document.ImportedSliders.FirstOrDefault(s => s.Id == item.Id) is { } importedTail
                     ? OsuSliderGeometrySnapshot(importedTail) : null;
                 tailId = item.Id; tailStart = source.Start; tailEnd = source.End;
-                tailPointerOffset = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale - source.End;
+                timelineBananaStart = bananaStart;
+                tailPointerOffset = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale - (bananaStart ? source.Start : source.End);
                 tailSpanDuration = (source.End - source.Start) / spans;
                 if (tailSpanDuration > 0)
                 {

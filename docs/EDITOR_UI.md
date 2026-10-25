@@ -1512,7 +1512,7 @@ In both modes, drag the slider tail in the object timeline to change reverses. D
 
 ## Banana showers
 
-With N, left-click to set the start, then right-click at a later time to finish. Esc or switching tools cancels. A yellow snapped-time line marks banana placement. A banana shower appears as a time rectangle spanning the playfield. Drag its body to move it or its top/bottom handles to change start/end times. The upper object timeline also allows dragging its tail to change the end time; Shift bypasses beat snapping, Esc cancels, and release commits one undo step. RNG generates individual banana X positions.
+With N, left-click to set the start, then right-click at a later time to finish. Esc or switching tools cancels. A yellow snapped-time line marks banana placement. A banana shower appears as a time rectangle spanning the playfield. Drag its body to move it or its start/end boundary lines to change start/end times independently; the centered handles mark these boundaries. Shift bypasses beat snapping. The upper object timeline also allows dragging its begin or tail marker to change the start or end time independently; Shift bypasses beat snapping, Esc cancels, and release commits one undo step. RNG generates individual banana X positions.
 
 ## Files and playback
 
