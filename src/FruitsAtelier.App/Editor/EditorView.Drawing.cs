@@ -19,6 +19,7 @@ public sealed partial class EditorView
 
     private void RefreshKiaiTransitions()
     {
+        RefreshDisplayedTiming();
         var transitions = new List<(double TimeMs, bool Active)>();
         bool active = false;
         overviewTiming = Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
@@ -680,7 +681,7 @@ public sealed partial class EditorView
         if (AudioLoading) return;
         const float timelineMarkerOpacity = .8f;
         float TimelineX(double time) => overview.X + (float)(Math.Clamp(time, 0, TimelineDurationMs) / TimelineDurationMs) * overview.Width;
-        var timing = overviewTiming;
+        var timing = displayedTiming;
         float centerY = overview.Y + overview.Height / 2;
         c.Line(overview.X, centerY, overview.Right, centerY, 0xA0A0A0, 1, timelineMarkerOpacity);
         float spanHeight = Math.Min(12, overview.Height * .6f);
@@ -715,7 +716,7 @@ public sealed partial class EditorView
             var point = timing[i];
             if (point.TimeMs < 0 || point.TimeMs > TimelineDurationMs) continue;
             float x = TimelineX(point.TimeMs);
-            c.Line(x, overview.Y + 2, x, centerY, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
+            DrawTimingMarker(c, point, x, overview.Y + 2, centerY, timelineMarkerOpacity);
         }
         double visibleStart = Math.Clamp(PresentationViewStart, 0, TimelineDurationMs);
         double visibleEnd = Math.Clamp(PresentationViewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);

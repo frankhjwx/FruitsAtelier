@@ -60,6 +60,7 @@ public sealed class CurveTrack
         var a = this; var b = other;
         if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
             || a.DropletMode != b.DropletMode || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
+            || a.SliderVelocityMultiplier != b.SliderVelocityMultiplier
             || a.EndpointSnap != b.EndpointSnap || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
             || a.StreamNewComboOffsets.Count != b.StreamNewComboOffsets.Count
             || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization)) return false;
@@ -102,6 +103,9 @@ public sealed class CurveTrack
     public SliderDropletMode? DropletMode { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SliderEndpointSnap? EndpointSnap { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? SliderVelocityMultiplier { get; set; }
 
     internal double? SliderVelocitySeed { get; set; }
     internal double? FixedSliderVelocityMultiplier { get; set; }

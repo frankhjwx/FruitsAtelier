@@ -1910,5 +1910,10 @@
   "mv.levelError": "errors",
   "mv.levelCheck": "checks",
   "mv.levelInfo": "information",
-  "mv.filteredEmpty": "No issues match the selected severity."
+  "mv.filteredEmpty": "No issues match the selected severity.",
+  "timing.showSv": "Mostrar líneas SV",
+  "timing.lockSv": "Bloquear SV",
+  "timing.bpmSv": "BPM / SV",
+  "timing.sv": "SV (×)",
+  "timing.finishDraft": "Aplica o cancela los cambios de timing antes de cambiar la vista SV."
 }

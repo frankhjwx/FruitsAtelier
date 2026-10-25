@@ -1910,5 +1910,10 @@
   "mv.levelError": "错误",
   "mv.levelCheck": "检查项",
   "mv.levelInfo": "提示",
-  "mv.filteredEmpty": "当前严重级别下没有问题。"
+  "mv.filteredEmpty": "当前严重级别下没有问题。",
+  "timing.showSv": "显示 SV 线",
+  "timing.lockSv": "锁定 SV",
+  "timing.bpmSv": "BPM / SV",
+  "timing.sv": "SV（×）",
+  "timing.finishDraft": "请先应用或取消 Timing 编辑，再切换 SV 显示。"
 }

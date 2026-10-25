@@ -29,6 +29,8 @@ public sealed partial class EditorView
         // The library does not render a difficulty, so lazy invalidation cannot release its data.
         editorWriteCache = new(); editorConversionCache = new(); draftConversionCache = new();
         conversion = null; playableExport = null; playableObjects = [];
+        displayedTiming = []; svOnlyTiming.Clear();
+        timingEntries.Clear(); timingUndo.Clear(); timingRedo.Clear(); timingDisplayOriginals.Clear();
         renderedTiming = snapTiming = null;
         importedCurveSnapshot = null; importedCurveDistances.Clear(); importedCurveScreens.Clear();
         importedCurveSources.Clear(); importedCurvePaths.Clear();

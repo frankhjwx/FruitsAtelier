@@ -37,6 +37,8 @@ if (args.Contains("--canvas-feedback-check")) { CanvasFeedbackTests.Run(); Conso
 if (args.Contains("--curve-edit-check")) { SliderModeInteractionTests.SwitchArAndLocalPenEdit(); SliderModeInteractionTests.InsertDeleteAndBoundary(); SliderModeInteractionTests.GlobalModeMenu(); Console.WriteLine("PASS Local curve editing, mode switching and undo"); return 0; }
 if (args.Contains("--canvas-feedback-performance")) { CanvasFeedbackPerformance.Run(); return 0; }
 if (args.Contains("--rotation-preview-performance")) { CanvasFeedbackPerformance.RunRotation(); return 0; }
+if (args.Contains("--timing-sv-performance")) { TimingVelocityTests.Benchmark(); return 0; }
+if (args.Contains("--timing-sv-check")) { TimingVelocityTests.Run(); Console.WriteLine("PASS Timing SV display, locking, editing and persistence"); return 0; }
 if (args.Contains("--timing-feedback-check")) { TimingEditorTests.Run(); TimingFeedbackTests.Run(); Console.WriteLine("PASS Timing setup, shortcuts, precision and range selection"); return 0; }
 
 if (args.Contains("--note-snap-check")) { NoteSnapTests.InspectBeatPosition(); Console.WriteLine("PASS nearest note beat snap recognition"); return 0; }
@@ -370,6 +372,7 @@ var tests = new (string Name, Action Run)[]
     ("Pause snapping waits for confirmation and isolates other transport operations", PauseSnapTests.PauseIsolation),
     ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
+    ("Timing SV display, locking, editing and persistence", TimingVelocityTests.Run),
     ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),
     ("Timing SV entry and DS unit switching preserve gameplay, persistence and undo", SliderMultiplierTests.Run),
     ("Timing metronome schedules beat and Ctrl snap ticks without duplicate playback", TimingEditorTests.Metronome),

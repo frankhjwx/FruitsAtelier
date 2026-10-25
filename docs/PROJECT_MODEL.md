@@ -7,6 +7,14 @@ The authoring model persists as UTF-8 JSON. Documents containing exact control c
 Non-default osu canvas coordinates, independent osu distance spacing, Legacy native
 geometry preservation, or randomization baselines use schema 27 (single difficulty)
 or 28 (multi-difficulty).
+Explicit FSlider SV uses optional `CurveTrack.SliderVelocityMultiplier` in the
+source base-SV basis and schema 41 (single difficulty) / 42 (multiple difficulties).
+Null retains automatic SV fitting. A non-null value fixes conversion SV, scales
+with the effective map base, participates in history and conversion cache equality,
+and rejects values outside 0.1-10x. Older projects remain readable; projects without
+this field retain their previous schema. Timing display and SV editing locks are
+editor session state and are not stored as beatmap timing or project content.
+
 Independent Legacy slider SV uses schema 29 (single difficulty) or 30 (multiple
 difficulties). Each Legacy slider stores its authored `SliderVelocityMultiplier`
 and an optional `ProcessedSliderVelocityMultiplier` for materialized droplet

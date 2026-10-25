@@ -1292,3 +1292,10 @@ two sizes and three DPI values.
 For an optional read-only report against an existing installation, run
 `App.Tests --osu-collections-read <osu-root>`. It reports collection member paths
 and difficulty names without importing projects or writing to the installation.
+
+`App.Tests --timing-sv-check` verifies independent SV visibility and lock controls,
+export-equivalent timing rows, unchanged hidden mode, read-only generated SV,
+compound sample editing, Legacy/FSlider SV updates, undo and project persistence.
+Windows `FruitsAtelier.App --render-check --timing-sv-render-check` exercises native
+controls and captures both languages, compact/wide windows and 96/144/192 DPI under
+`artifacts/tests/timing-sv-native`.

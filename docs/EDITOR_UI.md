@@ -868,6 +868,27 @@ while music is paused. Default
 samples show only the bank abbreviation in the list. Imported velocity and
 unrelated effect bits are preserved, while green-point BPM cells remain empty. Kiai updates the editor's existing Kiai indication and exports.
 
+**Show SV lines** and **Lock SV** are independent controls in the Timing panel
+and Timing Setup. SV lines are hidden and locked by default. Hidden mode uses the
+existing authoring timing list. Visible mode uses the complete validated export
+read-back, including generated Legacy/FSlider SV and restore points, with the same
+times, ordering, values and sample fields consumed by osu!, AiMod and Mapset
+Verifier. Switching either control does not change the map or undo history.
+Apply or cancel pending Timing Setup edits before switching its display source.
+
+Visible green rows show their SV multiplier in the BPM / SV column. Pure SV lines
+are dark green; while locked, they carry a translucent pink overlay and are read
+only. Compound green rows retain editable samples, volume and Kiai; only their
+SV cell is pink and locked. Unlocking enables the SV input on the Timing tab.
+SV edits update the sliders governed by that exported timing interval: Legacy
+sliders retain path length and change duration; FSliders retain their authored
+time-X curve and regenerate their exported geometry at the requested SV. Conversion
+constraints still apply. Generated timing positions follow their source sliders
+and cannot be independently moved, deleted or changed into red points.
+Sample edits preserve the slider's SV. Edits commit as one undo step and persist
+in project saves. The waveform and object/transport timelines use the selected
+timing display mode; hidden mode retains its existing waveform presentation.
+
 Ctrl+P adds a red point at the playhead; Ctrl+Shift+P adds a green point, opening
 the draft window on its Audio tab for green points. Shift+arrows extends or shrinks
 the timing-row selection from its moving end. New red and green points truncate the playhead to integer

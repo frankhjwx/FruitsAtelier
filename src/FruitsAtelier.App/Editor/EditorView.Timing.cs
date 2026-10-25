@@ -12,7 +12,13 @@ public sealed partial class EditorView
     public Action? RequestPasteTiming { get; set; }
     public Action? RequestTimingSampleHelp { get; set; }
     public int TimingInputSession { get; private set; }
-    private sealed record TimingEntry(int Id, TimingPoint? Original, TimingPoint Point);
+    private sealed record TimingEntry(int Id, TimingPoint? Original, TimingPoint Point)
+    {
+        public TimingPoint? Baseline { get; init; }
+        public int SourceIndex { get; init; } = -1;
+        public bool Derived { get; init; }
+        public bool SvOnly { get; init; }
+    }
     private readonly List<TimingEntry> timingEntries = [];
     private readonly HashSet<int> timingSelected = [];
     private readonly Stack<TimingEntry[]> timingUndo = [], timingRedo = [];
@@ -71,9 +77,19 @@ public sealed partial class EditorView
         TimingSetupVisible = true; timingCommand = timingField = timingError = "";
         timingEntries.Clear(); timingSelected.Clear(); timingUndo.Clear(); timingRedo.Clear();
         timingNextId = 0; timingTab = timingFilter = timingScroll = timingSort = 0; timingShiftMs = 0;
-        foreach (var point in Document.TimingPoints) timingEntries.Add(new(timingNextId++, TimingEditing.Copy(point), TimingEditing.Copy(point)));
+        RefreshDisplayedTiming();
+        var sourceRows = Document.TimingPoints.Select((p, i) => (Point: p, Index: i))
+            .GroupBy(item => (Time: item.Point.TimeMs, item.Point.Uninherited))
+            .ToDictionary(g => g.Key, g => new Queue<int>(g.Select(item => item.Index)));
+        foreach (var point in showTimingSv ? displayedTiming.AsEnumerable() : Document.TimingPoints)
+        {
+            int sourceIndex = sourceRows.TryGetValue((point.TimeMs, point.Uninherited), out var rows) && rows.Count > 0 ? rows.Dequeue() : -1;
+            timingEntries.Add(CreateTimingEntry(point, sourceIndex));
+        }
+        timingDisplayOriginals = timingEntries.Where(e => e.SourceIndex >= 0).Select(e => e.SourceIndex).ToHashSet();
         var active = TimingEditing.Current(Document, playhead);
-        int index = active is null ? -1 : Document.TimingPoints.IndexOf(active);
+        int index = active is null ? -1 : showTimingSv ? timingEntries.FindLastIndex(e => e.Point.TimeMs <= playhead)
+            : timingEntries.FindIndex(e => e.SourceIndex == Document.TimingPoints.IndexOf(active));
         timingCursor = timingAnchor = index;
         if (index >= 0) timingSelected.Add(index);
         timingScroll = Math.Max(0, Array.FindIndex(VisibleTimingEntries(), e => e.Id == index) - 3);
@@ -121,7 +137,7 @@ public sealed partial class EditorView
         ChangeTimingDraft(() =>
         {
             if (!double.IsFinite(amount)) throw new ArgumentException(L.Get("editor.error.finiteNumberRequired"));
-            var selected = timingEntries.Where(e => timingSelected.Contains(e.Id)).ToArray();
+            var selected = timingEntries.Where(e => timingSelected.Contains(e.Id) && TimingStructureEditable(e)).ToArray();
             var values = selected.Select(e => e.Point.Uninherited ? e.Point.TimeMs + amount : Math.Truncate(e.Point.TimeMs + amount)).ToArray();
             if (values.Any(v => !double.IsFinite(v) || Math.Abs(v) > int.MaxValue)) throw new ArgumentException(L.Get("timing.range"));
             for (int i = 0; i < selected.Length; i++) selected[i].Point.TimeMs = values[i];
@@ -178,7 +194,7 @@ public sealed partial class EditorView
     {
         if (!CommitTimingField()) return;
         var first = timingEntries.Where(e => e.Point.Uninherited).OrderBy(e => e.Point.TimeMs).ThenBy(e => e.Point.SourceOrder).FirstOrDefault();
-        ChangeTimingDraft(() => timingEntries.RemoveAll(e => timingSelected.Contains(e.Id) && e != first));
+        ChangeTimingDraft(() => timingEntries.RemoveAll(e => timingSelected.Contains(e.Id) && e != first && TimingStructureEditable(e)));
         timingSelected.RemoveWhere(id => !timingEntries.Any(e => e.Id == id));
     }
 
@@ -186,7 +202,7 @@ public sealed partial class EditorView
     {
         var point = TimingEditing.Current(Document, playhead);
         var first = Document.TimingPoints.Where(p => p.Uninherited).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).FirstOrDefault();
-        if (point is null || point == first) { StatusMessage = L.Get("timing.keepFirst"); return; }
+        if (point is null || point == first || timingSvLocked && svOnlyTiming.Contains(point)) { StatusMessage = L.Get("timing.keepFirst"); return; }
         Edit(L.Get("timing.delete"), () => Document.TimingPoints.Remove(point));
     }
 
@@ -194,8 +210,17 @@ public sealed partial class EditorView
     {
         if (!CommitTimingField()) return;
         var pairs = timingEntries.Where(e => e.Original is not null).Select(e => (e.Original!, e.Point)).ToArray();
-        if (!Edit(L.Get("timing.edit"), () => TimingEditing.Apply(Document, timingEntries.Select(e => e.Point).ToArray(), pairs,
-            new(timingScale, timingResnap, timingLengths, timingBookmarks, timingSnap))))
+        if (!Edit(L.Get("timing.edit"), () =>
+        {
+            if (showTimingSv) ApplyDisplayedTiming();
+            else
+            {
+                foreach (var e in timingEntries.Where(e => !e.Point.Uninherited && e.Baseline is not null && e.Point.BeatLengthMs != e.Baseline.BeatLengthMs))
+                    ApplyTimingSvToSliders(e.Baseline!.TimeMs, -100 / e.Point.BeatLengthMs * Document.SliderMultiplier / Document.EffectiveSliderMultiplier);
+                TimingEditing.Apply(Document, timingEntries.Select(e => e.Point).ToArray(), pairs,
+                    new(timingScale, timingResnap, timingLengths, timingBookmarks, timingSnap));
+            }
+        }, allowTimingSv: !timingSvLocked))
         { timingError = StatusMessage; return; }
         CloseTimingSetup(); ResetHitsounds();
     }
@@ -205,6 +230,7 @@ public sealed partial class EditorView
         if (!double.IsFinite(value)) throw new ArgumentException(L.Get("editor.error.finiteNumberRequired"));
         if (key == "offset" && Math.Abs(value) > int.MaxValue || key == "bpm" && (value < 1 || value > 10000)
             || key == "meter" && (value < 1 || value > 64 || value != Math.Truncate(value))
+            || key == "sv" && (value < .1 || value > 10)
             || key == "volume" && (value < 0 || value > 100)
             || key == "index" && (value < 0 || value > 10000 || value != Math.Truncate(value)))
             throw new ArgumentException(L.Get("timing.range"));
@@ -212,10 +238,12 @@ public sealed partial class EditorView
         {
             foreach (var entry in timingEntries.Where(e => timingSelected.Contains(e.Id)))
             {
+                if (showTimingSv && timingSvLocked && entry.SvOnly) continue;
                 var p = entry.Point;
                 switch (key)
                 {
-                    case "offset": p.TimeMs = p.Uninherited ? TimingPageValue(key, value) : Math.Truncate(value); break;
+                    case "sv" when !p.Uninherited && !timingSvLocked: p.BeatLengthMs = -100 / value; break;
+                    case "offset" when TimingStructureEditable(entry): p.TimeMs = p.Uninherited ? TimingPageValue(key, value) : Math.Truncate(value); break;
                     case "bpm" when p.Uninherited: p.BeatLengthMs = 60000 / TimingPageValue(key, value); break;
                     case "meter" when p.Uninherited: p.Meter = (int)value; break;
                     case "volume": p.Volume = (int)Math.Round(value); break;
@@ -238,7 +266,7 @@ public sealed partial class EditorView
             var map = Document.DeepClone(); map.TimingPoints.Clear(); map.TimingPoints.AddRange(timingEntries.Select(e => TimingEditing.Copy(e.Point)));
             foreach (var entry in selected)
             {
-                if (inherited && entry == first) continue;
+                if (inherited && entry == first || !TimingStructureEditable(entry) || timingSvLocked && !entry.Point.Uninherited) continue;
                 var replacement = TimingEditing.Create(map, entry.Point.TimeMs, inherited);
                 entry.Point.Uninherited = !inherited;
                 if (inherited) entry.Point.TimeMs = Math.Truncate(entry.Point.TimeMs);
@@ -307,7 +335,13 @@ public sealed partial class EditorView
         try
         {
             var points = TimingEditing.Parse(text);
-            foreach (var point in points.Where(p => !p.Uninherited)) point.TimeMs = Math.Truncate(point.TimeMs);
+            var clipboardTiming = new TimingMap.Lookup(showTimingSv && playableExport is not null ? playableExport.ReadBack : Document);
+            foreach (var point in points.Where(p => !p.Uninherited))
+            {
+                point.TimeMs = Math.Truncate(point.TimeMs);
+                if (timingSvLocked) point.BeatLengthMs = -100 / clipboardTiming.At(point.TimeMs).SliderVelocityMultiplier
+                    * (showTimingSv ? 1 : Document.SliderMultiplier / Document.EffectiveSliderMultiplier);
+            }
             ChangeTimingDraft(() =>
             {
                 timingSelected.Clear();
@@ -414,7 +448,7 @@ public sealed partial class EditorView
     private void UpdateTimingVolume(float x)
     {
         int volume = (int)Math.Clamp(Math.Round((x - timingVolumeTrack.X) / timingVolumeTrack.Width * 100), 0, 100);
-        foreach (var entry in timingEntries.Where(e => timingSelected.Contains(e.Id))) entry.Point.Volume = volume;
+        foreach (var entry in timingEntries.Where(e => timingSelected.Contains(e.Id) && (!showTimingSv || !timingSvLocked || !e.SvOnly))) entry.Point.Volume = volume;
     }
 
     private void EndTimingVolume(bool cancel)

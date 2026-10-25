@@ -442,7 +442,7 @@ public sealed partial class EditorView
         SelectObjects(objectSelection.Where(unchanged.Contains), selection);
     }
 
-    private bool Edit(string label, Action change, Action<bool, MapDocument, MapDocument>? restoreRelated = null, bool allowSliderDeletion = false)
+    private bool Edit(string label, Action change, Action<bool, MapDocument, MapDocument>? restoreRelated = null, bool allowSliderDeletion = false, bool allowTimingSv = false)
     {
         history.Begin(label, restoreRelated);
         try
@@ -453,7 +453,7 @@ public sealed partial class EditorView
             change();
             if (allowSliderDeletion)
                 readOnlyIds.IntersectWith(Document.Tracks.Select(t => t.Id).Concat(Document.ImportedSliders.Select(s => s.Id)));
-            if (!osuAllowSliderConversion && history.TransactionChangesSliderGeometry(readOnlyIds))
+            if (!osuAllowSliderConversion && history.TransactionChangesSliderGeometry(readOnlyIds, ignoreSliderVelocity: allowTimingSv))
             { history.Cancel(); ShowEditorNotice("osu.readOnlySlider"); return false; }
             if (before is not null && !PositionsEqual(before, Document))
             { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }

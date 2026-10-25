@@ -1910,5 +1910,10 @@
   "mv.levelError": "errors",
   "mv.levelCheck": "checks",
   "mv.levelInfo": "information",
-  "mv.filteredEmpty": "No issues match the selected severity."
+  "mv.filteredEmpty": "No issues match the selected severity.",
+  "timing.showSv": "แสดงเส้น SV",
+  "timing.lockSv": "ล็อก SV",
+  "timing.bpmSv": "BPM / SV",
+  "timing.sv": "SV (×)",
+  "timing.finishDraft": "ใช้หรือยกเลิกการแก้ไข Timing ก่อนสลับการแสดง SV"
 }

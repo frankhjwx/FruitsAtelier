@@ -14,8 +14,6 @@ public sealed partial class EditorView
     private bool waveformFailed;
     private double waveformSpanMs = 10000;
     private readonly List<BeatGridLine> waveformGrid = [];
-    private TimingMap.Lookup? waveformTiming;
-    private (double TimeMs, double BeatLengthMs)[] waveformRedPoints = [];
     public bool WaveformNeedsRedraw => TimingPageVisible && waveformTask is { IsCompleted: true };
     internal Rect WaveformBounds => new(16, 150, Math.Max(80, rightPanel.X - 32), Math.Max(100, TransportTop - 160));
 
@@ -97,15 +95,15 @@ public sealed partial class EditorView
         }
         Span<float> labelRights = stackalloc float[4];
         labelRights.Fill(r.X);
-        if (!ReferenceEquals(waveformTiming, renderedTiming))
-        {
-            waveformTiming = renderedTiming;
-            waveformRedPoints = Document.TimingPoints.Where(p => p.Uninherited).OrderBy(p => p.TimeMs).Select(p => (p.TimeMs, p.BeatLengthMs)).ToArray();
-        }
-        foreach (var point in waveformRedPoints)
+        foreach (var point in displayedTiming)
         {
             if (point.TimeMs < start || point.TimeMs > start + waveformSpanMs) continue;
             float x = r.X + (float)((point.TimeMs - start) / msPerPixel);
+            if (!point.Uninherited)
+            {
+                if (showTimingSv) DrawTimingMarker(c, point, x, gridTop, rulerY, .8f);
+                continue;
+            }
             string label = TimingN(60000 / TimingMap.EffectiveBeatLength(point.BeatLengthMs)) + " BPM";
             float labelWidth = Math.Min(r.Width - 1, c.MeasureText(label, 12));
             float labelX = Math.Clamp(x + 5, r.X, r.Right - labelWidth - 1);
@@ -134,11 +132,11 @@ public sealed partial class EditorView
         if (button != 0 || AudioLoading) return;
         var r = WaveformBounds;
         double time = playhead + (x - r.X - r.Width / 2) / r.Width * waveformSpanMs;
-        var nearest = Document.TimingPoints.Where(p => p.Uninherited)
+        var nearest = displayedTiming.Where(p => showTimingSv || p.Uninherited)
             .MinBy(p => Math.Abs(p.TimeMs - time));
         if (nearest != null && Math.Abs(nearest.TimeMs - time) * r.Width / waveformSpanMs <= 7)
         {
-            int index = Document.TimingPoints.IndexOf(nearest);
+            int index = Array.IndexOf(displayedTiming, nearest);
             OpenTimingSetup(); timingSelected.Clear(); timingSelected.Add(index); timingAnchor = timingCursor = index;
             timingScroll = Math.Max(0, Array.FindIndex(VisibleTimingEntries(), e => e.Id == index) - 3);
         }

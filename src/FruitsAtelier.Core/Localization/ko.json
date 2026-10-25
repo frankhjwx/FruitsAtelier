@@ -1910,5 +1910,10 @@
   "mv.levelError": "errors",
   "mv.levelCheck": "checks",
   "mv.levelInfo": "information",
-  "mv.filteredEmpty": "No issues match the selected severity."
+  "mv.filteredEmpty": "No issues match the selected severity.",
+  "timing.showSv": "SV 선 표시",
+  "timing.lockSv": "SV 잠금",
+  "timing.bpmSv": "BPM / SV",
+  "timing.sv": "SV (×)",
+  "timing.finishDraft": "SV 표시를 전환하기 전에 타이밍 편집을 적용하거나 취소하세요."
 }

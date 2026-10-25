@@ -533,12 +533,11 @@ public sealed partial class EditorView
             c.Line(edgeX, objectTimeline.Y + 2, edgeX, objectTimeline.Bottom - 2, 0xE8ECED, 2, .8f);
         }
         DrawTimelinePreviewMarker(c, objectTimeline, start, end);
-        foreach (var point in Document.TimingPoints)
+        foreach (var point in displayedTiming)
         {
             if (point.TimeMs < start || point.TimeMs > end) continue;
             float x = X(point.TimeMs);
-            c.Line(x, objectTimeline.Y, x, objectTimeline.Bottom - 1,
-                point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, .8f);
+            DrawTimingMarker(c, point, x, objectTimeline.Y, objectTimeline.Bottom - 1, .8f);
         }
         float head = X(LazerPresentationTime);
         c.Line(head, objectTimeline.Y, head, objectTimeline.Bottom, Gold, 2);

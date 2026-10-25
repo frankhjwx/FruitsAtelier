@@ -1910,5 +1910,10 @@
   "mv.levelError": "errors",
   "mv.levelCheck": "checks",
   "mv.levelInfo": "information",
-  "mv.filteredEmpty": "No issues match the selected severity."
+  "mv.filteredEmpty": "No issues match the selected severity.",
+  "timing.showSv": "顯示 SV 線",
+  "timing.lockSv": "鎖定 SV",
+  "timing.bpmSv": "BPM / SV",
+  "timing.sv": "SV（×）",
+  "timing.finishDraft": "請先套用或取消 Timing 編輯，再切換 SV 顯示。"
 }

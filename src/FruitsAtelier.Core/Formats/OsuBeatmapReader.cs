@@ -281,7 +281,7 @@ public static class OsuBeatmapReader
         }
         foreach (var shower in document.BananaShowers)
         { Id(shower.Id); Time(shower.TimeMs); Time(shower.EndTimeMs); shower.Pattern?.Validate(); if (shower.EndTimeMs < shower.TimeMs) throw new InvalidDataException(L.Get("core.reader.bananaEnd")); }
-        if (document.ImportedSliders.Any(s => InvalidSv(s.SliderVelocityMultiplier) || InvalidSv(s.ProcessedSliderVelocityMultiplier * document.SliderMultiplier / document.EffectiveSliderMultiplier)))
+        if (document.Tracks.Any(t => InvalidSv(t.SliderVelocityMultiplier) || InvalidSv(t.SliderVelocityMultiplier * document.SliderMultiplier / document.EffectiveSliderMultiplier)) || document.ImportedSliders.Any(s => InvalidSv(s.SliderVelocityMultiplier) || InvalidSv(s.ProcessedSliderVelocityMultiplier * document.SliderMultiplier / document.EffectiveSliderMultiplier)))
             throw new InvalidDataException(L.Get("legacySv.range"));
         foreach (var timing in document.TimingPoints) ValidateTiming(timing);
         var errors = CurveMath.Validate(document, int.MaxValue);

@@ -370,3 +370,10 @@ it does not compare/export complete documents to detect edits. It debounces
 committed changes for one second and clones documents once at check submission.
 Export, media copying and upstream checks run off the UI thread. Pending delays
 request a frame only when due and visible; retired workers cannot publish.
+
+Timing SV presentation retains sorted references to the editor's committed export
+read-back in visible mode and authoring timing in hidden mode. Conversion publication
+or a display-mode switch rebuilds the array and pure-SV classification; painting,
+selection and lock toggles reuse them. Difficulty cache retirement clears both.
+Timing presentation never starts an export or conversion from painting or pointer
+movement.
