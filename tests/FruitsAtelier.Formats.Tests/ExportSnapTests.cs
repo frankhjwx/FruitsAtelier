@@ -4,6 +4,7 @@ internal static class ExportSnapTests
 {
     public static void Run()
     {
+        Spinners();
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:2.02\nSliderTickRate:2\n[TimingPoints]\n670,254.237288135593,3,2,1,85,1,0\n12873,254.237288135593,4,2,1,85,1,0\n[HitObjects]\n215,192,33212,5,0,2:0:0:0:\n100,192,38297,5,8,2:0:0:0:\n442,192,55585,5,4,1:2:0:0:\n");
         var before = map.DeepClone();
         var cache = new OsuWriteCache();
@@ -68,6 +69,51 @@ internal static class ExportSnapTests
         var exportedSamples = new HitsoundResolver(sampleExport.ReadBack, sampleExport.PlayableObjects);
         Check(sourceEvents.Zip(sampleExport.PlayableObjects).All(p => sourceSamples.Describe(p.First) == exportedSamples.Describe(p.Second)),
             "Pruning preserves every event's sample settings");
+    }
+
+    private static void Spinners()
+    {
+        foreach (int end in new[] { 2386, 2387 })
+        {
+            var map = OsuBeatmapReader.Read($"osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n387,500,4,1,0,100,1,0\n[HitObjects]\n256,192,386,8,4,{end},1:2:0:50:\n128,192,3000,1,0,0:0:0:0:\n100,192,4000,2,0,L|300:192,1,140\n");
+            var before = map.DeepClone();
+            var cache = new OsuWriteCache();
+            var conversion = cache.Convert(map);
+            var output = OsuBeatmapWriter.Serialize(map, cache: cache);
+            var spinner = output.ReadBack.BananaShowers.Single();
+            Check(spinner.TimeMs == 387 && spinner.EndTimeMs == 2387, "Spinner head and tail repair one-ms offsets, including before the first red line");
+            Check(output.ObjectSequenceMatches && output.MaxConvertedTimeErrorMs == 0
+                && conversion.Objects.Select(o => (o.Kind, o.TimeMs, o.X)).SequenceEqual(output.PlayableObjects.Select(o => (o.Kind, o.TimeMs, o.X))),
+                "Spinner preview, exported bananas and downstream slider RNG agree");
+            Check(output.Text == OsuBeatmapWriter.Serialize(map, cache: cache).Text
+                && output.Text == OsuBeatmapWriter.Serialize(map).Text
+                && output.Text == OsuBeatmapWriter.Serialize(output.ReadBack).Text, "Spinner correction is cached and idempotent");
+            Check(map.ContentEquals(before), "Spinner correction preserves authoring data and source lines");
+            Check(output.Text.Contains("256,192,387,8,4,2387,1:2:0:50:"), "Corrected spinner retains position, sounds and samples");
+        }
+
+        var controls = new MapDocument { BeatLengthMs = 500, DurationMs = 5000 };
+        controls.TimingPoints.Add(new() { TimeMs = 387, BeatLengthMs = 500 });
+        controls.BananaShowers.Add(new() { TimeMs = 385, EndTimeMs = 2385 });
+        var untouched = OsuBeatmapWriter.Serialize(controls).ReadBack.BananaShowers.Single();
+        Check(untouched.TimeMs == 385 && untouched.EndTimeMs == 2385, "Spinner offsets larger than one ms stay authored");
+        controls.BananaShowers[0].TimeMs = 386; controls.BananaShowers[0].EndTimeMs = 2387;
+        controls.Fruits.Add(new() { TimeMs = 387, X = 100 });
+        Check(OsuBeatmapWriter.Serialize(controls).ReadBack.BananaShowers[0].TimeMs == 386, "Spinner head cannot move onto an occupied object head");
+
+        controls.TimingPoints.Clear(); controls.Fruits.Clear();
+        controls.Fruits.Add(new() { TimeMs = 1001, X = 100 });
+        controls.BananaShowers[0].TimeMs = 999; controls.BananaShowers[0].EndTimeMs = 2000;
+        var collisions = OsuBeatmapWriter.Serialize(controls).ReadBack;
+        Check(collisions.Fruits[0].TimeMs == 1001 && collisions.BananaShowers[0].TimeMs == 999,
+            "Circle and spinner corrections cannot merge distinct heads");
+        controls.Fruits.Clear(); controls.BananaShowers[0].EndTimeMs = 1000;
+        Check(OsuBeatmapWriter.Serialize(controls).ReadBack.BananaShowers[0].TimeMs == 999,
+            "One-ms correction cannot collapse a positive spinner duration");
+
+        controls.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 1000 }, new() { TimeMs = 387, BeatLengthMs = 500 }]);
+        controls.BananaShowers[0].TimeMs = 386; controls.BananaShowers[0].EndTimeMs = 2387;
+        Check(OsuBeatmapWriter.Serialize(controls).ReadBack.BananaShowers[0].TimeMs == 386, "Spinner head cannot cross a later red-line grid");
     }
 
     private static void Check(bool value, string message)

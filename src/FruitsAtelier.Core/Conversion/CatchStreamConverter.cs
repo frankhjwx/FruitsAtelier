@@ -6,12 +6,15 @@ public static class CatchStreamConverter
     public const double AlignmentTolerance = 0.0001;
 
     public static CatchConversionResult Convert(MapDocument document, bool compensateTinyDroplets = true, CatchConversionCache? cache = null)
+        => Convert(document, compensateTinyDroplets, cache, normalizeTiming: true);
+
+    internal static CatchConversionResult Convert(MapDocument document, bool compensateTinyDroplets, CatchConversionCache? cache, bool normalizeTiming)
     {
         ArgumentNullException.ThrowIfNull(document);
         try
         {
             if (BananaShowerExpansion.Create(document) is { } expansion)
-                return expansion.Remap(Convert(expansion.Document, compensateTinyDroplets, cache));
+                return expansion.Remap(Convert(expansion.Document, compensateTinyDroplets, cache, normalizeTiming));
         }
         catch (InvalidDataException error)
         {
@@ -34,8 +37,9 @@ public static class CatchStreamConverter
             return Finish();
         }
 
-        document = ExportTiming.Prepare(document, out var preparedTiming);
-        TimingMap.Lookup? timing = preparedTiming;
+        TimingMap.Lookup? timing;
+        if (normalizeTiming) document = ExportTiming.Prepare(document, out timing);
+        else timing = new(document);
         hardRockCompensation = document.DerandomizeDropletsForHardRock
             && (document.DerandomizeFSliderDroplets || document.Tracks.Any(t => t.StreamSnapDivisor is null && t.DropletMode is not null && !t.RandomizesDroplets(document)));
         if (document.LegacySliderTicks && hardRockCompensation)

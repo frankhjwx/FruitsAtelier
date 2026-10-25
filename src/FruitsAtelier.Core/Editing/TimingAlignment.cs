@@ -4,6 +4,7 @@ public sealed class TimingAlignmentPlan
 {
     internal Dictionary<double, double> ObjectTimes { get; init; } = [];
     internal Dictionary<int, double> TimingTimes { get; init; } = [];
+    internal Dictionary<Guid, (double Start, double End)> SpinnerTimes { get; init; } = [];
     public int ObjectCount { get; internal init; }
     public int TimingPointCount => TimingTimes.Count;
     public bool HasChanges => ObjectCount > 0 || TimingPointCount > 0;
@@ -59,27 +60,45 @@ public static class TimingAlignment
             timingTimes[i] = corrected;
             occupiedTiming.Add((OsuBeatmapWriter.QuantizeTime(corrected), false));
         }
-        var heads = document.Fruits.Select(f => f.TimeMs)
-            .Concat(document.ImportedSliders.Select(s => s.TimeMs))
-            .Concat(document.Tracks.Where(t => t.Nodes.Count > 0).Select(t => t.Nodes[0].TimeMs))
-            .Concat(document.BananaShowers.Select(s => s.TimeMs)).ToArray();
-        var occupied = heads.Select(OsuBeatmapWriter.QuantizeTime).ToHashSet();
-        var corrections = heads.Select(time => (Original: time, Corrected: ExportTiming.CorrectHead(alignedTiming, time)))
+        var heads = document.Fruits.Select(f => (f.Id, Time: f.TimeMs, Spinner: false))
+            .Concat(document.ImportedSliders.Select(s => (s.Id, Time: s.TimeMs, Spinner: false)))
+            .Concat(document.Tracks.Where(t => t.Nodes.Count > 0).Select(t => (t.Id, Time: t.Nodes[0].TimeMs, Spinner: false)))
+            .Concat(document.BananaShowers.Select(s => (s.Id, Time: s.TimeMs, Spinner: true))).ToArray();
+        var occupied = heads.Select(h => OsuBeatmapWriter.QuantizeTime(h.Time)).ToHashSet();
+        var corrections = heads.Select(h => (h.Id, h.Spinner, Original: h.Time,
+                Corrected: h.Spinner ? ExportTiming.CorrectSpinnerHead(alignedTiming, h.Time) : ExportTiming.CorrectHead(alignedTiming, h.Time)))
             .Where(p => p.Original != p.Corrected && !occupied.Contains(OsuBeatmapWriter.QuantizeTime(p.Corrected)))
             .GroupBy(p => OsuBeatmapWriter.QuantizeTime(p.Corrected))
             .Where(g => g.Select(p => OsuBeatmapWriter.QuantizeTime(p.Original)).Distinct().Count() == 1)
             .SelectMany(g => g).ToArray();
+        var spinnerHeads = corrections.Where(p => p.Spinner).ToDictionary(p => p.Id, p => p.Corrected);
+        var spinnerTimes = new Dictionary<Guid, (double Start, double End)>();
+        foreach (var spinner in document.BananaShowers)
+        {
+            double start = spinnerHeads.GetValueOrDefault(spinner.Id, spinner.TimeMs);
+            double end = ExportTiming.CorrectHead(alignedTiming, spinner.EndTimeMs);
+            double duration = OsuBeatmapWriter.QuantizeTime(end) - OsuBeatmapWriter.QuantizeTime(start);
+            if (duration < 0 || duration == 0 && spinner.EndTimeMs > spinner.TimeMs)
+            { start = spinner.TimeMs; end = spinner.EndTimeMs; }
+            if (start != spinner.TimeMs || end != spinner.EndTimeMs) spinnerTimes[spinner.Id] = (start, end);
+        }
         return new()
         {
-            ObjectCount = corrections.Length,
-            ObjectTimes = corrections.GroupBy(p => p.Original).ToDictionary(g => g.Key, g => g.First().Corrected),
-            TimingTimes = timingTimes
+            ObjectCount = corrections.Count(p => !p.Spinner) + spinnerTimes.Count,
+            ObjectTimes = corrections.Where(p => !p.Spinner).GroupBy(p => p.Original).ToDictionary(g => g.Key, g => g.First().Corrected),
+            TimingTimes = timingTimes,
+            SpinnerTimes = spinnerTimes
         };
     }
 
     public static void Apply(MapDocument document, TimingAlignmentPlan plan)
     {
-        TimingEditing.TransformObjects(document, time => (plan.ObjectTimes.GetValueOrDefault(time, time), 1));
+        TimingEditing.TransformObjects(document, time => (plan.ObjectTimes.GetValueOrDefault(time, time), 1),
+            double.NegativeInfinity, double.PositiveInfinity, transformSpinners: false);
+        foreach (var spinner in document.BananaShowers)
+            if (plan.SpinnerTimes.TryGetValue(spinner.Id, out var times))
+            { spinner.TimeMs = times.Start; spinner.EndTimeMs = times.End; }
+        document.DurationMs = Math.Max(document.DurationMs, document.BananaShowers.Select(s => s.EndTimeMs).DefaultIfEmpty(0).Max());
         foreach (var (index, time) in plan.TimingTimes) document.TimingPoints[index].TimeMs = time;
         TimingEditing.Validate(document);
     }

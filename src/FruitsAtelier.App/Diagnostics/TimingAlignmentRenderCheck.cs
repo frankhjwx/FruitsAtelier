@@ -21,6 +21,7 @@ internal static class TimingAlignmentRenderCheck
                     new() { TimeMs = 38297, BeatLengthMs = -100, Uninherited = false, Volume = 35 }]);
                 map.Fruits.Add(new() { TimeMs = 33212, X = 215 });
                 var view = new EditorView(false); view.LoadDocument(map); view.CloseLibrary();
+                string captureName = "prompt";
                 view.CheckTimingAlignmentOnOpen(); Paint(true);
                 if (!view.TimingAlignmentPromptVisible || view.TimingAlignmentObjectCount != 1 || view.TimingAlignmentPointCount != 1)
                     throw new InvalidOperationException("Native alignment prompt did not show both issue types.");
@@ -35,6 +36,20 @@ internal static class TimingAlignmentRenderCheck
                 view.KeyDown(90, true, false); Paint();
                 if (view.Document.Fruits[0].TimeMs != 33212 || view.IsDirty) throw new InvalidOperationException("Native alignment undo failed.");
                 view.NewProject();
+                map = new() { IsDemo = false, DurationMs = 5000 };
+                map.TimingPoints.Add(new() { TimeMs = 387, BeatLengthMs = 500 });
+                map.BananaShowers.Add(new() { TimeMs = 386, EndTimeMs = 1386 });
+                view.LoadDocument(map); view.CheckTimingAlignmentOnOpen(); captureName = "spinner-prompt"; Paint(true);
+                if (!view.TimingAlignmentPromptVisible || view.TimingAlignmentObjectCount != 1 || view.TimingAlignmentPointCount != 0)
+                    throw new InvalidOperationException("Native spinner alignment prompt missing.");
+                view.KeyDown(27, false, false); Paint();
+                if (!view.Document.ContentEquals(map) || view.IsDirty) throw new InvalidOperationException("Keeping spinner alignment changed content.");
+                view.LoadDocument(map); view.CheckTimingAlignmentOnOpen(); Paint(); view.KeyDown(13, false, false); Paint();
+                if (view.Document.BananaShowers[0].TimeMs != 387 || view.Document.BananaShowers[0].EndTimeMs != 1387 || !view.IsDirty)
+                    throw new InvalidOperationException("Native spinner alignment failed.");
+                view.KeyDown(90, true, false); Paint();
+                if (!view.Document.ContentEquals(map) || view.IsDirty) throw new InvalidOperationException("Native spinner alignment undo failed.");
+                view.NewProject();
 
                 void Paint(bool capture = false)
                 {
@@ -43,7 +58,7 @@ internal static class TimingAlignmentRenderCheck
                     {
                         string folder = Path.GetFullPath("artifacts/tests/timing-alignment-native"); Directory.CreateDirectory(folder);
                         var frame = canvas.CapturePixels();
-                        using var writer = new BinaryWriter(File.Create(Path.Combine(folder, $"prompt-{locale}-{width}x{height}-{dpi}.bmp")));
+                        using var writer = new BinaryWriter(File.Create(Path.Combine(folder, $"{captureName}-{locale}-{width}x{height}-{dpi}.bmp")));
                         writer.Write((ushort)0x4D42); writer.Write(54 + frame.Pixels.Length); writer.Write(0); writer.Write(54);
                         writer.Write(40); writer.Write(frame.Width); writer.Write(-frame.Height); writer.Write((ushort)1); writer.Write((ushort)32);
                         writer.Write(0); writer.Write(frame.Pixels.Length); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(frame.Pixels);

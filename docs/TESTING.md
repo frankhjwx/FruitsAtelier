@@ -15,18 +15,21 @@ repeat clicks, fade completion and idle redraws. Severity checks cover exclusive
 selection, switching levels and clicking the active level to restore all issues.
 
 `Core.Tests --timing-alignment-check` covers read-only detection, red-line chains,
-parent movement with retained durations, idempotence and undo. `App.Tests
+parent movement, spinner head/tail alignment, positive-duration guards, idempotence
+and undo. `App.Tests
 --timing-alignment-check` checks workspace opening, initial difficulty selection,
 localized counts, modal input, keep/align choices, undo/redo, project replacement
-and one prompt per difficulty per open. Windows `--render-check
+and one prompt per difficulty per open, including spinner-only offsets. Windows `--render-check
 --timing-alignment-render-check` renders and operates the dialog in English and
 Chinese at two window sizes and three DPI scales; captures go to
 `artifacts/tests/timing-alignment-native`.
 
 `Formats.Tests --export-snap-check` checks one-millisecond circle correction after
-red-line resets, source preservation, cached export equivalence, occupied heads,
-exact Stream/Stack grid times, and unused timing pruning with slider-body and
-five-millisecond tail sample preservation.
+red-line resets and spinner head/tail correction, including a head one millisecond
+before the first red line, collision/positive-duration guards, unchanged authoring
+data, cached/idempotent export and downstream banana/slider RNG agreement. It also
+checks exact Stream/Stack grid times and unused timing pruning with slider-body
+and five-millisecond tail sample preservation.
 
 ## Embedded browser checks
 

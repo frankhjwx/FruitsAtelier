@@ -66,11 +66,18 @@ These rules follow the [official format document](https://github.com/ppy/osu-wik
 
 ## Writer behavior
 
-Standalone circles with a one-millisecond integer offset from a supported beat
-grid are corrected in both conversion and export. The active red line owns that
-grid. Already snapped circles, offsets larger than one millisecond, times before
-the first red line, corrections across red-line grids, and corrections onto an occupied parent head retain their
-times. Saved authoring data and undo history keep their original precision.
+Standalone circles and spinner edges with a one-millisecond integer offset from
+a supported beat grid are corrected in both conversion and export. The active red line owns that
+grid. A spinner head up to one millisecond before the first red line can align
+to that line. Other times before the first red line, already snapped edges,
+offsets larger than one millisecond, corrections across red-line grids, and
+head corrections onto an occupied parent head retain their times. Spinner
+corrections do not reverse or collapse a positive duration. Conversion and export
+use the same corrected interval for banana generation and downstream RNG.
+Saved authoring data and undo history keep their original precision.
+The on-open timing-alignment prompt also detects spinner heads and tails, counts
+each affected spinner once, and applies confirmed corrections in one undo step.
+Keeping the original timing leaves authoring data unchanged.
 Stream/Stack subdivisions multiply the whole division count before dividing by
 the snap divisor, preventing intermediate floating-point rounding from moving an
 exact integer grid point one millisecond earlier.

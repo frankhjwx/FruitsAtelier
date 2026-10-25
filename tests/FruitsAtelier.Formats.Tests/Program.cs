@@ -74,7 +74,7 @@ if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console
 
 var tests = new (string Name, Action Run)[]
 {
-    ("Circle export correction and stream grid agree with internal playback", ExportSnapTests.Run),
+    ("Circle and spinner export correction and stream grid agree with internal playback", ExportSnapTests.Run),
     ("Pattern snapshots and FPT packages preserve independent authoring data", PatternGalleryTests.Run),
     ("Slider import modes and compensated baselines remain stable through conversion", SliderImportPolicyTests.Run),
     ("Reimported compensated sliders recover straight playback", SliderReimportTests.Run),

@@ -4,6 +4,7 @@ internal static class TimingAlignmentTests
 {
     public static void Run()
     {
+        Spinners();
         var map = new MapDocument { BeatLengthMs = 254.237288135593, DurationMs = 50000 };
         map.TimingPoints.AddRange([new() { TimeMs = 670, BeatLengthMs = map.BeatLengthMs },
             new() { TimeMs = 12873, BeatLengthMs = map.BeatLengthMs },
@@ -48,6 +49,40 @@ internal static class TimingAlignmentTests
         plan = TimingAlignment.Analyze(reds); TimingAlignment.Apply(reds, plan);
         Check(reds.TimingPoints[1].TimeMs == 1001 && reds.TimingPoints[2].TimeMs == 1001
             && reds.TimingPoints[3].TimeMs == 2001, "Duplicate groups retain their timing precedence");
+    }
+    private static void Spinners()
+    {
+        foreach (double start in new[] { 386d, 387d })
+        {
+            var map = new MapDocument { DurationMs = 1386 };
+            map.TimingPoints.Add(new() { TimeMs = 387, BeatLengthMs = 500 });
+            map.BananaShowers.Add(new() { TimeMs = start, EndTimeMs = 1386 });
+            var before = map.DeepClone();
+            var plan = TimingAlignment.Analyze(map);
+            Check(plan.ObjectCount == 1 && plan.TimingPointCount == 0 && map.ContentEquals(before),
+                "Spinner head/tail detection is read-only and counts each spinner once");
+            var history = new EditorHistory(map);
+            history.Begin("align"); TimingAlignment.Apply(history.Document, plan); history.Commit();
+            Check(history.Document.BananaShowers[0].TimeMs == 387 && history.Document.BananaShowers[0].EndTimeMs == 1387
+                && history.Document.DurationMs >= 1387 && !TimingAlignment.Analyze(history.Document).HasChanges,
+                "Spinner head before the first red line and tail align without repeated prompts");
+            history.Undo(); Check(history.Document.ContentEquals(before), "Spinner alignment undo restores both edges and duration");
+            history.Redo(); Check(history.Document.BananaShowers[0].EndTimeMs == 1387, "Spinner alignment redo restores the correction");
+        }
+        var shared = new MapDocument();
+        shared.TimingPoints.Add(new() { TimeMs = 387, BeatLengthMs = 500 });
+        shared.Fruits.Add(new() { TimeMs = 386 });
+        shared.BananaShowers.Add(new() { TimeMs = 386, EndTimeMs = 1387 });
+        var correction = TimingAlignment.Analyze(shared);
+        TimingAlignment.Apply(shared, correction);
+        Check(correction.ObjectCount == 1 && shared.Fruits[0].TimeMs == 386 && shared.BananaShowers[0].TimeMs == 387,
+            "The first-red-line spinner exception does not move a simultaneous pre-grid circle");
+        shared.TimingPoints.Clear(); shared.Fruits[0].TimeMs = 999;
+        shared.DurationMs = 1000;
+        shared.BananaShowers[0].TimeMs = 999; shared.BananaShowers[0].EndTimeMs = 1000;
+        correction = TimingAlignment.Analyze(shared); TimingAlignment.Apply(shared, correction);
+        Check(shared.Fruits[0].TimeMs == 1000 && shared.BananaShowers[0].TimeMs == 999 && shared.BananaShowers[0].EndTimeMs == 1000 && shared.DurationMs == 1000,
+            "Another parent sharing the same timestamp cannot collapse a spinner");
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
 }

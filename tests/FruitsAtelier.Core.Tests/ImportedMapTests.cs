@@ -130,7 +130,8 @@ internal static class ImportedMapTests
         double[] positions = [65.55122375488281, 482.8815612792969, 164.77008056640625];
         for (int i = 0; i < bananas.Length; i++) { Near(i * 100, bananas[i].TimeMs); Near(positions[i], bananas[i].X); }
         Near(4, result.Objects.First(o => o.Kind == CatchObjectKind.TinyDroplet).RandomOffset);
-        var tailShower = new MapDocument();
+        // Snapped endpoints keep this fixture focused on float accumulation rather than one-ms alignment.
+        var tailShower = new MapDocument { TimingOffsetMs = 274929, BeatLengthMs = 12595 };
         tailShower.BananaShowers.Add(new() { TimeMs = 274929, EndTimeMs = 287524 });
         True(CatchStreamConverter.Convert(tailShower).Objects.Count == 128, "Float banana accumulation was replaced with idealised interval multiplication.");
         var hyperInputs = new ConvertedCatchObject[]
