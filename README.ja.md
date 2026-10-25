@@ -73,6 +73,10 @@ C# 12 と .NET 10 を使用しています。Windows のソースビルドには
 
 - [ビルドとテスト](docs/TESTING.md) · [パッケージ作成とリリース](docs/RELEASING.md)
 - [編集操作](docs/EDITOR_UI.md) · [ワークスペースとファイル](docs/WORKSPACE.md)
+- [プロジェクトアーカイブ](docs/PROJECT_ARCHIVES.md) · [同期と復元](docs/SYNCHRONIZATION.md)
+- [Pattern Gallery](docs/PATTERN_GALLERY.md) · [ヒットサウンド](docs/HITSOUNDS.md)
+- [AiMod](docs/AIMOD.md) · [Mapset Verifier](docs/MAPSET_VERIFIER.md)
+- [編集パフォーマンス](docs/EDITING_PERFORMANCE.md)
 - [アーキテクチャ](docs/ARCHITECTURE.md) · [プロジェクトモデル](docs/PROJECT_MODEL.md) · [ファイル形式](docs/STABLE_FORMAT.md)
 - [ローカライズ](docs/LOCALIZATION.md) · [サードパーティのライセンス](THIRD_PARTY_NOTICES.md)
 
@@ -81,6 +85,7 @@ C# 12 と .NET 10 を使用しています。Windows のソースビルドには
 ## クレジット
 
 - [ppy/osu](https://github.com/ppy/osu) — osu!catch のアルゴリズムと、変換・ゲームプレイ・難易度計算・互換性に関する動作の参考。
+- [Naxesss/MapsetVerifier](https://github.com/Naxesss/MapsetVerifier) — Mapset Verifier パネルで使用する外部ビートマップ検証エンジン。
 - [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer) — マッピング中のリアルタイム Catch プレビューの着想。
 - [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer) — ドロップレットのランダム化補正と Catch スライダーパターン作成の着想。
 

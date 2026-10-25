@@ -73,6 +73,10 @@ The editor uses C# 12 and .NET 10. Windows source builds use SDK **10.0.400**, p
 
 - [Building and testing](docs/TESTING.md) · [Packaging and releases](docs/RELEASING.md)
 - [Editing controls](docs/EDITOR_UI.md) · [Workspace and files](docs/WORKSPACE.md)
+- [Project archives](docs/PROJECT_ARCHIVES.md) · [Synchronization and recovery](docs/SYNCHRONIZATION.md)
+- [Pattern Gallery](docs/PATTERN_GALLERY.md) · [Hitsounds](docs/HITSOUNDS.md)
+- [AiMod](docs/AIMOD.md) · [Mapset Verifier](docs/MAPSET_VERIFIER.md)
+- [Editing performance](docs/EDITING_PERFORMANCE.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Project model](docs/PROJECT_MODEL.md) · [File format](docs/STABLE_FORMAT.md)
 - [Localization](docs/LOCALIZATION.md) · [Third-party licenses](THIRD_PARTY_NOTICES.md)
 
@@ -81,6 +85,7 @@ Technical documentation and the user manual are maintained in English.
 ## Credits
 
 - [ppy/osu](https://github.com/ppy/osu) — osu!catch algorithms and reference behavior for conversion, gameplay, difficulty calculation, and compatibility.
+- [Naxesss/MapsetVerifier](https://github.com/Naxesss/MapsetVerifier) — the external beatmap verification engine used by the Mapset Verifier panel.
 - [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer) — inspiration for real-time Catch gameplay preview while mapping.
 - [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer) — inspiration for droplet derandomization and authoring Catch slider patterns.
 

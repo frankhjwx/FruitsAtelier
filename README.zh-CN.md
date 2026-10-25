@@ -73,6 +73,10 @@ bash scripts/Install-Mac-SDK.sh
 
 - [构建与测试](docs/TESTING.md) · [打包与发布](docs/RELEASING.md)
 - [编辑操作](docs/EDITOR_UI.md) · [工程与文件](docs/WORKSPACE.md)
+- [工程归档](docs/PROJECT_ARCHIVES.md) · [同步与恢复](docs/SYNCHRONIZATION.md)
+- [Pattern Gallery](docs/PATTERN_GALLERY.md) · [打击音](docs/HITSOUNDS.md)
+- [AiMod](docs/AIMOD.md) · [Mapset Verifier](docs/MAPSET_VERIFIER.md)
+- [编辑性能](docs/EDITING_PERFORMANCE.md)
 - [技术架构](docs/ARCHITECTURE.md) · [工程模型](docs/PROJECT_MODEL.md) · [文件格式](docs/STABLE_FORMAT.md)
 - [本地化维护](docs/LOCALIZATION.md) · [第三方许可](THIRD_PARTY_NOTICES.md)
 
@@ -81,6 +85,7 @@ bash scripts/Install-Mac-SDK.sh
 ## 致谢
 
 - [ppy/osu](https://github.com/ppy/osu)：提供 osu!catch 算法，以及转换、游玩、难度计算与兼容行为的参考。
+- [Naxesss/MapsetVerifier](https://github.com/Naxesss/MapsetVerifier)：为 Mapset Verifier 面板提供外部谱面检查引擎。
 - [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer)：为作图时的实时 Catch 游玩预览提供灵感。
 - [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer)：为水滴去随机化与 Catch 滑条编排提供灵感。
 

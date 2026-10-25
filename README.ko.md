@@ -73,6 +73,10 @@ C# 12와 .NET 10을 사용합니다. Windows 소스 빌드는 `global.json`에 �
 
 - [빌드와 테스트](docs/TESTING.md) · [패키징과 릴리스](docs/RELEASING.md)
 - [편집 조작](docs/EDITOR_UI.md) · [작업 공간과 파일](docs/WORKSPACE.md)
+- [프로젝트 아카이브](docs/PROJECT_ARCHIVES.md) · [동기화와 복구](docs/SYNCHRONIZATION.md)
+- [Pattern Gallery](docs/PATTERN_GALLERY.md) · [히트사운드](docs/HITSOUNDS.md)
+- [AiMod](docs/AIMOD.md) · [Mapset Verifier](docs/MAPSET_VERIFIER.md)
+- [편집 성능](docs/EDITING_PERFORMANCE.md)
 - [아키텍처](docs/ARCHITECTURE.md) · [프로젝트 모델](docs/PROJECT_MODEL.md) · [파일 형식](docs/STABLE_FORMAT.md)
 - [현지화](docs/LOCALIZATION.md) · [서드 파티 라이선스](THIRD_PARTY_NOTICES.md)
 
@@ -81,6 +85,7 @@ C# 12와 .NET 10을 사용합니다. Windows 소스 빌드는 `global.json`에 �
 ## 크레딧
 
 - [ppy/osu](https://github.com/ppy/osu) — osu!catch 알고리즘 및 변환, 게임플레이, 난이도 계산, 호환성 동작의 참고 자료.
+- [Naxesss/MapsetVerifier](https://github.com/Naxesss/MapsetVerifier) — Mapset Verifier 패널에서 사용하는 외부 비트맵 검증 엔진.
 - [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer) — 매핑 중 실시간 Catch 게임플레이 미리 보기의 영감.
 - [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer) — 드롭렛 무작위화 보정과 Catch 슬라이더 패턴 제작의 영감.
 
