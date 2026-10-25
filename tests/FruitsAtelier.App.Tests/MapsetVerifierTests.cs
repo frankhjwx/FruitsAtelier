@@ -63,6 +63,7 @@ internal static class MapsetVerifierTests
             Snapshot();
             AutoRefresh();
             PanelControls();
+            CopyFeedback();
             Console.WriteLine("PASS Mapset Verifier timestamps, difficulty identity, snapshots and task retirement");
         }
         finally { L.SetLanguage(language); }
@@ -98,9 +99,14 @@ internal static class MapsetVerifierTests
         Check(ui.View.MapsetVerifierHandCursor, "Timestamp hover selects the hand cursor");
         ui.View.PointerLeave(); Check(!ui.View.MapsetVerifierHandCursor, "Pointer leave clears the hand cursor");
         var filter = ui.View.VerifierFilterBounds("Problem"); Click(filter);
-        Check(!ui.View.VerifierTimestampBounds.Any(t => t.TimeMs == 1001) && checks == 1, "Severity pills filter cached results without checking again");
+        Check(ui.View.VerifierTimestampBounds.Count == 1 && ui.View.VerifierTimestampBounds[0].TimeMs == 1001 && checks == 1, "Selecting a pill shows only its severity without checking again");
+        Click(ui.View.VerifierFilterBounds("Warning"));
+        Check(ui.View.VerifierTimestampBounds.Count == 1 && ui.View.VerifierTimestampBounds[0].TimeMs == 2002, "Selecting another pill replaces the severity filter");
+        Click(ui.View.VerifierFilterBounds("Warning"));
+        Check(ui.View.VerifierTimestampBounds.Count == 62, "Clicking the selected pill restores unfiltered results");
         Click(filter);
-        Check(ui.View.VerifierTimestampBounds.Any(t => t.TimeMs == 1001), "Severity pill restores its issues");
+        Click(filter);
+        Check(ui.View.VerifierTimestampBounds.Any(t => t.TimeMs == 1001), "Clicking the selected severity returns to all issues");
         var heading = ui.Canvas.Texts.First(t => t.Value.Contains("Concurrent ") && t.Bold);
         ui.Click(ui.View.VerifierPanelBounds.X + 18, heading.Y + 7);
         Check(!ui.View.VerifierTimestampBounds.Any(t => t.TimeMs == 1001), "Chevron collapses the complete group");
@@ -119,12 +125,47 @@ internal static class MapsetVerifierTests
         Check(ui.View.VerifierScrollOffset == 0, "Clicking the track reaches the beginning");
         ui.View.CancelInteraction(); ui.Paint();
         Check(!ui.View.WantsCapture && !ui.View.IsDirty, "Lost capture and scrolling preserve content");
-        foreach (string level in new[] { "Problem", "Warning", "Minor" }) Click(ui.View.VerifierFilterBounds(level));
-        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("mv.filteredEmpty")), "Empty filters do not report an all-clear map");
-        ui.View.PointerMove(link.Bounds.X + 3, link.Bounds.Y + 5, false, false);
-        Check(!ui.View.MapsetVerifierHandCursor, "Filtered-out timestamps leave no stale hand targets");
+        Click(ui.View.VerifierFilterBounds("Warning"));
+        ui.View.PointerMove(link.Bounds.X + 3, link.Bounds.Y + 5, false, false); ui.Paint();
+        Check(!ui.View.VerifierTimestampBounds.Any(t => t.TimeMs == 1001), "Filtering removes unrelated timestamp targets");
         ui.View.StopMapsetVerifier();
         void Click(FruitsAtelier.App.Rendering.Rect bounds) => ui.Click(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
+    }
+
+    private static void CopyFeedback()
+    {
+        var clock = new Clock();
+        var ui = new Ui(false, clock);
+        ui.LoadDocument(new() { IsDemo = false, DurationMs = 10000 }); ui.Resize(1440, 900);
+        const string first = "00:01:001 - First", second = "00:02:002 - Second";
+        ui.View.VerifierAnalyze = (inputs, _, _) => Task.FromResult(new MapsetVerifierReport(1, [],
+            [new(inputs[0].Id, inputs[0].Name, "Hard", 3,
+                [new("Copy", "Copy heading", "Warning", first), new("Copy", "Copy heading", "Warning", second)])]));
+        ui.View.ShowMapsetVerifier(); Settle(ui);
+        var copy = ui.Canvas.Texts.Single(t => t.Value == L.Get("mv.copyAll", 2));
+        ui.View.PointerMove(copy.X + 4, copy.Y + 5, false, false); ui.Paint();
+        Check(ui.View.MapsetVerifierHandCursor, "Copy all hover uses the hand cursor");
+        ui.Click(copy.X + 4, copy.Y + 5);
+        Check(ui.View.VerifierCopyOpacity == 0, "Unavailable clipboard does not confirm a copy");
+        string? clipboard = null; ui.View.RequestCopyText = text => clipboard = text;
+        ui.Click(copy.X + 4, copy.Y + 5);
+        Check(clipboard == first + Environment.NewLine + second, "Copy all copies every complete group message");
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("discussion.linkCopied")) && ui.View.VerifierCopyOpacity == 1,
+            "Copy all shows the shared osu web confirmation");
+        Check(ui.View.MapsetVerifierNeedsRedraw, "Copy feedback requests fade frames");
+        clock.Advance(1800); ui.Paint();
+        Check(Math.Abs(ui.View.VerifierCopyOpacity - .5f) < .01, "Copy confirmation shares the web toolbar fade duration");
+        clock.Advance(200); ui.Paint();
+        Check(!ui.View.MapsetVerifierNeedsRedraw && !ui.Canvas.Texts.Any(t => t.Value == L.Get("discussion.linkCopied")), "Expired feedback stops rendering");
+        ui.Click(copy.X + 4, copy.Y + 5);
+        Check(ui.View.VerifierCopyOpacity == 1, "Repeated copy restarts confirmation");
+        var general = ui.View.VerifierGeneralTabBounds;
+        ui.Click(general.X + 15, general.Y + 12);
+        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("discussion.linkCopied")) && !ui.View.MapsetVerifierNeedsRedraw,
+            "Copy confirmation is scoped to its visible group");
+        Check(!ui.View.IsDirty, "Copy feedback preserves content and undo");
+        ui.View.StopMapsetVerifier();
+        Check(ui.View.VerifierCopyOpacity == 0, "Project retirement clears copy feedback");
     }
 
     private static void Snapshot()

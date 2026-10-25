@@ -9,11 +9,14 @@ difficulty select that difficulty before seeking. Groups collapse and provide
 
 The top row contains General/current-difficulty status tabs, a refresh icon and
 the upstream version. Status icons summarize the complete category, independently
-of display filters. Colored severity pills toggle problems, warnings and negligible
-issues; error/information pills appear when present. Filters use the cached report
-and preserve the current check snapshot. Chevrons expand or collapse check groups.
+of display filters. Colored severity pills select one severity at a time; clicking
+the active pill restores all severities. The default view is unfiltered.
+Error/information pills appear when present. Filters use the cached report and
+preserve the current check snapshot. Chevrons expand or collapse check groups.
 The right scrollbar supports thumb dragging and track clicks. Clickable timestamps
-show a hand cursor and an underline on hover.
+show a hand cursor and an underline on hover. **Copy all** uses a hand cursor
+and hover highlight, then shows the same localized clipboard confirmation as
+osu! Web for two seconds, fading during the final 400 ms.
 
 **Refresh** checks an exported snapshot of all loaded difficulties, including
 unsaved edits, with the current tiny-droplet compensation setting. It does not

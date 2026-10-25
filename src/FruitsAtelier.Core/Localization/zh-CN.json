@@ -1905,5 +1905,5 @@
   "mv.levelError": "错误",
   "mv.levelCheck": "检查项",
   "mv.levelInfo": "提示",
-  "mv.filteredEmpty": "没有显示的问题；请启用上方的严重级别筛选。"
+  "mv.filteredEmpty": "当前严重级别下没有问题。"
 }

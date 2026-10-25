@@ -17,9 +17,14 @@ public sealed partial class EditorView
     private Rect verifierGeneralTab, verifierDifficultyTab, verifierRefreshButton;
     private bool verifierScrollbarDragging;
     private float verifierScrollbarOffset;
+    private long? verifierCopiedAt;
+    private string? verifierCopiedKey;
+    private float verifierCopiedPainted;
+    internal float VerifierCopyOpacity => verifierCopiedAt is { } started
+        ? (float)Math.Clamp((2 - timeProvider.GetElapsedTime(started).TotalSeconds) / .4, 0, 1) : 0;
     private readonly List<Rect> verifierHandHits = [];
     private readonly Dictionary<string, Rect> verifierFilterBounds = [];
-    private readonly HashSet<string> verifierHiddenLevels = [];
+    private string? verifierSelectedLevel;
     private static readonly string[] verifierLevels = ["Error", "Problem", "Warning", "Minor", "Info"];
     internal Rect VerifierGeneralTabBounds => verifierGeneralTab;
     internal Rect VerifierDifficultyTabBounds => verifierDifficultyTab;
@@ -28,6 +33,8 @@ public sealed partial class EditorView
     internal Rect VerifierScrollbarThumb => verifierScrollbarThumb;
     internal Rect VerifierFilterBounds(string level) => verifierFilterBounds.GetValueOrDefault(level);
     internal float VerifierScrollOffset => verifierScroll;
+    internal IReadOnlyList<Rect> VerifierCopyBounds => verifierRuns.Where(r => r.CopyKey is not null)
+        .Select(r => new Rect(verifierBody.X + r.Bounds.X, verifierBody.Y + r.Bounds.Y - verifierScroll, r.Bounds.Width, r.Bounds.Height)).ToArray();
     public bool MapsetVerifierHandCursor => MapsetVerifierVisible && DockContentInputAvailable && menu < 0
         && contextItems.Count == 0 && !dockDragging && !verifierScrollbarDragging
         && verifierHandHits.Any(r => r.Contains(mouseX, mouseY));
@@ -40,7 +47,7 @@ public sealed partial class EditorView
     private readonly List<VerifierRun> verifierRuns = [];
     private (MapsetVerifierReport? Report, Guid Difficulty, bool General, float Width, string Language, int Collapsed)? verifierLayout;
     private sealed record VerifierRun(Rect Bounds, string Text, string Level = "", bool Bold = false,
-        double? TimeMs = null, Guid? Difficulty = null, Action? Action = null, bool Icon = false, float Size = 13, bool Chevron = false, bool Collapsed = false);
+        double? TimeMs = null, Guid? Difficulty = null, Action? Action = null, bool Icon = false, float Size = 13, bool Chevron = false, bool Collapsed = false, string? CopyKey = null);
     internal Func<MapsetVerifierInput[], bool, CancellationToken, Task<MapsetVerifierReport>> VerifierAnalyze { get; set; } = MapsetVerifierClient.AnalyzeAsync;
     internal MapsetVerifierReport? VerifierReport => verifierReport;
     internal Rect VerifierPanelBounds => verifierBounds;
@@ -52,7 +59,8 @@ public sealed partial class EditorView
         && !IsTestplaying && ClipboardInteractionReady && !LegacyDropletRefreshBusy
         && difficulties.All(d => !d.History.HasActiveTransaction)
         && timeProvider.GetElapsedTime(verifierChangedAt) >= TimeSpan.FromSeconds(1);
-    public bool MapsetVerifierNeedsRedraw => verifierTask is { IsCompleted: true } || VerifierRefreshReady;
+    public bool MapsetVerifierNeedsRedraw => verifierTask is { IsCompleted: true } || VerifierRefreshReady
+        || MapsetVerifierVisible && verifierCopiedPainted > 0;
 
     public void ShowMapsetVerifier()
     {
@@ -134,7 +142,8 @@ public sealed partial class EditorView
         verifierInterpretations.Clear(); verifierCollapsed.Clear(); verifierScroll = 0;
         verifierTracking = verifierRefreshPending = false; verifierRevisions.Clear();
         verifierScrollbarDragging = false; verifierScrollbarTrack = verifierScrollbarThumb = default;
-        verifierHandHits.Clear(); verifierFilterBounds.Clear(); verifierHiddenLevels.Clear();
+        verifierHandHits.Clear(); verifierFilterBounds.Clear(); verifierSelectedLevel = null;
+        verifierCopiedAt = null; verifierCopiedKey = null; verifierCopiedPainted = 0;
     }
 
     internal void NavigateVerifierTimestamp(Guid? difficulty, double time)
@@ -154,6 +163,8 @@ public sealed partial class EditorView
         var current = difficulties[activeDifficulty];
         var difficulty = verifierReport?.Difficulties.FirstOrDefault(d => d.Id == current.Id);
         verifierHandHits.Clear(); verifierFilterBounds.Clear();
+        verifierCopiedPainted = 0;
+        Rect? copiedButton = null;
         verifierScrollbarTrack = verifierScrollbarThumb = default;
         float y = bounds.Y + 6;
         c.Fill(bounds, 0x202B3B, 7);
@@ -213,15 +224,17 @@ public sealed partial class EditorView
             float badgeWidth = Math.Min(bounds.Width - 20, c.MeasureText(label, 10, true) + 18);
             if (filterX > filterStart && filterX + badgeWidth > bounds.Right - 10) { filterX = filterStart; y += 28; }
             var badge = new Rect(filterX, y, badgeWidth, 22);
-            bool enabled = !verifierHiddenLevels.Contains(level);
+            bool selected = verifierSelectedLevel == level;
+            bool enabled = verifierSelectedLevel is null || selected;
             uint color = level == "Minor" ? 0xB4DE60u : VerifierColour(level);
-            c.Fill(badge, color, 11, enabled ? .18f : .05f);
+            c.Fill(badge, color, 11, selected ? .32f : enabled ? .18f : .05f);
+            if (selected) c.Stroke(badge, color, radius: 11);
             if (!enabled) c.Stroke(badge, Grid, radius: 11);
             c.Text(label, badge.X + 9, badge.Y + 4, 10, enabled ? color : Muted, badge.Width - 18, true);
             verifierFilterBounds[level] = badge;
             hits.Add(new(badge, () =>
             {
-                if (!verifierHiddenLevels.Add(level)) verifierHiddenLevels.Remove(level);
+                verifierSelectedLevel = verifierSelectedLevel == level ? null : level;
                 verifierCollapseVersion++; verifierScroll = 0;
             }, true));
             filterX += badgeWidth + 6;
@@ -268,6 +281,12 @@ public sealed partial class EditorView
                 else
                 {
                     if (run.TimeMs is not null) c.Fill(rectangle, Surface, 3);
+                    if (run.CopyKey is not null)
+                    {
+                        if (DockContentInputAvailable && menu < 0 && contextItems.Count == 0 && rectangle.Contains(mouseX, mouseY))
+                        { c.Fill(rectangle, Surface, 3); colour = Accent; }
+                        if (run.CopyKey == verifierCopiedKey) copiedButton = rectangle;
+                    }
                     c.Text(run.Text, rectangle.X + (run.TimeMs is not null ? 3 : 0), rectangle.Y + 2, run.Size, colour, rectangle.Width, run.Bold);
                 }
                 if (run.TimeMs is double time)
@@ -276,7 +295,7 @@ public sealed partial class EditorView
                     if (MapsetVerifierHandCursor && rectangle.Contains(mouseX, mouseY))
                         c.Line(rectangle.X + 3, rectangle.Bottom - 2, rectangle.Right - 3, rectangle.Bottom - 2, colour);
                 }
-                else if (run.Action is { } action) Hit(action);
+                else if (run.Action is { } action) Hit(action, hand: run.CopyKey is not null);
 
                 void Hit(Action action, bool hand = false)
                 {
@@ -294,6 +313,21 @@ public sealed partial class EditorView
                 c.Fill(verifierScrollbarTrack, Surface, 3);
                 c.Fill(verifierScrollbarThumb, verifierScrollbarDragging || verifierScrollbarTrack.Contains(mouseX, mouseY) ? Foreground : Muted, 3);
             }
+        }
+        if (copiedButton is { } copiedAnchor && VerifierCopyOpacity > 0)
+        {
+            verifierCopiedPainted = VerifierCopyOpacity;
+            string copied = L.Get("discussion.linkCopied");
+            float popupRight = Math.Max(verifierBody.X, verifierBody.Right - 12);
+            float popupWidth = Math.Min(popupRight - verifierBody.X, c.MeasureText(copied, 11) + 16);
+            float left = Math.Clamp(copiedAnchor.X, verifierBody.X, popupRight - popupWidth);
+            float top = Math.Clamp(copiedAnchor.Bottom + 4, verifierBody.Y, Math.Max(verifierBody.Y, verifierBody.Bottom - 22));
+            var popup = new Rect(left, top, popupWidth, 22);
+            c.Clip(verifierBody);
+            c.Fill(popup, Surface, 4, verifierCopiedPainted);
+            c.StrokeOpacity(popup, Accent, 1, 4, verifierCopiedPainted);
+            c.TextOpacity(copied, left + 8, top + 4, 11, Accent, popupWidth - 16, false, verifierCopiedPainted);
+            c.Unclip();
         }
         if (footer > 12) c.Text(L.Get("mv.snapshot", verifierSnapshotTime), bounds.X + 10, bounds.Bottom - footer + 7, 10, Muted, bounds.Width - 20);
     }
@@ -348,11 +382,11 @@ public sealed partial class EditorView
     {
         verifierRuns.Clear();
         float y = 0;
-        int shown = issues.Count(i => !verifierHiddenLevels.Contains(VerifierDisplayLevel(i.Level)));
+        int shown = issues.Count(i => verifierSelectedLevel is null || verifierSelectedLevel == VerifierDisplayLevel(i.Level));
         if (shown == 0) verifierRuns.Add(new(new(4, 4, width - 8, 24), L.Get(issues.Length == 0 ? "mv.noIssues" : "mv.filteredEmpty")));
         foreach (string level in verifierLevels)
         {
-            if (verifierHiddenLevels.Contains(level)) continue;
+            if (verifierSelectedLevel is not null && verifierSelectedLevel != level) continue;
             var groupIssues = issues.Where(i => VerifierDisplayLevel(i.Level) == level).ToArray();
             foreach (var group in groupIssues.GroupBy(i => (i.Check, i.Title)).OrderBy(g => g.Key.Title, StringComparer.Ordinal))
             {
@@ -369,7 +403,13 @@ public sealed partial class EditorView
                     if (!verifierCollapsed.Add(collapse)) verifierCollapsed.Remove(collapse);
                     verifierCollapseVersion++;
                 }));
-                verifierRuns.Add(new(new(Math.Max(0, width - 78), top + 2, 78, 22), L.Get("mv.copyAll", group.Count()), "Info", Action: () => RequestCopyText?.Invoke(string.Join(Environment.NewLine, group.Select(i => i.Message))), Size: 10));
+                string copyKey = (verifierGeneral ? "general" : currentDifficulty.ToString()) + ":" + collapse;
+                verifierRuns.Add(new(new(Math.Max(0, width - 78), top + 2, 78, 22), L.Get("mv.copyAll", group.Count()), "Info", Action: () =>
+                {
+                    if (RequestCopyText is null) return;
+                    RequestCopyText(string.Join(Environment.NewLine, group.Select(i => i.Message)));
+                    verifierCopiedAt = timeProvider.GetTimestamp(); verifierCopiedKey = copyKey;
+                }, Size: 10, CopyKey: copyKey));
                 y = end;
                 if (!closed)
                     foreach (var issue in group.OrderBy(i => MapsetVerifierClient.Tokenize(i.Message).FirstOrDefault(t => t.TimeMs is not null)?.TimeMs ?? double.MinValue).ThenBy(i => i.Message, StringComparer.Ordinal))

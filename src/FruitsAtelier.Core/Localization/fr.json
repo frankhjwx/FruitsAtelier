@@ -1905,5 +1905,5 @@
   "mv.levelError": "errors",
   "mv.levelCheck": "checks",
   "mv.levelInfo": "information",
-  "mv.filteredEmpty": "No visible issues. Enable the severity filters above."
+  "mv.filteredEmpty": "No issues match the selected severity."
 }

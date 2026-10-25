@@ -10,6 +10,9 @@ behavior and cancellation of reports superseded by newer content.
 It covers category status icons, severity filters, compact toolbar alignment,
 chevrons, timestamp hand cursors, thumb/track scrolling and pointer-capture release.
 The native verifier check exercises scrolling and captures both category views.
+Copy checks cover complete group messages, hover cursors, clipboard confirmation,
+repeat clicks, fade completion and idle redraws. Severity checks cover exclusive
+selection, switching levels and clicking the active level to restore all issues.
 
 `Core.Tests --timing-alignment-check` covers read-only detection, red-line chains,
 parent movement with retained durations, idempotence and undo. `App.Tests
