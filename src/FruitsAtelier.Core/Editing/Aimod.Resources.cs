@@ -2,10 +2,13 @@ using System.Buffers.Binary;
 
 namespace FruitsAtelier.Core;
 
+public sealed record AimodVideoMetadata(int Width, int Height, bool HasAudio);
+
 public static partial class Aimod
 {
     // Run resource I/O on a worker owned by the report snapshot, never during drawing.
-    public static IReadOnlyList<AimodIssue> AnalyzeResources(MapDocument document)
+    public static IReadOnlyList<AimodIssue> AnalyzeResources(MapDocument document, Func<string, AimodVideoMetadata>? inspectVideo = null,
+        CancellationToken cancellation = default)
     {
         var issues = new List<AimodIssue>();
         string? root = Path.GetDirectoryName(document.SourcePath ?? document.AudioPath);
@@ -15,28 +18,8 @@ public static partial class Aimod
         string? background = OsuTimeline.BackgroundFilename(document) is string bg ? ResourceName(bg) : null;
         string audio = ResourceName(SongSetup.Get(document, "General", "AudioFilename"));
         AddReference(audio);
-        var events = document.OriginalSections.Where(s => s.Name == "Events").SelectMany(s => s.Lines).ToList();
-        var variables = document.OriginalSections.Where(s => s.Name == "Variables").SelectMany(s => s.Lines).ToList();
-        if (Directory.Exists(root))
-            foreach (string storyboard in Directory.EnumerateFiles(root, "*.osb").Order(StringComparer.OrdinalIgnoreCase))
-            {
-                string section = "";
-                foreach (string line in File.ReadLines(storyboard))
-                {
-                    if (line.StartsWith('[')) { section = line.Trim(); continue; }
-                    if (section == "[Events]") events.Add(line);
-                    else if (section == "[Variables]") variables.Add(line);
-                }
-            }
-        var substitutions = variables.Select(v => v.Split('=', 2)).Where(v => v.Length == 2 && v[0].StartsWith('$'))
-            .GroupBy(v => v[0]).ToDictionary(g => g.Key, g => g.Last()[1]);
-        string Expand(string line)
-        {
-            foreach (var pair in substitutions.OrderByDescending(p => p.Key.Length)) line = line.Replace(pair.Key, pair.Value, StringComparison.Ordinal);
-            return line;
-        }
-        events = events.Select(Expand).ToList();
-        foreach (var line in events) ReadEvent(line);
+        var events = StoryboardResourceEvents(document, root);
+        foreach (var line in events) { cancellation.ThrowIfCancellationRequested(); ReadEvent(line); }
         if (SongSetup.Get(document, "General", "EpilepsyWarning", "0") != "1" && ShortStoryboardEvents(events) > 5)
             issues.Add(new(AimodCategory.Design, AimodSeverity.Warning, "epilepsy"));
         foreach (var line in document.Fruits.Select(f => f.OriginalLine).Concat(document.ImportedSliders.Select(s => s.OriginalLine)))
@@ -46,15 +29,28 @@ public static partial class Aimod
             if (sample.Split(':', 5) is { Length: 5 } fields) AddReference(fields[4]);
         }
         foreach (string video in videos.Where(v => File.Exists(Path.Combine(root, v))))
-            ReadMedia(video, properties =>
+        {
+            cancellation.ThrowIfCancellationRequested();
+            try
             {
-                if (VideoDimensionIssue(properties.VideoWidth, properties.VideoHeight) is string code)
+                AimodVideoMetadata properties;
+                if (inspectVideo is not null) properties = inspectVideo(Path.Combine(root, video));
+                else
+                {
+                    using var media = TagLib.File.Create(Path.Combine(root, video));
+                    properties = new(media.Properties.VideoWidth, media.Properties.VideoHeight, media.Properties.AudioChannels > 0);
+                }
+                if (VideoDimensionIssue(properties.Width, properties.Height) is string code)
                     issues.Add(new(AimodCategory.Design, AimodSeverity.Warning, code));
-            }, skipUnsupportedVideo: true);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or TagLib.CorruptFileException or TagLib.UnsupportedFormatException or InvalidOperationException or NotSupportedException or DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
+            { issues.Add(new(AimodCategory.Design, AimodSeverity.Warning, "unreadableMedia", Arguments: [video])); }
+        }
         if (!string.IsNullOrEmpty(audio) && File.Exists(Path.Combine(root, audio)))
             ReadMedia(audio, _ => { });
         foreach (string reference in references)
         {
+            cancellation.ThrowIfCancellationRequested();
             string path = Path.Combine(root, reference);
             if (!File.Exists(path))
                 issues.Add(new(AimodCategory.Design, AimodSeverity.Error, "missingFile", Arguments: [reference]));
@@ -88,10 +84,9 @@ public static partial class Aimod
             }
         return issues;
 
-        void ReadMedia(string name, Action<TagLib.Properties> inspect, bool skipUnsupportedVideo = false)
+        void ReadMedia(string name, Action<TagLib.Properties> inspect)
         {
             try { using var media = TagLib.File.Create(Path.Combine(root, name)); inspect(media.Properties); }
-            catch (TagLib.UnsupportedFormatException) when (skipUnsupportedVideo) { }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or TagLib.CorruptFileException or TagLib.UnsupportedFormatException)
             { issues.Add(new(AimodCategory.Design, AimodSeverity.Warning, "unreadableMedia", Arguments: [name])); }
         }
@@ -118,6 +113,54 @@ public static partial class Aimod
                             AddReference(Path.ChangeExtension(fields[3], null) + i + Path.GetExtension(fields[3]));
                     break;
             }
+        }
+    }
+
+    public static IReadOnlyList<string> VideoResources(MapDocument document)
+    {
+        string? root = Path.GetDirectoryName(document.SourcePath ?? document.AudioPath);
+        if (root is null) return [];
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string line in StoryboardResourceEvents(document, root))
+        {
+            if (line.TrimStart().StartsWith("//", StringComparison.Ordinal)) continue;
+            var fields = WorkspaceProject.Csv(line.Trim());
+            if (fields.Length < 3 || fields[0] is not ("1" or "Video")) continue;
+            OsuBeatmapReader.ValidateOsuResourceReference(fields[2]);
+            names.Add(ResourceName(fields[2]));
+        }
+        return names.ToArray();
+    }
+
+    private static List<string> StoryboardResourceEvents(MapDocument document, string root)
+    {
+        var events = Expand(document.OriginalSections.Where(s => s.Name == "Events").SelectMany(s => s.Lines),
+            document.OriginalSections.Where(s => s.Name == "Variables").SelectMany(s => s.Lines));
+        if (Directory.Exists(root))
+            foreach (string storyboard in Directory.EnumerateFiles(root, "*.osb").Order(StringComparer.OrdinalIgnoreCase))
+            {
+                var sharedEvents = new List<string>();
+                var variables = new List<string>();
+                string section = "";
+                foreach (string line in File.ReadLines(storyboard))
+                {
+                    if (line.TrimStart().StartsWith('[')) { section = line.Trim(); continue; }
+                    if (section == "[Events]") sharedEvents.Add(line);
+                    else if (section == "[Variables]") variables.Add(line);
+                }
+                events.AddRange(Expand(sharedEvents, variables));
+            }
+        return events;
+
+        static List<string> Expand(IEnumerable<string> lines, IEnumerable<string> variables)
+        {
+            var substitutions = variables.Select(v => v.Trim().Split('=', 2)).Where(v => v.Length == 2 && v[0].StartsWith('$'))
+                .GroupBy(v => v[0].Trim()).ToDictionary(g => g.Key, g => g.Last()[1].Trim());
+            return lines.Select(line =>
+            {
+                foreach (var pair in substitutions.OrderByDescending(p => p.Key.Length)) line = line.Replace(pair.Key, pair.Value, StringComparison.Ordinal);
+                return line;
+            }).ToList();
         }
     }
 

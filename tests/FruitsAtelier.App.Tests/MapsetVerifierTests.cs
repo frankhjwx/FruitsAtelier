@@ -308,12 +308,31 @@ internal static class MapsetVerifierTests
             Directory.CreateDirectory(original); Directory.CreateDirectory(snapshot);
             File.WriteAllText(Path.Combine(original, "private.txt"), "unrelated data");
             File.WriteAllBytes(Path.Combine(original, "bg.jpg"), [1, 2, 3]);
+            File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "video-with-audio.flv"), Path.Combine(original, "shared.flv"));
+            File.Copy(Path.Combine(original, "shared.flv"), Path.Combine(original, "clip.mpeg"));
+            File.Copy(Path.Combine(original, "shared.flv"), Path.Combine(original, "clip.custom"));
+            File.WriteAllText(Path.Combine(original, "shared.osb"), "[Events]\nVideo,0,shared.flv\nVideo,0,missing.wmv\nVideo,0,broken.mp4\nVideo,0,clip.mpeg\nVideo,0,clip.custom\n");
+            File.WriteAllBytes(Path.Combine(original, "broken.mp4"), [0, 1, 2]);
             var document = new MapDocument { IsDemo = false, SourcePath = Path.Combine(original, "input.osu") };
             document.Fruits.Add(new() { TimeMs = 1234, X = 128 });
             var request = MapsetVerifierClient.PrepareSnapshot([new(Guid.NewGuid(), "Edited", document)], true, snapshot, default);
             Check(!File.Exists(Path.Combine(snapshot, "private.txt")) && File.Exists(Path.Combine(snapshot, "bg.jpg")), "Snapshot copies allowlisted mapset resources only");
             Check(File.ReadAllText(Path.Combine(snapshot, request.Difficulties[0].File)).Contains(",1234,"), "Snapshot exports current unsaved content");
-            Check(Directory.GetFiles(original).Length == 2, "Snapshot leaves source directory untouched");
+            var video = request.Videos.Single(v => v.File == "shared.flv");
+            Check(video is { Width: 1296, Height: 24, HasAudio: true, Error: null }, "Snapshot probes shared storyboard FLV metadata through the packaged decoder");
+            Check(new[] { "clip.mpeg", "clip.custom" }.All(name => File.Exists(Path.Combine(snapshot, name))
+                && request.Videos.Single(v => v.File == name) is { Width: 1296, Height: 24, HasAudio: true, Error: null }),
+                "Referenced videos are copied and probed independently of filename extension");
+            Check(request.Videos.Single(v => v.File == "missing.wmv").Error == "Missing"
+                && request.Videos.Single(v => v.File == "broken.mp4").Error == "Exception", "Snapshot preserves missing and unreadable video results");
+            var metadata = FruitsAtelier.App.Media.VideoMetadata.Read(Path.Combine(original, "shared.flv"));
+            Check(metadata == new AimodVideoMetadata(1296, 24, true), "Silent audio stream remains present in FLV metadata");
+            using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+            bool cancelled = false;
+            try { FruitsAtelier.App.Media.VideoMetadata.Read(Path.Combine(original, "shared.flv"), cancellation.Token); }
+            catch (OperationCanceledException) { cancelled = true; }
+            Check(cancelled, "Cancelled video metadata reads cannot publish a result");
+            Check(Directory.GetFiles(original).Length == 7, "Snapshot leaves source directory untouched");
         }
         finally { Directory.Delete(root, true); }
     }
@@ -338,7 +357,42 @@ internal static class MapsetVerifierTests
         File.WriteAllText(Path.Combine(evidence, "engine-report.json"), System.Text.Json.JsonSerializer.Serialize(result));
         var issues = result.Difficulties.SelectMany(d => d.Issues).ToArray();
         Check(issues.Any(i => i.Check.StartsWith("MapsetVerifier.") && MapsetVerifierClient.Tokenize(i.Message).Any(t => t.TimeMs == 1004)), "Actual upstream reports navigable object timestamps");
+        VideoEngine(root.FullName);
         Console.WriteLine("PASS actual pinned Mapset Verifier engine, exported snapshot and multiple difficulty identities");
+    }
+
+    private static void VideoEngine(string repository)
+    {
+        string root = Path.Combine(repository, "artifacts", "tests", "mapset-verifier", "media-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "video-with-audio.flv"), Path.Combine(root, "shared.flv"));
+            File.Copy(Path.Combine(root, "shared.flv"), Path.Combine(root, "clip.custom"));
+            File.WriteAllBytes(Path.Combine(root, "broken.mp4"), [0, 1, 2]);
+            File.WriteAllText(Path.Combine(root, "shared.osb"), "[Events]\nVideo,0,shared.flv\nVideo,0,missing.wmv\nVideo,0,broken.mp4\nVideo,0,clip.custom\n");
+            var map = new MapDocument { IsDemo = false, SourcePath = Path.Combine(root, "map.osu"),
+                AudioPath = Path.Combine(repository, "tests", "FruitsAtelier.Audio.Tests", "Fixtures", "quiet-tone.ogg") };
+            SongSetup.Set(map, "General", "Mode", "2");
+            map.Fruits.Add(new() { TimeMs = 1000 });
+            var before = map.DeepClone();
+            var result = MapsetVerifierClient.AnalyzeAsync([new(Guid.NewGuid(), "Media", map)], true, default).GetAwaiter().GetResult();
+            Check(result.General.Any(i => i.Check.EndsWith("CheckAudioInVideo") && i.Level == "Problem" && i.Message.Contains("shared.flv")),
+                "Actual engine flags the silent audio stream of a shared storyboard FLV");
+            Check(result.General.Any(i => i.Check.EndsWith("CheckVideoResolution") && i.Level == "Problem" && i.Message.Contains("1296 x 24")),
+                "Actual engine uses upstream's either-axis video resolution threshold");
+            Check(result.General.Any(i => i.Check.EndsWith("CheckAudioInVideo") && i.Level == "Problem" && i.Message.Contains("clip.custom")),
+                "Actual engine checks referenced video containers without an allowlisted extension");
+            foreach (string check in new[] { "CheckAudioInVideo", "CheckVideoResolution" })
+            {
+                Check(result.General.Any(i => i.Check.EndsWith(check) && i.Level == "Warning" && i.Message.Contains("missing.wmv")),
+                    "Actual video checks retain missing resource warnings");
+                Check(result.General.Any(i => i.Check.EndsWith(check) && i.Level == "Error" && i.Message.Contains("broken.mp4")),
+                    "Actual video checks retain metadata failure errors");
+            }
+            Check(map.ContentEquals(before), "Actual media verification preserves source content");
+        }
+        finally { Directory.Delete(root, true); }
     }
 
     private static void Settle(Ui ui)

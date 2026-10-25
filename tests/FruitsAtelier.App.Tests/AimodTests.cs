@@ -13,6 +13,7 @@ internal static class AimodTests
             {
                 L.SetLanguage(language);
                 AudioDuration();
+                DisabledMediaDiagnostics();
                 var map = new MapDocument { DurationMs = 10000 };
                 map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1005, X = 400 }]);
                 var ui = new Ui(); ui.LoadDocument(map);
@@ -45,6 +46,36 @@ internal static class AimodTests
             }
         }
         finally { L.SetLanguage(previous); }
+    }
+
+    private static void DisabledMediaDiagnostics()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "aimod-disabled-media", Guid.NewGuid().ToString("N")));
+        Directory.CreateDirectory(root);
+        var ui = new Ui(false);
+        try
+        {
+            File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "video-with-audio.flv"), Path.Combine(root, "clip.flv"));
+            File.WriteAllText(Path.Combine(root, "shared.osb"), "[Events]\nVideo,0,clip.flv\nVideo,0,missing.wmv\n");
+            var map = new MapDocument { SourcePath = Path.Combine(root, "fixture.osu"), IsDemo = false };
+            ui.View.LibrarySettings.EnableVideoStoryboard = false;
+            ui.LoadDocument(map); ui.View.ShowAimod();
+            var deadline = DateTime.UtcNow.AddSeconds(5);
+            while (!ui.View.AimodIssues.Any(i => i.Code == "missingFile") && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(1); }
+            Check(ui.View.AimodIssues.Any(i => i.Code == "missingFile" && i.Arguments.Contains("missing.wmv"))
+                && !ui.View.AimodIssues.Any(i => i.Code is "unreadableMedia" or "checkFailed"),
+                "Disabled playback still probes supported video and reports missing storyboard resources");
+            Check(!ui.View.AimodIssues.Any(i => i.Code is "largeVideoWide" or "largeVideoStandard"),
+                "AiMod preserves stable's both-axis resolution threshold for a wide short video");
+            Check(map.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Disabled media checking preserves beatmap content");
+            for (int i = 0; i < 10; i++) ui.View.ShowAimod();
+            ui.LoadDocument(new MapDocument());
+            deadline = DateTime.UtcNow.AddMilliseconds(100);
+            do { ui.Paint(); Thread.Sleep(1); } while (DateTime.UtcNow < deadline);
+            Check(!ui.View.AimodIssues.Any(i => i.Code is "missingFile" or "unreadableMedia" or "checkFailed"),
+                "Repeated refresh and document replacement retire prior media findings");
+        }
+        finally { ui.View.NewProject(); Directory.Delete(root, true); }
     }
 
     private static void AudioDuration()

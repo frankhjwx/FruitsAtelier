@@ -46,7 +46,9 @@ public static partial class MapsetVerifierClient
 
     private static readonly JsonSerializerOptions json = new() { PropertyNameCaseInsensitive = true };
     private static readonly HashSet<string> resourceExtensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".mp3", ".ogg", ".wav", ".flac", ".aac", ".m4a", ".mp4", ".avi", ".webm", ".mov", ".flv", ".mkv", ".wmv", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".osb" };
+        { ".mp3", ".ogg", ".wav", ".flac", ".aac", ".m4a", ".mp4", ".avi", ".webm", ".mov", ".flv", ".mkv", ".wmv", ".mpg", ".m4v", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".osb" };
+    private static readonly HashSet<string> videoExtensions = new(StringComparer.OrdinalIgnoreCase)
+        { ".mp4", ".avi", ".webm", ".mov", ".flv", ".mkv", ".wmv", ".mpg", ".m4v" };
 
     // Consume each timestamp independently, including lists and the upstream combo suffix.
     [GeneratedRegex(@"(?<![\d:])(?<minutes>\d{1,6}):(?<seconds>[0-5]\d):(?<milliseconds>\d{3})(?:\s*\([\d,|]+\))?|(?<!\S)(?<negative>-\d+)(?= - )", RegexOptions.CultureInvariant)]
@@ -130,13 +132,23 @@ public static partial class MapsetVerifierClient
     }
 
     internal sealed record ExportedDifficulty(Guid Id, string File, string? Interpretation);
-    internal sealed record SnapshotRequest(string Folder, ExportedDifficulty[] Difficulties);
+    internal sealed record VideoResource(string File, int Width = 0, int Height = 0, bool HasAudio = false, string? Error = null);
+    internal sealed record SnapshotRequest(string Folder, ExportedDifficulty[] Difficulties, VideoResource[] Videos);
 
     internal static SnapshotRequest PrepareSnapshot(MapsetVerifierInput[] inputs, bool compensation, string destination, CancellationToken cancellation)
     {
-        long bytes = 0; int files = 0;
+        long bytes = 0, videoBytes = 0; int files = 0;
+        byte[] copyBuffer = new byte[128 * 1024];
         var copied = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var videoSources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var input in inputs)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            if (Path.GetDirectoryName(input.Document.SourcePath ?? input.Document.AudioPath) is not { } root) continue;
+            foreach (string video in Aimod.VideoResources(input.Document))
+                videoSources.Add(Path.GetFullPath(Path.Combine(root, video)));
+        }
         foreach (var input in inputs)
         {
             cancellation.ThrowIfCancellationRequested();
@@ -153,12 +165,13 @@ public static partial class MapsetVerifierClient
                     if (!Path.GetFileName(child).StartsWith('.') && Path.GetFileName(child) is not ("artifacts" or "bin" or "obj")) pending.Push(child);
                 // Only mapset media/storyboards enter the engine snapshot; project files and unrelated data stay outside it.
                 foreach (string file in Directory.EnumerateFiles(directory))
-                    if (!Path.GetFileName(file).StartsWith('.') && (resourceExtensions.Contains(Path.GetExtension(file)) || Path.GetFileName(file).Equals("skin.ini", StringComparison.OrdinalIgnoreCase)))
+                    if (!Path.GetFileName(file).StartsWith('.') && (videoSources.Contains(Path.GetFullPath(file)) || resourceExtensions.Contains(Path.GetExtension(file)) || Path.GetFileName(file).Equals("skin.ini", StringComparison.OrdinalIgnoreCase)))
                         Copy(file, Path.GetRelativePath(root, file));
             }
         }
         var difficulties = new List<ExportedDifficulty>();
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var videoNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var input in inputs)
         {
             cancellation.ThrowIfCancellationRequested();
@@ -166,11 +179,26 @@ public static partial class MapsetVerifierClient
             string name = WorkspaceProject.DifficultyFileName(exported.ReadBack, input.Name, ".osu");
             if (!names.Add(name)) throw new InvalidDataException("Difficulties have conflicting export filenames: " + name);
             File.WriteAllText(Path.Combine(destination, name), exported.Text);
+            exported.ReadBack.SourcePath = Path.Combine(destination, name);
+            foreach (string video in Aimod.VideoResources(exported.ReadBack)) videoNames.Add(video);
             string audioName = SongSetup.Get(exported.ReadBack, "General", "AudioFilename");
             if (input.Document.AudioPath is { } audio && File.Exists(audio) && !string.IsNullOrWhiteSpace(audioName)) Copy(audio, audioName);
             difficulties.Add(new(input.Id, name, input.Interpretation));
         }
-        return new(destination, difficulties.ToArray());
+        var videos = videoNames.Select(name =>
+        {
+            cancellation.ThrowIfCancellationRequested();
+            string path = Path.Combine(destination, name);
+            if (!File.Exists(path)) return new VideoResource(name, Error: "Missing");
+            try
+            {
+                var metadata = Media.VideoMetadata.Read(path, cancellation);
+                return new VideoResource(name, metadata.Width, metadata.Height, metadata.HasAudio);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or NotSupportedException or DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
+            { return new VideoResource(name, Error: "Exception"); }
+        }).ToArray();
+        return new(destination, difficulties.ToArray(), videos);
 
         void Copy(string source, string relative)
         {
@@ -184,9 +212,26 @@ public static partial class MapsetVerifierClient
                 if (string.Equals(Path.GetFullPath(previous), Path.GetFullPath(source), StringComparison.OrdinalIgnoreCase)) return;
                 throw new InvalidDataException("Conflicting mapset resource: " + relative);
             }
-            if (++files > 50000 || (bytes += new FileInfo(source).Length) > 512L * 1024 * 1024) throw new InvalidDataException("Mapset resources exceed the 512 MiB / 50000 file limit.");
+            long length = new FileInfo(source).Length;
+            bool video = videoSources.Contains(Path.GetFullPath(source)) || videoExtensions.Contains(Path.GetExtension(source));
+            if (++files > 50000 || bytes + (video ? 0 : length) > 512L * 1024 * 1024 || videoBytes + (video ? length : 0) > 4L * 1024 * 1024 * 1024)
+                throw new InvalidDataException("Mapset resources exceed the 512 MiB non-video / 4 GiB video / 50000 file limit.");
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            File.Copy(source, target, overwrite: false); copied[target] = source;
+            using (var input = File.OpenRead(source))
+            using (var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                int count;
+                while ((count = input.Read(copyBuffer)) > 0)
+                {
+                    cancellation.ThrowIfCancellationRequested();
+                    if (video) videoBytes += count;
+                    else bytes += count;
+                    if (bytes > 512L * 1024 * 1024 || videoBytes > 4L * 1024 * 1024 * 1024)
+                        throw new InvalidDataException("Mapset resources grew beyond the snapshot size limit.");
+                    output.Write(copyBuffer, 0, count);
+                }
+            }
+            copied[target] = source;
         }
     }
 }

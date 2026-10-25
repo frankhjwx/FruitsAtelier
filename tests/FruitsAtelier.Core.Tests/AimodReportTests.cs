@@ -31,6 +31,7 @@ internal static class AimodReportTests
         foreach (var point in map.TimingPoints) point.Volume = 0;
         Check(Aimod.Analyze(map).Any(i => i.Code == "allQuiet" && i.Severity == AimodSeverity.Error), "Silent timing sections");
         Resources();
+        VideoResources();
         Check(Aimod.VideoDimensionIssue(1280, 720) is null && Aimod.VideoDimensionIssue(1920, 720) is null
             && Aimod.VideoDimensionIssue(1024, 1000) is null, "Stable video dimensions require both axes to exceed the limit");
         Check(Aimod.VideoDimensionIssue(1280, 960) == "largeVideoStandard"
@@ -42,6 +43,14 @@ internal static class AimodReportTests
             "Loop lifetime includes every repetition");
         Check(Aimod.ShortStoryboardEvents(["Sprite,Foreground,Centre,a.png,0,0", " F,0,0,40,0,1,0,1"]) == 0,
             "Compound commands extend the lifetime");
+        Check(Aimod.ShortStoryboardEvents(["Animation,Foreground,Centre,a.png,0,0,20,100,LoopForever", " F,0,0,99,0"]) == 1,
+            "Animation frame duration and alpha do not replace command lifetime");
+        Check(Aimod.ShortStoryboardEvents(["Sprite,Foreground,Centre,a.png,0,0", " T,HitSound,1000,1100", "  F,0,0,10,1"]) == 0,
+            "Trigger activation window participates in storyboard lifetime");
+        Check(Aimod.ShortStoryboardEvents(["Sprite,Foreground,Centre,a.png,0,0", " L,0,2", "  L,0,2", "   F,0,0,25,1"]) == 0,
+            "Nested loops extend command lifetime to the exact 100 ms boundary");
+        Check(Aimod.ShortStoryboardEvents(["Sprite,Foreground,Centre,a.png,0,0", "Sample,0,0,a.wav,100"]) == 0,
+            "Sprites without commands and sample events do not count as short objects");
         var medium = new MapDocument();
         medium.Fruits.AddRange([new() { TimeMs = 0 }, new() { TimeMs = 100000 }]);
         medium.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
@@ -147,8 +156,8 @@ internal static class AimodReportTests
         Check(Aimod.AnalyzeResources(map).Any(i => i.Code == "unreadableMedia"), "Unreadable video does not suppress other findings");
         File.WriteAllBytes(Path.Combine(root, "Video.flv"), [70, 76, 86, 1, 1, 0, 0, 0, 9, 0, 0, 0, 0]);
         map.OriginalSections.Single(s => s.Name == "Events").Lines.Add("Video,0,Video.flv");
-        Check(!Aimod.AnalyzeResources(map).Any(i => i.Code == "unreadableMedia" && (string)i.Arguments[0] == "Video.flv"),
-            "Unsupported video formats are skipped");
+        Check(Aimod.AnalyzeResources(map).Any(i => i.Code == "unreadableMedia" && (string)i.Arguments[0] == "Video.flv"),
+            "Unsupported video formats report unreadable metadata");
         SongSetup.Set(map, "General", "AudioFilename", "Video.flv");
         Check(Aimod.AnalyzeResources(map).Any(i => i.Code == "unreadableMedia" && (string)i.Arguments[0] == "Video.flv"),
             "Unsupported audio still reports unreadable metadata");
@@ -171,6 +180,44 @@ internal static class AimodReportTests
         map.Fruits[1].TimeMs = 50000;
         Check(!Aimod.Analyze(map, audioDurationMs: 60000).Any(i => i.Code == "longAudio"), "Exactly 80 percent is permitted");
     }
+    private static void VideoResources()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "aimod-video-resources", Guid.NewGuid().ToString("N")));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var map = new MapDocument { SourcePath = Path.Combine(root, "test.osu") };
+            var events = new OsuSection { Name = "Events" };
+            events.Lines.AddRange(["Video,0,$video", "1,10,clip.flv"]);
+            map.OriginalSections.Add(events);
+            var variables = new OsuSection { Name = "Variables" };
+            variables.Lines.Add("$video=clip.flv");
+            map.OriginalSections.Add(variables);
+            File.WriteAllBytes(Path.Combine(root, "clip.flv"), [1]);
+            File.WriteAllBytes(Path.Combine(root, "shared.wmv"), [2]);
+            File.WriteAllText(Path.Combine(root, "shared.osb"), "[Variables]\n$video=shared.wmv\n[Events]\nVideo,0,\"$video\"\n");
+            var before = map.DeepClone();
+            var probed = new List<string>();
+            var issues = Aimod.AnalyzeResources(map, path =>
+            {
+                probed.Add(Path.GetFileName(path));
+                return new(1920, 1080, true);
+            });
+            Check(probed.Order().SequenceEqual(new[] { "clip.flv", "shared.wmv" }), "Video probing scopes variables to their owning file and deduplicates references");
+            Check(issues.Count(i => i.Code == "largeVideoWide") == 2, "Supplied decoder metadata checks formats outside TagLib coverage");
+            Check(before.ContentEquals(map), "Video resource analysis preserves authoring content");
+            Check(Aimod.VideoResources(map).Order().SequenceEqual(probed.Order()), "Video discovery and resource analysis use the same expanded references");
+            issues = Aimod.AnalyzeResources(map, _ => throw new IOException("unreadable fixture"));
+            Check(issues.Count(i => i.Code == "unreadableMedia") == 2, "Video probe failures remain diagnostics for every referenced file");
+            using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+            bool cancelled = false;
+            try { Aimod.AnalyzeResources(map, _ => throw new OperationCanceledException(cancellation.Token)); }
+            catch (OperationCanceledException) { cancelled = true; }
+            Check(cancelled, "Video inspection cancellation is not converted into an unreadable warning");
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private static byte[] Video()
     {
         static byte[] Chunk(string name, byte[] data)

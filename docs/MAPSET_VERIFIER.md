@@ -28,8 +28,19 @@ in-flight check so older results cannot publish. Viewport, selection and playbac
 position changes do not schedule checks. **Refresh** also runs a check immediately. Difficulty interpretations affect checking only. General checks see the
 loaded project and its copied mapset media, rather than every difficulty present
 on disk. Media/storyboards and `skin.ini` are copied to temporary storage, with a
-512 MiB / 50,000-file limit; conflicting resource names fail explicitly. Checking
+512 MiB non-video / 4 GiB video / 50,000-file limit; conflicting resource names fail explicitly.
+Copies check cancellation and the byte limits as data is written. Checking
 runs in a cancellable standalone process with a three-minute timeout.
+
+Video resolution and audio-track checks use the packaged FFmpeg metadata probe
+for references in both `.osu` and shared `.osb` files, including FLV, MPG and M4V.
+They retain the pinned upstream check identities, messages, severities and
+resolution threshold (either axis exceeding 1280×720). The probe does not start
+playback, and checking remains available with video/storyboard display disabled.
+Missing and unreadable videos retain their respective upstream diagnostics.
+Other built-in checks continue to inspect the exported mapset snapshot, including
+storyboard sprite/animation resolution, Overlay layers, storyboard samples,
+video usage/offset consistency and resource usage.
 
 The **Unsnapped hit objects** Minor group offers **Fix for me**. The editor also
 adds an **Unsnapped timing lines** group for suspected one-millisecond red/green-line

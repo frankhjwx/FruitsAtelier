@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Update="Fixtures/discussions.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures/video-with-audio.flv" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../FruitsAtelier.Audio.Tests/Fixtures/quiet-tone.ogg" Link="Fixtures/quiet-tone.ogg" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../../src/FruitsAtelier.App/FruitsAtelier.App.csproj" />
   </ItemGroup>
