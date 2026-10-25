@@ -72,7 +72,7 @@ internal static class MediaToggleNativeTests
                 L.SetLanguage(language);
                 ClickLabel(L.Get("ui.view")); Capture(language + "-view-enabled.bmp");
                 ClickLabel(L.Get("settings.enableVideoStoryboard"));
-                ClickLabel(L.Get("ui.view")); Capture(language + "-view-disabled.bmp");
+                Capture(language + "-view-disabled.bmp");
                 view.KeyDown(27, false, false); view.KeyUp(27); Draw();
                 view.OpenSettings(); Draw(); ClickLabel(L.Get("settings.testplay")); Capture(language + "-settings-minimum.bmp");
                 ClickLabel(L.Get("settings.enableVideoStoryboard")); Capture(language + "-settings-checked.bmp");
@@ -117,7 +117,7 @@ internal static class MediaToggleNativeTests
             void ClickLabel(string label)
             {
                 var recording = new RecordingCanvas(); view.Render(recording, 980, 620);
-                var text = recording.Texts.First(t => t.Value == label); Click(text.X + 3, text.Y + 3);
+                var text = recording.Texts.First(t => t.Value == label || t.Value == "✓ " + label); Click(text.X + 3, text.Y + 3);
             }
             void Capture(string name) { canvas.Begin(); view.Render(canvas, 980, 620); canvas.End(capture: () => { var p = canvas.CapturePixels(); Save(p.Width, p.Height, p.Pixels, Path.Combine(directory, name)); }); }
         }

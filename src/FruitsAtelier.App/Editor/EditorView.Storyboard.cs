@@ -80,20 +80,6 @@ public sealed partial class EditorView
         RequestViewPreference?.Invoke();
     }
 
-    private void DrawMediaPreference(ICanvas c, Rect bounds)
-    {
-        var box = new Rect(bounds.X + 7, bounds.Y + (bounds.Height - 16) / 2, 16, 16);
-        c.Fill(box, draftEnableVideoStoryboard ? Accent : Background, 2); c.Stroke(box, Muted, radius: 2);
-        if (draftEnableVideoStoryboard)
-        {
-            c.Line(box.X + 3, box.Y + 8, box.X + 7, box.Y + 12, Background, 2);
-            c.Line(box.X + 7, box.Y + 12, box.X + 13, box.Y + 4, Background, 2);
-        }
-        c.Text(L.Get("settings.enableVideoStoryboard"), bounds.X + 32, bounds.Y + (bounds.Height - 17) / 2,
-            SettingsTextSize, Foreground, bounds.Width - 36);
-        hits.Add(new(bounds, () => draftEnableVideoStoryboard = !draftEnableVideoStoryboard, true));
-    }
-
     private void RetireStoryboard(bool preserveDisplay = false, bool preserveHistory = false)
     {
         storyboardCancellation?.Cancel(); storyboardCancellation?.Dispose(); storyboardCancellation = null;

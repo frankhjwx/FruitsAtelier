@@ -465,10 +465,10 @@ public sealed partial class EditorView
             L.Get(draftShowTestplayCombo ? "testplay.comboOn" : "testplay.comboOff"),
             () => draftShowTestplayCombo = !draftShowTestplayCombo, draftShowTestplayCombo);
         DrawBackgroundDimSetting(c, new(SettingsContentX, TestplaySettingsTop + 384, Math.Min(280, SettingsContentWidth), SettingsControlHeight), true);
-        SettingsButton(c, new(SettingsContentX, TestplaySettingsTop + 480, Math.Min(280, SettingsContentWidth), SettingsControlHeight),
-            (draftForceBackgroundDim ? "✓ " : "") + L.Get("settings.forceBackgroundDim"),
-            () => draftForceBackgroundDim = !draftForceBackgroundDim, draftForceBackgroundDim);
-        DrawMediaPreference(c, new(SettingsContentX, TestplaySettingsTop + 432, SettingsContentWidth, SettingsControlHeight));
+        DrawTestplayCheckbox(c, new(SettingsContentX, TestplaySettingsTop + 480, SettingsContentWidth, SettingsControlHeight),
+            L.Get("settings.forceBackgroundDim"), draftForceBackgroundDim, () => draftForceBackgroundDim = !draftForceBackgroundDim);
+        DrawTestplayCheckbox(c, new(SettingsContentX, TestplaySettingsTop + 432, SettingsContentWidth, SettingsControlHeight),
+            L.Get("settings.enableVideoStoryboard"), draftEnableVideoStoryboard, () => draftEnableVideoStoryboard = !draftEnableVideoStoryboard);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
         for (int i = 0; i < 3; i++)
         {
@@ -480,6 +480,20 @@ public sealed partial class EditorView
         c.Unclip();
         ClipSettingsHits(firstHit);
         DrawSettingsScrollbar(c, TestplaySettingsContentHeight);
+    }
+
+    private void DrawTestplayCheckbox(ICanvas c, Rect bounds, string label, bool value, Action toggle)
+    {
+        var box = new Rect(bounds.X + 7, bounds.Y + (bounds.Height - 16) / 2, 16, 16);
+        c.Fill(box, value ? Accent : Background, 2); c.Stroke(box, Muted, radius: 2);
+        if (value)
+        {
+            c.Line(box.X + 3, box.Y + 8, box.X + 7, box.Y + 12, Background, 2);
+            c.Line(box.X + 7, box.Y + 12, box.X + 13, box.Y + 4, Background, 2);
+        }
+        c.Text(label, bounds.X + 32, bounds.Y + (bounds.Height - 17) / 2,
+            SettingsTextSize, Foreground, bounds.Width - 36);
+        hits.Add(new(bounds, toggle, true));
     }
 
     private void CaptureTestplayKey(int key)

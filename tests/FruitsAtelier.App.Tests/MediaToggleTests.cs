@@ -41,13 +41,23 @@ internal static class MediaToggleTests
             var original = ui.View.Document.DeepClone(); bool dirty = ui.View.IsDirty;
             int saved = 0; ui.View.RequestViewPreference = () => saved++;
             ui.ClickText(L.Get("ui.view"));
-            var toggle = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.enableVideoStoryboard"));
+            var toggle = ui.Canvas.Texts.Single(t => t.Value == "✓ " + L.Get("settings.enableVideoStoryboard"));
             var dim = ui.Canvas.Texts.Single(t => t.Value.EndsWith(L.Get("settings.forceBackgroundDim"), StringComparison.Ordinal));
-            Check(toggle.Y > dim.Y && toggle.Y - dim.Y < 40, "View media checkbox is not immediately below Dim Background.");
-            Check(!toggle.Value.StartsWith('✓'), "Checkbox label contains a separate prefix tick.");
+            Check(toggle.Y > dim.Y && toggle.Y - dim.Y < 40, "View media toggle is not immediately below Dim Background.");
+            bool originalDim = ui.View.LibrarySettings.ForceBackgroundDim;
+            ui.ClickText(dim.Value);
+            Check(ui.View.LibrarySettings.ForceBackgroundDim != originalDim && MenuVisible(), "Dim toggle closed the View menu.");
+            ui.ClickText((!originalDim ? "✓ " : "") + L.Get("settings.forceBackgroundDim"));
+            Check(ui.View.LibrarySettings.ForceBackgroundDim == originalDim && MenuVisible(), "Dim toggle did not retain the menu on repeated clicks.");
+            Check(!ui.Canvas.Outlines.Any(o => o.Bounds.Width == 16 && o.Bounds.Height == 16 && o.Bounds.Y > toggle.Y - 10 && o.Bounds.Y < toggle.Y + 20),
+                "View media toggle still draws a separate checkbox.");
             ui.ClickText(toggle.Value);
-            Check(!ui.View.LibrarySettings.EnableVideoStoryboard && saved == 1, "View checkbox did not immediately disable and persist.");
+            Check(!ui.View.LibrarySettings.EnableVideoStoryboard && saved == 3 && MenuVisible(), "View media toggle did not persist while retaining the menu.");
+            ui.ClickText(L.Get("ui.resetView"));
+            Check(!MenuVisible(), "Ordinary View action retained the menu.");
             ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.testplay"));
+            ui.ClickText(L.Get("settings.forceBackgroundDim"));
+            Check(ui.View.LibrarySettings.ForceBackgroundDim == originalDim, "Dim checkbox draft applied before Apply.");
             ui.ClickText(L.Get("settings.enableVideoStoryboard"));
             Check(!ui.View.LibrarySettings.EnableVideoStoryboard, "Settings draft applied before Apply.");
             ui.Click(ui.View.SettingsBounds.Right - 32, ui.View.SettingsBounds.Y + 24);
@@ -55,15 +65,20 @@ internal static class MediaToggleTests
             string path = Path.Combine(DirectoryPath, language + "-settings.json");
             ui.View.ApplySettings(path, force: true);
             Check(!LibrarySettings.Load(path).EnableVideoStoryboard, "Cancel retained an enabled draft.");
+            Check(LibrarySettings.Load(path).ForceBackgroundDim == originalDim, "Cancel retained the Dim checkbox draft.");
+            ui.ClickText(L.Get("settings.forceBackgroundDim"));
             ui.ClickText(L.Get("settings.enableVideoStoryboard")); ui.View.ApplySettings(path); ui.Key(27);
             Check(ui.View.LibrarySettings.EnableVideoStoryboard && LibrarySettings.Load(path).EnableVideoStoryboard,
                 "Settings Apply did not update and persist the shared preference.");
+            Check(ui.View.LibrarySettings.ForceBackgroundDim != originalDim && LibrarySettings.Load(path).ForceBackgroundDim != originalDim,
+                "Settings Apply did not persist the Dim checkbox draft.");
             ui.Click(ui.View.SettingsBounds.Right - 32, ui.View.SettingsBounds.Y + 24);
             var canvasToggle = ui.View.CanvasMediaToggleBounds;
             ui.Click(canvasToggle.X + 15, canvasToggle.Y + 15);
             Check(!ui.View.LibrarySettings.EnableVideoStoryboard, "Canvas checkbox did not immediately disable the shared preference.");
             ui.ClickText(L.Get("ui.view")); ui.ClickText(L.Get("settings.enableVideoStoryboard"));
             Check(ui.View.LibrarySettings.EnableVideoStoryboard, "View checkbox did not follow the Canvas checkbox.");
+            ui.Key(27);
             ui.Resize(980, 620); ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.testplay"));
             var setting = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.enableVideoStoryboard"));
             Check(setting.Y > ui.View.SettingsBounds.Y && setting.Y < ui.View.SettingsBounds.Bottom - 50,
@@ -71,7 +86,8 @@ internal static class MediaToggleTests
             ui.ClickText(setting.Value); ui.View.ApplySettings(path); ui.Key(27);
             Check(!ui.View.LibrarySettings.EnableVideoStoryboard, "Minimum window checkbox did not apply.");
             Check(original.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty, "Media preference changed document or undo state.");
-            Console.WriteLine($"PASS {language} View checkbox immediate state and Settings Apply/Cancel share one preference");
+            Console.WriteLine($"PASS {language} View toggle styling/menu retention and Settings checkbox Apply/Cancel");
+            bool MenuVisible() => ui.Canvas.Texts.Any(t => t.Value == L.Get("ui.resetView"));
         }
         finally { ui.View.StopFileMonitoring(); ui.View.CompleteLibraryCacheWrites(); L.SetLanguage(previous); }
     }

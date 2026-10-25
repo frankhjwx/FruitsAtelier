@@ -770,7 +770,7 @@ public sealed partial class EditorView
     private void DrawMenu(ICanvas c)
     {
         menuHitStart = hits.Count;
-        var items = new List<(string Label, Action Action, bool Enabled, bool Active, bool Separator, bool Heading)>();
+        var items = new List<(string Label, Action Action, bool Enabled, bool Active, bool Separator, bool Heading, bool KeepOpen)>();
         if (menu == 0)
         {
             Item(L.Get("project.new"), () => RequestNewProject?.Invoke());
@@ -867,8 +867,9 @@ public sealed partial class EditorView
             {
                 LibrarySettings.ForceBackgroundDim = !LibrarySettings.ForceBackgroundDim;
                 RequestViewPreference?.Invoke();
-            }, active: LibrarySettings.ForceBackgroundDim);
-            Item(L.Get("settings.enableVideoStoryboard"), ToggleVideoStoryboard);
+            }, active: LibrarySettings.ForceBackgroundDim, keepOpen: true);
+            Item((LibrarySettings.EnableVideoStoryboard ? "✓ " : "") + L.Get("settings.enableVideoStoryboard"),
+                ToggleVideoStoryboard, active: LibrarySettings.EnableVideoStoryboard, keepOpen: true);
             Item(L.Get("volume.title"), OpenVolumePopover);
             Separator();
             Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
@@ -905,17 +906,7 @@ public sealed partial class EditorView
             }
             bool submenu = (menu == 2 || menu == 4) && y == rect.Y + 7;
             Button(c, new(rect.X + 6, y, rect.Width - 12, 31), item.Label,
-                () => { if (!submenu) menu = -1; item.Action(); }, item.Active || submenu && gridLevelMenuOpen, item.Enabled);
-            if (item.Action == (Action)ToggleVideoStoryboard)
-            {
-                var check = new Rect(rect.Right - 30, y + 8, 16, 16);
-                c.Fill(check, Background, 2); c.Stroke(check, Muted, radius: 2);
-                if (LibrarySettings.EnableVideoStoryboard)
-                {
-                    c.Line(check.X + 3, check.Y + 8, check.X + 7, check.Y + 12, Foreground, 2);
-                    c.Line(check.X + 7, check.Y + 12, check.X + 13, check.Y + 4, Foreground, 2);
-                }
-            }
+                () => { if (!submenu && !item.KeepOpen) menu = -1; item.Action(); }, item.Active || submenu && gridLevelMenuOpen, item.Enabled);
             if (submenu)
             {
                 c.Line(rect.Right - 19, y + 11, rect.Right - 14, y + 16, Foreground);
@@ -942,10 +933,10 @@ public sealed partial class EditorView
                 childY += 34;
             }
         }
-        void Item(string label, Action action, bool enabled = true, bool active = false)
-            => items.Add((label, action, enabled, active, false, false));
-        void Heading(string label) => items.Add((label, () => { }, false, false, false, true));
-        void Separator() => items.Add(("", () => { }, false, false, true, false));
+        void Item(string label, Action action, bool enabled = true, bool active = false, bool keepOpen = false)
+            => items.Add((label, action, enabled, active, false, false, keepOpen));
+        void Heading(string label) => items.Add((label, () => { }, false, false, false, true, false));
+        void Separator() => items.Add(("", () => { }, false, false, true, false, false));
     }
 
     private void PrepareCanvasToggleText(ICanvas c, bool compact, float buttonWidth)
