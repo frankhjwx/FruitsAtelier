@@ -1,0 +1,6 @@
+<Project>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'MapsetVerifier.Logging'">
+    <!-- The command-line checker uses Serilog sinks, without ASP.NET hosting. -->
+    <PackageReference Remove="Serilog.AspNetCore" />
+  </ItemGroup>
+</Project>

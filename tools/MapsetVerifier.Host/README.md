@@ -14,11 +14,22 @@ python scripts/Build-MapsetVerifier.py
 ```
 
 The script verifies and extracts the upstream source archive, builds this host
-against its unmodified projects, and writes a self-contained executable to
+against its pinned projects, and writes a self-contained executable to
 `artifacts/mapset-verifier/<runtime>/`. Publish pruning follows the unused game
 resource/native exclusions in upstream `src/MapsetVerifier.csproj` at the pinned
-revision. The output includes the GPL license, upstream source archive, this host's
-source and build instructions, and dependency metadata/license files.
+revision. `Upstream.Build.targets` excludes the web-hosting Serilog package from the
+logging project; no upstream source files are edited. The output retains licenses
+and source directions. The full upstream archive, host and launcher sources,
+dependency locks and build materials are in the separate
+`artifacts/mapset-verifier/FruitsAtelier-MapsetVerifier-TAG-source.zip` attachment.
+
+Publication passes `--shared-runtime <editor-publish-directory>` to use the exact
+.NET version from the editor's runtime configuration. The engine then publishes
+without a runtime to `<runtime>-shared/`. A separate GPL-3.0 launcher in
+`tools/MapsetVerifier.Launcher/` runs beside the editor on its bundled runtime and
+loads the engine's entry point with its own dependency resolver. Copy the engine
+directory to `mapset-verifier/`; the build script installs only the launcher's
+apphost, assembly, dependency manifest and runtime configuration beside the editor.
 
 Invoke with two absolute paths: a request JSON and a destination result JSON. The
 request contains `Folder` (an exported mapset snapshot) and `Difficulties` entries

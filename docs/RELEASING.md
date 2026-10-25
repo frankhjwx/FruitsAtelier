@@ -21,7 +21,11 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 ./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.2.3-win-x64.zip
 ```
 
-Publication requires Python 3 to prepare the pinned [Mapset Verifier engine](MAPSET_VERIFIER.md); the engine, licenses and corresponding source are included in the package.
+Publication requires Python 3 to prepare the pinned [Mapset Verifier engine](MAPSET_VERIFIER.md).
+The application package includes the engine, licenses and source download directions.
+Publish the generated `FruitsAtelier-MapsetVerifier-TAG-source.zip` and its SHA256
+alongside the binary assets; this separate attachment contains the corresponding
+source, adapter, launcher, build script and dependency locks.
 
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
@@ -186,7 +190,8 @@ the published artifacts.
    repository policy must allow the release job's `contents: write` permission.
 6. Verify the published Release is not a draft and contains the versioned ZIP and
    SHA256, fixed-name ZIP and SHA256, full `.nupkg`, and
-   `releases.win-x64.json`. Compare the ZIP checksum and confirm a public download
+   `releases.win-x64.json`, plus the MV corresponding-source ZIP and checksum.
+   Compare the ZIP checksum and confirm a public download
    succeeds. Confirm the packaged `build-info.json` records `$releaseCommit` and
    the intended version. Verify anonymous access to
    `https://api.github.com/repos/frankhjwx/FruitsAtelier/releases?per_page=10&page=1`:

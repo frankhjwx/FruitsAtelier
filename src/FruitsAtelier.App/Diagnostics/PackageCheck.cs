@@ -38,7 +38,7 @@ internal static class PackageCheck
             foreach (string asset in new[] { "branding/mark.png", "branding/app-icon.ico", "branding/fpt-file.ico", "icons/tools/select.png", "icons/tools/fslider.png" })
                 if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "assets", asset))) throw new FileNotFoundException(asset);
             checks.Add("Editor assets");
-            foreach (string file in new[] { "FruitsAtelier.MapsetVerifier.exe", "upstream.json", "LICENSE.MapsetVerifier.txt", "source/eng/mapset-verifier.json", "source/scripts/Build-MapsetVerifier.py" })
+            foreach (string file in new[] { "FruitsAtelier.MapsetVerifier.dll", "upstream.json", "LICENSE.MapsetVerifier.txt", "SOURCE.txt" })
                 if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "mapset-verifier", file))) throw new FileNotFoundException("Mapset Verifier: " + file);
             var verifierDocument = new MapDocument { IsDemo = false, DurationMs = 10000,
                 AudioPath = Path.Combine(AppContext.BaseDirectory, "assets/setup/campus-after-class.wav") };
@@ -47,7 +47,13 @@ internal static class PackageCheck
             verifierDocument.Fruits.Add(new() { TimeMs = 1004, X = 128 });
             var verifier = Editor.MapsetVerifierClient.AnalyzeAsync([new(Guid.NewGuid(), "Package", verifierDocument)], true, default).GetAwaiter().GetResult();
             if (verifier.Schema != 1 || verifier.Difficulties.Length != 1) throw new InvalidOperationException("Bundled Mapset Verifier check failed.");
-            checks.Add("Bundled Mapset Verifier engine and corresponding source");
+            if (!string.Equals(Path.GetFullPath(verifier.RuntimeDirectory), runtime, StringComparison.OrdinalIgnoreCase)
+                || verifier.RuntimeVersion != Environment.Version.ToString())
+                throw new InvalidOperationException("Mapset Verifier must use the editor's bundled runtime.");
+            if (File.Exists(Path.Combine(AppContext.BaseDirectory, "mapset-verifier", "coreclr.dll"))
+                || Directory.Exists(Path.Combine(AppContext.BaseDirectory, "mapset-verifier", "source")))
+                throw new InvalidOperationException("Mapset Verifier package duplicates runtime or source files.");
+            checks.Add("Bundled Mapset Verifier engine, shared editor runtime and source attachment directions");
             var failures = new List<string>();
             using (var sounds = new HitsoundPlayer(failures.Add))
             {

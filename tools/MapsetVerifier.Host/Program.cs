@@ -33,6 +33,8 @@ try
     var report = new
     {
         Schema = 1,
+        RuntimeDirectory = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(),
+        RuntimeVersion = Environment.Version.ToString(),
         General = issues.Where(i => i.CheckOrigin is GeneralCheck || i.beatmap is null).Select(ProjectIssue).ToArray(),
         Difficulties = set.Beatmaps.Select(map => new
         {
