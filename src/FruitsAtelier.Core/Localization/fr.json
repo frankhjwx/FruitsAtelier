@@ -159,7 +159,6 @@
   "volume.master": "Maître",
   "volume.music": "Musique",
   "volume.effect": "Effet",
-  "core.writer.restoreIntervalAt": "Impossible de conserver Slider Timing près de {0} ms : le FSlider à {1} ms nécessite un Timing incompatible dans la même fenêtre de recherche de 1 ms. Séparez ces têtes Slider/points Timing d'au moins 2 ms, ou convertissez le Slider en conflit en un Fruit Stream avant l'exportation.",
   "conversion.title": "Convertir en Stream/Stack",
   "conversion.editTitle": "Modifier Stream/Stack",
   "conversion.editMenu": "Modifier Stream/Stack… Ctrl+Shift+F",

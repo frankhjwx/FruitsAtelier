@@ -159,7 +159,6 @@
   "volume.master": "maestro",
   "volume.music": "musica",
   "volume.effect": "Efecto",
-  "core.writer.restoreIntervalAt": "No se puede conservar Slider Tiempo cerca de {0} ms: el FSlider en {1} ms requiere un Tiempo incompatible dentro de la misma ventana de búsqueda de 1 ms. Separe estos cabezales Slider/puntos Tiempo al menos 2 ms, o convierta el Slider en conflicto en un Fruit Stream antes de exportar.",
   "conversion.title": "Convertir a Stream/Stack",
   "conversion.editTitle": "Editar Stream/Stack",
   "conversion.editMenu": "Editar Stream/Stack… Ctrl+Shift+F",

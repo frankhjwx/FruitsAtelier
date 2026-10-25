@@ -159,7 +159,6 @@
   "volume.master": "マスター",
   "volume.music": "音楽",
   "volume.effect": "効果",
-  "core.writer.restoreIntervalAt": "{0} ミリ秒付近の スライダー タイミング を保存できません: {1} ミリ秒の FSlider には、同じ 1 ミリ秒のルックアップ ウィンドウ内に互換性のない タイミング が必要です。これらの スライダー ヘッド/タイミング ポイントを少なくとも 2 ミリ秒離すか、エクスポートする前に競合する スライダー を Fruit Stream に変換します。",
   "conversion.title": "Stream/Stackに変換",
   "conversion.editTitle": "Stream/Stackを編集",
   "conversion.editMenu": "Stream/Stack… Ctrl+Shift+Fを編集",

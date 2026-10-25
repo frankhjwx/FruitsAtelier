@@ -159,7 +159,6 @@
   "volume.master": "整體",
   "volume.music": "音樂",
   "volume.effect": "音效",
-  "core.writer.restoreIntervalAt": "無法在 {0} ms 附近保留 滑條 時間軸：{1} ms 處的 FSlider 需要在同一 1 ms 尋找視窗內不相容的 時間軸。將這些 滑條 頭/時間軸 點分開至少 2 ms，或在匯出之前將衝突的 滑條 轉換為 Fruit Stream。",
   "conversion.title": "轉換為 Stream/Stack",
   "conversion.editTitle": "編輯Stream/Stack",
   "conversion.editMenu": "編輯Stream/Stack…Ctrl+Shift+F",

@@ -34,9 +34,36 @@ internal static class IndependentSliderSvTests
                 Check(compensated.ObjectSequenceMatches, "Unused green SV constrained independent-slider base compensation.");
             }
         }
+        AdjacentTimingBoundary();
         SharedHead();
         ProcessedSv();
         ProcessedSvOverride();
+    }
+
+    private static void AdjacentTimingBoundary()
+    {
+        foreach (int version in new[] { 7, 14 })
+        foreach (bool red in new[] { true, false })
+        foreach (double offset in new[] { 1.0, .5, 1.75 })
+        {
+            var map = OsuBeatmapReader.Read($"osu file format v{version}\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:2.04\n[TimingPoints]\n0,500,4,1,0,80,1,0\n{(234070 + offset).ToString(System.Globalization.CultureInfo.InvariantCulture)},{(red ? "400" : "-50")},4,2,3,60,{(red ? 1 : 0)},1\n[HitObjects]\n100,192,234070,2,0,L|300:192,2,200\n100,192,235000,2,0,L|300:192,1,200\n");
+            map.ImportedSliders[0].SliderVelocityMultiplier = 10;
+            var before = map.DeepClone(); var cache = new OsuWriteCache();
+            double duration = ImportedSliderConverter.DurationMs(map, map.ImportedSliders[0]);
+            var result = OsuBeatmapWriter.Serialize(map, false, cache);
+            var repeated = OsuBeatmapWriter.Serialize(map, false, cache);
+            Check(result.ObjectSequenceMatches && result.MaxConvertedTimeErrorMs < 1e-6
+                && result.MaxConvertedXError < 1e-6 && result.Text == repeated.Text && map.ContentEquals(before),
+                "A Legacy head immediately before a timing boundary failed cached playback validation.");
+            var first = result.ReadBack.ImportedSliders[0];
+            Check(first.TimeMs == 234070 && first.SliderVelocityMultiplier == 10
+                && Math.Abs(ImportedSliderConverter.DurationMs(result.ReadBack, first) - duration) < 1e-6,
+                "Export moved the head or changed its independent duration.");
+            var following = result.ReadBack.TimingPoints.Single(p => p.TimeMs == 234070 + offset);
+            Check(following.BeatLengthMs == (red ? 400 : -50) && following.SampleSet == 2
+                && following.SampleIndex == 3 && following.Volume == 60 && following.Effects == 1,
+                "Export changed the following timing, samples or effects.");
+        }
     }
 
     private static void ProcessedSvOverride()

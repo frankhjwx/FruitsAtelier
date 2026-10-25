@@ -393,51 +393,18 @@ public static class OsuBeatmapWriter
             bool differsFromOriginal = Math.Abs(current.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9;
             if (differsFromOriginal && document.ImportedSliders.Any(s => s.TimeMs == start))
                 throw new InvalidDataException(L.Get("core.writer.existingSv"));
-            var preceding = document.ImportedSliders.FirstOrDefault(s => s.TimeMs >= start - 1 && s.TimeMs < start
-                && (Math.Abs(originalLookup.At(s.TimeMs).SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9
-                    || !originalLookup.At(s.TimeMs).GenerateTicks));
-            if (changesSv && preceding is not null)
-                throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(preceding.TimeMs), Number(start)));
             var template = TemplateAt(start, inclusive: true);
-            // Equal-SV heads can share a window, but its restoration must clear every head in the chain.
-            double safeWindowEnd = start + 2;
-            int following = LowerBound(heads, Math.BitIncrement(start));
-            for (int i = following; i < orderedSliders.Length; i++)
-            {
-                var nearby = orderedSliders[i];
-                double head = heads[i];
-                if (head >= safeWindowEnd) break;
-                if (Math.Abs(nearby.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9)
-                    throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(head), Number(start)));
-                safeWindowEnd = head + 2;
-            }
-            int nextTiming = LowerBound(originalTimes, safeWindowEnd), nextHead = LowerBound(heads, safeWindowEnd);
+            int nextTiming = LowerBound(originalTimes, Math.BitIncrement(start));
+            int nextHead = LowerBound(heads, Math.BitIncrement(start));
             double nextBoundary = Math.Min(nextTiming < originalTimes.Length ? originalTimes[nextTiming] : double.PositiveInfinity,
                 nextHead < heads.Length ? heads[nextHead] : double.PositiveInfinity);
-            double nextImported = document.ImportedSliders.Where(s => s.TimeMs > start && s.TimeMs < nextBoundary)
+            double restoreTime = document.ImportedSliders
                 .Select(s => s.OriginalLine is null ? QuantizeTime(s.TimeMs) : s.TimeMs)
+                .Where(time => time > start && time < nextBoundary)
                 .DefaultIfEmpty(double.PositiveInfinity).Min();
-            int firstBoundary = LowerBound(originalTimes, Math.BitIncrement(start));
-            var closeBoundaries = original.Skip(firstBoundary).Take(nextTiming - firstBoundary)
-                .GroupBy(t => t.TimeMs).ToArray();
-            foreach (var boundary in closeBoundaries)
-            {
-                var state = originalLookup.At(boundary.Key);
-                if (Math.Abs(state.BeatLengthMs - current.BeatLengthMs) > 1e-9)
-                    throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(boundary.Key), Number(start)));
-                if (Math.Abs(state.SliderVelocityMultiplier - first.SliderVelocityMultiplier) <= 1e-9) continue;
-                // Keep sample/effect events at their original times; only defer the conflicting SV change.
-                var greens = emitted.TimingPoints.Where(t => t.TimeMs == boundary.Key && !t.Uninherited).ToArray();
-                foreach (var green in greens) green.BeatLengthMs = -100 / first.SliderVelocityMultiplier;
-                if (greens.Length == 0)
-                    OverrideInherited(emitted.TimingPoints, boundary.First(), boundary.Key, -100 / first.SliderVelocityMultiplier);
-            }
-            double restoreTime = nextImported;
-            var restoreState = originalLookup.At(double.IsFinite(restoreTime) ? restoreTime : safeWindowEnd);
-            bool restoreDiffers = Math.Abs(restoreState.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9;
-            bool needsRestore = double.IsFinite(restoreTime) && restoreDiffers;
-            if (needsRestore && (restoreTime < safeWindowEnd || restoreTime > int.MaxValue))
-                throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(restoreTime), Number(start)));
+            var restoreState = originalLookup.At(double.IsFinite(restoreTime) ? restoreTime : start);
+            bool needsRestore = double.IsFinite(restoreTime)
+                && Math.Abs(restoreState.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9;
             if (changesSv)
                 OverrideInherited(emitted.TimingPoints, template, start,
                     current.GenerateTicks || differsFromOriginal ? -100 / first.SliderVelocityMultiplier : double.NaN);
@@ -448,8 +415,8 @@ public static class OsuBeatmapWriter
                     restoreState.GenerateTicks ? -100 / restoreState.SliderVelocityMultiplier : double.NaN);
             }
         }
-        // An SV-only boundary can move only if unchanged sliders keep both their exact and legacy lookup states.
-        VerifyImportedTiming(document, emitted, generated);
+        // SV is locked at the head; later timing points belong to subsequent objects.
+        VerifyImportedTiming(document, emitted);
         return emitted.TimingPoints.OrderBy(t => t.TimeMs).ToList();
 
         TimingPoint TemplateAt(double time, bool inclusive)
@@ -543,33 +510,18 @@ public static class OsuBeatmapWriter
             LegacyCatchRules.MinimumSliderVelocityMultiplier, LegacyCatchRules.MaximumSliderVelocityMultiplier) : 1;
     }
 
-    private static void VerifyImportedTiming(MapDocument original, MapDocument emitted, IReadOnlyList<GeneratedSlider> generated)
+    private static void VerifyImportedTiming(MapDocument original, MapDocument emitted)
     {
-        foreach (bool truncateTiming in new[] { false, true })
+        var before = new TimingMap.Lookup(original);
+        var after = new TimingMap.Lookup(emitted);
+        foreach (var slider in original.ImportedSliders)
         {
-            TimingMap.Lookup Lookup(MapDocument source)
-            {
-                if (!truncateTiming) return new(source);
-                var truncated = new MapDocument { BeatLengthMs = source.BeatLengthMs, TimingOffsetMs = source.TimingOffsetMs };
-                foreach (var point in source.TimingPoints.OrderBy(t => t.TimeMs))
-                {
-                    var copy = point.DeepClone(); copy.TimeMs = Math.Floor(copy.TimeMs);
-                    copy.SourceOrder = truncated.TimingPoints.Count;
-                    truncated.TimingPoints.Add(copy);
-                }
-                return new(truncated);
-            }
-            var before = Lookup(original); var after = Lookup(emitted);
-            foreach (var slider in original.ImportedSliders)
-            foreach (int offset in new[] { 0, 1 })
-            {
-                var expected = before.At(slider.TimeMs + offset); var actual = after.At(slider.TimeMs + offset);
-                if (Math.Abs(expected.BeatLengthMs - actual.BeatLengthMs) <= 1e-9
-                    && Math.Abs(expected.SliderVelocityMultiplier - actual.SliderVelocityMultiplier) <= 1e-9
-                    && expected.GenerateTicks == actual.GenerateTicks) continue;
-                double head = generated.MinBy(s => Math.Abs(QuantizeTime(s.StartTimeMs) - slider.TimeMs))!.StartTimeMs;
-                throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(slider.TimeMs), Number(QuantizeTime(head))));
-            }
+            double exportedHead = slider.OriginalLine is null ? QuantizeTime(slider.TimeMs) : slider.TimeMs;
+            var expected = before.At(slider.TimeMs); var actual = after.At(exportedHead);
+            if (Math.Abs(expected.BeatLengthMs - actual.BeatLengthMs) <= 1e-9
+                && Math.Abs(expected.SliderVelocityMultiplier - actual.SliderVelocityMultiplier) <= 1e-9
+                && expected.GenerateTicks == actual.GenerateTicks) continue;
+            throw new InvalidDataException(L.Get("core.writer.existingSv"));
         }
     }
 

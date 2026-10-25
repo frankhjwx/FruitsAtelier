@@ -11,6 +11,7 @@ internal static class IndependentSliderSvTests
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(locale);
+                OpenBesideTimingBoundary();
                 var ui = new Ui(false);
                 ui.LoadDocument(OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500\n[HitObjects]\n100,192,1000,2,0,L|300:192,1,200\n"));
                 ui.View.ToggleOsuCanvas(); ui.View.UpdateTransport(900, 5000, true, false, false, null, null); ui.Paint();
@@ -90,6 +91,36 @@ internal static class IndependentSliderSvTests
             }
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void OpenBesideTimingBoundary()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/slider-head-sync", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
+        Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+        File.WriteAllText(source, "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Timing\nArtist:Fixture\nCreator:Mapper\nVersion:Catch\n[TimingPoints]\n0,500,4,1,0,80,1,0\n234071,400,4,2,3,60,1,1\n[HitObjects]\n100,192,234070,2,0,L|300:192,2,200\n");
+        var project = BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source)]);
+        var session = WorkspaceProject.Create(Path.Combine(root, "Workspace"), project, songs);
+        var document = session.Project.Difficulties[0].Document;
+        session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(source, document, session.Directory);
+        session.Manifest.Difficulties[0].ExportConfirmed = true;
+        document.ImportedSliders.Single().SliderVelocityMultiplier = 10;
+        WorkspaceProject.Save(session, session.Project);
+        var ui = new Ui(false);
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+        try
+        {
+            ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory), checkAdditionalDifficulties: true);
+            SynchronizationUiTests.Wait(ui);
+            Check(!ui.View.SynchronizationVisible && !ui.View.LibraryVisible, "Opening a slider before a BPM boundary left a sync error or returned to Library.");
+            var exported = OsuBeatmapReader.ReadFile(source);
+            Check(exported.ImportedSliders.Single().TimeMs == 234070
+                && exported.ImportedSliders.Single().SliderVelocityMultiplier == 10,
+                "Opening did not synchronize the independent Legacy SV at the unchanged head.");
+            Check(ui.View.Document.ImportedSliders.Single().TimeMs == 234070,
+                "Synchronization moved the authored slider head.");
+        }
+        finally { ui.View.StopFileMonitoring(); }
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

@@ -159,7 +159,6 @@
   "volume.master": "อาจารย์",
   "volume.music": "ดนตรี",
   "volume.effect": "เอฟเฟกต์",
-  "core.writer.restoreIntervalAt": "ไม่สามารถรักษา สไลเดอร์ เวลา ใกล้กับ {0} ms: FSlider ที่ {1} ms ต้องการ เวลา ที่เข้ากันไม่ได้ภายในหน้าต่างการค้นหา 1 ms เดียวกัน แยกจุด สไลเดอร์/จุด เวลา เหล่านี้ออกอย่างน้อย 2 ms หรือแปลง สไลเดอร์ ที่ขัดแย้งกันเป็น Fruit Stream ก่อนที่จะส่งออก",
   "conversion.title": "แปลงเป็น Stream/Stack",
   "conversion.editTitle": "แก้ไข Stream/Stack",
   "conversion.editMenu": "แก้ไข Stream/Stack… Ctrl+Shift+F",

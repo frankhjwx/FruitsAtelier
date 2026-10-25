@@ -159,7 +159,6 @@
   "volume.master": "Mistrz",
   "volume.music": "Muzyka",
   "volume.effect": "Efekt",
-  "core.writer.restoreIntervalAt": "Nie można zachować Slider Rytmika w pobliżu {0} ms: FSlider w {1} ms wymaga niekompatybilnego Rytmika w tym samym oknie wyszukiwania 1 ms. Oddziel te głowice Slider/punkty Rytmika o co najmniej 2 ms lub przed eksportem przekonwertuj kolidujące Slider na Owoc Stream.",
   "conversion.title": "Konwertuj na Stream/Stack",
   "conversion.editTitle": "Edytuj Stream/Stack",
   "conversion.editMenu": "Edytuj Stream/Stack… Ctrl+Shift+F",

@@ -51,10 +51,11 @@ internal static class SliderTimingTests
         }
         Check(document.ContentEquals(before) && raw.Timing.Single(p => p.Time == 1001).Fields[5] == "35",
             "Compatible close timing must preserve metadata and source content");
-        var conflict = Map(); AddTrack(conflict, 1000, 2000, 0, 400); AddImported(conflict, 1001, 100, 1);
-        try { OsuBeatmapWriter.Serialize(conflict, false); throw new Exception("Conflicting heads should fail"); }
-        catch (InvalidDataException error)
-        { Check(error.Message.Contains("1000") && error.Message.Contains("1001"), "Conflict must identify both timestamps"); }
+        var adjacent = Map(); AddTrack(adjacent, 1000, 2000, 0, 400); AddImported(adjacent, 1001, 100, 1);
+        var close = OsuBeatmapWriter.Serialize(adjacent, false);
+        var closeRaw = RawMap.Parse(close.Text);
+        Near(1000, closeRaw.Duration(1000, 0)); Near(500, closeRaw.Duration(1001, 0));
+        Check(close.ObjectSequenceMatches, "Adjacent heads changed Catch event identities.");
     }
     public static void HighSvExportIsRejected()
     {
@@ -63,7 +64,7 @@ internal static class SliderTimingTests
         Throws(() => OsuBeatmapWriter.Serialize(document, false));
     }
 
-    public static void RestorationStaysOutsideHeadWindow()
+    public static void RestorationUsesFollowingHead()
     {
         var document = Map();
         AddTrack(document, 1000, 2000, 0, 400);
@@ -74,7 +75,7 @@ internal static class SliderTimingTests
         Near(1000, raw.Duration(1000, 0));
         Near(1000, raw.Duration(1000, 1));
         Check(raw.Timing.Where(p => p.Time > 1000 && p.Time <= 1001).Count() == 0,
-            "SV restoration entered the slider head's next-millisecond window.");
+            "Restoration preceded the next imported slider that needs it.");
         Check(raw.Timing.Count == 3 && raw.Timing[^1].Time == 1100,
             "Restore must occur at the first imported slider that needs the original SV.");
         Near(1, raw.State(1100).Sv);
@@ -181,7 +182,7 @@ internal static class SliderTimingTests
         Near(500, raw.DurationOfLine(importedLine, 0)); Near(500, raw.DurationOfLine(importedLine, 1));
     }
 
-    public static void UnsafeRestorationWindowIsRejected()
+    public static void FollowingTimingBoundaryPreservesHead()
     {
         foreach (double boundary in new[] { 1000.5, 1001.0, 1001.75 })
         {
@@ -189,72 +190,50 @@ internal static class SliderTimingTests
             document.TimingPoints.Add(new() { TimeMs = boundary, BeatLengthMs = 250, Uninherited = true, SourceOrder = 1 });
             AddTrack(document, 1000, 2000, 0, 400);
             var before = document.DeepClone();
-            Throws(() => OsuBeatmapWriter.Serialize(document, false));
-            Check(document.ContentEquals(before), "Rejected timing insertion mutated the source.");
+            var result = OsuBeatmapWriter.Serialize(document, false);
+            Near(1000, RawMap.Parse(result.Text).Duration(1000, 0));
+            Check(result.ObjectSequenceMatches && document.ContentEquals(before), "A following BPM boundary changed the slider or source.");
         }
-        var closeSlider = Map();
-        AddTrack(closeSlider, 1000, 2000, 0, 400);
-        AddImported(closeSlider, 1001, 100, 1);
-        Throws(() => OsuBeatmapWriter.Serialize(closeSlider, false));
-        var precedingSlider = Map();
-        AddImported(precedingSlider, 999, 100, 1);
-        AddTrack(precedingSlider, 1000, 2000, 0, 400);
-        Throws(() => OsuBeatmapWriter.Serialize(precedingSlider, false));
+        foreach (double head in new[] { 999.0, 1001.0 })
+        {
+            var document = Map(); AddTrack(document, 1000, 2000, 0, 400); AddImported(document, head, 100, 1);
+            var result = OsuBeatmapWriter.Serialize(document, false); var raw = RawMap.Parse(result.Text);
+            Near(1000, raw.Duration(1000, 0)); Near(500, raw.Duration(head, 0));
+            Check(result.ObjectSequenceMatches, "Adjacent imported slider changed event sequence.");
+        }
     }
 
     public static void CloseSvBoundaryPreservesTimingAndSamples()
     {
         foreach (double boundary in new[] { 1000.5, 1001.0, 1001.75 })
-        foreach (double restoredBeatLength in new[] { -80.0, double.NaN })
+        foreach (double beatLength in new[] { -80.0, double.NaN })
         {
             var document = Map();
-            document.TimingPoints.Add(new() { TimeMs = boundary, BeatLengthMs = restoredBeatLength,
+            document.TimingPoints.Add(new() { TimeMs = boundary, BeatLengthMs = beatLength,
                 Uninherited = false, SourceOrder = 1, SampleSet = 3, SampleIndex = 7, Volume = 35, Effects = 1 });
-            AddTrack(document, 1000, 2000, 0, 400);
-            AddImported(document, 1100, 100, 1);
-            var before = document.DeepClone();
-            var result = OsuBeatmapWriter.Serialize(document, false);
+            AddTrack(document, 1000, 2000, 0, 400); AddImported(document, 1100, 100, 1);
+            var before = document.DeepClone(); var result = OsuBeatmapWriter.Serialize(document, false);
             var raw = RawMap.Parse(result.Text);
-            Near(1000, raw.Duration(1000, 0)); Near(1000, raw.Duration(1000, 1));
-            Near(double.IsNaN(restoredBeatLength) ? 500 : 400, raw.Duration(1100, 0));
-            Near(double.IsNaN(restoredBeatLength) ? 500 : 400, raw.Duration(1100, 1));
-            var metadata = raw.Timing.Single(p => p.Time == boundary);
-            Check(metadata.Fields[3] == "3" && metadata.Fields[4] == "7" && metadata.Fields[5] == "35"
-                && metadata.Fields[7] == "1", "Close SV normalization moved or changed sample/effect metadata.");
-            var restore = raw.Timing.Single(p => p.Time == 1100);
-            Check(restore.BeatLength.Equals(restoredBeatLength), "Restore must use the state after the nearby boundary.");
-            Check(result.ObjectSequenceMatches && document.ContentEquals(before), "Normalization changed Catch objects or source content.");
-            document.ImportedSliders.Clear();
-            var isolated = RawMap.Parse(OsuBeatmapWriter.Serialize(document, false).Text);
-            Check(isolated.Timing.All(p => p.Time <= boundary), "Deferred SV without a dependent slider introduced a restoration.");
-            Near(1000, isolated.Duration(1000, 0)); Near(1000, isolated.Duration(1000, 1));
+            Near(1000, raw.Duration(1000, 0)); Near(double.IsNaN(beatLength) ? 500 : 400, raw.Duration(1100, 0));
+            var point = raw.Timing.Single(p => p.Time == boundary);
+            Check(point.BeatLength.Equals(beatLength) && point.Fields[3] == "3" && point.Fields[4] == "7"
+                && point.Fields[5] == "35" && point.Fields[7] == "1", "Following SV/sample/effect metadata changed.");
+            Check(raw.Timing.All(p => p.Time <= boundary), "A natural boundary introduced an unused restoration.");
+            Check(result.ObjectSequenceMatches && document.ContentEquals(before), "Export changed events or source content.");
         }
     }
 
-    public static void CloseSvBoundaryHandlesAdjacentHeads()
+    public static void AdjacentHeadsRetainIndependentSv()
     {
         var document = Map();
         document.TimingPoints.Add(new() { TimeMs = 1001, BeatLengthMs = -80, Uninherited = false });
         document.TimingPoints.Add(new() { TimeMs = 1002, BeatLengthMs = -50, Uninherited = false, Volume = 25 });
-        AddTrack(document, 1000, 2000, 0, 400);
-        AddTrack(document, 1001, 2001, 0, 400);
+        AddTrack(document, 1000, 2000, 0, 400); AddTrack(document, 1001, 1501, 0, 400);
         AddImported(document, 1003, 100, 1);
-        var raw = RawMap.Parse(OsuBeatmapWriter.Serialize(document, false).Text);
-        foreach (int offset in new[] { 0, 1 })
-        {
-            Near(1000, raw.Duration(1000, offset)); Near(1000, raw.Duration(1001, offset));
-            Near(250, raw.Duration(1003, offset));
-        }
-        Check(raw.Timing.Single(p => p.Time == 1002).Fields[5] == "25", "Chained window lost metadata.");
-        var conflict = Map();
-        conflict.TimingPoints.Add(new() { TimeMs = 1001, BeatLengthMs = -80, Uninherited = false });
-        AddTrack(conflict, 1000, 2000, 0, 400);
-        AddImported(conflict, 1001, 100, 1);
-        Throws(() => OsuBeatmapWriter.Serialize(conflict, false));
-        var generatedConflict = Map();
-        AddTrack(generatedConflict, 1000, 2000, 0, 400);
-        AddTrack(generatedConflict, 1001, 1501, 0, 400);
-        Throws(() => OsuBeatmapWriter.Serialize(generatedConflict, false));
+        var result = OsuBeatmapWriter.Serialize(document, false); var raw = RawMap.Parse(result.Text);
+        Near(1000, raw.Duration(1000, 0)); Near(500, raw.Duration(1001, 0)); Near(250, raw.Duration(1003, 0));
+        Check(raw.Timing.Single(p => p.Time == 1002).Fields[5] == "25" && result.ObjectSequenceMatches,
+            "Adjacent independent heads lost metadata or events.");
     }
 
     public static void CloseSvBoundaryRespectsNaturalRestoration()
@@ -262,22 +241,16 @@ internal static class SliderTimingTests
         var document = Map();
         document.TimingPoints.Add(new() { TimeMs = 1001, BeatLengthMs = -80, Uninherited = false });
         document.TimingPoints.Add(new() { TimeMs = 1002, BeatLengthMs = -25, Uninherited = false, Volume = 75 });
-        // This head already uses the original SV; the following boundary still needs normalization.
-        AddTrack(document, 1000, 2000, 100, 100);
-        AddImported(document, 1100, 100, 1);
-        var raw = RawMap.Parse(OsuBeatmapWriter.Serialize(document, false).Text);
-        Near(1000, raw.Duration(1000, 0)); Near(1000, raw.Duration(1000, 1));
-        Near(125, raw.Duration(1100, 0)); Near(125, raw.Duration(1100, 1));
-        var natural = raw.Timing.Single(p => p.Time == 1002);
-        Check(natural.BeatLength == -25 && natural.Fields[5] == "75", "Normalization overwrote a natural restoration.");
-
-        var conflict = Map();
-        conflict.TimingPoints.Add(new() { TimeMs = 1000.5, BeatLengthMs = -80, Uninherited = false });
-        AddTrack(conflict, 1000, 2000, 100, 100);
-        AddImported(conflict, 999, 100, 1);
-        var before = conflict.DeepClone();
-        Throws(() => OsuBeatmapWriter.Serialize(conflict, false));
-        Check(conflict.ContentEquals(before), "Rejected boundary normalization changed the source.");
+        AddTrack(document, 1000, 2000, 100, 100); AddImported(document, 1100, 100, 1);
+        var result = OsuBeatmapWriter.Serialize(document, false); var raw = RawMap.Parse(result.Text);
+        Near(1000, raw.Duration(1000, 0)); Near(125, raw.Duration(1100, 0));
+        Check(raw.Timing.Single(p => p.Time == 1001).BeatLength == -80
+            && raw.Timing.Single(p => p.Time == 1002).BeatLength == -25, "Natural SV boundaries were rewritten.");
+        var preceding = Map();
+        preceding.TimingPoints.Add(new() { TimeMs = 1000.5, BeatLengthMs = -80, Uninherited = false });
+        AddTrack(preceding, 1000, 2000, 100, 100); AddImported(preceding, 999, 100, 1);
+        var before = preceding.DeepClone(); var exported = OsuBeatmapWriter.Serialize(preceding, false);
+        Check(exported.ObjectSequenceMatches && preceding.ContentEquals(before), "Unchanged preceding head was rejected or mutated.");
     }
 
     public static void NaNAndFractionalHeadRestoreOriginalState()
@@ -322,7 +295,7 @@ internal static class SliderTimingTests
         {
             double head = Math.Truncate(track.Nodes[0].TimeMs);
             double duration = (track.Nodes[^1].TimeMs - track.Nodes[0].TimeMs) * track.SpanCount;
-            Near(duration, raw.Duration(head, 0)); Near(duration, raw.Duration(head, 1));
+            Near(duration, raw.Duration(head, 0));
             Check(raw.Timing.Count(p => p.Time == head && !p.Red) <= 1, "User export has ambiguous same-time SV points.");
             double originalSv = baseline.State(head).Sv;
             double requiredSv = raw.State(head).Sv;
@@ -332,12 +305,10 @@ internal static class SliderTimingTests
                 track.Name, StartMs = head, track.SpanCount, ExpectedDurationMs = duration,
                 ExpectedEndMs = head + duration, OriginalSv = originalSv, RequiredSv = requiredSv,
                 IndependentDurationMs = raw.Duration(head, 0), IndependentEndMs = head + raw.Duration(head, 0),
-                NextMillisecondLookupDurationMs = raw.Duration(head, 1),
                 DurationIfOriginalSvSelectedMs = durationWithOriginalSv, OriginalSvDurationRatio = requiredSv / originalSv,
-                PreviousExportExactLookupMs = previous?.Duration(head, 0),
-                PreviousExportNextMillisecondLookupMs = previous?.Duration(head, 1)
+                PreviousExportExactLookupMs = previous?.Duration(head, 0)
             });
-            Console.WriteLine($"  USER slider {head:R}: target {duration:R} ms, independent {raw.Duration(head, 1):R} ms");
+            Console.WriteLine($"  USER slider {head:R}: target {duration:R} ms, independent {raw.Duration(head, 0):R} ms");
         }
         var outputLines = result.Text.Split('\n').Select(line => line.TrimEnd('\r')).ToHashSet(StringComparer.Ordinal);
         int retainedSliders = 0, retainedFruits = 0, retainedShowers = 0;
@@ -349,7 +320,6 @@ internal static class SliderTimingTests
             double difference = Math.Abs(raw.DurationOfLine(originalLine, 0) - baseline.DurationOfLine(originalLine, 0));
             maximumUneditedDurationChange = Math.Max(maximumUneditedDurationChange, difference);
             Near(0, difference);
-            Near(0, raw.DurationOfLine(originalLine, 1) - baseline.DurationOfLine(originalLine, 1));
             retainedSliders++;
         }
         foreach (var fruit in document.Fruits)
@@ -375,7 +345,7 @@ internal static class SliderTimingTests
         File.WriteAllText(Path.Combine(output, "slider-timing-report.json"), System.Text.Json.JsonSerializer.Serialize(new
         {
             SourceProject = projectPath, PreviousExport = previousPath, Output = Path.Combine(output, "T1-fixed.osu"),
-            Verification = "Independent emitted-field duration formula; exact and +1 ms lookup scenarios. The +1 ms scenario is a conservative compatibility check, not a verified stable-client lookup rule.",
+            Verification = "Independent emitted-field duration formula evaluated at the exported slider head.",
             StableClientVerified = false, Sliders = sliderReports,
             Timing = new
             {
@@ -494,7 +464,7 @@ internal static class SliderTimingTests
             double beatLength = Timing.First(p => p.Red).BeatLength, sv = 1;
             foreach (var point in Timing)
             {
-                if (Math.Floor(point.Time) > query) break;
+                if (point.Time > query) break;
                 if (point.Red) { beatLength = point.BeatLength; sv = 1; }
                 else sv = point.BeatLength < 0 ? Math.Clamp(-100 / point.BeatLength, 0.1, 10) : 1;
             }

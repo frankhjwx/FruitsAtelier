@@ -159,7 +159,6 @@
   "volume.master": "Master",
   "volume.music": "Musika",
   "volume.effect": "Epekto",
-  "core.writer.restoreIntervalAt": "Hindi mapanatili ang Slider Timing malapit sa {0} ms: ang FSlider sa {1} ms ay nangangailangan ng hindi tugmang Timing sa loob ng parehong 1 ms lookup window. Paghiwalayin ang Slider heads/Timing point na ito nang hindi bababa sa 2 ms, o i-convert ang magkasalungat na Slider sa isang Fruit Stream bago i-export.",
   "conversion.title": "I-convert sa Stream/Stack",
   "conversion.editTitle": "I-edit ang Stream/Stack",
   "conversion.editMenu": "I-edit ang Stream/Stack... Ctrl+Shift+F",

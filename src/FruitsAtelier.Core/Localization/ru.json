@@ -159,7 +159,6 @@
   "volume.master": "Мастер",
   "volume.music": "Музыка",
   "volume.effect": "Эффект",
-  "core.writer.restoreIntervalAt": "Невозможно сохранить Слайдер Тайминг рядом с {0} мс: для FSlider с {1} мс требуется несовместимый Тайминг в том же окне поиска 1 мс. Разделите эти головки Слайдер/точки Тайминг минимум на 2 мс или преобразуйте конфликтующий Слайдер в Фрукт Stream перед экспортом.",
   "conversion.title": "Конвертировать в Stream/Stack",
   "conversion.editTitle": "Редактировать Stream/Stack",
   "conversion.editMenu": "Редактировать Stream/Stack… Ctrl+Shift+F",

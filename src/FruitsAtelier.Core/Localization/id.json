@@ -159,7 +159,6 @@
   "volume.master": "Guru",
   "volume.music": "Musik",
   "volume.effect": "Efek",
-  "core.writer.restoreIntervalAt": "Tidak dapat mempertahankan Slider Timing di dekat {0} ms: FSlider di {1} ms memerlukan Timing yang tidak kompatibel dalam jendela pencarian 1 ms yang sama. Pisahkan kepala Slider/titik Timing ini setidaknya 2 ms, atau ubah Slider yang bertentangan menjadi Fruit Stream sebelum mengekspor.",
   "conversion.title": "Konversikan ke Stream/Stack",
   "conversion.editTitle": "Sunting Stream/Stack",
   "conversion.editMenu": "Sunting Stream/Stack… Ctrl+Shift+F",

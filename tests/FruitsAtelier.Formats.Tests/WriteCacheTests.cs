@@ -173,11 +173,12 @@ internal static class WriteCacheTests
         map.TimingPoints.Add(new() { TimeMs = -1, BeatLengthMs = 500 });
         Check();
         map.TimingPoints.RemoveAt(map.TimingPoints.Count - 1);
-        map.TimingPoints.Add(new() { TimeMs = 5000.5, BeatLengthMs = 500 });
+        track.Nodes[0].TimeMs = 4999.75;
+        map.TimingPoints.Add(new() { TimeMs = 4999.5, BeatLengthMs = 500 });
         bool rejected = false;
         try { OsuBeatmapWriter.Serialize(map, cache: cache); }
         catch (InvalidDataException) { rejected = true; }
-        finally { map.TimingPoints.RemoveAt(map.TimingPoints.Count - 1); }
+        finally { map.TimingPoints.RemoveAt(map.TimingPoints.Count - 1); track.Nodes[0].TimeMs = 5000; }
         if (!rejected) throw new Exception("Invalid timing unexpectedly populated the export cache.");
         Check();
         var saved = map.DeepClone();

@@ -116,13 +116,12 @@ Legacy sliders with independent SV encode their actual per-object multiplier at
 the head, using the processed value when droplet effects are materialized. Their
 stored green points are unchanged by drawing, movement or Inspector SV editing.
 The writer merges per-object SV requirements with original timing/sample/effect
-states and applies its existing restoration and lookup-window checks. Unchanged
-imported SV requires no generated override. Coincident incompatible requirements
+states at the exported head. Unchanged imported SV requires no generated override. Coincident incompatible requirements
 fail explicitly; FSliders at a Legacy head must generate at its actual SV.
 
 When an edited slider requires a different SV, the writer replaces the old green point at its start time to avoid stacking different velocities at the same time, preserving red points and effective sample fields. Catch interprets inherited SV within stable's 0.1–10 range; FSliders requiring SV above 10 fail generation and export. A restoration point is written at the first unedited slider head before the next independent timing boundary that still depends on the old velocity. Otherwise it is omitted.
 
-The writer holds the required SV through the head's next-millisecond lookup window, including fractional timing points that can truncate into that window. Original sample, volume, and effect events retain their timestamps; only conflicting SV values are replaced temporarily, then restored when a subsequent unedited slider needs that state. Restoration must clear overlapping equal-SV head lookup windows. Original timing boundaries remain authoritative. Export verifies unchanged sliders retain their exact and next-millisecond timing states, including truncated timing offsets. Conflicting slider heads or BPM changes that cannot be represented safely still cause a localized failure identifying both times. Duration regressions calculate `length × spans × beatLength / (100 × SliderMultiplier × SV)` directly from exported fields.
+Slider timing and SV are locked at the exported head, following the pinned [legacy decoder](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs). A subsequent BPM/SV point or slider head may occur one millisecond later or at a fractional offset; it does not change the preceding slider's duration. Original timing, sample, volume and effect events retain their timestamps and values. Export verifies unchanged sliders retain their timing state at their exported heads. Coincident incompatible SV requirements and quantized heads crossing a BPM boundary still fail explicitly. Duration regressions calculate `length × spans × beatLength / (100 × SliderMultiplier × SV)` directly from exported fields.
 
 See [Building and Testing](TESTING.md) for tests and the [format module reference](../src/FruitsAtelier.Core/Formats/REFERENCE.md) for APIs and sources.
 

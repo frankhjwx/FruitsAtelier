@@ -1247,7 +1247,9 @@ with captures under `artifacts/tests/difficulty-tabs-native`.
 `App.Tests --independent-sv-check` checks Legacy Inspector SV editing, undo/redo,
 Shift duration locking and unchanged authoring timing. `Formats.Tests
 --independent-sv-check` checks v7/v14 independent SV import, movement, export,
-project persistence and compatible/incompatible coincident FSlider heads. Native
+project persistence, adjacent BPM/SV boundaries and compatible/incompatible coincident FSlider heads.
+The App suite also checks project opening and automatic synchronization with a
+Legacy slider one millisecond before a BPM boundary. Native
 `--render-check --osu-canvas-render-check --independent-sv-render-check` exercises
 Inspector input and Shift dragging in English/Chinese at both window sizes and
 96/120/144/168/192 DPI, including compact corner controls, slider and button
