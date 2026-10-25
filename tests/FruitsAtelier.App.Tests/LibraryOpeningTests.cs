@@ -10,13 +10,20 @@ internal static class LibraryOpeningTests
     {
         string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-open-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
+        var views = new List<EditorView>();
+        EditorView CreateView()
+        {
+            var view = new EditorView(false);
+            views.Add(view);
+            return view;
+        }
         try
         {
             var project = BeatmapProject.FromDocuments([new MapDocument { Name = "Open fixture", IsDemo = false }, new MapDocument { Name = "Second", IsDemo = false }]);
             var session = WorkspaceProject.Create(root, project, "");
             var map = new LibraryMap("", "", "", "", "", "", "", "", "", "", "", "", session.Directory);
             var gate = typeof(WorkspaceProject).GetField("Gate", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!;
-            var view = new EditorView(false);
+            var view = CreateView();
             var before = view.Document;
             var canvas = new RecordingCanvas();
             int completed = 0;
@@ -51,7 +58,7 @@ internal static class LibraryOpeningTests
             string sourceText = "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Source\nArtist:Artist\nCreator:Mapper\nVersion:{0}\n[Difficulty]\nCircleSize:5\nOverallDifficulty:5\nApproachRate:5\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,2,1,100,1,0\n[HitObjects]\n123,192,1000,1,0,0:0:0:0:\n";
             foreach (string name in new[] { "First", "Second" })
                 File.WriteAllText(Path.Combine(songs, name + ".osu"), string.Format(sourceText, name));
-            view = new EditorView(false);
+            view = CreateView();
             view.InitializeLibrary(false, new LibrarySettings { Workspace = Path.Combine(root, "Imported"), Songs = songs });
             view.BeginLibraryOpen(LibraryDatabase.ReadMetadata(Path.Combine(songs, "Second.osu"))!, selectDifficulty: true);
             Pump(view, canvas);
@@ -66,12 +73,12 @@ internal static class LibraryOpeningTests
             { view.Render(canvas, 980, 620); Thread.Sleep(10); }
             Check(view.CurrentDifficultyName == "Third", "new source difficulty is selected after synchronization imports it");
 
-            view = new EditorView(false); before = view.Document;
+            view = CreateView(); before = view.Document;
             view.BeginLibraryOpen(map with { ProjectPath = Path.Combine(root, "missing") }, () => completed++);
             Pump(view, canvas);
             Check(view.ErrorVisible && ReferenceEquals(before, view.Document) && completed == 1, "failed open retains the document and skips completion");
 
-            view = new EditorView(false);
+            view = CreateView();
             Task retired;
             lock (gate)
             {
@@ -83,7 +90,20 @@ internal static class LibraryOpeningTests
             view.Render(canvas, 980, 620);
             Check(!view.LibraryOpening && view.WorkspaceSession is null && completed == 1, "project replacement retires a pending open");
         }
-        finally { Directory.Delete(root, true); }
+        finally
+        {
+            var canvas = new RecordingCanvas();
+            foreach (var view in views)
+            {
+                view.StopFileMonitoring();
+                var deadline = Stopwatch.StartNew();
+                while (view.LibraryLoading && deadline.Elapsed < TimeSpan.FromSeconds(15))
+                { canvas.Clear(); view.Render(canvas, 980, 620); Thread.Sleep(10); }
+                Check(!view.LibraryLoading, "library workers finish before fixture deletion");
+                view.CompleteLibraryCacheWrites();
+            }
+            Directory.Delete(root, true);
+        }
     }
 
     private static void Pump(EditorView view, RecordingCanvas canvas)
