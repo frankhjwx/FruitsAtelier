@@ -107,7 +107,6 @@ public static class OsuBeatmapWriter
         var authoring = document;
         var bananaExpansion = BananaShowerExpansion.Create(document);
         if (bananaExpansion is not null) document = bananaExpansion.Document;
-        document = ExportTiming.Prepare(document, out _);
         cache?.ParsedSliders.Begin();
         var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache?.Source);
         if (!converted.Success) throw new InvalidDataException(L.Get("core.writer.incompletePrefix") + string.Join(L.Get("core.diagnostics.separator"), converted.Diagnostics));

@@ -28,12 +28,16 @@ and one prompt per difficulty per open, including spinner-only offsets. Windows 
 Chinese at two window sizes and three DPI scales; captures go to
 `artifacts/tests/timing-alignment-native`.
 
-`Formats.Tests --export-snap-check` checks one-millisecond circle correction after
-red-line resets and spinner head/tail correction, including a head one millisecond
-before the first red line, collision/positive-duration guards, unchanged authoring
-data, cached/idempotent export and downstream banana/slider RNG agreement. It also
-checks exact Stream/Stack grid times and unused timing pruning with slider-body
-and five-millisecond tail sample preservation.
+`Formats.Tests --export-snap-check` checks preservation of one-millisecond circle
+and spinner offsets, unchanged authoring data, cached/idempotent export and
+downstream banana/slider RNG agreement. It also checks exact Stream/Stack grid
+times and unused timing pruning with slider samples preserved.
+The Mapset Verifier interaction suite checks separate object/timing-line fixes,
+read-only checking, report refresh and independent undo/redo in English and Chinese.
+Kiai checks cover independent effect timing, retained SV and samples, occupied
+boundaries and undo/redo. Related-offset prompts cover current-section/all-section
+choices, cancellation, direct single-category fixes and one-step undo. Native
+captures include title-row fix buttons and these prompts at the tested sizes and DPI scales.
 
 ## Embedded browser checks
 

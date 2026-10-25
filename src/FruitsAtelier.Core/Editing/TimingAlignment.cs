@@ -12,7 +12,7 @@ public sealed class TimingAlignmentPlan
 
 public static class TimingAlignment
 {
-    public static TimingAlignmentPlan Analyze(MapDocument document)
+    public static TimingAlignmentPlan Analyze(MapDocument document, bool alignTimingPoints = true, bool alignObjects = true)
     {
         var timingTimes = new Dictionary<int, double>();
         var occupiedTiming = document.TimingPoints.Select(p => (Time: OsuBeatmapWriter.QuantizeTime(p.TimeMs), p.Uninherited)).ToHashSet();
@@ -23,7 +23,7 @@ public static class TimingAlignment
         foreach (var item in document.TimingPoints.Select((point, index) => (point, index)).OrderBy(p => p.point.TimeMs).ThenBy(p => p.point.SourceOrder))
         {
             var point = item.point;
-            if (!point.Uninherited) continue;
+            if (!alignTimingPoints || !point.Uninherited) continue;
             if (duplicates.Contains((point.TimeMs, point.Uninherited)))
             {
                 if (point.Uninherited && point.TimeMs != previousRedTime)
@@ -54,12 +54,13 @@ public static class TimingAlignment
         for (int i = 0; i < document.TimingPoints.Count; i++)
         {
             var point = document.TimingPoints[i];
-            if (point.Uninherited || duplicates.Contains((point.TimeMs, false))) continue;
+            if (!alignTimingPoints || point.Uninherited || duplicates.Contains((point.TimeMs, false))) continue;
             double corrected = ExportTiming.CorrectHead(alignedTiming, point.TimeMs);
             if (corrected == point.TimeMs || occupiedTiming.Contains((OsuBeatmapWriter.QuantizeTime(corrected), false))) continue;
             timingTimes[i] = corrected;
             occupiedTiming.Add((OsuBeatmapWriter.QuantizeTime(corrected), false));
         }
+        if (!alignObjects) return new() { TimingTimes = timingTimes };
         var heads = document.Fruits.Select(f => (f.Id, Time: f.TimeMs, Spinner: false))
             .Concat(document.ImportedSliders.Select(s => (s.Id, Time: s.TimeMs, Spinner: false)))
             .Concat(document.Tracks.Where(t => t.Nodes.Count > 0).Select(t => (t.Id, Time: t.Nodes[0].TimeMs, Spinner: false)))

@@ -20,6 +20,30 @@ public sealed record MapsetVerifierText(string Text, double? TimeMs = null);
 
 public static partial class MapsetVerifierClient
 {
+    internal const string TimingOffsetsCheck = "FruitsAtelier.Timing.UnsnappedLines";
+
+    internal static MapsetVerifierIssue[] TimingOffsetIssues(MapsetVerifierInput input)
+    {
+        var plan = TimingAlignment.Analyze(input.Document, alignObjects: false);
+        if (!plan.HasChanges) return [];
+        var aligned = input.Document.DeepClone();
+        TimingAlignment.Apply(aligned, plan);
+        return input.Document.TimingPoints.Select((point, index) => (point, index))
+            .Where(p => p.point.TimeMs != aligned.TimingPoints[p.index].TimeMs)
+            .Select(p => new MapsetVerifierIssue(TimingOffsetsCheck,
+                FruitsAtelier.Localization.Strings.Get("mv.timingOffsetsTitle"), "Minor",
+                FruitsAtelier.Localization.Strings.Get("mv.timingOffset",
+                    TimingTimestamp(p.point.TimeMs),
+                    aligned.TimingPoints[p.index].TimeMs), DifficultyId: input.Id)).ToArray();
+    }
+
+    private static string TimingTimestamp(double time)
+    {
+        long milliseconds = (long)Math.Truncate(time);
+        return string.Create(CultureInfo.InvariantCulture,
+            $"{milliseconds / 60000:00}:{milliseconds / 1000 % 60:00}:{milliseconds % 1000:000}");
+    }
+
     private static readonly JsonSerializerOptions json = new() { PropertyNameCaseInsensitive = true };
     private static readonly HashSet<string> resourceExtensions = new(StringComparer.OrdinalIgnoreCase)
         { ".mp3", ".ogg", ".wav", ".flac", ".aac", ".m4a", ".mp4", ".avi", ".webm", ".mov", ".flv", ".mkv", ".wmv", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".osb" };
@@ -93,7 +117,14 @@ public static partial class MapsetVerifierClient
                 || report.Difficulties.Any(d => d.Issues is null || !inputs.Any(i => i.Id == d.Id)))
                 throw new InvalidDataException("Unsupported Mapset Verifier report.");
             using var metadata = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(engine, "upstream.json"), cancellation));
-            return report with { UpstreamTag = metadata.RootElement.GetProperty("tag").GetString() ?? "" };
+            return report with
+            {
+                UpstreamTag = metadata.RootElement.GetProperty("tag").GetString() ?? "",
+                Difficulties = report.Difficulties.Select(d => d with
+                {
+                    Issues = [.. d.Issues, .. TimingOffsetIssues(inputs.First(i => i.Id == d.Id))]
+                }).ToArray()
+            };
         }
         finally { try { temporary.Delete(recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
     }

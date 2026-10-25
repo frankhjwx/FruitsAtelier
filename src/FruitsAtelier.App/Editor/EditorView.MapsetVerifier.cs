@@ -9,6 +9,11 @@ public sealed partial class EditorView
 {
     private MapsetVerifierReport? verifierReport;
     private Task<MapsetVerifierReport>? verifierTask;
+    private Task<MapDocument?>? verifierCleanupTask;
+    private EditorHistory? verifierCleanupHistory;
+    private long verifierCleanupRevision;
+    private Guid verifierCleanupDifficulty;
+    private bool verifierCleanupCompensation;
     private CancellationTokenSource? verifierCancellation;
     private string verifierError = "", verifierSnapshotTime = "";
     private bool verifierGeneral;
@@ -35,6 +40,8 @@ public sealed partial class EditorView
     internal float VerifierScrollOffset => verifierScroll;
     internal IReadOnlyList<Rect> VerifierCopyBounds => verifierRuns.Where(r => r.CopyKey is not null)
         .Select(r => new Rect(verifierBody.X + r.Bounds.X, verifierBody.Y + r.Bounds.Y - verifierScroll, r.Bounds.Width, r.Bounds.Height)).ToArray();
+    internal IReadOnlyList<Rect> VerifierFixBounds => verifierRuns.Where(r => r.Fix)
+        .Select(r => new Rect(verifierBody.X + r.Bounds.X, verifierBody.Y + r.Bounds.Y - verifierScroll, r.Bounds.Width, r.Bounds.Height)).ToArray();
     public bool MapsetVerifierHandCursor => MapsetVerifierVisible && DockContentInputAvailable && menu < 0
         && contextItems.Count == 0 && !dockDragging && !verifierScrollbarDragging
         && verifierHandHits.Any(r => r.Contains(mouseX, mouseY));
@@ -47,19 +54,19 @@ public sealed partial class EditorView
     private readonly List<VerifierRun> verifierRuns = [];
     private (MapsetVerifierReport? Report, Guid Difficulty, bool General, float Width, string Language, int Collapsed)? verifierLayout;
     private sealed record VerifierRun(Rect Bounds, string Text, string Level = "", bool Bold = false,
-        double? TimeMs = null, Guid? Difficulty = null, Action? Action = null, bool Icon = false, float Size = 13, bool Chevron = false, bool Collapsed = false, string? CopyKey = null);
+        double? TimeMs = null, Guid? Difficulty = null, Action? Action = null, bool Icon = false, float Size = 13, bool Chevron = false, bool Collapsed = false, string? CopyKey = null, bool Fix = false);
     internal Func<MapsetVerifierInput[], bool, CancellationToken, Task<MapsetVerifierReport>> VerifierAnalyze { get; set; } = MapsetVerifierClient.AnalyzeAsync;
     internal MapsetVerifierReport? VerifierReport => verifierReport;
     internal Rect VerifierPanelBounds => verifierBounds;
     internal IReadOnlyList<(Rect Bounds, double TimeMs, Guid? Difficulty)> VerifierTimestampBounds => verifierRuns
         .Where(r => r.TimeMs is not null).Select(r => (new Rect(verifierBody.X + r.Bounds.X, verifierBody.Y + r.Bounds.Y - verifierScroll, r.Bounds.Width, r.Bounds.Height), r.TimeMs!.Value, r.Difficulty)).ToArray();
     public bool MapsetVerifierVisible => PanelVisible(DockPanel.MapsetVerifier);
-    public bool MapsetVerifierBusy => verifierTask is not null;
+    public bool MapsetVerifierBusy => verifierTask is not null || verifierCleanupTask is not null;
     private bool VerifierRefreshReady => verifierRefreshPending && MapsetVerifierVisible && HasEditorProject && !LibraryVisible
         && !IsTestplaying && ClipboardInteractionReady && !LegacyDropletRefreshBusy
         && difficulties.All(d => !d.History.HasActiveTransaction)
         && timeProvider.GetElapsedTime(verifierChangedAt) >= TimeSpan.FromSeconds(1);
-    public bool MapsetVerifierNeedsRedraw => verifierTask is { IsCompleted: true } || VerifierRefreshReady
+    public bool MapsetVerifierNeedsRedraw => verifierCleanupTask is { IsCompleted: true } || verifierTask is { IsCompleted: true } || VerifierRefreshReady
         || MapsetVerifierVisible && verifierCopiedPainted > 0;
 
     public void ShowMapsetVerifier()
@@ -105,6 +112,7 @@ public sealed partial class EditorView
 
     private void PumpMapsetVerifier()
     {
+        PumpVerifierFix();
         if (!MapsetVerifierVisible || !DockContentInputAvailable) verifierScrollbarDragging = false;
         if (verifierTracking && (verifierCompensation != compensateTinyDroplets || verifierRevisions.Count != difficulties.Count
             || difficulties.Any(d => !verifierRevisions.TryGetValue(d.History, out var revision) || revision != d.History.ContentRevision)))
@@ -137,6 +145,8 @@ public sealed partial class EditorView
 
     private void CloseMapsetVerifier()
     {
+        verifierFixPrompt = null;
+        verifierCleanupTask = null; verifierCleanupHistory = null;
         CancelVerifier(); verifierCancellation = null; verifierTask = null;
         verifierReport = null; verifierError = ""; verifierLayout = null; verifierRuns.Clear();
         verifierInterpretations.Clear(); verifierCollapsed.Clear(); verifierScroll = 0;
@@ -281,11 +291,14 @@ public sealed partial class EditorView
                 else
                 {
                     if (run.TimeMs is not null) c.Fill(rectangle, Surface, 3);
-                    if (run.CopyKey is not null)
+                    if (run.Fix || run.CopyKey is not null)
                     {
-                        if (DockContentInputAvailable && menu < 0 && contextItems.Count == 0 && rectangle.Contains(mouseX, mouseY))
-                        { c.Fill(rectangle, Surface, 3); colour = Accent; }
-                        if (run.CopyKey == verifierCopiedKey) copiedButton = rectangle;
+                        bool hovered = DockContentInputAvailable && menu < 0 && contextItems.Count == 0
+                            && rectangle.Contains(mouseX, mouseY);
+                        c.Fill(rectangle, hovered ? Grid : Surface, 3);
+                        c.Stroke(rectangle, hovered ? Accent : Grid, radius: 3);
+                        colour = Accent;
+                        if (run.CopyKey is not null && run.CopyKey == verifierCopiedKey) copiedButton = rectangle;
                     }
                     c.Text(run.Text, rectangle.X + (run.TimeMs is not null ? 3 : 0), rectangle.Y + 2, run.Size, colour, rectangle.Width, run.Bold);
                 }
@@ -295,7 +308,7 @@ public sealed partial class EditorView
                     if (MapsetVerifierHandCursor && rectangle.Contains(mouseX, mouseY))
                         c.Line(rectangle.X + 3, rectangle.Bottom - 2, rectangle.Right - 3, rectangle.Bottom - 2, colour);
                 }
-                else if (run.Action is { } action) Hit(action, hand: run.CopyKey is not null);
+                else if (run.Action is { } action) Hit(action, hand: run.CopyKey is not null || run.Fix);
 
                 void Hit(Action action, bool hand = false)
                 {
@@ -393,12 +406,19 @@ public sealed partial class EditorView
                 string collapse = level + ":" + group.Key.Check;
                 bool closed = verifierCollapsed.Contains(collapse);
                 float top = y;
+                bool canFix = !verifierGeneral && level == "Minor"
+                    && (group.Key.Check == "MapsetVerifier.Checks.AllModes.Timing.CheckUnsnaps"
+                        || group.Key.Check == MapsetVerifierClient.TimingOffsetsCheck
+                        || group.Key.Check == "MapsetVerifier.Checks.AllModes.Timing.CheckKiaiUnsnap");
+                string fixLabel = L.Get("mv.fixForMe");
+                float fixWidth = c.MeasureText(fixLabel, 11) + 14;
+                float titleRight = width - 85 - (canFix ? fixWidth + 8 : 0);
                 float indent = 54, x = indent;
-                AddText(group.Key.Title, bold: true, max: Math.Max(indent + 20, width - 85));
+                AddText(group.Key.Title, bold: true, max: Math.Max(indent + 1, titleRight));
                 float end = y + 26;
                 verifierRuns.Add(new(new(5, top + 3, 18, 18), "", Chevron: true, Collapsed: closed));
                 verifierRuns.Add(new(new(30, top + 4, 16, 16), "", level, Icon: true));
-                verifierRuns.Add(new(new(0, top, Math.Max(20, width - 82), end - top), "", Action: () =>
+                verifierRuns.Add(new(new(0, top, Math.Max(20, canFix ? titleRight : width - 82), end - top), "", Action: () =>
                 {
                     if (!verifierCollapsed.Add(collapse)) verifierCollapsed.Remove(collapse);
                     verifierCollapseVersion++;
@@ -410,6 +430,17 @@ public sealed partial class EditorView
                     RequestCopyText(string.Join(Environment.NewLine, group.Select(i => i.Message)));
                     verifierCopiedAt = timeProvider.GetTimestamp(); verifierCopiedKey = copyKey;
                 }, Size: 10, CopyKey: copyKey));
+                if (canFix)
+                {
+                    bool timingPoints = group.Key.Check == MapsetVerifierClient.TimingOffsetsCheck;
+                    verifierRuns.Add(new(new(width - 86 - fixWidth, top + 2, fixWidth, 22),
+                        fixLabel, Action: () =>
+                        {
+                            if (group.Key.Check == "MapsetVerifier.Checks.AllModes.Timing.CheckKiaiUnsnap")
+                                OfferVerifierFix(currentDifficulty, VerifierFixCategory.Kiai);
+                            else OfferVerifierFix(currentDifficulty, timingPoints ? VerifierFixCategory.Timing : VerifierFixCategory.Objects);
+                        }, Size: 11, Fix: true));
+                }
                 y = end;
                 if (!closed)
                     foreach (var issue in group.OrderBy(i => MapsetVerifierClient.Tokenize(i.Message).FirstOrDefault(t => t.TimeMs is not null)?.TimeMs ?? double.MinValue).ThenBy(i => i.Message, StringComparer.Ordinal))

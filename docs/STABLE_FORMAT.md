@@ -66,18 +66,12 @@ These rules follow the [official format document](https://github.com/ppy/osu-wik
 
 ## Writer behavior
 
-Standalone circles and spinner edges with a one-millisecond integer offset from
-a supported beat grid are corrected in both conversion and export. The active red line owns that
-grid. A spinner head up to one millisecond before the first red line can align
-to that line. Other times before the first red line, already snapped edges,
-offsets larger than one millisecond, corrections across red-line grids, and
-head corrections onto an occupied parent head retain their times. Spinner
-corrections do not reverse or collapse a positive duration. Conversion and export
-use the same corrected interval for banana generation and downstream RNG.
-Saved authoring data and undo history keep their original precision.
-The on-open timing-alignment prompt also detects spinner heads and tails, counts
-each affected spinner once, and applies confirmed corrections in one undo step.
-Keeping the original timing leaves authoring data unchanged.
+Conversion and export preserve authored one-millisecond offsets in circles,
+slider heads, Stream/Stack subdivisions and spinner edges. Export applies ordinary
+integer truncation without automatically aligning these times to a beat grid.
+Mapset Verifier exposes explicit, undoable fixes for object and timing-line offsets
+in the current difficulty. The on-open timing-alignment prompt also detects these
+offsets and applies corrections only when confirmed.
 Stream/Stack subdivisions multiply the whole division count before dividing by
 the snap divisor, preventing intermediate floating-point rounding from moving an
 exact integer grid point one millisecond earlier.
@@ -87,7 +81,7 @@ effect changes affect no objects. Sample checks retain slider bodies and stable'
 five-millisecond edge lookahead. A sample point just after a fractional slider tail
 can therefore be required even when a verifier calls it unused.
 
-The generator first produces a two-dimensional slider that satisfies its targets; the writer then serializes it. Generated FSliders start at geometric Y=192 and initially travel upwards when vertical travel is nonzero. Vertical travel continues in the current direction until folding at Y=1/383. The writer emits `B` paths, repeating each internal point to form red anchors between straight Bezier segments. Unedited imported sliders retain their original path representation. Serialization uses invariant culture with consistent newline and UTF-8 policies. Integer object times truncate toward zero, matching stable snapping as modeled by MapsetVerifier. Coordinates round midpoints away from zero. Generated SV points use the same truncated time as their slider heads. Beat grids calculate offsets from whole subdivision counts before dividing, retaining exact whole-millisecond grid points. Fields unaffected by snap correction retain their original numeric spelling.
+The generator first produces a two-dimensional slider that satisfies its targets; the writer then serializes it. Generated FSliders start at geometric Y=192 and initially travel upwards when vertical travel is nonzero. Vertical travel continues in the current direction until folding at Y=1/383. The writer emits `B` paths, repeating each internal point to form red anchors between straight Bezier segments. Unedited imported sliders retain their original path representation. Serialization uses invariant culture with consistent newline and UTF-8 policies. Integer object times truncate toward zero, matching stable snapping as modeled by MapsetVerifier. Coordinates round midpoints away from zero. Generated SV points use the same truncated time as their slider heads. Beat grids calculate offsets from whole subdivision counts before dividing, retaining exact whole-millisecond grid points. Unchanged fields retain their original numeric spelling.
 
 Read-back maps events by source and nested event identity when quantization changes their order. An integer slider head can precede an unchanged fractional fruit at the same authored time. Playable NM/HR output retains the actual exported order; this ordering change alone does not invalidate a base-SV override. Compensation failures report the affected object time and count or time/position changes where available, with guidance for changing SV or reporting an editing failure.
 

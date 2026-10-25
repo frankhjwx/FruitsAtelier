@@ -14,7 +14,7 @@ public sealed partial class EditorView
     private readonly List<HitArea> sliderDialogHits = [];
     public bool SliderImportPromptVisible => sliderImportTargets.Length > 0;
     public bool SliderConversionBusy => sliderBatchTask is not null || sliderImportTask is not null || LegacyDropletRefreshBusy;
-    private bool SliderDialogVisible => TimingAlignmentPromptVisible || SliderImportPromptVisible || SliderImportSourcePromptVisible || SliderConversionBusy || sliderBatchErrors.Length > 0;
+    private bool SliderDialogVisible => VerifierFixPromptVisible || TimingAlignmentPromptVisible || SliderImportPromptVisible || SliderImportSourcePromptVisible || SliderConversionBusy || sliderBatchErrors.Length > 0;
     private bool rememberSliderImportChoice;
 
     public void OfferSliderConversion(bool allDifficulties)
@@ -103,6 +103,7 @@ public sealed partial class EditorView
         var rect = new Rect((width - Math.Min(700, width - 40)) / 2, (height - 300) / 2, Math.Min(700, width - 40), 300);
         c.Fill(new(rect.X - 4, rect.Y - 4, rect.Width + 8, rect.Height + 8), Background, 10);
         c.Fill(rect, Panel, 8); c.Stroke(rect, Accent, 1, 8);
+        if (VerifierFixPromptVisible) { DrawVerifierFixPrompt(c, rect); return; }
         if (TimingAlignmentPromptVisible) { DrawTimingAlignment(c, rect); return; }
         c.Text(L.Get(sliderImportWizard ? "sliderImport.title" : "sliderBatch.title"), rect.X + 22, rect.Y + 20, 18, Foreground, rect.Width - 200, true);
         if (sliderImportWizard && sliderSourceQuestions is { } questions)

@@ -61,6 +61,81 @@ internal static class MapsetVerifierRenderCheck
                 view.PointerUp(general.X + 20, general.Y + 12, 0); Paint(true);
                 view.StopMapsetVerifier();
 
+                var offsets = new MapDocument { IsDemo = false, BeatLengthMs = 500, DurationMs = 5000 };
+                offsets.Fruits.Add(new() { TimeMs = 1001, X = 100 });
+                offsets.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
+                    new() { TimeMs = 2001, BeatLengthMs = -100, Uninherited = false, Volume = 40 }]);
+                view = new EditorView(false); view.LoadDocument(offsets); view.CloseLibrary();
+                view.VerifierAnalyze = (inputs, _, _) =>
+                {
+                    var input = inputs[0];
+                    return Task.FromResult(new MapsetVerifierReport(1, [], [new(input.Id, input.Name, "Hard", 3,
+                        [.. input.Document.Fruits.Where(f => f.TimeMs == 1001).Select(_ => new MapsetVerifierIssue(
+                            "MapsetVerifier.Checks.AllModes.Timing.CheckUnsnaps", "Unsnapped hit objects.", "Minor",
+                            "00:01:001 - Circle unsnapped by 1 ms.")),
+                         .. MapsetVerifierClient.TimingOffsetIssues(input)])]));
+                };
+                view.ShowMapsetVerifier();
+                SettleOffsets();
+                captureName = "offset-fixes"; Paint(true);
+                if (view.VerifierFixBounds.Count != 2) throw new Exception("Native offset fix buttons missing");
+                for (int fix = 0; fix < 2; fix++)
+                {
+                    var button = view.VerifierFixBounds.First();
+                    view.PointerMove(button.X + 4, button.Y + 5, false, false); Paint();
+                    if (!view.MapsetVerifierHandCursor) throw new Exception("Native fix hand cursor missing");
+                    view.PointerDown(button.X + 4, button.Y + 5, 0, false, false);
+                    view.PointerUp(button.X + 4, button.Y + 5, 0);
+                    Paint();
+                    if (view.VerifierFixPromptVisible)
+                    {
+                        captureName = "related-offsets"; Paint(true);
+                        view.AnswerVerifierFix(false);
+                    }
+                    SettleOffsets();
+                }
+                if (view.Document.Fruits[0].TimeMs != 1000 || view.Document.TimingPoints[1].TimeMs != 2000
+                    || !view.IsDirty || view.VerifierFixBounds.Count != 0)
+                    throw new Exception("Native explicit offset fixes failed");
+                view.StopMapsetVerifier();
+
+                var kiai = new MapDocument { IsDemo = false, BeatLengthMs = 500, DurationMs = 5000 };
+                kiai.Fruits.Add(new() { TimeMs = 1500, X = 100 });
+                kiai.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
+                    new() { TimeMs = 1001, BeatLengthMs = -100, Uninherited = false, Effects = 1 },
+                    new() { TimeMs = 2001, BeatLengthMs = -100, Uninherited = false }]);
+                view = new EditorView(false); view.LoadDocument(kiai); view.CloseLibrary();
+                view.VerifierAnalyze = (inputs, _, _) => Task.FromResult(new MapsetVerifierReport(1, [],
+                    [new(inputs[0].Id, inputs[0].Name, "Hard", 3,
+                        [new("MapsetVerifier.Checks.AllModes.Timing.CheckKiaiUnsnap", "Unsnapped kiai.", "Minor",
+                            "00:01:001 - Kiai is unsnapped by 1 ms."),
+                         new("MapsetVerifier.Checks.AllModes.Timing.CheckUnusedLines", "Unused timing lines.", "Minor",
+                            "00:02:001 - Inherited line changes sample settings, but affects nothing.")])]));
+                view.ShowMapsetVerifier(); SettleOffsets();
+                captureName = "kiai-fix"; Paint(true);
+                if (view.VerifierFixBounds.Count != 1 || view.VerifierCopyBounds.Count != 2)
+                    throw new Exception("Native Kiai and read-only unused timing actions failed");
+                var kiaiButton = view.VerifierFixBounds.Single();
+                view.PointerDown(kiaiButton.X + 4, kiaiButton.Y + 5, 0, false, false);
+                view.PointerUp(kiaiButton.X + 4, kiaiButton.Y + 5, 0);
+                Paint();
+                if (!view.VerifierFixPromptVisible) throw new Exception("Native combined Kiai fix prompt missing");
+                captureName = "related-kiai"; Paint(true);
+                view.AnswerVerifierFix(false);
+                SettleOffsets();
+                if ((TimingEditing.Current(view.Document, 1000)!.Effects & 1) == 0
+                    || (TimingEditing.Current(view.Document, 2000)!.Effects & 1) != 0)
+                    throw new Exception("Native Kiai fix failed");
+                view.StopMapsetVerifier();
+
+                void SettleOffsets()
+                {
+                    var limit = DateTime.UtcNow.AddSeconds(10);
+                    do { Paint(); Thread.Sleep(1); } while (view.MapsetVerifierBusy && DateTime.UtcNow < limit);
+                    if (view.MapsetVerifierBusy) throw new Exception("Native offset report did not settle");
+                    Paint();
+                }
+
                 void Paint(bool capture = false)
                 {
                     canvas.Begin(); view.Render(canvas, width, height);

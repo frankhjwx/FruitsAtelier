@@ -1401,6 +1401,12 @@ public sealed partial class EditorView
         if (RotationVisible) { RotationKey(virtualKey, ctrl, shift); return; }
         if (SliderDialogVisible)
         {
+            if (VerifierFixPromptVisible)
+            {
+                if (virtualKey == 27) CancelVerifierFixPrompt();
+                else if (virtualKey == 13) AnswerVerifierFix(true);
+                return;
+            }
             if (TimingAlignmentPromptVisible)
             {
                 if (virtualKey is 13 or 27) AnswerTimingAlignment(virtualKey == 13);

@@ -14,8 +14,9 @@ the active pill restores all severities. The default view is unfiltered.
 Error/information pills appear when present. Filters use the cached report and
 preserve the current check snapshot. Chevrons expand or collapse check groups.
 The right scrollbar supports thumb dragging and track clicks. Clickable timestamps
-show a hand cursor and an underline on hover. **Copy all** uses a hand cursor
-and hover highlight, then shows the same localized clipboard confirmation as
+show a hand cursor and an underline on hover. **Copy all** and **Fix for me** share
+a persistent button background and border, hand cursor and hover highlight.
+**Copy all** then shows the same localized clipboard confirmation as
 osu! Web for two seconds, fading during the final 400 ms.
 
 **Refresh** checks an exported snapshot of all loaded difficulties, including
@@ -29,6 +30,25 @@ loaded project and its copied mapset media, rather than every difficulty present
 on disk. Media/storyboards and `skin.ini` are copied to temporary storage, with a
 512 MiB / 50,000-file limit; conflicting resource names fail explicitly. Checking
 runs in a cancellable standalone process with a three-minute timeout.
+
+The **Unsnapped hit objects** Minor group offers **Fix for me**. The editor also
+adds an **Unsnapped timing lines** group for suspected one-millisecond red/green-line
+offsets, with a separate **Fix for me** action. Each fix button sits to the left of
+**Copy all** on its check heading. Fixes recompute eligible corrections against the
+current document and refresh the report after committing. Occupied destinations
+and invalid spinner durations are preserved. Export and checking preserve offsets
+until a user explicitly applies a fix.
+
+If another object/timing/Kiai category also has eligible one-millisecond offsets,
+**Fix for me** asks whether to fix the current section or all three categories.
+A single affected category fixes directly. Both choices are one undoable edit;
+Cancel or Escape preserves the document. Detection uses the current authoring data.
+
+The **Unsnapped kiai** Minor group offers **Fix for me** for one-millisecond
+start/end offsets. It changes Kiai transitions independently of SV, samples and
+volume, preserving coincident or occupied timing boundaries. Validation must
+preserve authored and exported NM/HR events and samples before one undoable edit
+commits. **Unused timing lines** remains a read-only report with **Copy all**.
 
 ## Local preparation and AI development
 
