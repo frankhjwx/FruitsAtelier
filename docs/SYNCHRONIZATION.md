@@ -140,6 +140,13 @@ partially resolved tabs amber, and fully resolved tabs green. Clean categories
 remain readable. Choices stay in their category; object choices advance to the
 next unresolved group there. Whole-map choices remain available.
 
+Events review collects break periods from anywhere in the section into aligned
+tables, ordered by start time. Start and end use `mm:ss:ms`; duration uses
+milliseconds. Only changed cells are highlighted, and missing rows use dashes.
+Other event data appears below the table in its original command order and
+indentation, without blank lines or comment-only headings. The choice applies to
+the complete Events section, retaining its source text and comments.
+
 Applying a resolution retains the comparison with an applying message until
 publication finishes. Saved and working authoring are archived once before the
 resolution; publication reuses that recovery round. Object-only resolutions retain

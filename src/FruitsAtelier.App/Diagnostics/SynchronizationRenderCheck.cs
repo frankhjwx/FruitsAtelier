@@ -47,7 +47,7 @@ internal static class SynchronizationRenderCheck
 
                 view.LoadWorkspace(WorkspaceProject.Open(session.Directory));
                 string events = "Sprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\n"
-                    + string.Concat(Enumerable.Repeat("// storyboard command 01234567890123456789\n", 60000));
+                    + string.Concat(Enumerable.Repeat(" F,0,500,1000,1,0\n", 60000));
                 File.WriteAllText(source, text.Replace("[HitObjects]", "[Events]\n" + events + "[HitObjects]"));
                 view.RefreshSynchronization(); Wait();
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native section text review was not shown.");
@@ -55,6 +55,20 @@ internal static class SynchronizationRenderCheck
                 view.Wheel(200, 260, -1200, false); Paint();
                 view.PointerDown(width - 52, 131, 0, false, false); view.PointerUp(width - 52, 131, 0); Paint();
                 if (!sectionBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native text paging changed authoring.");
+                view.KeyDown(27, false, false);
+
+                string breakText = text.Replace("[HitObjects]", "[Events]\n//Break Periods\n2,54850,57406\n2,247104,250245\n//Storyboard Layer 0\nSprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\n[HitObjects]");
+                File.WriteAllText(source, breakText);
+                var breakSession = WorkspaceProject.Create(Path.Combine(root, "BreakWorkspace"), BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source)]), songs);
+                view.LoadWorkspace(breakSession);
+                File.WriteAllText(source, breakText.Replace("2,247104,250245", "2,247104,256536").Replace("[HitObjects]", "2,248656,256611\n[HitObjects]"));
+                view.RefreshSynchronization(); Wait();
+                if (!view.SynchronizationVisible) throw new InvalidOperationException("Native break review was not shown.");
+                var breakBefore = view.Document.DeepClone();
+                CaptureTiming("breaks-unresolved");
+                view.PointerDown(width / 2 + 100, height - 162, 0, false, false); view.PointerUp(width / 2 + 100, height - 162, 0); Paint();
+                CaptureTiming("breaks-resolved");
+                if (!breakBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native break review changed authoring before Apply.");
                 view.KeyDown(27, false, false);
 
                 view.LoadWorkspace(WorkspaceProject.Open(session.Directory));

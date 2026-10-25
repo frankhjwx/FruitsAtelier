@@ -342,9 +342,13 @@ when an external conflict is detected.
 `Formats.Tests --semantic-sync-check` runs the synchronization regressions, including
 playable slider equivalence, position tolerance, independent SV capture and
 normalized timing choices. `FruitsAtelier.App.exe --render-check
---semantic-sync-render-check` exercises the English and Chinese timing and playable-object tables at
+--semantic-sync-render-check` exercises the English and Chinese break, timing and playable-object tables at
 two window sizes and captures unresolved/resolved cells under
 `artifacts/tests/semantic-sync-native`.
+
+`App.Tests --sync-details-check` also checks break start/end/duration columns,
+aligned additions, changed-cell highlighting, complete Events choices and
+storyboard command preservation at both window sizes in English and Chinese.
 
 `Formats.Tests --fa-only-check` checks default compatibility, per-difficulty persistence, source exclusion, portable snapshots, individual saves, stale export rejection, source-change and deletion-failure isolation, and reenabling generation. `App.Tests --fa-only-check` checks new-difficulty defaults and FA-only selection, Song Setup dock and modal controls, keep/delete/cancel choices, independent policies and restart in English and Chinese at two sizes. Native synchronization checks capture the creation choice, FA Settings and file-removal confirmation.
 

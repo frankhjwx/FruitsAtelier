@@ -7,6 +7,9 @@ internal static class SyncTabsTests
 {
     public static void Run()
     {
+        var eventReview = EditorView.SplitSyncEvents("//Break Periods\n2,54850,57406\n//Storyboard Layer 0\nSprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\nBreak,247104,256536 // end\n2,248656,256611\n2,invalid,4");
+        Check(eventReview.Breaks == "54850,57406\n247104,256536\n248656,256611", "breaks are collected across event comments and storyboard commands");
+        Check(eventReview.Other == "Sprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\n2,invalid,4", "other events retain command order, indentation and malformed break data");
         var id = Guid.NewGuid();
         ConvertedCatchObject Event(int index, CatchObjectKind kind, double time, double x) => new(id, index, kind, time, x, x, x, 0);
         var events = new[] { Event(0, CatchObjectKind.Fruit, 1000, 100), Event(1, CatchObjectKind.TinyDroplet, 1050, 110), Event(2, CatchObjectKind.Droplet, 1100, 120) };
@@ -37,6 +40,7 @@ internal static class SyncTabsTests
                 string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
                 Directory.CreateDirectory(Path.GetDirectoryName(source)!);
                 string original = "osu file format v14\n[General]\nAudioFilename:music.wav\nMode:2\nSampleSet:Soft\nStackLeniency:0.7\nPreviewTime:-1\n[Metadata]\nVersion:Catch\nArtist:Artist\nTitle:Tabs\n[Difficulty]\nApproachRate:5\nCircleSize:5\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,2,0,100,1,0\n[HitObjects]\n100,192,1000,1,0,0:0:0:0:\n304,192,257090,1,0,0:0:0:0:\n200,192,260000,1,0,0:0:0:0:\n";
+                original = original.Replace("[HitObjects]", "[Events]\n//Break Periods\n2,54850,57406\n2,247104,250245\n//Storyboard Layer 0\n[HitObjects]");
                 File.WriteAllText(source, original);
                 File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(source)!, "music.wav"), [1, 2, 3, 4]);
                 var ui = new Ui(false); ui.Resize(width, 900);
@@ -51,7 +55,7 @@ internal static class SyncTabsTests
                 try
                 {
                     File.WriteAllText(source, original.Replace("SampleSet:Soft", "SampleSet:None").Replace("StackLeniency:0.7", "StackLeniency:0.5").Replace("PreviewTime:-1", "PreviewTime:1000")
-                        .Replace("257090,1", "257090,5").Replace("200,192,260000", "240,192,260000"));
+                        .Replace("2,247104,250245", "2,247104,256536\n2,248656,256611").Replace("257090,1", "257090,5").Replace("200,192,260000", "240,192,260000"));
                     ui.View.RefreshSynchronization(); Wait(ui);
                     var before = ui.View.Document.DeepClone();
                     Check(TabColour("General") == 0xED737B && TabColour("Objects") == 0xED737B && TabColour("Metadata") != 0xED737B, "tabs identify conflicted and clean categories");
@@ -61,7 +65,15 @@ internal static class SyncTabsTests
                     Select("StackLeniency", true); Check(TabColour("General") == 0xD5A34D, "partially resolved tab is amber");
                     Select("PreviewTime", false); Check(TabColour("General") == 0x70D69B, "fully resolved tab is green");
                     ui.ClickText("Metadata"); Check(ui.Canvas.Texts.Any(t => t.Value == "Title") && Row("Title") < Row("Artist"), "clean category shows complete ordered context");
-                    ui.ClickText("Events"); ui.ClickText("Timing"); ui.ClickText("Objects");
+                    ui.ClickText("Events");
+                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.breakStart")) && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.breakDuration")), "Events shows readable break columns");
+                    Check(ui.Canvas.Texts.Any(t => t.Value == "04:10:245" && t.Color == 0xED737B)
+                        && ui.Canvas.Texts.Any(t => t.Value == "04:07:104" && t.Color != 0xED737B), "break end changes highlight only changed cells");
+                    Check(ui.Canvas.Texts.Any(t => t.Value == "04:08:656" && t.Color == 0xED737B), "added break is shown in its aligned row");
+                    Check(!ui.Canvas.Texts.Any(t => t.Value.Contains("//Break") || t.Value.StartsWith("2,247104")), "Events hides raw breaks and empty comment headings");
+                    ui.ClickText(L.Get("sync.chooseExternal"));
+                    Check(TabColour("Events") == 0x70D69B, "Events choice resolves the section");
+                    ui.ClickText("Timing"); ui.ClickText("Objects");
                     Check(ui.Canvas.Texts.Any(t => t.Value.Contains("04:17:090") && t.Value.Contains(L.Get("sync.diff.on"))), "object group explains the New Combo edit");
                     Check(ui.Canvas.Texts.Any(t => System.Text.RegularExpressions.Regex.IsMatch(t.Value, @"^\d{2,}:\d{2}:\d{3}$")), "canvas axis uses three-digit milliseconds");
                     ClickRange(false); Check(TabColour("Objects") == 0xD5A34D, "left rectangle chooses FA and advances to next group");
@@ -76,6 +88,7 @@ internal static class SyncTabsTests
                     ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                     Check(!ui.View.SynchronizationVisible && OsuBeatmapReader.Setting(ui.View.Document, "General", "SampleSet") == "Soft"
                         && OsuBeatmapReader.Setting(ui.View.Document, "General", "StackLeniency") == "0.5"
+                        && OsuTimeline.Breaks(ui.View.Document).Any(b => b.StartMs == 247104 && b.EndMs == 256536)
                         && ui.View.Document.Fruits.Single(f => f.TimeMs == 260000).X == 200, "mixed category choices apply correctly");
                     Check(audioReloads == 0 && ui.View.AudioReady && ui.View.PlayheadMs == position && ui.View.ViewStartMs == viewStart,
                         $"mixed object resolution retains unchanged audio and nonzero transport position: reloads={audioReloads}, ready={ui.View.AudioReady}, position={position}/{ui.View.PlayheadMs}, view={viewStart}/{ui.View.ViewStartMs}");
