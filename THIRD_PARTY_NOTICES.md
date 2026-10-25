@@ -289,8 +289,9 @@ application code license.
 
 ## Setup music
 
-`assets/setup/campus-after-class.wav` is the user-supplied
-`01 BGM_CAMPUS_AFTER_CLASS_V1.wav`, used unmodified for the setup music audition.
+`assets/setup/campus-after-class.ogg` is an Ogg Vorbis encoding of the user-supplied
+`01 BGM_CAMPUS_AFTER_CLASS_V1.wav`, used for the setup music audition.
+The full recording is retained at 48 kHz stereo, encoded with libvorbis quality 6.
 It is separate from the application code license.
 
 ## Media metadata
