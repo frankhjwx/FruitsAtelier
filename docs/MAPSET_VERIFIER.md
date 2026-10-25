@@ -46,6 +46,11 @@ Windows and Mac publication scripts prepare and bundle the pinned engine, its
 licenses and corresponding source under `mapset-verifier/`. The adapter source
 and its build instructions are in `tools/MapsetVerifier.Host/`.
 
+The Mac app keeps the engine in `Contents/MacOS/mapset-verifier/` and its
+dependency licenses and corresponding source in
+`Contents/Resources/mapset-verifier/`, so resource directories are not treated as
+nested code bundles during signing. Packaging verifies the complete app signature.
+
 AI development follows the upstream-check rule in [AGENTS.md](../AGENTS.md).
 `python scripts/Update-MapsetVerifier.py` explicitly checks GitHub's latest formal
 release; drafts and prereleases are excluded. Run with `--update-locks` on the

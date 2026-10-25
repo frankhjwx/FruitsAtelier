@@ -14,6 +14,12 @@ cp "$FA_ROOT/assets/branding/fpt-file.icns" "$FA_APP/Contents/Resources/FptFile.
 python3 "$FA_ROOT/scripts/Build-MapsetVerifier.py" --runtime "$FA_RID"
 mkdir -p "$FA_APP/Contents/MacOS/mapset-verifier"
 cp -R "$FA_ROOT/artifacts/mapset-verifier/$FA_RID/." "$FA_APP/Contents/MacOS/mapset-verifier/"
+# Dotted resource directories in MacOS are interpreted as nested code bundles by codesign.
+for FA_RESOURCE in licenses source; do
+    mkdir -p "$FA_APP/Contents/Resources/mapset-verifier/$FA_RESOURCE"
+    cp -R "$FA_APP/Contents/MacOS/mapset-verifier/$FA_RESOURCE/." "$FA_APP/Contents/Resources/mapset-verifier/$FA_RESOURCE/"
+    rm -rf "$FA_APP/Contents/MacOS/mapset-verifier/$FA_RESOURCE"
+done
 cat > "$FA_APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -78,4 +84,5 @@ cat > "$FA_APP/Contents/Resources/en.lproj/InfoPlist.strings" <<'EN'
 "CFBundleName" = "FruitsAtelier";
 EN
 codesign --force --deep --sign - "$FA_APP"
+codesign --verify --deep --strict "$FA_APP"
 echo "$FA_APP"
