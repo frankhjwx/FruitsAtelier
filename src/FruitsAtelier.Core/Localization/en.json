@@ -1901,8 +1901,9 @@
   "mv.copyAll": "Copy all ({0})",
   "mv.levelProblem": "problems",
   "mv.levelWarning": "warnings",
-  "mv.levelMinor": "minor issues",
+  "mv.levelMinor": "negligible",
   "mv.levelError": "errors",
   "mv.levelCheck": "checks",
-  "mv.levelInfo": "information"
+  "mv.levelInfo": "information",
+  "mv.filteredEmpty": "No visible issues. Enable the severity filters above."
 }

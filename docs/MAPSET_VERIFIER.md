@@ -7,6 +7,14 @@ timestamp in an issue seeks independently; issues associated with another loaded
 difficulty select that difficulty before seeking. Groups collapse and provide
 **Copy all**. Check titles and messages retain upstream English wording.
 
+The top row contains General/current-difficulty status tabs, a refresh icon and
+the upstream version. Status icons summarize the complete category, independently
+of display filters. Colored severity pills toggle problems, warnings and negligible
+issues; error/information pills appear when present. Filters use the cached report
+and preserve the current check snapshot. Chevrons expand or collapse check groups.
+The right scrollbar supports thumb dragging and track clicks. Clickable timestamps
+show a hand cursor and an underline on hover.
+
 **Refresh** checks an exported snapshot of all loaded difficulties, including
 unsaved edits, with the current tiny-droplet compensation setting. It does not
 write original beatmaps or create undo entries. Content commits, undo/redo and difficulty-set changes schedule an automatic check

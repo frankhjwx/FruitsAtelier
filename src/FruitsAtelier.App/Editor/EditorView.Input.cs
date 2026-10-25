@@ -156,6 +156,7 @@ public sealed partial class EditorView
         if (SongDockPointer(x, y, button, shift)) return;
         if (CollaborationPointer(x, y, button)) return;
         if (DiscussionPointerDown(x, y, button)) return;
+        if (VerifierPointerDown(x, y, button)) return;
         if (NotesPointer(x, y, button, shift)) return;
         if (PatternDockPointer(x, y, button)) return;
         if (CanvasScalePointerDown(x, y, button)) return;
@@ -479,6 +480,7 @@ public sealed partial class EditorView
         if (discussionTextPressed is not null) { mouseX = x; mouseY = y; MoveDiscussionTextSelection(x, y); return; }
         if (discussionQuoteDrag is not null) { MoveDiscussionQuoteScrollbar(y); return; }
         if (discussionScrollbarDragging) { MoveDiscussionScrollbar(y); return; }
+        if (verifierScrollbarDragging) { mouseX = x; mouseY = y; MoveVerifierScrollbar(y); return; }
         if (GalleryTagsVisible) { mouseX = x; mouseY = y; if (!PatternNameVisible) { if (MoveGalleryTagOrder(x, y)) return; if (textSelecting && GalleryTagTextFocused) MoveInputSelection(x); else MoveGalleryTagColour(x, y); } return; }
         if (PatternGalleryPointerMove(x, y)) return;
         if (templatePointer) { mouseX = x; mouseY = y; MoveMapTemplate(x, y); return; }
@@ -649,6 +651,7 @@ public sealed partial class EditorView
         if (discussionTextPressed is not null) { EndDiscussionTextSelection(x, y); return; }
         if (discussionQuoteDrag is not null) { MoveDiscussionQuoteScrollbar(y); discussionQuoteDrag = null; return; }
         if (discussionScrollbarDragging) { MoveDiscussionScrollbar(y); discussionScrollbarDragging = false; return; }
+        if (verifierScrollbarDragging && button == 0) { MoveVerifierScrollbar(y); verifierScrollbarDragging = false; return; }
         if (GalleryTagsVisible) { if (button == 0) { if (EndGalleryTagOrder(x, y)) return; if (!PatternNameVisible) MoveGalleryTagColour(x, y); galleryTagDrag = 0; textSelecting = false; } return; }
         if (PatternGalleryPointerUp(x, y, button)) return;
         if (templatePointer && button == 0)
@@ -1641,6 +1644,7 @@ public sealed partial class EditorView
         discussionPreviewDragging = false;
         ClearDiscussionTextSelection();
         discussionScrollbarDragging = false; discussionQuoteDrag = null;
+        verifierScrollbarDragging = false;
         CancelPatternGalleryInteraction();
         CancelGalleryTagOrder();
         FinishMapTemplateDrag(cancel: true);

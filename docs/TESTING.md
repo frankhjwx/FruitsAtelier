@@ -7,6 +7,9 @@ On Windows run `FruitsAtelier.App --render-check --mapset-verifier-render-check`
 for native layout and timestamp input. See [Mapset Verifier](MAPSET_VERIFIER.md).
 The focused suite also checks the one-second edit debounce, undo/redo, idle frame
 behavior and cancellation of reports superseded by newer content.
+It covers category status icons, severity filters, compact toolbar alignment,
+chevrons, timestamp hand cursors, thumb/track scrolling and pointer-capture release.
+The native verifier check exercises scrolling and captures both category views.
 
 `Core.Tests --timing-alignment-check` covers read-only detection, red-line chains,
 parent movement with retained durations, idempotence and undo. `App.Tests

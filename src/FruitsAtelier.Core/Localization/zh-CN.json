@@ -1904,5 +1904,6 @@
   "mv.levelMinor": "次要问题",
   "mv.levelError": "错误",
   "mv.levelCheck": "检查项",
-  "mv.levelInfo": "提示"
+  "mv.levelInfo": "提示",
+  "mv.filteredEmpty": "没有显示的问题；请启用上方的严重级别筛选。"
 }

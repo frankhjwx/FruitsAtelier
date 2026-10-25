@@ -43,7 +43,8 @@ internal static class MapsetVerifierTests
                 ui.View.NavigateVerifierTimestamp(ids[1], 3003); ui.Paint();
                 Check(ui.View.ActiveDifficultyIndex == 1 && seek == 3003, "Navigation switches the canvas before seeking");
                 var panel = ui.View.VerifierPanelBounds;
-                ui.Click(panel.X + 110, panel.Y + 80);
+                var tab = ui.View.VerifierDifficultyTabBounds;
+                ui.Click(tab.X + tab.Width / 2, tab.Y + tab.Height / 2);
                 Check(ui.View.VerifierTimestampBounds.Count == 1 && ui.View.VerifierTimestampBounds[0].TimeMs == 3003, "Report follows the active difficulty GUID");
                 ui.View.SwitchDifficulty(0); ui.Paint();
                 Check(ui.View.VerifierTimestampBounds.Count == 2 && ui.View.Document.ContentEquals(baseline) && !ui.View.IsDirty, "Navigation preserves documents and cached results");
@@ -61,9 +62,69 @@ internal static class MapsetVerifierTests
             }
             Snapshot();
             AutoRefresh();
+            PanelControls();
             Console.WriteLine("PASS Mapset Verifier timestamps, difficulty identity, snapshots and task retirement");
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void PanelControls()
+    {
+        var ui = new Ui(false);
+        var map = new MapDocument { IsDemo = false, DurationMs = 30000 };
+        SongSetup.Set(map, "Metadata", "Title", "Toolbar song title");
+        ui.LoadDocument(map); ui.Resize(1440, 900);
+        int checks = 0;
+        ui.View.VerifierAnalyze = (inputs, _, _) =>
+        {
+            checks++;
+            MapsetVerifierIssue[] issues = [new("Problem", "Concurrent hit objects.", "Problem", "00:01:001 - First problem"),
+                new("Warning", "Preview warning.", "Warning", "00:02:002 - Preview warning"),
+                .. Enumerable.Range(0, 60).Select(i => new MapsetVerifierIssue("Minor", "Concurrent or conflicting timing lines.", "Minor", $"00:03:{i:000} - Minor detail {i}"))];
+            return Task.FromResult(new MapsetVerifierReport(1, [], [new(inputs[0].Id, inputs[0].Name, "Expert", 6.68, issues)]) { UpstreamTag = "v2.1.1" });
+        };
+        ui.View.ShowMapsetVerifier(); Settle(ui);
+        var general = ui.View.VerifierGeneralTabBounds;
+        var difficulty = ui.View.VerifierDifficultyTabBounds;
+        var refresh = ui.View.VerifierRefreshBounds;
+        Check(general.Y == difficulty.Y && refresh.Y == general.Y && difficulty.Right < refresh.X, "Compact tabs and right-aligned refresh share a row");
+        Check(ui.Canvas.Circles.Any(c => general.Contains(c.X, c.Y) && c.Color == 0x22D66C)
+            && ui.Canvas.Circles.Any(c => difficulty.Contains(c.X, c.Y) && c.Color == 0xFF6067), "General and difficulty show independent clear/problem status icons");
+        Check(!ui.Canvas.Texts.Any(t => t.Value.Contains("Toolbar song title") && t.X >= ui.View.VerifierPanelBounds.X), "Verifier header omits the song title");
+        Check(EditorView.VerifierHighestLevel([]) == "Check"
+            && EditorView.VerifierHighestLevel([new("m", "m", "Minor", "m")]) == "Minor", "Clear and negligible result statuses remain distinct");
+        var link = ui.View.VerifierTimestampBounds.First();
+        ui.View.PointerMove(link.Bounds.X + 3, link.Bounds.Y + 5, false, false); ui.Paint();
+        Check(ui.View.MapsetVerifierHandCursor, "Timestamp hover selects the hand cursor");
+        ui.View.PointerLeave(); Check(!ui.View.MapsetVerifierHandCursor, "Pointer leave clears the hand cursor");
+        var filter = ui.View.VerifierFilterBounds("Problem"); Click(filter);
+        Check(!ui.View.VerifierTimestampBounds.Any(t => t.TimeMs == 1001) && checks == 1, "Severity pills filter cached results without checking again");
+        Click(filter);
+        Check(ui.View.VerifierTimestampBounds.Any(t => t.TimeMs == 1001), "Severity pill restores its issues");
+        var heading = ui.Canvas.Texts.First(t => t.Value.Contains("Concurrent ") && t.Bold);
+        ui.Click(ui.View.VerifierPanelBounds.X + 18, heading.Y + 7);
+        Check(!ui.View.VerifierTimestampBounds.Any(t => t.TimeMs == 1001), "Chevron collapses the complete group");
+        ui.Click(ui.View.VerifierPanelBounds.X + 18, heading.Y + 7);
+        Check(ui.View.VerifierTimestampBounds.Any(t => t.TimeMs == 1001), "Chevron expands the complete group");
+        var thumb = ui.View.VerifierScrollbarThumb;
+        Check(thumb.Height > 0, "Overflow produces a scrollbar");
+        ui.View.PointerDown(thumb.X + 3, thumb.Y + 4, 0, false, false);
+        Check(ui.View.WantsCapture, "Scrollbar thumb captures the pointer");
+        var track = ui.View.VerifierScrollbarTrack;
+        ui.View.PointerMove(thumb.X + 3, track.Bottom + 50, false, false); ui.Paint();
+        Check(ui.View.VerifierScrollOffset > 0, "Thumb drags outside the track and clamps to the end");
+        ui.View.PointerUp(thumb.X + 3, track.Bottom + 50, 0); ui.Paint();
+        Check(!ui.View.WantsCapture, "Thumb release clears capture");
+        ui.View.PointerDown(track.X + 3, track.Y + 2, 0, false, false); ui.Paint();
+        Check(ui.View.VerifierScrollOffset == 0, "Clicking the track reaches the beginning");
+        ui.View.CancelInteraction(); ui.Paint();
+        Check(!ui.View.WantsCapture && !ui.View.IsDirty, "Lost capture and scrolling preserve content");
+        foreach (string level in new[] { "Problem", "Warning", "Minor" }) Click(ui.View.VerifierFilterBounds(level));
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("mv.filteredEmpty")), "Empty filters do not report an all-clear map");
+        ui.View.PointerMove(link.Bounds.X + 3, link.Bounds.Y + 5, false, false);
+        Check(!ui.View.MapsetVerifierHandCursor, "Filtered-out timestamps leave no stale hand targets");
+        ui.View.StopMapsetVerifier();
+        void Click(FruitsAtelier.App.Rendering.Rect bounds) => ui.Click(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
     }
 
     private static void Snapshot()

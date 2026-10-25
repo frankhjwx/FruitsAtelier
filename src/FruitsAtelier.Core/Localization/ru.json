@@ -1904,5 +1904,6 @@
   "mv.levelMinor": "minor issues",
   "mv.levelError": "errors",
   "mv.levelCheck": "checks",
-  "mv.levelInfo": "information"
+  "mv.levelInfo": "information",
+  "mv.filteredEmpty": "No visible issues. Enable the severity filters above."
 }
