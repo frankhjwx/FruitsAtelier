@@ -722,11 +722,14 @@ int failures = 0;
 var selectedTests = args.Length == 2 && args[0] == "--filter"
     ? tests.Where(test => test.Name.Contains(args[1], StringComparison.OrdinalIgnoreCase)).ToArray() : tests;
 if (selectedTests.Length == 0) { Console.Error.WriteLine("No matching tests."); return 1; }
+var suiteWatch = System.Diagnostics.Stopwatch.StartNew();
 foreach (var test in selectedTests)
 {
-    try { test.Run(); Console.WriteLine($"PASS {test.Name}"); }
-    catch (Exception error) { failures++; Console.WriteLine($"FAIL {test.Name}: {error}"); }
+    var watch = System.Diagnostics.Stopwatch.StartNew();
+    try { test.Run(); Console.WriteLine($"PASS {test.Name} ({watch.Elapsed.TotalSeconds:F2}s)"); }
+    catch (Exception error) { failures++; Console.WriteLine($"FAIL {test.Name} ({watch.Elapsed.TotalSeconds:F2}s): {error}"); }
 }
+Console.WriteLine($"Editor integration duration: {suiteWatch.Elapsed.TotalSeconds:F2}s.");
 Console.WriteLine($"{selectedTests.Length - failures}/{selectedTests.Length} editor integration tests passed.");
 return failures == 0 ? 0 : 1;
 

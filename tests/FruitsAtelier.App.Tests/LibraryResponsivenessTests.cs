@@ -9,13 +9,14 @@ internal static class LibraryResponsivenessTests
     {
         string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-library-lock-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
+        EditorView? view = null;
         try
         {
             _ = new LibraryDatabase(root, "");
             using var db = new SqliteConnection(new SqliteConnectionStringBuilder
                 { DataSource = Path.Combine(root, "library.db"), Pooling = false }.ToString());
             db.Open();
-            var view = new EditorView();
+            view = new EditorView();
             var canvas = new RecordingCanvas();
             WithWriteLock(() => view.InitializeLibrary(true, new LibrarySettings { Workspace = root }),
                 "library initialization blocked the UI on the database writer");
@@ -49,12 +50,16 @@ internal static class LibraryResponsivenessTests
                 for (int i = 0; i < 250; i++)
                 {
                     canvas.Clear(); view.Render(canvas, 980, 620);
-                    if (i > 20 && !view.LibraryLoading) return;
+                    if (!view.LibraryLoading) return;
                     Thread.Sleep(20);
                 }
                 throw new Exception("Library background work did not finish after releasing the writer");
             }
         }
-        finally { Directory.Delete(root, true); }
+        finally
+        {
+            view?.StopFileMonitoring(); view?.CompleteLibraryCacheWrites(); view?.CloseLibrary();
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
     }
 }

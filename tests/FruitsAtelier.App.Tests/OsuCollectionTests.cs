@@ -112,7 +112,7 @@ internal static class OsuCollectionTests
                 WriteDatabase(database, 20260924, (selected, hash));
                 Wait(() => canvas.Texts.Any(t => t.Value == "Practice"));
             }
-            finally { view.CloseLibrary(); }
+            finally { view.StopFileMonitoring(); view.CompleteLibraryCacheWrites(); view.CloseLibrary(); }
             void Paint() { canvas.Clear(); view.Render(canvas, width, 740); }
             void Click(string text)
             {
@@ -121,7 +121,7 @@ internal static class OsuCollectionTests
             }
             void Wait(Func<bool> condition)
             {
-                for (int i = 0; i < 1000; i++) { Paint(); if (i > 40 && !view.LibraryLoading && condition()) return; Thread.Sleep(10); }
+                for (int i = 0; i < 1000; i++) { Paint(); if (!view.LibraryLoading && condition()) return; Thread.Sleep(10); }
                 throw new Exception("osu collection UI did not settle: " + string.Join(" | ", canvas.Texts.Select(t => t.Value)));
             }
         }

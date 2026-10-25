@@ -95,10 +95,10 @@ build script when accepting a changed pin, for `win-x64`, `osx-arm64` and `osx-x
 `Run-Editor.cmd` and ordinary builds neither select a newer version nor perform
 upstream update checks. An offline session can continue using the existing pin.
 The upstream check requires network access to `api.github.com`, and a changed pin
-also downloads its source from `codeload.github.com`. Run it with network-enabled
-execution permissions when the agent sandbox restricts network access. If a
-restricted run reports DNS resolution failure (`getaddrinfo failed`), retry with
-the required permissions before treating the upstream check as unavailable.
+also downloads its source from `codeload.github.com`. Engine preparation can also
+download source archives and restore NuGet dependencies. For AI runs in restricted
+environments, follow the first-invocation network-permission rule in
+[AGENTS.md](../AGENTS.md#validation-and-documentation).
 
 ## GitHub update PRs
 

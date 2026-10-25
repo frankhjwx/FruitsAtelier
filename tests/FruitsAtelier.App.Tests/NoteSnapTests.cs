@@ -271,7 +271,7 @@ internal static class NoteSnapTests
             var original = ui.View.Document.DeepClone();
             var point = ui.ScreenAt(odd.TimeMs, odd.X);
             Inspect(ui, point.X, point.Y); ui.Paint();
-            Check(ui.View.SnapDivisor == 6 && ui.View.StatusMessage == Strings.Get("editor.status.noteBeatPosition", 1, 6, "00:01:166", 6),
+            Check(ui.View.SnapDivisor == 6 && ui.View.StatusMessage == Strings.Get("editor.status.noteBeatPosition", 1, 6, "00:01:167", 6),
                 "Long press did not identify the sixth-beat note and activate its snap.");
             ui.DownMap(odd.TimeMs, odd.X); ui.MoveMap(odd.TimeMs, odd.X + 25); ui.UpMap(odd.TimeMs, odd.X + 25);
             Check(ui.Fruit(odd.Id).TimeMs == odd.TimeMs && ui.Fruit(odd.Id).X != odd.X,

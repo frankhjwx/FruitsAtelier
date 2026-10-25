@@ -256,6 +256,14 @@ macOS path behavior.
 
 ## Automated regressions
 
+App integration output includes each test's elapsed time and the total suite duration.
+Library fixtures wait for loading and their expected results instead of rendering a
+minimum number of frames; complete cache writes before replacing or deleting a fixture.
+Audio-project creation covers every pair of language, Library/editor entry point,
+export mode and audio format using twelve cases. Section synchronization runs the
+multi-megabyte Events payload once in English and uses smaller multi-page payloads
+for the same navigation and merge assertions in every other supported language.
+
 `Core.Tests --pattern-placement-check` checks beat-relative placement, optional
 horizontal speed preservation, bounds, stream/stack data, destination droplet
 settings, saved AR, hyperdash starts and deterministic previews. `Formats.Tests --pattern-gallery-check`

@@ -76,7 +76,7 @@ internal static class LibraryNavigationTests
             }
             void Settle()
             {
-                for (int i = 0; i < 250; i++) { Paint(); if (i > 25 && !view.LibraryLoading) return; Thread.Sleep(10); }
+                for (int i = 0; i < 250; i++) { Paint(); if (!view.LibraryLoading) return; Thread.Sleep(10); }
                 throw new Exception("Library did not settle");
             }
         }
