@@ -35,6 +35,7 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        if (storyboardResourcesReleasePending) { c.ReleaseStoryboardResources(); storyboardResourcesReleasePending = false; }
         storyboardRenderFrame++;
         PumpStoryboardGameplay();
         PumpBrowserClear();
@@ -867,6 +868,7 @@ public sealed partial class EditorView
                 LibrarySettings.ForceBackgroundDim = !LibrarySettings.ForceBackgroundDim;
                 RequestViewPreference?.Invoke();
             }, active: LibrarySettings.ForceBackgroundDim);
+            Item(L.Get("settings.enableVideoStoryboard"), ToggleVideoStoryboard);
             Item(L.Get("volume.title"), OpenVolumePopover);
             Separator();
             Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
@@ -904,6 +906,16 @@ public sealed partial class EditorView
             bool submenu = (menu == 2 || menu == 4) && y == rect.Y + 7;
             Button(c, new(rect.X + 6, y, rect.Width - 12, 31), item.Label,
                 () => { if (!submenu) menu = -1; item.Action(); }, item.Active || submenu && gridLevelMenuOpen, item.Enabled);
+            if (item.Action == (Action)ToggleVideoStoryboard)
+            {
+                var check = new Rect(rect.Right - 30, y + 8, 16, 16);
+                c.Fill(check, Background, 2); c.Stroke(check, Muted, radius: 2);
+                if (LibrarySettings.EnableVideoStoryboard)
+                {
+                    c.Line(check.X + 3, check.Y + 8, check.X + 7, check.Y + 12, Foreground, 2);
+                    c.Line(check.X + 7, check.Y + 12, check.X + 13, check.Y + 4, Foreground, 2);
+                }
+            }
             if (submenu)
             {
                 c.Line(rect.Right - 19, y + 11, rect.Right - 14, y + 16, Foreground);

@@ -128,6 +128,7 @@
   "merge.confirm": "Samenvoegen",
   "merge.failed": "Samenvoegen mislukt: {0}",
   "merge.tooManyPoints": "Het samengevoegde pad zou te veel controlepunten bevatten. Selecteer minder objecten of verminder herhalingen.",
+  "settings.enableVideoStoryboard": "Video/storyboard inschakelen",
   "settings.backgroundDim": "Achtergrond dimmen: {0}%",
   "settings.forceBackgroundDim": "Schemerige achtergrond",
   "testplay.skip": "Overslaan (Space)",

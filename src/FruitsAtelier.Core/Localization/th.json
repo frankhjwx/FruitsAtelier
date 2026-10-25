@@ -128,6 +128,7 @@
   "merge.confirm": "ผสาน",
   "merge.failed": "การรวมล้มเหลว: {0}",
   "merge.tooManyPoints": "เส้นทางที่ผสานจะมีจุดควบคุมมากเกินไป เลือกวัตถุให้น้อยลงหรือลดการทำซ้ำ",
+  "settings.enableVideoStoryboard": "เปิดใช้งานวิดีโอ/สตอรีบอร์ด",
   "settings.backgroundDim": "พื้นหลังสลัว: {0}%",
   "settings.forceBackgroundDim": "พื้นหลังสลัว",
   "testplay.skip": "ข้าม (Space)",

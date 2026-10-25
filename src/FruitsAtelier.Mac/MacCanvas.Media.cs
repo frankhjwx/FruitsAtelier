@@ -87,7 +87,7 @@ internal sealed partial class ImageCache
         storyboardTextures[key] = (bitmap, ++storyboardClock); storyboardBytes += pixels.Data.Length; return bitmap;
     }
     internal void StopVideo() { Video?.Dispose(); Video = null; VideoBitmap?.Dispose(); VideoBitmap = null; VideoSerial = 0; VideoLastOpacity = 0; }
-    private void ReleaseMedia()
+    internal void ReleaseMedia()
     {
         MediaGeneration = MediaResourceIdentity.Next(); StoryboardCapacityWarning = null;
         StopVideo(); StoryboardPixels.Dispose(); StoryboardPixels = new(DecodeStoryboard);
@@ -160,4 +160,5 @@ internal sealed partial class MacCanvas
         return ready || images.VideoSerial != 0;
     }
     public void StopVideo() => images.StopVideo();
+    public void ReleaseStoryboardResources() => images.ReleaseMedia();
 }

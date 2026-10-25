@@ -128,6 +128,7 @@
   "merge.confirm": "Połącz",
   "merge.failed": "Scalanie nie powiodło się: {0}",
   "merge.tooManyPoints": "Połączona ścieżka zawierałaby zbyt wiele punktów kontrolnych. Wybierz mniej obiektów lub zmniejsz liczbę powtórzeń.",
+  "settings.enableVideoStoryboard": "Włącz wideo/storyboard",
   "settings.backgroundDim": "Przyciemnienie tła: {0}%",
   "settings.forceBackgroundDim": "Przyciemnione tło",
   "testplay.skip": "Pomiń (Space)",

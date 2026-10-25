@@ -122,7 +122,7 @@ public sealed partial class EditorView
         bool drawn = false;
         if ((!storyboardPresented || storyboardDisplayScene?.ReplacesBackground != true) && (beatmapBackground ?? storyboardScene?.BackgroundPath) is { } backgroundPath)
             drawn = c.BackgroundImage(backgroundPath, bounds);
-        if (storyboardScene is { Videos.Count: > 0 } scene)
+        if (LibrarySettings.EnableVideoStoryboard && storyboardScene is { Videos.Count: > 0 } scene)
         {
             var video = scene.Videos[0];
             if (playhead >= video.OffsetMs)

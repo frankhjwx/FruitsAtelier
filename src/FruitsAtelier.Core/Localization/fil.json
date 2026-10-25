@@ -128,6 +128,7 @@
   "merge.confirm": "Pagsamahin",
   "merge.failed": "Nabigo ang pagsasama: {0}",
   "merge.tooManyPoints": "Ang pinagsanib na landas ay maglalaman ng masyadong maraming control point. Pumili ng mas kaunting mga bagay o bawasan ang pag-uulit.",
+  "settings.enableVideoStoryboard": "I-enable ang Video/Storyboard",
   "settings.backgroundDim": "Malamlam ang background: {0}%",
   "settings.forceBackgroundDim": "Malamlam na Background",
   "testplay.skip": "Laktawan (Space)",

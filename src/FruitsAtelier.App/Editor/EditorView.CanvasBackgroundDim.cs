@@ -11,11 +11,12 @@ public sealed partial class EditorView
     private double canvasDimFadeAt;
     private double? canvasDimLeftAt;
     private double CanvasDimNowMs => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
-    public Rect CanvasBackgroundDimBounds => new(canvas.X + 82, plot.Bottom - 40, Math.Min(320, Math.Max(0, canvas.Width - 104)), 32);
+    public Rect CanvasBackgroundDimBounds => new(canvas.X + 82, plot.Bottom - 76, Math.Min(320, Math.Max(0, canvas.Width - 104)), 32);
+    internal Rect CanvasMediaToggleBounds => new(CanvasBackgroundDimBounds.X, CanvasBackgroundDimBounds.Bottom + 4, CanvasBackgroundDimBounds.Width, 32);
     internal Rect CanvasDiscussionToggleBounds => PanelVisible(DockPanel.Discussion) && !IsOsuCanvas
         ? new(CanvasBackgroundDimBounds.X, CanvasBackgroundDimBounds.Y - 36, CanvasBackgroundDimBounds.Width, 32) : default;
     private Rect CanvasOverlayControlsBounds => CanvasDiscussionToggleBounds.Width > 0
-        ? new(CanvasBackgroundDimBounds.X, CanvasDiscussionToggleBounds.Y, CanvasBackgroundDimBounds.Width, 68) : CanvasBackgroundDimBounds;
+        ? new(CanvasBackgroundDimBounds.X, CanvasDiscussionToggleBounds.Y, CanvasBackgroundDimBounds.Width, 104) : new(CanvasBackgroundDimBounds.X, CanvasBackgroundDimBounds.Y, CanvasBackgroundDimBounds.Width, 68);
     public Rect CanvasBackgroundDimSliderBounds
     {
         get
@@ -71,6 +72,7 @@ public sealed partial class EditorView
     {
         AdvanceCanvasBackgroundDim();
         if (!CanUseCanvasBackgroundDim || !CanvasOverlayControlsBounds.Contains(x, y)) return false;
+        if (button == 0 && CanvasMediaToggleBounds.Contains(x, y)) { ToggleVideoStoryboard(); return true; }
         if (button == 0 && CanvasDiscussionToggleBounds.Contains(x, y))
         {
             LibrarySettings.ShowCanvasDiscussionAnnotations = !LibrarySettings.ShowCanvasDiscussionAnnotations;
@@ -138,6 +140,16 @@ public sealed partial class EditorView
             c.TextOpacity((LibrarySettings.ShowCanvasDiscussionAnnotations ? "✓ " : "") + L.Get("discussion.showCanvasAnnotations"),
                 toggle.X + 10, toggle.Y + 8, 12, Foreground, toggle.Width - 20, false, opacity);
         }
+        var media = CanvasMediaToggleBounds;
+        c.Fill(media, 0, 5, .65f * opacity);
+        var check = new Rect(media.X + 9, media.Y + 8, 16, 16);
+        c.StrokeOpacity(check, Foreground, 1, 2, opacity);
+        if (LibrarySettings.EnableVideoStoryboard)
+        {
+            c.Line(check.X + 3, check.Y + 8, check.X + 7, check.Y + 12, Foreground, 2, opacity);
+            c.Line(check.X + 7, check.Y + 12, check.X + 13, check.Y + 4, Foreground, 2, opacity);
+        }
+        c.TextOpacity(L.Get("settings.enableVideoStoryboard"), media.X + 33, media.Y + 8, 12, Foreground, media.Width - 39, false, opacity);
         var r = CanvasBackgroundDimBounds;
         c.Fill(r, 0, 5, .65f * opacity);
         c.TextOpacity(L.Get("settings.canvasBackgroundDimLabel"), r.X + 10, r.Y + 8, 12, Foreground, 110, false, opacity);

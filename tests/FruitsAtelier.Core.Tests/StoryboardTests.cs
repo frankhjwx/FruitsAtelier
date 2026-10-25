@@ -129,6 +129,23 @@ internal static class StoryboardTests
             Check(triggers.Count(t => t.Name == "Failing") == 1 && triggers.Count(t => t.Name == "Passing") == 1, "Health transitions were duplicated or omitted.");
             Check(triggers.Count(t => t.Name == "HitSound") == 5, "Misses emitted hitsound triggers or successful catches were lost.");
         });
+        Test("sample-only health keeps judgment history without sprite sound triggers", () =>
+        {
+            var map = new MapDocument();
+            for (int i = 0; i < 12; i++) map.Fruits.Add(new Fruit { TimeMs = 1000, X = 256 });
+            var objects = CatchStreamConverter.Convert(map).Objects;
+            var original = new CatchStoryboardPlayback(new(objects, [], 5), ["HitObjectHit", "HitSound"], objects, new HitsoundResolver(map, objects), 0);
+            for (int i = 0; i < 5; i++) original.Judge(objects[i], false);
+            var clone = original.ForSamples();
+            for (int i = 5; i < 10; i++) { original.Judge(objects[i], true); clone.Judge(objects[i], true); }
+            original.Advance(2000); clone.Advance(2000);
+            foreach (double time in new[] { 0d, 999, 1000, 2000 })
+            {
+                var a = new List<StoryboardTrigger>(); var b = new List<StoryboardTrigger>(); long av = -1, bv = -1;
+                Check(original.CopyAt(time, a, ref av) == clone.CopyAt(time, b, ref bv), "Sample-only clone changed historical Pass/Fail state.");
+                Check(b.All(t => !t.Name.StartsWith("HitSound", StringComparison.Ordinal) && t.Name != "HitObjectHit"), "Sample-only clone retained visual sound triggers.");
+            }
+        });
         Test("native simulation owning callback covers all catch object kinds", () =>
         {
             foreach (bool hit in new[] { true, false })

@@ -5,7 +5,7 @@ using FruitsAtelier.Core;
 
 internal static class StoryboardEditorTests
 {
-    public static int Run(string path)
+    public static int Run(string path, bool toggleMedia = false)
     {
         var document = OsuBeatmapReader.ReadFile(path);
         var clock = new Clock(); var view = new EditorView(false, timeProvider: clock); var canvas = new RecordingCanvas();
@@ -28,6 +28,16 @@ internal static class StoryboardEditorTests
         for (int time = 0; time <= 3340; time += 20)
         { view.UpdateTransport(time, document.DurationMs, true, true, false, null, document.AudioPath); Paint(); }
         if (!HasFirstDot(view, 0x00FF00) || sounds.Count == 0) throw new Exception("Actual preview sound emission did not activate the matching HitSound trigger.");
+        if (toggleMedia)
+        {
+            void Toggle() => typeof(EditorView).GetMethod("ToggleVideoStoryboard", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, null);
+            Toggle(); Paint();
+            Toggle();
+            var settle = Stopwatch.StartNew();
+            do { Paint(); Thread.Sleep(2); } while ((Pending(view, "storyboardLoad") || Pending(view, "storyboardGameplayLoad")) && settle.Elapsed.TotalSeconds < 15);
+            if (!HasFirstDot(view, 0x00FF00)) throw new Exception("Reenabling visual media discarded an actual consumed preview trigger.");
+            Console.WriteLine("PASS media toggle retains actual preview trigger history");
+        }
         view.UpdateTransport(4000, document.DurationMs, true, false, false, null, document.AudioPath); Paint();
         if (!HasFirstDot(view, 0x00FF00)) throw new Exception("Seek discarded an already-emitted sound trigger.");
         view.UpdateTransport(3200, document.DurationMs, true, false, false, null, document.AudioPath); Paint();

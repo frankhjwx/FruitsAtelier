@@ -138,6 +138,7 @@ public sealed class LibrarySettings
     }
     public bool ShowTestplayCombo { get; set; } = true;
     public bool ForceBackgroundDim { get; set; }
+    public bool EnableVideoStoryboard { get; set; } = true;
     public uint CanvasGridColour { get; set; } = DefaultCanvasGridColour;
     public uint CanvasCentreLineColour { get; set; } = DefaultCanvasCentreLineColour;
     private int canvasGridOpacity = DefaultCanvasGridOpacity;

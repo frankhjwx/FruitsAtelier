@@ -77,9 +77,19 @@ public sealed class CatchStoryboardPlayback
     private double time, health = 1;
     private long version;
     public long Version { get { lock (gate) return version; } }
-    private CatchStoryboardPlayback(CatchStoryboardPlayback source, double start)
-    { configuration = source.configuration; hitNames = source.hitNames; recordObjectHit = source.recordObjectHit; time = start; healthPoints.Add((start, 1)); }
+    private CatchStoryboardPlayback(CatchStoryboardPlayback source, double start, bool samplesOnly = false)
+    { configuration = source.configuration; hitNames = samplesOnly ? new() : source.hitNames; recordObjectHit = !samplesOnly && source.recordObjectHit; time = start; healthPoints.Add((start, 1)); }
     public CatchStoryboardPlayback Fork(double start) => new(this, start);
+    public CatchStoryboardPlayback ForSamples()
+    {
+        lock (gate)
+        {
+            var copy = new CatchStoryboardPlayback(this, time, samplesOnly: true);
+            copy.healthPoints.Clear(); copy.healthPoints.AddRange(healthPoints);
+            copy.health = health; copy.version = version;
+            return copy;
+        }
+    }
 
     public CatchStoryboardPlayback(CatchStoryboardHealth configuration, IReadOnlyList<string> names,
         IReadOnlyList<ConvertedCatchObject> objects, HitsoundResolver resolver, double start)

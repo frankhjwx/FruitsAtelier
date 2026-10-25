@@ -128,6 +128,7 @@
   "merge.confirm": "Gabungkan",
   "merge.failed": "Penggabungan gagal: {0}",
   "merge.tooManyPoints": "Jalur yang digabungkan akan berisi terlalu banyak titik kontrol. Pilih lebih sedikit objek atau kurangi pengulangan.",
+  "settings.enableVideoStoryboard": "Aktifkan Video/Storyboard",
   "settings.backgroundDim": "Latar belakang redup: {0}%",
   "settings.forceBackgroundDim": "Latar Belakang Redup",
   "testplay.skip": "Lewati (Space)",

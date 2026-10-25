@@ -60,6 +60,7 @@ public interface ICanvas
         float originX, float originY) { }
     bool VideoImage(string path, Rect destination, double positionMs, bool playing, double rate) => false;
     void StopVideo() { }
+    void ReleaseStoryboardResources() => StopVideo();
     string? MediaError => null;
     long MediaGeneration => 0;
     void CachedPreview(object key, Rect bounds, Action<ICanvas, Rect> draw) => draw(this, bounds);

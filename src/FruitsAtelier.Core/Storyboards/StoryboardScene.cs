@@ -46,6 +46,8 @@ public sealed class StoryboardScene
         EndTimeMs = Math.Max(sprites.Where(s => double.IsFinite(s.End) && Math.Abs(s.End) < double.MaxValue / 2).Select(s => s.End).DefaultIfEmpty(0).Max(), samples.Select(s => s.TimeMs).DefaultIfEmpty(0).Max());
     }
 
+    public StoryboardScene WithoutVisuals() => new([], [], Samples.ToList(), [], false, BackgroundPath);
+
     public void Evaluate(double timeMs, List<StoryboardSpriteState> destination, bool passing = true,
         IReadOnlyList<StoryboardTrigger>? triggers = null)
     {
@@ -251,7 +253,7 @@ internal sealed class StoryboardSprite
 /// <summary>Legacy osu! storyboard grammar. Source: ppy/osu 48c4800e (MIT; THIRD_PARTY_NOTICES.md).</summary>
 public static class StoryboardReader
 {
-    public static StoryboardScene Read(string beatmapText, string? sharedText, string directory, CancellationToken cancellationToken = default)
+    public static StoryboardScene Read(string beatmapText, string? sharedText, string directory, CancellationToken cancellationToken = default, bool samplesOnly = false)
     {
         List<StoryboardSprite> sprites = []; List<StoryboardVideoInfo> videos = []; List<StoryboardSample> samples = []; List<string> diagnostics = [];
         bool wide = false; string? background = null; int order = 0;
@@ -274,7 +276,20 @@ public static class StoryboardReader
                 if (section == "General") { if (trimmed.StartsWith("WidescreenStoryboard:", StringComparison.Ordinal)) wide = trimmed.Split(':')[1].Trim() == "1"; continue; }
                 if (section == "Variables") { int eq = line.IndexOf('='); if (eq > 0) variables[line[..eq].Trim()] = line[(eq + 1)..].Trim(); continue; }
                 if (section != "Events") continue;
+                if (samplesOnly)
+                {
+                    // Sample declarations are top-level; skip visual commands before allocating fields or resolving images.
+                    if (line.Length == 0 || line[0] is ' ' or '_' or '\t') continue;
+                    int comma = line.IndexOf(',');
+                    string type = (comma < 0 ? line : line[..comma]).Trim();
+                    if (type is not ("5" or "Sample") && !type.Contains('$')) continue;
+                }
                 foreach (var variable in variables) line = line.Replace(variable.Key, variable.Value, StringComparison.Ordinal);
+                if (samplesOnly)
+                {
+                    int comma = line.IndexOf(',');
+                    if (comma < 0 || line[..comma].Trim() is not ("5" or "Sample")) continue;
+                }
                 int depth = 0; while (depth < line.Length && (line[depth] == ' ' || line[depth] == '_')) depth++;
                 var f = Fields(line[depth..]);
                 try
@@ -347,7 +362,7 @@ public static class StoryboardReader
             string path = System.IO.Path.GetFullPath(System.IO.Path.Combine(directory, name));
             string root = System.IO.Path.GetFullPath(directory).TrimEnd(System.IO.Path.DirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
             if (!path.StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Storyboard resource is outside its mapset.");
-            if (!System.IO.Path.HasExtension(path)) foreach (string extension in new[] { ".jpg", ".jpeg", ".png" }) if (File.Exists(path + extension)) { path += extension; break; }
+            if (!samplesOnly && !System.IO.Path.HasExtension(path)) foreach (string extension in new[] { ".jpg", ".jpeg", ".png" }) if (File.Exists(path + extension)) { path += extension; break; }
             resources[original] = path; return path;
         }
     }

@@ -103,6 +103,14 @@ Background dim reduces RGB brightness. Overlay
 sprites draw above gameplay with unchanged alpha, including black opaque portions
 at 100% dim. Force background dim suppresses background media entirely.
 
+`LibrarySettings.EnableVideoStoryboard` controls visuals across every viewport.
+Changing it retires scene and gameplay workers, clears displayed sprite buffers,
+and releases renderer media resources on the next frame, including while Settings
+is visible. Disabling uses the reader's sample-only path, which skips visual
+commands before field parsing or resource resolution. Sample snapshots and their
+transport scheduling cursors survive preference changes while the replacement
+sample scene is prepared; ordinary samples do not depend on visual decoding.
+
 `CatchStoryboardHealth` adapts `CatchHealthProcessor.GetHealthIncreaseFor`,
 `LegacyDrainingHealthProcessor.ComputeDrainRate` and the expanded break intervals
 from `DrainingHealthProcessor.ApplyBeatmap`, at the revision recorded in third-party

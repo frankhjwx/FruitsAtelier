@@ -128,6 +128,7 @@
   "merge.confirm": "Fusionner",
   "merge.failed": "Échec de la fusion : {0}",
   "merge.tooManyPoints": "Le chemin fusionné contiendrait trop de points de contrôle. Sélectionnez moins d’objets ou réduisez les répétitions.",
+  "settings.enableVideoStoryboard": "Activer la vidéo/le storyboard",
   "settings.backgroundDim": "Luminosité de l'arrière-plan : {0}%",
   "settings.forceBackgroundDim": "Fond sombre",
   "testplay.skip": "Sauter (Space)",

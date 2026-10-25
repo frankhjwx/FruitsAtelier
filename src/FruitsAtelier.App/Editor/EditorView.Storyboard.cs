@@ -47,10 +47,54 @@ public sealed partial class EditorView
     private long storyboardTriggerVersion = -1;
     private bool mediaPlayPending, mediaTestplayPending;
     private string? mediaReportedError;
-    public bool MediaNeedsRedraw => mediaOpening || mediaPlayPending || mediaTestplayPending
+    public bool MediaNeedsRedraw => storyboardResourcesReleasePending || mediaOpening || mediaPlayPending || mediaTestplayPending
         || storyboardLoad is { IsCompleted: true } || storyboardGameplayLoad is { IsCompleted: true };
 
-    private void RetireStoryboard(bool preserveDisplay = false)
+    private bool storyboardResourcesReleasePending;
+
+    private void ApplyMediaPreference()
+    {
+        bool prepared = mediaInitialPreparationComplete;
+        var samples = storyboardScene?.WithoutVisuals();
+        bool sampleHealth = samples?.Samples.Any(s => s.Layer is StoryboardLayer.Fail or StoryboardLayer.Pass) == true;
+        var sampleTemplate = sampleHealth ? storyboardTemplate?.ForSamples() : null;
+        var samplePreview = sampleHealth ? storyboardPreview?.ForSamples() : null;
+        var sampleTestplay = sampleHealth ? storyboardTestplay?.ForSamples() : null;
+        var sounds = storyboardSampleSounds;
+        var position = storyboardSamplePosition;
+        var through = storyboardSamplesThrough;
+        RetireStoryboard(preserveHistory: true);
+        storyboardResourcesReleasePending = true;
+        mediaInitialPreparationComplete = prepared;
+        RefreshStoryboard();
+        storyboardScene = samples; storyboardSampleSounds = sounds;
+        storyboardTemplate = sampleTemplate; storyboardPreview = samplePreview; storyboardTestplay = sampleTestplay;
+        storyboardSamplePosition = position; storyboardSamplesThrough = through;
+    }
+
+    private void ToggleVideoStoryboard()
+    {
+        LibrarySettings.EnableVideoStoryboard = !LibrarySettings.EnableVideoStoryboard;
+        draftEnableVideoStoryboard = LibrarySettings.EnableVideoStoryboard;
+        ApplyMediaPreference();
+        RequestViewPreference?.Invoke();
+    }
+
+    private void DrawMediaPreference(ICanvas c, Rect bounds)
+    {
+        var box = new Rect(bounds.X + 7, bounds.Y + (bounds.Height - 16) / 2, 16, 16);
+        c.Fill(box, draftEnableVideoStoryboard ? Accent : Background, 2); c.Stroke(box, Muted, radius: 2);
+        if (draftEnableVideoStoryboard)
+        {
+            c.Line(box.X + 3, box.Y + 8, box.X + 7, box.Y + 12, Background, 2);
+            c.Line(box.X + 7, box.Y + 12, box.X + 13, box.Y + 4, Background, 2);
+        }
+        c.Text(L.Get("settings.enableVideoStoryboard"), bounds.X + 32, bounds.Y + (bounds.Height - 17) / 2,
+            SettingsTextSize, Foreground, bounds.Width - 36);
+        hits.Add(new(bounds, () => draftEnableVideoStoryboard = !draftEnableVideoStoryboard, true));
+    }
+
+    private void RetireStoryboard(bool preserveDisplay = false, bool preserveHistory = false)
     {
         storyboardCancellation?.Cancel(); storyboardCancellation?.Dispose(); storyboardCancellation = null;
         if (storyboardLoad is { } retired) { retiredDifficultyWork.Add(retired); _ = retired.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default); }
@@ -73,7 +117,7 @@ public sealed partial class EditorView
         storyboardFrameTime = storyboardPreloadTime = double.NaN;
         storyboardSamplePosition = storyboardSamplesThrough = null; storyboardSampleSounds = [];
         storyboardTemplate = storyboardPreview = storyboardTestplay = null;
-        storyboardPreviewPlayed.Clear(); storyboardPendingPreviewSounds.Clear(); storyboardPreviewConsumedPosition = null;
+        if (!preserveHistory) { storyboardPreviewPlayed.Clear(); storyboardPendingPreviewSounds.Clear(); storyboardPreviewConsumedPosition = null; }
         storyboardTriggers.Clear(); storyboardTriggerVersion = -1; mediaPlayPending = mediaTestplayPending = false; mediaReportedError = null;
     }
 
@@ -94,7 +138,7 @@ public sealed partial class EditorView
         if (same && index == storyboardSource.Count) { QueueStoryboardGameplay(); return; }
         bool opening = !mediaInitialPreparationComplete;
         bool exiting = mediaExitPending;
-        RetireStoryboard(preserveDisplay: !opening); storyboardDirectory = directory; mediaOpening = opening; mediaExitPending = exiting;
+        RetireStoryboard(preserveDisplay: !opening, preserveHistory: true); storyboardDirectory = directory; mediaOpening = opening; mediaExitPending = exiting;
         var sections = new List<(string Name, string[] Lines)>();
         foreach (var section in Document.OriginalSections)
         {
@@ -102,6 +146,7 @@ public sealed partial class EditorView
             storyboardSource.Add((section.Name, section.Lines.SnapshotIdentity));
             sections.Add((section.Name, section.Lines.ToArray()));
         }
+        bool samplesOnly = !LibrarySettings.EnableVideoStoryboard;
         var cancellation = storyboardCancellation = new(); var token = cancellation.Token;
         storyboardLoad = Task.Run(() =>
         {
@@ -110,7 +155,7 @@ public sealed partial class EditorView
             string? sharedPath = Directory.EnumerateFiles(directory, "*", SearchOption.TopDirectoryOnly)
                 .Where(p => string.Equals(Path.GetExtension(p), ".osb", StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase).FirstOrDefault();
             token.ThrowIfCancellationRequested();
-            return StoryboardReader.Read(source.ToString(), sharedPath is null ? null : File.ReadAllText(sharedPath), directory, token);
+            return StoryboardReader.Read(source.ToString(), sharedPath is null ? null : File.ReadAllText(sharedPath), directory, token, samplesOnly: samplesOnly);
         }, token);
     }
 
@@ -168,6 +213,7 @@ public sealed partial class EditorView
             {
                 storyboardTemplate = task.Result; storyboardPreview = storyboardTemplate.Fork(0);
                 storyboardPreview.RecordSounds(storyboardPreviewPlayed.Values);
+                if (IsTestplaying && storyboardTestplay is null) storyboardTestplay = storyboardTemplate.Fork(testplayStart);
             }
             else if (task.Exception is { } error) SetNotice(L.Get("media.storyboardFailed", error.GetBaseException().Message));
             storyboardTriggerVersion = -1; storyboardFrameTime = double.NaN;
@@ -197,7 +243,7 @@ public sealed partial class EditorView
         if (storyboardPreparedFrame == storyboardRenderFrame) return;
         storyboardPreparedFrame = storyboardRenderFrame;
         PumpStoryboardGameplay();
-        if (storyboardScene is null) return;
+        if (!LibrarySettings.EnableVideoStoryboard || storyboardScene is null) return;
         if (!storyboardRendererObserved || storyboardCanvasGeneration != canvas.MediaGeneration)
         {
             storyboardRendererObserved = true; storyboardCanvasGeneration = canvas.MediaGeneration;
@@ -241,7 +287,7 @@ public sealed partial class EditorView
 
     private void DrawStoryboard(ICanvas canvas, Rect bounds, bool overlay, float brightness = 1)
     {
-        if (storyboardDisplayScene is null || !storyboardPresented) return;
+        if (!LibrarySettings.EnableVideoStoryboard || storyboardDisplayScene is null || !storyboardPresented) return;
         float scale = bounds.Height / 480;
         // Storyboards keep 480 logical pixels vertically and centre their legacy 640-wide coordinates.
         float x = bounds.X + bounds.Width / 2 - 320 * scale;
@@ -333,7 +379,7 @@ public sealed partial class EditorView
         PumpStoryboardGameplay();
         if (storyboardScene is not null) PrepareStoryboardFrame(canvas);
         if (mediaOpening && storyboardLoad is null && storyboardGameplayLoad is null
-            && (storyboardScene is null || storyboardTargetReady)) mediaOpening = false;
+            && (!LibrarySettings.EnableVideoStoryboard || storyboardScene is null || storyboardTargetReady)) mediaOpening = false;
         if (!mediaOpening && storyboardLoad is null && storyboardGameplayLoad is null) mediaInitialPreparationComplete = true;
         if (!mediaOpening) return false;
         canvas.Fill(new(0, 0, width, height), Background);
@@ -344,7 +390,7 @@ public sealed partial class EditorView
 
     private void DrawStoryboardLetterbox(ICanvas canvas, Rect bounds)
     {
-        if (storyboardDisplayScene is not { Widescreen: false, SpriteCount: > 0 }) return;
+        if (!LibrarySettings.EnableVideoStoryboard || storyboardDisplayScene is not { Widescreen: false, SpriteCount: > 0 }) return;
         float innerWidth = bounds.Height * 4 / 3;
         float side = Math.Max(0, (bounds.Width - innerWidth) / 2);
         if (side <= 0) return;

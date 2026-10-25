@@ -128,6 +128,7 @@
   "merge.confirm": "合併",
   "merge.failed": "合併失敗：{0}",
   "merge.tooManyPoints": "合併的路徑將包含太多控制點。選擇更少的物件或減少重複。",
+  "settings.enableVideoStoryboard": "啟用影片／故事板",
   "settings.backgroundDim": "背景暗淡：{0}%",
   "settings.forceBackgroundDim": "昏暗的背景",
   "testplay.skip": "跳過 (Space)",

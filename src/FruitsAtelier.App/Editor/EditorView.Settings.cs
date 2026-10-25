@@ -48,6 +48,7 @@ public sealed partial class EditorView
     private bool draftShowTestplayCombo;
     private int draftBackgroundDim, draftMappingCanvasBackgroundDim, draftCanvasGridOpacity;
     private bool draftForceBackgroundDim;
+    private bool draftEnableVideoStoryboard;
     private readonly uint[] draftSettingsColours = new uint[7];
     private uint SelectionHighlightColour => LibrarySettings.SelectionHighlightColour;
     private int settingsColourIndex = -1;
@@ -158,11 +159,12 @@ public sealed partial class EditorView
         draftBackgroundDim = LibrarySettings.BackgroundDim;
         draftMappingCanvasBackgroundDim = LibrarySettings.MappingCanvasBackgroundDim;
         draftForceBackgroundDim = LibrarySettings.ForceBackgroundDim;
+        draftEnableVideoStoryboard = LibrarySettings.EnableVideoStoryboard;
     }
 
     private bool SettingsRootsChanged => draftWorkspace != LibrarySettings.Workspace || draftOsuRoot != LibrarySettings.OsuRoot;
 
-    private bool SettingsChanged => draftMapperUsernames != string.Join("; ", LibrarySettings.MapperUsernames ?? []) ||
+    private bool SettingsChanged => draftEnableVideoStoryboard != LibrarySettings.EnableVideoStoryboard || draftMapperUsernames != string.Join("; ", LibrarySettings.MapperUsernames ?? []) ||
         draftScanStandardMaps != LibrarySettings.ScanStandardMaps || draftMappingCanvasBackgroundDim != LibrarySettings.MappingCanvasBackgroundDim ||
         draftSettingsColours[4] != LibrarySettings.CanvasGridColour ||
         draftSettingsColours[5] != LibrarySettings.CanvasCentreLineColour ||
@@ -431,6 +433,7 @@ public sealed partial class EditorView
             settings.CanvasCentreLineColour = draftSettingsColours[5];
             settings.CanvasGridOpacity = draftCanvasGridOpacity;
             settings.ForceBackgroundDim = draftForceBackgroundDim;
+            settings.EnableVideoStoryboard = draftEnableVideoStoryboard;
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.MapperUsernames = draftMapperUsernames.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.Ordinal).ToList();
             settings.ScanStandardMaps = draftScanStandardMaps;
@@ -497,7 +500,9 @@ public sealed partial class EditorView
             bool fullscreenChanged = settings.Fullscreen != LibrarySettings.Fullscreen;
             bool lazerEditingChanged = settings.LazerEditing != LibrarySettings.LazerEditing;
             if (lazerEditingChanged) CancelInteraction();
+            bool mediaChanged = settings.EnableVideoStoryboard != LibrarySettings.EnableVideoStoryboard;
             SaveLibraryMemory(); LibrarySettings = settings;
+            if (mediaChanged) ApplyMediaPreference();
             if (workspaceChanged) ConfigurePatternGallery(Path.Combine(settings.Workspace, "Patterns"));
             if (lazerEditingChanged) ResetLazerPresentation();
             if (!settings.ExperimentalSnapDivisions)

@@ -128,6 +128,7 @@
   "merge.confirm": "병합",
   "merge.failed": "병합 실패: {0}",
   "merge.tooManyPoints": "병합된 경로에 너무 많은 제어점이 포함됩니다. 더 적은 수의 개체를 선택하거나 반복을 줄이세요.",
+  "settings.enableVideoStoryboard": "동영상/스토리보드 활성화",
   "settings.backgroundDim": "배경 흐림: {0}%",
   "settings.forceBackgroundDim": "희미한 배경",
   "testplay.skip": "건너뛰기(Space)",

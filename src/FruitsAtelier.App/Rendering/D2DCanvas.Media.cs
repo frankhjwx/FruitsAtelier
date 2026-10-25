@@ -195,6 +195,7 @@ public sealed partial class D2DCanvas
         return ready || videoSerial != 0;
     }
     public void StopVideo() { video?.Dispose(); video = null; videoBitmap?.Dispose(); videoBitmap = null; videoSerial = 0; videoLastOpacity = 0; videoFrameRequested = false; }
+    public void ReleaseStoryboardResources() => ReleaseMedia();
     private void ReleaseMedia()
     {
         mediaGeneration = MediaResourceIdentity.Next(); storyboardCapacityWarning = null;

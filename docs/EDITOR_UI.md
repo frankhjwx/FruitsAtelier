@@ -1053,7 +1053,7 @@ Global defaults save immediately, including when the current difficulty is locke
 Cancel in Song Setup discards map drafts while retaining these global preferences.
 Changing them does not modify existing workspace difficulties or saved projects.
 
-Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same logical dimensions apply on both desktop platforms and follow their interface scaling. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
+Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries. General and Testplay content scroll when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same logical dimensions apply on both desktop platforms and follow their interface scaling. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
 The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. Ordinary preferences can be applied during library scanning or searching; changes to library paths wait for those tasks to finish. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **General → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
 
@@ -1074,6 +1074,16 @@ menu, click or drag the fill bar behind the centered label to set the percentage
 the side buttons adjust it by 5%. Dragging updates the background immediately and
 saves the preference when the drag ends. Settings uses the same fill bar, with changes
 kept in the draft until Apply. The editing canvas has a fully opaque backing.
+
+**Enable Video/Storyboard** defaults to enabled and shares one saved preference
+across **View** (below **Dim Background**), the canvas background slider panel,
+and **Settings > Testplay** (below **Background dim**). View and canvas changes
+apply immediately; Settings uses Apply and discards unapplied changes on close.
+The switch controls video and storyboard visuals in the mapping canvas, Catch
+preview and testplay. Disabling cancels visual preparation and releases decoded
+images, textures and video playback resources. Static beatmap backgrounds and
+ordinary storyboard samples continue playing; disabled maps parse sample events
+without preparing sprite commands, animation images or visual triggers.
 
 **View > Dim Background** and the matching **Settings > Testplay** switch
 force an opaque black background in Catch preview and testplay, including intro

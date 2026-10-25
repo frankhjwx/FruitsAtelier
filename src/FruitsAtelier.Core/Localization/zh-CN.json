@@ -128,6 +128,7 @@
   "merge.confirm": "合并",
   "merge.failed": "合并失败：{0}",
   "merge.tooManyPoints": "合并后的路径控制点过多，请减少选中对象或重复次数。",
+  "settings.enableVideoStoryboard": "启用视频／故事板",
   "settings.backgroundDim": "背景暗化：{0}%",
   "settings.forceBackgroundDim": "调暗背景",
   "testplay.skip": "跳过（空格）",
