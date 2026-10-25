@@ -143,9 +143,14 @@ next unresolved group there. Whole-map choices remain available.
 Events review collects break periods from anywhere in the section into aligned
 tables, ordered by start time. Start and end use `mm:ss:ms`; duration uses
 milliseconds. Only changed cells are highlighted, and missing rows use dashes.
+Click a differing break row on either side to choose that side for that break;
+each row is resolved independently and only the chosen row is outlined.
+Resolved choices can be changed by clicking the other side. Unchanged event text
+keeps a neutral border when only breaks differ.
 Other event data appears below the table in its original command order and
-indentation, without blank lines or comment-only headings. The choice applies to
-the complete Events section, retaining its source text and comments.
+indentation, without blank lines or comment-only headings. Other event changes
+form a separate selectable block. Mixed choices retain the chosen break lines
+and the other event block's source text and comments.
 
 Applying a resolution retains the comparison with an applying message until
 publication finishes. Saved and working authoring are archived once before the

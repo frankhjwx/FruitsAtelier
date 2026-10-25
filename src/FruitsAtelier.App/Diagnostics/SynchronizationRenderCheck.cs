@@ -57,7 +57,7 @@ internal static class SynchronizationRenderCheck
                 if (!sectionBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native text paging changed authoring.");
                 view.KeyDown(27, false, false);
 
-                string breakText = text.Replace("[HitObjects]", "[Events]\n//Break Periods\n2,54850,57406\n2,247104,250245\n//Storyboard Layer 0\nSprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\n[HitObjects]");
+                string breakText = text.Replace("[HitObjects]", "[Events]\n0,0,\"bg.png\",0,0\n//Break Periods\n2,54850,57406\n2,247104,250245\n//Storyboard Layer 0\nSprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\n[HitObjects]");
                 File.WriteAllText(source, breakText);
                 var breakSession = WorkspaceProject.Create(Path.Combine(root, "BreakWorkspace"), BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source)]), songs);
                 view.LoadWorkspace(breakSession);
@@ -66,8 +66,10 @@ internal static class SynchronizationRenderCheck
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native break review was not shown.");
                 var breakBefore = view.Document.DeepClone();
                 CaptureTiming("breaks-unresolved");
-                view.PointerDown(width / 2 + 100, height - 162, 0, false, false); view.PointerUp(width / 2 + 100, height - 162, 0); Paint();
-                CaptureTiming("breaks-resolved");
+                view.PointerDown(44, 265, 0, false, false); view.PointerUp(44, 265, 0); Paint();
+                CaptureTiming("breaks-partial");
+                view.PointerDown(width / 2 + 28, 288, 0, false, false); view.PointerUp(width / 2 + 28, 288, 0); Paint();
+                CaptureTiming("breaks-mixed");
                 if (!breakBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native break review changed authoring before Apply.");
                 view.KeyDown(27, false, false);
 

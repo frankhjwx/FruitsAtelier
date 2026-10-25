@@ -10,6 +10,7 @@ public sealed partial class EditorView
     private (string Key, int Page)? syncSectionLoaded;
     private string syncSectionLocal = "", syncSectionExternal = "";
     private string syncBreakLocal = "", syncBreakExternal = "", syncEventLocal = "", syncEventExternal = "";
+    private IReadOnlyList<WorkspaceSyncConflict> syncBreakRows = [];
     private MetadataTextDiff syncSectionDiff = new([], []);
     private const int SyncSectionPageSize = 4096;
 
@@ -25,10 +26,10 @@ public sealed partial class EditorView
 
     private void DrawSyncSection(ICanvas c, WorkspaceMerge merge, SyncComparison comparison, WorkspaceSyncConflict conflict)
     {
-        string key = "$text:" + conflict.Key;
+        bool events = conflict.Key.StartsWith("Events/");
+        string key = "$text:" + (events ? "Events/" : conflict.Key);
         string localText = conflict.Local, externalText = conflict.External;
         bool timing = conflict.Key == "TimingPoints/";
-        bool events = conflict.Key == "Events/";
         if (!timing && conflict.TimingShift is { } shift)
         {
             localText = L.Get("sync.timingOffsetSummary", shift.Count, 0);
@@ -42,9 +43,11 @@ public sealed partial class EditorView
             syncSectionPage = 0; syncSectionLoaded = null;
             if (events)
             {
-                var local = SplitSyncEvents(localText); var externalEvents = SplitSyncEvents(externalText);
-                (syncBreakLocal, syncBreakExternal) = AlignSyncTiming(local.Breaks, externalEvents.Breaks);
-                syncEventLocal = local.Other; syncEventExternal = externalEvents.Other;
+                var review = merge.EventReview ?? new WorkspaceEventReview(localText, externalText);
+                syncBreakRows = review.Breaks;
+                syncBreakLocal = string.Join('\n', syncBreakRows.Select(b => b.Local));
+                syncBreakExternal = string.Join('\n', syncBreakRows.Select(b => b.External));
+                syncEventLocal = SplitSyncEvents(review.LocalOther).Other; syncEventExternal = SplitSyncEvents(review.ExternalOther).Other;
             }
         }
         if (events) { localText = syncEventLocal; externalText = syncEventExternal; }
@@ -67,6 +70,12 @@ public sealed partial class EditorView
         c.Text(SyncMapHeading(merge), x + 20, y + 46, 12, Muted, w - 40);
         uint colour = !hasConflict ? Muted : syncRoundChoices.Contains(conflict.Key) ? SyncResolvedThisRound
             : merge.PreviouslyResolved.Contains(conflict.Key) ? SyncPreviouslyResolved : SyncUnresolved;
+        if (events)
+        {
+            var items = merge.Conflicts.Where(c => c.Key.StartsWith("Events/")).ToArray();
+            int resolved = items.Count(c => syncChoices.ContainsKey(c.Key));
+            colour = items.Length == 0 ? Muted : resolved == items.Length ? SyncResolvedThisRound : resolved > 0 ? SyncPreviouslyResolved : SyncUnresolved;
+        }
         c.Text(timing ? L.Get("timing.title") : events && (syncBreakLocal.Length > 0 || syncBreakExternal.Length > 0) ? L.Get("sync.breaks") : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key.TrimEnd('/'), x + 20, y + 106, 15, colour, w - 400);
         if (!timing && (!events || pages > 1))
         {
@@ -104,8 +113,10 @@ public sealed partial class EditorView
         {
             if (events)
             {
-                DrawSyncBreakTable(c, left, syncBreakLocal, syncBreakExternal, colour);
-                DrawSyncBreakTable(c, right, syncBreakExternal, syncBreakLocal, colour);
+                DrawSyncBreakTable(c, left, syncBreakLocal, syncBreakExternal,
+                    merge, false);
+                DrawSyncBreakTable(c, right, syncBreakExternal, syncBreakLocal,
+                    merge, true);
                 if (localText.Length > 0 || externalText.Length > 0)
                 {
                     c.Text(L.Get("sync.otherEvents"), left.X + 8, left.Y + eventOffset - 28, 12, Muted, paneWidth - 16);
@@ -116,13 +127,26 @@ public sealed partial class EditorView
             }
             if (!events || localText.Length > 0 || externalText.Length > 0)
             {
-                DrawSyncText(c, left, syncSectionLocal, colour, hasConflict ? syncSectionDiff.Local : []);
-                DrawSyncText(c, right, syncSectionExternal, colour, hasConflict ? syncSectionDiff.External : []);
+                bool otherConflict = events && merge.Conflicts.Any(item => item.Key == "Events/");
+                uint textColour = !events ? colour : !otherConflict ? Muted : syncRoundChoices.Contains("Events/") ? SyncResolvedThisRound
+                    : merge.PreviouslyResolved.Contains("Events/") ? SyncPreviouslyResolved : SyncUnresolved;
+                DrawSyncText(c, left, syncSectionLocal, textColour, hasConflict ? syncSectionDiff.Local : []);
+                DrawSyncText(c, right, syncSectionExternal, textColour, hasConflict ? syncSectionDiff.External : []);
+                if (otherConflict)
+                {
+                    foreach (var pane in new[] { (Bounds: left, External: false), (Bounds: right, External: true) })
+                    {
+                        float top = Math.Max(pane.Bounds.Y, syncCanvasBounds.Y), bottom = Math.Min(pane.Bounds.Bottom, syncCanvasBounds.Bottom);
+                        if (bottom > top) hits.Add(new(new(pane.Bounds.X, top, pane.Bounds.Width, bottom - top),
+                            () => ChooseSyncItem(merge, "Events/", pane.External), true));
+                    }
+                    if (syncChoices.TryGetValue("Events/", out bool otherExternal)) c.Stroke(otherExternal ? right : left, Accent, 3);
+                }
             }
         }
         c.Unclip();
         bool chosen = syncChoices.TryGetValue(conflict.Key, out bool external);
-        if (chosen) c.Stroke(new(external ? right.X : left.X, syncCanvasBounds.Y, paneWidth, syncCanvasBounds.Height), Accent, 3);
+        if (chosen && !events) c.Stroke(new(external ? right.X : left.X, syncCanvasBounds.Y, paneWidth, syncCanvasBounds.Height), Accent, 3);
         SyncReviewButton(c, new(left.X, y + h - 164, paneWidth, 36), L.Get("sync.chooseLocal"), () => ChooseSyncItem(merge, conflict.Key, false), chosen && !external, enabled: hasConflict);
         SyncReviewButton(c, new(right.X, y + h - 164, paneWidth, 36), L.Get(merge.NativeDifficulty ? "fad.chooseExternal" : "sync.chooseExternal"), () => ChooseSyncItem(merge, conflict.Key, true), chosen && external, enabled: hasConflict);
         DrawSyncReviewFooter(c, merge, x, y, w, h, showPreview: false);
@@ -143,7 +167,7 @@ public sealed partial class EditorView
         return (string.Join('\n', breaks), string.Join('\n', other));
     }
 
-    private void DrawSyncBreakTable(ICanvas c, Rect bounds, string text, string other, uint colour)
+    private void DrawSyncBreakTable(ICanvas c, Rect bounds, string text, string other, WorkspaceMerge merge, bool external)
     {
         c.Fill(bounds, Background);
         string[] headings = [L.Get("sync.breakStart"), L.Get("sync.breakEnd"), L.Get("sync.breakDuration")];
@@ -153,13 +177,26 @@ public sealed partial class EditorView
         if (text.Length == 0 && other.Length == 0) c.Text("—", bounds.X + 8, bounds.Y + 32, 12, Muted, column);
         for (int row = 0; row < rows.Length; row++)
         {
-            var values = Values(rows[row]); var previous = Values(row < opposite.Length ? opposite[row] : "");
             float y = bounds.Y + 32 + row * 23;
+            if (y + 23 < syncCanvasBounds.Y || y > syncCanvasBounds.Bottom) continue;
+            var values = Values(rows[row]); var previous = Values(row < opposite.Length ? opposite[row] : "");
+            var item = row < syncBreakRows.Count ? syncBreakRows[row] : null;
+            bool conflict = merge.EventReview is not null && item is not null && item.Local != item.External;
+            uint rowColour = !conflict ? Muted : syncRoundChoices.Contains(item!.Key) ? SyncResolvedThisRound
+                : merge.PreviouslyResolved.Contains(item!.Key) ? SyncPreviouslyResolved : SyncUnresolved;
+            if (conflict)
+            {
+                float top = Math.Max(y, syncCanvasBounds.Y), bottom = Math.Min(y + 23, syncCanvasBounds.Bottom);
+                if (bottom > top) hits.Add(new(new(bounds.X + 6, top, bounds.Width - 12, bottom - top),
+                    () => ChooseSyncItem(merge, item!.Key, external), true));
+                if (syncChoices.TryGetValue(item!.Key, out bool chosenExternal) && chosenExternal == external)
+                    c.Stroke(new(bounds.X + 6, y, bounds.Width - 12, 23), Accent, 2);
+            }
             for (int i = 0; i < 3; i++)
             {
                 bool changed = values[i] != previous[i];
-                if (changed) c.Fill(new(bounds.X + 6 + i * column, y, column - 2, 21), colour, opacity: .22f);
-                c.Text(values[i], bounds.X + 8 + i * column, y, 12, changed ? colour : Foreground, column - 4);
+                if (changed) c.Fill(new(bounds.X + 6 + i * column, y, column - 2, 21), rowColour, opacity: .22f);
+                c.Text(values[i], bounds.X + 8 + i * column, y, 12, changed ? rowColour : Foreground, column - 4);
             }
         }
 

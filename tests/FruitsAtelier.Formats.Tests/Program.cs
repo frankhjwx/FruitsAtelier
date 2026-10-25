@@ -17,6 +17,12 @@ if (args.Contains("--full-sync-check"))
     { run(); Console.WriteLine("PASS " + name); }
     VersionHistoryTests.Run(); return 0;
 }
+if (args.Contains("--break-sync-check"))
+{
+    foreach (var (name, run) in SynchronizationTests.Cases().Where(c => c.Item1.Contains("break", StringComparison.OrdinalIgnoreCase)))
+    { run(); Console.WriteLine("PASS " + name); }
+    return 0;
+}
 if (args.Contains("--semantic-sync-check"))
 {
     FaOnlyTests.Run();

@@ -347,8 +347,14 @@ two window sizes and captures unresolved/resolved cells under
 `artifacts/tests/semantic-sync-native`.
 
 `App.Tests --sync-details-check` also checks break start/end/duration columns,
-aligned additions, changed-cell highlighting, complete Events choices and
+aligned additions, changed-cell highlighting, independent break choices and
 storyboard command preservation at both window sizes in English and Chinese.
+It also checks neutral unchanged background borders and row clicks on break
+start, end and duration cells, including switching a resolved choice, row-only
+outlines and applying mixed FA/osu! break choices.
+`Formats.Tests --break-sync-check` focuses on mixed break/event resolution,
+additions/deletions, native and baseline-free comparisons, restart retention and
+later edits, alongside the break writeback and save-rewrite regressions.
 
 `Formats.Tests --fa-only-check` checks default compatibility, per-difficulty persistence, source exclusion, portable snapshots, individual saves, stale export rejection, source-change and deletion-failure isolation, and reenabling generation. `App.Tests --fa-only-check` checks new-difficulty defaults and FA-only selection, Song Setup dock and modal controls, keep/delete/cancel choices, independent policies and restart in English and Chinese at two sizes. Native synchronization checks capture the creation choice, FA Settings and file-removal confirmation.
 
