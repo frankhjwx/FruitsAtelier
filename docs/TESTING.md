@@ -814,7 +814,8 @@ press/release recovery, and 300 ms held retry while running and paused followed 
 the 600 ms reaction countdown. Retry regressions verify frozen gameplay and delayed
 audio restart until the same deadline used by Continue.
 The shared App regressions additionally check dim transitions, frozen resume
-countdowns, stale audio samples after skip, content isolation and preferences.
+countdowns, menu-free Ctrl+P pause and immediate Ctrl+P/Esc resume, stale audio
+samples after skip, content isolation and preferences.
 The Windows App retry PCM regression uses an injected silent output with the
 real hitsound mixer to verify the pause loop during the hold and the retry click
 after session audio reset.

@@ -38,7 +38,8 @@ internal static class TestplayTests
                 ui.Key('P', ctrl: true); ui.View.KeyUp('P');
                 clock.Advance(1000); ui.Paint(); Near(start + 100, ui.View.PlayheadMs);
                 ui.Key('P', ctrl: true); ui.View.KeyUp('P');
-                clock.Advance(600); ui.Paint(); Near(start + 100, ui.View.PlayheadMs);
+                Check(!ui.View.TestplayPaused, "Quick pause resumes preparation immediately");
+                ui.Paint(); Near(start + 100, ui.View.PlayheadMs);
                 ui.View.SetPlaybackSpeed(1.5);
                 Advance((-start - 100) / 1.5 + 1); Near(1.5, ui.View.PlayheadMs);
                 if (audio)
@@ -273,7 +274,7 @@ internal static class TestplayTests
                 double resumed = next == 1 ? 1.5 : 1;
                 Near(resumed, ui.View.PlaybackSpeed); Near(paused, ui.View.PlayheadMs);
                 ui.Key('P', ctrl: true); ui.View.KeyUp('P');
-                clock.Advance(600); ui.Paint();
+                Check(!ui.View.TestplayPaused, "Quick pause resumes autoplay immediately");
                 clock.Advance(100); ui.Paint(); Near(paused + 100 * resumed, ui.View.PlayheadMs);
                 ui.Key(114); ui.View.CancelInteraction(preserveTestplay: true);
                 ui.Key(114); Near(resumed, ui.View.PlaybackSpeed);
@@ -319,11 +320,20 @@ internal static class TestplayTests
         Check(ui.View.TestplayPaused, "held pause toggles only once");
         clock.Advance(2000); ui.Key(39); ui.Paint();
         Near(500, ui.View.PlayheadMs); Near(256, ui.View.TestplayCatcherX);
-        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.paused")), "pause state appears with shortcuts");
-        Check(ui.View.TestplayPauseMenuVisible, "Pause opens the interactive menu");
+        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.paused")), "Quick pause preserves the gameplay view");
+        Check(!ui.View.TestplayPauseMenuVisible, "Quick pause has no interactive menu");
         ui.View.KeyUp('P'); ui.Key('P', ctrl: true); ui.View.KeyUp('P');
-        clock.Advance(600); ui.Paint();
+        Check(!ui.View.TestplayPaused, "Ctrl+P resumes immediately");
         clock.Advance(100); ui.Paint(); Near(600, ui.View.PlayheadMs);
+        ui.Key('P', ctrl: true); ui.View.KeyUp('P');
+        clock.Advance(1000); ui.Paint(); Near(600, ui.View.PlayheadMs);
+        ui.Key(27); ui.Key(27);
+        Check(!ui.View.TestplayPaused && !ui.View.TestplayPauseMenuVisible, "Esc resumes quick pause once without opening a menu");
+        ui.View.KeyUp(27); ui.View.KeyUp(39);
+        ui.Key(27); ui.View.KeyUp(27);
+        Check(ui.View.TestplayPauseMenuVisible, "Esc opens the pause menu during gameplay");
+        ui.Key('P', ctrl: true); ui.View.KeyUp('P');
+        Check(!ui.View.TestplayPaused, "Ctrl+P resumes from the pause menu immediately");
         ui.Key(113); Check(!ui.View.IsTestplaying, "F2 exits"); Near(600, ui.View.PlayheadMs);
         ui.View.StartTestplay(); clock.Advance(250); ui.Paint(); ui.Key(112);
         Near(600, ui.View.PlayheadMs); Check(!ui.View.IsTestplaying && ui.View.Document.ContentEquals(before), "F1 returns to testplay start without edits");

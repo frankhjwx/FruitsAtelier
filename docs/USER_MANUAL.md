@@ -1035,7 +1035,8 @@ Seek to the section and press **F5**. Testplay uses the selected preview mod. **
 | --- | --- |
 | Left / Right | Move the catcher with default bindings |
 | Hold Shift | Dash with the default binding |
-| Esc / Ctrl+P | Pause or resume |
+| Ctrl+P | Pause without a menu or resume immediately |
+| Esc | Open the pause menu; resume a Ctrl+P pause immediately |
 | Ctrl+R | Retry from this session's start with its lead-in |
 | Hold backtick / ~ for 300 ms | Retry after dimming; release early to cancel |
 | F1 | Return to the editor at the selected start |
@@ -1439,7 +1440,8 @@ to Compose before moving selected objects.
 | F3 | During autoplay, toggle speed between 1.0x and 1.5x. |
 | Ctrl+Up / Ctrl+Down | During autoplay, increase / decrease speed by 25 percentage points, within 10%–150%. Works while paused too. |
 | Ctrl+Shift+Up / Ctrl+Shift+Down | During autoplay, increase / decrease speed by 5 percentage points. |
-| Esc / Ctrl+P | Open the pause menu / resume the session. |
+| Ctrl+P | Pause without a menu or resume immediately, without a countdown. |
+| Esc | Open the pause menu; resume a Ctrl+P pause immediately. |
 | Space | Skip the opening empty time while Skip is available; clicking Skip also works. |
 | Up / Down, Enter (pause menu) | Select Continue, Retry or Back, then activate it. |
 | Ctrl+B / Ctrl+Shift+B | Add a bookmark / remove the nearest within two seconds at the live position. |

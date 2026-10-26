@@ -14,6 +14,7 @@ public sealed partial class EditorView
     private bool testplayTabHeld;
     private bool testplaySpeedHeld;
     private bool testplayPauseHeld;
+    private bool testplayQuickPaused;
     private bool testplayRetryHeld;
     private const double TestplayQuickRetryHoldMs = 300;
     private double? testplayQuickRetryAt;
@@ -70,6 +71,7 @@ public sealed partial class EditorView
         testplayTabHeld = false;
         testplaySpeedHeld = false;
         testplayPauseHeld = false;
+        testplayQuickPaused = false;
         testplayRetryHeld = false;
         testplayQuickRetryAt = null;
         testplayQuickRetryHeld = false;
@@ -153,6 +155,7 @@ public sealed partial class EditorView
         testplayQuickRetryHeld = false;
         testplayResumeAt = null;
         testplayAutoNotice = null;
+        testplayQuickPaused = false;
         testplayBookmarkHeld = false;
         if (testplayWithAudio && !wasPaused)
         {
@@ -164,15 +167,24 @@ public sealed partial class EditorView
         StatusMessage = L.Get("testplay.returned");
     }
 
-    private void ToggleTestplayPause()
+    private void ToggleTestplayPause(bool quick = false)
     {
         if (testplay is null) return;
+        if (TestplayPaused && (quick || testplayQuickPaused))
+        {
+            testplayResumeAt = null;
+            testplayQuickPaused = false;
+            FadeTestplayMenu(0);
+            CompleteTestplayPauseToggle();
+            return;
+        }
         if (testplayResumeAt is not null) { testplayResumeAt = null; FadeTestplayMenu(1); SetTestplayPauseLoop(true); return; }
         if (TestplayPaused)
         {
             BeginTestplayResume();
             return;
         }
+        testplayQuickPaused = quick;
         CompleteTestplayPauseToggle();
     }
 
@@ -188,7 +200,7 @@ public sealed partial class EditorView
         if (testplay is null) return;
         double time = testplay.TogglePause();
         ResetHitsounds();
-        if (TestplayPaused) FadeTestplayMenu(1, opening: true);
+        if (TestplayPaused && !testplayQuickPaused) FadeTestplayMenu(1, opening: true);
         ResetTestplayPointer();
         testplayMenuSelection = 0;
         testplayKeyboardSelection = false;
@@ -201,8 +213,8 @@ public sealed partial class EditorView
             }
             else { RequestSeek?.Invoke(time); RequestTogglePlayback?.Invoke(); }
         }
-        SetTestplayPauseLoop(TestplayPaused);
-        if (TestplayPaused) PlayTestplayMenuSound("menuhit");
+        SetTestplayPauseLoop(TestplayPauseMenuVisible);
+        if (TestplayPauseMenuVisible) PlayTestplayMenuSound("menuhit");
         AdvanceTestplay();
     }
 

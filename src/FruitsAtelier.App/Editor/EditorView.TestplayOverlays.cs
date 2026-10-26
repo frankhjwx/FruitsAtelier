@@ -34,7 +34,7 @@ public sealed partial class EditorView
     private readonly Dictionary<string, Hitsound> testplayMenuSounds = [];
     public Action<Hitsound?>? RequestTestplayMenuLoop { get; set; }
     public bool TestplaySkipVisible => IsTestplaying && !TestplayPaused && playhead < testplayGameplayStart - 1000;
-    public bool TestplayPauseMenuVisible => TestplayPaused && testplayResumeAt is null;
+    public bool TestplayPauseMenuVisible => TestplayPaused && !testplayQuickPaused && testplayResumeAt is null;
     public Rect TestplaySkipBounds { get; private set; }
     private static readonly string[] pauseComponents = ["pause-continue", "pause-retry", "pause-back"];
     private static readonly string[] pauseLabels = ["testplay.continue", "testplay.retry", "testplay.quit"];
@@ -112,6 +112,7 @@ public sealed partial class EditorView
             testplay?.Cancel();
             testplayDriver?.Dispose(); testplayDriver = null;
             testplayResumeAt = null;
+            testplayQuickPaused = false;
             testplayAutoNotice = null;
             testplayTabHeld = testplaySpeedHeld = testplayPauseHeld = testplayBookmarkHeld = false;
             testplayMenuStartedAt = TestplayRealtime;
@@ -129,7 +130,7 @@ public sealed partial class EditorView
     private void DrawTestplayOverlays(ICanvas c)
     {
         float opacity = TestplayMenuOpacity;
-        if (TestplayPaused)
+        if (TestplayPaused && !testplayQuickPaused)
         {
             c.Fill(new(0, 0, width, height), 0, opacity: .75f * opacity);
             float scale = height / 768f;

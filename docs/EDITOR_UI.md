@@ -1093,7 +1093,9 @@ and break periods. The stored dim percentage is retained and used again when the
 switch is off. View changes save immediately; Settings changes require Apply.
 
 **Space** or clicking **Skip** skips an intro to three seconds before the first
-note. Skip is unavailable after that point. **Esc / Ctrl+P** opens the pause menu;
+note. Skip is unavailable after that point. **Ctrl+P** freezes gameplay and music
+without opening the pause menu. **Ctrl+P** or **Esc** resumes this direct pause
+immediately, without a countdown. During gameplay, **Esc** opens the pause menu;
 **Up/Down** selects Continue, Retry or Back and **Enter** activates the selection.
 Mouse buttons use the same actions. Opening the menu fades it in over 300 ms while
 music and judgement are already paused. Continue fades the pause menu out over 600 ms,

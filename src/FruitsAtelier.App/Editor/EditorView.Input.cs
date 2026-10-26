@@ -1281,7 +1281,7 @@ public sealed partial class EditorView
             else if (virtualKey == 113) { AdvanceTestplay(); StopTestplay(atCurrentPosition: true); }
             else if (ctrl && virtualKey == 80)
             {
-                if (!testplayPauseHeld) { testplayPauseHeld = true; ToggleTestplayPause(); }
+                if (!testplayPauseHeld) { testplayPauseHeld = true; ToggleTestplayPause(quick: true); }
             }
             else if (ctrl && !shift && !altHeld && virtualKey == 82)
             {

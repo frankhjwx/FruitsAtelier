@@ -37,12 +37,32 @@ internal static class TestplayRenderCheck
                 map.OriginalSections.Add(new OsuSection { Name = "Events", Lines = { "0,0,\"pause-overlay.png\",0,0", "2,12000,16000" } });
                 map.Fruits.AddRange([new Fruit { TimeMs = 10000, X = 256 }, new Fruit { TimeMs = 20000, X = 256 }]);
                 view.LoadDocument(map); view.LoadSkin(folder);
+                var preparation = System.Diagnostics.Stopwatch.StartNew();
+                do
+                {
+                    Paint();
+                    if (!view.LibraryOpening) break;
+                    if (preparation.Elapsed.TotalSeconds > 10) throw new TimeoutException("Native testplay media did not finish preparing.");
+                    Thread.Sleep(5);
+                } while (true);
                 view.StartTestplay(); Paint();
                 if (!view.TestplaySkipVisible) throw new InvalidOperationException("Native Skip is missing.");
                 var skip = view.TestplaySkipBounds;
                 view.PointerDown(skip.X + skip.Width / 2, skip.Y + skip.Height / 2, 0, false, false);
                 view.PointerUp(skip.X + skip.Width / 2, skip.Y + skip.Height / 2, 0); Paint();
                 if (view.TestplaySkipVisible || view.PlayheadMs < 7000) throw new InvalidOperationException("Native Skip click failed.");
+                foreach (int resumeKey in new[] { 80, 27 })
+                {
+                    view.KeyDown(80, true, false); view.KeyUp(80); Paint();
+                    double paused = view.PlayheadMs;
+                    clock.Advance(1000); Paint();
+                    if (!view.TestplayPaused || view.TestplayPauseMenuVisible || view.PlayheadMs != paused)
+                        throw new InvalidOperationException("Native Ctrl+P did not freeze gameplay without a menu.");
+                    view.KeyDown(resumeKey, resumeKey == 80, false); view.KeyUp(resumeKey); Paint();
+                    if (view.TestplayPaused) throw new InvalidOperationException("Native direct pause did not resume immediately.");
+                    clock.Advance(10); Paint();
+                    if (view.PlayheadMs <= paused) throw new InvalidOperationException("Native direct pause retained a resume countdown.");
+                }
                 view.KeyDown(27, false, false); view.KeyUp(27); Paint();
                 if (!view.TestplayPauseMenuVisible) throw new InvalidOperationException("Native pause menu is missing.");
                 view.KeyDown(40, false, false); view.KeyUp(40);

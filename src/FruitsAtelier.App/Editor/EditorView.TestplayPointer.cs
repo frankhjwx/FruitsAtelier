@@ -36,7 +36,7 @@ public sealed partial class EditorView
 
     private void MoveTestplayCursor(float x, float y)
     {
-        if (!TestplayPaused || x < 0 || y < 0) return;
+        if (!TestplayPaused || testplayQuickPaused || x < 0 || y < 0) return;
         double now = TestplayRealtime;
         bool continuous = skin?.MenuTexture("cursormiddle") is not null;
         if (testplayTrailX >= 0 && continuous)
@@ -64,7 +64,7 @@ public sealed partial class EditorView
 
     private void DrawTestplayCursor(ICanvas c)
     {
-        if (!TestplayPaused || mouseX < 0 || mouseY < 0 || mouseX >= width || mouseY >= height) return;
+        if (!TestplayPaused || testplayQuickPaused || mouseX < 0 || mouseY < 0 || mouseX >= width || mouseY >= height) return;
         bool continuous = skin?.MenuTexture("cursormiddle") is not null;
         float scale = height / 768f;
         float rotation = skin?.CursorRotate == true ? (float)(TestplayRealtime % 10000 / 10000 * 360) : 0;
