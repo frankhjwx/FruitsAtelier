@@ -14,6 +14,9 @@ internal static class LibraryDoubleClickTests
             var session = WorkspaceProject.Create(workspace, BeatmapProject.FromDocuments([MyMapsTests.Document("Click project", "Mapper")]), "");
             view = new EditorView(loadDemo: false);
             view.InitializeLibrary(true, new LibrarySettings { Workspace = workspace, MapperUsernames = ["Mapper"] });
+            var startup = (Task)view.GetType().GetField("libraryStartupTask", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(view)!;
+            Check(startup.Wait(TimeSpan.FromSeconds(10)) && view.LibraryLoading,
+                "completed startup stays loading until its result and initial scan are published");
             var canvas = new RecordingCanvas();
             int opens = 0; LibraryMap? target = null; bool selectedDifficulty = false;
             view.RequestLibraryOpen = (map, selectDifficulty) => { opens++; target = map; selectedDifficulty = selectDifficulty; };
@@ -80,7 +83,17 @@ internal static class LibraryDoubleClickTests
         }
         finally
         {
-            view?.StopFileMonitoring(); view?.CompleteLibraryCacheWrites(); view?.CloseLibrary();
+            view?.StopFileMonitoring();
+            if (view is not null)
+            {
+                var deadline = DateTime.UtcNow.AddSeconds(15);
+                var cleanupCanvas = new RecordingCanvas();
+                while (view.LibraryLoading && DateTime.UtcNow < deadline)
+                { cleanupCanvas.Clear(); view.Render(cleanupCanvas, 980, 620); Thread.Sleep(10); }
+                Check(!view.LibraryLoading, "library workers finish before fixture deletion");
+                view.CompleteLibraryCacheWrites();
+                view.CloseLibrary();
+            }
             if (Directory.Exists(root)) Directory.Delete(root, true);
         }
     }

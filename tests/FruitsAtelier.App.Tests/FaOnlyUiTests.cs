@@ -88,7 +88,8 @@ internal static class FaOnlyUiTests
                     var reopened = WorkspaceProject.Open(ui.View.WorkspaceSession!.Directory);
                     Check(reopened.Project.Difficulties.Single(d => d.Id == local).FaOnly
                         && reopened.Project.Difficulties.Count(d => !d.FaOnly) == count + 1, "restart retains independent per-difficulty settings");
-                    ui.View.LoadWorkspace(reopened); ui.View.SwitchDifficulty(reopened.Project.Difficulties.FindIndex(d => d.Id == local)); Wait(ui);
+                    ui.View.LoadWorkspace(reopened); Wait(ui);
+                    ui.View.SwitchDifficulty(reopened.Project.Difficulties.FindIndex(d => d.Id == local)); Wait(ui);
                     ui.View.OpenSongSetup(); ui.Paint(); ClickFaSettings();
                     ui.ClickText(L.Get("song.syncToOsu")); ui.ClickText(L.Get("mac.cancel"));
                     Check(ui.View.CurrentDifficultyFaOnly, "modal Song Setup cancellation preserves the saved sync setting");
@@ -105,7 +106,7 @@ internal static class FaOnlyUiTests
     private static void Wait(Ui ui)
     {
         var deadline = DateTime.UtcNow.AddSeconds(30);
-        do { ui.Paint(); if (!ui.View.SynchronizationBusy) { ui.Paint(); return; } Thread.Sleep(5); } while (DateTime.UtcNow < deadline);
+        do { ui.Paint(); if (!ui.View.SynchronizationBusy && !ui.View.LibraryOpening) { ui.Paint(); return; } Thread.Sleep(5); } while (DateTime.UtcNow < deadline);
         throw new TimeoutException("FA-only operation did not finish.");
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }

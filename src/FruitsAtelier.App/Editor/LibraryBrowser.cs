@@ -31,7 +31,7 @@ internal sealed class LibraryBrowser
     public int SetCount { get; }
     public int TopIndex { get; private set; }
     public LibrarySetRow? Selected { get; private set; }
-    public bool Loading => pageTask is { IsCompleted: false } || detailTask is { IsCompleted: false } || discoveryTask is { IsCompleted: false };
+    public bool Loading => pageTask is not null || detailTask is not null || discoveryTask is not null;
     public int CachedRows => pages.Values.Sum(page => page.Count);
     public string? Error { get; private set; }
 

@@ -192,7 +192,7 @@ internal static class TestplayPresentationTests
                 Check(ui.View.Document.ContentEquals(before), "Full dim preserves beatmap content");
                 ui.View.StopTestplay();
                 ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.testplay"));
-                ui.ClickText("✓ " + L.Get("settings.forceBackgroundDim"));
+                ui.ClickText(L.Get("settings.forceBackgroundDim"));
                 Check(ui.View.LibrarySettings.ForceBackgroundDim, "Settings full dim remains a draft before Apply");
                 string path = Path.GetFullPath("artifacts/tests/full-dim-settings.json");
                 ui.View.ApplySettings(path); ui.Paint();

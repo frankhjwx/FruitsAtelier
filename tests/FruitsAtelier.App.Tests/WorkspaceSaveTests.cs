@@ -204,8 +204,9 @@ static class WorkspaceSaveTests
         Check(!reopenedSession.Manifest.Difficulties.Single(d => d.Id == originalId).ExportConfirmed
             && reopenedSession.Manifest.Difficulties.Single(d => d.Id == added.Id).ExportConfirmed,
             "Explicit new export persists consent only for its own difficulty");
-        Check(ui.View.SwitchDifficulty(reopened.Difficulties.FindIndex(d => d.Id == originalId))
-            && ui.View.Document.ImportedSliders.Count == 1 && ui.View.Document.Tracks.Count == 0, "Original editor tab retains saved imported sliders");
+        Check(ui.View.SwitchDifficulty(reopened.Difficulties.FindIndex(d => d.Id == originalId)), "Original editor tab opens");
+        ui.PaintUntilReady();
+        Check(ui.View.Document.ImportedSliders.Count == 1 && ui.View.Document.Tracks.Count == 0, "Original editor tab retains saved imported sliders");
         ui.View.ConvertAllSliders(); ui.View.AnswerSliderImport(true);
         deadline = DateTime.UtcNow.AddSeconds(15);
         while (ui.View.SliderConversionBusy && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(10); }

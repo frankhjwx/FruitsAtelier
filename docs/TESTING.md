@@ -298,6 +298,11 @@ retain cleanup in `finally`. Run the affected suite and the macOS Desktop
 regression on the final revision before release; a Windows pass does not verify
 macOS path behavior.
 
+Shared editor fixtures must pump both synchronization and `LibraryOpening` to
+completion before editing or switching the loaded difficulty. Synchronization can
+finish before the initial media frame is ready. Library fixtures must also pump
+`LibraryLoading` and complete cache writes before deleting their directories.
+
 ## Automated regressions
 
 App integration output includes each test's elapsed time and the total suite duration.

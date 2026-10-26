@@ -796,8 +796,8 @@ internal static class SynchronizationUiTests
     internal static void Wait(Ui ui)
     {
         var deadline = DateTime.UtcNow.AddSeconds(20);
-        do { ui.Paint(); if (!ui.View.SynchronizationBusy) break; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
-        Check(!ui.View.SynchronizationBusy, "sync timeout"); ui.Paint();
+        do { ui.Paint(); if (!ui.View.SynchronizationBusy && !ui.View.LibraryOpening) break; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
+        Check(!ui.View.SynchronizationBusy && !ui.View.LibraryOpening, "sync and media preparation timeout"); ui.Paint();
         if (ui.View.ErrorVisible) throw new Exception("Unexpected error in synchronization UI");
     }
 

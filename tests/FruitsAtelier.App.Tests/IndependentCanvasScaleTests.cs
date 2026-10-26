@@ -82,8 +82,9 @@ internal static class IndependentCanvasScaleTests
             double panOffset = (plot.X + plot.Right - ui.Plot.X - ui.Plot.Right) / 2;
             ui.View.PointerDown(x, y, 1, false, false); ui.View.PointerMove(x + (float)panOffset, y, false, false);
             ui.View.PointerUp(x + (float)panOffset, y, 1); ui.Paint();
-            ui.View.UpdateTransport(1000, 30000, true, true, false, null, "fixture.wav"); ui.Paint();
-            ui.View.UpdateTransport(1000, 30000, true, false, false, null, "fixture.wav"); ui.Paint();
+            // Keep the note above the hover controls in the compact canvas.
+            ui.View.UpdateTransport(800, 30000, true, true, false, null, "fixture.wav"); ui.Paint();
+            ui.View.UpdateTransport(800, 30000, true, false, false, null, "fixture.wav"); ui.Paint();
             ui.Key('1'); ui.DownMap(1000, 256); ui.MoveMap(1100, 300); ui.UpMap(1100, 300);
             Near(1080, ui.View.Document.Fruits.Single().TimeMs); Near(300, ui.View.Document.Fruits.Single().X);
             ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Independent transform drag undoes exactly");

@@ -694,7 +694,7 @@ public sealed partial class EditorView
             else Button(c, browseBounds, L.Get("library.browse"), browse, fontSize: textSize);
         }
     }
-    public bool LibraryLoading => libraryStartupTask is { IsCompleted: false } || osuCollectionsTask is { IsCompleted: false } || LibraryVisible && libraryDatabase is not null && searchTaskQuery != LibrarySearchKey || scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
+    public bool LibraryLoading => libraryStartupTask is not null || libraryStartupScan || osuCollectionsTask is not null || LibraryVisible && libraryDatabase is not null && searchTaskQuery != LibrarySearchKey || scanTask is not null || searchTask is not null || ratingTask is not null || libraryBrowser is { Loading: true };
     public bool LibraryTextFocused => (LibraryVisible || librarySettingsOpen || ExportVisible) && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;
     public int LibraryInputField => LibraryTextFocused ? libraryField : -1;
     public Action? RequestPasteLibrary { get; set; }

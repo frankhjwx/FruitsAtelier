@@ -145,7 +145,7 @@ internal static class SyncTabsTests
     private static void Wait(Ui ui)
     {
         var deadline = DateTime.UtcNow.AddSeconds(20);
-        do { ui.Paint(); if (!ui.View.SynchronizationBusy) return; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
+        do { ui.Paint(); if (!ui.View.SynchronizationBusy && !ui.View.LibraryOpening) return; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
         throw new Exception("Sync tab fixture timed out.");
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
