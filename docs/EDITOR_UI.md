@@ -1002,7 +1002,9 @@ Design selects countdown speed (off, normal, half or double) from four choices a
 stores a non-negative countdown offset in beats. Switches control widescreen
 storyboard support, letterboxing in breaks and the flashing-light warning. These
 options are preserved in project saves and
-`.osu` exports; the editor does not render countdown or storyboard effects.
+`.osu` exports. The editor retains countdown settings without rendering the countdown.
+Video and storyboard visuals follow transport playback; see the shared
+Enable Video/Storyboard preference below.
 Audio, Advanced and preferred-skin controls are not part of Song Setup.
 
 ## Settings
@@ -1499,7 +1501,6 @@ Manual conversion does not offer this checkbox. These global import
 preferences are saved when applying Settings; they do not edit existing maps. Conversion uses the current map and slider modes and the retained baseline; there is no separate conversion-mode toggle. **Edit → Convert all sliders to FSliders** offers the same representation choice for the current difficulty. Single-slider conversion uses the same policy. Batch conversion is cancellable, checks its source snapshot before publication, and supports one undo step per difficulty. Invalid input retains its source with diagnostics. Saving persists the result in the workspace without modifying the original source files.
 
 Ctrl+D retains the source object and creates a same-type copy with its baseline and effective mode. Generated compensation is recalculated for the copied object's position in the map RNG sequence. This does not apply derandomization again to an already processed path.
-
 
 With Distance Snap disabled, dragging a selected slider fruit, droplet or tiny droplet follows horizontal Grid Snap, including the existing Shift override. Unreachable positions stop at an accepted grid point, or retain the original X when no grid point is reachable. With Distance Snap enabled, the strict event snapping rules above apply; rejected candidates do not leave partial geometry.
 
