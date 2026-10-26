@@ -7,6 +7,12 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class MapsetVerifierRenderCheck
 {
+    // Native captures must not outlast transient copy feedback on a slow renderer.
+    private sealed class Clock : TimeProvider
+    {
+        public override long GetTimestamp() => 0;
+    }
+
     internal static void Run(D2DCanvas canvas, int width, int height, int dpi)
     {
         string language = L.Language;
@@ -15,7 +21,8 @@ internal static class MapsetVerifierRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(locale);
-                var view = new EditorView(false); view.LoadDocument(new() { IsDemo = false, DurationMs = 300000 }); view.CloseLibrary();
+                var clock = new Clock();
+                var view = new EditorView(false, clock); view.LoadDocument(new() { IsDemo = false, DurationMs = 300000 }); view.CloseLibrary();
                 view.VerifierAnalyze = (inputs, _, _) => Task.FromResult(new MapsetVerifierReport(1,
                     [],
                     [new(inputs[0].Id, inputs[0].Name, "Expert", 6.68,
@@ -24,7 +31,7 @@ internal static class MapsetVerifierRenderCheck
                          new("Snap", "Wrongly or inconsistently snapped hit objects.", "Warning", "00:31:193 - 04:03:100 - 04:03:736 - 04:45:399 - 1/16 makes out 0.5% or less of snappings, ensure this makes sense."),
                          .. Enumerable.Range(0, 32).Select(i => new MapsetVerifierIssue("Timing", "Concurrent or conflicting timing lines.", "Minor", $"00:03:{i:000} - Conflicting line settings. Green overrides red."))])]) { UpstreamTag = "v2.1.1" });
                 string captureName = "panel";
-                Paint(); view.ShowMapsetVerifier();
+                WaitForOpening(); view.ShowMapsetVerifier();
                 var deadline = DateTime.UtcNow.AddSeconds(5);
                 do { Paint(); Thread.Sleep(1); } while (view.MapsetVerifierBusy && DateTime.UtcNow < deadline);
                 if (view.VerifierReport is null) throw new Exception("Native verifier report did not settle");
@@ -36,7 +43,7 @@ internal static class MapsetVerifierRenderCheck
                 view.PointerDown(copy.X + 4, copy.Y + 5, 0, false, false);
                 view.PointerUp(copy.X + 4, copy.Y + 5, 0);
                 captureName = "copy"; Paint(true);
-                if (copied is null || view.VerifierCopyOpacity <= 0) throw new Exception("Native Copy all confirmation missing");
+                if (copied is null || view.VerifierCopyOpacity <= 0) throw new Exception($"Native Copy all confirmation missing: copied={copied is not null}, opacity={view.VerifierCopyOpacity}, bounds={copy}, locale={locale}, size={width}x{height}, dpi={dpi}");
                 var filter = view.VerifierFilterBounds("Warning");
                 view.PointerDown(filter.X + 8, filter.Y + 8, 0, false, false);
                 view.PointerUp(filter.X + 8, filter.Y + 8, 0);
@@ -65,7 +72,7 @@ internal static class MapsetVerifierRenderCheck
                 offsets.Fruits.Add(new() { TimeMs = 1001, X = 100 });
                 offsets.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
                     new() { TimeMs = 2001, BeatLengthMs = -100, Uninherited = false, Volume = 40 }]);
-                view = new EditorView(false); view.LoadDocument(offsets); view.CloseLibrary();
+                view = new EditorView(false, clock); view.LoadDocument(offsets); view.CloseLibrary();
                 view.VerifierAnalyze = (inputs, _, _) =>
                 {
                     var input = inputs[0];
@@ -75,7 +82,7 @@ internal static class MapsetVerifierRenderCheck
                             "00:01:001 - Circle unsnapped by 1 ms.")),
                          .. MapsetVerifierClient.TimingOffsetIssues(input)])]));
                 };
-                view.ShowMapsetVerifier();
+                WaitForOpening(); view.ShowMapsetVerifier();
                 SettleOffsets();
                 captureName = "offset-fixes"; Paint(true);
                 if (view.VerifierFixBounds.Count != 2) throw new Exception("Native offset fix buttons missing");
@@ -104,14 +111,14 @@ internal static class MapsetVerifierRenderCheck
                 kiai.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
                     new() { TimeMs = 1001, BeatLengthMs = -100, Uninherited = false, Effects = 1 },
                     new() { TimeMs = 2001, BeatLengthMs = -100, Uninherited = false }]);
-                view = new EditorView(false); view.LoadDocument(kiai); view.CloseLibrary();
+                view = new EditorView(false, clock); view.LoadDocument(kiai); view.CloseLibrary();
                 view.VerifierAnalyze = (inputs, _, _) => Task.FromResult(new MapsetVerifierReport(1, [],
                     [new(inputs[0].Id, inputs[0].Name, "Hard", 3,
                         [new("MapsetVerifier.Checks.AllModes.Timing.CheckKiaiUnsnap", "Unsnapped kiai.", "Minor",
                             "00:01:001 - Kiai is unsnapped by 1 ms."),
                          new("MapsetVerifier.Checks.AllModes.Timing.CheckUnusedLines", "Unused timing lines.", "Minor",
                             "00:02:001 - Inherited line changes sample settings, but affects nothing.")])]));
-                view.ShowMapsetVerifier(); SettleOffsets();
+                WaitForOpening(); view.ShowMapsetVerifier(); SettleOffsets();
                 captureName = "kiai-fix"; Paint(true);
                 if (view.VerifierFixBounds.Count != 1 || view.VerifierCopyBounds.Count != 2)
                     throw new Exception("Native Kiai and read-only unused timing actions failed");
@@ -127,6 +134,13 @@ internal static class MapsetVerifierRenderCheck
                     || (TimingEditing.Current(view.Document, 2000)!.Effects & 1) != 0)
                     throw new Exception("Native Kiai fix failed");
                 view.StopMapsetVerifier();
+
+                void WaitForOpening()
+                {
+                    var limit = DateTime.UtcNow.AddSeconds(10);
+                    do { Paint(); Thread.Sleep(1); } while (view.LibraryOpening && DateTime.UtcNow < limit);
+                    if (view.LibraryOpening) throw new Exception("Native verifier fixture media did not finish preparing");
+                }
 
                 void SettleOffsets()
                 {

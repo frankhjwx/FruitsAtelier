@@ -219,7 +219,7 @@ static class SettingsTests
                 {
                     ui.View.ShowLibrary();
                     var deadline = DateTime.UtcNow.AddSeconds(10);
-                    while (ui.View.LibraryLoading && DateTime.UtcNow < deadline) Thread.Sleep(10);
+                    while (ui.View.LibraryLoading && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(10); }
                     Check(!ui.View.LibraryLoading, "Library finishes loading before settings interaction");
                 }
                 ui.View.OpenSettings(); ui.Paint();

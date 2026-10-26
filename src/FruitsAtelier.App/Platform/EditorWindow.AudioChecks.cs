@@ -68,6 +68,14 @@ internal sealed partial class EditorWindow
             view.RequestDifficultyChanged = ResetAudio;
             foreach (bool playing in new[] { false, true })
             {
+                var openingDeadline = DateTime.UtcNow.AddSeconds(10);
+                while (view.LibraryOpening && DateTime.UtcNow < openingDeadline)
+                {
+                    Native.GetClientRect(hwnd, out var client);
+                    canvas!.Begin(); view.Render(canvas, client.Right * 96 / uiDpi, client.Bottom * 96 / uiDpi); canvas.End();
+                    Thread.Sleep(1);
+                }
+                if (view.LibraryOpening) throw new InvalidOperationException("Audio switch fixture media did not finish preparing.");
                 audio = new AudioTransport(0, () => new AudioResetCheckOutput());
                 if (!audio.LoadAsync(path).GetAwaiter().GetResult()) throw new InvalidOperationException(audio.Error);
                 PollAudio();
