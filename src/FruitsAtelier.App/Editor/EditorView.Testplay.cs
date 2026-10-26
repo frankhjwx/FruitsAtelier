@@ -27,6 +27,8 @@ public sealed partial class EditorView
     public bool TestplayAutoplay => testplay?.Autoplay ?? false;
     private double TestplayRealtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
     private double testplayStart;
+    private readonly Dictionary<Guid, double> testplayApproachRates = [];
+    public double TestplayApproachRate => testplayApproachRates.GetValueOrDefault(difficulties[activeDifficulty].Id, PreviewApproachRate);
     private double testplayReturnPosition;
     private double testplayReturnSpeed;
     private bool testplayWithAudio;
@@ -291,20 +293,20 @@ public sealed partial class EditorView
         c.Clip(stage);
         float fieldWidth = stage.Width * .8f, left = stage.X + stage.Width * .1f;
         float catchY = stage.Y + stage.Height * .15f + 340 * fieldWidth / 512;
-        double speed = CatchScrollTiming.PixelsPerMs(PreviewApproachRate, fieldWidth);
+        double speed = CatchScrollTiming.PixelsPerMs(TestplayApproachRate, fieldWidth);
         double ahead = (catchY - stage.Y + CatchSize.FruitDiameter(PreviewCircleSize) * fieldWidth / 512) / speed;
         var frame = testplayFrame!;
         for (int i = frame.JudgedCount; i < previewObjects.Count && previewObjects[i].TimeMs <= playhead + ahead; i++)
         {
             var item = previewObjects[i];
             DrawCatchObject(c, item, left + (float)item.X * fieldWidth / 512,
-                catchY - (float)((item.TimeMs - playhead) * speed), fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
+                catchY - (float)((item.TimeMs - playhead) * speed), fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true, approachRate: TestplayApproachRate);
         }
         foreach (var item in frame.MissedObjects)
             DrawCatchObject(c, item, left + (float)item.X * fieldWidth / 512,
                 catchY + (float)((playhead - item.TimeMs) * speed), fieldWidth,
                 (float)Math.Clamp(1 - (playhead - item.TimeMs) / CatchTestplay.MissLifetimeMs, 0, 1),
-                circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
+                circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true, approachRate: TestplayApproachRate);
         float x = left + (float)frame.X * fieldWidth / 512;
         uint tint = frame.HyperDashing ? HyperDashColour : 0xFFFFFF;
         foreach (var trail in frame.Trails)
@@ -360,8 +362,10 @@ public sealed partial class EditorView
         Row(L.Get("testplay.drainTime", previewDrainTime));
         Row(L.Get("testplay.maximumCombo", previewMaximumCombo));
         Row(L.Get("testplay.maximumDroplets", previewMaximumDroplets));
+        Row(L.Get("testplay.approachRate", TestplayApproachRate),
+            Math.Abs(TestplayApproachRate - PreviewApproachRate) > .000001 ? 0xFFAA55u : 0xFFFFFFu);
         y += 16;
-        string[] hints = ["testplay.hintAutoplay", "testplay.hintBookmark", "testplay.hintPause", "testplay.hintQuickExit", "testplay.hintCurrentExit", "testplay.hintSpeed"];
+        string[] hints = ["testplay.hintAutoplay", "testplay.hintBookmark", "testplay.hintPause", "testplay.hintQuickExit", "testplay.hintCurrentExit", "testplay.hintSpeed", "testplay.hintApproachRate"];
         foreach (string hint in hints) Row(L.Get(hint));
     }
 

@@ -22,6 +22,7 @@ public sealed partial class EditorView
         private static DockGroup CreateRightDock()
         { var group = new DockGroup(DockPanel.Preview, 360); group.Panels.AddRange([DockPanel.Notes, DockPanel.SongSetup, DockPanel.PatternGallery, DockPanel.Discussion]); return group; }
         public (float X, float Y)? MovementPosition;
+        public float MovementScale = 1;
         public int PreviewMod, PreviewDisplayMode;
     }
     // Each workspace owns its layout so switching views cannot overwrite the other view's groups.

@@ -890,6 +890,55 @@ internal static class TestplayTests
         }
     }
 
+    public static void TemporaryApproachRate()
+    {
+        var ui = new Ui(timeProvider: new ManualTime());
+        var map = new MapDocument { ApproachRate = 10 };
+        map.Fruits.Add(new() { TimeMs = 5000, X = 256 });
+        var other = new MapDocument { ApproachRate = 7 };
+        other.Fruits.Add(new() { TimeMs = 5000, X = 256 });
+        var project = BeatmapProject.FromDocuments([map, other]);
+        ui.View.LoadProject(project); ui.PaintUntilReady();
+        var original = ui.View.Document.DeepClone();
+        ui.View.StartTestplay();
+        ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.approachRate", 10d) && t.Color == 0xFFFFFF), "Base AR is not white");
+        ui.Key(189, ctrl: true); ui.View.KeyUp(189);
+        Near(9.9, ui.View.TestplayApproachRate);
+        ui.Key(109, ctrl: true); ui.View.KeyUp(109);
+        Near(9.8, ui.View.TestplayApproachRate);
+        ui.Key(187, ctrl: true, shift: true); ui.View.KeyUp(187);
+        Near(9.9, ui.View.TestplayApproachRate);
+        ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.approachRate", 9.9) && t.Color == 0xFFAA55), "Live AR display missing");
+        ui.Key(82, ctrl: true); ui.View.KeyUp(82);
+        Near(9.9, ui.View.TestplayApproachRate);
+        ui.Key(107, ctrl: true); ui.View.KeyUp(107);
+        ui.Key(107, ctrl: true); ui.View.KeyUp(107);
+        Near(10, ui.View.TestplayApproachRate);
+        ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.approachRate", 10d) && t.Color == 0xFFFFFF), "Restored AR is not white");
+        for (int i = 0; i < 110; i++) { ui.Key(109, ctrl: true); ui.View.KeyUp(109); }
+        Near(0, ui.View.TestplayApproachRate);
+        Check(original.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Temporary AR modified content");
+        ui.View.StopTestplay();
+        Near(0, ui.View.TestplayApproachRate);
+        ui.View.StartTestplay(); Near(0, ui.View.TestplayApproachRate);
+        ui.View.StopTestplay();
+        Check(ui.View.SwitchDifficulty(1), "Cannot switch testplay difficulty"); ui.PaintUntilReady();
+        ui.View.StartTestplay(); Near(7, ui.View.TestplayApproachRate);
+        ui.Key(107, ctrl: true); ui.View.KeyUp(107); Near(7.1, ui.View.TestplayApproachRate);
+        ui.View.StopTestplay();
+        Check(ui.View.SwitchDifficulty(0), "Cannot return to testplay difficulty"); ui.PaintUntilReady();
+        ui.View.StartTestplay(); Near(0, ui.View.TestplayApproachRate); ui.View.StopTestplay();
+        ui.View.LoadProject(project); ui.PaintUntilReady();
+        ui.View.StartTestplay(); Near(0, ui.View.TestplayApproachRate); ui.View.StopTestplay();
+        Check(ui.View.SwitchDifficulty(1), "Cannot return to second difficulty"); ui.PaintUntilReady();
+        ui.View.StartTestplay(); Near(7.1, ui.View.TestplayApproachRate); ui.View.StopTestplay();
+        var fresh = new Ui(timeProvider: new ManualTime()); fresh.LoadDocument(map);
+        fresh.View.StartTestplay(); Near(10, fresh.View.TestplayApproachRate); fresh.View.StopTestplay();
+    }
+
     private sealed class ManualTime : TimeProvider
     {
         private double time, audio;

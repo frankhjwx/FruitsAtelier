@@ -15,6 +15,7 @@ public sealed class DockWorkspaceLayout
     public int PreviewDisplayMode { get; set; }
     public float? MovementX { get; set; }
     public float? MovementY { get; set; }
+    public float MovementScale { get; set; } = 1;
 }
 
 public sealed class DockGroupLayout

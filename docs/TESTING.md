@@ -808,6 +808,7 @@ system clipboard with its captured image.
 `FruitsAtelier.App.exe --testplay-render-check` independently exercises background
 decoding, custom Skip and pause textures, mouse/Space skip, keyboard Retry/Back,
 and both languages at wide, narrow and portrait sizes with 96/144/192 DPI.
+It also checks temporary AR changes and reuse on subsequent testplays.
 It uses silent callbacks and writes `artifacts/tests/testplay-native/report.json`.
 It also checks testplay shortcut dispatch before IME translation, process-key
 press/release recovery, and 300 ms held retry while running and paused followed by

@@ -465,6 +465,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay bookmark shortcuts edit at the live position", TestplayTests.BookmarksDuringTestplay),
     ("Testplay movement, combo, hyperdash and facing", TestplayTests.MovementAndJudgement),
     ("Testplay autoplay notices, manual input and focus persistence", TestplayTests.AutoplaySwitching),
+    ("Testplay temporary AR shortcuts preserve content and session boundaries", TestplayTests.TemporaryApproachRate),
     ("Testplay autoplay speed switching and localized display", TestplayTests.AutoplaySpeed),
     ("Testplay quick retry and stepped autoplay speed preserve session boundaries", TestplayTests.RetryAndSteppedSpeed),
     ("Testplay retry retains gameplay during reentrant audio and driver rendering", TestplayTests.RetryRendering),

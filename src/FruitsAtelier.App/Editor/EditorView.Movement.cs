@@ -23,6 +23,20 @@ public sealed partial class EditorView
     { get => DockWorkspaceState.MovementPosition; set => DockWorkspaceState.MovementPosition = value; }
     private bool movementPanelPointer, movementPanelMoved;
     private float movementPanelPointerX, movementPanelPointerY, movementPanelStartX, movementPanelStartY;
+    private int movementPanelCorner;
+    private float movementPanelStartWidth;
+    private float MovementPanelScale => MovementOverlayBounds is { } panel ? panel.Width / MovementPanelWidth : 1;
+    public int MovementPanelResizeCursor => movementPanelPointer ? movementPanelCorner
+        : DockContentInputAvailable && !DistanceEditing && menu < 0 && contextItems.Count == 0
+            ? MovementCorner(mouseX, mouseY) : 0;
+
+    private int MovementCorner(float x, float y)
+    {
+        if (MovementOverlayBounds is not { } panel || !panel.Contains(x, y)) return 0;
+        bool left = x < panel.X + 7, right = x >= panel.Right - 7;
+        bool top = y < panel.Y + 7, bottom = y >= panel.Bottom - 7;
+        return top ? left ? 1 : right ? 2 : 0 : bottom ? left ? 3 : right ? 4 : 0 : 0;
+    }
 
     private bool MovementPanelPointerDown(float x, float y, int button)
     {
@@ -31,6 +45,7 @@ public sealed partial class EditorView
         {
             contextItems.Clear(); menu = -1;
             contextItems.Add(new(L.Get("movement.resetPosition"), () => movementPanelPosition = null));
+            contextItems.Add(new(L.Get("movement.resetScale"), () => DockWorkspaceState.MovementScale = 1));
             contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)),
                 Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 240, ContextMenuHeight);
             return true;
@@ -39,6 +54,8 @@ public sealed partial class EditorView
         movementPanelPointer = true; movementPanelMoved = false;
         movementPanelPointerX = x; movementPanelPointerY = y;
         movementPanelStartX = panel.X; movementPanelStartY = panel.Y;
+        movementPanelCorner = MovementCorner(x, y);
+        movementPanelStartWidth = panel.Width;
         return true;
     }
 
@@ -47,6 +64,23 @@ public sealed partial class EditorView
         if (!movementPanelMoved && Math.Abs(x - movementPanelPointerX) < 3 && Math.Abs(y - movementPanelPointerY) < 3) return;
         movementPanelMoved = true;
         if (MovementOverlayBounds is not { } panel) return;
+        if (movementPanelCorner != 0)
+        {
+            bool left = movementPanelCorner is 1 or 3, top = movementPanelCorner is 1 or 2;
+            float ratio = MovementPanelHeight / MovementPanelWidth;
+            float anchorX = movementPanelStartX + (left ? movementPanelStartWidth : 0);
+            float anchorY = movementPanelStartY + (top ? movementPanelStartWidth * ratio : 0);
+            float dx = (x - movementPanelPointerX) * (left ? -1 : 1);
+            float dy = (y - movementPanelPointerY) * (top ? -1 : 1);
+            float maximum = Math.Min(left ? anchorX - plot.X : plot.Right - anchorX,
+                (top ? anchorY - plot.Y : plot.Bottom - anchorY) / ratio);
+            maximum = Math.Min(maximum, Math.Min(plot.Width - 12, (plot.Height - 20) / ratio));
+            float size = Math.Clamp(movementPanelStartWidth + (dx + dy * ratio) / (1 + ratio * ratio),
+                Math.Min(180, maximum), Math.Min(900, maximum));
+            DockWorkspaceState.MovementScale = size / MovementPanelWidth;
+            movementPanelPosition = (left ? anchorX - size : anchorX, top ? anchorY - size * ratio : anchorY);
+            return;
+        }
         movementPanelPosition = (Math.Clamp(movementPanelStartX + x - movementPanelPointerX, plot.X, plot.Right - panel.Width),
             Math.Clamp(movementPanelStartY + y - movementPanelPointerY, plot.Y, plot.Bottom - panel.Height));
     }
@@ -126,6 +160,23 @@ public sealed partial class EditorView
         }
     }
 
+    private Rect? MovementPanelBounds()
+    {
+        float panelWidth = Math.Min(MovementPanelWidth * DockWorkspaceState.MovementScale,
+            Math.Min(plot.Width - 12, (plot.Height - 20) * MovementPanelWidth / MovementPanelHeight));
+        if (panelWidth < 180 || plot.Height < MovementPanelHeight + 20) return null;
+        float scale = panelWidth / MovementPanelWidth, panelHeight = MovementPanelHeight * scale;
+        float minX = plot.X + 6;
+        // A panel filling the available width can reverse these bounds by one float ULP.
+        float maxX = Math.Max(minX, plot.Right - panelWidth - 6);
+        var r = new Rect(Math.Clamp(Playfield.X + Playfield.Width / 2 - panelWidth / 2, minX, maxX),
+            plot.Bottom - panelHeight - 8, panelWidth, panelHeight);
+        if (movementPanelPosition is { } position)
+            r = r with { X = Math.Clamp(position.X, plot.X, plot.Right - panelWidth),
+                Y = Math.Clamp(position.Y, plot.Y, Math.Max(plot.Y, plot.Bottom - panelHeight)) };
+        return r;
+    }
+
     private void DrawMovementOverlay(ICanvas c)
     {
         MovementOverlayBounds = null;
@@ -164,24 +215,16 @@ public sealed partial class EditorView
             DistanceReadout = (previousVisible ? DistanceReadout.Previous : null, nextVisible ? DistanceReadout.Next : null);
         }
 
-        float panelWidth = Math.Min(MovementPanelWidth, plot.Width - 12);
-        if (panelWidth < 180 || plot.Height < MovementPanelHeight + 20) return;
-        float minX = plot.X + 6;
-        // A panel filling the available width can reverse these bounds by one float ULP.
-        float maxX = Math.Max(minX, plot.Right - panelWidth - 6);
-        var r = new Rect(Math.Clamp(Playfield.X + Playfield.Width / 2 - panelWidth / 2, minX, maxX),
-            plot.Bottom - MovementPanelHeight - 8, panelWidth, MovementPanelHeight);
-        if (movementPanelPosition is { } position)
-            r = r with { X = Math.Clamp(position.X, plot.X, plot.Right - panelWidth),
-                Y = Math.Clamp(position.Y, plot.Y, plot.Bottom - MovementPanelHeight) };
+        if (MovementPanelBounds() is not { } r) return;
+        float scale = r.Width / MovementPanelWidth;
         MovementOverlayBounds = r;
-        c.Fill(r, 0x171C24, 6, .82f);
-        c.Stroke(r, 0x424D5C, 1, 6);
-        c.Text(L.Get("movement.previous", Label(MovementReadout.Previous)), r.X + 10, r.Y + 7, MovementPanelFontSize, Foreground, r.Width / 2 - 14);
+        c.Fill(r, 0x171C24, 6 * scale, .82f);
+        c.Stroke(r, 0x424D5C, scale, 6 * scale);
+        c.Text(L.Get("movement.previous", Label(MovementReadout.Previous)), r.X + 10 * scale, r.Y + 7 * scale, MovementPanelFontSize * scale, Foreground, r.Width / 2 - 14 * scale);
         string next = L.Get("movement.next", Label(MovementReadout.Next));
-        float nextWidth = Math.Min(c.MeasureText(next, MovementPanelFontSize), r.Width / 2 - 14);
-        c.Text(next, r.Right - 10 - nextWidth, r.Y + 7, MovementPanelFontSize, Foreground, nextWidth);
-        float left = r.X + 10, length = r.Width - 20, y = r.Y + 27;
+        float nextWidth = Math.Min(c.MeasureText(next, MovementPanelFontSize * scale), r.Width / 2 - 14 * scale);
+        c.Text(next, r.Right - 10 * scale - nextWidth, r.Y + 7 * scale, MovementPanelFontSize * scale, Foreground, nextWidth);
+        float left = r.X + 10 * scale, length = r.Width - 20 * scale, y = r.Y + 27 * scale;
         if (MovementReadout.Previous is { } value)
         {
             // A centre-start Stand can remain possible even when prefix context marks a hyperdash.
@@ -190,16 +233,16 @@ public sealed partial class EditorView
             float stand = (float)(value.StandLimit / extent) * length;
             float walk = (float)(Math.Max(value.StandLimit, value.WalkLimit) / extent) * length;
             float dash = (float)(dashLimit / extent) * length;
-            c.Fill(new(left, y, stand, 5), MovementColour(CatchMovementMode.Stand));
-            c.Fill(new(left + stand, y, walk - stand, 5), MovementColour(CatchMovementMode.Walk));
-            c.Fill(new(left + walk, y, dash - walk, 5), MovementColour(CatchMovementMode.Dash));
-            c.Fill(new(left + dash, y, length - dash, 5), MovementColour(CatchMovementMode.HyperDash));
+            c.Fill(new(left, y, stand, 5 * scale), MovementColour(CatchMovementMode.Stand));
+            c.Fill(new(left + stand, y, walk - stand, 5 * scale), MovementColour(CatchMovementMode.Walk));
+            c.Fill(new(left + walk, y, dash - walk, 5 * scale), MovementColour(CatchMovementMode.Dash));
+            c.Fill(new(left + dash, y, length - dash, 5 * scale), MovementColour(CatchMovementMode.HyperDash));
             float x = left + (float)Math.Clamp(value.Distance / extent, 0, 1) * length;
-            c.Line(x - 4, y - 6, x, y - 2, Foreground, 2);
-            c.Line(x + 4, y - 6, x, y - 2, Foreground, 2);
-            c.Line(x, y - 1, x, y + 7, Foreground, 1.5f);
+            c.Line(x - 4 * scale, y - 6 * scale, x, y - 2 * scale, Foreground, 2 * scale);
+            c.Line(x + 4 * scale, y - 6 * scale, x, y - 2 * scale, Foreground, 2 * scale);
+            c.Line(x, y - scale, x, y + 7 * scale, Foreground, 1.5f * scale);
         }
-        else c.Fill(new(left, y, length, 5), Grid, 2);
+        else c.Fill(new(left, y, length, 5 * scale), Grid, 2 * scale);
 
         DrawDistanceFields(c, r);
 

@@ -671,7 +671,7 @@ public sealed partial class EditorView
         {
             MoveMovementPanel(x, y); movementPanelPointer = false;
             // Wait for release to distinguish a numeric-field click from a panel drag.
-            if (!movementPanelMoved) DistancePointerDown(movementPanelPointerX, movementPanelPointerY, button, shift);
+            if (!movementPanelMoved && movementPanelCorner == 0) DistancePointerDown(movementPanelPointerX, movementPanelPointerY, button, shift);
             textSelecting = false;
             return;
         }
@@ -1276,6 +1276,12 @@ public sealed partial class EditorView
         if (IsTestplaying)
         {
             if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
+            if (ctrl && !altHeld && virtualKey is 107 or 109 or 187 or 189)
+            {
+                testplayApproachRates[difficulties[activeDifficulty].Id] = Math.Clamp(Math.Round(TestplayApproachRate
+                    + (virtualKey is 107 or 187 ? .1 : -.1), 10), 0, 10);
+                return;
+            }
             if (virtualKey == 27) { testplayEscapeConsumed = true; ToggleTestplayPause(); }
             else if (virtualKey == 112) StopTestplay();
             else if (virtualKey == 113) { AdvanceTestplay(); StopTestplay(atCurrentPosition: true); }

@@ -829,6 +829,22 @@ internal static class RenderCheck
                 view.PointerUp(moved.X + 20, moved.Y + 25, 0); Paint();
                 if (view.MovementOverlayBounds != panel || !beforePanelDrag.ContentEquals(view.Document))
                     throw new InvalidOperationException("Native indicator reset failed.");
+                var beforeResizeLayout = view.CaptureDockLayouts();
+                view.PointerDown(panel.X + 2, panel.Y + 2, 0, false, false);
+                view.PointerMove(panel.X + 62, panel.Y + 18.8f, false, false); Paint();
+                view.PointerUp(panel.X + 62, panel.Y + 18.8f, 0); Paint();
+                var resized = view.MovementOverlayBounds!.Value;
+                if (Math.Abs(resized.Width - 240) > .01 || Math.Abs(resized.Width / resized.Height - 300f / 84) > .001
+                    || Math.Abs(resized.Right - panel.Right) > .01 || Math.Abs(resized.Bottom - panel.Bottom) > .01)
+                    throw new InvalidOperationException("Native proportional movement resize failed.");
+                Directory.CreateDirectory(Path.GetFullPath("artifacts/tests/testplay-native"));
+                if (current == "en")
+                    TestplayRenderCheck.Capture(canvas, view, 1440, 900, Path.GetFullPath("artifacts/tests/testplay-native/resized-movement.bmp"));
+                view.PointerDown(resized.X + 2, resized.Y + 2, 0, false, false);
+                view.PointerMove(resized.X - 58, resized.Y - 14.8f, false, false); Paint();
+                view.PointerUp(resized.X - 58, resized.Y - 14.8f, 0); Paint();
+                view.LibrarySettings.DockLayouts = beforeResizeLayout; view.RestoreDockLayouts(); Paint();
+                input = view.PreviousDistanceFieldBounds!.Value;
                 view.PointerDown(input.X + 8, input.Y + 8, 0, false, false);
                 view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
                 view.KeyDown('A', true, false);

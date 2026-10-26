@@ -558,7 +558,7 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0020: // WM_SETCURSOR
                 if ((lParam.ToInt64() & 0xffff) == 1)
-                { Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelinePanelResizeCursor ? 32645 : (view.DiscussionHandCursor || view.MapsetVerifierHandCursor) ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512))); return 1; }
+                { Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.MovementPanelResizeCursor is 1 or 4 ? 32642 : view.MovementPanelResizeCursor is 2 or 3 ? 32643 : view.TimelinePanelResizeCursor ? 32645 : (view.DiscussionHandCursor || view.MapsetVerifierHandCursor) ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512))); return 1; }
                 break;
             case 0x02A3: // WM_MOUSELEAVE
                 view.PointerLeave(); Invalidate(); return 0;
@@ -567,7 +567,7 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.TrackMouseEvent(ref tracking);
                 view.SetModifiers(Native.Alt, Native.Shift);
                 view.PointerMove(x, y, Native.Shift, Native.Control);
-                Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelinePanelResizeCursor ? 32645 : (view.DiscussionHandCursor || view.MapsetVerifierHandCursor) ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512)));
+                Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.MovementPanelResizeCursor is 1 or 4 ? 32642 : view.MovementPanelResizeCursor is 2 or 3 ? 32643 : view.TimelinePanelResizeCursor ? 32645 : (view.DiscussionHandCursor || view.MapsetVerifierHandCursor) ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512)));
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0202:
             case 0x0205:
