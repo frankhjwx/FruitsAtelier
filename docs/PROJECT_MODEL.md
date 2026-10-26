@@ -211,6 +211,11 @@ compensation is applied once. Base changes validate the candidate conversion
 and NM/HR read-back against the current playable objects before committing.
 See [Timing editing](EDITOR_UI.md#timing-editing).
 
+Moving or resnapping objects extends `DurationMs` to include Legacy slider tails,
+using the resulting timing and each slider's SV and repeat count. Timing edits
+that also move inherited points or recalculate lengths use the final state for
+this extent. Existing longer document durations are retained.
+
 ## FSliders and Legacy Sliders
 
 New import provenance uses schema 37 (single difficulty) / 38 (multi-difficulty).

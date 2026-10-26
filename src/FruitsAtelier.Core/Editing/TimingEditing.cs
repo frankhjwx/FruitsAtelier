@@ -80,6 +80,7 @@ public static class TimingEditing
         }
         if (options.Snap) Resnap(map, options.Divisor);
         if (options.SliderLengths) ResnapLengths(map, options.Divisor);
+        if (options.Scale || options.Snap) ExtendDuration(map);
         Validate(map);
     }
 
@@ -111,7 +112,14 @@ public static class TimingEditing
             shower.EndTimeMs = next.Time + (shower.EndTimeMs - shower.TimeMs) * next.Scale;
             shower.TimeMs = next.Time;
         }
+        ExtendDuration(map);
+    }
+
+    private static void ExtendDuration(MapDocument map)
+    {
+        var timing = map.ImportedSliders.Count > 0 ? new TimingMap.Lookup(map) : null;
         map.DurationMs = Math.Max(map.DurationMs, map.Fruits.Select(f => f.TimeMs)
+            .Concat(map.ImportedSliders.Select(s => s.TimeMs + ImportedSliderConverter.DurationMs(map, s, timing)))
             .Concat(map.Tracks.Where(t => t.Nodes.Count > 0).Select(CurveMath.EndTimeMs))
             .Concat(map.BananaShowers.Select(s => s.EndTimeMs)).DefaultIfEmpty(0).Max());
     }
@@ -141,18 +149,19 @@ public static class TimingEditing
 
     public static void ResnapLengths(MapDocument map, int divisor)
     {
+        var timing = new TimingMap.Lookup(map);
         foreach (var slider in map.ImportedSliders)
         {
-            var state = TimingMap.At(map, slider.TimeMs);
-            double oldEnd = ImportedSliderConverter.EndTimeMs(map, slider);
-            double duration = Math.Max(state.BeatLengthMs / divisor, TimingMap.Snap(map, oldEnd, divisor) - slider.TimeMs);
-            slider.PixelLength = duration / slider.SpanCount * 100 * map.EffectiveSliderMultiplier * ImportedSliderConverter.SliderVelocityAt(map, slider) / state.BeatLengthMs;
+            var state = timing.At(slider.TimeMs);
+            double oldEnd = slider.TimeMs + ImportedSliderConverter.DurationMs(map, slider, timing);
+            double duration = Math.Max(state.BeatLengthMs / divisor, timing.Snap(oldEnd, divisor) - slider.TimeMs);
+            slider.PixelLength = duration / slider.SpanCount * 100 * map.EffectiveSliderMultiplier * ImportedSliderConverter.SliderVelocityAt(map, slider, timing) / state.BeatLengthMs;
             UpdateSliderSource(slider, 7, slider.PixelLength);
         }
         foreach (var track in map.Tracks.Where(t => t.Nodes.Count >= 2))
         {
             double start = track.Nodes[0].TimeMs, end = CurveMath.EndTimeMs(track);
-            double duration = Math.Max(TimingMap.At(map, start).BeatLengthMs / divisor, TimingMap.Snap(map, end, divisor) - start);
+            double duration = Math.Max(timing.At(start).BeatLengthMs / divisor, timing.Snap(end, divisor) - start);
             TransformTrack(track, start, start, duration / (end - start));
         }
         Validate(map);

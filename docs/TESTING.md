@@ -895,8 +895,25 @@ After changing input or drawing, manually check affected operations, language sw
 
 ## Editing performance benchmark
 
-`App.Tests --cache-lifetime-check` verifies that closing after both canvas modes
-and clipboard use releases the document, conversion and exported read-back.
+`App.Tests --cache-lifetime-check` warms both canvases, clipboard, distance labels,
+projected breaks, movement guides, snapping and collaboration selection. It checks
+that returning to the Library and replacing a document release their event arrays,
+sampled geometry, timing lookups and movement contexts as well as the document,
+conversion and exported read-back.
+
+`Core.Tests --timing-batch-check` compares batched length recalculation with the
+unbatched calculation across timing boundaries, repeats, independent SV and v7/v14.
+It also checks imported slider extents after timing edits, history and persistence.
+`Formats.Tests --timing-retiming-check` checks those edits through export/read-back.
+`App.Tests --timing-extent-check` moves a Legacy slider with absent or shorter audio,
+then checks timestamp navigation, undo/redo and reopening in English and Chinese.
+
+`App.Tests --selected-pen-nodes-check` checks control paint order, overlapping
+handle priority, anchor priority and visible handles with offscreen anchors.
+`App.Tests --selected-pen-nodes-performance` measures selected multi-node curves,
+reporting render and last-handle pointer-down CPU time and allocations separately.
+The counting canvas excludes native GPU submission and physical display latency.
+
 `App.Tests --project-memory-performance <folder>` opens all sibling `.osu`
 difficulties, waits for ratings and measures memory before and after returning
 to the library. Its final forced collection distinguishes live data from garbage.

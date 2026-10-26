@@ -464,12 +464,12 @@ public sealed partial class EditorView
                     DrawLegacyControls(c, track);
                     continue;
                 }
-                foreach (var node in track.Nodes)
+                for (int index = 0; index < track.Nodes.Count; index++)
                 {
+                    var node = track.Nodes[index];
                     var p = Screen(Point(node));
                     if (selected && controlsActive)
                     {
-                        int index = track.Nodes.IndexOf(node);
                         if (index > 0 && CurveMath.SegmentKind(track, index - 1) == CurveKind.Bezier) DrawHandle(PenHandle(track, index, true), DragKind.HandleIn);
                         if (index < track.Nodes.Count - 1 && CurveMath.SegmentKind(track, index) == CurveKind.Bezier
                             || track.Id == draftTrack && tool == Tool.Slider) DrawHandle(PenHandle(track, index, false), DragKind.HandleOut);
@@ -482,7 +482,7 @@ public sealed partial class EditorView
                     {
                         if (offset == default) return;
                         bool active = selection == node.Id && selectedPart == part;
-                        var h = PenHandleScreen(track, track.Nodes.IndexOf(node), part == DragKind.HandleIn);
+                        var h = PenHandleScreen(track, index, part == DragKind.HandleIn);
                         c.Line(p.X, p.Y, h.X, h.Y, active ? Foreground : 0x625E7C);
                         c.Circle(h.X, h.Y, active ? 6 : 4.5f, active ? Foreground : Background);
                         c.Circle(h.X, h.Y, active ? 6 : 4.5f, active ? Foreground : Purple, false, 1.5f);

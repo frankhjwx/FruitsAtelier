@@ -366,9 +366,9 @@ public sealed partial class EditorView
                     if (!ctrl && anchorSelection.Count == 1) BeginNodeDrag(selected, node, DragKind.Anchor, x, y);
                     return;
                 }
-            foreach (var node in selected.Nodes)
+            for (int index = 0; index < selected.Nodes.Count; index++)
             {
-                int index = selected.Nodes.IndexOf(node);
+                var node = selected.Nodes[index];
                 if (index > 0 && PenHandle(selected, index, true) != default && CurveMath.SegmentKind(selected, index - 1) == CurveKind.Bezier && HitPenHandle(selected, index, true, x, y))
                 { BeginNodeDrag(selected, node, DragKind.HandleIn, x, y); return; }
                 if (PenHandle(selected, index, false) != default && (index < selected.Nodes.Count - 1 && CurveMath.SegmentKind(selected, index) == CurveKind.Bezier || selected.Id == draftTrack) && HitPenHandle(selected, index, false, x, y))

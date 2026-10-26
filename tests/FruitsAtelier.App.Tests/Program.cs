@@ -19,6 +19,9 @@ if (args.Length == 4 && args[0] == "--media-native-seek") return MediaNativePerf
 if (args.Contains("--mapset-verifier-engine-check")) { MapsetVerifierTests.Engine(); return 0; }
 if (args.Contains("--mapset-verifier-check")) { MapsetVerifierTests.Run(); return 0; }
 if (args.Contains("--timing-alignment-check")) { TimingAlignmentUiTests.Run(); return 0; }
+if (args.Contains("--timing-extent-check")) { TimingExtentUiTests.Run(); return 0; }
+if (args.Contains("--selected-pen-nodes-check")) { SelectedPenNodeTests.Run(); return 0; }
+if (args.Contains("--selected-pen-nodes-performance")) { SelectedPenNodeTests.RunPerformance(); return 0; }
 if (args.Contains("--project-deletion-check")) { ProjectDeletionTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--history-save-performance") { HistorySavePerformance.Run(args[1]); return 0; }
 if (args.Contains("--discussions-check")) { DiscussionTests.Run(); return 0; }
@@ -397,6 +400,8 @@ var tests = new (string Name, Action Run)[]
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
     ("Timing SV display, locking, editing and persistence", TimingVelocityTests.Run),
     ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),
+    ("Moved Legacy slider tails remain reachable through navigation and history", TimingExtentUiTests.Run),
+    ("Selected Pen controls preserve handle rendering and hit order", SelectedPenNodeTests.Run),
     ("Timing SV entry and DS unit switching preserve gameplay, persistence and undo", SliderMultiplierTests.Run),
     ("Timing metronome schedules beat and Ctrl snap ticks without duplicate playback", TimingEditorTests.Metronome),
     ("Timing waveform zoom, cached audio and red-line selection", TimingEditorTests.Waveform),

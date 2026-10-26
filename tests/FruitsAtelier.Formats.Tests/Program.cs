@@ -1,6 +1,7 @@
 using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
+if (args.Contains("--timing-retiming-check")) { TimingRetimingTests.Run(); return 0; }
 if (args.Contains("--export-snap-check")) { ExportSnapTests.Run(); Console.WriteLine("PASS export offset preservation and stream grid"); return 0; }
 if (args.Contains("--pattern-gallery-check")) { PatternGalleryTests.Run(); return 0; }
 if (args.Contains("--slider-import-policy-check")) { SliderImportPolicyTests.Run(); Console.WriteLine("PASS unified slider import policy"); return 0; }
@@ -80,6 +81,7 @@ if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Retimed Legacy sliders preserve project and export data", TimingRetimingTests.Run),
     ("Circle and spinner offsets are preserved and stream grids agree with internal playback", ExportSnapTests.Run),
     ("Pattern snapshots and FPT packages preserve independent authoring data", PatternGalleryTests.Run),
     ("Slider import modes and compensated baselines remain stable through conversion", SliderImportPolicyTests.Run),
