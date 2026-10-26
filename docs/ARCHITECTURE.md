@@ -67,8 +67,11 @@ Uniform and vector scale remain separate, multiplicative properties, matching os
 All image paths resolve within the mapset; source event text remains unchanged.
 
 `EditorView.Storyboard` owns the active scene, reusable frame/preload buffers and
-asynchronous preparation. Section snapshot identities and resource-directory changes
-invalidate scene preparation. The file monitor also invalidates changed mapset media.
+asynchronous preparation. Events and Variables snapshot identities and resource-directory
+changes invalidate scene preparation. General snapshots are compared only when changed:
+edits to ordinary field values reuse the scene, while `WidescreenStoryboard` lines,
+line positions used by parser diagnostics, and embedded section boundaries remain
+part of the cache key. The file monitor also invalidates changed mapset media.
 Gameplay preparation keys include committed playable identity and history revision;
 one cancellable worker computes health and hit-sample trigger matching metadata. Retired workers
 cannot publish into a new difficulty. Difficulty retirement cancels both jobs and

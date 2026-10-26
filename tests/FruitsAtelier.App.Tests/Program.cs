@@ -10,6 +10,7 @@ if (args.Length == 2 && args[0] == "--media-toggle-trigger-check") return Storyb
 if (args.Contains("--media-integration-check")) return MediaIntegrationTests.Run();
 if (args.Contains("--media-loading-regression-check")) return MediaIntegrationTests.Run(finalFour: true);
 if (args.Contains("--storyboard-presentation-check")) return StoryboardPresentationTests.Run();
+if (args.Contains("--storyboard-source-cache-check")) { StoryboardSourceCacheTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--storyboard-editor-check") return StoryboardEditorTests.Run(args[1]);
 if (args.Length == 3 && args[0] == "--storyboard-native-pixels") return StoryboardNativePixels.Run(args[1], args[2]);
 if (args.Contains("--storyboard-audio-check")) return StoryboardAudioTests.Run();
@@ -308,6 +309,7 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Storyboard sources retain scenes across unrelated General edits", StoryboardSourceCacheTests.Run),
     ("Opening a map offers undoable object and timing alignment", TimingAlignmentUiTests.Run),
     ("Pattern Gallery preserves previews, placement and editing sessions", () => { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); }),
     ("Discussions, replies, annotations and timestamp navigation", DiscussionTests.Run),

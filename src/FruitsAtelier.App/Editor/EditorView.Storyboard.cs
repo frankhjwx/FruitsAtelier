@@ -11,7 +11,7 @@ public sealed partial class EditorView
     private StoryboardScene? storyboardDisplayScene;
     private Task<StoryboardScene>? storyboardLoad;
     private CancellationTokenSource? storyboardCancellation;
-    private readonly List<(string Name, object Identity)> storyboardSource = [];
+    private readonly List<(string Name, object Identity, string[]? General)> storyboardSource = [];
     private string? storyboardDirectory;
     private readonly List<StoryboardSpriteState> storyboardFrame = [];
     private readonly List<StoryboardSpriteState> storyboardDisplayFrame = [];
@@ -118,7 +118,13 @@ public sealed partial class EditorView
         foreach (var section in Document.OriginalSections)
         {
             if (section.Name is not ("Events" or "Variables" or "General")) continue;
-            same &= index < storyboardSource.Count && storyboardSource[index].Name == section.Name && ReferenceEquals(storyboardSource[index].Identity, section.Lines.SnapshotIdentity);
+            if (index >= storyboardSource.Count || storyboardSource[index].Name != section.Name) same = false;
+            else if (!ReferenceEquals(storyboardSource[index].Identity, section.Lines.SnapshotIdentity))
+            {
+                if (section.Name == "General" && StoryboardGeneralSource(section.Lines).SequenceEqual(storyboardSource[index].General!))
+                    storyboardSource[index] = (section.Name, section.Lines.SnapshotIdentity, storyboardSource[index].General);
+                else same = false;
+            }
             index++;
         }
         if (same && index == storyboardSource.Count) { QueueStoryboardGameplay(); return; }
@@ -129,7 +135,7 @@ public sealed partial class EditorView
         foreach (var section in Document.OriginalSections)
         {
             if (section.Name is not ("Events" or "Variables" or "General")) continue;
-            storyboardSource.Add((section.Name, section.Lines.SnapshotIdentity));
+            storyboardSource.Add((section.Name, section.Lines.SnapshotIdentity, section.Name == "General" ? StoryboardGeneralSource(section.Lines) : null));
             sections.Add((section.Name, section.Lines.ToArray()));
         }
         bool samplesOnly = !LibrarySettings.EnableVideoStoryboard;
@@ -143,6 +149,20 @@ public sealed partial class EditorView
             token.ThrowIfCancellationRequested();
             return StoryboardReader.Read(source.ToString(), sharedPath is null ? null : File.ReadAllText(sharedPath), directory, token, samplesOnly: samplesOnly);
         }, token);
+    }
+
+    private static string[] StoryboardGeneralSource(IEnumerable<string> lines)
+    {
+        // StoryboardReader consumes only WidescreenStoryboard from ordinary General lines.
+        // Keep line positions for parser diagnostics. Embedded section boundaries can change
+        // the reader's grammar, so retain all content from such a boundary onward.
+        bool retain = false;
+        return lines.Select(line =>
+        {
+            string trimmed = line.Trim();
+            retain |= trimmed.StartsWith('[') || line.Contains('\n');
+            return retain || trimmed.StartsWith("WidescreenStoryboard:", StringComparison.Ordinal) ? line : "";
+        }).ToArray();
     }
 
     private void PumpStoryboard()

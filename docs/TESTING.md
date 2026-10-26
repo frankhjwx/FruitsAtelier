@@ -2,6 +2,11 @@
 
 ## Video and storyboard playback
 
+`App.Tests --storyboard-source-cache-check` checks scene reuse for ordinary General
+value edits, including pending preparation. Widescreen, Events, Variables, source
+directories, retirement, line positions and embedded section boundaries still
+invalidate the scene; cached output is compared with a full source parse.
+
 `App.Tests --storyboard-presentation-check` verifies that Mapping retains video
 while Force background dim suppresses Preview, including pending video frames.
 Frames with no video viewport, before the video offset, with visuals disabled or
