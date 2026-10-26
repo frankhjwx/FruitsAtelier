@@ -61,10 +61,19 @@ their source image version changes.
 `Core/Storyboards` derives immutable sprites, commands, animation frames, samples and
 video references from retained `.osu` sections and the shared mapset `.osb`.
 Commands use binary searches per property; loops calculate their iteration from
-the requested timestamp. A sorted sprite interval index excludes inactive sprites.
+the requested timestamp. A balanced index over start-sorted sprites stores each
+subtree's maximum end time, so persistent backgrounds do not retain expired sprites
+in evaluation or preload queries. Traversal preserves start order; drawing sorts
+by layer and source order without boxing enum values.
 Evaluation has no forward playback cursor and supports alternating distant seeks.
 Uniform and vector scale remain separate, multiplicative properties, matching osu!.
 All image paths resolve within the mapset; source event text remains unchanged.
+Variable keys and values retain their whitespace, including command indentation.
+Independent single-character macros use a lookup pass; overlapping, recursive or
+other definitions retain insertion-ordered substitution. Parsing splits only on LF
+and checks cancellation during substitution and sprite compilation. Compilation
+distributes commands into property tracks without repeated per-property filtering
+and computes initial values without materializing sorted intermediate sequences.
 
 `EditorView.Storyboard` owns the active scene, reusable frame/preload buffers and
 asynchronous preparation. Events and Variables snapshot identities and resource-directory

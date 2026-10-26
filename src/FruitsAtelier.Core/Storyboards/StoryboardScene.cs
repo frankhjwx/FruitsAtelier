@@ -16,7 +16,7 @@ public readonly record struct StoryboardSpriteState(string Path, double X, doubl
 public sealed class StoryboardScene
 {
     private readonly StoryboardSprite[] sprites;
-    private readonly double[] prefixEnds;
+    private readonly double[] subtreeEnds;
     public IReadOnlyList<StoryboardVideoInfo> Videos { get; }
     public IReadOnlyList<StoryboardSample> Samples { get; }
     public IReadOnlyList<string> Diagnostics { get; }
@@ -33,8 +33,8 @@ public sealed class StoryboardScene
         List<StoryboardSample> samples, List<string> diagnostics, bool widescreen, string? background)
     {
         sprites = source.Where(s => s.HasCommands).OrderBy(s => s.Start).ToArray();
-        prefixEnds = new double[sprites.Length];
-        for (int i = 0; i < sprites.Length; i++) prefixEnds[i] = Math.Max(i == 0 ? double.MinValue : prefixEnds[i - 1], sprites[i].End);
+        subtreeEnds = new double[sprites.Length];
+        BuildIntervals(0, sprites.Length);
         Videos = videos.ToArray(); Samples = samples.OrderBy(s => s.TimeMs).ToArray(); Diagnostics = diagnostics.ToArray();
         Widescreen = widescreen;
         BackgroundPath = background;
@@ -48,38 +48,57 @@ public sealed class StoryboardScene
 
     public StoryboardScene WithoutVisuals() => new([], [], Samples.ToList(), [], false, BackgroundPath);
 
+    private double BuildIntervals(int low, int high)
+    {
+        if (low == high) return double.NegativeInfinity;
+        int middle = low + (high - low) / 2;
+        // A long-lived background must not keep every expired sprite in the query range.
+        return subtreeEnds[middle] = Math.Max(sprites[middle].End,
+            Math.Max(BuildIntervals(low, middle), BuildIntervals(middle + 1, high)));
+    }
+
     public void Evaluate(double timeMs, List<StoryboardSpriteState> destination, bool passing = true,
         IReadOnlyList<StoryboardTrigger>? triggers = null)
     {
         destination.Clear();
-        int first = LowerBound(prefixEnds, timeMs);
-        for (int i = first; i < sprites.Length && sprites[i].Start <= timeMs; i++)
+        Visit(0, sprites.Length);
+        destination.Sort(static (a, b) => { int layer = ((int)a.Layer).CompareTo((int)b.Layer); return layer != 0 ? layer : a.Order.CompareTo(b.Order); });
+
+        void Visit(int low, int high)
         {
-            var sprite = sprites[i];
-            if (sprite.End < timeMs || sprite.Layer == StoryboardLayer.Fail && passing || sprite.Layer == StoryboardLayer.Pass && !passing) continue;
-            var state = sprite.Evaluate(timeMs, triggers);
-            if (state.Opacity > 0 && state.ScaleX != 0 && state.ScaleY != 0) destination.Add(state);
+            if (low == high || !(sprites[low].Start <= timeMs)) return;
+            int middle = low + (high - low) / 2;
+            if (subtreeEnds[middle] < timeMs) return;
+            Visit(low, middle);
+            var sprite = sprites[middle];
+            if (!(sprite.Start <= timeMs)) return;
+            if (!(sprite.End < timeMs || sprite.Layer == StoryboardLayer.Fail && passing || sprite.Layer == StoryboardLayer.Pass && !passing))
+            {
+                var state = sprite.Evaluate(timeMs, triggers);
+                if (state.Opacity > 0 && state.ScaleX != 0 && state.ScaleY != 0) destination.Add(state);
+            }
+            Visit(middle + 1, high);
         }
-        destination.Sort(static (a, b) => { int layer = a.Layer.CompareTo(b.Layer); return layer != 0 ? layer : a.Order.CompareTo(b.Order); });
     }
 
     public void Preload(double timeMs, double lookAheadMs, List<string> destination, HashSet<string>? seen = null)
     {
         destination.Clear();
         seen ??= new(StringComparer.OrdinalIgnoreCase); seen.Clear();
-        int first = LowerBound(prefixEnds, timeMs);
-        for (int i = first; i < sprites.Length && sprites[i].Start <= timeMs + lookAheadMs; i++)
-        {
-            if (sprites[i].End < timeMs) continue;
-            foreach (string path in sprites[i].Frames) if (seen.Add(path)) destination.Add(path);
-        }
-    }
+        Visit(0, sprites.Length);
 
-    private static int LowerBound(double[] values, double time)
-    {
-        int low = 0, high = values.Length;
-        while (low < high) { int mid = (low + high) / 2; if (values[mid] < time) low = mid + 1; else high = mid; }
-        return low;
+        void Visit(int low, int high)
+        {
+            if (low == high || !(sprites[low].Start <= timeMs + lookAheadMs)) return;
+            int middle = low + (high - low) / 2;
+            if (subtreeEnds[middle] < timeMs) return;
+            Visit(low, middle);
+            var sprite = sprites[middle];
+            if (!(sprite.Start <= timeMs + lookAheadMs)) return;
+            if (!(sprite.End < timeMs))
+                foreach (string path in sprite.Frames) if (seen.Add(path)) destination.Add(path);
+            Visit(middle + 1, high);
+        }
     }
 }
 
@@ -101,10 +120,33 @@ internal sealed class StoryboardCommandGroup
     public double First, Last, Period;
     public void Compile()
     {
-        First = Commands.Count == 0 ? 0 : Commands.Min(c => c.Start);
-        Last = Commands.Count == 0 ? 0 : Commands.Max(c => c.End);
+        Span<int> counts = stackalloc int[14]; counts.Clear();
+        First = Last = 0;
+        bool sorted = true;
+        for (int i = 0; i < Commands.Count; i++)
+        {
+            var command = Commands[i];
+            if (i == 0) { First = command.Start; Last = command.End; }
+            else
+            {
+                First = Math.Min(First, command.Start);
+                if (command.End > Last || double.IsNaN(Last)) Last = command.End;
+                var previous = Commands[i - 1];
+                int comparison = previous.Start.CompareTo(command.Start);
+                if (comparison > 0 || comparison == 0 && previous.Order > command.Order) sorted = false;
+            }
+            if ((uint)command.Property < 14) counts[command.Property]++;
+        }
         Period = Math.Max(0, Last - First);
-        Tracks = Enumerable.Range(0, 14).Select(p => Commands.Where(c => c.Property == p).OrderBy(c => c.Start).ThenBy(c => c.Order).ToArray()).ToArray();
+        Tracks = new StoryboardCommand[14][];
+        for (int p = 0; p < Tracks.Length; p++) Tracks[p] = counts[p] == 0 ? [] : new StoryboardCommand[counts[p]];
+        IReadOnlyList<StoryboardCommand> ordered = sorted ? Commands : Commands.OrderBy(c => c.Start).ThenBy(c => c.Order).ToArray();
+        counts.Clear();
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            var command = ordered[i];
+            if ((uint)command.Property < 14) Tracks[command.Property][counts[command.Property]++] = command;
+        }
     }
 
     public bool TryValue(int property, double time, out double value, out double effectiveStart, out int order)
@@ -151,31 +193,67 @@ internal sealed class StoryboardSprite
     public void Compile()
     {
         foreach (var group in Groups) group.Compile();
-        foreach (var group in Groups.Where(g => g.Trigger is not null))
+        foreach (var group in Groups)
         {
-            group.CancellationPeers = Groups.Where(g => g.Trigger is not null && (ReferenceEquals(g, group) || group.TriggerGroup != 0 && g.TriggerGroup == group.TriggerGroup)).ToArray();
-            group.CancellationWindowEnd = group.CancellationPeers.Max(g => g.TriggerEnd);
+            if (group.Trigger is null) continue;
+            int count = 0;
+            foreach (var candidate in Groups)
+                if (candidate.Trigger is not null && (ReferenceEquals(candidate, group) || group.TriggerGroup != 0 && candidate.TriggerGroup == group.TriggerGroup)) count++;
+            group.CancellationPeers = new StoryboardCommandGroup[count];
+            count = 0; group.CancellationWindowEnd = double.MinValue;
+            foreach (var candidate in Groups)
+                if (candidate.Trigger is not null && (ReferenceEquals(candidate, group) || group.TriggerGroup != 0 && candidate.TriggerGroup == group.TriggerGroup))
+                {
+                    group.CancellationPeers[count++] = candidate;
+                    group.CancellationWindowEnd = Math.Max(group.CancellationWindowEnd, candidate.TriggerEnd);
+                }
         }
         initial[0] = X; initial[1] = Y; initial[2] = initial[3] = initial[4] = initial[9] = 1;
         initial[6] = initial[7] = initial[8] = 255;
         for (int p = 0; p < 13; p++)
         {
-            var first = Groups.Where(g => g.Trigger is null).SelectMany(g => g.Tracks[p].Select(c => (Command: c, Start: c.Start + g.Offset)))
-                .OrderBy(c => c.Start).ThenBy(c => c.Command.Order).FirstOrDefault();
-            if (first.Command != default && (p < 10 || first.Command.Start == first.Command.End)) initial[p] = first.Command.From;
+            StoryboardCommand first = default;
+            double firstStart = 0; bool found = false;
+            foreach (var group in Groups)
+            {
+                if (group.Trigger is not null) continue;
+                foreach (var command in group.Tracks[p])
+                {
+                    double start = command.Start + group.Offset;
+                    int comparison = start.CompareTo(firstStart);
+                    if (!found || comparison < 0 || comparison == 0 && command.Order < first.Order)
+                    { first = command; firstStart = start; found = true; }
+                }
+            }
+            if (first != default && (p < 10 || first.Start == first.End)) initial[p] = first.From;
         }
-        var ordinary = Groups.Where(g => g.Trigger is null && g.Commands.Count > 0).ToArray();
-        ordinaryCommands = ordinary.Length > 0;
-        Start = ordinary.Length == 0 ? double.MaxValue : ordinary.Min(g => g.Offset + g.First);
-        End = ordinary.Length == 0 ? double.MinValue : ordinary.Max(g => g.Offset + g.Last + g.Period * (g.Count - 1));
-        var alphas = ordinary.SelectMany(g => g.Tracks[9].Select(c => (Command: c, Start: c.Start + g.Offset))).OrderBy(c => c.Start).ToArray();
-        if (alphas.Length > 0 && alphas[0].Command.From == 0)
+        ordinaryCommands = false; Start = double.MaxValue; End = double.MinValue;
+        bool alphaFound = false, visibleAlphaFound = false;
+        double firstAlphaStart = 0, firstAlphaFrom = 0, firstVisibleAlphaStart = 0;
+        foreach (var group in Groups)
         {
-            foreach (var alpha in alphas)
-                if (alpha.Command.From > 0 || alpha.Command.To > 0) { Start = alpha.Start; break; }
+            if (group.Trigger is not null || group.Commands.Count == 0) continue;
+            double end = group.Offset + group.Last + group.Period * (group.Count - 1);
+            if (!ordinaryCommands) { Start = group.Offset + group.First; End = end; }
+            else
+            {
+                Start = Math.Min(Start, group.Offset + group.First);
+                if (end > End || double.IsNaN(End)) End = end;
+            }
+            ordinaryCommands = true;
+            foreach (var command in group.Tracks[9])
+            {
+                double start = command.Start + group.Offset;
+                if (!alphaFound || start.CompareTo(firstAlphaStart) < 0)
+                { firstAlphaStart = start; firstAlphaFrom = command.From; alphaFound = true; }
+                if ((command.From > 0 || command.To > 0) && (!visibleAlphaFound || start.CompareTo(firstVisibleAlphaStart) < 0))
+                { firstVisibleAlphaStart = start; visibleAlphaFound = true; }
+            }
         }
-        foreach (var trigger in Groups.Where(g => g.Trigger is not null))
+        if (alphaFound && firstAlphaFrom == 0 && visibleAlphaFound) Start = firstVisibleAlphaStart;
+        foreach (var trigger in Groups)
         {
+            if (trigger.Trigger is null) continue;
             Start = Math.Min(Start, trigger.TriggerStart + trigger.First);
             End = Math.Max(End, trigger.TriggerEnd + trigger.Last);
         }
@@ -258,23 +336,26 @@ public static class StoryboardReader
         List<StoryboardSprite> sprites = []; List<StoryboardVideoInfo> videos = []; List<StoryboardSample> samples = []; List<string> diagnostics = [];
         bool wide = false; string? background = null; int order = 0;
         var resources = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var variables = new Dictionary<string, string>();
+        var variables = new StoryboardVariables();
         Parse(beatmapText); if (sharedText is not null) Parse(sharedText);
-        foreach (var sprite in sprites) sprite.Compile();
+        foreach (var sprite in sprites) { cancellationToken.ThrowIfCancellationRequested(); sprite.Compile(); }
         return new(sprites, videos, samples, diagnostics, wide, background);
 
         void Parse(string text)
         {
             string section = "Events"; StoryboardSprite? sprite = null;
-            StoryboardCommandGroup? group = null; int lineNumber = 0;
-            foreach (string raw in text.Split('\n'))
+            StoryboardCommandGroup? group = null; int lineNumber = 0, offset = 0;
+            while (offset <= text.Length)
             {
                 cancellationToken.ThrowIfCancellationRequested(); lineNumber++;
-                string line = raw.TrimEnd('\r'); string trimmed = line.Trim();
+                int lineEnd = text.IndexOf('\n', offset);
+                if (lineEnd < 0) lineEnd = text.Length;
+                string line = text.AsSpan(offset, lineEnd - offset).TrimEnd('\r').ToString(); string trimmed = line.Trim();
+                offset = lineEnd + 1;
                 if (trimmed.Length == 0 || trimmed.StartsWith("//", StringComparison.Ordinal)) continue;
                 if (trimmed[0] == '[') { section = trimmed.Trim('[', ']'); continue; }
                 if (section == "General") { if (trimmed.StartsWith("WidescreenStoryboard:", StringComparison.Ordinal)) wide = trimmed.Split(':')[1].Trim() == "1"; continue; }
-                if (section == "Variables") { int eq = line.IndexOf('='); if (eq > 0) variables[line[..eq].Trim()] = line[(eq + 1)..].Trim(); continue; }
+                if (section == "Variables") { int eq = line.IndexOf('='); if (eq > 0) variables.Set(line[..eq], line[(eq + 1)..]); continue; }
                 if (section != "Events") continue;
                 if (samplesOnly)
                 {
@@ -284,7 +365,7 @@ public static class StoryboardReader
                     string type = (comma < 0 ? line : line[..comma]).Trim();
                     if (type is not ("5" or "Sample") && !type.Contains('$')) continue;
                 }
-                foreach (var variable in variables) line = line.Replace(variable.Key, variable.Value, StringComparison.Ordinal);
+                line = variables.Expand(line, cancellationToken);
                 if (samplesOnly)
                 {
                     int comma = line.IndexOf(',');

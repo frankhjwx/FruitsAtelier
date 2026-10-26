@@ -1,6 +1,7 @@
 using FruitsAtelier.Core;
 if (args.Contains("--timing-batch-check")) { TimingBatchEditingTests.Run(); return 0; }
 if (args.Contains("--storyboard-check")) return StoryboardTests.Run();
+if (args.Contains("--storyboard-compile-performance")) { StoryboardCompileTests.RunPerformance(); return 0; }
 if (args.Length == 3 && args[0] == "--storyboard-random-access") return StoryboardTests.Corpus(args[1], args[2]);
 if (args.Contains("--break-overlap-check")) { TimelineMetadataTests.Run(); Console.WriteLine("PASS Break split, edited boundaries, merge, history and persistence"); return 0; }
 if (args.Contains("--timing-alignment-check")) { TimingAlignmentTests.Run(); Console.WriteLine("PASS timing alignment detection, parents and undo"); return 0; }

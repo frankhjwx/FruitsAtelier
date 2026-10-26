@@ -18,6 +18,14 @@ Use a video longer than two seconds; the check seeks to one and two seconds.
 
 `Core.Tests --storyboard-check` checks legacy commands, easing endpoints, variable
 substitution, looping and trigger-relative animation at arbitrary timestamps.
+It includes whitespace-bearing macro names and command values, ordered replacement
+oracles, cancellation, differential command compilation, and interval/preload
+queries checked against a linear scan. Warm evaluation must avoid sorting allocations.
+`Core.Tests --storyboard-compile-performance` compares compilation time and allocations
+against the reference algorithm on the same generated command fixture.
+For compressed macro storyboards, compare original input with a reference scene
+from equivalently expanded input. Check full sampled states, preload order and
+scene metadata before comparing performance; incomplete scenes are not valid baselines.
 `App.Tests --storyboard-audio-check` checks storyboard samples through the actual
 muted WASAPI mixer and music clock, including pause, seek and playback speed.
 Audio output remains muted by the harness; do not change system volume.

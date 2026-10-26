@@ -8,6 +8,9 @@ internal static class StoryboardTests
     public static int Run()
     {
         int failed = 0;
+        Test("storyboard macros preserve whitespace and ordered substitution", StoryboardMacroTests.Run);
+        Test("storyboard command compilation preserves sampled playback", StoryboardCompileTests.Run);
+        Test("interval queries preserve linear-scan states and preload order without allocations", StoryboardIntervalTests.Run);
         Test("numbered hitsound triggers preserve default zero and explicit sample indexes", () =>
         {
             for (int index = 0; index <= 2; index++)
