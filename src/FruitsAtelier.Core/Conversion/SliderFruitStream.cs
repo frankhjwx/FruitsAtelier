@@ -24,7 +24,6 @@ public static class SliderFruitStream
         for (int index = 0; index <= Math.Floor(intervals + 1e-8); index++)
         {
             double time = Math.Min(end, start + index * beatLength / track.StreamSnapDivisor.Value);
-            time = ExportTiming.CorrectHead(timing, time);
             double target = CurveMath.PositionAtTime(track, time);
             if (track.Stack is { } stack)
             {

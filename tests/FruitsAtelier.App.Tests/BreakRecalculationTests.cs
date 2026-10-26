@@ -2,6 +2,111 @@ using FruitsAtelier.Core;
 
 internal static class BreakRecalculationTests
 {
+    public static void CompressedEditedBreakDeletion()
+    {
+        foreach (bool head in new[] { false, true })
+        foreach (bool adjust in new[] { false, true })
+        {
+            var map = Map();
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 200 });
+            var ui = new Ui(overview: false); ui.LoadDocument(map);
+            double time = head ? 2500 : 5700;
+            ui.View.UpdateTransport(time, 8000, true, false, false, null, null); ui.Paint();
+            ui.Key('2'); ui.ClickMap(time, 240); ui.Key('1');
+            var compressed = head ? new BreakPeriod(2700, 6000) : new BreakPeriod(1200, 4800);
+            Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual([compressed]), "Placement near a break edge must leave one compressed break.");
+            if (adjust)
+            {
+                foreach (var edge in new[] { (From: compressed.StartMs, To: compressed.StartMs + 100),
+                    (From: compressed.EndMs, To: compressed.EndMs - 100) })
+                {
+                    ui.View.UpdateTransport(edge.From, 8000, true, false, false, null, null); ui.Paint();
+                    var timeline = ui.View.ObjectTimelineBounds;
+                    float X(double at) => timeline.X + (float)((at - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+                    ui.View.PointerDown(X(edge.From), timeline.Y + 40, 0, false, false);
+                    ui.View.PointerMove(X(edge.To), timeline.Y + 40, false, false);
+                    ui.View.PointerUp(X(edge.To), timeline.Y + 40, 0); ui.Paint();
+                }
+                Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual([new BreakPeriod(compressed.StartMs + 100, compressed.EndMs - 100)]),
+                    "Both compressed boundaries must be manually dragged before deletion.");
+            }
+            var before = ui.View.Document.DeepClone();
+            var inserted = ui.View.Document.Fruits.Single(fruit => fruit.TimeMs == time);
+            ui.ClickFruit(inserted.Id); ui.Key(46);
+            var expected = head ? new BreakPeriod(1200, adjust ? 5900 : 6000) : new BreakPeriod(adjust ? 1300 : 1200, 6100);
+            Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual([expected]),
+                "Deleting the compressing note must restore its side and retain the far boundary.");
+            var after = ui.View.Document.DeepClone();
+            ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(before), "Undo must restore the compressing note and edited break.");
+            ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(after), "Redo must restore the recovered break.");
+        }
+    }
+
+    public static void SplitEditedBreakDeletion()
+    {
+        foreach (bool adjust in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 12000, IsDemo = false, ApproachRate = 7 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 200 });
+            map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 10000, X = 300 }]);
+            OsuTimeline.AddBreak(map, 1200, 9100);
+            var ui = new Ui(overview: false); ui.LoadDocument(map); ui.Resize(1440, 2000);
+            ui.Key('2');
+            foreach (double time in new[] { 3000d, 5000, 7000 }) { CenterTime(time); ui.ClickMap(time, 240); }
+            Check(OsuTimeline.Breaks(ui.View.Document).Count == 4,
+                $"Three placements must split the original break into four pieces: fruits={string.Join(',', ui.View.Document.Fruits.Select(fruit => fruit.TimeMs))}; breaks={string.Join(',', OsuTimeline.Breaks(ui.View.Document))}.");
+            ui.Key('1');
+            if (adjust)
+            {
+                foreach (var period in OsuTimeline.Breaks(ui.View.Document))
+                {
+                    DragEdge(period.StartMs, period.StartMs + 100);
+                    DragEdge(period.EndMs, period.EndMs - 100);
+                }
+            }
+            var pieces = OsuTimeline.Breaks(ui.View.Document);
+            var inserted = ui.View.Document.Fruits.Where(fruit => fruit.TimeMs is 3000 or 5000 or 7000).OrderBy(fruit => fruit.TimeMs).ToArray();
+            int remaining = 4;
+            foreach (var fruit in new[] { inserted[0], inserted[2], inserted[1] })
+            {
+                var before = ui.View.Document.DeepClone();
+                CenterTime(fruit.TimeMs); ui.ClickFruit(fruit.Id); ui.Key(46);
+                Check(OsuTimeline.Breaks(ui.View.Document).Count == --remaining,
+                    "Deleting each split object must merge the neighboring breaks after manual edge drags.");
+                var after = ui.View.Document.DeepClone();
+                ui.Key('Z', ctrl: true);
+                Check(ui.View.Document.ContentEquals(before), "Undo must restore the object and its manually edited break fragments.");
+                ui.Key('Y', ctrl: true);
+                Check(ui.View.Document.ContentEquals(after), "Redo must restore the deletion and merge.");
+            }
+            Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual([new BreakPeriod(pieces[0].StartMs, pieces[^1].EndMs)]),
+                "Deleting all inserted objects must restore one break with the retained outer boundaries.");
+
+            void CenterTime(double time)
+            {
+                var plot = ui.Plot;
+                var point = ui.ScreenAt(time, 240);
+                float x = plot.X + plot.Width / 2, y = plot.Y + plot.Height / 2;
+                float target = y + (y - point.Y);
+                ui.View.PointerDown(x, y, 1, false, false);
+                ui.View.PointerMove(x, target, false, false);
+                ui.View.PointerUp(x, target, 1); ui.Paint();
+            }
+
+            void DragEdge(double from, double to)
+            {
+                ui.View.UpdateTransport(from, 12000, true, false, false, null, null); ui.Paint();
+                var timeline = ui.View.ObjectTimelineBounds;
+                float X(double time) => timeline.X + (float)((time - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+                ui.View.PointerDown(X(from), timeline.Y + 40, 0, false, false);
+                ui.View.PointerMove(X(to), timeline.Y + 40, false, false);
+                ui.View.PointerUp(X(to), timeline.Y + 40, 0); ui.Paint();
+                Check(OsuTimeline.Breaks(ui.View.Document).Any(period => period.StartMs == to || period.EndMs == to),
+                    "The manual break boundary drag must commit before deleting the objects.");
+            }
+        }
+    }
+
     public static void MovementPreview()
     {
         foreach (bool lazer in new[] { false, true })

@@ -41,7 +41,7 @@ internal static class PackageCheck
             foreach (string file in new[] { "FruitsAtelier.MapsetVerifier.dll", "upstream.json", "LICENSE.MapsetVerifier.txt", "SOURCE.txt" })
                 if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "mapset-verifier", file))) throw new FileNotFoundException("Mapset Verifier: " + file);
             var verifierDocument = new MapDocument { IsDemo = false, DurationMs = 10000,
-                AudioPath = Path.Combine(AppContext.BaseDirectory, "assets/setup/campus-after-class.wav") };
+                AudioPath = Editor.EditorView.SetupAudioPath };
             SongSetup.Set(verifierDocument, "General", "Mode", "2");
             verifierDocument.TimingPoints.Add(new() { BeatLengthMs = 500 });
             verifierDocument.Fruits.Add(new() { TimeMs = 1004, X = 128 });

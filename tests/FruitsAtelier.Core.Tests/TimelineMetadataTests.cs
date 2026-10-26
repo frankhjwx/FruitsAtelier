@@ -10,6 +10,10 @@ internal static class TimelineMetadataTests
         UnboundedBreaks();
         ApproachAndOverlappingDurations();
         ProjectedBreaks();
+        OverlappingBreakEdits();
+        SplitEditedBreaks();
+        DurationVacancies();
+        CompressedEditedBreaks();
         const string source = "osu file format v14\n[General]\nMode:2\nPreviewTime:1500\n[Editor]\nBookmarks: 100, 300\n[Events]\n//Break Periods\n2,1000,2000\n0,0,background.jpg\n[TimingPoints]\n0,500,4,1,0,100,1,1\n[HitObjects]\n256,192,100,1,0,0:0:0:0:\n";
         var document = OsuBeatmapReader.Read(source);
         Check(OsuTimeline.PreviewTime(document) == 1500, "Preview point was not read");
@@ -44,6 +48,167 @@ internal static class TimelineMetadataTests
             && OsuTimeline.Breaks(exported).SequenceEqual([new BreakPeriod(3200, 3800)])
             && events.Lines[breakLine].EndsWith("// keep this comment", StringComparison.Ordinal),
             "Resizing a break must preserve its Events line and comment");
+    }
+
+    private static void SplitEditedBreaks()
+    {
+        foreach (int edit in Enumerable.Range(0, 7))
+        foreach (bool batch in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 22000, ApproachRate = 7 };
+            map.Fruits.AddRange([new() { TimeMs = 1000 }, new() { TimeMs = 20000 }]);
+            OsuTimeline.AddBreak(map, 1200, 19000);
+            var history = new EditorHistory(map);
+            var inserted = new[] { new Fruit { TimeMs = 5000 }, new Fruit { TimeMs = 10000 }, new Fruit { TimeMs = 15000 } };
+            history.Begin("Split break with three objects");
+            history.Document.Fruits.AddRange(inserted);
+            history.Commit();
+            Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(1200, 4100), new BreakPeriod(5200, 9100),
+                new BreakPeriod(10200, 14100), new BreakPeriod(15200, 19000)]), "Three inserted objects must split the break into four pieces.");
+            history.Begin("Adjust split break boundaries");
+            foreach (var period in OsuTimeline.Breaks(history.Document))
+            {
+                int mask = edit < 4 ? edit : edit - 3;
+                int direction = edit < 4 ? 100 : -100;
+                OsuTimeline.ReplaceBreak(history.Document, period,
+                    new(period.StartMs + ((mask & 1) != 0 && (edit < 4 || period.StartMs != 1200) ? direction : 0),
+                        period.EndMs - ((mask & 2) != 0 && (edit < 4 || period.EndMs != 19000) ? direction : 0)));
+            }
+            history.Commit();
+            var split = history.Document.DeepClone();
+            var pieces = OsuTimeline.Breaks(split);
+            var order = new[] { inserted[0], inserted[2], inserted[1] };
+            foreach (var fruit in order)
+            {
+                if (batch && fruit != order[0]) continue;
+                var before = history.Document.DeepClone();
+                history.Begin("Remove break objects");
+                history.Document.Fruits.RemoveAll(item => batch ? inserted.Any(parent => parent.Id == item.Id) : item.Id == fruit.Id);
+                history.Commit();
+                int expectedCount = batch ? 1 : fruit == order[0] ? 3 : fruit == order[1] ? 2 : 1;
+                Check(OsuTimeline.Breaks(history.Document).Count == expectedCount,
+                    "Deleting split objects must merge their adjacent breaks even after boundary edits.");
+                if (!batch && fruit == order[1])
+                    Check(OsuTimeline.Breaks(history.Document).SequenceEqual([
+                        new BreakPeriod(pieces[0].StartMs, Math.Min(pieces[1].EndMs, 9100)),
+                        new BreakPeriod(Math.Max(pieces[2].StartMs, 10200), pieces[3].EndMs)]),
+                        "The remaining middle object must keep its two surrounding gaps separate.");
+                var after = history.Document.DeepClone();
+                history.Undo(); Check(history.Document.ContentEquals(before), "Deletion undo must restore objects and manually edited breaks exactly.");
+                history.Redo(); Check(history.Document.ContentEquals(after), "Deletion redo must restore merged breaks exactly.");
+            }
+            var expected = new BreakPeriod(pieces[0].StartMs, pieces[^1].EndMs);
+            Check(OsuTimeline.Breaks(history.Document).SequenceEqual([expected]), "The final merge must retain the outer manually edited boundaries.");
+            Check(OsuTimeline.Breaks(ProjectSerializer.Read(ProjectSerializer.Serialize(history.Document))).SequenceEqual([expected])
+                && OsuTimeline.Breaks(OsuBeatmapWriter.Serialize(history.Document).ReadBack).SequenceEqual([expected]),
+                "Recombined breaks must survive project save and osu export.");
+        }
+    }
+
+    private static void CompressedEditedBreaks()
+    {
+        foreach (bool head in new[] { false, true })
+        foreach (int edit in Enumerable.Range(0, 4))
+        {
+            var map = new MapDocument { DurationMs = 8000, ApproachRate = 7 };
+            map.Fruits.AddRange([new() { TimeMs = 1000 }, new() { TimeMs = 7000 }]);
+            OsuTimeline.AddBreak(map, 1200, 6000);
+            var history = new EditorHistory(map);
+            var fruit = new Fruit { TimeMs = head ? 2500 : 5700 };
+            history.Begin("Compress break"); history.Document.Fruits.Add(fruit); history.Commit();
+            var compressed = head ? new BreakPeriod(2700, 6000) : new BreakPeriod(1200, 4800);
+            Check(OsuTimeline.Breaks(history.Document).SequenceEqual([compressed]), "Nearby placement must compress the break without leaving a short fragment.");
+            history.Undo(); Check(history.Document.ContentEquals(map), "Compression and placement must undo together.");
+            history.Redo();
+            history.Begin("Adjust compressed boundaries");
+            int startShift = (edit & (head ? 1 : 2)) != 0 ? 100 : 0;
+            int endShift = (edit & (head ? 2 : 1)) != 0 ? 100 : 0;
+            OsuTimeline.ReplaceBreak(history.Document, compressed, new(compressed.StartMs + startShift, compressed.EndMs - endShift));
+            history.Commit();
+            var before = history.Document.DeepClone();
+            var previous = before.Fruits.ToDictionary(item => item.Id, item => (Start: item.TimeMs, End: item.TimeMs));
+            var current = previous.Where(pair => pair.Key != fruit.Id).ToDictionary();
+            var projected = OsuTimeline.ReconcileBreaks(OsuTimeline.Breaks(before), previous, current,
+                CatchScrollTiming.PreemptMs(before.ApproachRate), removedParents: true);
+            history.Begin("Remove compressing object"); history.Document.Fruits.RemoveAll(item => item.Id == fruit.Id); history.Commit();
+            var expected = head ? new BreakPeriod(1200, 6000 - endShift) : new BreakPeriod(1200 + startShift, 6100);
+            Check(OsuTimeline.Breaks(history.Document).SequenceEqual([expected]) && projected.SequenceEqual([expected]),
+                "Deleting the compressing object must recover its side while retaining the opposite manual boundary.");
+            var after = history.Document.DeepClone();
+            history.Undo(); Check(history.Document.ContentEquals(before), "Deletion undo must restore the compressed and manually edited break.");
+            history.Redo(); Check(history.Document.ContentEquals(after), "Deletion redo must restore the recovered break.");
+        }
+    }
+
+    private static void DurationVacancies()
+    {
+        foreach (int change in Enumerable.Range(0, 3))
+        {
+            var map = new MapDocument { DurationMs = 12000, ApproachRate = 7 };
+            map.Fruits.AddRange([new() { TimeMs = 1000 }, new() { TimeMs = 10000 }]);
+            map.BananaShowers.Add(new() { TimeMs = 3000, EndTimeMs = 6000 });
+            OsuTimeline.AddBreak(map, 1200, 2100);
+            OsuTimeline.AddBreak(map, 6200, 9100);
+            if (change == 2) map.Fruits.Add(new() { TimeMs = 5000 });
+            var history = new EditorHistory(map);
+            history.Begin("Release part of an occupied interval");
+            if (change == 0) history.Document.BananaShowers[0].EndTimeMs = 4000;
+            else if (change == 1) history.Document.BananaShowers[0].TimeMs = 4000;
+            else history.Document.BananaShowers.Clear();
+            history.Commit();
+            BreakPeriod[] expected = change switch
+            {
+                0 => [new(1200, 2100), new(4200, 9100)],
+                1 => [new(1200, 3100), new(6200, 9100)],
+                _ => [new(1200, 4100), new(5200, 9100)]
+            };
+            Check(OsuTimeline.Breaks(history.Document).SequenceEqual(expected),
+                "Partial duration edits and surviving overlapping objects must retain break clearance.");
+            history.Undo(); Check(history.Document.ContentEquals(map), "Duration and break adjustments must undo together.");
+        }
+    }
+
+    private static void OverlappingBreakEdits()
+    {
+        var map = new MapDocument { DurationMs = 300000 };
+        map.OriginalSections.Add(new OsuSection { Name = "Events" });
+        var events = map.OriginalSections[0];
+        events.Lines.AddRange(["//Break Periods", "2,247104,250245 // first", "0,0,background.jpg",
+            "2,247104,250245 // duplicate", "2,248656,256536", "Sprite,Foreground,Centre,\"sprite.png\",320,240", "2,260000,265000"]);
+        var history = new EditorHistory(map);
+        history.Begin("Add overlapping break");
+        OsuTimeline.AddBreak(history.Document, 255000, 261000);
+        history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(247104, 265000)]),
+            "Adding a break must merge every overlapping interval in the chain.");
+        Check(history.Document.OriginalSections[0].Lines.Contains("2,247104,265000// first")
+            && history.Document.OriginalSections[0].Lines.Contains("0,0,background.jpg")
+            && history.Document.OriginalSections[0].Lines.Contains("Sprite,Foreground,Centre,\"sprite.png\",320,240"),
+            "Merging breaks must retain the first break's comment and unrelated Events data.");
+        history.Undo(); Check(history.Document.ContentEquals(map), "Undo must restore the original overlapping Events exactly.");
+        history.Redo();
+        Check(OsuTimeline.Breaks(ProjectSerializer.Read(ProjectSerializer.Serialize(history.Document)))
+            .SequenceEqual([new BreakPeriod(247104, 265000)]), "Merged breaks must persist in projects.");
+        Check(OsuTimeline.Breaks(OsuBeatmapWriter.Serialize(history.Document).ReadBack)
+            .SequenceEqual([new BreakPeriod(247104, 265000)]), "Merged breaks must persist in osu exports.");
+        foreach (var period in new[] { new BreakPeriod(248000, 250000), new BreakPeriod(247104, 265000) })
+        {
+            var before = history.Document.DeepClone();
+            OsuTimeline.AddBreak(history.Document, period.StartMs, period.EndMs);
+            Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(247104, 265000)]),
+                "Contained or duplicate additions must leave a single break.");
+            Check(history.Document.ContentEquals(before), "Contained or duplicate additions must preserve Events exactly.");
+        }
+        OsuTimeline.AddBreak(history.Document, 270000, 275000);
+        history.Begin("Extend break across its neighbor");
+        Check(OsuTimeline.ReplaceBreak(history.Document, new(270000, 275000), new(264000, 276000)), "Break replacement failed.");
+        history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(247104, 276000)]),
+            "Resizing must merge overlapping breaks in either direction.");
+        history.Undo();
+        Check(OsuTimeline.Breaks(history.Document).Count == 2, "Resize undo must restore both breaks.");
+        OsuTimeline.AddBreak(history.Document, 265000, 269000);
+        Check(OsuTimeline.Breaks(history.Document).Count == 3, "Touching boundaries do not overlap.");
     }
 
     private static void ProjectedBreaks()

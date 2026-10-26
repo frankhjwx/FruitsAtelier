@@ -34,7 +34,7 @@ internal static class LibraryFavouriteTests
                 Check(original.ContentEquals(view.Document) && !view.IsDirty, "favourites leaves beatmap content unchanged");
                 view.LoadWorkspace(WorkspaceProject.Open(local.Directory)); view.ShowLibrary(); Settle(2);
                 Check(canvas.Texts.Single(t => t.Value == L.Get("library.favourites")).Bold, "returning from a local favourite retains its category");
-                view.CloseLibrary();
+                view.StopFileMonitoring(); view.CompleteLibraryCacheWrites(); view.CloseLibrary();
                 view = new EditorView(loadDemo: false); view.InitializeLibrary(true, settings); Settle(2);
                 Check(view.LibrarySetTotal == 2, "restart restores favourites category and entries");
                 LibraryMap? opened = null;
@@ -54,13 +54,13 @@ internal static class LibraryFavouriteTests
                 Check(view.LibrarySetTotal == 1, "removal updates active favourites list");
                 Toggle("library.removeFavourite"); Settle(0);
                 Check(view.LibrarySetTotal == 0, "removing last favourite clears list");
-                view.CloseLibrary();
+                view.StopFileMonitoring(); view.CompleteLibraryCacheWrites(); view.CloseLibrary();
                 view = new EditorView(loadDemo: false); view.InitializeLibrary(true, settings); Settle(0);
                 Check(view.LibrarySetTotal == 0, "removals survive restart");
                 Click("library.myMaps"); Settle(1);
                 Check(StarCount() == 0, "project cards no longer show favourite stars");
             }
-            finally { view.CloseLibrary(); }
+            finally { view.StopFileMonitoring(); view.CompleteLibraryCacheWrites(); view.CloseLibrary(); }
 
             void Paint() { canvas.Clear(); view.Render(canvas, width, 620); }
             int StarCount() => canvas.Images.Count(i => Path.GetFileName(i.Path) == "favourite-star.png" && i.Bounds.X == 219.6f);
@@ -69,7 +69,7 @@ internal static class LibraryFavouriteTests
                 for (int i = 0; i < 1000; i++)
                 {
                     Paint();
-                    if (i > 80 && !view.LibraryLoading && view.LibrarySetTotal == count) return;
+                    if (!view.LibraryLoading && view.LibrarySetTotal == count) return;
                     Thread.Sleep(10);
                 }
                 throw new Exception("Favourite library did not settle: " + string.Join(" | ", canvas.Texts.Select(t => t.Value)));

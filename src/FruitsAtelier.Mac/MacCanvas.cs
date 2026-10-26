@@ -114,11 +114,12 @@ internal sealed partial class ImageCache : IDisposable
     }
     internal void ReleaseDifficultyResources()
     {
+        ReleaseMedia();
         ClearPatternRasters();
         beatmapBackground?.Bitmap.Dispose(); beatmapBackground = null;
         paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear();
     }
-    public void Dispose() { ClearPatternRasters(); ClearImages(); thumbnails.Dispose(); paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear(); }
+    public void Dispose() { ReleaseMedia(); StoryboardPixels.Dispose(); ClearPatternRasters(); ClearImages(); thumbnails.Dispose(); paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear(); }
 }
 
 internal sealed partial class MacCanvas(DrawingContext context, ImageCache images, double renderScale = 1) : ICanvas, IDisposable

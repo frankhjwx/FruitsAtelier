@@ -11,6 +11,7 @@ public sealed class CatchConversionCache
     private readonly HashSet<Guid> seen = new();
     private (double, double, double, double, double, double, bool, double, int, bool, bool, double, bool) settings;
     private TimingMap.Lookup? timing;
+    private double authoredSvScale = 1;
     private Dictionary<double, double> fixedHeads = [];
     internal void Begin(MapDocument document, bool compensation)
     {
@@ -22,6 +23,7 @@ public sealed class CatchConversionCache
             entries.Clear(); trackPositions.Clear(); settings = current;
         }
         if (timing is null || !timing.MatchesTiming(document)) timing = new(document);
+        authoredSvScale = document.SliderMultiplier / document.EffectiveSliderMultiplier;
         fixedHeads = LegacySliderVelocityEditing.HeadVelocities(document);
         seen.Clear();
     }
@@ -85,7 +87,7 @@ public sealed class CatchConversionCache
     {
         if (track is null) return imported is null ? default : timing!.At(imported.TimeMs);
         var state = timing!.At(track.Nodes[0].TimeMs);
-        return state with { SliderVelocityMultiplier = track.FixedSliderVelocityMultiplier ?? LegacySliderVelocityEditing.ConstraintAt(fixedHeads, track.Nodes[0].TimeMs)
+        return state with { SliderVelocityMultiplier = track.FixedSliderVelocityMultiplier ?? track.SliderVelocityMultiplier * authoredSvScale ?? LegacySliderVelocityEditing.ConstraintAt(fixedHeads, track.Nodes[0].TimeMs)
             ?? state.SliderVelocityMultiplier };
     }
 
@@ -93,7 +95,7 @@ public sealed class CatchConversionCache
     {
         if (a.Id != b.Id || a.Kind != b.Kind || a.Name != b.Name || a.SourceOrder != b.SourceOrder || a.SpanCount != b.SpanCount
             || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets || a.Nodes.Count != b.Nodes.Count
-            || a.SliderVelocitySeed != b.SliderVelocitySeed || a.FixedSliderVelocityMultiplier != b.FixedSliderVelocityMultiplier
+            || a.SliderVelocityMultiplier != b.SliderVelocityMultiplier || a.SliderVelocitySeed != b.SliderVelocitySeed || a.FixedSliderVelocityMultiplier != b.FixedSliderVelocityMultiplier
             || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
             || !a.StreamNewComboOffsets.SequenceEqual(b.StreamNewComboOffsets)
             || includeRandomization && (a.DropletMode != b.DropletMode || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization))) return false;

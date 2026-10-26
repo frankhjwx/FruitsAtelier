@@ -56,9 +56,125 @@ their source image version changes.
 
 `Core/` and `App/` abbreviate their respective source project directories. The Mac project links `EditorView`, `ICanvas`, skinning, and beatmap archive source files, and references the Core project. Core does not reference window or graphics-device types.
 
+## Video and storyboard playback
+
+`Core/Storyboards` derives immutable sprites, commands, animation frames, samples and
+video references from retained `.osu` sections and the shared mapset `.osb`.
+Commands use binary searches per property; loops calculate their iteration from
+the requested timestamp. A balanced index over start-sorted sprites stores each
+subtree's maximum end time, so persistent backgrounds do not retain expired sprites
+in evaluation or preload queries. Traversal preserves start order; drawing sorts
+by layer and source order without boxing enum values.
+Evaluation has no forward playback cursor and supports alternating distant seeks.
+Uniform and vector scale remain separate, multiplicative properties, matching osu!.
+All image paths resolve within the mapset; source event text remains unchanged.
+Variable keys and values retain their whitespace, including command indentation.
+Independent single-character macros use a lookup pass; overlapping, recursive or
+other definitions retain insertion-ordered substitution. Parsing splits only on LF
+and checks cancellation during substitution and sprite compilation. Compilation
+distributes commands into property tracks without repeated per-property filtering
+and computes initial values without materializing sorted intermediate sequences.
+
+`EditorView.Storyboard` owns the active scene, reusable frame/preload buffers and
+asynchronous preparation. Events and Variables snapshot identities and resource-directory
+changes invalidate scene preparation. General snapshots are compared only when changed:
+edits to ordinary field values reuse the scene, while `WidescreenStoryboard` lines,
+line positions used by parser diagnostics, and embedded section boundaries remain
+part of the cache key. The file monitor also invalidates changed mapset media.
+Gameplay preparation keys include committed playable identity and history revision;
+one cancellable worker computes health and hit-sample trigger matching metadata. Retired workers
+cannot publish into a new difficulty. Difficulty retirement cancels both jobs and
+releases renderer resources through `ICanvas.ReleaseDifficultyResources`.
+Map opening includes storyboard parsing, gameplay preparation and the current
+visible images reaching the renderer. The existing opening overlay remains visible
+until the prepared editor frame can be published together. Known missing images
+complete preparation with a diagnostic. Image sets beyond the resident texture
+budget complete with a visible warning and bounded rendering rather than keeping
+the map closed indefinitely. A seek updates audio, editing data and the transport
+immediately. Video and storyboard drawing retain their last complete frame until
+the newest target's resources are ready; a legitimately empty storyboard target
+publishes immediately. The previous storyboard image set remains pinned during
+that replacement. Windows permits up to 256 MiB for the displayed set plus 256 MiB
+for its pending replacement, with a 512 MiB hard limit, then trims back to the
+ordinary 256 MiB budget after publication. Renderer resource replacement invalidates
+the displayed-image readiness without delaying transport input.
+Background save, synchronization and file-monitor completion still pump while the
+opening overlay is shown. Esc or a library request can leave preparation through
+the ordinary Save/Discard/Cancel decision; its dialog appears above the neutral
+loading screen. Cancel resumes preparation and leaving retires the pending jobs.
+
+Video receives the existing audio-derived song position minus its event offset.
+The static background remains below the video. A video's first and final 500 ms
+use linear fades, so it covers the background in between and reveals it at either
+end. Storyboard coordinates retain 480 logical pixels vertically and centre X=320.
+The widescreen flag selects a 640- or 853⅓-wide mask, intersected with the host panel.
+Non-widescreen storyboards place black bars outside their 4:3 background region,
+before drawing editor/gameplay objects; dimming does not recolour those bars.
+Video uses centred cover sizing; video-only scenes use the full available panel.
+Background dim reduces RGB brightness. Overlay
+sprites draw above gameplay with unchanged alpha, including black opaque portions
+at 100% dim. Force background dim suppresses background media in Catch preview
+and testplay; Mapping retains its independent media display. All viewports share
+the renderer's video decoder. The editor retains it while any viewport requests
+video in the current frame and stops it when none does, including full-screen
+pages and force-dim testplay. A requested frame still being decoded counts as
+video demand.
+
+`LibrarySettings.EnableVideoStoryboard` controls visuals across every viewport.
+Changing it retires scene and gameplay workers, clears displayed sprite buffers,
+and releases renderer media resources on the next frame, including while Settings
+is visible. Disabling uses the reader's sample-only path, which skips visual
+commands before field parsing or resource resolution. Sample snapshots and their
+transport scheduling cursors survive preference changes while the replacement
+sample scene is prepared; ordinary samples do not depend on visual decoding.
+
+`CatchStoryboardHealth` adapts `CatchHealthProcessor.GetHealthIncreaseFor`,
+`LegacyDrainingHealthProcessor.ComputeDrainRate` and the expanded break intervals
+from `DrainingHealthProcessor.ApplyBeatmap`, at the revision recorded in third-party
+notices. Drain calibration visits fruits, droplets and bananas; tiny droplets are
+excluded from calibration but their actual hit/miss health adjustments still apply.
+The ordinary Catch preview stays in Pass and records only hitsounds actually
+dispatched during playback. Scheduling ahead adds pending events, not trigger
+history. A continuously advancing published audio consumption clock must cross
+their timestamps before they are committed; the final pause clock commits already
+consumed events before cancelling the remaining queue. Seek, pause and speed changes
+cancel pending events without inventing triggers or clearing recorded history.
+An immediate dispatch counts even at zero output volume. Repeated visits query
+the retained event timestamps, so seeking before an event removes its effect and
+seeking forward can reproduce an event that already happened. Difficulty retirement
+clears this session-only history; ordinary metadata preparation rebuilds matching
+metadata around it. No trigger history is written to the document.
+
+Testplay observes every judgement at `CatchTestplay.Judged`, before UI snapshots
+can discard transient data, and records actual hit-sound, HitObjectHit and
+health-threshold transition triggers. The journal supports arbitrary historical
+reads. Health at least 0.5 selects Pass; crossing that threshold emits Passing/Failing.
+Initial full health does not emit a transition trigger. This health affects
+storyboard presentation without ending editor testplay. Starting/retrying testplay
+creates a fresh judgement journal independently of the ordinary preview history.
+Repeated activations cancel the prior instance's future commands. Explicit nonzero
+trigger groups also cancel sibling triggers on the same sprite, following the
+[compound-command contract](https://osu.ppy.sh/wiki/en/Storyboard/Scripting/Compound_Commands).
+Cancelled transforms retain their value at cancellation until a newer command
+replaces that property; random-time evaluation reconstructs this directly.
+
+Storyboard samples share the platform hitsound mixer and transport scheduling.
+Their cursor resets on pause, seek, speed changes and difficulty retirement; video
+audio is unused. Referenced samples that cannot decode do not become synthetic
+catch hitsounds. Missing or malformed media is reported in the editor status.
+
+Playback uses mapset images. The retained `UseSkinSprites` source setting does not
+currently replace them with skin textures. Commands attached directly to a video
+event are preserved for export, while video playback uses the event offset,
+centred cover sizing and standard start/end fades. These boundaries differ from
+osu! features outside the supported sprite/animation and trigger playback path.
+
 ## Workspace and library
 
 `Core/Workspace` provides project-directory transactions, SQLite indexing, metadata scanning, resource-reference diagnostics, and explicit export plans. Shared `EditorView.Library` implements the library/settings pages, and `EditorView.Export` draws the modal export overlay above the editor; platform hosts handle folder selection, audio changes, and resource export. Library scanning and star calculations run in the background. The UI reads committed maps during scanning and completed star results. See [Workspace](WORKSPACE.md).
+
+Library loading remains active until completed worker results have been published
+by the UI pump, including startup indexing and browser page/detail updates.
 
 Opening a library project runs on a background worker on both platforms. The library
 shows a loading overlay and blocks further content operations until the result is

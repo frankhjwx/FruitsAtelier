@@ -149,7 +149,7 @@ internal static class LibraryOrganizationTests
                 Click("library.collectionDone"); Wait(3);
                 ClickText("Practice"); Wait(1);
                 Check(canvas.Texts.Any(t => t.X == 314 && t.Value == "Alpha"), "collection filters to chosen set");
-                view.CloseLibrary();
+                view.StopFileMonitoring(); view.CompleteLibraryCacheWrites(); view.CloseLibrary();
                 view = new EditorView(false); view.InitializeLibrary(true, settings); Wait(1);
                 Check(canvas.Texts.Any(t => t.Value == "Practice"), "collection membership and navigation survive restart");
                 var collection = canvas.Texts.First(t => t.Value == "Practice");
@@ -173,14 +173,14 @@ internal static class LibraryOrganizationTests
                 view.ShowLibrary(); Paint(); Click("library.recentVisited"); Wait(1);
                 ClickText(L.Get("library.groupCount", L.Get("library.period.0"), 1)); Wait(1);
                 Check(canvas.Texts.Any(t => t.X == 314 && t.Value == "Alpha"), "successful open records recent visit");
-                view.CloseLibrary();
+                view.StopFileMonitoring(); view.CompleteLibraryCacheWrites(); view.CloseLibrary();
                 view = new EditorView(false); view.InitializeLibrary(true, settings); Wait(1);
                 Check(Label("library.recentVisited").Bold, "recent category survives restart");
                 var reference = canvas.Texts.First(t => t.Value == "References");
                 view.PointerDown(reference.X, reference.Y, 2, false, false); Paint(); Click("library.deleteCollection"); Wait(1);
                 Check(!canvas.Texts.Any(t => t.Value == "References") && Directory.Exists(a), "deleting collection retains source files");
             }
-            finally { view.CloseLibrary(); }
+            finally { view.StopFileMonitoring(); view.CompleteLibraryCacheWrites(); view.CloseLibrary(); }
 
             RecordingCanvas.Label Label(string key) => canvas.Texts.Last(t => t.Value == L.Get(key));
             void Click(string key) => ClickText(L.Get(key));
@@ -194,7 +194,7 @@ internal static class LibraryOrganizationTests
             {
                 for (int i = 0; i < 1000; i++)
                 {
-                    Paint(); if (i > 40 && !view.LibraryLoading && view.LibrarySetTotal == count) return;
+                    Paint(); if (!view.LibraryLoading && view.LibrarySetTotal == count) return;
                     Thread.Sleep(10);
                 }
                 throw new Exception("Library organization did not settle: " + string.Join(" | ", canvas.Texts.Select(t => t.Value)));

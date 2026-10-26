@@ -8,7 +8,7 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 
 [公式サイト](https://fruitsatelier.himiko.moe/) · [ダウンロード](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**現在のバージョン：1.2.3**
+**現在のバージョン：1.3.0**
 
 ![FruitsAtelier の編集キャンバス、オブジェクトタイムライン、Catch プレビュー](assets/screenshots/twin-bloom.png)
 
@@ -33,7 +33,7 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 - **編集可能なストリームとスタック。** 曲線に沿って指定の拍分割でフルーツを生成したり、幅の変化を設定して左右交互のスタックを作成したりできます。親曲線や個別のフルーツを編集し、独立したフルーツに分割することもできます。どちらも hit circle として出力されます。
 - **Pattern Gallery。** 独立したパターンのスナップショットを保存し、スキン付きプレビューから別の譜面へ BPM に合わせてドラッグできます。`.fpt` 形式で共有し、元の譜面の未保存の変更を保持したまま[メインキャンバスで編集](docs/PATTERN_GALLERY.md)できます。
 
-Catch の `.osu` は v7–v14 と stable 互換の lazer v128 を読み込めます。v7 の譜面は旧スライダーティックの規則を保つため v7 で出力し、それ以外は v14 で出力します。1.2.3 では動画とストーリーボードの再生に対応していません。
+Catch の `.osu` は v7–v14 と stable 互換の lazer v128 を読み込めます。v7 の譜面は旧スライダーティックの規則を保つため v7 で出力し、それ以外は v14 で出力します。動画とストーリーボードは作図キャンバス、Catch プレビュー、テストプレイで楽曲に同期して再生され、ストーリーボードのサンプル音声とゲームプレイトリガーにも対応します。プレビューのヒットサウンドトリガーは実際のサウンド再生で有効になり、シークだけでは発動しません。
 
 ## はじめに
 
@@ -73,6 +73,10 @@ C# 12 と .NET 10 を使用しています。Windows のソースビルドには
 
 - [ビルドとテスト](docs/TESTING.md) · [パッケージ作成とリリース](docs/RELEASING.md)
 - [編集操作](docs/EDITOR_UI.md) · [ワークスペースとファイル](docs/WORKSPACE.md)
+- [プロジェクトアーカイブ](docs/PROJECT_ARCHIVES.md) · [同期と復元](docs/SYNCHRONIZATION.md)
+- [Pattern Gallery](docs/PATTERN_GALLERY.md) · [ヒットサウンド](docs/HITSOUNDS.md)
+- [AiMod](docs/AIMOD.md) · [Mapset Verifier](docs/MAPSET_VERIFIER.md)
+- [編集パフォーマンス](docs/EDITING_PERFORMANCE.md)
 - [アーキテクチャ](docs/ARCHITECTURE.md) · [プロジェクトモデル](docs/PROJECT_MODEL.md) · [ファイル形式](docs/STABLE_FORMAT.md)
 - [ローカライズ](docs/LOCALIZATION.md) · [サードパーティのライセンス](THIRD_PARTY_NOTICES.md)
 
@@ -81,6 +85,7 @@ C# 12 と .NET 10 を使用しています。Windows のソースビルドには
 ## クレジット
 
 - [ppy/osu](https://github.com/ppy/osu) — osu!catch のアルゴリズムと、変換・ゲームプレイ・難易度計算・互換性に関する動作の参考。
+- [Naxesss/MapsetVerifier](https://github.com/Naxesss/MapsetVerifier) — Mapset Verifier パネルで使用する外部ビートマップ検証エンジン。
 - [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer) — マッピング中のリアルタイム Catch プレビューの着想。
 - [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer) — ドロップレットのランダム化補正と Catch スライダーパターン作成の着想。
 

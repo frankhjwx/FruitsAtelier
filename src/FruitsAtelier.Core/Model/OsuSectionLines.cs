@@ -5,6 +5,8 @@ namespace FruitsAtelier.Core;
 public sealed class OsuSectionLines : Collection<string>
 {
     private object? snapshotIdentity;
+    [System.Text.Json.Serialization.JsonIgnore]
+    public object SnapshotIdentity => snapshotIdentity ??= new object();
     public OsuSectionLines() : base(new List<string>()) { }
     private OsuSectionLines(List<string> lines, object identity) : base(lines) => snapshotIdentity = identity;
 

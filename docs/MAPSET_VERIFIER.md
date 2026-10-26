@@ -14,8 +14,9 @@ the active pill restores all severities. The default view is unfiltered.
 Error/information pills appear when present. Filters use the cached report and
 preserve the current check snapshot. Chevrons expand or collapse check groups.
 The right scrollbar supports thumb dragging and track clicks. Clickable timestamps
-show a hand cursor and an underline on hover. **Copy all** uses a hand cursor
-and hover highlight, then shows the same localized clipboard confirmation as
+show a hand cursor and an underline on hover. **Copy all** and **Fix for me** share
+a persistent button background and border, hand cursor and hover highlight.
+**Copy all** then shows the same localized clipboard confirmation as
 osu! Web for two seconds, fading during the final 400 ms.
 
 **Refresh** checks an exported snapshot of all loaded difficulties, including
@@ -27,8 +28,38 @@ in-flight check so older results cannot publish. Viewport, selection and playbac
 position changes do not schedule checks. **Refresh** also runs a check immediately. Difficulty interpretations affect checking only. General checks see the
 loaded project and its copied mapset media, rather than every difficulty present
 on disk. Media/storyboards and `skin.ini` are copied to temporary storage, with a
-512 MiB / 50,000-file limit; conflicting resource names fail explicitly. Checking
+512 MiB non-video / 4 GiB video / 50,000-file limit; conflicting resource names fail explicitly.
+Copies check cancellation and the byte limits as data is written. Checking
 runs in a cancellable standalone process with a three-minute timeout.
+
+Video resolution and audio-track checks use the packaged FFmpeg metadata probe
+for references in both `.osu` and shared `.osb` files, including FLV, MPG and M4V.
+They retain the pinned upstream check identities, messages, severities and
+resolution threshold (either axis exceeding 1280×720). The probe does not start
+playback, and checking remains available with video/storyboard display disabled.
+Missing and unreadable videos retain their respective upstream diagnostics.
+Other built-in checks continue to inspect the exported mapset snapshot, including
+storyboard sprite/animation resolution, Overlay layers, storyboard samples,
+video usage/offset consistency and resource usage.
+
+The **Unsnapped hit objects** Minor group offers **Fix for me**. The editor also
+adds an **Unsnapped timing lines** group for suspected one-millisecond red/green-line
+offsets, with a separate **Fix for me** action. Each fix button sits to the left of
+**Copy all** on its check heading. Fixes recompute eligible corrections against the
+current document and refresh the report after committing. Occupied destinations
+and invalid spinner durations are preserved. Export and checking preserve offsets
+until a user explicitly applies a fix.
+
+If another object/timing/Kiai category also has eligible one-millisecond offsets,
+**Fix for me** asks whether to fix the current section or all three categories.
+A single affected category fixes directly. Both choices are one undoable edit;
+Cancel or Escape preserves the document. Detection uses the current authoring data.
+
+The **Unsnapped kiai** Minor group offers **Fix for me** for one-millisecond
+start/end offsets. It changes Kiai transitions independently of SV, samples and
+volume, preserving coincident or occupied timing boundaries. Validation must
+preserve authored and exported NM/HR events and samples before one undoable edit
+commits. **Unused timing lines** remains a read-only report with **Copy all**.
 
 ## Local preparation and AI development
 
@@ -74,6 +105,11 @@ release; drafts and prereleases are excluded. Run with `--update-locks` on the
 build script when accepting a changed pin, for `win-x64`, `osx-arm64` and `osx-x64`.
 `Run-Editor.cmd` and ordinary builds neither select a newer version nor perform
 upstream update checks. An offline session can continue using the existing pin.
+The upstream check requires network access to `api.github.com`, and a changed pin
+also downloads its source from `codeload.github.com`. Engine preparation can also
+download source archives and restore NuGet dependencies. For AI runs in restricted
+environments, follow the first-invocation network-permission rule in
+[AGENTS.md](../AGENTS.md#validation-and-documentation).
 
 ## GitHub update PRs
 

@@ -7,6 +7,14 @@ The authoring model persists as UTF-8 JSON. Documents containing exact control c
 Non-default osu canvas coordinates, independent osu distance spacing, Legacy native
 geometry preservation, or randomization baselines use schema 27 (single difficulty)
 or 28 (multi-difficulty).
+Explicit FSlider SV uses optional `CurveTrack.SliderVelocityMultiplier` in the
+source base-SV basis and schema 41 (single difficulty) / 42 (multiple difficulties).
+Null retains automatic SV fitting. A non-null value fixes conversion SV, scales
+with the effective map base, participates in history and conversion cache equality,
+and rejects values outside 0.1-10x. Older projects remain readable; projects without
+this field retain their previous schema. Timing display and SV editing locks are
+editor session state and are not stored as beatmap timing or project content.
+
 Independent Legacy slider SV uses schema 29 (single difficulty) or 30 (multiple
 difficulties). Each Legacy slider stores its authored `SliderVelocityMultiplier`
 and an optional `ProcessedSliderVelocityMultiplier` for materialized droplet
@@ -203,6 +211,11 @@ compensation is applied once. Base changes validate the candidate conversion
 and NM/HR read-back against the current playable objects before committing.
 See [Timing editing](EDITOR_UI.md#timing-editing).
 
+Moving or resnapping objects extends `DurationMs` to include Legacy slider tails,
+using the resulting timing and each slider's SV and repeat count. Timing edits
+that also move inherited points or recalculate lengths use the final state for
+this extent. Existing longer document durations are retained.
+
 ## FSliders and Legacy Sliders
 
 New import provenance uses schema 37 (single difficulty) / 38 (multi-difficulty).
@@ -364,7 +377,7 @@ and exported read-back apply the ordinary osu HR rules to the generated geometry
 
 `.osu` accepts v7–v14 and stable-compatible lazer v128 / Mode=0 or Mode=2 and emits v7 for maps retaining legacy slider ticks or v14 otherwise, always with Mode=2; see [stable File Contract](STABLE_FORMAT.md). Legacy Sliders retain original lines. FSliders encode integer time and path coordinates, preserve SpanCount, and insert/restore inherited SV as needed. Legacy-converted FSliders reuse original type/hitsound/sample fields. Span-count edits preserve surviving edge samples; new edges receive defaults and a diagnostic. Incompatible same-time SV conflicts fail explicitly. Export read-back compares the full object sequence, times, and X; quantization can introduce errors or sequence changes.
 
-Project saving and `.osu` export are independent; exporting cannot replace saving authoring intent. Video and storyboard playback are unsupported. Preserving raw section text alone does not mean its referenced assets have been packaged; workspace archive retention is described separately in [Workspace](WORKSPACE.md).
+Project saving and `.osu` export are independent; exporting cannot replace saving authoring intent. Video and storyboard playback is derived from retained source sections and mapset resources; it does not add authoring objects or change content history. Preserving raw section text alone does not mean its referenced assets have been packaged; workspace archive retention is described separately in [Workspace](WORKSPACE.md).
 
 `CurveTrack.StreamSnapDivisor` is null for ordinary sliders and 1–16 for slider-managed fruit streams. It participates in cloning, history, equality and conversion-cache invalidation. Stream sampling uses the head BPM and follows every repeated traversal without consuming slider RNG. Derived fruits retain the parent ID with distinct event indices and standalone gameplay semantics. They do not produce generated slider geometry or SV overrides. `.osu` export expands them into ordered hit circles; only project files retain the editable parent.
 

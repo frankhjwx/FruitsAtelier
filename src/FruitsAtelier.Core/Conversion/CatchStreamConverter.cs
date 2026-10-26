@@ -6,15 +6,12 @@ public static class CatchStreamConverter
     public const double AlignmentTolerance = 0.0001;
 
     public static CatchConversionResult Convert(MapDocument document, bool compensateTinyDroplets = true, CatchConversionCache? cache = null)
-        => Convert(document, compensateTinyDroplets, cache, normalizeTiming: true);
-
-    internal static CatchConversionResult Convert(MapDocument document, bool compensateTinyDroplets, CatchConversionCache? cache, bool normalizeTiming)
     {
         ArgumentNullException.ThrowIfNull(document);
         try
         {
             if (BananaShowerExpansion.Create(document) is { } expansion)
-                return expansion.Remap(Convert(expansion.Document, compensateTinyDroplets, cache, normalizeTiming));
+                return expansion.Remap(Convert(expansion.Document, compensateTinyDroplets, cache));
         }
         catch (InvalidDataException error)
         {
@@ -37,9 +34,7 @@ public static class CatchStreamConverter
             return Finish();
         }
 
-        TimingMap.Lookup? timing;
-        if (normalizeTiming) document = ExportTiming.Prepare(document, out timing);
-        else timing = new(document);
+        var timing = new TimingMap.Lookup(document);
         hardRockCompensation = document.DerandomizeDropletsForHardRock
             && (document.DerandomizeFSliderDroplets || document.Tracks.Any(t => t.StreamSnapDivisor is null && t.DropletMode is not null && !t.RandomizesDroplets(document)));
         if (document.LegacySliderTicks && hardRockCompensation)
@@ -116,7 +111,7 @@ public static class CatchStreamConverter
                     : document.DerandomizeFSliderDroplets || (track.CompensateTinyDroplets ?? compensateTinyDroplets);
                 var converted = ConvertTrack(document, track, compensate,
                     ref rng, (timing ??= new(document)).At(track.Nodes[0].TimeMs), effectRng, cache?.PositionAtTime(track), hardRockBefore,
-                    track.FixedSliderVelocityMultiplier ?? LegacySliderVelocityEditing.ConstraintAt(fixedHeads, track.Nodes[0].TimeMs));
+                    track.FixedSliderVelocityMultiplier ?? track.SliderVelocityMultiplier * document.SliderMultiplier / document.EffectiveSliderMultiplier ?? LegacySliderVelocityEditing.ConstraintAt(fixedHeads, track.Nodes[0].TimeMs));
                 sliders.Add(converted.Slider);
                 objects.AddRange(converted.Objects);
                 AdvanceEffectRandom(converted.Objects, ref effectRng);
@@ -311,6 +306,7 @@ public static class CatchStreamConverter
                             ValidateTrack(document, authored);
                             var conversion = ConvertTrack(document, authored, true, ref normalRandom, timing.At(source.TimeMs), effectRandom,
                                 cache.PositionAtTime(authored), hardRockBefore, authored.FixedSliderVelocityMultiplier
+                                    ?? authored.SliderVelocityMultiplier * document.SliderMultiplier / document.EffectiveSliderMultiplier
                                     ?? LegacySliderVelocityEditing.ConstraintAt(fixedHeads, authored.Nodes[0].TimeMs));
                             fitted = conversion.Slider; events = conversion.Objects;
                         }
@@ -331,7 +327,7 @@ public static class CatchStreamConverter
                     if (events is null)
                     {
                         var at = timing.At(source.TimeMs);
-                        double sv = track.FixedSliderVelocityMultiplier ?? LegacySliderVelocityEditing.ConstraintAt(fixedHeads, source.TimeMs)
+                        double sv = track.FixedSliderVelocityMultiplier ?? track.SliderVelocityMultiplier * document.SliderMultiplier / document.EffectiveSliderMultiplier ?? LegacySliderVelocityEditing.ConstraintAt(fixedHeads, source.TimeMs)
                             ?? track.SliderVelocitySeed ?? at.SliderVelocityMultiplier;
                         double velocity = LegacyCatchRules.Velocity(at.BeatLengthMs, document.EffectiveSliderMultiplier, sv);
                         double duration = track.Nodes[^1].TimeMs - source.TimeMs;

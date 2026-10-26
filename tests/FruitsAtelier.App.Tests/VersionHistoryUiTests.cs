@@ -31,7 +31,7 @@ internal static class VersionHistoryUiTests
                 WorkspaceAssociations.DeleteDifficulty(session, project, removedId);
                 var ui = new Ui(false); ui.Resize(size.Item1, size.Item2);
                 ui.View.LibrarySettings.Workspace = workspace;
-                ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory)); ui.Paint();
+                ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory)); ui.PaintUntilReady();
                 int saves = 0; ui.View.RequestSave = () => saves++;
                 ui.ClickText(L.Get("ui.edit")); ui.ClickText(L.Get("history.menu")); Wait(ui);
                 Check(ui.View.VersionHistoryVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("history.title")), "Edit opens localized history");
@@ -74,7 +74,7 @@ internal static class VersionHistoryUiTests
                     "restoration keeps other edits and unlinks deleted sources");
                 ui.View.SaveWorkspace();
                 Check(WorkspaceProject.Open(session.Directory).Project.Difficulties.Any(d => d.Id == removedId), "restored difficulty survives save and restart");
-                ui.View.SwitchDifficulty(0); ui.Paint();
+                ui.View.SwitchDifficulty(0); ui.PaintUntilReady();
                 string missingSource = Path.Combine(workspace, "missing.osu");
                 Guid keptId = ui.View.CaptureProject().Difficulties[0].Id;
                 ui.View.WorkspaceSession!.Manifest.Difficulties.Single(d => d.Id == keptId).Source = missingSource;

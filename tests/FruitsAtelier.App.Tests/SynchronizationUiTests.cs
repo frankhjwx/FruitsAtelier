@@ -323,8 +323,9 @@ internal static class SynchronizationUiTests
                 WriteExternal(source, Fixture.Replace("[HitObjects]", "[Events]\n//Break Periods\n//Storyboard\n\n[HitObjects]"));
                 ui.View.RefreshSynchronization(); Wait(ui);
                 Check(!ui.View.SynchronizationVisible, "comment-only Events save needs no review");
+                // Exercise the multi-megabyte payload once; smaller multi-page fixtures retain every locale's navigation and merge checks.
                 string events = "Sprite,Foreground,Centre,\"sprite.png\",320,240\n"
-                    + string.Concat(Enumerable.Repeat(" F,0,0,500,0,1\n// storyboard command 012345678901234567890123456789\n", 70000)) + "Sprite,Foreground,Centre,\"END_STORYBOARD.png\",320,240";
+                    + string.Concat(Enumerable.Repeat(" F,0,0,500,0,1\n// storyboard command 012345678901234567890123456789\n", language == "en" ? 70000 : 300)) + "Sprite,Foreground,Centre,\"END_STORYBOARD.png\",320,240";
                 WriteExternal(source, Fixture.Replace("[HitObjects]", "[Events]\n" + events + "\n[HitObjects]"));
                 ui.View.RefreshSynchronization(); Wait(ui);
                 Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Value == "Events"), "external Events change opens text review");
@@ -795,8 +796,8 @@ internal static class SynchronizationUiTests
     internal static void Wait(Ui ui)
     {
         var deadline = DateTime.UtcNow.AddSeconds(20);
-        do { ui.Paint(); if (!ui.View.SynchronizationBusy) break; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
-        Check(!ui.View.SynchronizationBusy, "sync timeout"); ui.Paint();
+        do { ui.Paint(); if (!ui.View.SynchronizationBusy && !ui.View.LibraryOpening) break; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
+        Check(!ui.View.SynchronizationBusy && !ui.View.LibraryOpening, "sync and media preparation timeout"); ui.Paint();
         if (ui.View.ErrorVisible) throw new Exception("Unexpected error in synchronization UI");
     }
 

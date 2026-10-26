@@ -8,7 +8,7 @@
 
 [官网](https://fruitsatelier.himiko.moe/) · [下载](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**当前版本：1.2.3**
+**当前版本：1.3.0**
 
 ![水果工坊的编辑画布、物件时间轴与 Catch 预览](assets/screenshots/twin-bloom.png)
 
@@ -33,7 +33,7 @@
 - **可编辑的 Stream 与 Stack**：沿滑条曲线按指定节拍细分生成水果串，或用宽度包络生成交替排列的叠果。保留可编辑的父曲线，调整单个水果，或拆分成独立水果；两者均导出为 hit circle。
 - **Pattern Gallery**：保存独立的 Pattern 快照，浏览皮肤预览，按目标 BPM 拖入其他谱面，并分享 `.fpt` 文件。[在主画布编辑 Pattern](docs/PATTERN_GALLERY.md) 时，原谱面的未保存内容会保留。
 
-支持读取 v7–v14 及兼容 stable 的 lazer v128 Catch `.osu`。v7 谱面导出保留 v7，以保留旧版滑条水滴规则；其余导出为 v14。1.2.3 暂不提供视频与故事板播放。
+支持读取 v7–v14 及兼容 stable 的 lazer v128 Catch `.osu`。v7 谱面导出保留 v7，以保留旧版滑条水滴规则；其余导出为 v14。视频与故事板在作图画布、Catch 预览及试玩中跟随歌曲播放，支持故事板音效与游戏触发器。预览中的 hitsound 触发器只随实际声音播放触发，单独拖动时间轴不会触发。
 
 ## 开始使用
 
@@ -73,6 +73,10 @@ bash scripts/Install-Mac-SDK.sh
 
 - [构建与测试](docs/TESTING.md) · [打包与发布](docs/RELEASING.md)
 - [编辑操作](docs/EDITOR_UI.md) · [工程与文件](docs/WORKSPACE.md)
+- [工程归档](docs/PROJECT_ARCHIVES.md) · [同步与恢复](docs/SYNCHRONIZATION.md)
+- [Pattern Gallery](docs/PATTERN_GALLERY.md) · [打击音](docs/HITSOUNDS.md)
+- [AiMod](docs/AIMOD.md) · [Mapset Verifier](docs/MAPSET_VERIFIER.md)
+- [编辑性能](docs/EDITING_PERFORMANCE.md)
 - [技术架构](docs/ARCHITECTURE.md) · [工程模型](docs/PROJECT_MODEL.md) · [文件格式](docs/STABLE_FORMAT.md)
 - [本地化维护](docs/LOCALIZATION.md) · [第三方许可](THIRD_PARTY_NOTICES.md)
 
@@ -81,6 +85,7 @@ bash scripts/Install-Mac-SDK.sh
 ## 致谢
 
 - [ppy/osu](https://github.com/ppy/osu)：提供 osu!catch 算法，以及转换、游玩、难度计算与兼容行为的参考。
+- [Naxesss/MapsetVerifier](https://github.com/Naxesss/MapsetVerifier)：为 Mapset Verifier 面板提供外部谱面检查引擎。
 - [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer)：为作图时的实时 Catch 游玩预览提供灵感。
 - [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer)：为水滴去随机化与 Catch 滑条编排提供灵感。
 

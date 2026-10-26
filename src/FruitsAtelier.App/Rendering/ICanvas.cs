@@ -50,6 +50,19 @@ public interface ICanvas
         => additive ? AdditiveImage(filePath, destination, tint, opacity) : Image(filePath, destination, tint, opacity: opacity);
     bool Thumbnail(string filePath, Rect destination) => false;
     bool BackgroundImage(string filePath, Rect destination) => Image(filePath, destination);
+    void BeginStoryboard() { }
+    void EndStoryboard() { }
+    void PrepareStoryboardImages(IReadOnlyList<string> paths) { }
+    bool StoryboardImagesReady(IReadOnlyList<string> paths) => true;
+    void RetainStoryboardImages(IReadOnlyList<string> paths) { }
+    void StoryboardSprite(string path, float x, float y, float scaleX, float scaleY,
+        uint tint, float opacity, float rotationRadians, bool additive, bool flipX, bool flipY,
+        float originX, float originY) { }
+    bool VideoImage(string path, Rect destination, double positionMs, bool playing, double rate) => false;
+    void StopVideo() { }
+    void ReleaseStoryboardResources() => StopVideo();
+    string? MediaError => null;
+    long MediaGeneration => 0;
     void CachedPreview(object key, Rect bounds, Action<ICanvas, Rect> draw) => draw(this, bounds);
     void DimBackground(Rect bounds, uint color, float opacity) => Fill(bounds, color, opacity: opacity);
     void Clip(Rect r);

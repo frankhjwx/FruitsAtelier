@@ -1,9 +1,28 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+if (args.Contains("--storyboard-image-cache-check")) return StoryboardImageCacheTests.Run();
+if (args.Length == 4 && args[0] == "--storyboard-first-playback") return StoryboardFirstPlaybackTests.Run(args[1], args[2], int.Parse(args[3]));
+if (args.Contains("--media-toggle-check")) return MediaToggleTests.Run();
+if (args.Length == 2 && args[0] == "--media-toggle-native-check") return MediaToggleNativeTests.Run(args[1]);
+if (args.Contains("--media-toggle-audio-check")) { StoryboardAudioTests.Run(s => s.EnableVideoStoryboard = false); return StoryboardAudioTests.Run(toggleDuringPlayback: true); }
+if (args.Length == 2 && args[0] == "--media-toggle-trigger-check") return StoryboardEditorTests.Run(args[1], toggleMedia: true);
+if (args.Contains("--media-integration-check")) return MediaIntegrationTests.Run();
+if (args.Contains("--media-loading-regression-check")) return MediaIntegrationTests.Run(finalFour: true);
+if (args.Contains("--storyboard-presentation-check")) return StoryboardPresentationTests.Run();
+if (args.Contains("--storyboard-source-cache-check")) { StoryboardSourceCacheTests.Run(); return 0; }
+if (args.Length == 2 && args[0] == "--storyboard-editor-check") return StoryboardEditorTests.Run(args[1]);
+if (args.Length == 3 && args[0] == "--storyboard-native-pixels") return StoryboardNativePixels.Run(args[1], args[2]);
+if (args.Contains("--storyboard-audio-check")) return StoryboardAudioTests.Run();
+if (args.Length == 3 && args[0] == "--media-video-corpus") return MediaVideoTests.Corpus(args[1], args[2]);
+if (args.Length is 3 or 4 or 5 && args[0] == "--media-native-profile") return MediaNativePerformance.Run(args[1], args[2], args.Length >= 4 ? double.Parse(args[3], System.Globalization.CultureInfo.InvariantCulture) : null, args.Length == 5 ? double.Parse(args[4], System.Globalization.CultureInfo.InvariantCulture) : 0);
+if (args.Length == 4 && args[0] == "--media-native-seek") return MediaNativePerformance.Run(args[1], args[2], 10000, seekDurationMs: double.Parse(args[3], System.Globalization.CultureInfo.InvariantCulture));
 if (args.Contains("--mapset-verifier-engine-check")) { MapsetVerifierTests.Engine(); return 0; }
 if (args.Contains("--mapset-verifier-check")) { MapsetVerifierTests.Run(); return 0; }
 if (args.Contains("--timing-alignment-check")) { TimingAlignmentUiTests.Run(); return 0; }
+if (args.Contains("--timing-extent-check")) { TimingExtentUiTests.Run(); return 0; }
+if (args.Contains("--selected-pen-nodes-check")) { SelectedPenNodeTests.Run(); return 0; }
+if (args.Contains("--selected-pen-nodes-performance")) { SelectedPenNodeTests.RunPerformance(); return 0; }
 if (args.Contains("--project-deletion-check")) { ProjectDeletionTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--history-save-performance") { HistorySavePerformance.Run(args[1]); return 0; }
 if (args.Contains("--discussions-check")) { DiscussionTests.Run(); return 0; }
@@ -37,6 +56,8 @@ if (args.Contains("--canvas-feedback-check")) { CanvasFeedbackTests.Run(); Conso
 if (args.Contains("--curve-edit-check")) { SliderModeInteractionTests.SwitchArAndLocalPenEdit(); SliderModeInteractionTests.InsertDeleteAndBoundary(); SliderModeInteractionTests.GlobalModeMenu(); Console.WriteLine("PASS Local curve editing, mode switching and undo"); return 0; }
 if (args.Contains("--canvas-feedback-performance")) { CanvasFeedbackPerformance.Run(); return 0; }
 if (args.Contains("--rotation-preview-performance")) { CanvasFeedbackPerformance.RunRotation(); return 0; }
+if (args.Contains("--timing-sv-performance")) { TimingVelocityTests.Benchmark(); return 0; }
+if (args.Contains("--timing-sv-check")) { TimingVelocityTests.Run(); Console.WriteLine("PASS Timing SV display, locking, editing and persistence"); return 0; }
 if (args.Contains("--timing-feedback-check")) { TimingEditorTests.Run(); TimingFeedbackTests.Run(); Console.WriteLine("PASS Timing setup, shortcuts, precision and range selection"); return 0; }
 
 if (args.Contains("--note-snap-check")) { NoteSnapTests.InspectBeatPosition(); Console.WriteLine("PASS nearest note beat snap recognition"); return 0; }
@@ -89,6 +110,14 @@ if (args.Contains("--break-preview-check"))
     BreakRecalculationTests.MovementPreview(); BreakRecalculationTests.Placement();
     BreakRecalculationTests.DurationAndCancellation(); BreakRecalculationTests.RemovalAndNearbyPlacement();
     Console.WriteLine("PASS Break projection, movement preview, placement and undo"); return 0;
+}
+
+if (args.Contains("--break-overlap-check"))
+{
+    TimelineOverviewTests.OverlappingBreakEditing(); TimelineOverviewTests.BreakEdgeEditing(); TimelineOverviewTests.InsertBreakButton();
+    BreakRecalculationTests.SplitEditedBreakDeletion();
+    BreakRecalculationTests.CompressedEditedBreakDeletion();
+    Console.WriteLine("PASS Overlapping break additions, edge previews, cancellation and undo"); return 0;
 }
 
 if (args.Contains("--timeline-layout-check"))
@@ -280,6 +309,7 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Storyboard sources retain scenes across unrelated General edits", StoryboardSourceCacheTests.Run),
     ("Opening a map offers undoable object and timing alignment", TimingAlignmentUiTests.Run),
     ("Pattern Gallery preserves previews, placement and editing sessions", () => { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); }),
     ("Discussions, replies, annotations and timestamp navigation", DiscussionTests.Run),
@@ -370,7 +400,10 @@ var tests = new (string Name, Action Run)[]
     ("Pause snapping waits for confirmation and isolates other transport operations", PauseSnapTests.PauseIsolation),
     ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
+    ("Timing SV display, locking, editing and persistence", TimingVelocityTests.Run),
     ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),
+    ("Moved Legacy slider tails remain reachable through navigation and history", TimingExtentUiTests.Run),
+    ("Selected Pen controls preserve handle rendering and hit order", SelectedPenNodeTests.Run),
     ("Timing SV entry and DS unit switching preserve gameplay, persistence and undo", SliderMultiplierTests.Run),
     ("Timing metronome schedules beat and Ctrl snap ticks without duplicate playback", TimingEditorTests.Metronome),
     ("Timing waveform zoom, cached audio and red-line selection", TimingEditorTests.Waveform),
@@ -563,6 +596,9 @@ var tests = new (string Name, Action Run)[]
     ("Timing menu sets an undoable preview point", TimelineOverviewTests.PreviewPointMenu),
     ("Snap toolbar inserts an undoable break between objects", TimelineOverviewTests.InsertBreakButton),
     ("Upper timeline break edges drag, preview, cancel and remove short breaks", TimelineOverviewTests.BreakEdgeEditing),
+    ("Overlapping break additions and edge edits merge with undo", TimelineOverviewTests.OverlappingBreakEditing),
+    ("Split breaks merge after object deletion and manual edge drags", BreakRecalculationTests.SplitEditedBreakDeletion),
+    ("Compressed breaks recover after object deletion and manual edge drags", BreakRecalculationTests.CompressedEditedBreakDeletion),
     ("Bottom transport controls play, pause, stop and test", TimelineOverviewTests.TransportControls),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
     ("Map import preferences persist remembered choices and require uncertain FA decisions", MapImportSettingsTests.Run),
@@ -708,11 +744,14 @@ int failures = 0;
 var selectedTests = args.Length == 2 && args[0] == "--filter"
     ? tests.Where(test => test.Name.Contains(args[1], StringComparison.OrdinalIgnoreCase)).ToArray() : tests;
 if (selectedTests.Length == 0) { Console.Error.WriteLine("No matching tests."); return 1; }
+var suiteWatch = System.Diagnostics.Stopwatch.StartNew();
 foreach (var test in selectedTests)
 {
-    try { test.Run(); Console.WriteLine($"PASS {test.Name}"); }
-    catch (Exception error) { failures++; Console.WriteLine($"FAIL {test.Name}: {error}"); }
+    var watch = System.Diagnostics.Stopwatch.StartNew();
+    try { test.Run(); Console.WriteLine($"PASS {test.Name} ({watch.Elapsed.TotalSeconds:F2}s)"); }
+    catch (Exception error) { failures++; Console.WriteLine($"FAIL {test.Name} ({watch.Elapsed.TotalSeconds:F2}s): {error}"); }
 }
+Console.WriteLine($"Editor integration duration: {suiteWatch.Elapsed.TotalSeconds:F2}s.");
 Console.WriteLine($"{selectedTests.Length - failures}/{selectedTests.Length} editor integration tests passed.");
 return failures == 0 ? 0 : 1;
 
@@ -1343,7 +1382,7 @@ sealed class Ui
         View = new(timeProvider: timeProvider);
         View.LibrarySettings.TestplayStartupDelaySeconds = 0;
         View.SetSliderEditingMode(SliderEditingMode.PenTool);
-        Paint();
+        PaintUntilReady();
         if (!lockDropletSelection)
         {
             var button = View.AssistButtonBounds[6];
@@ -1356,8 +1395,14 @@ sealed class Ui
     public void LoadDocument(MapDocument document)
     {
         View.LoadDocument(document);
-        Paint();
+        PaintUntilReady();
         ShowFixtureOverview();
+    }
+    public void PaintUntilReady()
+    {
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        do { Paint(); if (!View.LibraryOpening) return; Thread.Sleep(5); } while (timer.Elapsed.TotalSeconds < 10);
+        throw new TimeoutException("The editor did not finish preparing its opening media.");
     }
     private void ShowFixtureOverview()
     {

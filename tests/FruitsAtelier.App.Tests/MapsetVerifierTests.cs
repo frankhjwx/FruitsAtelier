@@ -60,6 +60,9 @@ internal static class MapsetVerifierTests
                 pending.SetResult(new(1, [], [])); ui.Paint();
                 Check(ui.View.VerifierReport is null, "Retired result cannot publish into a new project");
             }
+            OffsetFixes();
+            KiaiFix();
+
             Snapshot();
             AutoRefresh();
             PanelControls();
@@ -69,8 +72,133 @@ internal static class MapsetVerifierTests
         finally { L.SetLanguage(language); }
     }
 
+    private static void OffsetFixes()
+    {
+        foreach (string locale in new[] { "en", "zh-CN" })
+        {
+            L.SetLanguage(locale);
+            var map = new MapDocument { IsDemo = false, BeatLengthMs = 500, DurationMs = 5000 };
+            map.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
+                new() { TimeMs = 2001, BeatLengthMs = -100, Uninherited = false, Volume = 40 }]);
+            map.Fruits.Add(new() { TimeMs = 1001, X = 100 });
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900);
+            var before = ui.View.Document.DeepClone();
+            ui.View.VerifierAnalyze = (inputs, _, _) =>
+            {
+                var input = inputs[0];
+                return Task.FromResult(new MapsetVerifierReport(1, [], [new(input.Id, input.Name, "Hard", 3,
+                    [.. input.Document.Fruits.Where(f => f.TimeMs == 1001).Select(_ => new MapsetVerifierIssue(
+                        "MapsetVerifier.Checks.AllModes.Timing.CheckUnsnaps", "Unsnapped hit objects.", "Minor",
+                        "00:01:001 - Circle unsnapped by 1 ms.")),
+                     .. MapsetVerifierClient.TimingOffsetIssues(input)])]));
+            };
+            ui.View.ShowMapsetVerifier(); Settle(ui);
+            Check(ui.View.Document.ContentEquals(before) && !ui.View.IsDirty, "Checking offsets preserves original content");
+            Check(ui.View.VerifierFixBounds.Count == 2, "Timing line group offers its own fix");
+            ClickFix();
+            Check(ui.View.VerifierFixPromptVisible, "Other sections offer a combined fix");
+            ui.ClickText(L.Get("mv.fixThisSection")); Settle(ui);
+            Check(ui.View.Document.Fruits[0].TimeMs == 1000 && ui.View.Document.TimingPoints[1].TimeMs == 2001,
+                "Object fix leaves timing lines unchanged");
+            Check(ui.View.VerifierFixBounds.Count == 1, "Fixed objects disappear after refresh");
+            ui.Key(90, true); ui.Paint();
+            Check(ui.View.Document.ContentEquals(before), "Object fix is one undo transaction");
+            ui.Key(89, true); ui.Paint();
+            Check(ui.View.Document.Fruits[0].TimeMs == 1000, "Object fix supports redo");
+            ui.View.RefreshMapsetVerifier(); Settle(ui);
+            ClickFix(); Settle(ui);
+            Check(!ui.View.VerifierFixPromptVisible, "A single affected section fixes without asking");
+            Check(ui.View.Document.TimingPoints[1].TimeMs == 2000 && ui.View.Document.Fruits[0].TimeMs == 1000,
+                "Timing fix leaves objects unchanged");
+            Check(MapsetVerifierClient.TimingOffsetIssues(new(Guid.NewGuid(), "map", ui.View.Document)).Length == 0,
+                "Timing fix clears the detected offsets");
+            ui.Key(90, true); ui.Paint();
+            Check(ui.View.Document.TimingPoints[1].TimeMs == 2001 && ui.View.Document.Fruits[0].TimeMs == 1000,
+                "Timing fix is independently undoable");
+            ui.Key(90, true); ui.Paint();
+            Check(ui.View.Document.ContentEquals(before), "Both separate fixes can be undone");
+            ui.View.RefreshMapsetVerifier(); Settle(ui); ClickFix();
+            Check(ui.View.VerifierFixPromptVisible, "Combined choice uses the current document");
+            ui.Key(27); ui.Paint();
+            Check(!ui.View.VerifierFixPromptVisible && ui.View.Document.ContentEquals(before), "Escape cancels without edits");
+            ClickFix(); ui.ClickText(L.Get("mv.fixAllSections")); Settle(ui);
+            Check(ui.View.Document.Fruits[0].TimeMs == 1000 && ui.View.Document.TimingPoints[1].TimeMs == 2000,
+                "Combined choice fixes object and timing offsets");
+            ui.Key(90, true); ui.Paint();
+            Check(ui.View.Document.ContentEquals(before), "Combined fix is one undo step");
+            ui.View.StopMapsetVerifier();
+
+            void ClickFix()
+            {
+                var button = ui.View.VerifierFixBounds.First();
+                var copy = ui.View.VerifierCopyBounds.First();
+                Check(button.Y == copy.Y && button.Right < copy.X, "Fix for me sits left of Copy all on the title row");
+                ui.Click(button.X + 4, button.Y + 5);
+            }
+        }
+    }
+
+    private static void KiaiFix()
+    {
+        var map = new MapDocument { IsDemo = false, BeatLengthMs = 500, DurationMs = 5000 };
+        map.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
+            new() { TimeMs = 1001, BeatLengthMs = -100, Uninherited = false, Effects = 1 },
+            new() { TimeMs = 2001, BeatLengthMs = -100, Uninherited = false }]);
+        map.Fruits.Add(new() { TimeMs = 1001, X = 100 });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900);
+        var before = ui.View.Document.DeepClone();
+        ui.View.VerifierAnalyze = (inputs, _, _) => Task.FromResult(new MapsetVerifierReport(1, [],
+            [new(inputs[0].Id, inputs[0].Name, "Hard", 3,
+                [new("MapsetVerifier.Checks.AllModes.Timing.CheckKiaiUnsnap", "Unsnapped kiai.", "Minor",
+                    "00:01:001 - Kiai is unsnapped by 1 ms."),
+                 new("MapsetVerifier.Checks.AllModes.Timing.CheckUnusedLines", "Unused timing lines.", "Minor",
+                    "00:02:001 - Inherited line changes sample settings, but affects nothing.")])]));
+        ui.View.ShowMapsetVerifier(); Settle(ui);
+        Check(ui.View.VerifierFixBounds.Count == 1 && ui.View.VerifierCopyBounds.Count == 2,
+            "Kiai offers a fix while unused timing remains read-only");
+        var button = ui.View.VerifierFixBounds.Single();
+        ui.Click(button.X + 4, button.Y + 5);
+        Check(ui.View.VerifierFixPromptVisible, "Kiai offers the other timing offsets");
+        ui.ClickText(L.Get("mv.fixThisSection")); Settle(ui);
+        Check((TimingEditing.Current(ui.View.Document, 1000)!.Effects & 1) != 0
+            && (TimingEditing.Current(ui.View.Document, 2000)!.Effects & 1) == 0,
+            "Kiai button aligns both transitions");
+        Check(ui.View.Document.Fruits[0].TimeMs == 1001, "Current-section Kiai fix preserves object offsets");
+        ui.Key(90, true); ui.Paint();
+        Check(ui.View.Document.ContentEquals(before), "Kiai fix is one undo step");
+        ui.Key(89, true); ui.Paint();
+        Check((TimingEditing.Current(ui.View.Document, 1000)!.Effects & 1) != 0, "Kiai fix supports redo");
+        ui.View.RefreshMapsetVerifier(); Settle(ui);
+        button = ui.View.VerifierFixBounds.Single();
+        ui.Click(button.X + 4, button.Y + 5);
+        if (ui.View.VerifierFixPromptVisible) ui.View.AnswerVerifierFix(false);
+        Settle(ui);
+        Check(ui.View.StatusMessage == L.Get("mv.noOffsets"), "Repeated Kiai fix makes no changes");
+        ui.Key(90, true); ui.Paint();
+        Check(ui.View.Document.ContentEquals(before), "Kiai-only fix can return to the complete baseline");
+        ui.View.RefreshMapsetVerifier(); Settle(ui);
+        button = ui.View.VerifierFixBounds.Single();
+        ui.Click(button.X + 4, button.Y + 5);
+        Check(ui.View.VerifierFixPromptVisible, "All three offset categories offer a combined choice");
+        ui.ClickText(L.Get("mv.fixAllSections")); Settle(ui);
+        Check(ui.View.Document.Fruits[0].TimeMs == 1000
+            && (TimingEditing.Current(ui.View.Document, 1000)!.Effects & 1) != 0
+            && (TimingEditing.Current(ui.View.Document, 2000)!.Effects & 1) == 0
+            && !TimingAlignment.Analyze(ui.View.Document).HasChanges,
+            "Combined fix includes objects, timing and Kiai");
+        ui.Key(90, true); ui.Paint();
+        Check(ui.View.Document.ContentEquals(before), "All three categories undo together");
+        ui.View.StopMapsetVerifier();
+    }
+
     private static void PanelControls()
     {
+        var longMap = new MapDocument();
+        longMap.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
+            new() { TimeMs = 3662001, BeatLengthMs = -100, Uninherited = false, Volume = 40 }]);
+        var longIssue = MapsetVerifierClient.TimingOffsetIssues(new(Guid.NewGuid(), "Long", longMap)).Single();
+        Check(MapsetVerifierClient.Tokenize(longIssue.Message).Single(t => t.TimeMs is not null).TimeMs == 3662001,
+            "Timing line timestamps retain total minutes beyond one hour");
         var ui = new Ui(false);
         var map = new MapDocument { IsDemo = false, DurationMs = 30000 };
         SongSetup.Set(map, "Metadata", "Title", "Toolbar song title");
@@ -142,6 +270,8 @@ internal static class MapsetVerifierTests
             [new(inputs[0].Id, inputs[0].Name, "Hard", 3,
                 [new("Copy", "Copy heading", "Warning", first), new("Copy", "Copy heading", "Warning", second)])]));
         ui.View.ShowMapsetVerifier(); Settle(ui);
+        var copyBounds = ui.View.VerifierCopyBounds.Single();
+        Check(ui.Canvas.Fills.Any(f => f.Bounds == copyBounds), "Copy all retains its button background without hover");
         var copy = ui.Canvas.Texts.Single(t => t.Value == L.Get("mv.copyAll", 2));
         ui.View.PointerMove(copy.X + 4, copy.Y + 5, false, false); ui.Paint();
         Check(ui.View.MapsetVerifierHandCursor, "Copy all hover uses the hand cursor");
@@ -178,12 +308,31 @@ internal static class MapsetVerifierTests
             Directory.CreateDirectory(original); Directory.CreateDirectory(snapshot);
             File.WriteAllText(Path.Combine(original, "private.txt"), "unrelated data");
             File.WriteAllBytes(Path.Combine(original, "bg.jpg"), [1, 2, 3]);
+            File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "video-with-audio.flv"), Path.Combine(original, "shared.flv"));
+            File.Copy(Path.Combine(original, "shared.flv"), Path.Combine(original, "clip.mpeg"));
+            File.Copy(Path.Combine(original, "shared.flv"), Path.Combine(original, "clip.custom"));
+            File.WriteAllText(Path.Combine(original, "shared.osb"), "[Events]\nVideo,0,shared.flv\nVideo,0,missing.wmv\nVideo,0,broken.mp4\nVideo,0,clip.mpeg\nVideo,0,clip.custom\n");
+            File.WriteAllBytes(Path.Combine(original, "broken.mp4"), [0, 1, 2]);
             var document = new MapDocument { IsDemo = false, SourcePath = Path.Combine(original, "input.osu") };
             document.Fruits.Add(new() { TimeMs = 1234, X = 128 });
             var request = MapsetVerifierClient.PrepareSnapshot([new(Guid.NewGuid(), "Edited", document)], true, snapshot, default);
             Check(!File.Exists(Path.Combine(snapshot, "private.txt")) && File.Exists(Path.Combine(snapshot, "bg.jpg")), "Snapshot copies allowlisted mapset resources only");
             Check(File.ReadAllText(Path.Combine(snapshot, request.Difficulties[0].File)).Contains(",1234,"), "Snapshot exports current unsaved content");
-            Check(Directory.GetFiles(original).Length == 2, "Snapshot leaves source directory untouched");
+            var video = request.Videos.Single(v => v.File == "shared.flv");
+            Check(video is { Width: 1296, Height: 24, HasAudio: true, Error: null }, "Snapshot probes shared storyboard FLV metadata through the packaged decoder");
+            Check(new[] { "clip.mpeg", "clip.custom" }.All(name => File.Exists(Path.Combine(snapshot, name))
+                && request.Videos.Single(v => v.File == name) is { Width: 1296, Height: 24, HasAudio: true, Error: null }),
+                "Referenced videos are copied and probed independently of filename extension");
+            Check(request.Videos.Single(v => v.File == "missing.wmv").Error == "Missing"
+                && request.Videos.Single(v => v.File == "broken.mp4").Error == "Exception", "Snapshot preserves missing and unreadable video results");
+            var metadata = FruitsAtelier.App.Media.VideoMetadata.Read(Path.Combine(original, "shared.flv"));
+            Check(metadata == new AimodVideoMetadata(1296, 24, true), "Silent audio stream remains present in FLV metadata");
+            using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+            bool cancelled = false;
+            try { FruitsAtelier.App.Media.VideoMetadata.Read(Path.Combine(original, "shared.flv"), cancellation.Token); }
+            catch (OperationCanceledException) { cancelled = true; }
+            Check(cancelled, "Cancelled video metadata reads cannot publish a result");
+            Check(Directory.GetFiles(original).Length == 7, "Snapshot leaves source directory untouched");
         }
         finally { Directory.Delete(root, true); }
     }
@@ -208,7 +357,42 @@ internal static class MapsetVerifierTests
         File.WriteAllText(Path.Combine(evidence, "engine-report.json"), System.Text.Json.JsonSerializer.Serialize(result));
         var issues = result.Difficulties.SelectMany(d => d.Issues).ToArray();
         Check(issues.Any(i => i.Check.StartsWith("MapsetVerifier.") && MapsetVerifierClient.Tokenize(i.Message).Any(t => t.TimeMs == 1004)), "Actual upstream reports navigable object timestamps");
+        VideoEngine(root.FullName);
         Console.WriteLine("PASS actual pinned Mapset Verifier engine, exported snapshot and multiple difficulty identities");
+    }
+
+    private static void VideoEngine(string repository)
+    {
+        string root = Path.Combine(repository, "artifacts", "tests", "mapset-verifier", "media-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "video-with-audio.flv"), Path.Combine(root, "shared.flv"));
+            File.Copy(Path.Combine(root, "shared.flv"), Path.Combine(root, "clip.custom"));
+            File.WriteAllBytes(Path.Combine(root, "broken.mp4"), [0, 1, 2]);
+            File.WriteAllText(Path.Combine(root, "shared.osb"), "[Events]\nVideo,0,shared.flv\nVideo,0,missing.wmv\nVideo,0,broken.mp4\nVideo,0,clip.custom\n");
+            var map = new MapDocument { IsDemo = false, SourcePath = Path.Combine(root, "map.osu"),
+                AudioPath = Path.Combine(repository, "tests", "FruitsAtelier.Audio.Tests", "Fixtures", "quiet-tone.ogg") };
+            SongSetup.Set(map, "General", "Mode", "2");
+            map.Fruits.Add(new() { TimeMs = 1000 });
+            var before = map.DeepClone();
+            var result = MapsetVerifierClient.AnalyzeAsync([new(Guid.NewGuid(), "Media", map)], true, default).GetAwaiter().GetResult();
+            Check(result.General.Any(i => i.Check.EndsWith("CheckAudioInVideo") && i.Level == "Problem" && i.Message.Contains("shared.flv")),
+                "Actual engine flags the silent audio stream of a shared storyboard FLV");
+            Check(result.General.Any(i => i.Check.EndsWith("CheckVideoResolution") && i.Level == "Problem" && i.Message.Contains("1296 x 24")),
+                "Actual engine uses upstream's either-axis video resolution threshold");
+            Check(result.General.Any(i => i.Check.EndsWith("CheckAudioInVideo") && i.Level == "Problem" && i.Message.Contains("clip.custom")),
+                "Actual engine checks referenced video containers without an allowlisted extension");
+            foreach (string check in new[] { "CheckAudioInVideo", "CheckVideoResolution" })
+            {
+                Check(result.General.Any(i => i.Check.EndsWith(check) && i.Level == "Warning" && i.Message.Contains("missing.wmv")),
+                    "Actual video checks retain missing resource warnings");
+                Check(result.General.Any(i => i.Check.EndsWith(check) && i.Level == "Error" && i.Message.Contains("broken.mp4")),
+                    "Actual video checks retain metadata failure errors");
+            }
+            Check(map.ContentEquals(before), "Actual media verification preserves source content");
+        }
+        finally { Directory.Delete(root, true); }
     }
 
     private static void Settle(Ui ui)

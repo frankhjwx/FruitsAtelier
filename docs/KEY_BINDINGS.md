@@ -4,7 +4,7 @@ In Compose, Tab toggles the Catch and osu! canvases. Text fields,
 dialogs, Ctrl+Tab difficulty switching and Testplay retain their own Tab actions.
 See [osu! canvas](EDITOR_UI.md#osu-canvas) for native slider controls and distance spacing.
 
-This reference describes FruitsAtelier 0.9.0. Bindings depend on the active page,
+This reference describes FruitsAtelier v1.3.0. Bindings depend on the active page,
 focused field, selected object and drawing state. For differences from osu!stable
 and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 
@@ -185,12 +185,10 @@ families. Beat snapping is independent of Slider Tick Rate.
 | Ctrl+Shift+F | Open/focus the Stream/Stack dock, adding it if closed. Existing patterns retain their mode; ordinary sliders start on Stream. |
 | Ctrl+Shift+M | Open/focus merge controls in Slider Inspector. Select at least two consecutive circles/sliders to merge. |
 
-In the conversion dialog, Tab switches Stream/Stack outside numeric fields.
-Roll the wheel over the preview to scroll long patterns. Left/Up and Right/Down
-decrease and increase the chosen subdivision. Enter applies; Esc cancels. Converting to a stream retains an editable
-slider parent and exports fruit objects. **Break into Fruits**, off by default,
-instead creates separate editable fruits. Existing streams also offer this action
-directly below **Edit Stream/Stack** in their long-press menu.
+The Stream/Stack dock previews its output on the main canvas. Valid parameter
+changes apply with project undo; graph and snap drags commit on release. A stream
+retains an editable slider parent and exports fruit objects. **Break into Fruits**
+is an explicit action that creates independent editable fruits.
 
 Holding a selected object retains the complete selection for batch slider actions.
 Merge offers straight segments and a curved path; a selection containing a curved
@@ -305,7 +303,7 @@ Prefer bindings that do not overlap Ctrl+P, Ctrl+B, Ctrl+R, Ctrl+Up/Down or Alt+
 | Compose numeric field: Enter / Esc | Commit / cancel. Tab / Shift+Tab commits and cycles fields. |
 | Prev DS or X input: Enter / Tab / Esc | Commit / commit / cancel the live adjustment. Ctrl+Z ends and undoes a changed preview. |
 | Song Setup: Tab / Shift+Tab | Cycle editable fields on the active tab. |
-| Song Setup: Enter / Esc | Apply / discard; Esc first closes an open countdown dropdown. |
+| Song Setup | Valid dock fields apply immediately with project undo; there is no dialog-wide Apply/Cancel. |
 | Library: Ctrl+F | Focus and select the search text. |
 | Library: F5 | Rescan the library. |
 | Library: Enter | Leave a text field; with no field focused, open the selected map. |

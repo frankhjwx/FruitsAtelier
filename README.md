@@ -8,7 +8,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 [Website](https://fruitsatelier.himiko.moe/) · [Download](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**Current version: 1.2.3**
+**Current version: 1.3.0**
 
 ![FruitsAtelier's editing canvas, object timeline, and Catch preview](assets/screenshots/twin-bloom.png)
 
@@ -33,7 +33,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 - **Editable streams and stacks.** Turn a slider curve into a fruit stream at a chosen beat subdivision, or an alternating stack with a variable width envelope. Keep the parent curve editable, adjust individual fruits, or separate the pattern into independent fruits. Both export as hit circles.
 - **Pattern Gallery.** Save independent pattern snapshots, browse skinned previews, drag them into another map at its BPM, and share `.fpt` packages. [Edit patterns](docs/PATTERN_GALLERY.md) in the main canvas while retaining your current map's unsaved work.
 
-Catch `.osu` import supports versions 7–14 and stable-compatible lazer v128. Version 7 maps retain v7 on export to preserve their slider ticks; other maps export as v14. Video and storyboard playback are not available in 1.2.3.
+Catch `.osu` import supports versions 7–14 and stable-compatible lazer v128. Version 7 maps retain v7 on export to preserve their slider ticks; other maps export as v14. Video and storyboard playback follows the song transport in the mapping canvas, Catch preview and testplay, including storyboard samples and gameplay triggers. Preview hitsound triggers follow actual sound playback; seeking alone does not activate them.
 
 ## Get started
 
@@ -73,6 +73,10 @@ The editor uses C# 12 and .NET 10. Windows source builds use SDK **10.0.400**, p
 
 - [Building and testing](docs/TESTING.md) · [Packaging and releases](docs/RELEASING.md)
 - [Editing controls](docs/EDITOR_UI.md) · [Workspace and files](docs/WORKSPACE.md)
+- [Project archives](docs/PROJECT_ARCHIVES.md) · [Synchronization and recovery](docs/SYNCHRONIZATION.md)
+- [Pattern Gallery](docs/PATTERN_GALLERY.md) · [Hitsounds](docs/HITSOUNDS.md)
+- [AiMod](docs/AIMOD.md) · [Mapset Verifier](docs/MAPSET_VERIFIER.md)
+- [Editing performance](docs/EDITING_PERFORMANCE.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Project model](docs/PROJECT_MODEL.md) · [File format](docs/STABLE_FORMAT.md)
 - [Localization](docs/LOCALIZATION.md) · [Third-party licenses](THIRD_PARTY_NOTICES.md)
 
@@ -81,6 +85,7 @@ Technical documentation and the user manual are maintained in English.
 ## Credits
 
 - [ppy/osu](https://github.com/ppy/osu) — osu!catch algorithms and reference behavior for conversion, gameplay, difficulty calculation, and compatibility.
+- [Naxesss/MapsetVerifier](https://github.com/Naxesss/MapsetVerifier) — the external beatmap verification engine used by the Mapset Verifier panel.
 - [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer) — inspiration for real-time Catch gameplay preview while mapping.
 - [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer) — inspiration for droplet derandomization and authoring Catch slider patterns.
 

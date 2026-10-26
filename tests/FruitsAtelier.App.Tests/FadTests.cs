@@ -71,8 +71,8 @@ internal static class FadTests
             {
                 L.SetLanguage(locale);
                 var ui = new Ui(false); ui.View.LibrarySettings.Workspace = Path.Combine(settings.Workspace, locale); ui.View.LibrarySettings.Songs = "";
-                ui.View.LoadProject(project); ui.Paint();
-                ui.View.BeginFadImport(archive); Settle(ui);
+                ui.View.LoadProject(project); ui.PaintUntilReady();
+                ui.View.BeginFadImport(archive); Settle(ui); ui.PaintUntilReady();
                 Check(!ui.View.ErrorVisible && ui.View.DifficultyCount == 2 && ui.View.CurrentDifficultyName == "Guest", "unknown difficulty is added");
                 Check(ui.View.Document.Tracks[0].Nodes[0].HandleOut == curve.Nodes[0].HandleOut, "native curve handles survive import");
                 var guest = ui.View.CaptureProject().Difficulties.Single(d => d.Id == incoming.Id);
@@ -102,7 +102,7 @@ internal static class FadTests
                 Check(ProjectSerializer.Serialize(ui.View.CaptureProject()) == state && ui.View.LibraryVisible, "library rejection preserves project and page");
                 ui.Key(27); ui.View.DropLibraryFiles([archive]); ui.Paint();
                 Check(ui.View.ErrorVisible, "library drag and drop shows the same error"); ui.Key(27);
-                ui.View.LoadProject(project); ui.View.CloseLibrary(); ui.Paint();
+                ui.View.LoadProject(project); ui.View.CloseLibrary(); ui.PaintUntilReady();
                 int? exportedIndex = null; ui.View.RequestFadExport = index => exportedIndex = index;
                 ui.ClickText(L.Get("ui.file"));
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("faz.export"))

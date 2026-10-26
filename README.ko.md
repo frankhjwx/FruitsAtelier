@@ -8,7 +8,7 @@ Windows와 macOS에서 사용할 수 있는 독립 osu!catch 비트맵 편집기
 
 [공식 웹사이트](https://fruitsatelier.himiko.moe/) · [다운로드](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**현재 버전: 1.2.3**
+**현재 버전: 1.3.0**
 
 ![FruitsAtelier의 편집 캔버스, 오브젝트 타임라인, Catch 미리 보기](assets/screenshots/twin-bloom.png)
 
@@ -33,7 +33,7 @@ Windows와 macOS에서 사용할 수 있는 독립 osu!catch 비트맵 편집기
 - **편집 가능한 스트림과 스택.** 곡선을 따라 지정한 비트 분할로 과일 스트림을 만들거나, 폭 변화를 설정해 좌우로 번갈아 배치되는 스택을 만들 수 있습니다. 부모 곡선과 개별 과일을 편집하거나 독립된 과일로 분리할 수도 있습니다. 둘 다 hit circle로 내보냅니다.
 - **Pattern Gallery.** 독립된 패턴 스냅샷을 저장하고 스킨 미리 보기에서 다른 비트맵으로 BPM에 맞춰 드래그하세요. `.fpt` 파일로 공유하고, 원래 비트맵의 저장하지 않은 변경 사항을 유지하면서 [메인 캔버스에서 패턴을 편집](docs/PATTERN_GALLERY.md)할 수 있습니다.
 
-Catch `.osu`는 v7–v14 및 stable과 호환되는 lazer v128을 읽을 수 있습니다. v7 비트맵은 기존 슬라이더 틱 규칙을 보존하도록 v7로 내보내며, 나머지는 v14로 내보냅니다. 1.2.3에서는 동영상과 스토리보드 재생을 지원하지 않습니다.
+Catch `.osu`는 v7–v14 및 stable과 호환되는 lazer v128을 읽을 수 있습니다. v7 비트맵은 기존 슬라이더 틱 규칙을 보존하도록 v7로 내보내며, 나머지는 v14로 내보냅니다. 동영상과 스토리보드는 작도 캔버스, Catch 미리보기 및 테스트 플레이에서 음악과 동기화되며, 스토리보드 샘플 음향과 게임플레이 트리거도 지원합니다. 미리보기의 히트사운드 트리거는 실제 소리 재생으로 활성화되며, 탐색만으로는 발동하지 않습니다.
 
 ## 시작하기
 
@@ -73,6 +73,10 @@ C# 12와 .NET 10을 사용합니다. Windows 소스 빌드는 `global.json`에 �
 
 - [빌드와 테스트](docs/TESTING.md) · [패키징과 릴리스](docs/RELEASING.md)
 - [편집 조작](docs/EDITOR_UI.md) · [작업 공간과 파일](docs/WORKSPACE.md)
+- [프로젝트 아카이브](docs/PROJECT_ARCHIVES.md) · [동기화와 복구](docs/SYNCHRONIZATION.md)
+- [Pattern Gallery](docs/PATTERN_GALLERY.md) · [히트사운드](docs/HITSOUNDS.md)
+- [AiMod](docs/AIMOD.md) · [Mapset Verifier](docs/MAPSET_VERIFIER.md)
+- [편집 성능](docs/EDITING_PERFORMANCE.md)
 - [아키텍처](docs/ARCHITECTURE.md) · [프로젝트 모델](docs/PROJECT_MODEL.md) · [파일 형식](docs/STABLE_FORMAT.md)
 - [현지화](docs/LOCALIZATION.md) · [서드 파티 라이선스](THIRD_PARTY_NOTICES.md)
 
@@ -81,6 +85,7 @@ C# 12와 .NET 10을 사용합니다. Windows 소스 빌드는 `global.json`에 �
 ## 크레딧
 
 - [ppy/osu](https://github.com/ppy/osu) — osu!catch 알고리즘 및 변환, 게임플레이, 난이도 계산, 호환성 동작의 참고 자료.
+- [Naxesss/MapsetVerifier](https://github.com/Naxesss/MapsetVerifier) — Mapset Verifier 패널에서 사용하는 외부 비트맵 검증 엔진.
 - [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer) — 매핑 중 실시간 Catch 게임플레이 미리 보기의 영감.
 - [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer) — 드롭렛 무작위화 보정과 Catch 슬라이더 패턴 제작의 영감.
 

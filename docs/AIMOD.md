@@ -15,14 +15,16 @@ snapshot: Refresh updates it, and checking or navigating never creates an edit.
 | Mapset | Shared metadata, audio settings and uninherited timing differences between loaded difficulties. |
 
 Resource existence and PNG/JPEG/GIF header checks run on a document snapshot in a
-worker. Shared `.osb` files, variables, animation frames, loops and compound
+worker. Shared `.osb` files, file-local variables, animation frames, loops and compound
 commands participate in resource and storyboard checks. Video dimensions and media
-readability use TagLibSharp 2.3.0 without decoding playback. Audio length uses the
+readability use the packaged FFmpeg metadata probe, including FLV, without starting
+playback or depending on the video/storyboard display preference. The probe reads
+only the referenced local file and is cancelled when the report is refreshed or
+retired. Audio metadata checks use TagLibSharp 2.3.0. Audio length uses the
 loaded playback duration shared with the timeline, rather than a metadata bitrate
 estimate. The editor refreshes the report when that duration becomes available;
-audio-length checks wait while playback audio is unavailable. Unsupported video
-formats, including FLV, are skipped while the editor lacks support. Unreadable supported videos and
-unreadable or unsupported audio still produce diagnostics. The editor consumes
+audio-length checks wait while playback audio is unavailable. Unreadable videos and
+unreadable or unsupported audio produce diagnostics. The editor consumes
 only completed results; rendering performs no file I/O.
 Mapset checks use loaded difficulties, not an online submission service.
 

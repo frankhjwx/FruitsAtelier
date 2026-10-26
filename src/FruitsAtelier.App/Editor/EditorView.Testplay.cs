@@ -39,8 +39,9 @@ public sealed partial class EditorView
 
     public void StartTestplay()
     {
+        bool mediaCanDefer = mediaOpening && libraryOpenTask is null && !AudioProjectCreating && workspaceSaveTask is null && syncCommitTask is null;
         if (IsTestplaying || !HasEditorProject || LibraryVisible || ExportVisible || ErrorVisible ||
-            DiscardConfirmationVisible || SliderDialogVisible || (RotationVisible || TimeJumpVisible) || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
+            ContentConfirmationVisible || SynchronizationBlocksInput && !mediaCanDefer || SliderDialogVisible || (RotationVisible || TimeJumpVisible) || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
             drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading) return;
         EnsureConversion();
         if (deferredConversion)
@@ -49,6 +50,7 @@ public sealed partial class EditorView
             return;
         }
         if (!conversion!.Success) return;
+        if (DeferMediaPlayback(true)) return;
         if (IsLazerEditing && !AudioPlaying && TestplayRealtime < lazerSeekStarted + 300)
             SeekTo(LazerPresentationTime);
         testplayReturnPosition = playhead;
@@ -97,6 +99,9 @@ public sealed partial class EditorView
 
     private void BeginTestplay(CatchTestplay session, bool audioAlreadyPlaying, bool startPaused = false)
     {
+        storyboardTestplay = storyboardTemplate?.Fork(testplayStart);
+        storyboardTriggerVersion = -1; storyboardFrameTime = double.NaN;
+        storyboardSamplePosition = testplayStart - .001; storyboardSamplesThrough = null;
         comboCurrent = comboPrevious = 0; comboChangedAt = double.NegativeInfinity;
         var resolver = new HitsoundResolver(Document, PreviewObjects(), HitsoundSkinFolders);
         var sounds = PreviewObjects().ToDictionary(item => (item.SourceId, item.EventIndex), resolver.Resolve);
@@ -120,7 +125,7 @@ public sealed partial class EditorView
                     if (scheduleSound is not null) scheduleSound(sound, item.TimeMs);
                     else playSound?.Invoke(sound);
                 }
-            });
+            }, judged: (item, hit) => storyboardTestplay?.Judge(item, hit), advanced: time => storyboardTestplay?.Advance(time));
         if (startPaused) testplay.TogglePause();
         if (RequestRunTestplay is null)
             foreach (int key in heldEditorKeys) testplay.SetKey(key, true);
@@ -144,7 +149,7 @@ public sealed partial class EditorView
         double returnTime = atCurrentPosition && testplay is not null ? testplay.TransportPosition : testplayReturnPosition;
         testplay?.Cancel();
         testplayDriver?.Dispose(); testplayDriver = null;
-        testplay = null; testplayFrame = null;
+        testplay = null; testplayFrame = null; storyboardTestplay = null; storyboardTriggerVersion = -1; storyboardFrameTime = double.NaN;
         testplayQuickRetryHeld = false;
         testplayResumeAt = null;
         testplayAutoNotice = null;
@@ -182,6 +187,7 @@ public sealed partial class EditorView
     {
         if (testplay is null) return;
         double time = testplay.TogglePause();
+        ResetHitsounds();
         if (TestplayPaused) FadeTestplayMenu(1, opening: true);
         ResetTestplayPointer();
         testplayMenuSelection = 0;
@@ -225,6 +231,7 @@ public sealed partial class EditorView
             testplayAutoNoticeAt = TestplayRealtime;
         }
         playhead = testplayFrame.TimeMs;
+        UpdateStoryboardSamples(playhead, !testplay.Paused);
         UpdateBackgroundDim();
         foreach (var change in testplayFrame.ComboChanges)
         {
@@ -296,6 +303,7 @@ public sealed partial class EditorView
         DrawCatchLighting(c, frame.Lighting, playhead, x, fieldWidth, catchY, PreviewCircleSize);
         if (LibrarySettings.ShowTestplayCombo) DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
         c.Unclip();
+        DrawStoryboardOverlay(c, new(0, 0, width, height), CurrentBackgroundDim);
         DrawTestplayInformation(c, frame);
         if (testplayAutoNotice is { } notice)
         {
@@ -406,17 +414,23 @@ public sealed partial class EditorView
         219 => "[", 220 => "\\", 221 => "]", 222 => "'", 223 => "OEM 8", 226 => "OEM 102",
         _ => ((char)key).ToString()
     };
+    private const float TestplaySettingsContentHeight = 408;
+    private float TestplaySettingsTop => SettingsTop - workspaceScroll;
     private float TestplaySettingsCellWidth => Math.Min(220, SettingsContentWidth / 3);
     internal Rect TestplayBindingBounds(int index) => new(SettingsContentX + index * TestplaySettingsCellWidth,
-        SettingsTop + 188, TestplaySettingsCellWidth - 12, SettingsControlHeight);
-    internal Rect TestplayStartupDelayBounds => new(SettingsContentX + 270, SettingsTop + 260,
+        TestplaySettingsTop + 188, TestplaySettingsCellWidth - 12, SettingsControlHeight);
+    internal Rect TestplayStartupDelayBounds => new(SettingsContentX + 270, TestplaySettingsTop + 260,
         TestplaySettingsCellWidth * 3 - 12 - 270, SettingsControlHeight);
-    internal Rect TestplaySpeedBounds => new(SettingsContentX + 270, SettingsTop + 300,
+    internal Rect TestplaySpeedBounds => new(SettingsContentX + 270, TestplaySettingsTop + 300,
         TestplaySettingsCellWidth * 3 - 12 - 270, SettingsControlHeight);
     private void DrawTestplayBindings(ICanvas c)
     {
+        workspaceScrollBounds = new(SettingsContentX, SettingsTop + 116, SettingsContentWidth + 12, SettingsBounds.Height - 208);
+        workspaceScroll = Math.Clamp(workspaceScroll, 0, Math.Max(0, TestplaySettingsContentHeight - workspaceScrollBounds.Height));
+        int firstHit = hits.Count;
+        c.Clip(workspaceScrollBounds);
         float cell = TestplaySettingsCellWidth;
-        c.Text(L.Get("testplay.keyBindingSettings"), SettingsContentX, SettingsTop + 124, SettingsSectionSize, Foreground, SettingsRight - SettingsContentX - 32, true);
+        c.Text(L.Get("testplay.keyBindingSettings"), SettingsContentX, TestplaySettingsTop + 124, SettingsSectionSize, Foreground, SettingsRight - SettingsContentX - 32, true);
         var leadIn = TestplayStartupDelayBounds;
         c.Text(L.Get("testplay.startupDelay"), SettingsContentX, leadIn.Y + (leadIn.Height - 17) / 2,
             SettingsTextSize, Foreground, 260, true);
@@ -447,21 +461,39 @@ public sealed partial class EditorView
         TimingButton(c, new(speed.Right - 24, speed.Y, 24, speed.Height), "›",
             () => draftTestplaySpeed = Math.Min(1.5, (Math.Round(draftTestplaySpeed * 100) + 5) / 100),
             enabled: draftTestplaySpeed < 1.5, flatArrow: true);
-        SettingsButton(c, new(SettingsContentX, SettingsTop + 336, Math.Min(280, SettingsContentWidth), SettingsControlHeight),
+        SettingsButton(c, new(SettingsContentX, TestplaySettingsTop + 336, Math.Min(280, SettingsContentWidth), SettingsControlHeight),
             L.Get(draftShowTestplayCombo ? "testplay.comboOn" : "testplay.comboOff"),
             () => draftShowTestplayCombo = !draftShowTestplayCombo, draftShowTestplayCombo);
-        DrawBackgroundDimSetting(c, new(SettingsContentX, SettingsTop + 384, Math.Min(280, SettingsContentWidth), SettingsControlHeight), true);
-        SettingsButton(c, new(SettingsContentX, SettingsTop + 432, Math.Min(280, SettingsContentWidth), SettingsControlHeight),
-            (draftForceBackgroundDim ? "✓ " : "") + L.Get("settings.forceBackgroundDim"),
-            () => draftForceBackgroundDim = !draftForceBackgroundDim, draftForceBackgroundDim);
+        DrawBackgroundDimSetting(c, new(SettingsContentX, TestplaySettingsTop + 384, Math.Min(280, SettingsContentWidth), SettingsControlHeight), true);
+        DrawTestplayCheckbox(c, new(SettingsContentX, TestplaySettingsTop + 480, SettingsContentWidth, SettingsControlHeight),
+            L.Get("settings.forceBackgroundDim"), draftForceBackgroundDim, () => draftForceBackgroundDim = !draftForceBackgroundDim);
+        DrawTestplayCheckbox(c, new(SettingsContentX, TestplaySettingsTop + 432, SettingsContentWidth, SettingsControlHeight),
+            L.Get("settings.enableVideoStoryboard"), draftEnableVideoStoryboard, () => draftEnableVideoStoryboard = !draftEnableVideoStoryboard);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
         for (int i = 0; i < 3; i++)
         {
             int action = i;
-            c.Text(L.Get(labels[i]), SettingsContentX + i * cell, SettingsTop + 160, SettingsTextSize, Foreground, cell - 8, true);
+            c.Text(L.Get(labels[i]), SettingsContentX + i * cell, TestplaySettingsTop + 160, SettingsTextSize, Foreground, cell - 8, true);
             SettingsButton(c, TestplayBindingBounds(i), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
                 () => { libraryField = -1; bindingCapture = action; }, bindingCapture == i);
         }
+        c.Unclip();
+        ClipSettingsHits(firstHit);
+        DrawSettingsScrollbar(c, TestplaySettingsContentHeight);
+    }
+
+    private void DrawTestplayCheckbox(ICanvas c, Rect bounds, string label, bool value, Action toggle)
+    {
+        var box = new Rect(bounds.X + 7, bounds.Y + (bounds.Height - 16) / 2, 16, 16);
+        c.Fill(box, value ? Accent : Background, 2); c.Stroke(box, Muted, radius: 2);
+        if (value)
+        {
+            c.Line(box.X + 3, box.Y + 8, box.X + 7, box.Y + 12, Background, 2);
+            c.Line(box.X + 7, box.Y + 12, box.X + 13, box.Y + 4, Background, 2);
+        }
+        c.Text(label, bounds.X + 32, bounds.Y + (bounds.Height - 17) / 2,
+            SettingsTextSize, Foreground, bounds.Width - 36);
+        hits.Add(new(bounds, toggle, true));
     }
 
     private void CaptureTestplayKey(int key)

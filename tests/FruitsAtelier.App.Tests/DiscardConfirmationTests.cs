@@ -8,6 +8,9 @@ internal static class DiscardConfirmationTests
         var view = new EditorView();
         view.ChangeAudioPath("unsaved.ogg");
         var canvas = new RecordingCanvas();
+        var opening = System.Diagnostics.Stopwatch.StartNew();
+        do { canvas.Clear(); view.Render(canvas, 980, 620); if (!view.LibraryOpening) break; Thread.Sleep(5); } while (opening.Elapsed.TotalSeconds < 10);
+        if (view.LibraryOpening) throw new TimeoutException("The discard fixture did not finish opening media.");
         int answer = 0;
         view.ShowDiscardConfirmation(a => answer = a);
         view.Render(canvas, 980, 620);

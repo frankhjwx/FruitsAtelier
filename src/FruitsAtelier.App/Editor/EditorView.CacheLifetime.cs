@@ -23,16 +23,22 @@ public sealed partial class EditorView
 
     private void ReleaseDifficultyCaches()
     {
+        RetireStoryboard();
         ClearDiscussionRegions();
         difficultyGraphicsReleasePending = true;
         projectMemoryReclaimPending = true;
         // The library does not render a difficulty, so lazy invalidation cannot release its data.
         editorWriteCache = new(); editorConversionCache = new(); draftConversionCache = new();
         conversion = null; playableExport = null; playableObjects = [];
+        displayedTiming = []; svOnlyTiming.Clear();
+        timingEntries.Clear(); timingUndo.Clear(); timingRedo.Clear(); timingDisplayOriginals.Clear();
         renderedTiming = snapTiming = null;
+        cachedAxisTimingLookup = null; cachedAxisTimingTimes = [];
         importedCurveSnapshot = null; importedCurveDistances.Clear(); importedCurveScreens.Clear();
         importedCurveSources.Clear(); importedCurvePaths.Clear();
         osuCanvasSource = null; osuCanvasObjects = []; osuCanvasMaximumEnds = []; osuCanvasVisible.Clear();
+        osuDistanceSource = null; osuDistanceReferences = [];
+        osuObjectSnapSource = null; osuObjectSnapTargets = []; EndOsuDragSnap();
         osuDraftPathSource = osuDraftCandidate = null; osuDraftPath = []; osuDraftStrokePath = []; osuDraftInputs = default;
         timelineConversion = null; timelineSources = []; timelineMarkers = [];
         timelineStarts = []; timelineEnds = []; timelinePrefixEnd = [];
@@ -41,18 +47,24 @@ public sealed partial class EditorView
         previewLighting = []; previewHyperdash.Clear(); previewComboEnds.Clear();
         hitsoundConversion = null; hitsoundDocument = null; resolvedHitsounds = [];
         distanceConversion = null; distanceReferences = [];
+        distanceLayoutSource = distanceLayoutAuthoredSource = null; distanceLayoutTiming = null;
+        distanceLayoutBreaks = null; distanceLayout.Clear();
         objectSnapConversion = null; objectSnapFruits = []; objectSnapTarget = null; EndObjectDragSnap();
         lazerDistanceConversion = null; lazerDistanceReferences = []; lazerDistanceParentEnds.Clear();
+        lazerGuideMovementSource = null; lazerGuideMovementObjects = []; lazerGuideMovementContexts = []; lazerGuideExcluded.Clear();
         lazerVisualSource = null; lazerAutoplay = null; lazerLighting = []; lazerCaught.Clear();
-        movementSnapshots.Clear();
+        movementSnapshots.Clear(); movementStates = []; movementIndices = [];
         sampleBankConversion = null; sliderSnapLabelSource = null; sliderSnapLabels.Clear();
         inspectorExport = null; inspectorSnapshot = null; inspectorRows.Clear();
         songDockSnapshot = randomDockSnapshot = patternDockSnapshot = null;
         liveSongSnapshot = liveRandomSnapshot = livePatternSnapshot = null;
-        placementWriteCache = new(); placementSource = null; placementOrderSource = null;
+        placementWriteCache = new(); placementSource = null; placementOrderSource = null; placementOrder = [];
         placementMovementObjects = null; placementDraftEvents = []; placementDraftTrack = null;
+        placementBreakIntervalSource = null; placementBreakIntervals.Clear();
+        placementBreakObjects = null; placementBreakSource = null; placementBreakPreview = [];
         rotationConversionCache = new(); rotationValidation = null; bananaEditCache = new(); bananaEditSnapshot = null;
         metronomeSnapshot = null; cachedCurveSamples = null;
         hyperdashObjects.Clear(); skinIndices.Clear(); comboEntries = [];
+        collaborationSelectionConversion = null; collaborationSelectionRanges = null; collaborationSelectableParents.Clear();
     }
 }

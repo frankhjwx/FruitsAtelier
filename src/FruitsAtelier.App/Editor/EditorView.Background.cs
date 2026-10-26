@@ -45,6 +45,7 @@ public sealed partial class EditorView
 
     private void RefreshBeatmapBackground()
     {
+        RefreshStoryboard();
         beatmapBackground = null;
         try
         {
@@ -114,11 +115,28 @@ public sealed partial class EditorView
         backgroundDimChangedAt = TestplayRealtime;
     }
 
+    private bool videoRequestedThisFrame;
+
     private void DrawBeatmapBackground(ICanvas c, Rect bounds, float dim, bool mappingCanvas = false)
     {
         if (!mappingCanvas && LibrarySettings.ForceBackgroundDim) { c.Fill(bounds, 0); return; }
-        if (beatmapBackground is not null && c.BackgroundImage(beatmapBackground, bounds))
+        PrepareStoryboardFrame(c);
+        bool drawn = false;
+        if ((!storyboardPresented || storyboardDisplayScene?.ReplacesBackground != true) && (beatmapBackground ?? storyboardScene?.BackgroundPath) is { } backgroundPath)
+            drawn = c.BackgroundImage(backgroundPath, bounds);
+        if (LibrarySettings.EnableVideoStoryboard && storyboardScene is { Videos.Count: > 0 } scene)
+        {
+            var video = scene.Videos[0];
+            if (playhead >= video.OffsetMs)
+            {
+                videoRequestedThisFrame = true;
+                drawn |= c.VideoImage(video.Path, bounds, playhead - video.OffsetMs, AudioPlaying, PlaybackSpeed);
+            }
+        }
+        if (storyboardDisplayFrame.Count > 0) { DrawStoryboard(c, bounds, false); drawn = true; }
+        if (drawn)
             c.DimBackground(bounds, mappingCanvas ? Background : 0, dim);
+        DrawStoryboardLetterbox(c, bounds);
     }
 
     private void DrawBackgroundDimSetting(ICanvas c, Rect bounds, bool draft, float opacity = 1, bool mappingCanvas = false)

@@ -49,12 +49,22 @@ public sealed partial class EditorView
         var left = new Rect(r.X + 16, r.Y + 98, leftWidth, r.Height - 310);
         c.Fill(left, Background, 4);
         if (selected.Length == 0) c.Text(L.Get("timing.select"), left.X + 12, left.Y + 20, 13, Muted, left.Width - 24);
-        else DrawTimingProperties(c, left, selected);
+        else
+        {
+            int hitStart = hits.Count, fieldStart = timingFields.Count;
+            DrawTimingProperties(c, left, selected);
+            if (showTimingSv && timingSvLocked && timingEntries.Where(e => timingSelected.Contains(e.Id)).All(e => e.SvOnly))
+            {
+                hits.RemoveRange(hitStart, hits.Count - hitStart);
+                timingFields.RemoveRange(fieldStart, timingFields.Count - fieldStart);
+                c.Fill(left, TimingLockPink, 4, .12f);
+            }
+        }
         timingListBounds = new(listX, r.Y + 98, r.Right - listX - 16, r.Height - 348);
         var list = timingListBounds;
         c.Fill(list, Background, 4);
         float[] columns = [0, .22f, .35f, .49f, .69f, .84f];
-        string[] headings = ["timing.offsetShort", "timing.bpm", "timing.meter", "timing.sample", "timing.volumeShort", "timing.kiai"];
+        string[] headings = ["timing.offsetShort", showTimingSv ? "timing.bpmSv" : "timing.bpm", "timing.meter", "timing.sample", "timing.volumeShort", "timing.kiai"];
         for (int i = 0; i < columns.Length; i++)
         {
             string arrow = i == 4 && timingSort != 0 ? timingSort == 1 ? " ↑" : " ↓" : "";
@@ -80,12 +90,15 @@ public sealed partial class EditorView
             var entry = entries[i]; var p = entry.Point;
             var row = new Rect(list.X + 3, list.Y + 32 + (i - timingScroll) * 28, list.Width - 12, 28);
             c.Fill(row, timingSelected.Contains(entry.Id) ? 0x35495B : i % 2 == 0 ? 0x222832u : Background);
-            c.Circle(row.X + 6, row.Y + 14, 3, p.Uninherited ? Error : Accent);
-            string[] values = [Time(p.TimeMs), p.Uninherited ? TimingN(TimingPageValue("bpm", 60000 / TimingMap.EffectiveBeatLength(p.BeatLengthMs))) : "",
+            c.Circle(row.X + 6, row.Y + 14, 3, p.Uninherited ? Error : entry.SvOnly && showTimingSv ? TimingSvGreen : Accent);
+            string[] values = [Time(p.TimeMs), p.Uninherited ? TimingN(TimingPageValue("bpm", 60000 / TimingMap.EffectiveBeatLength(p.BeatLengthMs))) : showTimingSv ? TimingN(-100 / p.BeatLengthMs) + "×" : "",
                 p.Uninherited ? p.Meter + "/4" : "", (p.SampleSet switch { 1 => "N", 2 => "S", 3 => "D", _ => "–" }) + (p.SampleIndex == 0 ? "" : ":C" + p.SampleIndex),
                 p.Volume + "%", (p.Effects & 1) != 0 ? "✓" : ""];
             for (int k = 0; k < columns.Length; k++) c.Text(values[k], list.X + (k == 0 ? 15 : 9) + list.Width * columns[k], row.Y + 7, 11, Foreground,
                 list.Width * (k + 1 < columns.Length ? columns[k + 1] - columns[k] : 1 - columns[k]) - 12);
+            if (showTimingSv && timingSvLocked && !p.Uninherited)
+                c.Fill(entry.SvOnly ? row : new Rect(list.X + list.Width * columns[1], row.Y,
+                    list.Width * (columns[2] - columns[1]), row.Height), TimingLockPink, opacity: .18f);
             hits.Add(new(row, () => SelectTimingEntry(entry.Id, placementCtrl, timingPointerShift), true));
         }
         c.Unclip();
@@ -99,14 +112,20 @@ public sealed partial class EditorView
             selected.Length > 0 && selected.All(p => !p.Uninherited), ToggleTimingInheritance, selected.Length > 0);
         TimingPointButton(c, new(list.Right - 82, controlsY, 36, 30), true, () => AddTimingPoint(timingFilter != 1));
         TimingPointButton(c, new(list.Right - 40, controlsY, 36, 30), false, DeleteTimingPoints, selected.Length > 0);
-        float applyY = r.Bottom - 188;
+        TimingSvDisplayBounds = new(r.X + 16, r.Bottom - 198, r.Width * .47f, 28);
+        TimingCheck(c, TimingSvDisplayBounds, "timing.showSv", showTimingSv,
+            ToggleTimingSvDisplay, playableExport is not null || showTimingSv);
+        TimingSvLockBounds = new(r.X + r.Width * .5f, r.Bottom - 198, r.Width * .47f, 28);
+        TimingCheck(c, TimingSvLockBounds, "timing.lockSv", timingSvLocked,
+            () => timingSvLocked = !timingSvLocked);
+        float applyY = r.Bottom - 162;
         c.Text(L.Get("timing.whenApplying"), r.X + 20, applyY, 13, Foreground, r.Width - 40);
-        TimingCheck(c, new(r.X + 20, applyY + 25, r.Width * .47f, 28), "timing.scale", timingScale, () => timingScale = !timingScale);
-        TimingCheck(c, new(r.X + 20, applyY + 58, r.Width * .47f, 28), "timing.snap", timingResnap, () => timingResnap = !timingResnap);
-        TimingCheck(c, new(r.X + r.Width * .5f, applyY + 25, r.Width * .47f, 28), "timing.lengths", timingLengths, () => timingLengths = !timingLengths);
-        TimingCheck(c, new(r.X + r.Width * .5f, applyY + 58, r.Width * .47f, 28), "timing.bookmarks", timingBookmarks, () => timingBookmarks = !timingBookmarks);
-        DrawTimingSnap(c, new(r.X + 20, applyY + 91, 300, 38));
-        c.Text(timingError, r.X + 340, applyY + 95, 11, Error, r.Width - 360);
+        TimingCheck(c, new(r.X + 20, applyY + 22, r.Width * .47f, 24), "timing.scale", timingScale, () => timingScale = !timingScale);
+        TimingCheck(c, new(r.X + 20, applyY + 50, r.Width * .47f, 24), "timing.snap", timingResnap, () => timingResnap = !timingResnap);
+        TimingCheck(c, new(r.X + r.Width * .5f, applyY + 22, r.Width * .47f, 24), "timing.lengths", timingLengths, () => timingLengths = !timingLengths);
+        TimingCheck(c, new(r.X + r.Width * .5f, applyY + 50, r.Width * .47f, 24), "timing.bookmarks", timingBookmarks, () => timingBookmarks = !timingBookmarks);
+        DrawTimingSnap(c, new(r.X + 20, applyY + 78, 300, 32));
+        c.Text(timingError, r.X + 340, applyY + 82, 11, Error, r.Width - 360);
         Button(c, new(r.X + 20, r.Bottom - 46, r.Width * .65f - 24, 32), L.Get("song.ok"), ApplyTimingSetup, true);
         Button(c, new(r.X + r.Width * .65f, r.Bottom - 46, r.Width * .35f - 20, 32), L.Get("mac.cancel"), CloseTimingSetup);
     }
@@ -134,19 +153,23 @@ public sealed partial class EditorView
     {
         float y = r.Y + 14;
         string Common(Func<TimingPoint, double> get) => points.Select(get).Distinct().Take(2).Count() == 1 ? TimingN(get(points[0])) : "";
-        void Number(string key, Func<TimingPoint, double> get)
+        void Number(string key, Func<TimingPoint, double> get, bool enabled = true)
         {
             c.Text(L.Get($"timing.{key}"), r.X + 12, y + 8, 12, Foreground, 90);
-            TimingNumber(c, key, new(r.X + 106, y, r.Width - 118, 30), Common(p => TimingPageValue(key, get(p))), v => SetTimingValues(key, v), () => get(points[0])); y += timingTab == 1 ? 34 : 45;
+            TimingNumber(c, key, new(r.X + 106, y, r.Width - 118, 30), Common(p => TimingPageValue(key, get(p))), v => SetTimingValues(key, v), () => get(points[0]), enabled: enabled);
+            if (key == "sv" && timingSvLocked) c.Fill(new(r.X + 106, y, r.Width - 118, 30), TimingLockPink, 4, .22f);
+            y += timingTab == 1 ? 34 : 45;
         }
         if (timingTab == 0)
         {
-            Number("offset", p => p.TimeMs);
-            TimingButton(c, new(r.X + 12, y, r.Width - 24, 32), L.Get("timing.useCurrent"), () => SetTimingValues("offset", Math.Truncate(playhead))); y += 38;
+            bool structure = timingEntries.Where(e => timingSelected.Contains(e.Id)).All(TimingStructureEditable);
+            Number("offset", p => p.TimeMs, structure);
+            TimingButton(c, new(r.X + 12, y, r.Width - 24, 32), L.Get("timing.useCurrent"), () => SetTimingValues("offset", Math.Truncate(playhead)), enabled: structure); y += 38;
             c.Text(L.Get("timing.shiftSelected"), r.X + 12, y, 12, Foreground, r.Width - 24); y += 20;
             TimingNumber(c, "shift", new(r.X + 12, y, r.Width - 112, 30), TimingN(timingShiftMs), v => timingShiftMs = v);
-            TimingButton(c, new(r.Right - 94, y, 82, 30), L.Get("timing.shiftApply"), () => ShiftSelectedTiming(timingShiftMs)); y += 38;
+            TimingButton(c, new(r.Right - 94, y, 82, 30), L.Get("timing.shiftApply"), () => ShiftSelectedTiming(timingShiftMs), enabled: structure); y += 38;
             if (points.All(p => p.Uninherited)) { Number("bpm", p => 60000 / TimingMap.EffectiveBeatLength(p.BeatLengthMs)); Number("meter", p => p.Meter); }
+            else if (showTimingSv && points.All(p => !p.Uninherited)) Number("sv", p => -100 / p.BeatLengthMs, !timingSvLocked);
             else if (points.Any(p => p.Uninherited)) c.Text(L.Get("timing.mixedTypes"), r.X + 12, y, 12, Muted, r.Width - 24);
         }
         else if (timingTab == 1)
@@ -281,8 +304,8 @@ public sealed partial class EditorView
     {
         timingFields.Clear();
         var r = new Rect(rightPanel.X + 14, rightPanel.Y + 46, rightPanel.Width - 28, rightPanel.Height - 52);
-        bool compact = r.Height < 585;
-        float y = r.Y, gap = compact ? 5 : 12, row = compact ? 28 : 34;
+        bool compact = r.Height < 670;
+        float y = r.Y, gap = compact ? 4 : 12, row = compact ? 25 : 34;
         var state = SnapTiming().At(playhead);
         if (timingResetPoint is not null && !ReferenceEquals(timingResetDocument, Document)) timingResetPoint = null;
         int count = Math.Min(16, state.Meter);
@@ -327,6 +350,12 @@ public sealed partial class EditorView
         TimingSliderVelocityLinkBounds = new(r.X + 100, y, r.Width - 100, row);
         TimingButton(c, TimingSliderVelocityLinkBounds, L.Get("timing.adjustSliderVelocity"), OpenDistanceSnapDialog);
         y += row + gap;
+        TimingSvDisplayBounds = new(r.X, y, r.Width, row);
+        TimingCheck(c, TimingSvDisplayBounds, "timing.showSv", showTimingSv, ToggleTimingSvDisplay,
+            playableExport is not null || showTimingSv); y += row + gap;
+        TimingSvLockBounds = new(r.X, y, r.Width, row);
+        TimingCheck(c, TimingSvLockBounds, "timing.lockSv", timingSvLocked,
+            () => timingSvLocked = !timingSvLocked); y += row + gap;
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.metronome", metronomeEnabled, () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }); y += row + gap;
         TimingButton(c, new(r.X, y, r.Width, row), L.Get("timing.setup"), OpenTimingSetup); y += row + gap;
         c.Text(timingError.Length > 0 ? timingError : sliderMultiplierValidation is not null

@@ -33,6 +33,7 @@ internal sealed class EditorControl : Control, IDisposable
 {
     internal EditorView View { get; } = new(loadDemo: false);
     private readonly ImageCache images = new();
+    internal bool MediaNeedsRedraw => images.MediaNeedsRedraw;
     internal Action? Changed;
     private float uiScale = 1;
     private Point EditorPoint(PointerEventArgs e) => e.GetPosition(this) / uiScale;

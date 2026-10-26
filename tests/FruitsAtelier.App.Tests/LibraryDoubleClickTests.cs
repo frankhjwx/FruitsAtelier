@@ -7,12 +7,16 @@ internal static class LibraryDoubleClickTests
     public static void Run()
     {
         string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-library-click-" + Guid.NewGuid());
+        EditorView? view = null;
         try
         {
             string workspace = Path.Combine(root, "Workspace");
             var session = WorkspaceProject.Create(workspace, BeatmapProject.FromDocuments([MyMapsTests.Document("Click project", "Mapper")]), "");
-            var view = new EditorView(loadDemo: false);
+            view = new EditorView(loadDemo: false);
             view.InitializeLibrary(true, new LibrarySettings { Workspace = workspace, MapperUsernames = ["Mapper"] });
+            var startup = (Task)view.GetType().GetField("libraryStartupTask", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(view)!;
+            Check(startup.Wait(TimeSpan.FromSeconds(10)) && view.LibraryLoading,
+                "completed startup stays loading until its result and initial scan are published");
             var canvas = new RecordingCanvas();
             int opens = 0; LibraryMap? target = null; bool selectedDifficulty = false;
             view.RequestLibraryOpen = (map, selectDifficulty) => { opens++; target = map; selectedDifficulty = selectDifficulty; };
@@ -66,7 +70,7 @@ internal static class LibraryDoubleClickTests
                 for (int i = 0; i < 200; i++)
                 {
                     canvas.Clear(); view.Render(canvas, 980, 620);
-                    if (i > 20 && !view.LibraryLoading) return;
+                    if (!view.LibraryLoading) return;
                     Thread.Sleep(20);
                 }
                 throw new Exception("Library did not settle");
@@ -77,7 +81,21 @@ internal static class LibraryDoubleClickTests
                 view.PointerDown(text.X + 2, text.Y + 2, 0, false, false); view.PointerUp(text.X + 2, text.Y + 2, 0);
             }
         }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+        finally
+        {
+            view?.StopFileMonitoring();
+            if (view is not null)
+            {
+                var deadline = DateTime.UtcNow.AddSeconds(15);
+                var cleanupCanvas = new RecordingCanvas();
+                while (view.LibraryLoading && DateTime.UtcNow < deadline)
+                { cleanupCanvas.Clear(); view.Render(cleanupCanvas, 980, 620); Thread.Sleep(10); }
+                Check(!view.LibraryLoading, "library workers finish before fixture deletion");
+                view.CompleteLibraryCacheWrites();
+                view.CloseLibrary();
+            }
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
 }

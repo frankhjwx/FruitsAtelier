@@ -1,7 +1,8 @@
 using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
-if (args.Contains("--export-snap-check")) { ExportSnapTests.Run(); Console.WriteLine("PASS export snap correction and stream grid"); return 0; }
+if (args.Contains("--timing-retiming-check")) { TimingRetimingTests.Run(); return 0; }
+if (args.Contains("--export-snap-check")) { ExportSnapTests.Run(); Console.WriteLine("PASS export offset preservation and stream grid"); return 0; }
 if (args.Contains("--pattern-gallery-check")) { PatternGalleryTests.Run(); return 0; }
 if (args.Contains("--slider-import-policy-check")) { SliderImportPolicyTests.Run(); Console.WriteLine("PASS unified slider import policy"); return 0; }
 if (args.Contains("--slider-reimport-check")) { SliderReimportTests.Run(); Console.WriteLine("PASS compensated osu reimport and fitted FSlider playback"); return 0; }
@@ -80,7 +81,8 @@ if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console
 
 var tests = new (string Name, Action Run)[]
 {
-    ("Circle and spinner export correction and stream grid agree with internal playback", ExportSnapTests.Run),
+    ("Retimed Legacy sliders preserve project and export data", TimingRetimingTests.Run),
+    ("Circle and spinner offsets are preserved and stream grids agree with internal playback", ExportSnapTests.Run),
     ("Pattern snapshots and FPT packages preserve independent authoring data", PatternGalleryTests.Run),
     ("Slider import modes and compensated baselines remain stable through conversion", SliderImportPolicyTests.Run),
     ("Reimported compensated sliders recover straight playback", SliderReimportTests.Run),
@@ -124,7 +126,7 @@ var tests = new (string Name, Action Run)[]
     ("Changing promoted repeat count resizes edge samples without losing head or tail", () => EachLanguage(ChangedRepeatEdges)),
     ("Temporary SV restores following imported slider speed", RestoreSv),
     ("Base SV overrides avoid unused leading greens and preserve pre-timing sliders", SliderTimingTests.BaseSvDoesNotAddLeadingInheritedPoint),
-    ("Independent duration formula survives the head lookup window", SliderTimingTests.RestorationStaysOutsideHeadWindow),
+    ("Independent duration formula restores SV at the following head", SliderTimingTests.RestorationUsesFollowingHead),
     ("An isolated edited slider does not restore unused original SV", SliderTimingTests.IsolatedEditedSliderDoesNotRestoreUnusedSv),
     ("Same-time SV replaces greens while preserving red timing and effective samples", SliderTimingTests.SameTimeOverrideReplacesGreensAndPreservesRed),
     ("Natural red and green boundary is not overwritten by an SV restore", SliderTimingTests.NaturalBoundaryIsNotOverwrittenByRestore),
@@ -132,12 +134,12 @@ var tests = new (string Name, Action Run)[]
     ("Shared generated SV restores only for the following imported slider", SliderTimingTests.SharedGeneratedSvRestoresOnlyForFollowingImportedSlider),
     ("A following generated head reestablishes original SV without an unused restore", SliderTimingTests.FollowingGeneratedHeadReestablishesOriginalSv),
     ("FSliders above stable's SV=10 limit are not exported", SliderTimingTests.HighSvExportIsRejected),
-    ("Close BPM changes and incompatible imported heads are rejected atomically", SliderTimingTests.UnsafeRestorationWindowIsRejected),
-    ("Close SV boundaries retain metadata and restore speed outside the head window", SliderTimingTests.CloseSvBoundaryPreservesTimingAndSamples),
-    ("Close SV boundaries support compatible head chains and reject conflicting heads", SliderTimingTests.CloseSvBoundaryHandlesAdjacentHeads),
-    ("Close SV boundaries retain natural restoration and protect preceding legacy lookups", SliderTimingTests.CloseSvBoundaryRespectsNaturalRestoration),
-    ("Compatible close timing exports and conflicts identify their timestamps", SliderTimingTests.CompatibleCloseTiming),
-    ("Fractional head restores original NaN state after the lookup window", SliderTimingTests.NaNAndFractionalHeadRestoreOriginalState),
+    ("Following BPM boundaries and adjacent imported heads preserve durations", SliderTimingTests.FollowingTimingBoundaryPreservesHead),
+    ("Following SV boundaries retain timing and sample metadata", SliderTimingTests.CloseSvBoundaryPreservesTimingAndSamples),
+    ("Adjacent generated heads retain independent SV", SliderTimingTests.AdjacentHeadsRetainIndependentSv),
+    ("Natural SV boundaries preserve preceding slider timing", SliderTimingTests.CloseSvBoundaryRespectsNaturalRestoration),
+    ("Compatible and independent adjacent timing exports", SliderTimingTests.CompatibleCloseTiming),
+    ("Fractional head restores original NaN state at the following imported head", SliderTimingTests.NaNAndFractionalHeadRestoreOriginalState),
     ("User project export durations pass an independent raw-field calculation", SliderTimingTests.UserProjectExportHasIndependentCorrectDurations),
     ("NaN inherited metadata does not cause a spurious same-time Catch SV conflict", InheritedNaN),
     ("Conflicting same-time imported slider blocks export", ConflictingSv),

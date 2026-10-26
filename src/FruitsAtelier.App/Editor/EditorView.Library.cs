@@ -99,20 +99,22 @@ public sealed partial class EditorView
     public void ShowLibrary()
     {
         if (ResolvePatternSessionsBeforeLeaving(ShowLibrary)) return;
-        if (LibraryOpening) return;
+        if (libraryOpenTask is not null) return;
+        bool previousExitPending = mediaExitPending;
+        mediaExitPending = true;
         if (WaitForSynchronization(ready => { if (ready) ShowLibrary(); })) return;
-        if (DiscardConfirmationVisible || !PrepareFileOperation()) return;
+        if (DiscardConfirmationVisible || !PrepareFileOperation()) { mediaExitPending = previousExitPending; return; }
         if (HasEditorProject && IsDirty)
         {
             ShowDiscardConfirmation(answer =>
             {
-                if (answer == 2) return;
+                if (answer == 2) { mediaExitPending = false; return; }
                 try
                 {
                     if (answer == 7) LeaveEditor();
-                    else if (answer == 6) BeginWorkspaceSave(saved => { if (saved) LeaveEditor(); });
+                    else if (answer == 6) BeginWorkspaceSave(saved => { if (saved) LeaveEditor(); else mediaExitPending = false; });
                 }
-                catch (Exception error) { ShowError(L.Reformat(error.Message)); }
+                catch (Exception error) { mediaExitPending = false; ShowError(L.Reformat(error.Message)); }
             });
             return;
         }
@@ -692,7 +694,7 @@ public sealed partial class EditorView
             else Button(c, browseBounds, L.Get("library.browse"), browse, fontSize: textSize);
         }
     }
-    public bool LibraryLoading => libraryStartupTask is { IsCompleted: false } || osuCollectionsTask is { IsCompleted: false } || LibraryVisible && libraryDatabase is not null && searchTaskQuery != LibrarySearchKey || scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
+    public bool LibraryLoading => libraryStartupTask is not null || libraryStartupScan || osuCollectionsTask is not null || LibraryVisible && libraryDatabase is not null && searchTaskQuery != LibrarySearchKey || scanTask is not null || searchTask is not null || ratingTask is not null || libraryBrowser is { Loading: true };
     public bool LibraryTextFocused => (LibraryVisible || librarySettingsOpen || ExportVisible) && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;
     public int LibraryInputField => LibraryTextFocused ? libraryField : -1;
     public Action? RequestPasteLibrary { get; set; }

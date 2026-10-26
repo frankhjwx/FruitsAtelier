@@ -13,6 +13,7 @@ public sealed partial class EditorView
     private AimodCategory? aimodCategory;
     private bool aimodDistanceSnap;
     private Task<IReadOnlyList<AimodIssue>>? aimodResourceTask;
+    private CancellationTokenSource? aimodResourceCancellation;
     private double? aimodAudioDurationMs;
     private int aimodFirst, aimodVisibleRows = 1;
     private Rect aimodListBounds;
@@ -33,6 +34,7 @@ public sealed partial class EditorView
 
     private void RefreshAimod()
     {
+        CancelAimodResources();
         EnsureConversion();
         aimodSnapshot = convertedSnapshot;
         aimodAudioDurationMs = ReadyAimodAudioDurationMs;
@@ -42,7 +44,9 @@ public sealed partial class EditorView
             AimodIssues = Aimod.Analyze(Document, playableExport, aimodDistanceSnap,
                 difficulties.Where(d => d.History.Document != Document).Select(d => d.History.Document), aimodAudioDurationMs);
             var snapshot = Document.DeepClone();
-            aimodResourceTask = Task.Run(() => Aimod.AnalyzeResources(snapshot));
+            var cancellation = new CancellationTokenSource();
+            aimodResourceCancellation = cancellation;
+            aimodResourceTask = Task.Run(() => Aimod.AnalyzeResources(snapshot, path => Media.VideoMetadata.Read(path, cancellation.Token), cancellation.Token), cancellation.Token);
         }
         catch (Exception error) when (error is InvalidDataException or ArgumentException)
         {
@@ -74,9 +78,19 @@ public sealed partial class EditorView
 
     private void CloseAimod()
     {
+        CancelAimodResources();
         aimodResourceTask = null; AimodErrors = []; AimodIssues = []; aimodRows = []; aimodFirst = 0; aimodScrollY = 0;
         aimodSnapshot = null; aimodFocused = false; aimodGesture = AimodGesture.None; aimodSelected.Clear();
         aimodAudioDurationMs = null;
+    }
+
+    private void CancelAimodResources()
+    {
+        if (aimodResourceCancellation is not { } retired) return;
+        retired.Cancel(); aimodResourceCancellation = null;
+        if (aimodResourceTask is { } task)
+            _ = task.ContinueWith(t => { _ = t.Exception; retired.Dispose(); }, TaskScheduler.Default);
+        else retired.Dispose();
     }
 
     private void LocateAimodIssue(AimodIssue issue)
@@ -92,6 +106,7 @@ public sealed partial class EditorView
     {
         if (aimodResourceTask is not { IsCompleted: true } completed) return;
         aimodResourceTask = null;
+        aimodResourceCancellation?.Dispose(); aimodResourceCancellation = null;
         var extra = completed.IsCompletedSuccessfully ? completed.Result
             : new[] { new AimodIssue(AimodCategory.Design, AimodSeverity.Error, "checkFailed", Arguments: [completed.Exception!.GetBaseException().Message]) };
         var selected = aimodSelected.Where(i => i < aimodRows.Count).Select(i => aimodRows[i]).ToHashSet();

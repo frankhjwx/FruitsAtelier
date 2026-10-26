@@ -19,6 +19,7 @@ public sealed partial class EditorView
 
     private void RefreshKiaiTransitions()
     {
+        RefreshDisplayedTiming();
         var transitions = new List<(double TimeMs, bool Active)>();
         bool active = false;
         overviewTiming = Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
@@ -34,13 +35,26 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        if (storyboardResourcesReleasePending) { c.ReleaseStoryboardResources(); storyboardResourcesReleasePending = false; }
+        storyboardRenderFrame++;
+        PumpStoryboardGameplay();
         PumpBrowserClear();
         // Full-screen pages can return before laying out docks; never reuse their previous native viewport.
         browserRenderedViewport = browserToolbar = default;
         discussionMarkerHits.Clear(); discussionQuoteBounds.Clear(); discussionQuoteActions.Clear(); discussionQuoteViews.Clear();
-        RenderContent(c, width, height);
-        DrawOsuLinkNotice(c);
-        DrawOsuLinkFallback(c);
+        videoRequestedThisFrame = false;
+        try
+        {
+            RenderContent(c, width, height);
+            ReportMediaError(c);
+            DrawOsuLinkNotice(c);
+            DrawOsuLinkFallback(c);
+        }
+        finally
+        {
+            // Mapping and Preview share one decoder, so retirement follows all viewport requests.
+            if (!videoRequestedThisFrame) c.StopVideo();
+        }
     }
 
     private void RenderContent(ICanvas c, float width, float height)
@@ -82,14 +96,20 @@ public sealed partial class EditorView
         LegacyConversionBounds = StreamConversionBounds = default;
         distanceLabelBounds.Clear(); PreviousDistanceFieldBounds = NextDistanceFieldBounds = XCoordinateFieldBounds = null;
         AdvanceCanvasBackgroundDim();
+        if (difficultyGraphicsReleasePending) { c.ReleaseDifficultyResources(); difficultyGraphicsReleasePending = false; }
         if (IsTestplaying)
         {
             AdvanceTestplay();
-            if (IsTestplaying) { DrawTestplay(c); return; }
+            if (IsTestplaying) { if (!DrawMediaOpening(c)) DrawTestplay(c); return; }
         }
         if (ErrorVisible) { DrawError(c); return; }
         PumpSliderBatch();
         PumpLibrary();
+        if (!LibraryVisible)
+        {
+            EnsureConversion();
+            if (DrawMediaOpening(c)) return;
+        }
         if (FirstRunSetupVisible)
         {
             DrawFirstRunSetup(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c);
@@ -137,6 +157,8 @@ public sealed partial class EditorView
             else
             {
                 DrawCanvas(c);
+                DrawStoryboardOverlay(c, new(leftPanel.Right, canvas.Y + 38,
+                    canvas.Right - leftPanel.Right, plot.Bottom - canvas.Y - 38), LibrarySettings.MappingCanvasBackgroundDim / 100f);
                 DrawCollaborationCanvasLock(c);
                 DrawToolPalette(c);
                 DrawDistanceReadout(c);
@@ -451,12 +473,12 @@ public sealed partial class EditorView
                     DrawLegacyControls(c, track);
                     continue;
                 }
-                foreach (var node in track.Nodes)
+                for (int index = 0; index < track.Nodes.Count; index++)
                 {
+                    var node = track.Nodes[index];
                     var p = Screen(Point(node));
                     if (selected && controlsActive)
                     {
-                        int index = track.Nodes.IndexOf(node);
                         if (index > 0 && CurveMath.SegmentKind(track, index - 1) == CurveKind.Bezier) DrawHandle(PenHandle(track, index, true), DragKind.HandleIn);
                         if (index < track.Nodes.Count - 1 && CurveMath.SegmentKind(track, index) == CurveKind.Bezier
                             || track.Id == draftTrack && tool == Tool.Slider) DrawHandle(PenHandle(track, index, false), DragKind.HandleOut);
@@ -469,7 +491,7 @@ public sealed partial class EditorView
                     {
                         if (offset == default) return;
                         bool active = selection == node.Id && selectedPart == part;
-                        var h = PenHandleScreen(track, track.Nodes.IndexOf(node), part == DragKind.HandleIn);
+                        var h = PenHandleScreen(track, index, part == DragKind.HandleIn);
                         c.Line(p.X, p.Y, h.X, h.Y, active ? Foreground : 0x625E7C);
                         c.Circle(h.X, h.Y, active ? 6 : 4.5f, active ? Foreground : Background);
                         c.Circle(h.X, h.Y, active ? 6 : 4.5f, active ? Foreground : Purple, false, 1.5f);
@@ -623,6 +645,7 @@ public sealed partial class EditorView
             DrawCatchObject(c, item, fieldLeft + (float)(item.X / 512) * fieldWidth, y, fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
         }
         c.Unclip();
+        DrawStoryboardOverlay(c, stage, LibrarySettings.BackgroundDim / 100f);
     }
 
     private void DrawKiaiBadge(ICanvas c)
@@ -680,7 +703,7 @@ public sealed partial class EditorView
         if (AudioLoading) return;
         const float timelineMarkerOpacity = .8f;
         float TimelineX(double time) => overview.X + (float)(Math.Clamp(time, 0, TimelineDurationMs) / TimelineDurationMs) * overview.Width;
-        var timing = overviewTiming;
+        var timing = displayedTiming;
         float centerY = overview.Y + overview.Height / 2;
         c.Line(overview.X, centerY, overview.Right, centerY, 0xA0A0A0, 1, timelineMarkerOpacity);
         float spanHeight = Math.Min(12, overview.Height * .6f);
@@ -715,7 +738,7 @@ public sealed partial class EditorView
             var point = timing[i];
             if (point.TimeMs < 0 || point.TimeMs > TimelineDurationMs) continue;
             float x = TimelineX(point.TimeMs);
-            c.Line(x, overview.Y + 2, x, centerY, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
+            DrawTimingMarker(c, point, x, overview.Y + 2, centerY, timelineMarkerOpacity);
         }
         double visibleStart = Math.Clamp(PresentationViewStart, 0, TimelineDurationMs);
         double visibleEnd = Math.Clamp(PresentationViewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);
@@ -756,7 +779,7 @@ public sealed partial class EditorView
     private void DrawMenu(ICanvas c)
     {
         menuHitStart = hits.Count;
-        var items = new List<(string Label, Action Action, bool Enabled, bool Active, bool Separator, bool Heading)>();
+        var items = new List<(string Label, Action Action, bool Enabled, bool Active, bool Separator, bool Heading, bool KeepOpen)>();
         if (menu == 0)
         {
             Item(L.Get("project.new"), () => RequestNewProject?.Invoke());
@@ -853,7 +876,9 @@ public sealed partial class EditorView
             {
                 LibrarySettings.ForceBackgroundDim = !LibrarySettings.ForceBackgroundDim;
                 RequestViewPreference?.Invoke();
-            }, active: LibrarySettings.ForceBackgroundDim);
+            }, active: LibrarySettings.ForceBackgroundDim, keepOpen: true);
+            Item((LibrarySettings.EnableVideoStoryboard ? "✓ " : "") + L.Get("settings.enableVideoStoryboard"),
+                ToggleVideoStoryboard, active: LibrarySettings.EnableVideoStoryboard, keepOpen: true);
             Item(L.Get("volume.title"), OpenVolumePopover);
             Separator();
             Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
@@ -890,7 +915,7 @@ public sealed partial class EditorView
             }
             bool submenu = (menu == 2 || menu == 4) && y == rect.Y + 7;
             Button(c, new(rect.X + 6, y, rect.Width - 12, 31), item.Label,
-                () => { if (!submenu) menu = -1; item.Action(); }, item.Active || submenu && gridLevelMenuOpen, item.Enabled);
+                () => { if (!submenu && !item.KeepOpen) menu = -1; item.Action(); }, item.Active || submenu && gridLevelMenuOpen, item.Enabled);
             if (submenu)
             {
                 c.Line(rect.Right - 19, y + 11, rect.Right - 14, y + 16, Foreground);
@@ -917,10 +942,10 @@ public sealed partial class EditorView
                 childY += 34;
             }
         }
-        void Item(string label, Action action, bool enabled = true, bool active = false)
-            => items.Add((label, action, enabled, active, false, false));
-        void Heading(string label) => items.Add((label, () => { }, false, false, false, true));
-        void Separator() => items.Add(("", () => { }, false, false, true, false));
+        void Item(string label, Action action, bool enabled = true, bool active = false, bool keepOpen = false)
+            => items.Add((label, action, enabled, active, false, false, keepOpen));
+        void Heading(string label) => items.Add((label, () => { }, false, false, false, true, false));
+        void Separator() => items.Add(("", () => { }, false, false, true, false, false));
     }
 
     private void PrepareCanvasToggleText(ICanvas c, bool compact, float buttonWidth)

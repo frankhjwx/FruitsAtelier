@@ -57,8 +57,15 @@ static class SettingsTests
                             "startup delay aligns with the Dash binding right edge");
                         var combo = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.comboOn"));
                         Check(combo.MaxWidth <= 280, "Combo count uses a compact button");
-                        var dim = ui.Canvas.Texts.Single(t => t.Value.EndsWith(L.Get("settings.forceBackgroundDim")));
-                        Check(dim.MaxWidth <= 280, "Dim Background uses a compact button");
+                        foreach (string key in new[] { "settings.forceBackgroundDim", "settings.enableVideoStoryboard" })
+                        {
+                            var checkbox = ui.Canvas.Texts.Single(t => t.Value == L.Get(key));
+                            Check(checkbox.X == page.X + 32 && checkbox.X + checkbox.MaxWidth <= ui.View.SettingsBounds.Right - 32,
+                                "Testplay checkbox labels stay within the settings content area");
+                            Check(ui.Canvas.Outlines.Any(o => o.Bounds.Width == 16 && o.Bounds.Height == 16
+                                && o.Bounds.X == checkbox.X - 25 && Math.Abs(o.Bounds.Y - checkbox.Y) < 1),
+                                "Testplay visibility preferences use checkbox rows");
+                        }
                     }
                     if (category == "settings.workspace")
                     {
@@ -212,7 +219,7 @@ static class SettingsTests
                 {
                     ui.View.ShowLibrary();
                     var deadline = DateTime.UtcNow.AddSeconds(10);
-                    while (ui.View.LibraryLoading && DateTime.UtcNow < deadline) Thread.Sleep(10);
+                    while (ui.View.LibraryLoading && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(10); }
                     Check(!ui.View.LibraryLoading, "Library finishes loading before settings interaction");
                 }
                 ui.View.OpenSettings(); ui.Paint();

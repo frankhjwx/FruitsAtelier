@@ -20,6 +20,8 @@ a time or position can still flatten a complete imported slider path.
   banana shower requires the full RNG-aware path.
 - Batch timing queries through one `TimingMap.Lookup`. Calling `TimingMap.At` in a
   per-object loop constructs and sorts a new lookup for every object.
+  Batch slider-length recalculation shares one lookup across Legacy sliders and
+  FSliders while retaining their individual SV and repeat calculations.
 - Fill beat grids into each view's reusable buffer with `TimingMap.Lookup.FillGrid`.
   The lookup owns timing values; the buffer is refilled for the current visible range
   and snap divisor, without retaining grid data across timing changes.
@@ -63,6 +65,8 @@ refresh once per minute when the panel is visible.
 Replacing a difficulty releases its conversion, export/read-back and presentation
 caches, including when returning to the library. The next frame releases its
 renderer geometry and background resources before drawing the new content.
+Distance labels, projected breaks, movement guides, standard-canvas snapping,
+timing-axis and collaboration-selection caches retire with the same difficulty.
 Project replacement also clears the project-local clipboard. Retired rating,
 resource and conversion workers cannot publish into the new session.
 After project/difficulty preparation or retirement, a single idle collection
@@ -129,6 +133,9 @@ intervals and the candidate interval. They share the transaction's break algorit
 without cloning a document or exporting the map. The interval cache follows the
 conversion snapshot; projected breaks follow the placement snapshot, committed
 break array and AR. Leaving placement restores committed break filtering.
+Vacated parent intervals query sorted occupied starts and prefix end times when
+associating manually resized break fragments, avoiding a full-map scan per
+removed parent in an empty gap.
 
 Lazer distance guide colours retain a sorted playable fruit/droplet array and
 movement prefix contexts, keyed by playable snapshot identity, CS and excluded
@@ -233,6 +240,9 @@ caches with the UI.
 Coordinate projection reuses the current viewport transform until its origin,
 dimensions, time range or time scale changes; drawing each object must not allocate
 another transform.
+Selected Pen controls use indexed node traversal for drawing and hit testing.
+Handles remain eligible when their owning anchor is outside the viewport;
+anchor-first hit priority and handle traversal order remain unchanged.
 
 Windows drawing uses one mutable solid brush, at most 128 cached text formats and
 256 cached text layouts. Layouts are keyed by text, size, clipping dimensions and
@@ -370,3 +380,10 @@ it does not compare/export complete documents to detect edits. It debounces
 committed changes for one second and clones documents once at check submission.
 Export, media copying and upstream checks run off the UI thread. Pending delays
 request a frame only when due and visible; retired workers cannot publish.
+
+Timing SV presentation retains sorted references to the editor's committed export
+read-back in visible mode and authoring timing in hidden mode. Conversion publication
+or a display-mode switch rebuilds the array and pure-SV classification; painting,
+selection and lock toggles reuse them. Difficulty cache retirement clears both.
+Timing presentation never starts an export or conversion from painting or pointer
+movement.

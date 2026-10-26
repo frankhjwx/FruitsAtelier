@@ -2,6 +2,12 @@
   "version": 1,
   "dependencies": {
     "net10.0-windows7.0": {
+      "FFmpeg.AutoGen": {
+        "type": "Direct",
+        "requested": "[4.3.0.1, )",
+        "resolved": "4.3.0.1",
+        "contentHash": "koM5zqdZZHGAVK0faNZgi9HjCrHrMRGaTqmTEbvMSx3YeNIZBd62JQMZjAE0HlQ3NsLnRvXigVJtwRidOnosUw=="
+      },
       "Microsoft.Web.WebView2": {
         "type": "Direct",
         "requested": "[1.0.4258.31, )",
@@ -47,6 +53,12 @@
         "requested": "[0.10.4, )",
         "resolved": "0.10.4",
         "contentHash": "WYnil3DhQHzjCY0dM9I2B3r1vWip90AOuQd25KE4NrjPQBg0tBJFluRLm5YPnO5ZLDmwrfosY8jCQGQRmWI/Pg=="
+      },
+      "ppy.osu.Framework.NativeLibs": {
+        "type": "Direct",
+        "requested": "[2025.806.0-nativelibs, )",
+        "resolved": "2025.806.0-nativelibs",
+        "contentHash": "andr6OYdjUCpglWMdKoXarGVcgQFza3oRZ8LMJFHjv31N2tO6v9DTs6gZdJB8YWuOBMn77A6Eg3Hy38UZhD9IA=="
       },
       "SoundTouch.Net": {
         "type": "Direct",

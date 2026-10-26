@@ -29,7 +29,7 @@ public sealed partial class EditorView
     public Rect SetupAudioButtonBounds(int index) => new(SettingsContentX + index * 52, SettingsTop + 364, 42, 32);
     public static (double Width, double Height) FirstRunWindowSize(double workWidth, double workHeight, double scale)
         => (Math.Min(880, workWidth * .85 / scale), Math.Min(620, workHeight * .85 / scale));
-    public static string SetupAudioPath => Path.Combine(AppContext.BaseDirectory, "assets", "setup", "campus-after-class.wav");
+    public static string SetupAudioPath => Path.Combine(AppContext.BaseDirectory, "assets", "setup", "campus-after-class.ogg");
     private static readonly string[] FirstRunTitles = ["setup.paths", "setup.skin", "setup.audio", "setup.droplets", "settings.testplay"];
 
     internal void BeginFirstRunSetup(string? settingsPath = null)

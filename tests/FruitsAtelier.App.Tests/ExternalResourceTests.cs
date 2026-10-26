@@ -10,6 +10,7 @@ internal static class ExternalResourceTests
     {
         string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-external-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
+        EditorView? view = null;
         try
         {
             var settings = new LibrarySettings { Workspace = Path.Combine(root, "Workspace") };
@@ -75,12 +76,12 @@ internal static class ExternalResourceTests
             Reject(() => LibraryOperations.ImportPath(bad, settings));
             Check(!File.Exists(Path.Combine(root, "escape.txt")), "full extraction rejects path traversal");
 
-            var view = new EditorView(); view.InitializeLibrary(true, settings);
+            view = new EditorView(); view.InitializeLibrary(true, settings);
             var canvas = new RecordingCanvas();
             for (int i = 0; i < 200; i++)
             {
                 canvas.Clear(); view.Render(canvas, 980, 620);
-                if (!view.LibraryLoading && i > 20) break;
+                if (!view.LibraryLoading) break;
                 Thread.Sleep(20);
             }
             Check(!view.LibraryLoading, "library background work completed");
@@ -96,7 +97,11 @@ internal static class ExternalResourceTests
                 Check(folderClicked == expected, "library import menu is connected");
             }
         }
-        finally { Directory.Delete(root, true); }
+        finally
+        {
+            view?.StopFileMonitoring(); view?.CompleteLibraryCacheWrites(); view?.CloseLibrary();
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
     }
     private static string Map(string title, string difficulty) => $"osu file format v14\n[General]\nMode:2\nAudioFilename:audio.ogg\n[Metadata]\nTitle:{title}\nTitleUnicode:原始标题\nArtist:romanised artist\nArtistUnicode:水果工坊\nCreator:Mapper\nVersion:{difficulty}\nTags:piano\n[Events]\n0,0,\"background.jpg\",0,0\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,1,0,0:0:0:0:";
     private static void Add(ZipArchive zip, string name, string content) { using var writer = new StreamWriter(zip.CreateEntry(name).Open()); writer.Write(content); }

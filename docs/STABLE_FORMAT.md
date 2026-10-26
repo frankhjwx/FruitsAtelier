@@ -66,18 +66,12 @@ These rules follow the [official format document](https://github.com/ppy/osu-wik
 
 ## Writer behavior
 
-Standalone circles and spinner edges with a one-millisecond integer offset from
-a supported beat grid are corrected in both conversion and export. The active red line owns that
-grid. A spinner head up to one millisecond before the first red line can align
-to that line. Other times before the first red line, already snapped edges,
-offsets larger than one millisecond, corrections across red-line grids, and
-head corrections onto an occupied parent head retain their times. Spinner
-corrections do not reverse or collapse a positive duration. Conversion and export
-use the same corrected interval for banana generation and downstream RNG.
-Saved authoring data and undo history keep their original precision.
-The on-open timing-alignment prompt also detects spinner heads and tails, counts
-each affected spinner once, and applies confirmed corrections in one undo step.
-Keeping the original timing leaves authoring data unchanged.
+Conversion and export preserve authored one-millisecond offsets in circles,
+slider heads, Stream/Stack subdivisions and spinner edges. Export applies ordinary
+integer truncation without automatically aligning these times to a beat grid.
+Mapset Verifier exposes explicit, undoable fixes for object and timing-line offsets
+in the current difficulty. The on-open timing-alignment prompt also detects these
+offsets and applies corrections only when confirmed.
 Stream/Stack subdivisions multiply the whole division count before dividing by
 the snap divisor, preventing intermediate floating-point rounding from moving an
 exact integer grid point one millisecond earlier.
@@ -87,7 +81,7 @@ effect changes affect no objects. Sample checks retain slider bodies and stable'
 five-millisecond edge lookahead. A sample point just after a fractional slider tail
 can therefore be required even when a verifier calls it unused.
 
-The generator first produces a two-dimensional slider that satisfies its targets; the writer then serializes it. Generated FSliders start at geometric Y=192 and initially travel upwards when vertical travel is nonzero. Vertical travel continues in the current direction until folding at Y=1/383. The writer emits `B` paths, repeating each internal point to form red anchors between straight Bezier segments. Unedited imported sliders retain their original path representation. Serialization uses invariant culture with consistent newline and UTF-8 policies. Integer object times truncate toward zero, matching stable snapping as modeled by MapsetVerifier. Coordinates round midpoints away from zero. Generated SV points use the same truncated time as their slider heads. Beat grids calculate offsets from whole subdivision counts before dividing, retaining exact whole-millisecond grid points. Fields unaffected by snap correction retain their original numeric spelling.
+The generator first produces a two-dimensional slider that satisfies its targets; the writer then serializes it. Generated FSliders start at geometric Y=192 and initially travel upwards when vertical travel is nonzero. Vertical travel continues in the current direction until folding at Y=1/383. The writer emits `B` paths, repeating each internal point to form red anchors between straight Bezier segments. Unedited imported sliders retain their original path representation. Serialization uses invariant culture with consistent newline and UTF-8 policies. Integer object times truncate toward zero, matching stable snapping as modeled by MapsetVerifier. Coordinates round midpoints away from zero. Generated SV points use the same truncated time as their slider heads. Beat grids calculate offsets from whole subdivision counts before dividing, retaining exact whole-millisecond grid points. Unchanged fields retain their original numeric spelling.
 
 Read-back maps events by source and nested event identity when quantization changes their order. An integer slider head can precede an unchanged fractional fruit at the same authored time. Playable NM/HR output retains the actual exported order; this ordering change alone does not invalidate a base-SV override. Compensation failures report the affected object time and count or time/position changes where available, with guidance for changing SV or reporting an editing failure.
 
@@ -122,13 +116,12 @@ Legacy sliders with independent SV encode their actual per-object multiplier at
 the head, using the processed value when droplet effects are materialized. Their
 stored green points are unchanged by drawing, movement or Inspector SV editing.
 The writer merges per-object SV requirements with original timing/sample/effect
-states and applies its existing restoration and lookup-window checks. Unchanged
-imported SV requires no generated override. Coincident incompatible requirements
+states at the exported head. Unchanged imported SV requires no generated override. Coincident incompatible requirements
 fail explicitly; FSliders at a Legacy head must generate at its actual SV.
 
 When an edited slider requires a different SV, the writer replaces the old green point at its start time to avoid stacking different velocities at the same time, preserving red points and effective sample fields. Catch interprets inherited SV within stable's 0.1–10 range; FSliders requiring SV above 10 fail generation and export. A restoration point is written at the first unedited slider head before the next independent timing boundary that still depends on the old velocity. Otherwise it is omitted.
 
-The writer holds the required SV through the head's next-millisecond lookup window, including fractional timing points that can truncate into that window. Original sample, volume, and effect events retain their timestamps; only conflicting SV values are replaced temporarily, then restored when a subsequent unedited slider needs that state. Restoration must clear overlapping equal-SV head lookup windows. Original timing boundaries remain authoritative. Export verifies unchanged sliders retain their exact and next-millisecond timing states, including truncated timing offsets. Conflicting slider heads or BPM changes that cannot be represented safely still cause a localized failure identifying both times. Duration regressions calculate `length × spans × beatLength / (100 × SliderMultiplier × SV)` directly from exported fields.
+Slider timing and SV are locked at the exported head, following the pinned [legacy decoder](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs). A subsequent BPM/SV point or slider head may occur one millisecond later or at a fractional offset; it does not change the preceding slider's duration. Original timing, sample, volume and effect events retain their timestamps and values. Export verifies unchanged sliders retain their timing state at their exported heads. Coincident incompatible SV requirements and quantized heads crossing a BPM boundary still fail explicitly. Duration regressions calculate `length × spans × beatLength / (100 × SliderMultiplier × SV)` directly from exported fields.
 
 See [Building and Testing](TESTING.md) for tests and the [format module reference](../src/FruitsAtelier.Core/Formats/REFERENCE.md) for APIs and sources.
 

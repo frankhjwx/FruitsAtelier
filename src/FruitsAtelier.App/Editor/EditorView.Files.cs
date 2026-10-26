@@ -388,6 +388,7 @@ public sealed partial class EditorView
 
     private void TogglePlayback()
     {
+        if (!AudioPlaying && DeferMediaPlayback(false)) return;
         if (AudioReady)
         {
             if (IsLazerEditing && !AudioPlaying && TestplayRealtime < lazerSeekStarted + 300)

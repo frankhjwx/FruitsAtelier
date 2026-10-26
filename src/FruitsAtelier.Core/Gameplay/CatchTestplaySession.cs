@@ -34,6 +34,7 @@ public sealed class CatchTestplaySession
     private bool waitingForDeviceProgress;
     private double resumePosition;
     private double outputLead;
+    private readonly Action<double>? advanced;
     public bool Paused { get { lock (gate) return paused; } }
     public bool Autoplay { get { lock (gate) return autoplay; } }
     private Exception? error;
@@ -48,17 +49,20 @@ public sealed class CatchTestplaySession
 
     public CatchTestplaySession(CatchTestplay game, CatchTestplayClock clock, double start, bool withAudio,
         bool audioPlaying, int left, int right, int dash, TimeProvider timeProvider, double circleSize,
-        HashSet<(Guid SourceId, int EventIndex)> comboEnds, Action<ConvertedCatchObject>? caught = null)
+        HashSet<(Guid SourceId, int EventIndex)> comboEnds, Action<ConvertedCatchObject>? caught = null,
+        Action<ConvertedCatchObject, bool>? judged = null, Action<double>? advanced = null)
     {
         this.game = game; this.clock = clock; time = start; startPosition = start; WithAudio = withAudio;
         audioStarted = audioPlaying; this.left = left; this.right = right; this.dash = dash;
         waitingForDeviceProgress = withAudio && !audioPlaying;
         this.timeProvider = timeProvider; this.comboEnds = comboEnds;
+        this.advanced = advanced;
         plate = new(circleSize);
         game.Caught = caught;
         game.ComboChanged = (value, item) => comboChanges.Add(new(value, item));
         game.Judged = (item, x, hit) =>
         {
+            judged?.Invoke(item, hit);
             plate.Judge(item, x, hit, this.comboEnds.Contains((item.SourceId, item.EventIndex)));
             if (hit) lighting.Add(new(item, item.X - x,
                 game.Combo + (item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet ? 1 : 0)));
@@ -108,6 +112,7 @@ public sealed class CatchTestplaySession
             time = target;
             outputLead = 0;
             game.Advance(target, false, false, false, autoplay);
+            advanced?.Invoke(target);
             waitingForDeviceProgress = false;
             awaitingResume = WithAudio;
             resumePosition = target;
@@ -175,6 +180,7 @@ public sealed class CatchTestplaySession
         if (ended || paused || awaitingResume || WithAudio && !audioStarted || !clock.IsRunning) return;
         time = clock.At(Realtime);
         game.Advance(time, keys.Contains(left), keys.Contains(right), keys.Contains(dash), autoplay);
+        advanced?.Invoke(time);
         plate.Prune(time);
         int expiredLighting = 0;
         while (expiredLighting < lighting.Count && time - lighting[expiredLighting].Object.TimeMs >= CatchHitLighting.Lifetime)

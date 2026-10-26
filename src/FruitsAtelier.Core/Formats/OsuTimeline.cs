@@ -40,10 +40,11 @@ public static class OsuTimeline
         bool removedParents = document.Fruits.Count < before.Fruits.Count || document.Tracks.Count < before.Tracks.Count
             || document.ImportedSliders.Count < before.ImportedSliders.Count || document.BananaShowers.Count < before.BananaShowers.Count;
         if (periods.Count == 0 && !removedParents) return;
+        // Reconciliation owns its period list; callbacks must not merge fragments midway through the pass.
         ReconcileBreaksCore(periods, ObjectIntervals(before, sliderLengths), ObjectIntervals(document, sliderLengths),
             CatchScrollTiming.PreemptMs(document.ApproachRate), before.ApproachRate != document.ApproachRate, removedParents,
-            period => RemoveBreak(document, period), (period, replacement) => ReplaceBreak(document, period, replacement),
-            period => AddBreak(document, period.StartMs, period.EndMs));
+            period => RemoveBreak(document, period), (period, replacement) => ReplaceBreakLine(document, period, replacement),
+            period => AddBreakLine(document, period.StartMs, period.EndMs));
     }
 
     /// <summary>Projects breaks from parent intervals without changing the source periods or documents.</summary>
@@ -67,9 +68,13 @@ public static class OsuTimeline
             .Select(pair => pair.Value).ToArray();
         if (changed.Length == 0 && vacated.Length == 0 && !approachChanged) return periods;
         var occupied = current.Values.OrderBy(interval => interval.Start).ToArray();
+        var occupiedPrefixEnd = vacated.Length == 0 ? [] : new double[occupied.Length];
+        for (int i = 0; i < occupiedPrefixEnd.Length; i++)
+            occupiedPrefixEnd[i] = i == 0 ? occupied[i].End : Math.Max(occupiedPrefixEnd[i - 1], occupied[i].End);
         // A break needs objects on both sides, even when its boundaries were manually resized.
         double firstStart = occupied.Length == 0 ? double.PositiveInfinity : occupied[0].Start;
-        double lastEnd = occupied.Length == 0 ? double.NegativeInfinity : occupied.Max(item => item.End);
+        double lastEnd = occupied.Length == 0 ? double.NegativeInfinity
+            : occupiedPrefixEnd.Length > 0 ? occupiedPrefixEnd[^1] : occupied.Max(item => item.End);
         foreach (var period in periods.ToArray())
             if (period.EndMs <= firstStart || period.StartMs >= lastEnd)
                 Remove(period);
@@ -78,28 +83,35 @@ public static class OsuTimeline
             int beforeNote = (int)Math.Clamp(Math.Floor(interval.Start - preempt), 0, int.MaxValue);
             int afterNote = BreakStartAfter(interval.End);
             var adjacent = OrderedPeriods();
-            var left = adjacent.LastOrDefault(period => period.EndMs == beforeNote);
-            var right = adjacent.FirstOrDefault(period => period.StartMs == afterNote
-                || period.StartMs == Math.Ceiling(interval.End + 200));
+            int following = FirstStartingAtOrAfter(interval.Start);
+            double? prior = following > 0 ? occupiedPrefixEnd[following - 1] : null;
+            double? next = following < occupied.Length ? occupied[following].Start : null;
+            bool vacant = (prior is null || prior.Value < interval.Start) && (next is null || next.Value > interval.End);
+            // Manual edge edits keep a fragment in its object gap, even after changing its generated boundary.
+            var left = adjacent.LastOrDefault(period => period.EndMs == beforeNote
+                || vacant && prior is not null && period.StartMs >= prior.Value && period.EndMs <= interval.Start);
+            var right = adjacent.FirstOrDefault(period => period.StartMs == afterNote || period.StartMs == Math.Ceiling(interval.End + 200)
+                || vacant && next is not null && period.StartMs >= interval.End && period.EndMs <= next.Value);
             if (left == default && right == default) continue;
+            if (!vacant)
+            {
+                prior = occupied.Where(item => item.End <= interval.Start).Select(item => (double?)item.End).Max();
+                next = occupied.Where(item => item.Start >= interval.End).Select(item => (double?)item.Start).FirstOrDefault();
+            }
             if (left != default && right != default && left != right)
             {
                 Replace(left, new(left.StartMs, right.EndMs));
                 Remove(right);
             }
-            else if (left != default)
+            else if (left != default && next is not null)
             {
-                double? next = occupied.Where(item => item.Start >= interval.End).Select(item => (double?)item.Start).FirstOrDefault();
-                if (next is not null)
-                    Replace(left, new(left.StartMs,
-                        Math.Max(left.EndMs, (int)Math.Clamp(Math.Floor(next.Value - preempt), 0, int.MaxValue))));
+                Replace(left, new(left.StartMs,
+                    Math.Max(left.EndMs, (int)Math.Clamp(Math.Floor(next.Value - preempt), 0, int.MaxValue))));
             }
-            else
+            else if (right != default && prior is not null)
             {
-                double? prior = occupied.Where(item => item.End <= interval.Start).Select(item => (double?)item.End).Max();
-                if (prior is not null)
-                    Replace(right, new(
-                        Math.Min(right.StartMs, BreakStartAfter(prior.Value)), right.EndMs));
+                Replace(right, new(
+                    Math.Min(right.StartMs, BreakStartAfter(prior.Value)), right.EndMs));
             }
         }
         foreach (var period in OrderedPeriods())
@@ -148,6 +160,17 @@ public static class OsuTimeline
             previousEnd = Math.Max(previousEnd, next.End);
         }
         return OrderedPeriods();
+
+        int FirstStartingAtOrAfter(double time)
+        {
+            int low = 0, high = occupied.Length;
+            while (low < high)
+            {
+                int middle = low + (high - low) / 2;
+                if (occupied[middle].Start < time) low = middle + 1; else high = middle;
+            }
+            return low;
+        }
 
         BreakPeriod[] OrderedPeriods() => periods.OrderBy(period => period.StartMs).ToArray();
         void Remove(BreakPeriod period)
@@ -235,16 +258,33 @@ public static class OsuTimeline
     public static void AddBreak(MapDocument document, int start, int end)
     {
         if (start < 0 || end <= start) throw new ArgumentOutOfRangeException(nameof(end));
+        if (!Breaks(document).Any(period => period.StartMs <= start && period.EndMs >= end))
+            AddBreakLine(document, start, end);
+        MergeOverlappingBreaks(document);
+    }
+
+    private static void AddBreakLine(MapDocument document, int start, int end)
+    {
         var section = document.OriginalSections.LastOrDefault(s => s.Name == "Events");
         if (section is null) { section = new OsuSection { Name = "Events" }; document.OriginalSections.Add(section); }
         section.Lines.Add($"2,{start.ToString(CultureInfo.InvariantCulture)},{end.ToString(CultureInfo.InvariantCulture)}");
     }
 
     public static bool RemoveBreak(MapDocument document, BreakPeriod period)
+        => RemoveBreakLine(document, period, fromEnd: false);
+
+    private static bool RemoveBreakLine(MapDocument document, BreakPeriod period, bool fromEnd)
     {
-        foreach (var section in document.OriginalSections.Where(s => s.Name == "Events"))
-            for (int i = 0; i < section.Lines.Count; i++)
+        for (int offset = 0; offset < document.OriginalSections.Count; offset++)
+        {
+            var section = document.OriginalSections[fromEnd ? document.OriginalSections.Count - 1 - offset : offset];
+            if (section.Name != "Events") continue;
+            for (int lineOffset = 0; lineOffset < section.Lines.Count; lineOffset++)
+            {
+                int i = fromEnd ? section.Lines.Count - 1 - lineOffset : lineOffset;
                 if (ParseBreak(section.Lines[i]) == period) { section.Lines.RemoveAt(i); return true; }
+            }
+        }
         return false;
     }
 
@@ -252,6 +292,29 @@ public static class OsuTimeline
     {
         if (replacement.StartMs < 0 || replacement.EndMs <= replacement.StartMs)
             throw new ArgumentOutOfRangeException(nameof(replacement));
+        if (!ReplaceBreakLine(document, period, replacement)) return false;
+        MergeOverlappingBreaks(document);
+        return true;
+    }
+
+    private static void MergeOverlappingBreaks(MapDocument document)
+    {
+        var periods = Breaks(document);
+        if (periods.Count < 2) return;
+        var merged = periods[0];
+        for (int i = 1; i < periods.Count; i++)
+        {
+            var next = periods[i];
+            if (next.StartMs >= merged.EndMs) { merged = next; continue; }
+            RemoveBreakLine(document, next, fromEnd: true);
+            var replacement = new BreakPeriod(merged.StartMs, Math.Max(merged.EndMs, next.EndMs));
+            ReplaceBreakLine(document, merged, replacement);
+            merged = replacement;
+        }
+    }
+
+    private static bool ReplaceBreakLine(MapDocument document, BreakPeriod period, BreakPeriod replacement)
+    {
         foreach (var section in document.OriginalSections.Where(s => s.Name == "Events"))
             for (int i = 0; i < section.Lines.Count; i++)
             {

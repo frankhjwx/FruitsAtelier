@@ -366,9 +366,9 @@ public sealed partial class EditorView
                     if (!ctrl && anchorSelection.Count == 1) BeginNodeDrag(selected, node, DragKind.Anchor, x, y);
                     return;
                 }
-            foreach (var node in selected.Nodes)
+            for (int index = 0; index < selected.Nodes.Count; index++)
             {
-                int index = selected.Nodes.IndexOf(node);
+                var node = selected.Nodes[index];
                 if (index > 0 && PenHandle(selected, index, true) != default && CurveMath.SegmentKind(selected, index - 1) == CurveKind.Bezier && HitPenHandle(selected, index, true, x, y))
                 { BeginNodeDrag(selected, node, DragKind.HandleIn, x, y); return; }
                 if (PenHandle(selected, index, false) != default && (index < selected.Nodes.Count - 1 && CurveMath.SegmentKind(selected, index) == CurveKind.Bezier || selected.Id == draftTrack) && HitPenHandle(selected, index, false, x, y))
@@ -1261,6 +1261,9 @@ public sealed partial class EditorView
         if (AudioDiagnosticMarkerKeyDown(virtualKey, ctrl, shift)) return;
         if (FullscreenKeyDown(virtualKey, ctrl, shift)) return;
         if (VersionHistoryVisible) { VersionHistoryKey(virtualKey); return; }
+        if (virtualKey == 27 && mediaOpening && !mediaExitPending && !ContentConfirmationVisible
+            && !ErrorVisible && libraryOpenTask is null)
+        { ShowLibrary(); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
             return;
@@ -1401,6 +1404,12 @@ public sealed partial class EditorView
         if (RotationVisible) { RotationKey(virtualKey, ctrl, shift); return; }
         if (SliderDialogVisible)
         {
+            if (VerifierFixPromptVisible)
+            {
+                if (virtualKey == 27) CancelVerifierFixPrompt();
+                else if (virtualKey == 13) AnswerVerifierFix(true);
+                return;
+            }
             if (TimingAlignmentPromptVisible)
             {
                 if (virtualKey is 13 or 27) AnswerTimingAlignment(virtualKey == 13);

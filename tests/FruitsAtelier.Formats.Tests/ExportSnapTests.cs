@@ -5,6 +5,7 @@ internal static class ExportSnapTests
     public static void Run()
     {
         Spinners();
+        Kiai();
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:2.02\nSliderTickRate:2\n[TimingPoints]\n670,254.237288135593,3,2,1,85,1,0\n12873,254.237288135593,4,2,1,85,1,0\n[HitObjects]\n215,192,33212,5,0,2:0:0:0:\n100,192,38297,5,8,2:0:0:0:\n442,192,55585,5,4,1:2:0:0:\n");
         var before = map.DeepClone();
         var cache = new OsuWriteCache();
@@ -12,13 +13,13 @@ internal static class ExportSnapTests
         var output = OsuBeatmapWriter.Serialize(map, cache: cache);
         var again = OsuBeatmapWriter.Serialize(map, cache: cache);
         var full = OsuBeatmapWriter.Serialize(map);
-        var expected = new[] { 33211d, 38296, 55584 };
-        Check(source.Objects.Select(o => o.TimeMs).SequenceEqual(expected), "Internal conversion corrects the active red-line grid");
-        Check(output.ReadBack.Fruits.Select(f => f.TimeMs).SequenceEqual(expected), "Export corrects retained integer source lines");
+        var expected = new[] { 33212d, 38297, 55585 };
+        Check(source.Objects.Select(o => o.TimeMs).SequenceEqual(expected), "Internal conversion preserves one-ms offsets");
+        Check(output.ReadBack.Fruits.Select(f => f.TimeMs).SequenceEqual(expected), "Export preserves retained integer source lines");
         Check(output.ObjectSequenceMatches && output.MaxConvertedTimeErrorMs == 0
-            && output.MaxTimeQuantizationMs == 1
+            && output.MaxTimeQuantizationMs == 0
             && output.Text == again.Text && output.Text == full.Text, "Cached and full export agree with conversion");
-        Check(OsuBeatmapWriter.Serialize(output.ReadBack).Text == output.Text, "Correction is idempotent");
+        Check(OsuBeatmapWriter.Serialize(output.ReadBack).Text == output.Text, "Export is idempotent");
         Check(map.ContentEquals(before), "Export and preview retain source and undo content");
 
         var controls = new MapDocument { BeatLengthMs = 500, DurationMs = 5000 };
@@ -26,7 +27,7 @@ internal static class ExportSnapTests
             new() { TimeMs = 1007, X = 300 }, new() { TimeMs = 1125, X = 400 }]);
         var untouched = OsuBeatmapWriter.Serialize(controls);
         Check(untouched.ReadBack.Fruits.Select(f => f.TimeMs).SequenceEqual(new[] { 1000d, 1001, 1007, 1125 }),
-            "Correction preserves close distinct heads, off-grid notes and already snapped notes");
+            "Export preserves close distinct heads, off-grid notes and already snapped notes");
         controls.Fruits.Clear();
         controls.Fruits.AddRange([new() { TimeMs = 999, X = 100 }, new() { TimeMs = 1001, X = 200 }]);
         Check(OsuBeatmapWriter.Serialize(controls).ReadBack.Fruits.Select(f => f.TimeMs).SequenceEqual(new[] { 999d, 1001 }),
@@ -36,9 +37,9 @@ internal static class ExportSnapTests
         Check(OsuBeatmapWriter.Serialize(controls).ReadBack.Fruits[0].TimeMs == 2168,
             "A nearby red line cannot pull a note across its active timing grid");
         controls.TimingPoints.Clear(); controls.Fruits[0].TimeMs = Math.BitDecrement(1000d);
-        Check(CatchStreamConverter.Convert(controls).Objects[0].TimeMs == 1000
-            && OsuBeatmapWriter.Serialize(controls).ReadBack.Fruits[0].TimeMs == 1000,
-            "Floating-point noise below an integer grid point does not become a fractional one-ms offset internally");
+        Check(CatchStreamConverter.Convert(controls).Objects[0].TimeMs == Math.BitDecrement(1000d)
+            && OsuBeatmapWriter.Serialize(controls).ReadBack.Fruits[0].TimeMs == 999,
+            "Fractional authoring times retain ordinary integer truncation");
 
         var streamMap = new MapDocument { BeatLengthMs = 500, DurationMs = 40000 };
         var stream = new CurveTrack { StreamSnapDivisor = 3 };
@@ -71,6 +72,28 @@ internal static class ExportSnapTests
             "Pruning preserves every event's sample settings");
     }
 
+    private static void Kiai()
+    {
+        var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n1001,-50,4,2,0,40,0,1\n2001,-100,4,3,0,80,0,0\n3003,-100,4,1,0,60,0,1\n[HitObjects]\n100,192,1100,2,0,L|300:192,1,140\n128,192,2200,1,0,0:0:0:0:\n");
+        var before = map.DeepClone();
+        var result = KiaiTimingEditing.Prepare(map) ?? throw new Exception("Expected Kiai offsets");
+        Check(map.ContentEquals(before), "Kiai preparation is read-only");
+        bool At(double time) => (TimingEditing.Current(result, time)!.Effects & 1) != 0;
+        Check(!At(999) && At(1000) && At(1999) && !At(2000) && !At(3002) && At(3003),
+            "Kiai start/end fix only one-ms offsets");
+        Check(result.TimingPoints.Any(p => p.TimeMs == 1001 && p.BeatLengthMs == -50 && p.SampleSet == 2 && p.Volume == 40)
+            && result.TimingPoints.Any(p => p.TimeMs == 2001 && p.SampleSet == 3 && p.Volume == 80),
+            "Combined SV and sample changes retain their original timing");
+        Check(KiaiTimingEditing.Prepare(result) is null, "Kiai fixes are idempotent");
+        var occupied = new MapDocument { BeatLengthMs = 500 };
+        occupied.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
+            new() { TimeMs = 1000, BeatLengthMs = -100, Uninherited = false, Volume = 40 },
+            new() { TimeMs = 1001, BeatLengthMs = -100, Uninherited = false, Effects = 1 }]);
+        Check(KiaiTimingEditing.Prepare(occupied) is null, "Kiai fixes preserve occupied timing boundaries");
+        occupied.TimingPoints[1].TimeMs = 1001;
+        Check(KiaiTimingEditing.Prepare(occupied) is null, "Kiai fixes preserve coincident timing lines");
+    }
+
     private static void Spinners()
     {
         foreach (int end in new[] { 2386, 2387 })
@@ -81,15 +104,15 @@ internal static class ExportSnapTests
             var conversion = cache.Convert(map);
             var output = OsuBeatmapWriter.Serialize(map, cache: cache);
             var spinner = output.ReadBack.BananaShowers.Single();
-            Check(spinner.TimeMs == 387 && spinner.EndTimeMs == 2387, "Spinner head and tail repair one-ms offsets, including before the first red line");
+            Check(spinner.TimeMs == 386 && spinner.EndTimeMs == end, "Spinner head and tail retain one-ms offsets");
             Check(output.ObjectSequenceMatches && output.MaxConvertedTimeErrorMs == 0
                 && conversion.Objects.Select(o => (o.Kind, o.TimeMs, o.X)).SequenceEqual(output.PlayableObjects.Select(o => (o.Kind, o.TimeMs, o.X))),
                 "Spinner preview, exported bananas and downstream slider RNG agree");
             Check(output.Text == OsuBeatmapWriter.Serialize(map, cache: cache).Text
                 && output.Text == OsuBeatmapWriter.Serialize(map).Text
-                && output.Text == OsuBeatmapWriter.Serialize(output.ReadBack).Text, "Spinner correction is cached and idempotent");
-            Check(map.ContentEquals(before), "Spinner correction preserves authoring data and source lines");
-            Check(output.Text.Contains("256,192,387,8,4,2387,1:2:0:50:"), "Corrected spinner retains position, sounds and samples");
+                && output.Text == OsuBeatmapWriter.Serialize(output.ReadBack).Text, "Spinner export is cached and idempotent");
+            Check(map.ContentEquals(before), "Spinner export preserves authoring data and source lines");
+            Check(output.Text.Contains($"256,192,386,8,4,{end},1:2:0:50:"), "Exported spinner retains position, sounds and samples");
         }
 
         var controls = new MapDocument { BeatLengthMs = 500, DurationMs = 5000 };
@@ -106,10 +129,10 @@ internal static class ExportSnapTests
         controls.BananaShowers[0].TimeMs = 999; controls.BananaShowers[0].EndTimeMs = 2000;
         var collisions = OsuBeatmapWriter.Serialize(controls).ReadBack;
         Check(collisions.Fruits[0].TimeMs == 1001 && collisions.BananaShowers[0].TimeMs == 999,
-            "Circle and spinner corrections cannot merge distinct heads");
+            "Export retains distinct circle and spinner heads");
         controls.Fruits.Clear(); controls.BananaShowers[0].EndTimeMs = 1000;
         Check(OsuBeatmapWriter.Serialize(controls).ReadBack.BananaShowers[0].TimeMs == 999,
-            "One-ms correction cannot collapse a positive spinner duration");
+            "Export preserves a positive one-ms spinner duration");
 
         controls.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 1000 }, new() { TimeMs = 387, BeatLengthMs = 500 }]);
         controls.BananaShowers[0].TimeMs = 386; controls.BananaShowers[0].EndTimeMs = 2387;

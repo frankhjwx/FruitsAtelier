@@ -29,7 +29,7 @@ internal static class FullSynchronizationTests
                 WorkspaceProject.Save(session, session.Project);
                 var ui = new Ui(false); ui.Resize(size.Item1, size.Item2);
                 ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
-                ui.View.LoadWorkspace(session); Wait(ui);
+                ui.View.LoadWorkspace(session); Wait(ui); ui.PaintUntilReady();
                 try
                 {
                     const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
@@ -94,7 +94,7 @@ internal static class FullSynchronizationTests
                         "an expired recovery point reports an error instead of selecting another snapshot");
                     ui.Key(27);
                     var other = WorkspaceProject.Create(Path.Combine(root, "Other"), BeatmapProject.FromDocuments([new MapDocument { IsDemo = false }]), "");
-                    ui.View.LoadWorkspace(other); Wait(ui);
+                    ui.View.LoadWorkspace(other); Wait(ui); ui.PaintUntilReady();
                     Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.restoreFullBackup")), "recovery shortcut is scoped to its project");
                 }
                 finally { ui.View.StopFileMonitoring(); }

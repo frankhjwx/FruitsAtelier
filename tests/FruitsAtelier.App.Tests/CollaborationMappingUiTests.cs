@@ -211,7 +211,7 @@ internal static class CollaborationMappingUiTests
         var target = Difficulty("target", 2000); target.Document.SourcePath = Path.Combine(targetRoot, "target.osu");
         target.Document.CollaborationReferences = [new(Guid.NewGuid(), source.Id, 0, 1000)];
         var ui = new Ui(); ui.View.LoadProject(new() { Name = "resources", Difficulties = [source, target] });
-        ui.View.SwitchDifficulty(1); ui.View.ShowCollaborationPanel(); ui.Paint(); ui.View.SynchronizeCollaboration();
+        ui.View.SwitchDifficulty(1); ui.View.ShowCollaborationPanel(); ui.PaintUntilReady(); ui.View.SynchronizeCollaboration();
         var watch = Stopwatch.StartNew();
         while (ui.View.CollaborationBusy && watch.Elapsed.TotalSeconds < 15) { ui.Paint(); Thread.Sleep(1); }
         Check(ui.View.Document.Fruits.Count == 2, "Cross-folder sync commits content");

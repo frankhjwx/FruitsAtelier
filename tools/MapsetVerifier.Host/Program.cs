@@ -4,6 +4,8 @@ using System.Text.Json.Serialization;
 using MapsetVerifier.Framework;
 using MapsetVerifier.Framework.Objects;
 using MapsetVerifier.Parser.Objects;
+using MapsetVerifier.Checks.AllModes.General.Audio;
+using MapsetVerifier.Checks.AllModes.General.Resources;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
@@ -21,7 +23,33 @@ try
     set.Beatmaps.Sort((a, b) => a.GetDifficulty().CompareTo(b.GetDifficulty()));
     // Only built-in checks are loaded; this host does not discover user plugins or start a server.
     Checker.LoadDefaultChecks();
+    if (request.Videos is not null)
+    {
+        var checks = CheckerRegistry.GetChecks();
+        CheckerRegistry.ClearChecks();
+        foreach (var check in checks.Where(c => c is not (CheckVideoResolution or CheckAudioInVideo)))
+            CheckerRegistry.RegisterCheck(check);
+    }
     var issues = Checker.GetBeatmapSetIssues(set);
+    if (request.Videos is { } videos)
+    {
+        // Use the editor's bounded local-file probe for formats TagLib cannot inspect, including shared .osb videos.
+        var resolution = new CheckVideoResolution();
+        var audio = new CheckAudioInVideo();
+        foreach (var video in videos)
+        {
+            if (video.Error is { } error)
+            {
+                issues.Add(new Issue(resolution.GetTemplate(error), null, video.File).WithOrigin(resolution));
+                issues.Add(new Issue(audio.GetTemplate(error), null, video.File).WithOrigin(audio));
+                continue;
+            }
+            if (video.Width > 1280 || video.Height > 720)
+                issues.Add(new Issue(resolution.GetTemplate("Resolution"), null, video.File, video.Width, video.Height).WithOrigin(resolution));
+            if (video.HasAudio)
+                issues.Add(new Issue(audio.GetTemplate("Audio"), null, video.File).WithOrigin(audio));
+        }
+    }
     Guid? Identity(Beatmap? map) => map is not null && identities.TryGetValue(Path.GetFileName(map.MapPath), out var entry) ? entry.Id : null;
     object ProjectIssue(Issue issue) => new
     {
@@ -49,4 +77,5 @@ try
 catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 
 internal sealed record Difficulty(Guid Id, string File, string? Interpretation);
-internal sealed record Request(string Folder, Difficulty[] Difficulties);
+internal sealed record VideoResource(string File, int Width, int Height, bool HasAudio, string? Error);
+internal sealed record Request(string Folder, Difficulty[] Difficulties, VideoResource[]? Videos);

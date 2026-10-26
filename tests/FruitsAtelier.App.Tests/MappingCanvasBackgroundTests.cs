@@ -81,7 +81,7 @@ static class MappingCanvasBackgroundTests
             Check(local.View.WorkspaceSession is not null && local.View.IsDirty, "New map did not acquire a background in its workspace.");
             local.View.SaveWorkspace();
             var session = WorkspaceProject.Open(local.View.WorkspaceSession!.Directory);
-            local.View.LoadWorkspace(session); local.Canvas.AcceptBackgrounds = true; local.Paint();
+            local.View.LoadWorkspace(session); local.Canvas.AcceptBackgrounds = true; local.PaintUntilReady();
             Check(local.Canvas.Images.Any(t => t.Path == Path.Combine(session.Directory, "background.png")), "Local map lost its background after reopening.");
         }
         finally { L.SetLanguage(language); }

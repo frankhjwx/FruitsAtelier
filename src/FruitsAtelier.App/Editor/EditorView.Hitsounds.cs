@@ -48,6 +48,7 @@ public sealed partial class EditorView
 
     public void StartHitsounds(double position)
     {
+        storyboardSamplePosition = position - .001; storyboardSamplesThrough = null;
         if (hitsoundPosition != position) hitsoundPosition = position - 0.001;
         hitsoundDocument = Document; hitsoundFile = Document.AudioPath;
         scheduledThrough = null;
@@ -56,6 +57,8 @@ public sealed partial class EditorView
 
     public void ResetHitsounds()
     {
+        CancelStoryboardPreviewSounds();
+        storyboardSamplePosition = storyboardSamplesThrough = null;
         hitsoundPosition = null;
         scheduledThrough = null;
         preparedThrough = double.NegativeInfinity;
@@ -63,6 +66,13 @@ public sealed partial class EditorView
     }
 
     private void UpdateHitsounds(double position, bool playing, string? filename)
+    {
+        if (!IsTestplaying) ConsumeStoryboardPreviewSounds(position, playing);
+        UpdateObjectHitsounds(position, playing, filename);
+        if (!IsTestplaying) UpdateStoryboardSamples(position, playing);
+    }
+
+    private void UpdateObjectHitsounds(double position, bool playing, string? filename)
     {
         if (TimingModal && !playing) { hitsoundPosition = scheduledThrough = null; return; }
         if (TimingPageVisible && !IsTestplaying)
@@ -74,6 +84,7 @@ public sealed partial class EditorView
         if (!ReferenceEquals(hitsoundDocument, Document) || hitsoundFile != filename)
         {
             ResetHitsounds(); hitsoundDocument = Document; hitsoundFile = filename;
+            if (playing && double.IsFinite(position)) storyboardPreviewConsumedPosition = position;
         }
         if (!double.IsFinite(position) || !playing)
         {
@@ -88,7 +99,8 @@ public sealed partial class EditorView
         bool discontinuity = position < start || position - start > 250;
         if (discontinuity)
         {
-            RequestStopHitsounds?.Invoke(); scheduledThrough = null;
+            RequestStopHitsounds?.Invoke(); scheduledThrough = storyboardSamplesThrough = null;
+            storyboardPendingPreviewSounds.Clear();
             if (RequestScheduleHitsound is null) return;
             start = position - .001;
         }
@@ -97,7 +109,8 @@ public sealed partial class EditorView
         var current = GetHitsoundConversion();
         if (previousConversion is not null && !ReferenceEquals(previousConversion, current))
         {
-            RequestStopHitsounds?.Invoke(); scheduledThrough = null;
+            RequestStopHitsounds?.Invoke(); scheduledThrough = storyboardSamplesThrough = null;
+            storyboardPendingPreviewSounds.Clear();
             start = position - .001;
         }
         var objects = current.Objects;
@@ -108,9 +121,14 @@ public sealed partial class EditorView
         for (int i = low; i < objects.Count && objects[i].TimeMs <= end; i++)
         {
             if (!ShouldPlayCatchHitsound(objects[i], ref lastBananaTime)) continue;
+            bool dispatched = false;
             foreach (var sound in resolvedHitsounds[i])
-                if (scheduled) RequestScheduleHitsound!(sound, objects[i].TimeMs);
-                else RequestHitsound!(sound);
+            {
+                if (scheduled) RequestScheduleHitsound!(sound, objects[i].TimeMs); else RequestHitsound!(sound);
+                dispatched = true;
+            }
+            if (dispatched)
+                if (scheduled) storyboardPendingPreviewSounds.Add(objects[i]); else RecordStoryboardPreviewSound(objects[i]);
         }
         if (scheduled) scheduledThrough = end;
         if (position + 500 >= preparedThrough) PrepareUpcoming(position);

@@ -1,5 +1,71 @@
 # Building and Testing
 
+## Video and storyboard playback
+
+`App.Tests --storyboard-source-cache-check` checks scene reuse for ordinary General
+value edits, including pending preparation. Widescreen, Events, Variables, source
+directories, retirement, line positions and embedded section boundaries still
+invalidate the scene; cached output is compared with a full source parse.
+
+`App.Tests --storyboard-presentation-check` verifies that Mapping retains video
+while Force background dim suppresses Preview, including pending video frames.
+Frames with no video viewport, before the video offset, with visuals disabled or
+in force-dim testplay retire the decoder. On Windows,
+`App.Tests --media-toggle-native-check <video-path>` checks decoder identity across
+repeated Mapping/Preview frames, paused seeking through uploaded frame serials,
+testplay retirement and restoration, and media disable/reopen with real Direct2D.
+Use a video longer than two seconds; the check seeks to one and two seconds.
+
+`Core.Tests --storyboard-check` checks legacy commands, easing endpoints, variable
+substitution, looping and trigger-relative animation at arbitrary timestamps.
+It includes whitespace-bearing macro names and command values, ordered replacement
+oracles, cancellation, differential command compilation, and interval/preload
+queries checked against a linear scan. Warm evaluation must avoid sorting allocations.
+`Core.Tests --storyboard-compile-performance` compares compilation time and allocations
+against the reference algorithm on the same generated command fixture.
+For compressed macro storyboards, compare original input with a reference scene
+from equivalently expanded input. Check full sampled states, preload order and
+scene metadata before comparing performance; incomplete scenes are not valid baselines.
+`App.Tests --storyboard-audio-check` checks storyboard samples through the actual
+muted WASAPI mixer and music clock, including pause, seek and playback speed.
+Audio output remains muted by the harness; do not change system volume.
+
+`App.Tests --storyboard-image-cache-check` uses a controlled decoder to verify
+that current-frame requests take priority over queued prefetch, including multiple
+required images and repeated preparation without duplicate decoding.
+`App.Tests --storyboard-first-playback <Platter.osu> <output-directory> <seed>`
+checks the Wings of Courage storyboard's first s15/4–7 transitions after randomized
+forward/backward seeks in a fresh hidden native renderer. Odd seeds add bounded
+decoder delays. Reports record target/display images, pending work and cache sizes.
+
+On Windows, use `App.Tests --storyboard-native-pixels <output-directory>` for
+native sprite colour/alpha checks. Use `App.Tests --media-native-profile
+<difficulty.osu> <report.json> <full-duration-ms>` for a hidden native renderer
+profile. Pass the full audio/storyboard duration explicitly, including intros and
+outros outside the hit-object range. Reports distinguish UI CPU and allocations
+from completed GPU frames, and include memory samples and per-second gaps.
+`App.Tests --media-video-corpus <inventory.json> <report.json>` exercises existing
+video files through the packaged decoder. The inventory contains a `videos` array
+whose entries provide `path` and `format.duration` (a string in seconds).
+Local mapsets and media are read-only;
+write reports and captures only under ignored `artifacts/`.
+
+Media changes require cold open and warm playback on representative heavy
+storyboards, alternating distant forward/backward seeks, and difficulty retirement
+while loads are pending. Include storyboard samples, actual hit/miss triggers,
+Pass/Fail transitions, alpha/colour/flip/rotation, animation and loop boundaries,
+preview triggers absent on a paused seek, actual dispatch followed by historical
+backward/forward seeks, and scheduling cancelled before consumption. Exercise
+pause and seek immediately before and after a sample timestamp, including zero
+output volume, without replacing consumed device-clock checks with scheduling logs.
+Include
+both widescreen flags, 4:3/16:9/narrow viewports, video start/end fades and
+background dim at 0/50/100. Check that opening stays in its loading overlay until
+the first image frame is ready, a seek retains the prior complete media frame
+while immediately updating audio and the playhead, missing media completes
+preparation with a diagnostic, and repeated seeks do not
+grow worker queues, decoded-image memory or native textures without bound.
+
 For Mapset Verifier changes, prepare the pinned engine with
 `python scripts/Build-MapsetVerifier.py`, then run `App.Tests
 --mapset-verifier-check` and `App.Tests --mapset-verifier-engine-check`.
@@ -28,12 +94,27 @@ and one prompt per difficulty per open, including spinner-only offsets. Windows 
 Chinese at two window sizes and three DPI scales; captures go to
 `artifacts/tests/timing-alignment-native`.
 
-`Formats.Tests --export-snap-check` checks one-millisecond circle correction after
-red-line resets and spinner head/tail correction, including a head one millisecond
-before the first red line, collision/positive-duration guards, unchanged authoring
-data, cached/idempotent export and downstream banana/slider RNG agreement. It also
-checks exact Stream/Stack grid times and unused timing pruning with slider-body
-and five-millisecond tail sample preservation.
+`Formats.Tests --export-snap-check` checks preservation of one-millisecond circle
+and spinner offsets, unchanged authoring data, cached/idempotent export and
+downstream banana/slider RNG agreement. It also checks exact Stream/Stack grid
+times and unused timing pruning with slider samples preserved.
+The Mapset Verifier interaction suite checks separate object/timing-line fixes,
+read-only checking, report refresh and independent undo/redo in English and Chinese.
+Kiai checks cover independent effect timing, retained SV and samples, occupied
+boundaries and undo/redo. Related-offset prompts cover current-section/all-section
+choices, cancellation, direct single-category fixes and one-step undo. Native
+captures include title-row fix buttons and these prompts at the tested sizes and DPI scales.
+
+`App.Tests --break-overlap-check` covers overview Shift-drag additions, Insert
+Break Time, both edge-drag directions, merged previews, cancellation and one-step
+undo/redo. It also places multiple objects inside a break, drags the resulting
+fragments' start/end boundaries, and deletes those objects to check recombination.
+Compression-only placements at either end check recovery after deleting the note,
+including manual edge drags and preservation of the opposite boundary.
+`Core.Tests --break-overlap-check` additionally covers batch and staged deletion,
+retained outer boundaries and separation by remaining objects, as well as existing
+overlapping Events, chained, contained and duplicate ranges, touching boundaries,
+comments, unrelated events and project/export persistence.
 
 ## Embedded browser checks
 
@@ -239,7 +320,20 @@ retain cleanup in `finally`. Run the affected suite and the macOS Desktop
 regression on the final revision before release; a Windows pass does not verify
 macOS path behavior.
 
+Shared editor fixtures must pump both synchronization and `LibraryOpening` to
+completion before editing or switching the loaded difficulty. Synchronization can
+finish before the initial media frame is ready. Library fixtures must also pump
+`LibraryLoading` and complete cache writes before deleting their directories.
+
 ## Automated regressions
+
+App integration output includes each test's elapsed time and the total suite duration.
+Library fixtures wait for loading and their expected results instead of rendering a
+minimum number of frames; complete cache writes before replacing or deleting a fixture.
+Audio-project creation covers every pair of language, Library/editor entry point,
+export mode and audio format using twelve cases. Section synchronization runs the
+multi-megabyte Events payload once in English and uses smaller multi-page payloads
+for the same navigation and merge assertions in every other supported language.
 
 `Core.Tests --pattern-placement-check` checks beat-relative placement, optional
 horizontal speed preservation, bounds, stream/stack data, destination droplet
@@ -823,8 +917,25 @@ After changing input or drawing, manually check affected operations, language sw
 
 ## Editing performance benchmark
 
-`App.Tests --cache-lifetime-check` verifies that closing after both canvas modes
-and clipboard use releases the document, conversion and exported read-back.
+`App.Tests --cache-lifetime-check` warms both canvases, clipboard, distance labels,
+projected breaks, movement guides, snapping and collaboration selection. It checks
+that returning to the Library and replacing a document release their event arrays,
+sampled geometry, timing lookups and movement contexts as well as the document,
+conversion and exported read-back.
+
+`Core.Tests --timing-batch-check` compares batched length recalculation with the
+unbatched calculation across timing boundaries, repeats, independent SV and v7/v14.
+It also checks imported slider extents after timing edits, history and persistence.
+`Formats.Tests --timing-retiming-check` checks those edits through export/read-back.
+`App.Tests --timing-extent-check` moves a Legacy slider with absent or shorter audio,
+then checks timestamp navigation, undo/redo and reopening in English and Chinese.
+
+`App.Tests --selected-pen-nodes-check` checks control paint order, overlapping
+handle priority, anchor priority and visible handles with offscreen anchors.
+`App.Tests --selected-pen-nodes-performance` measures selected multi-node curves,
+reporting render and last-handle pointer-down CPU time and allocations separately.
+The counting canvas excludes native GPU submission and physical display latency.
+
 `App.Tests --project-memory-performance <folder>` opens all sibling `.osu`
 difficulties, waits for ratings and measures memory before and after returning
 to the library. Its final forced collection distinguishes live data from garbage.
@@ -1243,7 +1354,9 @@ with captures under `artifacts/tests/difficulty-tabs-native`.
 `App.Tests --independent-sv-check` checks Legacy Inspector SV editing, undo/redo,
 Shift duration locking and unchanged authoring timing. `Formats.Tests
 --independent-sv-check` checks v7/v14 independent SV import, movement, export,
-project persistence and compatible/incompatible coincident FSlider heads. Native
+project persistence, adjacent BPM/SV boundaries and compatible/incompatible coincident FSlider heads.
+The App suite also checks project opening and automatic synchronization with a
+Legacy slider one millisecond before a BPM boundary. Native
 `--render-check --osu-canvas-render-check --independent-sv-render-check` exercises
 Inspector input and Shift dragging in English/Chinese at both window sizes and
 96/120/144/168/192 DPI, including compact corner controls, slider and button
@@ -1292,3 +1405,10 @@ two sizes and three DPI values.
 For an optional read-only report against an existing installation, run
 `App.Tests --osu-collections-read <osu-root>`. It reports collection member paths
 and difficulty names without importing projects or writing to the installation.
+
+`App.Tests --timing-sv-check` verifies independent SV visibility and lock controls,
+export-equivalent timing rows, unchanged hidden mode, read-only generated SV,
+compound sample editing, Legacy/FSlider SV updates, undo and project persistence.
+Windows `FruitsAtelier.App --render-check --timing-sv-render-check` exercises native
+controls and captures both languages, compact/wide windows and 96/144/192 DPI under
+`artifacts/tests/timing-sv-native`.

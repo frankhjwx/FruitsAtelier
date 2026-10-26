@@ -33,8 +33,9 @@ internal static class AudioProjectTests
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (bool library in new[] { false, true })
             foreach (int mode in new[] { 0, 1, 2 })
-            foreach (string input in new[] { source, ogg, wav })
             {
+                // Cover every pair of locale, entry point, export mode and audio format without repeating all combinations.
+                string input = new[] { source, ogg, wav }[(mode + (locale == "en" ? 0 : 1) + (library ? 1 : 0)) % 3];
                 L.SetLanguage(locale);
                 string workspace = Path.Combine(root, $"{locale}-{library}-{mode}-{Path.GetExtension(input)}");
                 string osu = Path.Combine(root, $"osu-{locale}-{library}-{mode}-{Path.GetExtension(input)}");

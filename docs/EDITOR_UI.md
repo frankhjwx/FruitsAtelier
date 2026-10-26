@@ -868,6 +868,27 @@ while music is paused. Default
 samples show only the bank abbreviation in the list. Imported velocity and
 unrelated effect bits are preserved, while green-point BPM cells remain empty. Kiai updates the editor's existing Kiai indication and exports.
 
+**Show SV lines** and **Lock SV** are independent controls in the Timing panel
+and Timing Setup. SV lines are hidden and locked by default. Hidden mode uses the
+existing authoring timing list. Visible mode uses the complete validated export
+read-back, including generated Legacy/FSlider SV and restore points, with the same
+times, ordering, values and sample fields consumed by osu!, AiMod and Mapset
+Verifier. Switching either control does not change the map or undo history.
+Apply or cancel pending Timing Setup edits before switching its display source.
+
+Visible green rows show their SV multiplier in the BPM / SV column. Pure SV lines
+are dark green; while locked, they carry a translucent pink overlay and are read
+only. Compound green rows retain editable samples, volume and Kiai; only their
+SV cell is pink and locked. Unlocking enables the SV input on the Timing tab.
+SV edits update the sliders governed by that exported timing interval: Legacy
+sliders retain path length and change duration; FSliders retain their authored
+time-X curve and regenerate their exported geometry at the requested SV. Conversion
+constraints still apply. Generated timing positions follow their source sliders
+and cannot be independently moved, deleted or changed into red points.
+Sample edits preserve the slider's SV. Edits commit as one undo step and persist
+in project saves. The waveform and object/transport timelines use the selected
+timing display mode; hidden mode retains its existing waveform presentation.
+
 Ctrl+P adds a red point at the playhead; Ctrl+Shift+P adds a green point, opening
 the draft window on its Audio tab for green points. Shift+arrows extends or shrinks
 the timing-row selection from its moving end. New red and green points truncate the playhead to integer
@@ -981,7 +1002,9 @@ Design selects countdown speed (off, normal, half or double) from four choices a
 stores a non-negative countdown offset in beats. Switches control widescreen
 storyboard support, letterboxing in breaks and the flashing-light warning. These
 options are preserved in project saves and
-`.osu` exports; the editor does not render countdown or storyboard effects.
+`.osu` exports. The editor retains countdown settings without rendering the countdown.
+Video and storyboard visuals follow transport playback; see the shared
+Enable Video/Storyboard preference below.
 Audio, Advanced and preferred-skin controls are not part of Song Setup.
 
 ## Settings
@@ -1032,7 +1055,7 @@ Global defaults save immediately, including when the current difficulty is locke
 Cancel in Song Setup discards map drafts while retaining these global preferences.
 Changing them does not modify existing workspace difficulties or saved projects.
 
-Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same logical dimensions apply on both desktop platforms and follow their interface scaling. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
+Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries. General and Testplay content scroll when the window is too short, with the page title and Apply fixed. Combo count in Testplay uses a compact button; the Background dim row matches its width. Dim Background and Enable Video/Storyboard use checkboxes. Navigation retains its larger click targets. The same logical dimensions apply on both desktop platforms and follow their interface scaling. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
 The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. Ordinary preferences can be applied during library scanning or searching; changes to library paths wait for those tasks to finish. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **General → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
 
@@ -1053,6 +1076,16 @@ menu, click or drag the fill bar behind the centered label to set the percentage
 the side buttons adjust it by 5%. Dragging updates the background immediately and
 saves the preference when the drag ends. Settings uses the same fill bar, with changes
 kept in the draft until Apply. The editing canvas has a fully opaque backing.
+
+**Enable Video/Storyboard** defaults to enabled and shares one saved preference
+across **View** (below **Dim Background**), the canvas background slider panel,
+and **Settings > Testplay** (below **Background dim**). View and canvas changes
+apply immediately; both View toggles show their active state and keep the menu open after a click. Settings uses Apply and discards unapplied changes on close.
+The switch controls video and storyboard visuals in the mapping canvas, Catch
+preview and testplay. Disabling cancels visual preparation and releases decoded
+images, textures and video playback resources. Static beatmap backgrounds and
+ordinary storyboard samples continue playing; disabled maps parse sample events
+without preparing sprite commands, animation images or visual triggers.
 
 **View > Dim Background** and the matching **Settings > Testplay** switch
 force an opaque black background in Catch preview and testplay, including intro
@@ -1161,9 +1194,11 @@ does not edit beatmap content or create undo entries.
 
 During a kiai interval, a small badge appears at the upper-left of the editing plot. It brightens at the interval start and on every full beat from the active red timing point, then fades through the beat. Green timing points that preserve the kiai state do not restart the pulse. Its pulse follows map time, including seeking and timing edits.
 
-Adding, pasting, moving, extending or removing notes around an existing break recalculates the affected interval when the edit commits. Breaks leave the next object's AR preempt time clear and resume at least 200 ms after the preceding object ends, including all slider repeats and banana-shower duration. An occupied break is shortened, split, or removed; generated pieces shorter than 650 ms are removed. Removing the note that split a break merges its remaining pieces. Deleting the last objects in a bounded section also creates a break for a newly vacated gap with at least 650 ms after the preceding object's recovery and before the next object's approach, even when no existing break remains. Overlapping occupied intervals prevent a break. After object-time or duration edits, breaks before the first object or after the maximum object end are removed, including manually resized intervals. Approach-rate edits reconcile breaks against the new approach time. Extensions use the maximum preceding object end so overlapping long objects remain clear. Unaffected valid break boundaries and other Events data are preserved. The note change and break adjustment share one undo step, and saving or exporting retains the updated intervals.
+Adding, pasting, moving, extending or removing notes around an existing break recalculates the affected interval when the edit commits. Breaks leave the next object's AR preempt time clear and resume at least 200 ms after the preceding object ends, including all slider repeats and banana-shower duration. An occupied break is shortened, split, or removed; generated pieces shorter than 650 ms are removed. Removing the notes that split a break merges its remaining pieces, including fragments whose start or end was manually resized. Fragments are associated by their surrounding object gap; merging retains the outer fragment boundaries, and remaining objects continue to separate gaps. Deleting the last objects in a bounded section also creates a break for a newly vacated gap with at least 650 ms after the preceding object's recovery and before the next object's approach, even when no existing break remains. Overlapping occupied intervals prevent a break. After object-time or duration edits, breaks before the first object or after the maximum object end are removed, including manually resized intervals. Approach-rate edits reconcile breaks against the new approach time. Extensions use the maximum preceding object end so overlapping long objects remain clear. Unaffected valid break boundaries and other Events data are preserved. The note change and break adjustment share one undo step, and saving or exporting retains the updated intervals.
 
-In the object timeline and canvas left time axis, each break has a grey core and lighter white and green transition regions extending to the adjacent source objects, without changing the stored break timestamps. Hovering a core edge in the object timeline shows a horizontal resize cursor. Dragging that edge snaps to the current beat subdivision when Snap is on and previews the new range; releasing commits one undoable edit, releasing with less than 400 ms remaining removes the break, and Esc cancels the preview.
+When placement only shortens a break at one end, deleting the note restores that end toward the next remaining object while retaining the opposite manually edited boundary. The recovered range still leaves AR preempt time before the following object and 200 ms after the preceding object's end.
+
+In the object timeline and canvas left time axis, each break has a grey core and lighter white and green transition regions extending to the adjacent source objects, without changing the stored break timestamps. Hovering a core edge in the object timeline shows a horizontal resize cursor. Dragging that edge snaps to the current beat subdivision when Snap is on and previews the new range; releasing commits one undoable edit, releasing with less than 400 ms remaining removes the break, and Esc cancels the preview. Adding or resizing a break merges overlapping intervals into their combined range, including contained, duplicate and chained overlaps already in the document. Touching boundaries remain separate. Edge drags preview the merged range and can cross another break within the surrounding object gap. The merge shares the addition or resize's undo step; unrelated Events data is preserved.
 
 Fruit and slider shapes on the upper object timeline use standard osu! circle and slider-endpoint skin resources, tinted with the beatmap or skin combo colour. Numbers use the skin's HitCircle font and overlay-order setting; missing resources have geometric/text fallbacks. Banana showers remain gold. Each object's body, endpoints, reverse arrows and number occupy one chronological layer: earlier starts cover later starts, with earlier ends and source order breaking ties. Selected objects retain this order and show orange rings with blue outer rings. Clicking and deleting use the same front-to-back order. Slider tracks honour SliderTrackOverride and have no separate perimeter; their white edges come from the endpoint artwork. Circle textures account for legacy transparent padding, and HitCircle font glyphs use the legacy 0.8 scale. Timing point markers use the same time-to-X coordinate as note centers. Insert Break Time uses the same text size as Movement Analysis; the Mapping header places AR, CS, and DPB in fixed columns on one baseline.
 
@@ -1466,7 +1501,6 @@ Manual conversion does not offer this checkbox. These global import
 preferences are saved when applying Settings; they do not edit existing maps. Conversion uses the current map and slider modes and the retained baseline; there is no separate conversion-mode toggle. **Edit → Convert all sliders to FSliders** offers the same representation choice for the current difficulty. Single-slider conversion uses the same policy. Batch conversion is cancellable, checks its source snapshot before publication, and supports one undo step per difficulty. Invalid input retains its source with diagnostics. Saving persists the result in the workspace without modifying the original source files.
 
 Ctrl+D retains the source object and creates a same-type copy with its baseline and effective mode. Generated compensation is recalculated for the copied object's position in the map RNG sequence. This does not apply derandomization again to an already processed path.
-
 
 With Distance Snap disabled, dragging a selected slider fruit, droplet or tiny droplet follows horizontal Grid Snap, including the existing Shift override. Unreachable positions stop at an accepted grid point, or retain the original X when no grid point is reachable. With Distance Snap enabled, the strict event snapping rules above apply; rejected candidates do not leave partial geometry.
 
