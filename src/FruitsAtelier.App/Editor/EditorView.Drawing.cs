@@ -42,10 +42,19 @@ public sealed partial class EditorView
         // Full-screen pages can return before laying out docks; never reuse their previous native viewport.
         browserRenderedViewport = browserToolbar = default;
         discussionMarkerHits.Clear(); discussionQuoteBounds.Clear(); discussionQuoteActions.Clear(); discussionQuoteViews.Clear();
-        RenderContent(c, width, height);
-        ReportMediaError(c);
-        DrawOsuLinkNotice(c);
-        DrawOsuLinkFallback(c);
+        videoRequestedThisFrame = false;
+        try
+        {
+            RenderContent(c, width, height);
+            ReportMediaError(c);
+            DrawOsuLinkNotice(c);
+            DrawOsuLinkFallback(c);
+        }
+        finally
+        {
+            // Mapping and Preview share one decoder, so retirement follows all viewport requests.
+            if (!videoRequestedThisFrame) c.StopVideo();
+        }
     }
 
     private void RenderContent(ICanvas c, float width, float height)

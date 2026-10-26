@@ -50,6 +50,7 @@ internal static class MediaToggleNativeTests
             do { Draw(); Thread.Sleep(2); } while ((canvas.StoryboardTextureBytes == 0 || Field(canvas, "videoBitmap") is null) && ready.Elapsed.TotalSeconds < 5);
             Console.WriteLine($"Native enabled: textures={canvas.StoryboardTextureBytes}, video={Field(canvas, "video") is not null}, bitmap={Field(canvas, "videoBitmap") is not null}, error={canvas.MediaError}, scene={(Field(view, "storyboardScene") as StoryboardScene)?.SpriteCount}, videos={(Field(view, "storyboardScene") as StoryboardScene)?.Videos.Count}, diagnostics={string.Join(';', (Field(view, "storyboardScene") as StoryboardScene)?.Diagnostics ?? [])}, position={view.PlayheadMs}");
             Assert(canvas.StoryboardTextureBytes > 0 && Field(canvas, "videoBitmap") is not null, "Enabled native resources did not load.");
+            CheckSharedVideo();
             var retiredPixels = (StoryboardImageCache)Field(canvas, "storyboardPixels")!;
             var retiredVideo = (VideoPlayback)Field(canvas, "video")!;
             Toggle(); Draw();
@@ -105,6 +106,53 @@ internal static class MediaToggleNativeTests
                 return map;
             }
             void Draw() { canvas.Begin(); view.Render(canvas, 980, 620); canvas.End(); }
+            void CheckSharedVideo()
+            {
+                var toggle = view.PreviewToggleBounds;
+                if (!view.CatchPreviewVisible) Click(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2);
+                Assert(view.CatchPreviewVisible, "Native shared-video check requires the actual Preview dock.");
+                var decoder = (VideoPlayback)Field(canvas, "video")!;
+                foreach (bool force in new[] { false, true, false })
+                {
+                    view.LibrarySettings.ForceBackgroundDim = force;
+                    for (int frame = 0; frame < 12; frame++)
+                    {
+                        Draw();
+                        Assert(ReferenceEquals(decoder, Field(canvas, "video")),
+                            $"Preview retired the Mapping decoder: force={force}, frame={frame}.");
+                        Assert(Field(canvas, "videoBitmap") is not null, "Mapping lost its prepared video frame.");
+                    }
+                    Console.WriteLine($"PASS native shared video force={force}: 12 frames retain one decoder");
+                }
+                view.LibrarySettings.ForceBackgroundDim = true;
+                view.UpdateTransport(2000, 10000, true, false, false, null, null);
+                var sought = Stopwatch.StartNew();
+                bool displayed = false;
+                do
+                {
+                    Draw();
+                    decoder.WithFrame(2000, false, 1, frame => displayed = frame.Time <= 2000 && frame.EndTime > 2000
+                        && (long)Field(canvas, "videoSerial")! == frame.Serial);
+                    if (!displayed) Thread.Sleep(2);
+                }
+                while (!displayed && sought.Elapsed.TotalSeconds < 5);
+                Assert(ReferenceEquals(decoder, Field(canvas, "video")) && displayed,
+                    "Paused seek did not reach the requested video time with force-dim Preview.");
+                view.LibrarySettings.TestplayStartupDelaySeconds = 0;
+                view.StartTestplay(); Draw();
+                Assert(view.IsTestplaying && Field(canvas, "video") is null,
+                    "Force-dim testplay retained a decoder without any visible video viewport.");
+                Assert(decoder.Completion.Wait(TimeSpan.FromSeconds(5)), "Suppressed testplay decoder did not finish retiring.");
+                view.StopTestplay();
+                view.LibrarySettings.ForceBackgroundDim = false;
+                Settle();
+                var resumed = Stopwatch.StartNew();
+                do { Draw(); Thread.Sleep(2); }
+                while (Field(canvas, "videoBitmap") is null && resumed.Elapsed.TotalSeconds < 5);
+                Assert(Field(canvas, "videoBitmap") is not null, "Returning from testplay did not restore Mapping video.");
+                toggle = view.PreviewToggleBounds;
+                if (view.CatchPreviewVisible) Click(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2);
+            }
             void Settle()
             {
                 view.UpdateTransport(1000, 10000, true, false, false, null, null);

@@ -101,7 +101,12 @@ before drawing editor/gameplay objects; dimming does not recolour those bars.
 Video uses centred cover sizing; video-only scenes use the full available panel.
 Background dim reduces RGB brightness. Overlay
 sprites draw above gameplay with unchanged alpha, including black opaque portions
-at 100% dim. Force background dim suppresses background media entirely.
+at 100% dim. Force background dim suppresses background media in Catch preview
+and testplay; Mapping retains its independent media display. All viewports share
+the renderer's video decoder. The editor retains it while any viewport requests
+video in the current frame and stops it when none does, including full-screen
+pages and force-dim testplay. A requested frame still being decoded counts as
+video demand.
 
 `LibrarySettings.EnableVideoStoryboard` controls visuals across every viewport.
 Changing it retires scene and gameplay workers, clears displayed sprite buffers,

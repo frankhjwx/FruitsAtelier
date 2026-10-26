@@ -2,6 +2,15 @@
 
 ## Video and storyboard playback
 
+`App.Tests --storyboard-presentation-check` verifies that Mapping retains video
+while Force background dim suppresses Preview, including pending video frames.
+Frames with no video viewport, before the video offset, with visuals disabled or
+in force-dim testplay retire the decoder. On Windows,
+`App.Tests --media-toggle-native-check <video-path>` checks decoder identity across
+repeated Mapping/Preview frames, paused seeking through uploaded frame serials,
+testplay retirement and restoration, and media disable/reopen with real Direct2D.
+Use a video longer than two seconds; the check seeks to one and two seconds.
+
 `Core.Tests --storyboard-check` checks legacy commands, easing endpoints, variable
 substitution, looping and trigger-relative animation at arbitrary timestamps.
 `App.Tests --storyboard-audio-check` checks storyboard samples through the actual

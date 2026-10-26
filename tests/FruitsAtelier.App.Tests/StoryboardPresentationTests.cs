@@ -79,14 +79,43 @@ internal static class StoryboardPresentationTests
                 }
                 view.UpdateTransport(499, 10000, true, false, false, null, null); Paint();
                 if (canvas.Videos.Count != 0 || canvas.Backgrounds.Count != 2) throw new Exception("Video offset boundary omitted the background or requested an early frame.");
+                if (canvas.VideoActive || canvas.VideoStops == 0) throw new Exception("Seeking before the video offset retained the decoder.");
                 view.UpdateTransport(500, 10000, true, false, false, null, null); Paint();
                 if (canvas.Videos.Count != 2 || canvas.Videos.Any(v => v.TimeMs != 0)) throw new Exception("Video offset was not mapped to media time zero.");
             }
             view.LibrarySettings.ForceBackgroundDim = true; view.UpdateTransport(6000, 10000, true, false, false, null, null); Paint();
             if (canvas.Videos.Count != 1) throw new Exception("Force dim did not suppress preview media while retaining the mapping canvas.");
+            for (int frame = 0; frame < 3; frame++)
+            {
+                Paint();
+                if (canvas.Videos.Count != 1 || canvas.VideoStops != 0 || !canvas.VideoActive)
+                    throw new Exception("Force dim retired the Mapping decoder while suppressing Preview media.");
+            }
+            canvas.VideoReady = false; Paint();
+            if (canvas.VideoStops != 0 || !canvas.VideoActive)
+                throw new Exception("An unready video request retired its decoder before a frame could arrive.");
+            canvas.VideoReady = true;
+            typeof(EditorView).GetMethod("ShowTimingPage", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, [true]); Paint();
+            if (!view.TimingPageVisible || canvas.Videos.Count != 0 || canvas.VideoActive || canvas.VideoStops == 0)
+                throw new Exception("A frame without video viewports retained its decoder.");
+            typeof(EditorView).GetMethod("ShowTimingPage", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, [false]); Paint();
+            if (!canvas.VideoActive || canvas.VideoStops != 0) throw new Exception("Returning to Mapping did not restore video demand.");
+            typeof(EditorView).GetMethod("ToggleVideoStoryboard", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, null); Paint();
+            if (canvas.Videos.Count != 0 || canvas.VideoActive || canvas.VideoStops == 0)
+                throw new Exception("Disabling video retained the decoder.");
+            typeof(EditorView).GetMethod("ToggleVideoStoryboard", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, null);
+            warm.Restart();
+            do { Paint(); if (Pending(view)) Thread.Sleep(5); } while (Pending(view) && warm.Elapsed.TotalSeconds < 5);
+            if (Pending(view) || !canvas.VideoActive) throw new Exception("Enabling video did not restore Mapping demand.");
             view.UpdateTransport(6000, 10000, false, false, false, null, null); view.StartTestplay(); Paint();
             if (!view.IsTestplaying || canvas.Videos.Count != 0 || canvas.Sprites.Count != 0) throw new Exception("Force dim leaked media into actual testplay.");
-            view.StopTestplay(); view.StopFileMonitoring(); view.CompleteLibraryCacheWrites();
+            if (canvas.VideoActive || canvas.VideoStops == 0) throw new Exception("Force dim retained a video decoder during testplay.");
+            view.StopTestplay(); Paint();
+            if (!canvas.VideoActive) throw new Exception("Leaving testplay did not restore Mapping video demand.");
+            view.ShowLibrary(); Paint();
+            if (!view.LibraryVisible || canvas.Videos.Count != 0 || canvas.VideoActive || canvas.VideoStops == 0)
+                throw new Exception("Library navigation retained the video decoder.");
+            view.StopFileMonitoring(); view.CompleteLibraryCacheWrites();
             Console.WriteLine($"PASS {(widescreen ? "16:9" : "4:3")} storyboard mask, preview 4:3/16:9/Fit, dim 0/50/100, video offset and Force dim");
 
             void Paint() { canvas.Clear(); view.Render(canvas, 1440, 900); }
@@ -131,7 +160,8 @@ internal static class StoryboardPresentationTests
     private sealed class MediaCanvas : ICanvas
     {
         private readonly RecordingCanvas inner = new(); private readonly Stack<Rect> clips = new();
-        internal bool RequiredReady = true;
+        internal bool RequiredReady = true, VideoReady = true, VideoActive;
+        internal int VideoStops;
         public bool StoryboardImagesReady(IReadOnlyList<string> paths) => RequiredReady;
         internal readonly List<(Rect Bounds, float Opacity)> Dims = [];
         internal readonly List<(string Path, Rect Bounds, double TimeMs)> Videos = [];
@@ -139,7 +169,7 @@ internal static class StoryboardPresentationTests
         internal readonly List<(string Path, float X, float Y, float Opacity, uint Tint, Rect Clip)> Sprites = [];
         internal readonly List<(Rect Bounds, uint Color, float Opacity)> Fills = [];
         internal IReadOnlyList<RecordingCanvas.Label> Texts => inner.Texts;
-        internal void Clear() { inner.Clear(); Dims.Clear(); Videos.Clear(); Backgrounds.Clear(); Sprites.Clear(); Fills.Clear(); clips.Clear(); }
+        internal void Clear() { inner.Clear(); Dims.Clear(); Videos.Clear(); Backgrounds.Clear(); Sprites.Clear(); Fills.Clear(); clips.Clear(); VideoStops = 0; }
         public void Fill(Rect r, uint color, float radius = 0, float opacity = 1) { Fills.Add((r, color, opacity)); inner.Fill(r, color, radius, opacity); }
         public void Stroke(Rect r, uint color, float width = 1, float radius = 0) => inner.Stroke(r, color, width, radius);
         public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1) => inner.Line(x1, y1, x2, y2, color, width, opacity);
@@ -147,7 +177,8 @@ internal static class StoryboardPresentationTests
         public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false) => inner.Text(text, x, y, size, color, maxWidth, bold);
         public bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null, float opacity = 1) => inner.Image(filePath, destination, tint, source, opacity);
         public bool BackgroundImage(string filePath, Rect destination) { Backgrounds.Add((filePath, destination)); return true; }
-        public bool VideoImage(string path, Rect destination, double positionMs, bool playing, double rate) { Videos.Add((path, destination, positionMs)); return true; }
+        public bool VideoImage(string path, Rect destination, double positionMs, bool playing, double rate) { Videos.Add((path, destination, positionMs)); VideoActive = true; return VideoReady; }
+        public void StopVideo() { VideoStops++; VideoActive = false; }
         public void DimBackground(Rect bounds, uint color, float opacity) => Dims.Add((bounds, opacity));
         public void StoryboardSprite(string path, float x, float y, float scaleX, float scaleY, uint tint, float opacity, float rotationRadians, bool additive, bool flipX, bool flipY, float originX, float originY)
             => Sprites.Add((path, x, y, opacity, tint, clips.Peek()));
