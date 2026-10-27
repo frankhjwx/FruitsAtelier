@@ -18,8 +18,9 @@ public static class SliderRepresentationEditing
             || before.RandomizeDropletSeed != after.RandomizeDropletSeed;
         bool managed = after.DerandomizeFSliderDroplets || after.DerandomizeDropletsForHardRock
             || after.RandomizeDropletStrength != 20 || after.RandomizeDropletSeed != 1337
-            || after.ImportedSliders.Any(s => s.RandomizationSource is not null);
+            || after.ImportedSliders.Any(s => s.RandomizationSource is not null || s.DropletMode is not null);
         var oldSliders = before.ImportedSliders.ToDictionary(s => s.Id);
+        if (after.ImportedSliders.Any(s => s.DropletMode != (oldSliders.TryGetValue(s.Id, out var old) ? old.DropletMode : null))) return true;
         if (after.ImportedSliders.Any(s => s.SliderVelocityMultiplier is not null
             && (!oldSliders.TryGetValue(s.Id, out var old) || s.SliderVelocityMultiplier != old.SliderVelocityMultiplier
                 || s.TimeMs != old.TimeMs || s.X != old.X || s.Y != old.Y || s.PixelLength != old.PixelLength
@@ -51,7 +52,7 @@ public static class SliderRepresentationEditing
             if (document.ImportedSliders.Count == 0) return new(true, []);
             if (!document.DerandomizeFSliderDroplets && !document.DerandomizeDropletsForHardRock
                 && document.RandomizeDropletStrength == 20 && document.RandomizeDropletSeed == 1337
-                && document.ImportedSliders.All(s => s.RandomizationSource is null)) return new(true, []);
+                && document.ImportedSliders.All(s => s.RandomizationSource is null && s.DropletMode is null)) return new(true, []);
             var candidate = document.DeepClone();
             var sources = candidate.ImportedSliders.ToArray();
             var timingLookup = new TimingMap.Lookup(document);
@@ -120,7 +121,7 @@ public static class SliderRepresentationEditing
             {
                 var baseline = tracks[slider.Id];
                 baseline.SliderVelocitySeed = initialVelocities[slider.Id] * document.SliderMultiplier / document.EffectiveSliderMultiplier;
-                baseline.DropletMode ??= SliderDropletMode.FollowMap;
+                baseline.DropletMode = slider.DropletMode ?? baseline.DropletMode ?? SliderDropletMode.FollowMap;
                 baseline.DropletRandomization ??= new();
                 baseline.DropletRandomization.Enabled = true;
                 baselineTracks[slider.Id] = baseline.DeepClone();
@@ -162,6 +163,7 @@ public static class SliderRepresentationEditing
                 slider.SourceOrder = source.SourceOrder;
                 slider.EndpointSnap = source.EndpointSnap;
                 slider.PreserveNativeGeometry = source.PreserveNativeGeometry;
+                slider.DropletMode = source.DropletMode;
                 slider.ProcessedSliderVelocityMultiplier = source.SliderVelocityMultiplier is null ? null
                     : StoredVelocity(slider.SliderVelocityMultiplier!.Value);
                 slider.SliderVelocityMultiplier = source.SliderVelocityMultiplier;
@@ -227,6 +229,7 @@ public static class SliderRepresentationEditing
             slider.EndpointSnap = track.EndpointSnap;
             slider.RandomizationSource = slider.DeepClone();
             slider.RandomizationTrack = track.DeepClone();
+            slider.DropletMode = track.DropletMode;
             slider.RandomizationBaseVelocity = slider.SliderVelocityMultiplier;
             candidate.Tracks.RemoveAll(t => t.Id == id);
             candidate.ImportedSliders.Add(slider);

@@ -156,7 +156,8 @@ public sealed class LibrarySettings
     public double ObjectTimelineScale { get => objectTimelineScale; set => objectTimelineScale = double.IsFinite(value) ? Math.Clamp(value, .025, 16) : .18; }
     private float objectTimelineHeight = 64, overviewTimelineHeight = 40;
     public float ObjectTimelineHeight { get => objectTimelineHeight; set => objectTimelineHeight = float.IsFinite(value) ? Math.Clamp(value, 32, 64) : 64; }
-    public float OverviewTimelineHeight { get => overviewTimelineHeight; set => overviewTimelineHeight = float.IsFinite(value) ? Math.Clamp(value, 20, 40) : 40; }
+    public float OverviewTimelineHeight { get => overviewTimelineHeight; set => overviewTimelineHeight = float.IsFinite(value) ? Math.Clamp(value, 16, 40) : 40; }
+    public bool OverviewTimelineCollapsed { get; set; }
     public double WaveformSpanMs { get => waveformSpanMs; set => waveformSpanMs = double.IsFinite(value) ? Math.Clamp(value, 100, int.MaxValue * 2d) : 10000; }
     public int TestplayLeftKey { get; set; } = 37;
     public int TestplayRightKey { get; set; } = 39;

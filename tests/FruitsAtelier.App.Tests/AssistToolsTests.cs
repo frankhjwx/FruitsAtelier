@@ -153,6 +153,43 @@ internal static class AssistToolsTests
             Check(ui.View.MovementReadout.Next?.Mode == CatchMovementMode.Stand, "Outgoing Stand missing");
         }
         ui.Key('1'); ui.ClickMap(2000, 310);
+        foreach (int corner in new[] { 1, 2, 3, 4 })
+        {
+            var start = ui.View.MovementOverlayBounds!.Value;
+            bool left = corner is 1 or 3, top = corner is 1 or 2;
+            float x = left ? start.X + 2 : start.Right - 2;
+            float y = top ? start.Y + 2 : start.Bottom - 2;
+            ui.View.PointerMove(x, y, false, false); ui.Paint();
+            Check(ui.View.MovementPanelResizeCursor == corner, "Corner cursor missing");
+            ui.View.PointerDown(x, y, 0, false, false);
+            float dx = (left ? 1 : -1) * 30, dy = (top ? 1 : -1) * 8.4f;
+            ui.View.PointerMove(x + dx, y + dy, false, false); ui.Paint();
+            ui.View.PointerUp(x + dx, y + dy, 0); ui.Paint();
+            var resized = ui.View.MovementOverlayBounds!.Value;
+            Near(start.Width - 30, resized.Width);
+            Near(300d / 84, resized.Width / resized.Height);
+            Near(left ? start.Right : start.X, left ? resized.Right : resized.X);
+            Near(top ? start.Bottom : start.Y, top ? resized.Bottom : resized.Y);
+            Check(!ui.View.IsEditingText && !ui.View.WantsCapture, "Resize entered numeric editing or retained capture");
+        }
+        Check(original.ContentEquals(ui.View.Document), "Resize changed content");
+        var layout = ui.View.CaptureDockLayouts();
+        Near(.6, layout.Mapping!.MovementScale);
+        var restored = new Ui(); restored.View.LibrarySettings.DockLayouts = layout; restored.View.RestoreDockLayouts();
+        Near(.6, restored.View.CaptureDockLayouts().Mapping!.MovementScale);
+        var small = ui.View.MovementOverlayBounds!.Value;
+        ui.View.PointerDown(small.X + 15, small.Y + 12, 0, false, false);
+        ui.View.PointerMove(small.X + 15, small.Y - 88, false, false);
+        ui.View.PointerUp(small.X + 15, small.Y - 88, 0); ui.Paint();
+        var beforeReset = ui.View.MovementOverlayBounds!.Value;
+        ui.View.PointerDown(beforeReset.X + 15, beforeReset.Y + 12, 2, false, false); ui.Paint();
+        ui.ClickText(Strings.Get("movement.resetScale"));
+        var reset = ui.View.MovementOverlayBounds!.Value;
+        Near(300, reset.Width); Near(84, reset.Height);
+        Near(beforeReset.X, reset.X); Near(beforeReset.Y, reset.Y);
+        Check(original.ContentEquals(ui.View.Document), "Scale reset changed content");
+        // Restore the default layout for the movement and numeric-input checks below.
+        ui.View.LibrarySettings.DockLayouts = new EditorDockLayouts { Mapping = new DockWorkspaceLayout() }; ui.View.RestoreDockLayouts(); ui.Paint();
         var defaultPanel = ui.View.MovementOverlayBounds!.Value;
         float panelX = defaultPanel.X + 15, panelY = defaultPanel.Y + 12;
         ui.View.PointerDown(panelX, panelY, 0, false, false);

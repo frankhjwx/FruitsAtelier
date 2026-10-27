@@ -14,6 +14,7 @@ public sealed partial class EditorView
     private bool testplayTabHeld;
     private bool testplaySpeedHeld;
     private bool testplayPauseHeld;
+    private bool testplayQuickPaused;
     private bool testplayRetryHeld;
     private const double TestplayQuickRetryHoldMs = 300;
     private double? testplayQuickRetryAt;
@@ -26,6 +27,8 @@ public sealed partial class EditorView
     public bool TestplayAutoplay => testplay?.Autoplay ?? false;
     private double TestplayRealtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
     private double testplayStart;
+    private readonly Dictionary<Guid, double> testplayApproachRates = [];
+    public double TestplayApproachRate => testplayApproachRates.GetValueOrDefault(difficulties[activeDifficulty].Id, PreviewApproachRate);
     private double testplayReturnPosition;
     private double testplayReturnSpeed;
     private bool testplayWithAudio;
@@ -70,6 +73,7 @@ public sealed partial class EditorView
         testplayTabHeld = false;
         testplaySpeedHeld = false;
         testplayPauseHeld = false;
+        testplayQuickPaused = false;
         testplayRetryHeld = false;
         testplayQuickRetryAt = null;
         testplayQuickRetryHeld = false;
@@ -153,6 +157,7 @@ public sealed partial class EditorView
         testplayQuickRetryHeld = false;
         testplayResumeAt = null;
         testplayAutoNotice = null;
+        testplayQuickPaused = false;
         testplayBookmarkHeld = false;
         if (testplayWithAudio && !wasPaused)
         {
@@ -164,15 +169,24 @@ public sealed partial class EditorView
         StatusMessage = L.Get("testplay.returned");
     }
 
-    private void ToggleTestplayPause()
+    private void ToggleTestplayPause(bool quick = false)
     {
         if (testplay is null) return;
+        if (TestplayPaused && (quick || testplayQuickPaused))
+        {
+            testplayResumeAt = null;
+            testplayQuickPaused = false;
+            FadeTestplayMenu(0);
+            CompleteTestplayPauseToggle();
+            return;
+        }
         if (testplayResumeAt is not null) { testplayResumeAt = null; FadeTestplayMenu(1); SetTestplayPauseLoop(true); return; }
         if (TestplayPaused)
         {
             BeginTestplayResume();
             return;
         }
+        testplayQuickPaused = quick;
         CompleteTestplayPauseToggle();
     }
 
@@ -188,7 +202,7 @@ public sealed partial class EditorView
         if (testplay is null) return;
         double time = testplay.TogglePause();
         ResetHitsounds();
-        if (TestplayPaused) FadeTestplayMenu(1, opening: true);
+        if (TestplayPaused && !testplayQuickPaused) FadeTestplayMenu(1, opening: true);
         ResetTestplayPointer();
         testplayMenuSelection = 0;
         testplayKeyboardSelection = false;
@@ -201,8 +215,8 @@ public sealed partial class EditorView
             }
             else { RequestSeek?.Invoke(time); RequestTogglePlayback?.Invoke(); }
         }
-        SetTestplayPauseLoop(TestplayPaused);
-        if (TestplayPaused) PlayTestplayMenuSound("menuhit");
+        SetTestplayPauseLoop(TestplayPauseMenuVisible);
+        if (TestplayPauseMenuVisible) PlayTestplayMenuSound("menuhit");
         AdvanceTestplay();
     }
 
@@ -279,20 +293,20 @@ public sealed partial class EditorView
         c.Clip(stage);
         float fieldWidth = stage.Width * .8f, left = stage.X + stage.Width * .1f;
         float catchY = stage.Y + stage.Height * .15f + 340 * fieldWidth / 512;
-        double speed = CatchScrollTiming.PixelsPerMs(PreviewApproachRate, fieldWidth);
+        double speed = CatchScrollTiming.PixelsPerMs(TestplayApproachRate, fieldWidth);
         double ahead = (catchY - stage.Y + CatchSize.FruitDiameter(PreviewCircleSize) * fieldWidth / 512) / speed;
         var frame = testplayFrame!;
         for (int i = frame.JudgedCount; i < previewObjects.Count && previewObjects[i].TimeMs <= playhead + ahead; i++)
         {
             var item = previewObjects[i];
             DrawCatchObject(c, item, left + (float)item.X * fieldWidth / 512,
-                catchY - (float)((item.TimeMs - playhead) * speed), fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
+                catchY - (float)((item.TimeMs - playhead) * speed), fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true, approachRate: TestplayApproachRate);
         }
         foreach (var item in frame.MissedObjects)
             DrawCatchObject(c, item, left + (float)item.X * fieldWidth / 512,
                 catchY + (float)((playhead - item.TimeMs) * speed), fieldWidth,
                 (float)Math.Clamp(1 - (playhead - item.TimeMs) / CatchTestplay.MissLifetimeMs, 0, 1),
-                circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
+                circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true, approachRate: TestplayApproachRate);
         float x = left + (float)frame.X * fieldWidth / 512;
         uint tint = frame.HyperDashing ? HyperDashColour : 0xFFFFFF;
         foreach (var trail in frame.Trails)
@@ -348,8 +362,10 @@ public sealed partial class EditorView
         Row(L.Get("testplay.drainTime", previewDrainTime));
         Row(L.Get("testplay.maximumCombo", previewMaximumCombo));
         Row(L.Get("testplay.maximumDroplets", previewMaximumDroplets));
+        Row(L.Get("testplay.approachRate", TestplayApproachRate),
+            Math.Abs(TestplayApproachRate - PreviewApproachRate) > .000001 ? 0xFFAA55u : 0xFFFFFFu);
         y += 16;
-        string[] hints = ["testplay.hintAutoplay", "testplay.hintBookmark", "testplay.hintPause", "testplay.hintQuickExit", "testplay.hintCurrentExit", "testplay.hintSpeed"];
+        string[] hints = ["testplay.hintAutoplay", "testplay.hintBookmark", "testplay.hintPause", "testplay.hintQuickExit", "testplay.hintCurrentExit", "testplay.hintSpeed", "testplay.hintApproachRate"];
         foreach (string hint in hints) Row(L.Get(hint));
     }
 

@@ -36,10 +36,10 @@ public sealed partial class EditorView
         get
         {
             int count = VisibleTimingEntries().Length;
-            int capacity = Math.Max(1, (int)((timingListBounds.Height - 34) / 28));
-            var track = new Rect(timingListBounds.Right - 9, timingListBounds.Y + 34, 9, Math.Max(0, timingListBounds.Height - 34));
+            int capacity = Math.Max(1, (int)((timingListBounds.Height - 34 * TimingRowScale) / (28 * TimingRowScale)));
+            var track = new Rect(timingListBounds.Right - 9 * TimingRowScale, timingListBounds.Y + 34 * TimingRowScale, 9 * TimingRowScale, Math.Max(0, timingListBounds.Height - 34 * TimingRowScale));
             int maximum = Math.Max(0, count - capacity);
-            float h = maximum == 0 ? track.Height : Math.Min(track.Height, Math.Max(12, track.Height * capacity / count));
+            float h = maximum == 0 ? track.Height : Math.Min(track.Height, Math.Max(12 * TimingRowScale, track.Height * capacity / count));
             return (track, new(track.X, track.Y + (track.Height - h) * Math.Clamp(timingScroll, 0, maximum) / Math.Max(1, maximum), track.Width, h), maximum);
         }
     }
@@ -65,16 +65,33 @@ public sealed partial class EditorView
     private MapDocument? timingResetDocument;
     private bool timingPointerShift;
     private bool panelMenuOpen, timingSnapDragging;
-    private Rect panelMenuBounds, timingSnapBounds;
-    private bool TimingModal => TimingSetupVisible || timingCommand.Length > 0;
-    internal Rect TimingSetupBounds => new((width - Math.Min(1000, width - 24)) / 2,
-        (height - Math.Min(680, height - 24)) / 2, Math.Min(1000, width - 24), Math.Min(680, height - 24));
+    private Rect panelMenuBounds, timingSnapDragBounds;
+    private bool timingSnapSetup;
+    private bool timingSetupFocused, timingWindowDragging;
+    private TimingPoint[] timingSetupSource = [];
+    private double timingSetupSourceSv, timingSetupSourceEffectiveSv;
+    private (float X, float Y)? timingWindowPosition;
+    private (float X, float Y) timingWindowGrab;
+    private int timingHitStart, timingHitEnd;
+    private readonly List<(string Key, Rect Bounds, string Value, Action<double> Apply)> timingWindowFields = [], timingBackgroundFields = [];
+    private bool TimingModal => timingCommand.Length > 0;
+    private bool TimingSetupInputAvailable => TimingSetupVisible && !SongSetupVisible && !VolumeDialogVisible
+        && !StreamDialogVisible && !MergeDialogVisible && !TimeJumpVisible && !SliderDialogVisible && !ExportVisible
+        && !librarySettingsOpen && !HitsoundCopierVisible && !RotationVisible && !BananaEditVisible;
+    private bool TimingWindowContains(float x, float y) => TimingSetupInputAvailable && menu < 0
+        && contextItems.Count == 0 && !panelMenuOpen && TimingSetupBounds.Contains(x, y);
+    internal Rect TimingSetupBounds => new(
+        Math.Clamp(timingWindowPosition?.X ?? (width - Math.Min(1000, width - 24)) / 2, 0, Math.Max(0, width - Math.Min(1000, width - 24) * (TimingModal ? 1 : timingWindowScale))),
+        Math.Clamp(timingWindowPosition?.Y ?? (height - Math.Min(680, height - 24)) / 2, 0, Math.Max(0, height - Math.Min(680, height - 24) * (TimingModal ? 1 : timingWindowScale))),
+        Math.Min(1000, width - 24) * (TimingModal ? 1 : timingWindowScale), Math.Min(680, height - 24) * (TimingModal ? 1 : timingWindowScale));
 
     internal void OpenTimingSetup()
     {
         if (!HasEditorProject || LibraryVisible || IsTestplaying || !PrepareFileOperation()) return;
         if (AudioPlaying) RequestPausePlayback?.Invoke();
-        TimingSetupVisible = true; timingCommand = timingField = timingError = "";
+        TimingSetupVisible = timingSetupFocused = true; timingCommand = timingField = timingError = "";
+        timingSetupSource = Document.TimingPoints.Select(TimingEditing.Copy).ToArray();
+        timingSetupSourceSv = Document.SliderMultiplier; timingSetupSourceEffectiveSv = Document.EffectiveSliderMultiplier;
         timingEntries.Clear(); timingSelected.Clear(); timingUndo.Clear(); timingRedo.Clear();
         timingNextId = 0; timingTab = timingFilter = timingScroll = timingSort = 0; timingShiftMs = 0;
         RefreshDisplayedTiming();
@@ -100,10 +117,11 @@ public sealed partial class EditorView
     private void CloseTimingSetup()
     {
         if (TimingModal) ResetHitsounds();
-        timingVolumeStart = null;
-        timingScrollDragging = false;
+        timingVolumeStart = null; timingSetupSource = [];
+        timingScrollDragging = timingWindowDragging = timingSetupFocused = false;
         TimingSetupVisible = false; timingCommand = timingField = timingError = "";
-        timingFieldApply = null; timingFields.Clear(); hits.Clear(); fields.Clear(); TimingInputSession++;
+        timingFieldApply = null; timingFields.Clear(); timingWindowFields.Clear(); timingBackgroundFields.Clear();
+        hits.Clear(); fields.Clear(); TimingInputSession++;
     }
 
     private void ShowTimingPage(bool visible)
@@ -206,9 +224,18 @@ public sealed partial class EditorView
         Edit(L.Get("timing.delete"), () => Document.TimingPoints.Remove(point));
     }
 
+    private static bool SameTimingSource(TimingPoint a, TimingPoint b) => a.TimeMs == b.TimeMs
+        && a.BeatLengthMs.Equals(b.BeatLengthMs) && a.Meter == b.Meter && a.SampleSet == b.SampleSet
+        && a.SampleIndex == b.SampleIndex && a.Volume == b.Volume && a.Effects == b.Effects
+        && a.Uninherited == b.Uninherited && a.SourceOrder == b.SourceOrder && a.OriginalLine == b.OriginalLine;
+
     private void ApplyTimingSetup()
     {
         if (!CommitTimingField()) return;
+        if (Document.SliderMultiplier != timingSetupSourceSv || Document.EffectiveSliderMultiplier != timingSetupSourceEffectiveSv
+            || timingSetupSource.Length != Document.TimingPoints.Count
+            || timingSetupSource.Where((p, i) => !SameTimingSource(p, Document.TimingPoints[i])).Any())
+        { timingError = L.Get("timing.sourceChanged"); return; }
         var pairs = timingEntries.Where(e => e.Original is not null).Select(e => (e.Original!, e.Point)).ToArray();
         if (!Edit(L.Get("timing.edit"), () =>
         {
@@ -325,7 +352,7 @@ public sealed partial class EditorView
 
     public void PasteTimingText(string text, int session)
     {
-        if (session != TimingInputSession || !TimingModal && !TimingPageVisible) return;
+        if (session != TimingInputSession || !TimingModal && !TimingSetupVisible && !TimingPageVisible) return;
         if (timingField.Length > 0)
         {
             timingText = InsertInput("timing:" + timingField, timingText,
@@ -359,7 +386,8 @@ public sealed partial class EditorView
 
     private bool TimingKey(int key, bool ctrl, bool shift)
     {
-        if (!TimingModal && !TimingPageVisible) return false;
+        if (!TimingModal && !(TimingSetupInputAvailable && timingSetupFocused) && !TimingPageVisible) return false;
+        if (TimingSetupVisible && !timingSetupFocused && !TimingPageVisible) return false;
         if (timingField.Length > 0)
         {
             if (key == 27) { timingField = timingError = ""; TimingInputSession++; return true; }
@@ -375,7 +403,7 @@ public sealed partial class EditorView
             }
             InputKey("timing:" + timingField, ref timingText, key, ctrl, shift, 30, RequestPasteTiming); return true;
         }
-        if (TimingSetupVisible)
+        if (TimingSetupVisible && timingSetupFocused && !TimingModal)
         {
             if (altHeld) return true;
             if (ctrl && !shift && key == 65) { timingSelected.Clear(); foreach (var entry in VisibleTimingEntries()) timingSelected.Add(entry.Id); }
@@ -420,15 +448,22 @@ public sealed partial class EditorView
     {
         if (button != 0) return;
         if (!timingFields.Any(f => f.Key == timingField && f.Bounds.Contains(x, y)) && !CommitTimingField()) return;
+        if (!TimingModal && TimingSetupVisible && timingSetupFocused && (TimingWindowCorner(x, y) != 0 || new Rect(TimingSetupBounds.X, TimingSetupBounds.Y, TimingSetupBounds.Width - 56 * timingWindowScale, 44 * timingWindowScale).Contains(x, y)))
+        {
+            timingWindowDragging = true; timingWindowCorner = TimingWindowCorner(x, y);
+            timingWindowResizeStart = TimingSetupBounds; timingWindowResizePointer = (x, y);
+            timingWindowGrab = (x - TimingSetupBounds.X, y - TimingSetupBounds.Y);
+            return;
+        }
         var scrollbar = TimingScrollbar;
-        if (TimingSetupVisible && scrollbar.Maximum > 0 && scrollbar.Track.Contains(x, y))
+        if (TimingSetupVisible && timingSetupFocused && scrollbar.Maximum > 0 && scrollbar.Track.Contains(x, y))
         {
             timingScrollDragging = true;
             timingScrollGrab = scrollbar.Thumb.Contains(x, y) ? y - scrollbar.Thumb.Y : scrollbar.Thumb.Height / 2;
             UpdateTimingScroll(y);
             return;
         }
-        for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y))
+        for (int i = !TimingModal && TimingSetupVisible && timingSetupFocused ? timingHitEnd - 1 : hits.Count - 1; i >= (!TimingModal && TimingSetupVisible && timingSetupFocused ? timingHitStart : 0); i--) if (hits[i].Bounds.Contains(x, y))
         { if (hits[i].Enabled) hits[i].Action(); return; }
     }
 

@@ -14,7 +14,8 @@ public sealed partial class EditorView
     {
         Left = Capture(workspace.Left), Right = Capture(workspace.Right),
         PreviewMod = workspace.PreviewMod, PreviewDisplayMode = workspace.PreviewDisplayMode,
-        MovementX = workspace.MovementPosition?.X, MovementY = workspace.MovementPosition?.Y
+        MovementX = workspace.MovementPosition?.X, MovementY = workspace.MovementPosition?.Y,
+        MovementScale = workspace.MovementScale
     };
     private static DockGroupLayout Capture(DockGroup group) => new()
     {
@@ -62,6 +63,7 @@ public sealed partial class EditorView
         workspace.PreviewDisplayMode = Math.Clamp(layout.PreviewDisplayMode, 0, 2);
         workspace.MovementPosition = layout.MovementX is { } x && float.IsFinite(x)
             && layout.MovementY is { } y && float.IsFinite(y) ? (x, y) : null;
+        workspace.MovementScale = float.IsFinite(layout.MovementScale) ? Math.Clamp(layout.MovementScale, .6f, 3) : 1;
         void RestoreGroup(DockGroup group, DockGroupLayout? saved)
         {
             var names = saved?.Panels ?? group.Panels.Select(p => p.ToString()).ToArray();

@@ -9,12 +9,18 @@ public sealed partial class EditorView
 {
     private static string TimingN(double value) => value.ToString("0.######", CultureInfo.InvariantCulture);
 
-    private void DrawTimingSetup(ICanvas c)
+    private void DrawTimingSetupContents(ICanvas c)
     {
-        if (!TimingModal) return;
-        hits.Clear(); fields.Clear(); timingFields.Clear();
+        if (!TimingModal && !TimingSetupVisible) return;
+        if (TimingModal) { hits.Clear(); fields.Clear(); }
+        timingHitStart = hits.Count;
+        timingBackgroundFields.Clear();
+        if (TimingPageVisible) timingBackgroundFields.AddRange(timingFields);
+        timingFields.Clear();
         var r = TimingSetupBounds;
-        c.Fill(new(0, 0, width, height), Background, opacity: .8f); c.Fill(r, Panel, 8); c.Stroke(r, Grid, radius: 8);
+        if (timingWindowDrawing) r = r with { Width = r.Width / timingWindowScale, Height = r.Height / timingWindowScale };
+        if (TimingModal) c.Fill(new(0, 0, width, height), Background, opacity: .8f);
+        c.Fill(r, Panel, 8); c.Stroke(r, Grid, radius: 8);
         if (timingCommand.Length > 0)
         {
             c.Text(L.Get($"timing.{timingCommand}"), r.X + 24, r.Y + 24, 20, Foreground, r.Width - 48);
@@ -128,6 +134,9 @@ public sealed partial class EditorView
         c.Text(timingError, r.X + 340, applyY + 82, 11, Error, r.Width - 360);
         Button(c, new(r.X + 20, r.Bottom - 46, r.Width * .65f - 24, 32), L.Get("song.ok"), ApplyTimingSetup, true);
         Button(c, new(r.X + r.Width * .65f, r.Bottom - 46, r.Width * .35f - 20, 32), L.Get("mac.cancel"), CloseTimingSetup);
+        timingHitEnd = hits.Count;
+        timingWindowFields.Clear(); timingWindowFields.AddRange(timingFields);
+        if (!timingSetupFocused) { timingFields.Clear(); timingFields.AddRange(timingBackgroundFields); }
     }
 
     private void TimingPointButton(ICanvas c, Rect bounds, bool add, Action action, bool enabled = true)
@@ -199,7 +208,8 @@ public sealed partial class EditorView
             var slider = new Rect(r.X + 78, y + 3, r.Width - 166, 24);
             c.Line(slider.X, slider.Y + 12, slider.Right, slider.Y + 12, Grid, 4);
             c.Circle(slider.X + slider.Width * points[0].Volume / 100, slider.Y + 12, 6, Accent);
-            hits.Add(new(slider, () => BeginTimingVolumeDrag(slider), true));
+            var inputSlider = timingWindowDrawing ? TimingWindowMap(slider) : slider;
+            hits.Add(new(slider, () => BeginTimingVolumeDrag(inputSlider), true));
             TimingNumber(c, "volume", new(r.Right - 78, y, 50, 28), Common(p => p.Volume), v => SetTimingValues("volume", v));
             c.Text("%", r.Right - 24, y + 7, 12, Foreground, 20); y += 38;
             string[] sounds = ["hitnormal", "hitfinish", "hitwhistle", "hitclap"];
@@ -283,20 +293,26 @@ public sealed partial class EditorView
 
     private void DrawTimingSnap(ICanvas c, Rect r)
     {
-        timingSnapBounds = r;
-        int value = TimingSetupVisible ? timingSnap : divisor;
+        int value = timingWindowDrawing ? timingSnap : divisor;
         c.Text(L.Get("timing.snapDivisor", value), r.X, r.Y, 12, Foreground, r.Width);
         float left = r.X + 8, length = r.Width - 16, cy = r.Y + 28;
         c.Line(left, cy, left + length, cy, Muted, 3);
         for (int i = 0; i < SnapDivisors.Length; i++) c.Line(left + length * i / (SnapDivisors.Length - 1), cy - 4, left + length * i / (SnapDivisors.Length - 1), cy + 4, Grid);
         c.Circle(left + length * Math.Max(0, Array.IndexOf(SnapDivisors, value)) / (SnapDivisors.Length - 1), cy, 6, Accent);
-        hits.Add(new(r, () => { timingSnapDragging = true; SetTimingSnap(mouseX); }, true));
+        bool setup = timingWindowDrawing;
+        var pointerBounds = setup ? TimingWindowMap(r) : r;
+        hits.Add(new(r, () =>
+        {
+            timingSnapDragging = true; timingSnapSetup = setup; timingSnapDragBounds = pointerBounds;
+            SetTimingSnap(mouseX);
+        }, true));
     }
 
     private void SetTimingSnap(float x)
     {
-        int index = (int)Math.Round(Math.Clamp((x - timingSnapBounds.X - 8) / (timingSnapBounds.Width - 16), 0, 1) * (SnapDivisors.Length - 1));
-        if (TimingSetupVisible) timingSnap = SnapDivisors[index];
+        float scale = timingSnapSetup ? timingWindowScale : 1;
+        int index = (int)Math.Round(Math.Clamp((x - timingSnapDragBounds.X - 8 * scale) / (timingSnapDragBounds.Width - 16 * scale), 0, 1) * (SnapDivisors.Length - 1));
+        if (timingSnapSetup) timingSnap = SnapDivisors[index];
         else { divisor = SnapDivisors[index]; ResetHitsounds(); }
     }
 

@@ -138,7 +138,7 @@ internal sealed class EditorControl : Control, IDisposable
     private StandardCursorType? pointerCursorType;
     private void UpdatePointerCursor()
     {
-        var next = View.TestplayUsesCursor ? StandardCursorType.None : View.TimelinePanelResizeCursor ? StandardCursorType.SizeNorthSouth : (View.DiscussionHandCursor || View.MapsetVerifierHandCursor) ? StandardCursorType.Hand : View.DiscussionTextCursor ? StandardCursorType.Ibeam : View.TimelineResizeCursor || View.PreviewResizeCursor || View.AimodColumnResizeCursor || View.SelectionScaleCursor ? StandardCursorType.SizeWestEast : StandardCursorType.Arrow;
+        var next = View.TestplayUsesCursor ? StandardCursorType.None : View.FloatingPanelResizeCursor is 1 or 4 ? StandardCursorType.TopLeftCorner : View.FloatingPanelResizeCursor is 2 or 3 ? StandardCursorType.TopRightCorner : View.TimelinePanelResizeCursor ? StandardCursorType.SizeNorthSouth : (View.DiscussionHandCursor || View.MapsetVerifierHandCursor) ? StandardCursorType.Hand : View.DiscussionTextCursor ? StandardCursorType.Ibeam : View.TimelineResizeCursor || View.PreviewResizeCursor || View.AimodColumnResizeCursor || View.SelectionScaleCursor ? StandardCursorType.SizeWestEast : StandardCursorType.Arrow;
         if (pointerCursorType == next) return;
         pointerCursorType = next;
         Cursor = new Cursor(next);

@@ -48,13 +48,13 @@ internal static class TimelineLayoutTests
                 Resize(true, 10000, cancel: false); Resize(false, -10000, cancel: false); CheckLayout();
                 Check(ui.View.ObjectTimelineBounds.Height == 64 && ui.Plot.Height >= 120 && Overview().Height == 40, "Timeline growth consumed the editing area.");
                 Resize(true, -10000, cancel: false); Resize(false, 10000, cancel: false);
-                Check(ui.View.ObjectTimelineBounds.Height == 32 && Overview().Height == 20, "Timeline shrink limits failed.");
-                Check(ui.View.TransportButtonBounds(0).Height == 32 && ui.View.TimeDisplayBounds.Height == 27,
-                    "Timeline shrinking changed the time or playback control size.");
+                Check(ui.View.ObjectTimelineBounds.Height == 32 && Overview().Height == 16, "Timeline shrink limits failed.");
+                Check(Math.Abs(ui.View.TransportButtonBounds(0).Height - 12.8f) < .001 && Math.Abs(ui.View.TimeDisplayBounds.Height - 15.2f) < .001,
+                    "Minimum overview does not scale the timestamp and playback controls.");
                 Check(ui.View.TransportButtonBounds(0).Y >= ui.View.OverviewTimelineResizeBounds.Y + 4,
                     "Minimum transport row does not reserve the playback controls' height.");
                 ui.View.OpenSettings(); ui.View.ApplySettings(path, force: true); ui.Key(27);
-                Check(LibrarySettings.Load(path).ObjectTimelineHeight == 32 && LibrarySettings.Load(path).OverviewTimelineHeight == 20,
+                Check(LibrarySettings.Load(path).ObjectTimelineHeight == 32 && LibrarySettings.Load(path).OverviewTimelineHeight == 16,
                     "Applying other settings reset timeline heights.");
                 var selector = ui.View.PlaybackSpeedSelectorBounds;
                 var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("ui.playbackSpeed"));
@@ -70,6 +70,22 @@ internal static class TimelineLayoutTests
                 }
                 Check(before.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty && ui.View.PlayheadMs == playhead,
                     "Layout changes modified beatmap content or playhead.");
+                var expandedPlot = ui.Plot;
+                Check(!ui.Canvas.Texts.Any(t => t.Value is "⌃" or "⌄"), "Timeline retained its arrow button");
+                DoubleDivider();
+                Check(ui.View.LibrarySettings.OverviewTimelineCollapsed && ui.View.TimeDisplayBounds == default
+                    && ui.View.TestplayButtonBounds == default && !ui.Canvas.Fills.Any(f => f.Color == 0x141922)
+                    && ui.Plot.Height == expandedPlot.Height + 36 && !ui.View.WantsCapture,
+                    "Collapsing the overview retained hidden controls or failed to release its full height");
+                Check(LibrarySettings.Load(path).OverviewTimelineCollapsed, "Overview collapse was not saved");
+                ui.View.OpenSettings(); ui.View.ApplySettings(path, force: true); ui.Key(27);
+                Check(ui.View.LibrarySettings.OverviewTimelineCollapsed, "Applying settings expanded the overview");
+                DoubleDivider();
+                Check(!ui.View.LibrarySettings.OverviewTimelineCollapsed && ui.Plot == expandedPlot
+                    && Overview().Height == 16 && !LibrarySettings.Load(path).OverviewTimelineCollapsed,
+                    "Expanding the overview failed to restore its saved height and canvas layout");
+                Check(before.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty && ui.View.PlayheadMs == playhead,
+                    "Overview collapse modified beatmap content or playhead");
 
                 Rect Overview() => ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
                 void CheckLayout()
@@ -79,6 +95,14 @@ internal static class TimelineLayoutTests
                     Check(time.Right < play.X && test.Right < overview.X && overview.Right <= ui.Width, "Transport controls overlap or escape the window.");
                     Check(speed.Y == volume.Y && speed.Right < volume.X, "Speed selector is not immediately left of Volume.");
                     Check(ui.Plot.Bottom <= ui.View.OverviewTimelineResizeBounds.Y, "Plot overlaps the overview resize boundary.");
+                }
+                void DoubleDivider()
+                {
+                    var bounds = ui.View.OverviewTimelineResizeBounds;
+                    float x = bounds.X + bounds.Width / 2, y = bounds.Y + bounds.Height / 2;
+                    ui.Click(x, y);
+                    ui.View.PointerDoubleClick(x, y, false, false);
+                    ui.View.PointerUp(x, y, 0); ui.Paint();
                 }
                 void Resize(bool upper, float delta, bool cancel)
                 {
@@ -98,7 +122,7 @@ internal static class TimelineLayoutTests
             var fruit = new Fruit { TimeMs = 0, X = 256 };
             minimumMap.Fruits.Add(fruit); minimumUi.LoadDocument(minimumMap);
             minimumUi.View.LibrarySettings.ObjectTimelineHeight = 32;
-            minimumUi.View.LibrarySettings.OverviewTimelineHeight = 20;
+            minimumUi.View.LibrarySettings.OverviewTimelineHeight = 16;
             minimumUi.Paint();
             var timeline = minimumUi.View.ObjectTimelineBounds;
             minimumUi.Click(timeline.X + timeline.Width / 2, timeline.Y + 27 * .5f);

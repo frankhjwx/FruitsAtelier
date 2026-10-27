@@ -23,6 +23,17 @@ internal static class TimingVelocityRenderCheck
                 if (!view.ShowTimingSv || !view.TimingSvLocked || view.IsDirty) throw new InvalidOperationException("Display toggle changed timing content or lock.");
                 view.UpdateTransport(1000, 10000, true, false, false, null, null);
                 view.OpenTimingSetup(); Paint("compound-locked");
+                var originalWindow = view.TimingSetupBounds;
+                view.PointerDown(originalWindow.Right - 2, originalWindow.Bottom - 2, 0, false, false);
+                view.PointerMove(originalWindow.X, originalWindow.Y, false, false); Paint();
+                view.PointerUp(originalWindow.X, originalWindow.Y, 0); Paint("half-size");
+                var halfWindow = view.TimingSetupBounds;
+                if (Math.Abs(halfWindow.Width - originalWindow.Width * .5f) > .01f
+                    || Math.Abs(halfWindow.Height - originalWindow.Height * .5f) > .01f)
+                    throw new InvalidOperationException("Timing corner did not stop at 50% scale.");
+                view.PointerDown(halfWindow.X + 20, halfWindow.Y + 10, 0, false, false);
+                view.PointerMove(halfWindow.X + 50, halfWindow.Y + 30, false, false); Paint();
+                view.PointerUp(halfWindow.X + 50, halfWindow.Y + 30, 0); Paint("half-size-moved");
                 if (view.TimingFields.Any(f => f.Key == "sv")) throw new InvalidOperationException("Locked SV accepts input.");
                 Click(view.TimingSvLockBounds); Paint("compound-unlocked");
                 if (!view.TimingFields.Any(f => f.Key == "sv")) throw new InvalidOperationException("Unlocked SV input missing.");

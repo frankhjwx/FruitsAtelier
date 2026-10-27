@@ -13,7 +13,7 @@ public sealed partial class EditorView
     private int breakStartMs;
     private int OverviewTime(float x) => (int)Math.Clamp(Math.Round((x - overview.X) / overview.Width * TimelineDurationMs), 0, int.MaxValue);
     private float TimelineHeadX => overview.X + (float)(playhead / TimelineDurationMs) * overview.Width;
-    private bool HitsTimelineHead(float x, float y) => Math.Abs(x - TimelineHeadX) <= 6
+    private bool HitsTimelineHead(float x, float y) => !OverviewTimelineCollapsed && Math.Abs(x - TimelineHeadX) <= 6
         && y >= overview.Y - 7 && y <= overview.Bottom + 2;
 
     public void PointerLeave()
@@ -97,7 +97,18 @@ public sealed partial class EditorView
             DistanceSnapPointerDown(x, y, button);
             return;
         }
-        if (TimingModal) { TimingPointerDown(x, y, button); return; }
+        if (TimingModal || TimingWindowContains(x, y))
+        {
+            timingSetupFocused = TimingSetupVisible;
+            if (!TimingModal && TimingSetupVisible) { timingFields.Clear(); timingFields.AddRange(timingWindowFields); }
+            TimingPointerDown(x, y, button); return;
+        }
+        if (TimingSetupVisible)
+        {
+            if (!CommitTimingField()) return;
+            timingSetupFocused = false;
+            timingFields.Clear(); timingFields.AddRange(timingBackgroundFields);
+        }
         if (!LibraryVisible && !SongSetupVisible && panelMenuOpen) { PanelPointerDown(x, y); return; }
         if (TimingPageVisible && !SongSetupVisible && menu < 0 && y >= 122 && rightPanel.Contains(x, y)) { TimingPointerDown(x, y, button); return; }
         if (BeginVolumePopoverPointer(x, y, button)) return;
@@ -501,9 +512,10 @@ public sealed partial class EditorView
         if (MoveCanvasBackgroundDimPointer(x, y)) return;
         if (backgroundDimDragging) { mouseX = x; mouseY = y; UpdateBackgroundDimDrag(x); return; }
         if (timingSnapDragging) { SetTimingSnap(x); return; }
+        if (timingWindowDragging) { MoveTimingWindow(x, y); return; }
         if (timingScrollDragging) { UpdateTimingScroll(y); return; }
         if (timingVolumeStart is not null) { UpdateTimingVolume(x); return; }
-        if (TimingModal) { mouseX = x; mouseY = y; return; }
+        if (TimingModal || TimingWindowContains(x, y) && drag == DragKind.None) { mouseX = x; mouseY = y; return; }
         if (volumePopoverDrag >= 0) return;
         if (textSelecting) { mouseY = y; MoveInputSelection(x); return; }
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
@@ -671,7 +683,7 @@ public sealed partial class EditorView
         {
             MoveMovementPanel(x, y); movementPanelPointer = false;
             // Wait for release to distinguish a numeric-field click from a panel drag.
-            if (!movementPanelMoved) DistancePointerDown(movementPanelPointerX, movementPanelPointerY, button, shift);
+            if (!movementPanelMoved && movementPanelCorner == 0) DistancePointerDown(movementPanelPointerX, movementPanelPointerY, button, shift);
             textSelecting = false;
             return;
         }
@@ -680,6 +692,7 @@ public sealed partial class EditorView
         if (EndCanvasBackgroundDimPointer(x, y, button)) return;
         if (backgroundDimDragging && button == 0) { UpdateBackgroundDimDrag(x); FinishBackgroundDimDrag(); return; }
         if (timingSnapDragging) { SetTimingSnap(x); timingSnapDragging = false; return; }
+        if (timingWindowDragging && button == 0) { MoveTimingWindow(x, y); timingWindowDragging = false; return; }
         if (timingScrollDragging && button == 0) { UpdateTimingScroll(y); timingScrollDragging = false; return; }
         if (timingVolumeStart is not null) { UpdateTimingVolume(x); EndTimingVolume(false); return; }
         if (TimingModal) return;
@@ -803,6 +816,7 @@ public sealed partial class EditorView
             && (galleryGridBounds.Contains(x, y) || galleryCategoryBounds.Contains(x, y))) return;
         if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
+        if (TogglePaneSeparator(x, y)) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
             var row = aimodRowBounds.FirstOrDefault(r => r.Bounds.Contains(x, y));
@@ -821,7 +835,7 @@ public sealed partial class EditorView
             PointerDown(x, y, 0, shift, ctrl);
             return;
         }
-        if (TimingModal || TimingPageVisible && rightPanel.Contains(x, y))
+        if (TimingModal || TimingWindowContains(x, y) || TimingPageVisible && rightPanel.Contains(x, y))
         {
             var field = timingFields.FirstOrDefault(f => f.Bounds.Contains(x, y));
             if (field.Key is not null && CommitTimingField())
@@ -1014,7 +1028,7 @@ public sealed partial class EditorView
         }
         if (SynchronizationVisible) { ScrollSyncComparison(x, y, delta, ctrl); return; }
         if (librarySettingsOpen) { ScrollStorage(x, y, delta); return; }
-        if (TimingModal)
+        if (TimingModal || TimingWindowContains(x, y))
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (HandleVolumePopoverWheel(x, y, delta)) return;
         if (WheelDockHorizontal(x, y, delta, shift)) return;
@@ -1276,12 +1290,18 @@ public sealed partial class EditorView
         if (IsTestplaying)
         {
             if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
+            if (ctrl && !altHeld && virtualKey is 107 or 109 or 187 or 189)
+            {
+                testplayApproachRates[difficulties[activeDifficulty].Id] = Math.Clamp(Math.Round(TestplayApproachRate
+                    + (virtualKey is 107 or 187 ? .1 : -.1), 10), 0, 10);
+                return;
+            }
             if (virtualKey == 27) { testplayEscapeConsumed = true; ToggleTestplayPause(); }
             else if (virtualKey == 112) StopTestplay();
             else if (virtualKey == 113) { AdvanceTestplay(); StopTestplay(atCurrentPosition: true); }
             else if (ctrl && virtualKey == 80)
             {
-                if (!testplayPauseHeld) { testplayPauseHeld = true; ToggleTestplayPause(); }
+                if (!testplayPauseHeld) { testplayPauseHeld = true; ToggleTestplayPause(quick: true); }
             }
             else if (ctrl && !shift && !altHeld && virtualKey == 82)
             {
@@ -1611,7 +1631,7 @@ public sealed partial class EditorView
         {
             return;
         }
-        if (TimingModal || TimingPageVisible && timingField.Length > 0)
+        if (TimingModal || (TimingSetupVisible && timingSetupFocused || TimingPageVisible) && timingField.Length > 0)
         { if (!char.IsControl(value)) PasteTimingText(value.ToString(), TimingInputSession); return; }
         if (SongSetupVisible) { if (!char.IsControl(value)) PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }
         if (DistanceSnapDialogVisible)
@@ -1677,7 +1697,7 @@ public sealed partial class EditorView
         placementCtrl = false; timingTapHeld = false; timingSnapDragging = false; panelMenuOpen = false;
         lazerMiddleMarquee = false;
         EndTimingVolume(true);
-        timingScrollDragging = false;
+        timingScrollDragging = timingWindowDragging = false;
         pendingStreamChildSelection = null;
         pendingImplicitSliderConversions.Clear();
         textSelecting = false;

@@ -477,6 +477,7 @@ public sealed partial class EditorView
             settings.ObjectTimelineScale = LibrarySettings.ObjectTimelineScale;
             settings.ObjectTimelineHeight = LibrarySettings.ObjectTimelineHeight;
             settings.OverviewTimelineHeight = LibrarySettings.OverviewTimelineHeight;
+            settings.OverviewTimelineCollapsed = LibrarySettings.OverviewTimelineCollapsed;
             settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
             bool workspaceChanged = settings.Workspace != LibrarySettings.Workspace;

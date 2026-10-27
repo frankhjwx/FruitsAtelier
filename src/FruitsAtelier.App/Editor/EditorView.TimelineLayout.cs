@@ -7,13 +7,16 @@ public sealed partial class EditorView
 {
     private float OverviewHeight => LibrarySettings.OverviewTimelineHeight;
     private float ObjectTimelineHeight => LibrarySettings.ObjectTimelineHeight;
-    private float TransportRowHeight => Math.Max(32, OverviewHeight);
-    private float TransportTop => height - TransportRowHeight - 48;
+    private float TransportRowHeight => OverviewHeight;
+    private float TransportScale => TransportRowHeight / 40;
+    private bool OverviewTimelineCollapsed => LibrarySettings.OverviewTimelineCollapsed;
+    private float TransportTop => height - 28 - (OverviewTimelineCollapsed ? 0 : TransportRowHeight + 20);
     internal Rect ObjectTimelineResizeBounds => TimingPageVisible ? default
         : new(objectTimeline.X - 42, objectTimeline.Bottom + 1, objectTimeline.Width + 42, 8);
-    internal Rect OverviewTimelineResizeBounds => new(0, TransportTop - 4, width, 8);
+    internal Rect OverviewTimelineResizeBounds => new(0, TransportTop - (OverviewTimelineCollapsed ? 8 : 4), width, 8);
     internal Rect PlaybackSpeedSelectorBounds => new(VolumeButtonBounds.X - 8 - PlaybackRates.Length * 50 + 4, height - 27, PlaybackRates.Length * 50 - 4, 26);
-    internal Rect TransportButtonBounds(int index) => new(208 + index * 49, overview.Y + (overview.Height - 32) / 2, 42, 32);
+    internal Rect TransportButtonBounds(int index) => OverviewTimelineCollapsed ? default
+        : new(272 + index * 49, overview.Y + (overview.Height - 32 * TransportScale) / 2, 42, 32 * TransportScale);
     private bool resizingObjectTimeline;
     private float timelineResizeY, timelineResizeHeight, timelineResizeOriginal;
     public bool TimelinePanelResizeCursor => DockContentInputAvailable && !librarySettingsOpen && menu < 0 && contextItems.Count == 0
@@ -24,6 +27,7 @@ public sealed partial class EditorView
     private bool BeginTimelinePanelResize(float x, float y, int button)
     {
         if (button != 0 || !TimelinePanelResizeCursor) return false;
+        if (OverviewTimelineCollapsed && OverviewTimelineResizeBounds.Contains(x, y)) return true;
         resizingObjectTimeline = ObjectTimelineResizeBounds.Contains(x, y);
         timelineResizeY = y;
         timelineResizeHeight = resizingObjectTimeline ? ObjectTimelineHeight : OverviewHeight;
@@ -61,9 +65,42 @@ public sealed partial class EditorView
         void Draw(Rect bounds)
         {
             bool hover = TimelinePanelResizeCursor && bounds.Contains(mouseX, mouseY);
-            c.Line(bounds.X, bounds.Y + 4, bounds.Right, bounds.Y + 4, hover ? Accent : Grid, hover ? 2 : 1);
-            c.Line(bounds.X + bounds.Width / 2 - 16, bounds.Y + 4, bounds.X + bounds.Width / 2 + 16, bounds.Y + 4, hover ? Accent : Muted, 2);
+            float y = bounds == OverviewTimelineResizeBounds && OverviewTimelineCollapsed ? bounds.Bottom - 1 : bounds.Y + 4;
+            c.Line(bounds.X, y, bounds.Right, y, hover ? Accent : Grid, hover ? 2 : 1);
+            c.Line(bounds.X + bounds.Width / 2 - 16, y, bounds.X + bounds.Width / 2 + 16, y, hover ? Accent : Muted, 2);
         }
+    }
+
+    private void ToggleOverviewTimeline()
+    {
+        LibrarySettings.OverviewTimelineCollapsed = !OverviewTimelineCollapsed;
+        RequestViewPreference?.Invoke();
+    }
+
+    private bool TogglePaneSeparator(float x, float y)
+    {
+        if (!DockContentInputAvailable || librarySettingsOpen || menu >= 0 || contextItems.Count > 0 || languageMenuOpen
+            || PatternGalleryPopupContains(x, y) || PatternGalleryWantsCapture
+            || drag is not (DragKind.None or DragKind.TimelinePanelResize or DragKind.PreviewResize)) return false;
+        if (OverviewTimelineResizeBounds.Contains(x, y))
+        {
+            if (!CommitField()) return true;
+            FinishTimelinePanelResize(cancel: true);
+            ToggleOverviewTimeline();
+            return true;
+        }
+        if (TimingPageVisible) return false;
+        foreach (bool left in new[] { true, false })
+        {
+            var group = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
+            if (group.Panels.Count == 0 || !DockCollapseBounds(left).Contains(x, y)) continue;
+            if (!CommitField()) return true;
+            drag = DragKind.None;
+            group.Collapsed = !group.Collapsed;
+            SaveDockLayoutIfChanged();
+            return true;
+        }
+        return false;
     }
 
     private float DrawPlaybackSpeedSelector(ICanvas c)

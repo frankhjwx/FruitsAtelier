@@ -17,24 +17,25 @@ public sealed partial class EditorView
             bool hover = r.Contains(mouseX, mouseY);
             if (hover) c.Fill(r, 0x35404D, 4);
             uint ink = enabled[i] ? 0xF4F4F4u : 0x7B8490u;
-            float cx = r.X + 21, cy = r.Y + 16;
+            float scale = TransportScale;
+            float cx = r.X + r.Width / 2, cy = r.Y + r.Height / 2;
             switch (i)
             {
                 case 0:
                     for (int row = -9; row <= 9; row++)
-                        c.Line(cx - 8, cy + row, cx + 9 - Math.Abs(row) * 17f / 9, cy + row, ink, 1.2f);
+                        c.Line(cx - 8 * scale, cy + row * scale, cx + (9 - Math.Abs(row) * 17f / 9) * scale, cy + row * scale, ink, 1.2f * scale);
                     break;
                 case 1:
-                    c.Fill(new(cx - 9, cy - 10, 7, 20), ink);
-                    c.Fill(new(cx + 2, cy - 10, 7, 20), ink);
+                    c.Fill(new(cx - 9 * scale, cy - 10 * scale, 7 * scale, 20 * scale), ink);
+                    c.Fill(new(cx + 2 * scale, cy - 10 * scale, 7 * scale, 20 * scale), ink);
                     break;
                 case 2:
-                    c.Fill(new(cx - 9, cy - 9, 18, 18), ink);
+                    c.Fill(new(cx - 9 * scale, cy - 9 * scale, 18 * scale, 18 * scale), ink);
                     break;
                 case 3:
-                    c.Fill(new(cx - 13, cy - 10, 20, 20), ink, 3);
+                    c.Fill(new(cx - 13 * scale, cy - 10 * scale, 20 * scale, 20 * scale), ink, 3 * scale);
                     for (int row = -8; row <= 8; row++)
-                        c.Line(cx + 7, cy + row, cx + 14 - Math.Abs(row) * 5f / 8, cy + row, ink, 1.2f);
+                        c.Line(cx + 7 * scale, cy + row * scale, cx + (14 - Math.Abs(row) * 5f / 8) * scale, cy + row * scale, ink, 1.2f * scale);
                     break;
             }
             hits.Add(new(r, actions[i], enabled[i]));

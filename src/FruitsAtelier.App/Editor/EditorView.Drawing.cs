@@ -122,7 +122,8 @@ public sealed partial class EditorView
         if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawLibraryCollectionDialog(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
         LayoutDockPanels();
         plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight + PatternEditingBannerHeight, Math.Max(50, canvas.Width - 198 - DiscussionCanvasReserve), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight - PatternEditingBannerHeight));
-        overview = new(420, TransportTop + 10 + (TransportRowHeight - OverviewHeight) / 2, Math.Max(100, width - 448), OverviewHeight);
+        overview = OverviewTimelineCollapsed ? default
+            : new(484, TransportTop + 10 + (TransportRowHeight - OverviewHeight) / 2, Math.Max(100, width - 512), OverviewHeight);
         if (!IsLazerEditing)
         {
             canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, MaximumCanvasZoom);
@@ -145,7 +146,7 @@ public sealed partial class EditorView
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         var pointer = (X: mouseX, Y: mouseY);
         // Covered controls render as if the pointer were outside the window.
-        if (PatternGalleryPopupContains(mouseX, mouseY)) mouseX = mouseY = -1;
+        if (PatternGalleryPopupContains(mouseX, mouseY) || TimingWindowContains(mouseX, mouseY)) mouseX = mouseY = -1;
         try
         {
             c.Fill(new(0, 0, width, height), Background);
@@ -177,7 +178,7 @@ public sealed partial class EditorView
                 DrawCanvasBackgroundDim(c);
             }
             DrawTransport(c);
-            if (!TimingPageVisible) DrawDiscussionOverview(c);
+            if (!TimingPageVisible && !OverviewTimelineCollapsed) DrawDiscussionOverview(c);
             DrawTimelineResizers(c);
             DrawStatus(c);
             DrawUpdateNotice(c);
@@ -186,6 +187,7 @@ public sealed partial class EditorView
         finally { mouseX = pointer.X; mouseY = pointer.Y; }
         DrawPatternGalleryOverlay(c);
         DrawPatternEditingBanner(c);
+        DrawTimingSetup(c);
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);
         if (!librarySettingsOpen) DrawLanguageMenu(c);
@@ -200,7 +202,6 @@ public sealed partial class EditorView
         DrawVolumePopover(c);
         DrawDistanceSnapDialog(c);
         DrawSongSetup(c);
-        DrawTimingSetup(c);
         DrawHitsoundCopier(c);
         DrawSettings(c);
         DrawCollaborationReport(c);
@@ -683,17 +684,23 @@ public sealed partial class EditorView
 
     private void DrawTransport(ICanvas c)
     {
+        TimeDisplayBounds = TestplayButtonBounds = default;
+        if (OverviewTimelineCollapsed) return;
         float top = TransportTop;
         c.Fill(new(0, top, width, height - 28 - top), 0x20252E);
         c.Line(0, top, width, top, Grid);
-        float timeY = overview.Y + (overview.Height - 27) / 2;
-        TimeDisplayBounds = new(16, timeY, 188, 27);
+        float scale = TransportScale;
+        float timeY = overview.Y + (overview.Height - 20 * scale) / 2;
+        TimeDisplayBounds = new(16, overview.Y + (overview.Height - 38 * scale) / 2, 252, 38 * scale);
         if (TimeDisplayBounds.Contains(mouseX, mouseY)) c.Fill(TimeDisplayBounds, Surface, 4);
         string currentTime = Time(LazerPresentationTime);
-        c.Text(currentTime, 20, timeY + 3, 17, Foreground, 83, true);
-        const float durationX = 105;
-        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, timeY + 3, 17, Muted,
-            Math.Max(0, TimeDisplayBounds.Right - durationX));
+        c.Text(currentTime, 20, timeY, 17 * scale, Foreground, 83 * scale, true);
+        float durationX = 20 + 85 * scale;
+        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, timeY, 17 * scale, Muted,
+            Math.Max(0, TimeDisplayBounds.Right - 72 - durationX));
+        double progress = TimelineDurationMs > 0 ? Math.Clamp(LazerPresentationTime / TimelineDurationMs, 0, 1) * 100 : 0;
+        c.Text(AudioLoading ? "--.-%" : progress.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "%",
+            TimeDisplayBounds.Right - 64, timeY, 17 * scale, Muted, 64);
         hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
         if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
             c.Text(L.Get("timeJump.title"), 20, top - 20, 12, Foreground, 200);

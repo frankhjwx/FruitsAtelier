@@ -143,6 +143,17 @@ public sealed class TimingPoint
 public sealed class ImportedSlider
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SliderDropletMode? DropletMode { get; set; }
+
+    public bool RandomizesDroplets(MapDocument document) => DropletMode switch
+    {
+        SliderDropletMode.Randomize => true,
+        SliderDropletMode.Derandomize => false,
+        SliderDropletMode.FollowMap => !document.DerandomizeFSliderDroplets,
+        _ => RandomizationTrack?.RandomizesDroplets(document) ?? true
+    };
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SliderEndpointSnap? EndpointSnap { get; set; }
     private sealed record GeometryMemo(WeakReference<ImportedSliderGeometry> Geometry, SliderControlPoints Controls,
         long X, long Y, long Length, char PathType);
@@ -187,7 +198,7 @@ public sealed class ImportedSlider
     {
         var copy = new ImportedSlider
         {
-            Id = Id, SourceOrder = SourceOrder, OriginalLine = OriginalLine, X = X, Y = Y, EndpointSnap = EndpointSnap,
+            Id = Id, SourceOrder = SourceOrder, OriginalLine = OriginalLine, X = X, Y = Y, EndpointSnap = EndpointSnap, DropletMode = DropletMode,
             TimeMs = TimeMs, PathType = PathType, SpanCount = SpanCount, PixelLength = PixelLength,
             RandomizationSource = RandomizationSource?.DeepClone(), RandomizationTrack = RandomizationTrack?.DeepClone(),
             RandomizationBaseVelocity = RandomizationBaseVelocity, PreserveNativeGeometry = PreserveNativeGeometry,
@@ -202,7 +213,7 @@ public sealed class ImportedSlider
         && OriginalLine == other.OriginalLine && X == other.X && Y == other.Y && TimeMs == other.TimeMs
         && PathType == other.PathType && SpanCount == other.SpanCount && PixelLength == other.PixelLength
         && SliderVelocityMultiplier == other.SliderVelocityMultiplier && ProcessedSliderVelocityMultiplier == other.ProcessedSliderVelocityMultiplier
-        && RandomizationBaseVelocity == other.RandomizationBaseVelocity
+        && RandomizationBaseVelocity == other.RandomizationBaseVelocity && DropletMode == other.DropletMode
         && PreserveNativeGeometry == other.PreserveNativeGeometry && EndpointSnap == other.EndpointSnap
         && ControlPoints.ContentEquals(other.ControlPoints)
         && (ReferenceEquals(RandomizationTrack, other.RandomizationTrack)

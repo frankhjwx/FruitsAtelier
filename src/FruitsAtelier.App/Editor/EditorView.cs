@@ -123,7 +123,7 @@ public sealed partial class EditorView
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectNotes != savedProjectNotes || projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
     public bool IsEditingText => PatternNameVisible || GalleryTagTextFocused || GallerySearchFocused || MapTemplatesVisible || addDifficultyConfirmation || CollaborationFocused || RandomDockFocused || SongDockFocused || NotesFocused || PatternDockEditing && (stackNumericField >= 0 || bananaEditField >= 0) || BananaEditVisible && bananaEditField >= 0 || HitsoundCopierVisible && copierNewDiff && copierNameFocused || StreamDialogVisible && stackMode && stackNumericField >= 0 || timingField.Length > 0 || SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || RotationVisible || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
-    public bool WantsCapture => verifierScrollbarDragging || discussionTextPressed is not null || discussionPreviewDragging || discussionQuoteDrag is not null || discussionScrollbarDragging || galleryTagOrderPressed is not null || galleryTagDrag != 0 || PatternGalleryWantsCapture || templatePointer || collaborationReportDragging || rotationWindowDragging || rotationDragging || aimodGesture != AimodGesture.None || dockHorizontalDrag is not null || randomDragging || notesSelecting || dockPressed is not null || acknowledgementsScrollDragging || canvasDimDragging || movementPanelPointer || backgroundDimDragging || workspaceScrollDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || stackPointDragging >= 0 || stackFruitDragging >= 0 || SliderHoldNeedsRedraw || sliderHoldConsumed;
+    public bool WantsCapture => verifierScrollbarDragging || discussionTextPressed is not null || discussionPreviewDragging || discussionQuoteDrag is not null || discussionScrollbarDragging || galleryTagOrderPressed is not null || galleryTagDrag != 0 || PatternGalleryWantsCapture || templatePointer || collaborationReportDragging || rotationWindowDragging || rotationDragging || aimodGesture != AimodGesture.None || dockHorizontalDrag is not null || randomDragging || notesSelecting || dockPressed is not null || acknowledgementsScrollDragging || canvasDimDragging || movementPanelPointer || backgroundDimDragging || workspaceScrollDragging || timingWindowDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || stackPointDragging >= 0 || stackFruitDragging >= 0 || SliderHoldNeedsRedraw || sliderHoldConsumed;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;
@@ -442,7 +442,7 @@ public sealed partial class EditorView
         SelectObjects(objectSelection.Where(unchanged.Contains), selection);
     }
 
-    private bool Edit(string label, Action change, Action<bool, MapDocument, MapDocument>? restoreRelated = null, bool allowSliderDeletion = false, bool allowTimingSv = false)
+    private bool Edit(string label, Action change, Action<bool, MapDocument, MapDocument>? restoreRelated = null, bool allowSliderDeletion = false, bool allowTimingSv = false, bool allowDropletMode = false)
     {
         history.Begin(label, restoreRelated);
         try
@@ -453,7 +453,7 @@ public sealed partial class EditorView
             change();
             if (allowSliderDeletion)
                 readOnlyIds.IntersectWith(Document.Tracks.Select(t => t.Id).Concat(Document.ImportedSliders.Select(s => s.Id)));
-            if (!osuAllowSliderConversion && history.TransactionChangesSliderGeometry(readOnlyIds, ignoreSliderVelocity: allowTimingSv))
+            if (!osuAllowSliderConversion && history.TransactionChangesSliderGeometry(readOnlyIds, ignoreSliderVelocity: allowTimingSv, ignoreDropletMode: allowDropletMode))
             { history.Cancel(); ShowEditorNotice("osu.readOnlySlider"); return false; }
             if (before is not null && !PositionsEqual(before, Document))
             { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }

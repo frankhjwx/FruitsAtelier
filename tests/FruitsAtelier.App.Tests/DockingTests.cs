@@ -35,6 +35,18 @@ internal static class DockingTests
                 Check(Math.Abs(DockWidth(true) - leftMaximum) < .1f && DockWidth(false) < leftMaximum,
                     "Widening the left dock reciprocally narrows the right dock");
                 ResizeDock(true, 280); ResizeDock(false, 360);
+                foreach (bool left in new[] { true, false })
+                {
+                    float originalWidth = DockWidth(left);
+                    DoubleSeparator(left);
+                    var layout = ui.View.CaptureDockLayouts().Mapping!;
+                    Check((left ? layout.Left : layout.Right)!.Collapsed && !ui.View.WantsCapture,
+                        "Double-clicking a dock separator did not collapse it");
+                    DoubleSeparator(left);
+                    layout = ui.View.CaptureDockLayouts().Mapping!;
+                    Check(!(left ? layout.Left : layout.Right)!.Collapsed && Math.Abs(DockWidth(left) - originalWidth) < .01
+                        && !ui.View.WantsCapture, "Double-clicking a collapsed separator did not restore its dock width");
+                }
                 Drag(EditorView.DockPanel.MovementStrain, ui.Width - 80, 200);
                 Check(ui.View.DifficultyCurvePanelBounds.X > ui.Plot.Right && ui.View.DifficultyCurveVisible
                     && !ui.View.CatchPreviewVisible, "Strain merges on the right and becomes active");
@@ -100,6 +112,14 @@ internal static class DockingTests
                 Check(!ui.View.DifficultyCurveVisible && !ui.View.CatchPreviewVisible, "Collapsed state survives view switches");
                 Click(ui.View.DifficultyCurveToggleBounds);
                 Check(ui.View.DifficultyCurveVisible, "Reopening restores the active tab");
+                void DoubleSeparator(bool left)
+                {
+                    var bounds = ui.View.DockCollapseBounds(left);
+                    float x = bounds.X + bounds.Width / 2, y = bounds.Y + 80;
+                    ui.Click(x, y);
+                    ui.View.PointerDoubleClick(x, y, false, false);
+                    ui.View.PointerUp(x, y, 0); ui.Paint();
+                }
                 var graph = ui.View.DifficultyCurveGraphBounds;
                 double seek = -1; ui.View.RequestSeek = value => seek = value;
                 Click(new(graph.X + 10, graph.Y, 20, 2));

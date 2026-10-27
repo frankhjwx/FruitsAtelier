@@ -206,6 +206,18 @@ reloading preferences, and preservation of existing project values. Legacy singl
 and multi-difficulty projects and imported maps exercise compatible drawing defaults,
 explicit randomization, cancellation, undo/redo, persistence and exported output.
 
+`App.Tests --legacy-droplet-modes-check` checks Legacy-only and mixed FSlider
+selection, explicit overrides and Follow map, atomic undo/redo, single- and
+multi-difficulty persistence, conversion to FSlider, subsequent default/strength/seed
+changes, cached export equivalence and NM/HR exported tiny droplets.
+Native `--render-check --legacy-droplet-modes-render-check` operates
+the Inspector dropdown in English and Chinese at two sizes and three DPI scales;
+captures go to `artifacts/tests/legacy-droplet-modes/native`.
+
+Focused App test commands print uncaught test exceptions to standard error and
+return exit code 1. The full suite records failures per test and continues through
+the remaining cases. Capture both output streams when retaining test logs.
+
 ### Windows sandbox permissions
 
 `App.Tests --window-preferences-check` checks canvas switch persistence, settings
@@ -808,13 +820,15 @@ system clipboard with its captured image.
 `FruitsAtelier.App.exe --testplay-render-check` independently exercises background
 decoding, custom Skip and pause textures, mouse/Space skip, keyboard Retry/Back,
 and both languages at wide, narrow and portrait sizes with 96/144/192 DPI.
+It also checks temporary AR changes and reuse on subsequent testplays.
 It uses silent callbacks and writes `artifacts/tests/testplay-native/report.json`.
 It also checks testplay shortcut dispatch before IME translation, process-key
 press/release recovery, and 300 ms held retry while running and paused followed by
 the 600 ms reaction countdown. Retry regressions verify frozen gameplay and delayed
 audio restart until the same deadline used by Continue.
 The shared App regressions additionally check dim transitions, frozen resume
-countdowns, stale audio samples after skip, content isolation and preferences.
+countdowns, menu-free Ctrl+P pause and immediate Ctrl+P/Esc resume, stale audio
+samples after skip, content isolation and preferences.
 The Windows App retry PCM regression uses an injected silent output with the
 real hitsound mixer to verify the pause loop during the hold and the retry click
 after session audio reset.
@@ -1317,9 +1331,10 @@ are written under `artifacts/tests/banana-edit/native`.
 
 ## Independent viewport scaling
 
-`App.Tests --timeline-layout-check` checks both timelines' 50–100% height limits,
+`App.Tests --timeline-layout-check` checks the upper timeline’s 32–64 DIP and overview’s 16–40 DIP height limits,
 saved view preferences, cancellation, minimum-height selection and seeking,
-transport alignment and the static playback-speed label with its expanded
+inline timestamp/progress alignment, divider double-click collapse/expansion, preserved height
+and collapsed preferences, and the static playback-speed label with its expanded
 speed buttons. `FruitsAtelier.App.exe --render-check --timeline-layout-render-check`
 exercises resizing and speed selection at every UI-scale step in English and
 Chinese at two client resolutions. Captures, including minimum heights, are
@@ -1412,3 +1427,11 @@ compound sample editing, Legacy/FSlider SV updates, undo and project persistence
 Windows `FruitsAtelier.App --render-check --timing-sv-render-check` exercises native
 controls and captures both languages, compact/wide windows and 96/144/192 DPI under
 `artifacts/tests/timing-sv-native`.
+
+`App.Tests --timing-feedback-check` also checks the floating F6 window: undimmed
+editor rendering, title dragging, four-corner proportional scaling down to 50%,
+scaled numeric input, outside selection/deletion and undo, draft application after
+object edits, stale timing rejection and document retirement in English and Chinese.
+Windows `FruitsAtelier.App --render-check --timing-sv-render-check` captures and
+operates the half-size window before and after dragging at both window sizes and
+96/144/192 DPI under `artifacts/tests/timing-sv-native`.

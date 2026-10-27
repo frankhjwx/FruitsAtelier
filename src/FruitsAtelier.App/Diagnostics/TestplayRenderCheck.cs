@@ -37,12 +37,38 @@ internal static class TestplayRenderCheck
                 map.OriginalSections.Add(new OsuSection { Name = "Events", Lines = { "0,0,\"pause-overlay.png\",0,0", "2,12000,16000" } });
                 map.Fruits.AddRange([new Fruit { TimeMs = 10000, X = 256 }, new Fruit { TimeMs = 20000, X = 256 }]);
                 view.LoadDocument(map); view.LoadSkin(folder);
+                var preparation = System.Diagnostics.Stopwatch.StartNew();
+                do
+                {
+                    Paint();
+                    if (!view.LibraryOpening) break;
+                    if (preparation.Elapsed.TotalSeconds > 10) throw new TimeoutException("Native testplay media did not finish preparing.");
+                    Thread.Sleep(5);
+                } while (true);
                 view.StartTestplay(); Paint();
+                double baseAr = view.PreviewApproachRate;
+                view.KeyDown(189, true, false); view.KeyUp(189); Paint();
+                if (Math.Abs(view.TestplayApproachRate - (baseAr - .1)) > .001 || view.Document.ApproachRate != map.ApproachRate)
+                    throw new InvalidOperationException("Native temporary AR failed.");
+                if (dpi == 96 && size == (1440, 900) && locale == "en")
+                    Capture(canvas, view, size.Item1, size.Item2, Path.Combine(folder, "adjusted-ar.bmp"));
                 if (!view.TestplaySkipVisible) throw new InvalidOperationException("Native Skip is missing.");
                 var skip = view.TestplaySkipBounds;
                 view.PointerDown(skip.X + skip.Width / 2, skip.Y + skip.Height / 2, 0, false, false);
                 view.PointerUp(skip.X + skip.Width / 2, skip.Y + skip.Height / 2, 0); Paint();
                 if (view.TestplaySkipVisible || view.PlayheadMs < 7000) throw new InvalidOperationException("Native Skip click failed.");
+                foreach (int resumeKey in new[] { 80, 27 })
+                {
+                    view.KeyDown(80, true, false); view.KeyUp(80); Paint();
+                    double paused = view.PlayheadMs;
+                    clock.Advance(1000); Paint();
+                    if (!view.TestplayPaused || view.TestplayPauseMenuVisible || view.PlayheadMs != paused)
+                        throw new InvalidOperationException("Native Ctrl+P did not freeze gameplay without a menu.");
+                    view.KeyDown(resumeKey, resumeKey == 80, false); view.KeyUp(resumeKey); Paint();
+                    if (view.TestplayPaused) throw new InvalidOperationException("Native direct pause did not resume immediately.");
+                    clock.Advance(10); Paint();
+                    if (view.PlayheadMs <= paused) throw new InvalidOperationException("Native direct pause retained a resume countdown.");
+                }
                 view.KeyDown(27, false, false); view.KeyUp(27); Paint();
                 if (!view.TestplayPauseMenuVisible) throw new InvalidOperationException("Native pause menu is missing.");
                 view.KeyDown(40, false, false); view.KeyUp(40);
@@ -68,6 +94,10 @@ internal static class TestplayRenderCheck
                 view.KeyDown(38, false, false); view.KeyUp(38);
                 view.KeyDown(13, false, false); view.KeyUp(13); Paint();
                 if (view.IsTestplaying) throw new InvalidOperationException("Native Back failed.");
+                view.StartTestplay(); Paint();
+                if (Math.Abs(view.TestplayApproachRate - (baseAr - .1)) > .001)
+                    throw new InvalidOperationException("Native testplay AR did not persist across sessions.");
+                view.StopTestplay();
                 cases.Add(new { dpi, width = size.Item1, height = size.Item2, locale });
                 void Paint()
                 {
@@ -83,6 +113,20 @@ internal static class TestplayRenderCheck
         }
         finally { L.SetLanguage(language); }
     }
+    internal static void Capture(D2DCanvas canvas, EditorView view, int width, int height, string path)
+    {
+        canvas.Begin(); view.Render(canvas, width, height);
+        canvas.End(capture: () =>
+        {
+            var frame = canvas.CapturePixels();
+            using var output = new BinaryWriter(File.Create(path));
+            output.Write((ushort)0x4D42); output.Write(54 + frame.Pixels.Length); output.Write(0); output.Write(54);
+            output.Write(40); output.Write(frame.Width); output.Write(-frame.Height);
+            output.Write((ushort)1); output.Write((ushort)32); output.Write(0); output.Write(frame.Pixels.Length);
+            output.Write(0); output.Write(0); output.Write(0); output.Write(0); output.Write(frame.Pixels);
+        });
+    }
+
     private static void CheckBackgroundCache(D2DCanvas canvas, string folder, string sprite)
     {
         string path = Path.Combine(folder, "large-background.png");

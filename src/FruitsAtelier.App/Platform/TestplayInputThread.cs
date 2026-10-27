@@ -109,7 +109,7 @@ internal sealed class TestplayInputThread : IDisposable
                         {
                             foreach (var held in pressed.Where(pair => IsTestplayShortcut(pair.Value)).Select(pair => pair.Key).ToArray())
                                 pressed.Remove(held);
-                            foreach (int shortcutKey in new[] { 38, 40, 82 })
+                            foreach (int shortcutKey in new[] { 38, 40, 82, 107, 109, 187, 189 })
                                 if (session.UsesKey(shortcutKey) && IsTestplayShortcut(shortcutKey)) session.SetKey(shortcutKey, false);
                         }
                     }
@@ -158,13 +158,13 @@ internal sealed class TestplayInputThread : IDisposable
         bool ctrl = down(0x11), alt = down(0x12), shift = down(0x10);
         for (int key = 1; key < 255; key++)
             if (session.UsesKey(key) && down(key)
-                && !(ctrl && !alt && (key is 38 or 40 || key == 82 && !shift))
+                && !(ctrl && !alt && (key is 38 or 40 or 107 or 109 or 187 or 189 || key == 82 && !shift))
                 && !(alt && key is 13 or 37 or 38 or 39 or 40))
                 session.SetKey(key, true);
     }
     // Retry replaces the worker while Ctrl is held, before the new worker receives a modifier transition.
     private static bool IsTestplayShortcut(int key) => GetAsyncKeyState(0x11) < 0 && GetAsyncKeyState(0x12) >= 0
-        && (key is 38 or 40 || key == 82 && GetAsyncKeyState(0x10) >= 0);
+        && (key is 38 or 40 or 107 or 109 or 187 or 189 || key == 82 && GetAsyncKeyState(0x10) >= 0);
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int key);

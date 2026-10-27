@@ -1,6 +1,8 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+try
+{
 if (args.Contains("--storyboard-image-cache-check")) return StoryboardImageCacheTests.Run();
 if (args.Length == 4 && args[0] == "--storyboard-first-playback") return StoryboardFirstPlaybackTests.Run(args[1], args[2], int.Parse(args[3]));
 if (args.Contains("--media-toggle-check")) return MediaToggleTests.Run();
@@ -67,6 +69,7 @@ if (args.Contains("--slider-endpoint-snap-performance")) { SliderEndpointSnapTes
 
 if (args.Contains("--independent-sv-check")) { IndependentSliderSvTests.Run(); Console.WriteLine("PASS Independent Legacy SV, overlap and editing"); return 0; }
 
+if (args.Contains("--legacy-droplet-modes-check")) { LegacyDropletModeTests.Run(); Console.WriteLine("PASS Legacy and FSlider droplet modes, history and persistence"); return 0; }
 if (args.Contains("--droplet-defaults-check")) { DropletDefaultsTests.Run(); Console.WriteLine("PASS Global droplet defaults and restart restoration"); return 0; }
 
 if (args.Contains("--window-preferences-check")) { WindowPreferenceTests.Run(); Console.WriteLine("PASS Window and canvas preferences"); return 0; }
@@ -339,6 +342,7 @@ var tests = new (string Name, Action Run)[]
     ("Tags wrap with row-aware editing and droplet lock persists", FeedbackInteractionTests.TagsAndPreference),
     ("Overlapping timeline markers and unmapped section breaks remain visible", FeedbackInteractionTests.MarkersAndBreak),
     ("Independent droplet defaults persist and initialize new projects and FSliders", DropletDefaultsTests.Run),
+    ("Legacy and FSlider droplet modes support mixed selection, history and persistence", LegacyDropletModeTests.Run),
     ("Selection boxes scale and move consecutive parents with anchor priority and atomic undo", SelectionTransformTests.Run),
     ("Selection drag bounds follow generated fruits and droplets while handles stay free", SelectionTransformTests.DragBoundsFollowPlayableObjects),
     ("Fractional group drag boundaries preserve fruits, export and undo", GroupDragBoundaryTests.Run),
@@ -398,7 +402,7 @@ var tests = new (string Name, Action Run)[]
     ("Timing current-time offsets use integer milliseconds and taps apply after ten samples", TimingFeedbackTests.Run),
     ("Canvas rotation, metadata, native streams, placement and timing feedback", CanvasFeedbackTests.Run),
     ("Pause snapping waits for confirmation and isolates other transport operations", PauseSnapTests.PauseIsolation),
-    ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
+    ("Shortcut routing exports from Timing while preserving window focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
     ("Timing SV display, locking, editing and persistence", TimingVelocityTests.Run),
     ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),
@@ -465,6 +469,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay bookmark shortcuts edit at the live position", TestplayTests.BookmarksDuringTestplay),
     ("Testplay movement, combo, hyperdash and facing", TestplayTests.MovementAndJudgement),
     ("Testplay autoplay notices, manual input and focus persistence", TestplayTests.AutoplaySwitching),
+    ("Testplay temporary AR shortcuts preserve content and session boundaries", TestplayTests.TemporaryApproachRate),
     ("Testplay autoplay speed switching and localized display", TestplayTests.AutoplaySpeed),
     ("Testplay quick retry and stepped autoplay speed preserve session boundaries", TestplayTests.RetryAndSteppedSpeed),
     ("Testplay retry retains gameplay during reentrant audio and driver rendering", TestplayTests.RetryRendering),
@@ -754,6 +759,12 @@ foreach (var test in selectedTests)
 Console.WriteLine($"Editor integration duration: {suiteWatch.Elapsed.TotalSeconds:F2}s.");
 Console.WriteLine($"{selectedTests.Length - failures}/{selectedTests.Length} editor integration tests passed.");
 return failures == 0 ? 0 : 1;
+}
+catch (Exception error)
+{
+    Console.Error.WriteLine(error);
+    return 1;
+}
 
 static void ContinuousFollow()
 {

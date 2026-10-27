@@ -734,13 +734,15 @@ change the current difficulty or its undo history. New projects default to
 derandomization. Valid current-difficulty edits also save the last used mode, strength,
 seed and NM/HR target as global defaults for new projects. Existing projects retain
 their own saved values. In **Slider Inspector**, **Droplet mode** selects
-Follow map, Derandomize or Randomize for the selected ordinary FSliders without
+Follow map, Derandomize or Randomize for the selected ordinary FSliders and Legacy Sliders without
 switching tabs. Explicit modes take precedence over the difficulty default.
 Multiple differing modes display Mixed; choosing a mode applies it to all eligible
 selected sliders in one undo step. The chosen mode is also remembered globally for
 newly drawn FSliders in both drawing modes, including after restarting; it initially
-uses Follow map. Existing sliders keep their own modes. Legacy Sliders and managed Stream/Stack objects
-are excluded. The effective mode is displayed with the Inspector metrics.
+uses Follow map. Existing sliders keep their own modes. Managed Stream/Stack objects
+are excluded. Both canvases allow droplet mode changes, including mixed Legacy/FSlider
+selections. Legacy changes retain the slider representation and regenerate compensation
+from its saved baseline. The effective mode is displayed with the Inspector metrics.
 
 In imported maps and older projects without new-slider randomization enabled,
 new FSliders default to Derandomize when the remembered mode is Follow map and
@@ -838,7 +840,7 @@ fitted section start stays relative to the beginning of the measurement. BPM use
 decimal places. **Apply timing** can also apply a shorter measurement with at least two taps.
 **Reset taps** clears the measurement. Tap uses map time, including playback speed.
 
-**Timing Setup / F6** opens an application-modal **Timing and Control Points**
+**Timing Setup / F6** opens a floating **Timing and Control Points**
 window. It displays and commits edited BPM values to at most two decimal places
 and offsets to integer milliseconds. **Use Current Time** takes the whole-millisecond
 part of the playback position. The draft is committed by OK as one undo step; Cancel, Escape or the close
@@ -857,6 +859,15 @@ Home/End keys navigate
 the list. Drag the list scrollbar or click its track to navigate longer lists without
 changing the selected rows. Tab moves between numeric fields; Enter commits a field before accepting
 the dialog. Ctrl+Z/Y operate on the draft while no numeric field has focus.
+
+Drag the title bar to reposition the window within the application. Drag any corner
+to scale its controls and text proportionally from 50% to 100% of its original
+size; the opposite corner stays fixed. The editor remains undimmed and
+interactive outside it, including editing, scrolling, playback and navigation.
+Click inside the window to use its timing shortcuts, or outside to return keyboard
+focus to the editor. Object edits and timing drafts use separate undo histories.
+If timing or base SV changes in the editor, reopen the window before applying its
+draft. Switching difficulties closes the window.
 
 Red points expose offset, BPM and meter. Green points expose offset, samples,
 volume and Kiai. The inheritance checkbox changes point type; it protects the
@@ -1093,7 +1104,9 @@ and break periods. The stored dim percentage is retained and used again when the
 switch is off. View changes save immediately; Settings changes require Apply.
 
 **Space** or clicking **Skip** skips an intro to three seconds before the first
-note. Skip is unavailable after that point. **Esc / Ctrl+P** opens the pause menu;
+note. Skip is unavailable after that point. **Ctrl+P** freezes gameplay and music
+without opening the pause menu. **Ctrl+P** or **Esc** resumes this direct pause
+immediately, without a countdown. During gameplay, **Esc** opens the pause menu;
 **Up/Down** selects Continue, Retry or Back and **Enter** activates the selection.
 Mouse buttons use the same actions. Opening the menu fades it in over 300 ms while
 music and judgement are already paused. Continue fades the pause menu out over 600 ms,
@@ -1184,13 +1197,24 @@ The bottom overview shows red and green timing points above a white center line,
 Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow line and bookmarks as blue lower lines. Preview lines draw before timing points, the playhead and bookmarks, so overlapping markers remain visible. Red and green timing points meet the overview center line and also appear on the upper object timeline. Short overview spans retain a minimum two-DIP width. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, blue bookmark labels, and ordinary time labels in the default muted color. Red timing and blue bookmark lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. Double-click an upper timeline object to select it and seek to its start without editing content. During a slider endpoint or timeline-tail drag, wheel navigation, Ctrl+wheel Snap, Alt+wheel zoom and Space/C playback remain available; release commits one edit and Esc restores its starting content. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. The bookmark toolbar is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
 
 Drag the divider below the upper object timeline or above the bottom overview to
-adjust their heights. Each ranges from 50% to 100% of its original height: 32–64
-DIP for the upper timeline and 20–40 DIP for the overview. The timestamp and
-playback controls retain their sizes; the transport row always reserves at least
-the controls' 32-DIP height. Upper timeline markers and their hit regions shrink
+adjust their heights: 32–64 DIP for the upper timeline and 16–40 DIP for the
+overview. The transport row, timestamp and playback icons scale with the overview
+height. The current time, total duration and progress percentage use the same font size and appear
+on one vertically centred row, followed by playback controls and the overview.
+Progress uses the current
+position within the total timeline duration, clamped to 0–100% and shown to one
+decimal place; loading audio shows a placeholder. Upper timeline markers and their hit regions shrink
 together. Releasing saves the heights as view
 preferences; Esc or lost pointer capture restores the previous height. Resizing
 does not edit beatmap content or create undo entries.
+
+Double-click the divider above the bottom overview to collapse the whole transport
+row and expand the canvas into its space. The divider remains above the status bar
+while collapsed; double-click it again to restore the previous timeline height.
+Double-click either side dock’s vertical divider to collapse or expand that dock,
+retaining its width and active tab. Dividers remain visible when collapsed. Dragging
+an expanded divider still adjusts its size. These actions are saved as view
+preferences and do not edit beatmap content; keyboard transport shortcuts remain available.
 
 During a kiai interval, a small badge appears at the upper-left of the editing plot. It brightens at the interval start and on every full beat from the active red timing point, then fades through the beat. Green timing points that preserve the kiai state do not restart the pulse. Its pulse follows map time, including seeking and timing edits.
 
@@ -1437,6 +1461,8 @@ A compact movement panel uses a consistent font size, aligned left/right readout
 
 Slider Path, Selection Rect and Movement Analysis use equal-width buttons. Long localized labels use a smaller font down to 10 DIP, then wrap onto two lines when needed in the compact toolbar. Wrapping prefers spaces and localized word-break hints. Text fitting measures the enabled button's font so toggling a button retains its layout; results are refreshed when the language or compact layout changes.
 
+Drag any corner of the floating movement panel to resize it proportionally, including its labels and numeric controls. The opposite corner stays fixed, and the panel remains inside the canvas. Size and position are saved with the workspace layout. The panel’s context menu offers independent **Reset position** and **Reset scale** actions; resetting scale restores 100% while retaining the position, clamped inside the canvas.
+
 **Movement Analysis**, beside **Selection Rect** in the canvas toolbar, toggles 4-DIP coloured connections above curves and behind objects on the editing canvas. The button highlights when enabled; the same toggle is also available under **View → Movement Analysis**. It is off by default and is a session display setting. Each consecutive Fruit/Droplet pair uses the same Stand, Walk, Dash, and HDash classification, using the Mapping Canvas indicator colours as the floating panel. Connections follow placement previews and content edits, retain full-sequence movement context across viewport edges, and skip simultaneous pairs and TinyDroplets. Banana shower and break intervals suppress entire connections and their DS labels whenever they overlap the pair, including links between fruits on opposite sides of an interval. Kiai intervals retain the connections and labels. Each Stand connection assumes its own departure-centre position; a sequence of Stand connections does not imply one shared standing position. Toggling the mode does not edit content or enter undo history. DS labels beside the connections use the same base-DPB formula as the floating panel. Each label has one fixed position to the right of the full connection midpoint, independent of viewport clipping. Intervals of 37.5 ms or less (a 1/8 beat at 200 BPM) omit DS labels. Longer intervals show labels wherever the fixed position fits inside the viewport without overlapping banana showers, the floating panel, or other labels. Fruit/droplet sprite bounds do not suppress labels because their transparent padding and glow overstate the occupied area. Labels do not move to alternate positions.
 
 In Select mode, New Combo toggles the selected parents, or the particular Stream/Stack fruit selected in the upper timeline. On the editing canvas, a fruit with this flag has an NC label beside it in every UI language. The label sits to the right when there is room and otherwise to the left; slider heads with the flag are labelled once. A pending New Combo fruit placement shows the same NC label beside its preview. The sound buttons toggle additions independently and support mixed multi-selection. Clicking a slider fruit targets that head, repeat or tail's hitsound; selecting the whole slider through its timeline body targets every edge. Droplet/tiny selections target the parent, whose edge sounds are editable; these children retain their existing tick/silent playback rules. Banana showers use their fixed banana sound and disable the three additions. In Fruit placement mode, or with no selection, buttons set pending flags for new objects. New Combo resets after placement; pending additions remain until changed or switching difficulty.
@@ -1595,7 +1621,7 @@ in narrow docks.
 
 The fixed Mapping Panel / Timing Panel selector switches workspaces. Each workspace independently retains panel placement, tab order,
 active tabs, collapsed groups, widths, preview options and the movement readout's
-position. Layout changes are saved in user preferences after completed actions
+position and scale. Layout changes are saved in user preferences after completed actions
 and restored when the editor restarts, independently of project saves. Timing Panel keeps its fixed waveform and timing-controls layout and
 does not expose dock dragging. Layout changes do not change beatmap content or undo.
 
@@ -1726,6 +1752,8 @@ controls and preview without the introductory or graph-instruction paragraphs.
 With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. Once the parent is selected, dragging a fruit edits its X position and marks that event with a bright outer ring. Middle-fruit edits preserve neighbouring samples and event times; repeated traversals sharing the same path sample move together. Head and tail fruits also support dragging in time. A repeated tail resizes its span duration and edits the endpoint of its final traversal. Drag the empty area inside the selection box to move the whole stream. Visible anchors and handles take priority over overlapping stream fruits, so dragging a control reshapes the parent curve. Hiding Slider Path lets the overlapping fruit be edited directly. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in Slider Inspector. The Stream/Stack dock changes their subdivision immediately with undo support; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. Parent-level New Combo applies to the first fruit; internal fruit NC is edited in the upper timeline. Object-level sound/sample settings apply to each fruit.
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Ctrl+L restores the current difficulty's previous saved version after confirmation. Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
+
+During testplay, Ctrl+Plus / Ctrl+Minus changes the current AR by 0.1 within 0–10. Both the main keyboard and numeric keypad work, including Ctrl+Shift+Plus. The left information area shows the current AR in white when it matches the difficulty’s preview AR, or orange when it differs. Each difficulty retains its own override for subsequent testplays and retries until the editor closes. Switching difficulties restores that difficulty’s override, or its original preview AR if unchanged. It does not edit difficulty settings or undo history.
 
 Testplay lead-in is configured in Settings > Testplay, from 0 to 5 seconds in 0.5-second steps (default 1). Settings also offers a persistent Combo-count visibility toggle, without a keyboard shortcut. Holding the configured Dash key adds a bright white catcher layer while preserving the existing trails and Hyperdash tint. Testplay starts at the selected position minus the lead-in. When that position reaches zero, opening preparation follows the [user manual](USER_MANUAL.md#testplay). Audio starts at the negative map position: Windows supplies silent PCM before the music, and macOS schedules the music node for zero while its output clock advances. The session uses the same interpolated audio clock throughout preparation and music. Pause, speed changes, retry and intro skips preserve negative transport positions. Hold the `~` / backtick key for 300 ms to retry once from the session start. A black overlay gradually dims the whole window while the pause loop plays during the hold; completing it plays the pause-menu Retry click and clears the overlay at the session start. Releasing early cancels the retry and removes the overlay. It also works while paused. Esc opens the pause menu; F1 returns to the selected position.
 

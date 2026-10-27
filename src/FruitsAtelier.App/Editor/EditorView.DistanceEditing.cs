@@ -14,7 +14,7 @@ public sealed partial class EditorView
     public Rect? NextDistanceFieldBounds { get; private set; }
     public Rect? XCoordinateFieldBounds { get; private set; }
     private Rect? XCoordinateRowBounds => MovementOverlayBounds is { } panel
-        ? new(panel.X, panel.Y + 56, panel.Width, panel.Height - 56) : null;
+        ? new(panel.X, panel.Y + 56 * MovementPanelScale, panel.Width, panel.Height - 56 * MovementPanelScale) : null;
 
     private double BaseDistanceVelocity(double time) => DistanceSnap.BaseVelocity(Document, time, renderedTiming);
     private double? BaseDistanceRatio(ConvertedCatchObject from, ConvertedCatchObject to)
@@ -54,56 +54,57 @@ public sealed partial class EditorView
 
     private void DrawDistanceFields(ICanvas c, Rect panel)
     {
+        float scale = MovementPanelScale;
         DistanceSliderBounds = null;
         var target = PlacementGhostPoint() is null ? SelectedDistanceObject() : null;
         if (target is not null && IsReadOnlySlider(target.SourceId)) target = null;
         var previous = target is not null ? DistanceNeighbours(target).Previous : null;
         bool editable = target is not null && target.Kind != CatchObjectKind.TinyDroplet && previous is not null && DistanceReadout.Previous.HasValue && !notesLocked && drag == DragKind.None;
         NextDistanceFieldBounds = null;
-        PreviousDistanceFieldBounds = editable ? new(panel.X, panel.Y, panel.Width, 56) : null;
-        var coordinateInput = new Rect(panel.Right - 74, panel.Y + 58, 64, 20);
+        PreviousDistanceFieldBounds = editable ? new(panel.X, panel.Y, panel.Width, 56 * scale) : null;
+        var coordinateInput = new Rect(panel.Right - 74 * scale, panel.Y + 58 * scale, 64 * scale, 20 * scale);
         XCoordinateFieldBounds = target is not null && !notesLocked && drag == DragKind.None
             ? editingXCoordinate ? coordinateInput : XCoordinateRowBounds : null;
         if (DistanceEditing && editingXCoordinate)
         {
-            c.Text(L.Get("coordinate.x"), panel.X + 10, panel.Y + 60, MovementPanelFontSize, Muted, panel.Width - 94);
-            c.Fill(coordinateInput, Panel, 3);
-            c.Stroke(coordinateInput, fieldError.Length > 0 ? Error : Accent, 1, 3);
-            DrawInputText(c, new(coordinateInput.X + 5, coordinateInput.Y + 2, coordinateInput.Width - 10, 16), editBuffer, MovementPanelFontSize, true, "distance");
+            c.Text(L.Get("coordinate.x"), panel.X + 10 * scale, panel.Y + 60 * scale, MovementPanelFontSize * scale, Muted, panel.Width - 94 * scale);
+            c.Fill(coordinateInput, Panel, 3 * scale);
+            c.Stroke(coordinateInput, fieldError.Length > 0 ? Error : Accent, scale, 3 * scale);
+            DrawInputText(c, new(coordinateInput.X + 5 * scale, coordinateInput.Y + 2 * scale, coordinateInput.Width - 10 * scale, 16 * scale), editBuffer, MovementPanelFontSize * scale, true, "distance");
         }
         else
         {
             double? coordinate = PlacementGhostPoint()?.X ?? target?.X
                 ?? (clickedCoordinate is { } clicked && FlagTargets().Contains(clicked.SourceId) ? clicked.X : null);
             c.Text(L.Get("coordinate.readout", coordinate?.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "—"),
-                panel.X + 10, panel.Y + 60, MovementPanelFontSize, Muted, panel.Width - 20);
+                panel.X + 10 * scale, panel.Y + 60 * scale, MovementPanelFontSize * scale, Muted, panel.Width - 20 * scale);
         }
         if (DistanceEditing && !editingXCoordinate)
         {
-            var slider = new Rect(panel.X + 10, panel.Y + 36, panel.Width - 94, 20);
-            var input = new Rect(panel.Right - 74, panel.Y + 36, 64, 20);
+            var slider = new Rect(panel.X + 10 * scale, panel.Y + 36 * scale, panel.Width - 94 * scale, 20 * scale);
+            var input = new Rect(panel.Right - 74 * scale, panel.Y + 36 * scale, 64 * scale, 20 * scale);
             DistanceSliderBounds = slider;
             PreviousDistanceFieldBounds = input;
-            float y = slider.Y + 10;
-            c.Line(slider.X, y, slider.Right, y, Grid, 4);
+            float y = slider.Y + 10 * scale;
+            c.Line(slider.X, y, slider.Right, y, Grid, 4 * scale);
             float x = slider.X + (float)(distanceMaximum > 0 ? distanceValue / distanceMaximum : 0) * slider.Width;
-            c.Line(slider.X, y, x, y, Accent, 4);
-            c.Fill(new(x - 5, y - 7, 10, 14), Accent, 5);
-            c.Fill(input, Panel, 3);
-            c.Stroke(input, fieldError.Length > 0 ? Error : Accent, 1, 3);
-            DrawInputText(c, new(input.X + 5, input.Y + 2, input.Width - 10, 16), editBuffer, MovementPanelFontSize, true, "distance");
+            c.Line(slider.X, y, x, y, Accent, 4 * scale);
+            c.Fill(new(x - 5 * scale, y - 7 * scale, 10 * scale, 14 * scale), Accent, 5 * scale);
+            c.Fill(input, Panel, 3 * scale);
+            c.Stroke(input, fieldError.Length > 0 ? Error : Accent, scale, 3 * scale);
+            DrawInputText(c, new(input.X + 5 * scale, input.Y + 2 * scale, input.Width - 10 * scale, 16 * scale), editBuffer, MovementPanelFontSize * scale, true, "distance");
         }
         else
         {
-            c.Text(L.Get("assist.previous", DistanceReadout.Previous is { } p ? L.Get("assist.ratio", p) : "—"), panel.X + 10, panel.Y + 38, MovementPanelFontSize, EqualDistanceHighlighted ? Gold : Muted, panel.Width / 2 - 14);
+            c.Text(L.Get("assist.previous", DistanceReadout.Previous is { } p ? L.Get("assist.ratio", p) : "—"), panel.X + 10 * scale, panel.Y + 38 * scale, MovementPanelFontSize * scale, EqualDistanceHighlighted ? Gold : Muted, panel.Width / 2 - 14 * scale);
             string next = L.Get("assist.next", DistanceReadout.Next is { } n ? L.Get("assist.ratio", n) : "—");
-            float nextWidth = Math.Min(c.MeasureText(next, MovementPanelFontSize), panel.Width / 2 - 14);
-            c.Text(next, panel.Right - 10 - nextWidth, panel.Y + 38, MovementPanelFontSize, EqualDistanceHighlighted ? Gold : Muted, nextWidth);
+            float nextWidth = Math.Min(c.MeasureText(next, MovementPanelFontSize * scale), panel.Width / 2 - 14 * scale);
+            c.Text(next, panel.Right - 10 * scale - nextWidth, panel.Y + 38 * scale, MovementPanelFontSize * scale, EqualDistanceHighlighted ? Gold : Muted, nextWidth);
         }
         if (DistanceEditing && fieldError.Length > 0)
         {
-            c.Fill(new(panel.X, panel.Y - 30, panel.Width, 28), Panel, 4);
-            c.Text(fieldError, panel.X + 6, panel.Y - 24, 11, Error, panel.Width - 12);
+            c.Fill(new(panel.X, panel.Y - 30 * scale, panel.Width, 28 * scale), Panel, 4 * scale);
+            c.Text(fieldError, panel.X + 6 * scale, panel.Y - 24 * scale, 11 * scale, Error, panel.Width - 12 * scale);
         }
     }
 
@@ -343,9 +344,7 @@ public sealed partial class EditorView
         var occupied = new List<Rect>();
         if (PlacementGhostPoint() is not null || FlagTargets().Length == 1)
         {
-            float panelWidth = Math.Min(MovementPanelWidth, plot.Width - 12);
-            occupied.Add(new(Math.Clamp(Playfield.X + Playfield.Width / 2 - panelWidth / 2, plot.X + 6, plot.Right - panelWidth - 6),
-                plot.Bottom - MovementPanelHeight - 8, panelWidth, MovementPanelHeight));
+            if (MovementPanelBounds() is { } panel) occupied.Add(panel);
         }
         foreach (var shower in Document.BananaShowers) occupied.Add(BananaRectangle(shower));
         int low = 0, high = distanceLayout.Count;
