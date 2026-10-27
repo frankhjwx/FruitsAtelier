@@ -284,9 +284,17 @@ internal static class TimelineOverviewTests
         Check(ui.View.TimeDisplayBounds.Right < ui.View.TransportButtonBounds(0).X, "Time display must sit left of transport controls");
         Check(Math.Abs(ui.View.TimeDisplayBounds.Y + ui.View.TimeDisplayBounds.Height / 2 - test.Y - test.Height / 2) < .01,
             "Time display and transport controls must share a row");
-        var currentLabel = ui.Canvas.Texts.Single(t => t.X == 20 && t.Y == ui.View.TimeDisplayBounds.Y);
+        var currentLabel = ui.Canvas.Texts.Single(t => t.X == 20 && t.Y >= ui.View.TimeDisplayBounds.Y
+            && t.Y < ui.View.TimeDisplayBounds.Bottom);
         var durationLabel = ui.Canvas.Texts.Single(t => t.Value.StartsWith("/ ") && t.X > currentLabel.X && t.X < 210);
         Check(Math.Abs(currentLabel.Y - durationLabel.Y) <= 4, "Time display should use one line");
+        var percentage = ui.Canvas.Texts.Single(t => t.Value.EndsWith('%')
+            && t.X > durationLabel.X && t.X < ui.View.TimeDisplayBounds.Right && t.Y >= currentLabel.Y
+            && t.Y < ui.View.TimeDisplayBounds.Bottom);
+        Check(percentage.X >= durationLabel.X + durationLabel.MaxWidth
+            && percentage.X + percentage.MaxWidth < ui.View.TransportButtonBounds(0).X
+            && Math.Abs(percentage.Y - currentLabel.Y) <= 4,
+            "Progress should sit beside the duration on the transport row");
         float durationX = durationLabel.X;
         ui.View.UpdateTransport(1888, 5000, true, false, false, null, map.AudioPath); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value.StartsWith("/ ") && t.X == durationX),

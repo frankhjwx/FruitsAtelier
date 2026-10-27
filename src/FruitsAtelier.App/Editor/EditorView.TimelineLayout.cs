@@ -9,16 +9,20 @@ public sealed partial class EditorView
     private float ObjectTimelineHeight => LibrarySettings.ObjectTimelineHeight;
     private float TransportRowHeight => OverviewHeight;
     private float TransportScale => TransportRowHeight / 40;
-    private float TransportTop => height - TransportRowHeight - 48;
+    private bool OverviewTimelineCollapsed => LibrarySettings.OverviewTimelineCollapsed;
+    private float TransportTop => height - 28 - (OverviewTimelineCollapsed ? 0 : TransportRowHeight + 20);
+    internal Rect OverviewTimelineToggleBounds => new(width / 2 - 22, TransportTop - 22, 44, 22);
     internal Rect ObjectTimelineResizeBounds => TimingPageVisible ? default
         : new(objectTimeline.X - 42, objectTimeline.Bottom + 1, objectTimeline.Width + 42, 8);
-    internal Rect OverviewTimelineResizeBounds => new(0, TransportTop - 4, width, 8);
+    internal Rect OverviewTimelineResizeBounds => OverviewTimelineCollapsed ? default : new(0, TransportTop - 4, width, 8);
     internal Rect PlaybackSpeedSelectorBounds => new(VolumeButtonBounds.X - 8 - PlaybackRates.Length * 50 + 4, height - 27, PlaybackRates.Length * 50 - 4, 26);
-    internal Rect TransportButtonBounds(int index) => new(208 + index * 49, overview.Y + (overview.Height - 32 * TransportScale) / 2, 42, 32 * TransportScale);
+    internal Rect TransportButtonBounds(int index) => OverviewTimelineCollapsed ? default
+        : new(272 + index * 49, overview.Y + (overview.Height - 32 * TransportScale) / 2, 42, 32 * TransportScale);
     private bool resizingObjectTimeline;
     private float timelineResizeY, timelineResizeHeight, timelineResizeOriginal;
     public bool TimelinePanelResizeCursor => DockContentInputAvailable && !librarySettingsOpen && menu < 0 && contextItems.Count == 0
         && !PatternGalleryPopupContains(mouseX, mouseY) && !PatternGalleryWantsCapture
+        && !OverviewTimelineToggleBounds.Contains(mouseX, mouseY)
         && (drag == DragKind.TimelinePanelResize || drag == DragKind.None
             && (ObjectTimelineResizeBounds.Contains(mouseX, mouseY) || OverviewTimelineResizeBounds.Contains(mouseX, mouseY)));
 
@@ -58,13 +62,35 @@ public sealed partial class EditorView
     private void DrawTimelineResizers(ICanvas c)
     {
         if (!TimingPageVisible) Draw(ObjectTimelineResizeBounds);
-        Draw(OverviewTimelineResizeBounds);
+        if (!OverviewTimelineCollapsed) Draw(OverviewTimelineResizeBounds);
         void Draw(Rect bounds)
         {
             bool hover = TimelinePanelResizeCursor && bounds.Contains(mouseX, mouseY);
             c.Line(bounds.X, bounds.Y + 4, bounds.Right, bounds.Y + 4, hover ? Accent : Grid, hover ? 2 : 1);
             c.Line(bounds.X + bounds.Width / 2 - 16, bounds.Y + 4, bounds.X + bounds.Width / 2 + 16, bounds.Y + 4, hover ? Accent : Muted, 2);
         }
+    }
+
+    private void ToggleOverviewTimeline()
+    {
+        LibrarySettings.OverviewTimelineCollapsed = !OverviewTimelineCollapsed;
+        RequestViewPreference?.Invoke();
+    }
+
+    private bool OverviewTimelineTogglePointer(float x, float y, int button)
+    {
+        if (!DockContentInputAvailable || menu >= 0 || contextItems.Count > 0
+            || PatternGalleryPopupContains(x, y) || PatternGalleryWantsCapture
+            || !OverviewTimelineToggleBounds.Contains(x, y)) return false;
+        if (button == 0 && CommitField()) ToggleOverviewTimeline();
+        return true;
+    }
+
+    private void DrawOverviewTimelineToggle(ICanvas c)
+    {
+        c.Fill(OverviewTimelineToggleBounds, Surface, 5);
+        Button(c, OverviewTimelineToggleBounds, OverviewTimelineCollapsed ? "⌃" : "⌄", ToggleOverviewTimeline,
+            textPadding: 18, textRightPadding: 4);
     }
 
     private float DrawPlaybackSpeedSelector(ICanvas c)

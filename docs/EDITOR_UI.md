@@ -1188,13 +1188,20 @@ Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow 
 Drag the divider below the upper object timeline or above the bottom overview to
 adjust their heights: 32–64 DIP for the upper timeline and 16–40 DIP for the
 overview. The transport row, timestamp and playback icons scale with the overview
-height. A smaller, left-aligned progress percentage appears below the current
-time, with both text rows vertically centred together. Progress uses the current
+height. The current time, total duration and a smaller progress percentage appear
+on one vertically centred row, followed by playback controls and the overview.
+Progress uses the current
 position within the total timeline duration, clamped to 0–100% and shown to one
 decimal place; loading audio shows a placeholder. Upper timeline markers and their hit regions shrink
 together. Releasing saves the heights as view
 preferences; Esc or lost pointer capture restores the previous height. Resizing
 does not edit beatmap content or create undo entries.
+
+The arrow above the bottom overview collapses the whole transport row and expands
+the canvas into its space. It remains above the status bar while collapsed, so
+clicking it restores the previous timeline height. The arrow overlays the canvas
+and reserves no additional row. The collapsed state is saved as a view preference;
+keyboard transport shortcuts remain available.
 
 During a kiai interval, a small badge appears at the upper-left of the editing plot. It brightens at the interval start and on every full beat from the active red timing point, then fades through the beat. Green timing points that preserve the kiai state do not restart the pulse. Its pulse follows map time, including seeking and timing edits.
 

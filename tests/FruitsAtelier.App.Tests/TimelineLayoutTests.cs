@@ -70,6 +70,25 @@ internal static class TimelineLayoutTests
                 }
                 Check(before.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty && ui.View.PlayheadMs == playhead,
                     "Layout changes modified beatmap content or playhead.");
+                var expandedPlot = ui.Plot;
+                var toggle = ui.View.OverviewTimelineToggleBounds;
+                Check(toggle.Bottom == ui.View.OverviewTimelineResizeBounds.Y + 4,
+                    "Overview toggle reserved a row instead of overlaying the canvas");
+                ui.Click(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2);
+                Check(ui.View.LibrarySettings.OverviewTimelineCollapsed && ui.View.TimeDisplayBounds == default
+                    && ui.View.TestplayButtonBounds == default && !ui.Canvas.Fills.Any(f => f.Color == 0x141922)
+                    && ui.Plot.Height == expandedPlot.Height + 36 && !ui.View.WantsCapture,
+                    "Collapsing the overview retained hidden controls or failed to release its full height");
+                Check(LibrarySettings.Load(path).OverviewTimelineCollapsed, "Overview collapse was not saved");
+                ui.View.OpenSettings(); ui.View.ApplySettings(path, force: true); ui.Key(27);
+                Check(ui.View.LibrarySettings.OverviewTimelineCollapsed, "Applying settings expanded the overview");
+                toggle = ui.View.OverviewTimelineToggleBounds;
+                ui.Click(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2);
+                Check(!ui.View.LibrarySettings.OverviewTimelineCollapsed && ui.Plot == expandedPlot
+                    && Overview().Height == 16 && !LibrarySettings.Load(path).OverviewTimelineCollapsed,
+                    "Expanding the overview failed to restore its saved height and canvas layout");
+                Check(before.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty && ui.View.PlayheadMs == playhead,
+                    "Overview collapse modified beatmap content or playhead");
 
                 Rect Overview() => ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
                 void CheckLayout()

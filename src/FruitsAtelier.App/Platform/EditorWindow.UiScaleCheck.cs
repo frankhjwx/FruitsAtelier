@@ -26,6 +26,7 @@ internal sealed partial class EditorWindow
                 view.LibrarySettings.UiScalePercent = 150;
                 view.LibrarySettings.ObjectTimelineHeight = 64;
                 view.LibrarySettings.OverviewTimelineHeight = 40;
+                view.LibrarySettings.OverviewTimelineCollapsed = false;
                 Native.SetWindowPos(hwnd, 0, 0, 0, size.Item1, size.Item2, 0x0004 | 0x0010 | 0x0020);
                 Paint();
                 view.KeyDown(107, true, false); Paint();
@@ -67,6 +68,7 @@ internal sealed partial class EditorWindow
                 }
                 if (timelineLayout)
                 {
+                    Capture("expanded");
                     var upper = view.ObjectTimelineResizeBounds;
                     Drag(upper.X + 10, upper.Y + 4, -32); Paint();
                     var lower = view.OverviewTimelineResizeBounds;
@@ -86,6 +88,17 @@ internal sealed partial class EditorWindow
                     if (view.ObjectTimelineBounds.Height != 32 || view.LibrarySettings.OverviewTimelineHeight != 16)
                         throw new InvalidOperationException("Native timeline minimum-height limits failed.");
                     Capture("minimum");
+                    var expandedPlot = view.CanvasPlotBounds;
+                    var toggle = view.OverviewTimelineToggleBounds;
+                    Click(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2); Paint();
+                    if (!view.LibrarySettings.OverviewTimelineCollapsed || view.TimeDisplayBounds != default
+                        || Math.Abs(view.CanvasPlotBounds.Height - expandedPlot.Height - 36) > .01 || view.WantsCapture)
+                        throw new InvalidOperationException("Native overview collapse did not release the transport row.");
+                    Capture("collapsed");
+                    toggle = view.OverviewTimelineToggleBounds;
+                    Click(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2); Paint();
+                    if (view.LibrarySettings.OverviewTimelineCollapsed || view.CanvasPlotBounds != expandedPlot)
+                        throw new InvalidOperationException("Native overview expansion did not restore its layout.");
                 }
                 var bounds = view.CanvasScaleLockBounds;
                 bool uniform = view.UniformCanvasScale;

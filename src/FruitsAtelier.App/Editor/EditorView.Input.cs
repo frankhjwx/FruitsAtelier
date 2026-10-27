@@ -13,7 +13,7 @@ public sealed partial class EditorView
     private int breakStartMs;
     private int OverviewTime(float x) => (int)Math.Clamp(Math.Round((x - overview.X) / overview.Width * TimelineDurationMs), 0, int.MaxValue);
     private float TimelineHeadX => overview.X + (float)(playhead / TimelineDurationMs) * overview.Width;
-    private bool HitsTimelineHead(float x, float y) => Math.Abs(x - TimelineHeadX) <= 6
+    private bool HitsTimelineHead(float x, float y) => !OverviewTimelineCollapsed && Math.Abs(x - TimelineHeadX) <= 6
         && y >= overview.Y - 7 && y <= overview.Bottom + 2;
 
     public void PointerLeave()
@@ -136,6 +136,7 @@ public sealed partial class EditorView
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
+        if (OverviewTimelineTogglePointer(x, y, button)) return;
         if (PatternEditingPointerDown(x, y, button)) return;
         if (PatternGalleryPointerDown(x, y, button, shift, ctrl)) return;
         if (BeginTimelinePanelResize(x, y, button)) return;
