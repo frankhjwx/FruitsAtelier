@@ -1,6 +1,8 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
+try
+{
 if (args.Contains("--storyboard-image-cache-check")) return StoryboardImageCacheTests.Run();
 if (args.Length == 4 && args[0] == "--storyboard-first-playback") return StoryboardFirstPlaybackTests.Run(args[1], args[2], int.Parse(args[3]));
 if (args.Contains("--media-toggle-check")) return MediaToggleTests.Run();
@@ -400,7 +402,7 @@ var tests = new (string Name, Action Run)[]
     ("Timing current-time offsets use integer milliseconds and taps apply after ten samples", TimingFeedbackTests.Run),
     ("Canvas rotation, metadata, native streams, placement and timing feedback", CanvasFeedbackTests.Run),
     ("Pause snapping waits for confirmation and isolates other transport operations", PauseSnapTests.PauseIsolation),
-    ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
+    ("Shortcut routing exports from Timing while preserving window focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
     ("Timing SV display, locking, editing and persistence", TimingVelocityTests.Run),
     ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),
@@ -757,6 +759,12 @@ foreach (var test in selectedTests)
 Console.WriteLine($"Editor integration duration: {suiteWatch.Elapsed.TotalSeconds:F2}s.");
 Console.WriteLine($"{selectedTests.Length - failures}/{selectedTests.Length} editor integration tests passed.");
 return failures == 0 ? 0 : 1;
+}
+catch (Exception error)
+{
+    Console.Error.WriteLine(error);
+    return 1;
+}
 
 static void ContinuousFollow()
 {

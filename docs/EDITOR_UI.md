@@ -840,7 +840,7 @@ fitted section start stays relative to the beginning of the measurement. BPM use
 decimal places. **Apply timing** can also apply a shorter measurement with at least two taps.
 **Reset taps** clears the measurement. Tap uses map time, including playback speed.
 
-**Timing Setup / F6** opens an application-modal **Timing and Control Points**
+**Timing Setup / F6** opens a floating **Timing and Control Points**
 window. It displays and commits edited BPM values to at most two decimal places
 and offsets to integer milliseconds. **Use Current Time** takes the whole-millisecond
 part of the playback position. The draft is committed by OK as one undo step; Cancel, Escape or the close
@@ -859,6 +859,15 @@ Home/End keys navigate
 the list. Drag the list scrollbar or click its track to navigate longer lists without
 changing the selected rows. Tab moves between numeric fields; Enter commits a field before accepting
 the dialog. Ctrl+Z/Y operate on the draft while no numeric field has focus.
+
+Drag the title bar to reposition the window within the application. Drag any corner
+to scale its controls and text proportionally from 50% to 100% of its original
+size; the opposite corner stays fixed. The editor remains undimmed and
+interactive outside it, including editing, scrolling, playback and navigation.
+Click inside the window to use its timing shortcuts, or outside to return keyboard
+focus to the editor. Object edits and timing drafts use separate undo histories.
+If timing or base SV changes in the editor, reopen the window before applying its
+draft. Switching difficulties closes the window.
 
 Red points expose offset, BPM and meter. Green points expose offset, samples,
 volume and Kiai. The inheritance checkbox changes point type; it protects the

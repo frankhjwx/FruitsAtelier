@@ -146,7 +146,7 @@ public sealed partial class EditorView
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         var pointer = (X: mouseX, Y: mouseY);
         // Covered controls render as if the pointer were outside the window.
-        if (PatternGalleryPopupContains(mouseX, mouseY)) mouseX = mouseY = -1;
+        if (PatternGalleryPopupContains(mouseX, mouseY) || TimingWindowContains(mouseX, mouseY)) mouseX = mouseY = -1;
         try
         {
             c.Fill(new(0, 0, width, height), Background);
@@ -187,6 +187,7 @@ public sealed partial class EditorView
         finally { mouseX = pointer.X; mouseY = pointer.Y; }
         DrawPatternGalleryOverlay(c);
         DrawPatternEditingBanner(c);
+        DrawTimingSetup(c);
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);
         if (!librarySettingsOpen) DrawLanguageMenu(c);
@@ -201,7 +202,6 @@ public sealed partial class EditorView
         DrawVolumePopover(c);
         DrawDistanceSnapDialog(c);
         DrawSongSetup(c);
-        DrawTimingSetup(c);
         DrawHitsoundCopier(c);
         DrawSettings(c);
         DrawCollaborationReport(c);

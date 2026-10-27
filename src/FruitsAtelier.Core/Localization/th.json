@@ -1929,6 +1929,7 @@
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
   "timing.finishDraft": "ใช้หรือยกเลิกการแก้ไข Timing ก่อนสลับการแสดง SV",
+  "timing.sourceChanged": "Timing ในตัวแก้ไขเปลี่ยนไปแล้ว โปรดเปิดหน้าต่างนี้ใหม่ก่อนนำไปใช้",
   "media.storyboardDiagnostics": "สตอรีบอร์ด: ข้ามคำสั่งหรือทรัพยากรที่ไม่ถูกต้อง {0} รายการ",
   "media.storyboardFailed": "ไม่สามารถโหลดสตอรีบอร์ดได้: {0}",
   "media.loading": "กำลังเตรียมทรัพยากรบีตแมป…"

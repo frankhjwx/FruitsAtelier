@@ -214,6 +214,10 @@ Native `--render-check --legacy-droplet-modes-render-check` operates
 the Inspector dropdown in English and Chinese at two sizes and three DPI scales;
 captures go to `artifacts/tests/legacy-droplet-modes/native`.
 
+Focused App test commands print uncaught test exceptions to standard error and
+return exit code 1. The full suite records failures per test and continues through
+the remaining cases. Capture both output streams when retaining test logs.
+
 ### Windows sandbox permissions
 
 `App.Tests --window-preferences-check` checks canvas switch persistence, settings
@@ -1423,3 +1427,11 @@ compound sample editing, Legacy/FSlider SV updates, undo and project persistence
 Windows `FruitsAtelier.App --render-check --timing-sv-render-check` exercises native
 controls and captures both languages, compact/wide windows and 96/144/192 DPI under
 `artifacts/tests/timing-sv-native`.
+
+`App.Tests --timing-feedback-check` also checks the floating F6 window: undimmed
+editor rendering, title dragging, four-corner proportional scaling down to 50%,
+scaled numeric input, outside selection/deletion and undo, draft application after
+object edits, stale timing rejection and document retirement in English and Chinese.
+Windows `FruitsAtelier.App --render-check --timing-sv-render-check` captures and
+operates the half-size window before and after dragging at both window sizes and
+96/144/192 DPI under `artifacts/tests/timing-sv-native`.

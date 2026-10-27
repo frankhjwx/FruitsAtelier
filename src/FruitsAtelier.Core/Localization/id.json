@@ -1929,6 +1929,7 @@
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Terapkan atau batalkan perubahan timing sebelum mengganti tampilan SV.",
+  "timing.sourceChanged": "Timing di editor telah berubah. Buka kembali jendela ini sebelum menerapkan.",
   "media.storyboardDiagnostics": "Storyboard: {0} perintah atau sumber daya tidak valid dilewati.",
   "media.storyboardFailed": "Storyboard tidak dapat dimuat: {0}",
   "media.loading": "Menyiapkan sumber daya beatmap…"

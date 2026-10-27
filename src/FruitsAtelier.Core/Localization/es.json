@@ -1929,6 +1929,7 @@
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Aplica o cancela los cambios de timing antes de cambiar la vista SV.",
+  "timing.sourceChanged": "El timing ha cambiado en el editor. Vuelve a abrir esta ventana antes de aplicar.",
   "media.storyboardDiagnostics": "Storyboard: se omitieron {0} comandos o recursos no válidos.",
   "media.storyboardFailed": "No se pudo cargar el storyboard: {0}",
   "media.loading": "Preparando los recursos del mapa…"

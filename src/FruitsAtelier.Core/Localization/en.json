@@ -1929,6 +1929,7 @@
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Apply or cancel timing edits before switching the SV display.",
+  "timing.sourceChanged": "Timing changed in the editor. Reopen this window before applying.",
   "media.storyboardDiagnostics": "Storyboard: {0} invalid commands or resources were skipped.",
   "media.storyboardFailed": "Storyboard could not be loaded: {0}",
   "media.loading": "Preparing map resources…"

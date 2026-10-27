@@ -31,6 +31,7 @@ public sealed partial class EditorView
         editorWriteCache = new(); editorConversionCache = new(); draftConversionCache = new();
         conversion = null; playableExport = null; playableObjects = [];
         displayedTiming = []; svOnlyTiming.Clear();
+        CloseTimingSetup();
         timingEntries.Clear(); timingUndo.Clear(); timingRedo.Clear(); timingDisplayOriginals.Clear();
         renderedTiming = snapTiming = null;
         cachedAxisTimingLookup = null; cachedAxisTimingTimes = [];

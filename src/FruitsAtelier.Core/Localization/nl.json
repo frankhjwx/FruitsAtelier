@@ -1929,6 +1929,7 @@
   "timing.bpmSv": "BPM / SV",
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Pas timingwijzigingen toe of annuleer ze voordat je de SV-weergave wisselt.",
+  "timing.sourceChanged": "De timing in de editor is gewijzigd. Open dit venster opnieuw voordat je de wijzigingen toepast.",
   "media.storyboardDiagnostics": "Storyboard: {0} ongeldige opdrachten of bronnen overgeslagen.",
   "media.storyboardFailed": "Storyboard kon niet worden geladen: {0}",
   "media.loading": "Beatmapbronnen voorbereiden…"

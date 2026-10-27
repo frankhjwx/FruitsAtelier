@@ -11,7 +11,10 @@ internal static class TimingEditorTests
             foreach (string lang in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(lang);
+                FloatingWindow();
+                FloatingResize();
                 Scrollbar();
+                Scrollbar(halfSize: true);
                 BatchAndMarkers();
                 var map = Map(); var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(980, 620);
                 ui.View.UpdateTransport(0, 10000, true, false, false, null, null); ui.Paint();
@@ -97,6 +100,91 @@ internal static class TimingEditorTests
         finally { L.SetLanguage(language); }
     }
 
+    private static void FloatingResize()
+    {
+        for (int corner = 1; corner <= 4; corner++)
+        {
+            var ui = new Ui(false); ui.LoadDocument(Map()); ui.Resize(1440, 900); ui.Key(117);
+            var start = ui.View.TimingSetupBounds;
+            bool left = corner is 1 or 3, top = corner is 1 or 2;
+            float x = left ? start.X + 2 : start.Right - 2, y = top ? start.Y + 2 : start.Bottom - 2;
+            ui.View.PointerMove(x, y, false, false); ui.Paint();
+            Check(ui.View.FloatingPanelResizeCursor == corner, "Each Timing corner exposes its resize cursor");
+            ui.View.PointerDown(x, y, 0, false, false);
+            float targetX = x + (left ? 1000 : -1000), targetY = y + (top ? 680 : -680);
+            ui.View.PointerMove(targetX, targetY, false, false); ui.Paint();
+            ui.View.PointerUp(targetX, targetY, 0); ui.Paint();
+            var small = ui.View.TimingSetupBounds;
+            Check(Math.Abs(small.Width - start.Width * .5f) < .01 && Math.Abs(small.Height - start.Height * .5f) < .01,
+                "Every corner stops at half the original width and height");
+            Check(Math.Abs((left ? small.Right : small.X) - (left ? start.Right : start.X)) < .01
+                && Math.Abs((top ? small.Bottom : small.Y) - (top ? start.Bottom : start.Y)) < .01,
+                "Resizing anchors the opposite corner");
+            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.title") && Math.Abs(t.Size - 9.5f) < .01),
+                "Timing text scales with its window");
+            Set(ui, "bpm", "150");
+            ui.ClickText(L.Get("timing.audio"));
+            var volume = ui.View.TimingFields.Single(f => f.Key == "volume").Bounds;
+            var slider = ui.Canvas.Lines.Single(l => Math.Abs(l.Y1 - volume.Y - 7.5f) < .01 && l.Width == 2
+                && l.X1 > small.X && l.X2 < volume.X);
+            float volumeX = slider.X1 + (slider.X2 - slider.X1) * .25f;
+            ui.View.PointerDown(volumeX, slider.Y1, 0, false, false); ui.Paint();
+            ui.View.PointerMove(volumeX, slider.Y1, false, false); ui.Paint();
+            ui.View.PointerUp(volumeX, slider.Y1, 0); ui.Paint();
+            Check(ui.View.TimingFields.Single(f => f.Key == "volume").Value == "25", "Half-size volume dragging uses scaled coordinates across frames");
+            ui.Key(13);
+            Check(!ui.View.TimingSetupVisible && Math.Abs(ui.View.Document.TimingPoints[0].BeatLengthMs - 400) < .001,
+                "Half-size timing fields and confirmation retain their input coordinates");
+        }
+    }
+
+    private static void FloatingWindow()
+    {
+        var map = Map(); var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1920, 1080);
+        ui.Key(117);
+        Check(!ui.Canvas.PaintCalls.Any(p => p.FillBounds is { X: 0, Y: 0, Width: 1920, Height: 1080 } && p.Opacity == .8f),
+            "Timing setup leaves the editor undimmed");
+        var start = ui.View.TimingSetupBounds;
+        ui.View.PointerDown(start.X + 30, start.Y + 20, 0, false, false);
+        Check(ui.View.WantsCapture, "Title drag captures the pointer");
+        ui.View.PointerMove(1900, start.Y + 60, false, false); ui.Paint();
+        ui.View.PointerUp(1900, start.Y + 60, 0); ui.Paint();
+        var moved = ui.View.TimingSetupBounds;
+        Check(moved.X > start.X && moved.Y == start.Y + 40 && moved.Right <= ui.Width && !ui.View.WantsCapture,
+            "Title drag repositions and clamps the window, then releases capture");
+        var fruit = ui.View.Document.Fruits.Single();
+        var screen = ui.ScreenAt(fruit.TimeMs, fruit.X);
+        Check(screen.X < moved.X, "The fixture exposes an object beside the floating window");
+        ui.Click(screen.X, screen.Y);
+        int playback = 0; ui.View.RequestTogglePlayback = () => playback++;
+        ui.View.UpdateTransport(0, 10000, true, false, false, null, null); ui.Key(32);
+        Check(playback == 1, "Playback shortcuts remain available outside the floating window");
+        ui.Key(46);
+        Check(ui.View.TimingSetupVisible && ui.View.Document.Fruits.Count == 0, "Outside selection and Delete reach the canvas");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.Fruits.Count == 1, "Outside undo restores the object independently of timing history");
+        ui.Click(moved.X + 20, moved.Y + 18);
+        Set(ui, "bpm", "150");
+        ui.ClickFruit(fruit.Id); ui.Key(46);
+        ui.Click(moved.X + 20, moved.Y + 18); ui.Key(13);
+        Check(!ui.View.TimingSetupVisible && ui.View.Document.Fruits.Count == 0
+            && Math.Abs(ui.View.Document.TimingPoints[0].BeatLengthMs - 400) < .001,
+            $"Applying timing preserves outside edits: visible={ui.View.TimingSetupVisible}, fruits={ui.View.Document.Fruits.Count}, beat={ui.View.Document.TimingPoints[0].BeatLengthMs}, status={ui.View.StatusMessage}");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.Fruits.Count == 0 && ui.View.Document.TimingPoints[0].BeatLengthMs == 500,
+            "Undoing timing preserves the independent object deletion");
+        ui.Key(117); Set(ui, "bpm", "160");
+        ui.View.Document.TimingPoints[0].BeatLengthMs = 300;
+        ui.Key(13);
+        Check(ui.View.TimingSetupVisible && ui.View.Document.TimingPoints[0].BeatLengthMs == 300
+            && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.sourceChanged")), "A stale timing draft cannot overwrite newer timing");
+        ui.Key(27); ui.Key(117); ui.Resize(980, 620);
+        Check(ui.View.TimingSetupBounds.Right <= 980 && ui.View.TimingSetupBounds.Bottom <= 620,
+            "Resizing retains reachable floating controls");
+        ui.View.LoadDocument(map); ui.Paint();
+        Check(!ui.View.TimingSetupVisible, "Document replacement closes its timing draft");
+    }
+
     private static void BatchAndMarkers()
     {
         var map = Map();
@@ -155,11 +243,18 @@ internal static class TimingEditorTests
         ui.Click(label.X + 2, label.Y + 2);
     }
 
-    private static void Scrollbar()
+    private static void Scrollbar(bool halfSize = false)
     {
         var map = Map();
         for (int i = 1; i < 200; i++) map.TimingPoints.Add(new TimingPoint { TimeMs = i * 1000, BeatLengthMs = -100, Uninherited = false, Volume = i % 2 == 0 ? 100 : 80 });
         var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(980, 620); ui.Key(117);
+        if (halfSize)
+        {
+            var r = ui.View.TimingSetupBounds;
+            ui.View.PointerDown(r.Right - 2, r.Bottom - 2, 0, false, false);
+            ui.View.PointerMove(r.X, r.Y, false, false); ui.Paint();
+            ui.View.PointerUp(r.X, r.Y, 0); ui.Paint();
+        }
         var (track, thumb, maximum) = ui.View.TimingScrollbar;
         Check(maximum > 0, "Dense timing list has a scrollbar");
         float x = thumb.X + thumb.Width / 2, y = thumb.Y + thumb.Height / 2;
