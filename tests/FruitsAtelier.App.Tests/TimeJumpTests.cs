@@ -15,8 +15,8 @@ internal static class TimeJumpTests
                 && t.X > ui.View.TimeDisplayBounds.X && t.Y >= ui.View.TimeDisplayBounds.Y);
             var current = ui.Canvas.Texts.Single(t => t.X == 20 && t.Y >= ui.View.TimeDisplayBounds.Y
                 && t.Y < ui.View.TimeDisplayBounds.Bottom);
-            Check(progress.X > current.X && Math.Abs(progress.Y - current.Y) <= 4 && progress.Size < current.Size,
-                "Progress sits beside the time in smaller text");
+            Check(progress.X > current.X && progress.Y == current.Y && progress.Size == current.Size,
+                "Progress sits beside the time on the same baseline and at the same font size");
         }
         ui.View.UpdateTransport(1500, 240000, true, false, false, null, null); ui.Paint();
         foreach (var size in new[] { (980f, 620f), (1440f, 1200f) })

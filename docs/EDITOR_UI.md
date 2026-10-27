@@ -1190,7 +1190,7 @@ Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow 
 Drag the divider below the upper object timeline or above the bottom overview to
 adjust their heights: 32–64 DIP for the upper timeline and 16–40 DIP for the
 overview. The transport row, timestamp and playback icons scale with the overview
-height. The current time, total duration and a smaller progress percentage appear
+height. The current time, total duration and progress percentage use the same font size and appear
 on one vertically centred row, followed by playback controls and the overview.
 Progress uses the current
 position within the total timeline duration, clamped to 0–100% and shown to one

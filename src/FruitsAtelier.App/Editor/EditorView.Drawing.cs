@@ -697,10 +697,10 @@ public sealed partial class EditorView
         c.Text(currentTime, 20, timeY, 17 * scale, Foreground, 83 * scale, true);
         float durationX = 20 + 85 * scale;
         c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, timeY, 17 * scale, Muted,
-            Math.Max(0, TimeDisplayBounds.Right - 64 - durationX));
+            Math.Max(0, TimeDisplayBounds.Right - 72 - durationX));
         double progress = TimelineDurationMs > 0 ? Math.Clamp(LazerPresentationTime / TimelineDurationMs, 0, 1) * 100 : 0;
         c.Text(AudioLoading ? "--.-%" : progress.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "%",
-            TimeDisplayBounds.Right - 58, timeY + 4 * scale, 11 * scale, Muted, 54);
+            TimeDisplayBounds.Right - 64, timeY, 17 * scale, Muted, 64);
         hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
         if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
             c.Text(L.Get("timeJump.title"), 20, top - 20, 12, Foreground, 200);
