@@ -71,10 +71,8 @@ internal static class TimelineLayoutTests
                 Check(before.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty && ui.View.PlayheadMs == playhead,
                     "Layout changes modified beatmap content or playhead.");
                 var expandedPlot = ui.Plot;
-                var toggle = ui.View.OverviewTimelineToggleBounds;
-                Check(toggle.Bottom == ui.View.OverviewTimelineResizeBounds.Y + 4,
-                    "Overview toggle reserved a row instead of overlaying the canvas");
-                ui.Click(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2);
+                Check(!ui.Canvas.Texts.Any(t => t.Value is "⌃" or "⌄"), "Timeline retained its arrow button");
+                DoubleDivider();
                 Check(ui.View.LibrarySettings.OverviewTimelineCollapsed && ui.View.TimeDisplayBounds == default
                     && ui.View.TestplayButtonBounds == default && !ui.Canvas.Fills.Any(f => f.Color == 0x141922)
                     && ui.Plot.Height == expandedPlot.Height + 36 && !ui.View.WantsCapture,
@@ -82,8 +80,7 @@ internal static class TimelineLayoutTests
                 Check(LibrarySettings.Load(path).OverviewTimelineCollapsed, "Overview collapse was not saved");
                 ui.View.OpenSettings(); ui.View.ApplySettings(path, force: true); ui.Key(27);
                 Check(ui.View.LibrarySettings.OverviewTimelineCollapsed, "Applying settings expanded the overview");
-                toggle = ui.View.OverviewTimelineToggleBounds;
-                ui.Click(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2);
+                DoubleDivider();
                 Check(!ui.View.LibrarySettings.OverviewTimelineCollapsed && ui.Plot == expandedPlot
                     && Overview().Height == 16 && !LibrarySettings.Load(path).OverviewTimelineCollapsed,
                     "Expanding the overview failed to restore its saved height and canvas layout");
@@ -98,6 +95,14 @@ internal static class TimelineLayoutTests
                     Check(time.Right < play.X && test.Right < overview.X && overview.Right <= ui.Width, "Transport controls overlap or escape the window.");
                     Check(speed.Y == volume.Y && speed.Right < volume.X, "Speed selector is not immediately left of Volume.");
                     Check(ui.Plot.Bottom <= ui.View.OverviewTimelineResizeBounds.Y, "Plot overlaps the overview resize boundary.");
+                }
+                void DoubleDivider()
+                {
+                    var bounds = ui.View.OverviewTimelineResizeBounds;
+                    float x = bounds.X + bounds.Width / 2, y = bounds.Y + bounds.Height / 2;
+                    ui.Click(x, y);
+                    ui.View.PointerDoubleClick(x, y, false, false);
+                    ui.View.PointerUp(x, y, 0); ui.Paint();
                 }
                 void Resize(bool upper, float delta, bool cancel)
                 {

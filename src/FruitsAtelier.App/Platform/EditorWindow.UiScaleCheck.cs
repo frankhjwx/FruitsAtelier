@@ -89,16 +89,31 @@ internal sealed partial class EditorWindow
                         throw new InvalidOperationException("Native timeline minimum-height limits failed.");
                     Capture("minimum");
                     var expandedPlot = view.CanvasPlotBounds;
-                    var toggle = view.OverviewTimelineToggleBounds;
-                    Click(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2); Paint();
+                    var toggle = view.OverviewTimelineResizeBounds;
+                    DoubleClick(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2); Paint();
                     if (!view.LibrarySettings.OverviewTimelineCollapsed || view.TimeDisplayBounds != default
                         || Math.Abs(view.CanvasPlotBounds.Height - expandedPlot.Height - 36) > .01 || view.WantsCapture)
                         throw new InvalidOperationException("Native overview collapse did not release the transport row.");
                     Capture("collapsed");
-                    toggle = view.OverviewTimelineToggleBounds;
-                    Click(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2); Paint();
+                    toggle = view.OverviewTimelineResizeBounds;
+                    DoubleClick(toggle.X + toggle.Width / 2, toggle.Y + toggle.Height / 2); Paint();
                     if (view.LibrarySettings.OverviewTimelineCollapsed || view.CanvasPlotBounds != expandedPlot)
                         throw new InvalidOperationException("Native overview expansion did not restore its layout.");
+                    foreach (bool left in new[] { true, false })
+                    {
+                        var layout = view.CaptureDockLayouts().Mapping!;
+                        bool wasCollapsed = (left ? layout.Left : layout.Right)!.Collapsed;
+                        var divider = view.DockCollapseBounds(left);
+                        DoubleClick(divider.X + divider.Width / 2, divider.Y + 80); Paint();
+                        layout = view.CaptureDockLayouts().Mapping!;
+                        if ((left ? layout.Left : layout.Right)!.Collapsed == wasCollapsed || view.WantsCapture)
+                            throw new InvalidOperationException("Native dock separator double-click did not toggle its dock.");
+                        divider = view.DockCollapseBounds(left);
+                        DoubleClick(divider.X + divider.Width / 2, divider.Y + 80); Paint();
+                        layout = view.CaptureDockLayouts().Mapping!;
+                        if ((left ? layout.Left : layout.Right)!.Collapsed != wasCollapsed || view.WantsCapture)
+                            throw new InvalidOperationException("Native dock separator double-click did not restore its dock.");
+                    }
                 }
                 var bounds = view.CanvasScaleLockBounds;
                 bool uniform = view.UniformCanvasScale;
@@ -133,6 +148,7 @@ internal sealed partial class EditorWindow
         }
         void Paint() => WndProc(hwnd, 0x000F, 0, 0);
         void Click(float x, float y) { Send(0x0201, x, y); Send(0x0202, x, y); }
+        void DoubleClick(float x, float y) { Click(x, y); Send(0x0203, x, y); Send(0x0202, x, y); }
         void Drag(float x, float y, float delta)
         {
             Send(0x0201, x, y); Send(0x0200, x, y + delta); Send(0x0202, x, y + delta);

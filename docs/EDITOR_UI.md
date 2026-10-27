@@ -1199,11 +1199,13 @@ together. Releasing saves the heights as view
 preferences; Esc or lost pointer capture restores the previous height. Resizing
 does not edit beatmap content or create undo entries.
 
-The arrow above the bottom overview collapses the whole transport row and expands
-the canvas into its space. It remains above the status bar while collapsed, so
-clicking it restores the previous timeline height. The arrow overlays the canvas
-and reserves no additional row. The collapsed state is saved as a view preference;
-keyboard transport shortcuts remain available.
+Double-click the divider above the bottom overview to collapse the whole transport
+row and expand the canvas into its space. The divider remains above the status bar
+while collapsed; double-click it again to restore the previous timeline height.
+Double-click either side dock’s vertical divider to collapse or expand that dock,
+retaining its width and active tab. Dividers remain visible when collapsed. Dragging
+an expanded divider still adjusts its size. These actions are saved as view
+preferences and do not edit beatmap content; keyboard transport shortcuts remain available.
 
 During a kiai interval, a small badge appears at the upper-left of the editing plot. It brightens at the interval start and on every full beat from the active red timing point, then fades through the beat. Green timing points that preserve the kiai state do not restart the pulse. Its pulse follows map time, including seeking and timing edits.
 

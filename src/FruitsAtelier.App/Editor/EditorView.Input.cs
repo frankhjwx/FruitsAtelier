@@ -136,7 +136,6 @@ public sealed partial class EditorView
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
-        if (OverviewTimelineTogglePointer(x, y, button)) return;
         if (PatternEditingPointerDown(x, y, button)) return;
         if (PatternGalleryPointerDown(x, y, button, shift, ctrl)) return;
         if (BeginTimelinePanelResize(x, y, button)) return;
@@ -804,6 +803,7 @@ public sealed partial class EditorView
             && (galleryGridBounds.Contains(x, y) || galleryCategoryBounds.Contains(x, y))) return;
         if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
+        if (TogglePaneSeparator(x, y)) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
             var row = aimodRowBounds.FirstOrDefault(r => r.Bounds.Contains(x, y));

@@ -1329,7 +1329,7 @@ are written under `artifacts/tests/banana-edit/native`.
 
 `App.Tests --timeline-layout-check` checks the upper timeline’s 32–64 DIP and overview’s 16–40 DIP height limits,
 saved view preferences, cancellation, minimum-height selection and seeking,
-inline timestamp/progress alignment, overlay collapse/expansion, preserved height
+inline timestamp/progress alignment, divider double-click collapse/expansion, preserved height
 and collapsed preferences, and the static playback-speed label with its expanded
 speed buttons. `FruitsAtelier.App.exe --render-check --timeline-layout-render-check`
 exercises resizing and speed selection at every UI-scale step in English and

@@ -54,6 +54,12 @@ public sealed partial class EditorView
     private float AvailableDockWidth => Math.Max(24, width - 109 - (MinimumPlayfieldWidth + 198));
     private float MaximumDockWidth => Math.Max(MinimumDockWidth, width * .45f);
     internal Rect DockResizeBounds(bool left) => left ? leftDockResizeBounds : rightDockResizeBounds;
+    internal Rect DockCollapseBounds(bool left)
+    {
+        var group = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
+        float edge = left ? leftPanel.Right : group.Collapsed ? width : rightPanel.X;
+        return new(Math.Clamp(edge - 4, 0, Math.Max(0, width - 8)), canvas.Y + 38, 8, Math.Max(0, canvas.Height - 38));
+    }
     private bool DockReordering => dockDragging && dockPressed is { } panel
         && DockDropSide(mouseX, mouseY) is { } left
         && ReferenceEquals(PanelGroup(panel), left ? DockWorkspaceState.Left : DockWorkspaceState.Right);
@@ -288,6 +294,12 @@ public sealed partial class EditorView
                 if (group.Panels.Contains(DockPanel.Preview)) PreviewResizeBounds = resize;
                 c.Fill(new(edge - 1, resize.Y, 2, resize.Height),
                     resize.Contains(mouseX, mouseY) || drag == DragKind.PreviewResize && dockResizeLeft == left ? Accent : Grid);
+            }
+            if (group.Collapsed)
+            {
+                var separator = DockCollapseBounds(left);
+                float edge = left ? leftPanel.Right : width - 1;
+                c.Line(edge, separator.Y, edge, separator.Bottom, Grid);
             }
             c.Fill(toggle, Surface, 5);
             Button(c, toggle, left == group.Collapsed ? "›" : "‹", () => group.Collapsed = !group.Collapsed);

@@ -181,7 +181,6 @@ public sealed partial class EditorView
             if (!TimingPageVisible && !OverviewTimelineCollapsed) DrawDiscussionOverview(c);
             DrawTimelineResizers(c);
             DrawStatus(c);
-            DrawOverviewTimelineToggle(c);
             DrawUpdateNotice(c);
             DrawDockDrag(c);
         }
