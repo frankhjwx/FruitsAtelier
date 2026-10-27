@@ -686,14 +686,18 @@ public sealed partial class EditorView
         float top = TransportTop;
         c.Fill(new(0, top, width, height - 28 - top), 0x20252E);
         c.Line(0, top, width, top, Grid);
-        float timeY = overview.Y + (overview.Height - 27) / 2;
-        TimeDisplayBounds = new(16, timeY, 188, 27);
+        float scale = TransportScale;
+        float timeY = overview.Y + (overview.Height - 38 * scale) / 2;
+        TimeDisplayBounds = new(16, timeY, 188, 38 * scale);
         if (TimeDisplayBounds.Contains(mouseX, mouseY)) c.Fill(TimeDisplayBounds, Surface, 4);
         string currentTime = Time(LazerPresentationTime);
-        c.Text(currentTime, 20, timeY + 3, 17, Foreground, 83, true);
-        const float durationX = 105;
-        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, timeY + 3, 17, Muted,
+        c.Text(currentTime, 20, timeY, 17 * scale, Foreground, 83 * scale, true);
+        float durationX = 20 + 85 * scale;
+        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, timeY, 17 * scale, Muted,
             Math.Max(0, TimeDisplayBounds.Right - durationX));
+        double progress = TimelineDurationMs > 0 ? Math.Clamp(LazerPresentationTime / TimelineDurationMs, 0, 1) * 100 : 0;
+        c.Text(AudioLoading ? "--.-%" : progress.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "%",
+            20, timeY + 23 * scale, 11 * scale, Muted, 188);
         hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
         if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
             c.Text(L.Get("timeJump.title"), 20, top - 20, 12, Foreground, 200);

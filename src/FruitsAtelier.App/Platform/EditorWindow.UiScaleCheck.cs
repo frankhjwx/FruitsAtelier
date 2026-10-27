@@ -83,8 +83,8 @@ internal sealed partial class EditorWindow
                     Drag(upper.X + 10, upper.Y + 4, -100); Paint();
                     lower = view.OverviewTimelineResizeBounds;
                     Drag(20, lower.Y + 4, 100); Paint();
-                    if (view.ObjectTimelineBounds.Height != 32 || view.LibrarySettings.OverviewTimelineHeight != 20)
-                        throw new InvalidOperationException("Native timeline half-height limits failed.");
+                    if (view.ObjectTimelineBounds.Height != 32 || view.LibrarySettings.OverviewTimelineHeight != 16)
+                        throw new InvalidOperationException("Native timeline minimum-height limits failed.");
                     Capture("minimum");
                 }
                 var bounds = view.CanvasScaleLockBounds;

@@ -8,6 +8,13 @@ internal static class TimeJumpTests
         var ui = new Ui();
         var map = new MapDocument { DurationMs = 240000 };
         map.Fruits.Add(new Fruit { TimeMs = 2000, X = 256 }); ui.LoadDocument(map);
+        foreach (var sample in new[] { (0d, "0.0%"), (120000d, "50.0%"), (238080d, "99.2%"), (240000d, "100.0%") })
+        {
+            ui.View.UpdateTransport(sample.Item1, 240000, true, false, false, null, null); ui.Paint();
+            var progress = ui.Canvas.Texts.Single(t => t.Value == sample.Item2 && t.X == 20);
+            var current = ui.Canvas.Texts.Single(t => t.X == 20 && t.Y == ui.View.TimeDisplayBounds.Y);
+            Check(progress.Y > current.Y && progress.Size < current.Size, "Progress sits below the current time in smaller text");
+        }
         ui.View.UpdateTransport(1500, 240000, true, false, false, null, null); ui.Paint();
         foreach (var size in new[] { (980f, 620f), (1440f, 1200f) })
         {

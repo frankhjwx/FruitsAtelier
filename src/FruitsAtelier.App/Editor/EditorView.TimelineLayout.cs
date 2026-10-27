@@ -7,13 +7,14 @@ public sealed partial class EditorView
 {
     private float OverviewHeight => LibrarySettings.OverviewTimelineHeight;
     private float ObjectTimelineHeight => LibrarySettings.ObjectTimelineHeight;
-    private float TransportRowHeight => Math.Max(32, OverviewHeight);
+    private float TransportRowHeight => OverviewHeight;
+    private float TransportScale => TransportRowHeight / 40;
     private float TransportTop => height - TransportRowHeight - 48;
     internal Rect ObjectTimelineResizeBounds => TimingPageVisible ? default
         : new(objectTimeline.X - 42, objectTimeline.Bottom + 1, objectTimeline.Width + 42, 8);
     internal Rect OverviewTimelineResizeBounds => new(0, TransportTop - 4, width, 8);
     internal Rect PlaybackSpeedSelectorBounds => new(VolumeButtonBounds.X - 8 - PlaybackRates.Length * 50 + 4, height - 27, PlaybackRates.Length * 50 - 4, 26);
-    internal Rect TransportButtonBounds(int index) => new(208 + index * 49, overview.Y + (overview.Height - 32) / 2, 42, 32);
+    internal Rect TransportButtonBounds(int index) => new(208 + index * 49, overview.Y + (overview.Height - 32 * TransportScale) / 2, 42, 32 * TransportScale);
     private bool resizingObjectTimeline;
     private float timelineResizeY, timelineResizeHeight, timelineResizeOriginal;
     public bool TimelinePanelResizeCursor => DockContentInputAvailable && !librarySettingsOpen && menu < 0 && contextItems.Count == 0

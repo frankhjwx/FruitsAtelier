@@ -48,13 +48,13 @@ internal static class TimelineLayoutTests
                 Resize(true, 10000, cancel: false); Resize(false, -10000, cancel: false); CheckLayout();
                 Check(ui.View.ObjectTimelineBounds.Height == 64 && ui.Plot.Height >= 120 && Overview().Height == 40, "Timeline growth consumed the editing area.");
                 Resize(true, -10000, cancel: false); Resize(false, 10000, cancel: false);
-                Check(ui.View.ObjectTimelineBounds.Height == 32 && Overview().Height == 20, "Timeline shrink limits failed.");
-                Check(ui.View.TransportButtonBounds(0).Height == 32 && ui.View.TimeDisplayBounds.Height == 27,
-                    "Timeline shrinking changed the time or playback control size.");
+                Check(ui.View.ObjectTimelineBounds.Height == 32 && Overview().Height == 16, "Timeline shrink limits failed.");
+                Check(Math.Abs(ui.View.TransportButtonBounds(0).Height - 12.8f) < .001 && Math.Abs(ui.View.TimeDisplayBounds.Height - 15.2f) < .001,
+                    "Minimum overview does not scale the timestamp and playback controls.");
                 Check(ui.View.TransportButtonBounds(0).Y >= ui.View.OverviewTimelineResizeBounds.Y + 4,
                     "Minimum transport row does not reserve the playback controls' height.");
                 ui.View.OpenSettings(); ui.View.ApplySettings(path, force: true); ui.Key(27);
-                Check(LibrarySettings.Load(path).ObjectTimelineHeight == 32 && LibrarySettings.Load(path).OverviewTimelineHeight == 20,
+                Check(LibrarySettings.Load(path).ObjectTimelineHeight == 32 && LibrarySettings.Load(path).OverviewTimelineHeight == 16,
                     "Applying other settings reset timeline heights.");
                 var selector = ui.View.PlaybackSpeedSelectorBounds;
                 var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("ui.playbackSpeed"));
@@ -98,7 +98,7 @@ internal static class TimelineLayoutTests
             var fruit = new Fruit { TimeMs = 0, X = 256 };
             minimumMap.Fruits.Add(fruit); minimumUi.LoadDocument(minimumMap);
             minimumUi.View.LibrarySettings.ObjectTimelineHeight = 32;
-            minimumUi.View.LibrarySettings.OverviewTimelineHeight = 20;
+            minimumUi.View.LibrarySettings.OverviewTimelineHeight = 16;
             minimumUi.Paint();
             var timeline = minimumUi.View.ObjectTimelineBounds;
             minimumUi.Click(timeline.X + timeline.Width / 2, timeline.Y + 27 * .5f);

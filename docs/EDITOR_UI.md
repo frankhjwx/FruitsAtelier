@@ -1186,10 +1186,12 @@ The bottom overview shows red and green timing points above a white center line,
 Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow line and bookmarks as blue lower lines. Preview lines draw before timing points, the playhead and bookmarks, so overlapping markers remain visible. Red and green timing points meet the overview center line and also appear on the upper object timeline. Short overview spans retain a minimum two-DIP width. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, blue bookmark labels, and ordinary time labels in the default muted color. Red timing and blue bookmark lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. Double-click an upper timeline object to select it and seek to its start without editing content. During a slider endpoint or timeline-tail drag, wheel navigation, Ctrl+wheel Snap, Alt+wheel zoom and Space/C playback remain available; release commits one edit and Esc restores its starting content. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. The bookmark toolbar is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
 
 Drag the divider below the upper object timeline or above the bottom overview to
-adjust their heights. Each ranges from 50% to 100% of its original height: 32–64
-DIP for the upper timeline and 20–40 DIP for the overview. The timestamp and
-playback controls retain their sizes; the transport row always reserves at least
-the controls' 32-DIP height. Upper timeline markers and their hit regions shrink
+adjust their heights: 32–64 DIP for the upper timeline and 16–40 DIP for the
+overview. The transport row, timestamp and playback icons scale with the overview
+height. A smaller, left-aligned progress percentage appears below the current
+time, with both text rows vertically centred together. Progress uses the current
+position within the total timeline duration, clamped to 0–100% and shown to one
+decimal place; loading audio shows a placeholder. Upper timeline markers and their hit regions shrink
 together. Releasing saves the heights as view
 preferences; Esc or lost pointer capture restores the previous height. Resizing
 does not edit beatmap content or create undo entries.
