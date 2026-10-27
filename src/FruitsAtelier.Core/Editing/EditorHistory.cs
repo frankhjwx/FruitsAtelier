@@ -53,7 +53,7 @@ public sealed class EditorHistory
     }
     public bool TransactionNeedsLegacyDropletRefresh => transactionStart is not null
         && SliderRepresentationEditing.NeedsLegacyDropletRefresh(transactionStart, Document);
-    public bool TransactionChangesSliderGeometry(IEnumerable<Guid> ids, bool ignoreSliderVelocity = false)
+    public bool TransactionChangesSliderGeometry(IEnumerable<Guid> ids, bool ignoreSliderVelocity = false, bool ignoreDropletMode = false)
     {
         if (transactionStart is null) return false;
         var protectedIds = ids.ToHashSet();
@@ -67,6 +67,7 @@ public sealed class EditorHistory
             var shape = current.DeepClone();
             shape.OriginalLine = track.OriginalLine;
             if (ignoreSliderVelocity) shape.SliderVelocityMultiplier = track.SliderVelocityMultiplier;
+            if (ignoreDropletMode) shape.DropletMode = track.DropletMode;
             shape.StreamNewComboOffsets.Clear(); shape.StreamNewComboOffsets.AddRange(track.StreamNewComboOffsets);
             if (!track.ContentEquals(shape)) return true;
         }
@@ -76,6 +77,7 @@ public sealed class EditorHistory
             if (slider.ContentEquals(current)) continue;
             var shape = current.DeepClone(); shape.OriginalLine = slider.OriginalLine;
             if (ignoreSliderVelocity) shape.SliderVelocityMultiplier = slider.SliderVelocityMultiplier;
+            if (ignoreDropletMode) shape.DropletMode = slider.DropletMode;
             if (!slider.ContentEquals(shape)) return true;
         }
         return false;

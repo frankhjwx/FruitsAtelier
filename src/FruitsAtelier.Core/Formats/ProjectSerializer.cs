@@ -60,7 +60,7 @@ public static partial class ProjectSerializer
             if (copy.AudioPath is not null && Path.IsPathFullyQualified(copy.AudioPath)) copy.AudioPath = Path.GetRelativePath(directory, copy.AudioPath);
             if (copy.SourcePath is not null && Path.IsPathFullyQualified(copy.SourcePath)) copy.SourcePath = Path.GetRelativePath(directory, copy.SourcePath);
         }
-        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasFSliderSv(copy) ? 41 : copy.CollaborationEditableRanges is not null ? 39 : copy.SliderImportState != SliderImportState.None ? 37 : HasUnassignedSections(copy) ? 35 : copy.CollaborationReferences is { Count: > 0 } ? 33 : HasEndpointSnap(copy) ? 31 : HasIndependentSv(copy) ? 29 : HasOsuCanvasData(copy) ? 27 : HasDropletModes(copy) ? 25 : HasBananaPatterns(copy) ? 21 : copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, WriteOptions([copy]));
+        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasLegacyDropletModes(copy) ? 43 : HasFSliderSv(copy) ? 41 : copy.CollaborationEditableRanges is not null ? 39 : copy.SliderImportState != SliderImportState.None ? 37 : HasUnassignedSections(copy) ? 35 : copy.CollaborationReferences is { Count: > 0 } ? 33 : HasEndpointSnap(copy) ? 31 : HasIndependentSv(copy) ? 29 : HasOsuCanvasData(copy) ? 27 : HasDropletModes(copy) ? 25 : HasBananaPatterns(copy) ? 21 : copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, WriteOptions([copy]));
         if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.writeLimit"));
         return text;
@@ -72,7 +72,7 @@ public static partial class ProjectSerializer
         ProjectFile? file;
         try { file = JsonSerializer.Deserialize<ProjectFile>(text, options); }
         catch (JsonException error) { throw new InvalidDataException(L.Get("core.project.invalidJson"), error); }
-        if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17 or 19 or 21 or 25 or 27 or 29 or 31 or 33 or 35 or 37 or 39 or 41) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
+        if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17 or 19 or 21 or 25 or 27 or 29 or 31 or 33 or 35 or 37 or 39 or 41 or 43) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
         var document = file.Document;
         NormalizeRandomizationStrength(document);
         NormalizeBaseDistance(document);
@@ -122,6 +122,8 @@ public static partial class ProjectSerializer
     private static bool HasFSliderSv(MapDocument document) => document.Tracks.Any(t => t.SliderVelocityMultiplier is not null);
 
     private static bool HasIndependentSv(MapDocument document) => document.ImportedSliders.Any(s => s.SliderVelocityMultiplier is not null || s.ProcessedSliderVelocityMultiplier is not null);
+    private static bool HasLegacyDropletModes(MapDocument document) => document.ImportedSliders.Any(s => s.DropletMode is not null);
+
     private static bool HasOsuCanvasData(MapDocument document) => document.OsuDistanceSpacing != 1 || document.Fruits.Any(HasFruitY)
         || document.ImportedSliders.Any(s => s.PreserveNativeGeometry || s.RandomizationSource is not null || s.RandomizationTrack is not null || s.RandomizationBaseVelocity is not null);
     private static bool HasDropletModes(MapDocument document) => document.Tracks.Any(t => t.DropletMode is not null);

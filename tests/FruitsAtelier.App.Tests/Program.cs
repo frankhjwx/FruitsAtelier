@@ -67,6 +67,7 @@ if (args.Contains("--slider-endpoint-snap-performance")) { SliderEndpointSnapTes
 
 if (args.Contains("--independent-sv-check")) { IndependentSliderSvTests.Run(); Console.WriteLine("PASS Independent Legacy SV, overlap and editing"); return 0; }
 
+if (args.Contains("--legacy-droplet-modes-check")) { LegacyDropletModeTests.Run(); Console.WriteLine("PASS Legacy and FSlider droplet modes, history and persistence"); return 0; }
 if (args.Contains("--droplet-defaults-check")) { DropletDefaultsTests.Run(); Console.WriteLine("PASS Global droplet defaults and restart restoration"); return 0; }
 
 if (args.Contains("--window-preferences-check")) { WindowPreferenceTests.Run(); Console.WriteLine("PASS Window and canvas preferences"); return 0; }
@@ -339,6 +340,7 @@ var tests = new (string Name, Action Run)[]
     ("Tags wrap with row-aware editing and droplet lock persists", FeedbackInteractionTests.TagsAndPreference),
     ("Overlapping timeline markers and unmapped section breaks remain visible", FeedbackInteractionTests.MarkersAndBreak),
     ("Independent droplet defaults persist and initialize new projects and FSliders", DropletDefaultsTests.Run),
+    ("Legacy and FSlider droplet modes support mixed selection, history and persistence", LegacyDropletModeTests.Run),
     ("Selection boxes scale and move consecutive parents with anchor priority and atomic undo", SelectionTransformTests.Run),
     ("Selection drag bounds follow generated fruits and droplets while handles stay free", SelectionTransformTests.DragBoundsFollowPlayableObjects),
     ("Fractional group drag boundaries preserve fruits, export and undo", GroupDragBoundaryTests.Run),

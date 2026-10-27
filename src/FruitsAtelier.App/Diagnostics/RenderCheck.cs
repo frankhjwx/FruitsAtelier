@@ -980,6 +980,11 @@ internal static class RenderCheck
             }
             return;
         }
+        if (Environment.GetCommandLineArgs().Contains("--legacy-droplet-modes-render-check"))
+        {
+            LegacyDropletModeRenderCheck.Run(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--slider-endpoint-snap-render-check"))
         {
             SliderEndpointSnapRenderCheck.Run(canvas);

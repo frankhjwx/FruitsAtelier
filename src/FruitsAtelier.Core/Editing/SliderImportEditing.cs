@@ -123,14 +123,14 @@ public static class SliderImportEditing
             track.OriginalLine = slider.OriginalLine;
             track.SourceOrder = slider.SourceOrder;
             track.EndpointSnap = slider.EndpointSnap;
-            track.DropletMode ??= SliderDropletMode.FollowMap;
+            track.DropletMode = slider.DropletMode ?? track.DropletMode ?? SliderDropletMode.FollowMap;
             tracks.Add(track);
         }
         candidate.ImportedSliders.RemoveAll(s => tracks.Any(t => t.Id == s.Id));
         candidate.Tracks.AddRange(tracks);
         var fitted = ImportedSliderEditing.Convert(candidate,
             sources.Where(s => s.RandomizationTrack is null).Select(s => s.Id).ToArray(), cancellation, fitPlayback: false);
-        foreach (var track in fitted.Tracks) track.DropletMode = SliderDropletMode.FollowMap;
+        foreach (var track in fitted.Tracks) track.DropletMode = sources.Single(s => s.Id == track.Id).DropletMode ?? SliderDropletMode.FollowMap;
         tracks.AddRange(fitted.Tracks);
         cancellation.ThrowIfCancellationRequested();
         var output = OsuBeatmapWriter.Serialize(candidate);

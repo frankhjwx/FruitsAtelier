@@ -206,6 +206,14 @@ reloading preferences, and preservation of existing project values. Legacy singl
 and multi-difficulty projects and imported maps exercise compatible drawing defaults,
 explicit randomization, cancellation, undo/redo, persistence and exported output.
 
+`App.Tests --legacy-droplet-modes-check` checks Legacy-only and mixed FSlider
+selection, explicit overrides and Follow map, atomic undo/redo, single- and
+multi-difficulty persistence, conversion to FSlider, subsequent default/strength/seed
+changes, cached export equivalence and NM/HR exported tiny droplets.
+Native `--render-check --legacy-droplet-modes-render-check` operates
+the Inspector dropdown in English and Chinese at two sizes and three DPI scales;
+captures go to `artifacts/tests/legacy-droplet-modes/native`.
+
 ### Windows sandbox permissions
 
 `App.Tests --window-preferences-check` checks canvas switch persistence, settings

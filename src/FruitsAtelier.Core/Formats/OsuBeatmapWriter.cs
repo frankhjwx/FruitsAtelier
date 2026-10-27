@@ -144,6 +144,7 @@ public static class OsuBeatmapWriter
                 else cache.ParsedSliders.Parse(original, slider.OriginalLine, slider.SourceOrder);
                 if (original.ImportedSliders.Count != 1) throw new InvalidDataException(L.Get("core.writer.importedText"));
                 original.ImportedSliders[0].Id = slider.Id;
+                original.ImportedSliders[0].DropletMode = slider.DropletMode;
                 original.ImportedSliders[0].RandomizationSource = slider.RandomizationSource;
                 original.ImportedSliders[0].RandomizationTrack = slider.RandomizationTrack;
                 original.ImportedSliders[0].RandomizationBaseVelocity = slider.RandomizationBaseVelocity;

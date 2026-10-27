@@ -277,6 +277,14 @@ the parent is converted to Stream/Stack. Breaking transfers the flags to the fru
 
 ### Droplet randomization
 
+`ImportedSlider.DropletMode` stores the same FollowMap, Derandomize and Randomize
+overrides as FSliders. Non-null Legacy modes require schema 43 (single difficulty)
+or 44 (multiple difficulties). Earlier schemas remain readable and missing Legacy
+modes retain their existing baseline behavior. Mode changes rebuild the processed
+Legacy geometry at the detached content commit boundary, preserving the original
+source and fitting baseline. Conversion between Legacy and FSlider retains the
+chosen mode. Explicit overrides take precedence over the difficulty default.
+
 `MapDocument.RandomizeDropletStrength` is the TinyDroplet lateral randomization
 amplitude in playfield pixels (0–100, default 20). Earlier project files with valid
 strengths above 100 are capped at 100 when loaded. `RandomizeDropletSeed` is a signed
@@ -299,7 +307,8 @@ preference, which defaults to on. Legacy conversion uses the current difficulty
 and retained slider baseline, as described above.
 These fields participate in deep cloning, content equality, history, persistence and cache
 invalidation. Slider-managed fruit streams retain dormant effects but do not apply
-them; imported Legacy Sliders retain their existing conversion rules.
+them. Legacy overrides are applied to their retained fitting tracks before
+materializing export-compatible geometry.
 
 Randomization uses the osu! legacy RNG initialized with Seed, in complete parent
 conversion order before final time sorting. Droplets and TinyDroplets consume one

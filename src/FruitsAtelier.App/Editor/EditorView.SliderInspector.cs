@@ -41,6 +41,7 @@ public sealed partial class EditorView
     internal double? InspectorPeakRatio { get; private set; }
     internal double? InspectorMaxDs { get; private set; }
     internal Rect SliderInspectorViewport => inspectorBounds;
+    internal Rect SliderDropletModeBounds { get; private set; }
     internal Rect LegacySliderSvBounds => fields.FirstOrDefault(f => f.Label == L.Get("legacySv.label"))?.Bounds ?? default;
 
     internal void ShowSliderInspector()
@@ -132,7 +133,7 @@ public sealed partial class EditorView
         inspectorRows.Add(("inspector.spans", Range(tracks.Select(t => (double)t.SpanCount).Concat(imported.Select(t => (double)t.SpanCount)))));
         var derandomization = tracks.Where(t => t.StreamSnapDivisor is null)
             .Select(t => !t.RandomizesDroplets(Document))
-            .Concat(imported.Select(s => s.RandomizationTrack is { } track && !track.RandomizesDroplets(Document))).Distinct().ToArray();
+            .Concat(imported.Select(s => !s.RandomizesDroplets(Document))).Distinct().ToArray();
         inspectorRows.Add(("inspector.dropletEffective", derandomization.Length == 0 ? "—"
             : derandomization.Length > 1 ? L.Get("inspector.mixed")
             : L.Get(derandomization[0] ? "droplet.mode.Derandomize" : "droplet.mode.Randomize")));
@@ -200,15 +201,19 @@ public sealed partial class EditorView
                 actions.Add((L.Get("stream.convertBack"), ConvertStreamsBack, enabled, 0));
             }
             var dropletTracks = InspectorDropletTracks();
-            if (dropletTracks.Length > 0)
+            var dropletSliders = InspectorDropletSliders();
+            if (dropletTracks.Length + dropletSliders.Length > 0)
             {
                 Section(3, "inspector.section.droplets");
-                var modes = dropletTracks.Select(InspectorDropletMode).Distinct().ToArray();
+                var modes = dropletTracks.Select(InspectorDropletMode).Concat(dropletSliders.Select(InspectorDropletMode)).Distinct().ToArray();
                 string mode = modes.Length == 1 ? L.Get("droplet.mode." + modes[0]) : L.Get("inspector.mixed");
-                actions.Add((L.Get("inspector.dropletMode", mode), OpenInspectorDropletMenu, enabled, 0));
-                int adjustments = dropletTracks.Sum(t => t.DropletRandomization?.Adjustments.Count ?? 0);
-                actions.Add((L.Get(adjustments > 0 && dropletTracks.Where(t => t.DropletRandomization?.Adjustments.Count > 0).All(t => !t.RandomizesDroplets(Document))
-                    ? "inspector.resetDropletsInactive" : "inspector.resetDroplets", adjustments), ResetInspectorDroplets, enabled && adjustments > 0, 0));
+                actions.Add((L.Get("inspector.dropletMode", mode), OpenInspectorDropletMenu, enabled, 7));
+                if (dropletTracks.Length > 0)
+                {
+                    int adjustments = dropletTracks.Sum(t => t.DropletRandomization?.Adjustments.Count ?? 0);
+                    actions.Add((L.Get(adjustments > 0 && dropletTracks.Where(t => t.DropletRandomization?.Adjustments.Count > 0).All(t => !t.RandomizesDroplets(Document))
+                        ? "inspector.resetDropletsInactive" : "inspector.resetDroplets", adjustments), ResetInspectorDroplets, enabled && adjustments > 0, 0));
+                }
             }
         }
         Section(4, "inspector.section.structure");
@@ -225,13 +230,21 @@ public sealed partial class EditorView
     private CurveTrack[] InspectorDropletTracks() => Document.Tracks
         .Where(t => t.StreamSnapDivisor is null && inspectorTargetSet.Contains(t.Id)).ToArray();
 
+    private ImportedSlider[] InspectorDropletSliders() => Document.ImportedSliders
+        .Where(s => inspectorTargetSet.Contains(s.Id)).ToArray();
+
+    private SliderDropletMode InspectorDropletMode(ImportedSlider slider) => slider.DropletMode
+        ?? (slider.RandomizationTrack is { } track ? InspectorDropletMode(track) : SliderDropletMode.FollowMap);
+
     private SliderDropletMode InspectorDropletMode(CurveTrack track) => track.DropletMode
         ?? (track.DropletRandomization is { Enabled: true } ? SliderDropletMode.FollowMap : SliderDropletMode.Derandomize);
 
     private void OpenInspectorDropletMenu()
     {
         var targets = InspectorDropletTracks().Select(t => t.Id).ToHashSet();
-        var modes = InspectorDropletTracks().Select(InspectorDropletMode).Distinct().ToArray();
+        var legacyTargets = InspectorDropletSliders().Select(s => s.Id).ToHashSet();
+        var modes = InspectorDropletTracks().Select(InspectorDropletMode)
+            .Concat(InspectorDropletSliders().Select(InspectorDropletMode)).Distinct().ToArray();
         menu = -1; languageMenuOpen = false; contextItems.Clear();
         foreach (var mode in Enum.GetValues<SliderDropletMode>())
             contextItems.Add(new(L.Get("droplet.mode." + mode), () =>
@@ -241,7 +254,9 @@ public sealed partial class EditorView
                 {
                     foreach (var track in Document.Tracks.Where(t => t.StreamSnapDivisor is null && targets.Contains(t.Id)))
                         track.DropletMode = mode;
-                });
+                    foreach (var slider in Document.ImportedSliders.Where(s => legacyTargets.Contains(s.Id)))
+                        slider.DropletMode = mode;
+                }, allowDropletMode: true);
                 LibrarySettings.DefaultDropletMode = mode;
                 RequestViewPreference?.Invoke();
             }, Active: modes.Length == 1 && modes[0] == mode));
@@ -264,6 +279,7 @@ public sealed partial class EditorView
     private void DrawSliderInspector(ICanvas c, Rect bounds)
     {
         SliderEndpointToggleBounds = SliderEndpointStartBounds = SliderEndpointEndBounds = default;
+        SliderDropletModeBounds = default;
         inspectorSectionBounds.Clear();
         if (!DockContentInputAvailable) return;
         inspectorBounds = bounds; RefreshSliderInspector();
@@ -323,6 +339,7 @@ public sealed partial class EditorView
                 if (action.Kind == 4) SliderEndpointToggleBounds = box;
                 if (action.Kind == 5) SliderEndpointStartBounds = box;
                 if (action.Kind == 6) SliderEndpointEndBounds = box;
+                if (action.Kind == 7) SliderDropletModeBounds = box;
             }
             if (action.Kind == 3 && action.Enabled)
             {
