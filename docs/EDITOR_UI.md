@@ -778,6 +778,11 @@ parts of the sequence. Adding or removing earlier RNG-consuming objects changes
 later offsets; ordinary NM fruits do not. Unchanged content and Seed reproduce
 the same result. HR gameplay applies osu!'s usual additional position rules.
 
+Legacy sliders authored in the osu! canvas retain their original path geometry
+on export when randomization is effective with Strength 20, Seed 1337 and no
+manual corrections. Returning from custom randomization settings to these defaults
+restores the authored geometry.
+
 Randomization affects TinyDroplets. Drag a TinyDroplet in Select mode or edit its
 X coordinate to save a correction without changing the base curve. Unlock droplet
 selection using the Lock Notes flyout when needed. Disabling randomization retains

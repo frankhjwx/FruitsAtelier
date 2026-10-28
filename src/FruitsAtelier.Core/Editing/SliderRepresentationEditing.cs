@@ -54,7 +54,31 @@ public static class SliderRepresentationEditing
                 && document.RandomizeDropletStrength == 20 && document.RandomizeDropletSeed == 1337
                 && document.ImportedSliders.All(s => s.RandomizationSource is null && s.DropletMode is null)) return new(true, []);
             var candidate = document.DeepClone();
-            var sources = candidate.ImportedSliders.ToArray();
+            var nativeIds = candidate.ImportedSliders.Where(s => s.PreserveNativeGeometry
+                && (s.DropletMode is null ? !document.DerandomizeFSliderDroplets : s.RandomizesDroplets(document))
+                && document.RandomizeDropletStrength == 20 && document.RandomizeDropletSeed == 1337
+                && (s.RandomizationTrack?.DropletRandomization?.Adjustments.Count ?? 0) == 0).Select(s => s.Id).ToHashSet();
+            foreach (var slider in candidate.ImportedSliders.Where(s => nativeIds.Contains(s.Id)))
+            {
+                // Native randomization operates directly on the authored osu! path.
+                if (slider.RandomizationSource is not { } source) continue;
+                slider.X = source.X; slider.Y = source.Y; slider.PathType = source.PathType;
+                slider.PixelLength = source.PixelLength;
+                slider.ControlPoints.Clear(); slider.ControlPoints.AddRange(source.ControlPoints);
+                if (slider.OriginalLine is { } line)
+                {
+                    static string N(double value) => value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+                    var fields = line.Split(',');
+                    fields[0] = N(slider.X); fields[1] = N(slider.Y);
+                    fields[5] = slider.PathType + string.Concat(slider.ControlPoints.Skip(1).Select(p => "|" + N(p.X) + ":" + N(p.GeometryY)));
+                    fields[7] = N(slider.PixelLength);
+                    slider.OriginalLine = string.Join(',', fields);
+                }
+                slider.SliderVelocityMultiplier ??= slider.RandomizationBaseVelocity;
+                slider.ProcessedSliderVelocityMultiplier = null;
+                slider.RandomizationSource = null; slider.RandomizationTrack = null; slider.RandomizationBaseVelocity = null;
+            }
+            var sources = candidate.ImportedSliders.Where(s => !nativeIds.Contains(s.Id)).ToArray();
             var timingLookup = new TimingMap.Lookup(document);
             var previousLookup = previous is null ? null : new TimingMap.Lookup(previous);
             var previousSliders = previous?.ImportedSliders.ToDictionary(s => s.Id);
