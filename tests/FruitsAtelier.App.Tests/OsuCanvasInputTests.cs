@@ -296,6 +296,12 @@ internal static class OsuCanvasInputTests
             "Removing native repeats left the tail override on a deleted edge.");
         ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ContentEquals(map), "Native repeat sample edits were not reversible.");
+        var emptyEdges = OsuBeatmapReader.Read("osu file format v14\n[TimingPoints]\n0,500\n[HitObjects]\n64,64,1000,2,0,L|192:64,2,128,0|0|,0:0|0:0|,0:0:0:0:\n");
+        ui.LoadDocument(emptyEdges); ui.Paint();
+        Click(ui, 64, 64); ChangeRepeat(ui, true);
+        fields = ui.View.Document.ImportedSliders.Single().OriginalLine!.Split(',');
+        Check(fields[8] == "0|0|0|0" && fields[9] == "0:0|0:0|0:0|0:0",
+            "Native repeat editing retained empty tail samples.");
     }
 
     private static void Click(Ui ui, double x, double y)

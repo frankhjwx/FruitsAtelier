@@ -524,7 +524,7 @@ public sealed partial class EditorView
         var edges = Enumerable.Repeat(fallback, spans + 1).ToArray();
         if (!string.IsNullOrEmpty(source))
         {
-            var old = source.Split('|'); edges[0] = old[0];
+            var old = source.Split('|').Select(value => string.IsNullOrEmpty(value) ? fallback : value).ToArray(); edges[0] = old[0];
             if (old.Length > 1) edges[^1] = old[^1];
             for (int i = 1; i < Math.Min(old.Length - 1, edges.Length - 1); i++) edges[i] = old[i];
         }

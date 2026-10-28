@@ -108,7 +108,8 @@ Unedited sliders are not resampled. SV changes are checked against parameters af
 
 Generated sliders write explicit edge sounds, edge sample banks and hit samples
 when expanding omitted optional columns. Empty optional sample columns in retained
-slider lines are also filled on export. Default edges inherit the object's sound
+slider lines and empty entries within edge lists are also filled on export.
+Default edges inherit the object's sound
 and sample banks; explicit edge values and omitted trailing columns on unedited
 sliders retain their source representation.
 

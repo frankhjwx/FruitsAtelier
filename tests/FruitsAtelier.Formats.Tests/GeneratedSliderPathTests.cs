@@ -66,7 +66,8 @@ internal static class GeneratedSliderPathTests
 
     private static void OptionalSamples()
     {
-        foreach (string suffix in new[] { "", ",2|4", ",2|4,1:2|2:3", ",,,2:3:0:0:", ",,,", ",,", ",,1:2|2:3,2:3:0:0:" })
+        foreach (string suffix in new[] { "", ",2|4", ",2|4,1:2|2:3", ",,,2:3:0:0:", ",,,", ",,", ",,1:2|2:3,2:3:0:0:",
+            ",0|,0:0|,0:0:0:0:", ",|4,|2:3,2:3:0:0:", ",2||4,1:2||2:3,2:3:0:0:", ",0|" })
         {
             string line = "100,192,1000,2,8,L|200:192,1,100" + suffix;
             var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n" + line);

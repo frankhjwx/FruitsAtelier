@@ -154,7 +154,9 @@ public static class OsuBeatmapWriter
                 original.ImportedSliders[0].ProcessedSliderVelocityMultiplier = slider.ProcessedSliderVelocityMultiplier;
                 if (!slider.ContentEquals(original.ImportedSliders[0])) throw new InvalidDataException(L.Get("core.writer.importedChanged"));
                 string line = slider.OriginalLine;
-                if (line.Contains(",,", StringComparison.Ordinal) || line.EndsWith(','))
+                if (line.Contains(",,", StringComparison.Ordinal) || line.EndsWith(',')
+                    || line.Contains("|,", StringComparison.Ordinal) || line.Contains(",|", StringComparison.Ordinal)
+                    || line.Contains("||", StringComparison.Ordinal) || line.EndsWith('|'))
                 {
                     string[] values = line.Split(',');
                     FillSliderSamples(values, slider.SpanCount);
@@ -571,6 +573,13 @@ public static class OsuBeatmapWriter
         // Present optional columns need explicit values for stable; omitted edges inherit the object samples.
         if (values.Length > 8 && string.IsNullOrEmpty(values[8])) values[8] = DefaultEdges(spans, values[4]);
         if (values.Length > 9 && string.IsNullOrEmpty(values[9])) values[9] = DefaultEdges(spans, SliderSampleBanks(values));
+        for (int column = 8; column <= 9 && column < values.Length; column++)
+        {
+            var edges = values[column].Split('|');
+            if (edges.All(edge => edge.Length > 0)) continue;
+            string fallback = column == 8 ? values[4] : SliderSampleBanks(values);
+            values[column] = string.Join('|', edges.Select(edge => edge.Length == 0 ? fallback : edge));
+        }
         if (values.Length > 10 && string.IsNullOrEmpty(values[10])) values[10] = "0:0:0:0:";
     }
     private static string ResizeEdges(string? source, int spans, string fallback)
