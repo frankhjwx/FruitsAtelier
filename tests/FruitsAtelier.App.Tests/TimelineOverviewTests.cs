@@ -447,9 +447,10 @@ internal static class TimelineOverviewTests
             ui.View.PointerDown(first.X + 7, first.Y + 17, 0, false, false);
             Check(ui.View.WantsCapture, "Bookmark handle did not capture the pointer");
             ui.View.PointerMove(first.X + 47, first.Y - 83, false, false);
-            ui.View.PointerUp(first.X + 47, first.Y - 83, 0); ui.Paint();
+            ui.View.PointerUp(first.X + 47, first.Y - 83, 0);
+            ui.View.PointerMove(first.X + 47, first.Y + 17, false, false); ui.Paint();
             var moved = ui.Canvas.Images.Single(i => i.Path.EndsWith("toolbar-panel.png", StringComparison.Ordinal)).Bounds;
-            Check(moved.X == first.X + 40 && moved.Y == first.Y - 100 && !ui.View.WantsCapture, "Bookmark toolbar did not retain its dragged position");
+            Check(moved.X == first.X + 40 && moved.Y == first.Y && !ui.View.WantsCapture, "Bookmark toolbar did not retain horizontal movement at its fixed height");
             Check(content.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty, "Dragging bookmarks changed content");
             ui.View.PointerLeave(); ui.Paint();
             Check(!ui.Canvas.Images.Any(i => i.Path.EndsWith("toolbar-panel.png", StringComparison.Ordinal)), "Toolbar stayed visible after mouse exit");

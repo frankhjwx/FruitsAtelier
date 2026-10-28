@@ -76,9 +76,8 @@ public sealed partial class EditorView
         if (overlayDragging == 1)
         {
             var before = BookmarkToolbarBounds;
-            var after = PositionedOverlay(before, dx, dy, BookmarkToolbarArea);
+            var after = PositionedOverlay(before, dx, 0, BookmarkToolbarArea);
             LibrarySettings.BookmarkToolbarOffsetX = after.X - BookmarkToolbarOrigin.X;
-            LibrarySettings.BookmarkToolbarOffsetY = after.Y - BookmarkToolbarOrigin.Y;
         }
         else
         {

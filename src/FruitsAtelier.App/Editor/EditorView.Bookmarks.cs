@@ -12,7 +12,7 @@ public sealed partial class EditorView
     private Rect BookmarkToolbarArea => new(canvas.X, canvas.Y, Math.Max(0, width - canvas.X - 16), Math.Max(0, overview.Bottom - canvas.Y));
     private Rect BookmarkToolbarOrigin => new(overview.X + 8, overview.Y - 39, 262, 34);
     internal Rect BookmarkToolbarBounds => PositionedOverlay(BookmarkToolbarOrigin,
-        LibrarySettings.BookmarkToolbarOffsetX, LibrarySettings.BookmarkToolbarOffsetY, BookmarkToolbarArea);
+        LibrarySettings.BookmarkToolbarOffsetX, 0, BookmarkToolbarArea);
     internal Rect BookmarkToolbarGrip => new(BookmarkToolbarBounds.X, BookmarkToolbarBounds.Y, 14, 34);
     private bool CanShowBookmarkToolbar => !OverviewTimelineCollapsed && overview.Width >= 276 && CanDropBackground
         && !TimingPageVisible && !TimeJumpVisible && !IsEditingText && menu < 0 && contextItems.Count == 0;

@@ -116,8 +116,9 @@ internal static class MappingCanvasRenderCheck
                     var handle = view.BookmarkToolbarGrip;
                     view.PointerDown(handle.X + 7, handle.Y + 17, 0, false, false);
                     view.PointerMove(handle.X + 37, handle.Y - 63, false, false);
-                    view.PointerUp(handle.X + 37, handle.Y - 63, 0); Paint("bookmark-moved");
-                    if (view.BookmarkToolbarBounds.X != bookmarks.X + 30 || view.BookmarkToolbarBounds.Y != bookmarks.Y - 80
+                    view.PointerUp(handle.X + 37, handle.Y - 63, 0);
+                    view.PointerMove(handle.X + 37, handle.Y + 17, false, false); Paint("bookmark-moved");
+                    if (view.BookmarkToolbarBounds.X != bookmarks.X + 30 || view.BookmarkToolbarBounds.Y != bookmarks.Y
                         || !original.ContentEquals(view.Document))
                         throw new InvalidOperationException("Native bookmark drag failed or edited content.");
                 }
