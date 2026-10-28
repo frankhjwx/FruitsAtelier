@@ -573,6 +573,7 @@
   "editor.status.noteBeatPosition": "Nearest beat {0}/{1} · {2} · temporary Snap 1/{3}",
   "editor.status.noteOffGrid": "Off-grid · {0}",
   "editor.status.objectsCopied": "Copied {0} objects · Paste aligns the earliest start to the playhead",
+  "editor.status.timestampCopied": "Timestamp copied to clipboard",
   "editor.status.objectsCut": "Cut {0} objects · Ctrl + Z to undo",
   "editor.status.objectsDeleted": "Deleted {0} objects · Ctrl + Z to undo",
   "editor.status.objectsPasted": "Pasted {0} objects at the playhead · Ctrl + Z to undo",

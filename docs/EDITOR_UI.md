@@ -398,6 +398,10 @@ Temporary beat grids shown by inspecting a note do not replace the saved divisor
 
 ## osu! canvas
 
+The standard canvas draws objects whose start or end is closest to the current
+playhead in front. Picking follows this same layer order; equal distances retain
+chronological and source order. Selection does not change object layers.
+
 Tab switches the Compose canvas between Catch's time–X view and an
 osu!standard 512×384 geometric view. Text fields, dialogs, Ctrl+Tab difficulty
 navigation and Testplay retain their own key handling. Switching views does not
@@ -1674,6 +1678,10 @@ supports text selection, copy/paste and independent text undo/redo while focused
 Notes changes mark the project dirty and are saved with the project, including
 workspace manifests and compatibility project files. Closing or moving its tab
 does not delete the notes. Notes are not exported to `.osu` files.
+
+In Select mode, Ctrl+C with no objects selected copies the current playhead as
+`mm:ss:fff - ` for Notes or modding. This replaces the object clipboard without
+changing beatmap content.
 
 Copy selected map objects with Ctrl+C and paste into Notes with Ctrl+V. Notes keeps
 exactly the external plain-text reference format, for example `00:12:345 (1,2) - `.

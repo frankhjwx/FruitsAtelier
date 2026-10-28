@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "最近的節拍 {0}/{1} · {2} · 臨時快照 1/{3}",
   "editor.status.noteOffGrid": "離網·{0}",
   "editor.status.objectsCopied": "複製的 {0} 物件 · 貼上將最早的開始位置與播放頭對齊",
+  "editor.status.timestampCopied": "已複製時間戳記到剪貼簿",
   "editor.status.objectsCut": "剪切 {0} 物件 · Ctrl + Z 撤銷",
   "editor.status.objectsDeleted": "Deleted {0} 要撤銷的物件 · Ctrl + Z",
   "editor.status.objectsPasted": "在播放頭處貼上了 {0} 物件 · Ctrl + Z 要撤銷",

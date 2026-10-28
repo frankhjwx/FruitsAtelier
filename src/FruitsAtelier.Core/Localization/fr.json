@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "Battement le plus proche {0}/{1} · {2} · Snap temporaire 1/{3}",
   "editor.status.noteOffGrid": "Hors réseau · {0}",
   "editor.status.objectsCopied": "Objets {0} copiés · Coller aligne le premier démarrage sur la tête de lecture",
+  "editor.status.timestampCopied": "Horodatage copié dans le presse-papiers",
   "editor.status.objectsCut": "Couper les objets {0} · Ctrl + Z pour annuler",
   "editor.status.objectsDeleted": "Objets Deleted {0} · Ctrl + Z pour annuler",
   "editor.status.objectsPasted": "Objets {0} collés au niveau de la tête de lecture · Ctrl + Z pour annuler",

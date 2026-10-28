@@ -116,8 +116,19 @@ public sealed partial class EditorView
 
     public bool CanPasteSelection => ClipboardInteractionReady && objectClipboard is not null;
 
+    private bool CanCopyTimestamp => ClipboardInteractionReady && tool == Tool.Select
+        && ClipboardSelectedParentIds().Count == 0;
+
     public bool CopySelection()
     {
+        if (CanCopyTimestamp)
+        {
+            objectClipboard = null; clipboardDifficulty = null; copiedPatternText = null;
+            ObjectClipboardText = Time(playhead) + " - ";
+            RequestCopyText?.Invoke(ObjectClipboardText);
+            StatusMessage = L.Get("editor.status.timestampCopied");
+            return true;
+        }
         if (!TryCopySnapshot(out var snapshot)) return false;
         StoreClipboard(snapshot!, SelectionReference(snapshot!));
         StatusMessage = L.Get("editor.status.objectsCopied", ClipboardParents(snapshot!).Count());

@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "Ближайшая точка {0}/{1} · {2} · временная привязка 1/{3}",
   "editor.status.noteOffGrid": "Автономный · {0}",
   "editor.status.objectsCopied": "Скопированные объекты {0} · Вставка выравнивает самое раннее начало по курсору воспроизведения.",
+  "editor.status.timestampCopied": "Временная метка скопирована в буфер обмена",
   "editor.status.objectsCut": "Вырезать объекты {0} · Ctrl + Z для отмены",
   "editor.status.objectsDeleted": "Deleted {0} объекты · Ctrl + Z для отмены",
   "editor.status.objectsPasted": "В точку воспроизведения вставлены объекты {0} · Ctrl + Z для отмены.",

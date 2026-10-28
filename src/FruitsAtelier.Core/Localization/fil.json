@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "Pinakamalapit na beat {0}/{1} · {2} · pansamantalang Snap 1/{3}",
   "editor.status.noteOffGrid": "Off-grid · {0}",
   "editor.status.objectsCopied": "Mga kinopya na {0} na mga bagay · I-paste ang pinakamaagang simula sa playhead",
+  "editor.status.timestampCopied": "Nakopya ang timestamp sa clipboard",
   "editor.status.objectsCut": "Gupitin ang mga bagay na {0} · Ctrl + Z upang i-undo",
   "editor.status.objectsDeleted": "Deleted {0} object · Ctrl + Z na i-undo",
   "editor.status.objectsPasted": "Na-paste ang {0} object sa playhead · Ctrl + Z para i-undo",

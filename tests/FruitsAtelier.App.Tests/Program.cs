@@ -709,6 +709,7 @@ var tests = new (string Name, Action Run)[]
     ("One authoring gesture mixes straight and Bezier segments with reversible edits", MixedSliderTests.Author),
     ("Legacy Sliders convert to FSliders and preserve repeats through project and osu export", MixedSliderTests.Import),
     ("Beatmap resource export excludes output subtrees and preserves selected audio", ResourceTests.Run),
+    ("Empty selection clipboard copies playhead timestamps on both canvases", ClipboardTests.EmptySelectionTimestamp),
     ("Fruit clipboard snapshots preserve metadata and undo identities", ClipboardTests.FruitSnapshotAndHistory),
     ("Anchor clipboard actions copy and cut the entire repeated slider", ClipboardTests.AnchorCopiesAndCutsParent),
     ("Legacy Slider and banana clipboard preserve geometry and export samples", ClipboardTests.ImportedAndBananaMetadata),

@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "Beat más cercano {0}/{1} · {2} · Snap temporal 1/{3}",
   "editor.status.noteOffGrid": "Fuera de la red · {0}",
   "editor.status.objectsCopied": "Objetos {0} copiados · Pegar alinea el inicio más antiguo con el cabezal de reproducción",
+  "editor.status.timestampCopied": "Marca de tiempo copiada al portapapeles",
   "editor.status.objectsCut": "Cortar objetos {0} · Ctrl + Z para deshacer",
   "editor.status.objectsDeleted": "Deleted {0} objetos · Ctrl + Z para deshacer",
   "editor.status.objectsPasted": "Objetos {0} pegados en el cabezal de reproducción · Ctrl + Z para deshacer",

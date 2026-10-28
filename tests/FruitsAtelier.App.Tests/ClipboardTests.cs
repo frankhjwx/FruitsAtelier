@@ -117,6 +117,31 @@ internal static class ClipboardTests
         Check(ui.View.PasteSelection(), "A failed paste destroyed the clipboard.");
     }
 
+    public static void EmptySelectionTimestamp()
+    {
+        foreach (bool osu in new[] { false, true })
+        {
+            var ui = new Ui(false);
+            ui.LoadDocument(new MapDocument { DurationMs = 100000 });
+            if (osu) ui.View.ToggleOsuCanvas();
+            ui.Key('1');
+            string? copied = null;
+            ui.View.RequestCopyText = text => copied = text;
+            foreach (double time in new[] { 0d, 12345.75, 65432d })
+            {
+                ui.View.UpdateTransport(time, 100000, true, false, false, null, "fixture.wav"); ui.Paint();
+                var before = ui.View.Document.DeepClone();
+                ui.Key('C', ctrl: true);
+                string expected = time == 0 ? "00:00:000 - " : time < 60000 ? "00:12:345 - " : "01:05:432 - ";
+                Check(copied == expected && ui.View.ObjectClipboardText == expected,
+                    "Empty Select copy must use the current playhead without object numbers.");
+                Check(!ui.View.CanPasteSelection && !ui.View.CanCopySelection && !ui.View.CutSelection()
+                    && ui.View.Document.ContentEquals(before) && !ui.View.IsDirty,
+                    "Timestamp copy enabled object operations or modified content.");
+            }
+        }
+    }
+
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
     private static void Near(double expected, double actual)
     { if (!double.IsFinite(actual) || Math.Abs(expected - actual) > 0.000001) throw new Exception($"Expected {expected:R}, got {actual:R}."); }

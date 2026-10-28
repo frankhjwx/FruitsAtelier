@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "ニアレストビート {0}/{1} ・ {2} ・ 一時スナップ 1/{3}",
   "editor.status.noteOffGrid": "オフグリッド・{0}",
   "editor.status.objectsCopied": "コピーされた {0} オブジェクト · 貼り付けは最も早い開始を再生ヘッドに揃えます",
+  "editor.status.timestampCopied": "タイムスタンプをクリップボードにコピーしました",
   "editor.status.objectsCut": "{0} オブジェクトを切り取る · Ctrl + Z を元に戻す",
   "editor.status.objectsDeleted": "Deleted {0} オブジェクト · 元に戻す Ctrl + Z",
   "editor.status.objectsPasted": "再生ヘッドに {0} オブジェクトを貼り付けました · Ctrl + Z を元に戻す",

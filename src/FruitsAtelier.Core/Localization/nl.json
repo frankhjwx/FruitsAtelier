@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "Dichtstbijzijnde slag {0}/{1} · {2} · tijdelijke Snap 1/{3}",
   "editor.status.noteOffGrid": "Off-grid · {0}",
   "editor.status.objectsCopied": "Gekopieerde {0}-objecten · Plakken lijnt het vroegste begin uit met de afspeelkop",
+  "editor.status.timestampCopied": "Tijdstempel naar het klembord gekopieerd",
   "editor.status.objectsCut": "{0}-objecten knippen · Ctrl + Z om ongedaan te maken",
   "editor.status.objectsDeleted": "Deleted {0} objecten · Ctrl + Z om ongedaan te maken",
   "editor.status.objectsPasted": "{0}-objecten in de afspeelkop geplakt · Ctrl + Z om ongedaan te maken",

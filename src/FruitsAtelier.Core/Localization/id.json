@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "Ketukan terdekat {0}/{1} · {2} · Snap sementara 1/{3}",
   "editor.status.noteOffGrid": "Di luar jaringan · {0}",
   "editor.status.objectsCopied": "Objek {0} yang disalin · Tempel menyelaraskan awal paling awal ke playhead",
+  "editor.status.timestampCopied": "Stempel waktu disalin ke papan klip",
   "editor.status.objectsCut": "Potong objek {0} · Ctrl + Z untuk membatalkan",
   "editor.status.objectsDeleted": "Deleted {0} objek · Ctrl + Z untuk membatalkan",
   "editor.status.objectsPasted": "Menempelkan objek {0} di playhead · Ctrl + Z untuk membatalkan",

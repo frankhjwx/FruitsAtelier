@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "จังหวะที่ใกล้ที่สุด {0}/{1} · {2} · Snap ชั่วคราว 1/{3}",
   "editor.status.noteOffGrid": "นอกระบบ · {0}",
   "editor.status.objectsCopied": "คัดลอกวัตถุ {0} แล้ว · การวางจะจัดตำแหน่งจุดเริ่มต้นแรกสุดให้กับส่วนหัวของตัวควบคุมการเล่น",
+  "editor.status.timestampCopied": "คัดลอกเวลาลงในคลิปบอร์ดแล้ว",
   "editor.status.objectsCut": "ตัดวัตถุ {0} · Ctrl + Z เพื่อเลิกทำ",
   "editor.status.objectsDeleted": "อ็อบเจ็กต์ Deleted {0} · Ctrl + Z เพื่อเลิกทำ",
   "editor.status.objectsPasted": "วางวัตถุ {0} ที่ส่วนหัวของตัวควบคุมการเล่น · Ctrl + Z เพื่อเลิกทำ",
