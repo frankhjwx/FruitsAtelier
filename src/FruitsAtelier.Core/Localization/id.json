@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "Timing di editor telah berubah. Buka kembali jendela ini sebelum menerapkan.",
   "media.storyboardDiagnostics": "Storyboard: {0} perintah atau sumber daya tidak valid dilewati.",
   "media.storyboardFailed": "Storyboard tidak dapat dimuat: {0}",
-  "media.loading": "Menyiapkan sumber daya beatmap…"
+  "media.loading": "Menyiapkan sumber daya beatmap…",
+  "settings.editorTheme": "Tema editor",
+  "settings.theme.graphite": "Grafit",
+  "settings.theme.studio": "Studio",
+  "settings.theme.pearl": "Mutiara hitam",
+  "settings.theme.midnight": "Tengah malam",
+  "settings.theme.forest": "Hutan",
+  "settings.theme.rose": "Mawar",
+  "settings.theme.slate": "Batu sabak"
 }

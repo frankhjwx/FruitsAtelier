@@ -13,7 +13,7 @@ public sealed partial class EditorView
     private DiscussionRegion[] discussionRegions = [];
     private double[] discussionRegionEnds = [];
     private object? discussionRegionConversion, discussionRegionAnchors;
-    private readonly Dictionary<(long Id, float Width, string Language, Type Canvas), DiscussionLayout> discussionQuoteLayouts = [];
+    private readonly Dictionary<(long Id, float Width, string Language, Type Canvas, EditorThemePalette Theme), DiscussionLayout> discussionQuoteLayouts = [];
     private readonly Dictionary<long, float> discussionQuoteScrolls = [];
     private readonly List<(Rect Bounds, Action Action)> discussionQuoteActions = [];
     private sealed record DiscussionQuoteView(long Id, Rect Bounds, Rect Viewport, Rect Track, Rect Thumb, float Maximum);
@@ -167,7 +167,7 @@ public sealed partial class EditorView
                 DrawDiscussionTypeIcons(c, thread, marker.X + 4, marker.Y + 4);
                 discussionMarkerHits.Add((marker, anchor.Discussion)); lastBottom = marker.Bottom + 4; continue;
             }
-            var key = (thread.Id, MathF.Floor(quoteWidth), L.Language, c.GetType());
+            var key = (thread.Id, MathF.Floor(quoteWidth), L.Language, c.GetType(), Theme);
             if (!discussionQuoteLayouts.TryGetValue(key, out var layout))
             {
                 layout = new(); BuildDiscussionLayout(c, Math.Max(20, quoteWidth - 26), [thread], layout);

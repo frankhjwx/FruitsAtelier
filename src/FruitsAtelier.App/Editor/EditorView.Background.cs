@@ -161,10 +161,10 @@ public sealed partial class EditorView
             if (draft && opacity >= 1) { SettingsButton(c, r, text, () => Change(delta), enabled: enabled); return; }
             if (enabled && r.Contains(mouseX, mouseY))
             {
-                c.Fill(r, 0x3D495A, 4, opacity);
+                c.Fill(r, Chrome(0x3D495A, HoverSurface), 4, opacity);
             }
-            c.StrokeOpacity(r, draft ? 0x71849Au : 0xFFFFFFu, 1, 4, opacity * (enabled ? 1 : .35f));
-            c.TextOpacity(text, r.X + 9, r.Y + (r.Height - 16) / 2, 12, enabled ? Foreground : 0x5B6777u, r.Width - 15, false, opacity);
+            c.StrokeOpacity(r, draft ? Chrome(0x71849A, Muted) : 0xFFFFFFu, 1, 4, opacity * (enabled ? 1 : .35f));
+            c.TextOpacity(text, r.X + 9, r.Y + (r.Height - 16) / 2, 12, enabled ? Foreground : Chrome(0x5B6777, Muted), r.Width - 15, false, opacity);
             hits.Add(new(r, () => Change(delta), enabled));
         }
         void Change(int delta)

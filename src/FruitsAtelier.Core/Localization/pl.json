@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "Timing w edytorze uległ zmianie. Przed zastosowaniem otwórz to okno ponownie.",
   "media.storyboardDiagnostics": "Storyboard: pominięto {0} nieprawidłowych poleceń lub zasobów.",
   "media.storyboardFailed": "Nie udało się wczytać storyboardu: {0}",
-  "media.loading": "Przygotowywanie zasobów mapy…"
+  "media.loading": "Przygotowywanie zasobów mapy…",
+  "settings.editorTheme": "Motyw edytora",
+  "settings.theme.graphite": "Grafit",
+  "settings.theme.studio": "Studio",
+  "settings.theme.pearl": "Czarna perła",
+  "settings.theme.midnight": "Północ",
+  "settings.theme.forest": "Las",
+  "settings.theme.rose": "Róża",
+  "settings.theme.slate": "Łupek"
 }

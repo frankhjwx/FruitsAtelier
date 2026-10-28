@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "Timing ในตัวแก้ไขเปลี่ยนไปแล้ว โปรดเปิดหน้าต่างนี้ใหม่ก่อนนำไปใช้",
   "media.storyboardDiagnostics": "สตอรีบอร์ด: ข้ามคำสั่งหรือทรัพยากรที่ไม่ถูกต้อง {0} รายการ",
   "media.storyboardFailed": "ไม่สามารถโหลดสตอรีบอร์ดได้: {0}",
-  "media.loading": "กำลังเตรียมทรัพยากรบีตแมป…"
+  "media.loading": "กำลังเตรียมทรัพยากรบีตแมป…",
+  "settings.editorTheme": "ธีมตัวแก้ไข",
+  "settings.theme.graphite": "กราไฟต์",
+  "settings.theme.studio": "สตูดิโอ",
+  "settings.theme.pearl": "ไข่มุกดำ",
+  "settings.theme.midnight": "เที่ยงคืน",
+  "settings.theme.forest": "ป่า",
+  "settings.theme.rose": "กุหลาบ",
+  "settings.theme.slate": "หินชนวน"
 }

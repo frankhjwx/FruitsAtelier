@@ -160,7 +160,15 @@ internal sealed class EditorControl : Control, IDisposable
     private static IEnumerable<string> DroppedPaths(DragEventArgs e)
         => e.DataTransfer.TryGetFiles()?.OfType<IStorageFile>().Select(f => f.TryGetLocalPath()).OfType<string>() ?? [];
 
-    internal void Refresh() { InvalidateVisual(); Changed?.Invoke(); }
+    internal void Refresh()
+    {
+        if (TopLevel.GetTopLevel(this) is Window window)
+        {
+            var theme = View.LightEditorTheme ? Avalonia.Styling.ThemeVariant.Light : Avalonia.Styling.ThemeVariant.Dark;
+            if (window.RequestedThemeVariant != theme) window.RequestedThemeVariant = theme;
+        }
+        InvalidateVisual(); Changed?.Invoke();
+    }
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));

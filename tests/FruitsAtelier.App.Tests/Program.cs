@@ -133,6 +133,7 @@ if (args.Contains("--timeline-layout-check"))
     Console.WriteLine("PASS Resizable timelines, compact transport, speed selector and input"); return 0;
 }
 
+if (args.Contains("--editor-theme-check")) { EditorThemeTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS Editor themes, preview, persistence and settings layout"); return 0; }
 if (args.Contains("--ui-scale-check")) { UiScaleTests.Run(); SettingsTests.Layout(); DisplaySettingsTests.Run(); Console.WriteLine("PASS UI scale preferences, layout and input"); return 0; }
 
 if (args.Contains("--conversion-docks-check")) { ConversionDockShortcutTests.Run(); PatternNotesTests.Run(); Console.WriteLine("PASS Conversion dock shortcuts, action menus and live editing"); return 0; }
@@ -386,6 +387,7 @@ var tests = new (string Name, Action Run)[]
     ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
+    ("Editor themes preview, cancel and persist without changing content", EditorThemeTests.Run),
     ("UI scale defaults, steps, draft cancellation and persistence preserve content", UiScaleTests.Run),
     ("Window and canvas display preferences persist without content edits", WindowPreferenceTests.Run),
     ("Fullscreen settings and Alt Enter preserve drafts, content and testplay", FullscreenSettingsTests.Run),

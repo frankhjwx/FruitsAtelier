@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "エディターのタイミングが変更されました。適用前にこのウィンドウを開き直してください。",
   "media.storyboardDiagnostics": "ストーリーボード：無効なコマンドまたはリソースを {0} 件スキップしました。",
   "media.storyboardFailed": "ストーリーボードを読み込めませんでした：{0}",
-  "media.loading": "譜面のリソースを準備しています…"
+  "media.loading": "譜面のリソースを準備しています…",
+  "settings.editorTheme": "エディターテーマ",
+  "settings.theme.graphite": "グラファイト",
+  "settings.theme.studio": "スタジオ",
+  "settings.theme.pearl": "ブラックパール",
+  "settings.theme.midnight": "ミッドナイト",
+  "settings.theme.forest": "フォレスト",
+  "settings.theme.rose": "ローズ",
+  "settings.theme.slate": "スレート"
 }

@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "Тайминг в редакторе изменился. Перед применением откройте это окно заново.",
   "media.storyboardDiagnostics": "Сториборд: пропущено недопустимых команд или ресурсов: {0}.",
   "media.storyboardFailed": "Не удалось загрузить сториборд: {0}",
-  "media.loading": "Подготовка ресурсов карты…"
+  "media.loading": "Подготовка ресурсов карты…",
+  "settings.editorTheme": "Тема редактора",
+  "settings.theme.graphite": "Графит",
+  "settings.theme.studio": "Студия",
+  "settings.theme.pearl": "Чёрный жемчуг",
+  "settings.theme.midnight": "Полночь",
+  "settings.theme.forest": "Лес",
+  "settings.theme.rose": "Роза",
+  "settings.theme.slate": "Сланец"
 }

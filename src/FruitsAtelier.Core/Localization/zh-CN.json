@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "编辑器中的 Timing 已更改。请重新打开此窗口后再应用。",
   "media.storyboardDiagnostics": "故事板：已跳过 {0} 条无效指令或资源。",
   "media.storyboardFailed": "无法载入故事板：{0}",
-  "media.loading": "正在准备谱面资源…"
+  "media.loading": "正在准备谱面资源…",
+  "settings.editorTheme": "编辑器主题",
+  "settings.theme.graphite": "石墨",
+  "settings.theme.studio": "工作站",
+  "settings.theme.pearl": "黑珍珠",
+  "settings.theme.midnight": "午夜",
+  "settings.theme.forest": "森林",
+  "settings.theme.rose": "玫瑰",
+  "settings.theme.slate": "岩灰"
 }

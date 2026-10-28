@@ -32,7 +32,7 @@ public sealed partial class EditorView
         SongTextField(c, "Hex", r.Y + 430);
     }
 
-    private static void DrawColourChart(ICanvas c, Rect palette, double hue, double saturation, double value, float opacity = 1)
+    private void DrawColourChart(ICanvas c, Rect palette, double hue, double saturation, double value, float opacity = 1)
     {
         for (int sy = 0; sy < 24; sy++)
         for (int sx = 0; sx < 40; sx++)
@@ -41,7 +41,7 @@ public sealed partial class EditorView
         c.Circle(palette.X + (float)saturation * palette.Width, palette.Y + (float)(1 - value) * palette.Height, 5, Foreground, false, 2);
     }
 
-    private static void DrawHueTrack(ICanvas c, Rect track, double hue)
+    private void DrawHueTrack(ICanvas c, Rect track, double hue)
     {
         for (int i = 0; i < 60; i++)
             c.Fill(new(track.X + i * track.Width / 60, track.Y, track.Width / 60 + .5f, track.Height), SongHsv(i * 6, 1, 1));

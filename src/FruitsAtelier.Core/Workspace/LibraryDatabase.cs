@@ -101,6 +101,12 @@ public sealed class LibrarySettings
         set => osuSliderDefaultSv = double.IsFinite(value) ? Math.Clamp(value, .1, 10) : 1;
     }
     public bool LowLatencyDisplay { get; set; }
+    private EditorThemeId editorTheme;
+    public EditorThemeId EditorTheme
+    {
+        get => editorTheme;
+        set => editorTheme = Enum.IsDefined(value) ? value : EditorThemeId.Graphite;
+    }
     public const int DefaultUiScalePercent = 150;
     public const int MinimumUiScalePercent = 50;
     public const int MaximumUiScalePercent = 200;

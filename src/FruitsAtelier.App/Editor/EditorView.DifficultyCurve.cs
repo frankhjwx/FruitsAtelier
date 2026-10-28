@@ -23,7 +23,7 @@ public sealed partial class EditorView
         if (graph.Width < 10 || graph.Height < 10) return;
         _ = DifficultyRating(activeDifficulty);
         var samples = difficulties[activeDifficulty].StrainSamples;
-        c.Fill(graph, 0x151A22, 3);
+        c.Fill(graph, Chrome(0x151A22, Background), 3);
         c.Stroke(graph, Grid, 1, 3);
         for (int guide = 1; guide < 4; guide++)
         {

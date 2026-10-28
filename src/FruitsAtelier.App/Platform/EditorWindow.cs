@@ -113,8 +113,7 @@ internal sealed partial class EditorWindow : IDisposable
         if (hwnd == 0) throw new Win32Exception();
         Native.DragAcceptFiles(hwnd, true);
         dpi = Native.GetDpiForWindow(hwnd);
-        int dark = 1;
-        Native.DwmSetWindowAttribute(hwnd, 20, ref dark, 4);
+        RefreshTitleBarTheme();
         Native.GetClientRect(hwnd, out var client);
         RefreshUiScale(hwnd);
         canvas = new D2DCanvas(hwnd, client.Right, client.Bottom, uiDpi) { Performance = view.Performance };
@@ -190,6 +189,10 @@ internal sealed partial class EditorWindow : IDisposable
             if (Environment.GetCommandLineArgs().Contains("--osu-link-render-check"))
             {
                 CheckOsuLinks(); Native.DestroyWindow(hwnd); return 0;
+            }
+            if (Environment.GetCommandLineArgs().Contains("--editor-theme-render-check"))
+            {
+                CheckEditorThemes(); Native.DestroyWindow(hwnd); return 0;
             }
             if (Environment.GetCommandLineArgs().Contains("--ui-scale-render-check") || Environment.GetCommandLineArgs().Contains("--timeline-layout-render-check"))
             {
@@ -450,6 +453,7 @@ internal sealed partial class EditorWindow : IDisposable
                     if (canvas is not null && rect.Right > 0 && rect.Bottom > 0 && !Native.IsIconic(window))
                     {
                         RefreshUiScale(window);
+                        RefreshTitleBarTheme();
                         RecordFrameGap();
                         // Continuous repainting can starve WM_TIMER, including update status polling.
                         renderTimer.Restart();

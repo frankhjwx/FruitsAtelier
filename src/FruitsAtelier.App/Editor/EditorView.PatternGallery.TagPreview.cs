@@ -92,7 +92,7 @@ public sealed partial class EditorView
         return lines.ToArray();
     }
 
-    private static void DrawGalleryTagChips(ICanvas c, GalleryTagLayout layout, Rect bounds, float scroll = 0)
+    private void DrawGalleryTagChips(ICanvas c, GalleryTagLayout layout, Rect bounds, float scroll = 0)
     {
         c.Clip(bounds);
         foreach (var chip in layout.Chips)

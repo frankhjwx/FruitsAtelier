@@ -215,7 +215,7 @@ public sealed partial class EditorView
         {
             float start = c.MeasureText(value[..Math.Clamp(textEditor.Start, 0, value.Length)], size);
             float end = c.MeasureText(value[..Math.Clamp(textEditor.End, 0, value.Length)], size);
-            c.Fill(new(left + start, content.Y, end - start, content.Height), textInputFocused ? 0x365D77u : Grid);
+            c.Fill(new(left + start, content.Y, end - start, content.Height), textInputFocused ? Chrome(0x365D77, SelectedSurface) : Grid);
         }
         c.Text(value, left, content.Y, size, Foreground, Math.Max(content.Width, textWidth + 2));
         if (focused)

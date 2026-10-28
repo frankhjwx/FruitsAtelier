@@ -203,7 +203,7 @@ public sealed partial class EditorView
                 var icon = (MapTemplateIcon)i;
                 var r = new Rect(left + i * 36, y + 398, 32, 32);
                 bool selected = templateDraft[templateIndex].Icon == icon;
-                c.Fill(r, selected ? 0x31494Bu : Surface, 4);
+                c.Fill(r, selected ? Chrome(0x31494B, SelectedSurface) : Surface, 4);
                 c.Stroke(r, selected ? Accent : Grid, radius: 4);
                 DrawTemplateIcon(c, icon, new(r.X + 6, r.Y + 6, 20, 20));
                 hits.Add(new(r, () => templateDraft[templateIndex].Icon = icon, true));

@@ -61,7 +61,7 @@ public sealed partial class EditorView
         float x = Math.Clamp(anchor.X + anchor.Width / 2 - w / 2, 8, Math.Max(8, width - w - 8));
         float y = anchor.Bottom + 10;
         if (y + 32 > height - 8) y = anchor.Y - 42;
-        c.Fill(new(x, y, w, 32), 0x14191D, 5);
+        c.Fill(new(x, y, w, 32), Chrome(0x14191D, Background), 5);
         c.Text(label, x + 12, y + 8, 12, Foreground, w - 24);
     }
 }

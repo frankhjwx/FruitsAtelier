@@ -27,12 +27,12 @@ public sealed partial class EditorView
         Math.Clamp(origin.Y + (float.IsFinite(dy) ? dy : 0), area.Y, Math.Max(area.Y, area.Bottom - origin.Height)),
         origin.Width, origin.Height);
 
-    private static void DrawOverlayGrip(ICanvas c, Rect r, float opacity = 1)
+    private void DrawOverlayGrip(ICanvas c, Rect r, float opacity = 1)
     {
-        c.Fill(r, 0x1D2732, 4, opacity);
+        c.Fill(r, Chrome(0x1D2732, Panel), 4, opacity);
         for (int row = -1; row <= 1; row++)
         for (int col = 0; col < 2; col++)
-            c.Circle(r.X + 5 + col * 4, r.Y + r.Height / 2 + row * 5, 1, 0xAAB8C8, opacity: opacity);
+            c.Circle(r.X + 5 + col * 4, r.Y + r.Height / 2 + row * 5, 1, Chrome(0xAAB8C8, Muted), opacity: opacity);
     }
 
     private bool BeginOverlayDrag(float x, float y, int button)

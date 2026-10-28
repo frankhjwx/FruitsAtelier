@@ -67,8 +67,8 @@ public sealed partial class EditorView
         var panel = BookmarkToolbarBounds;
         if (!(bookmarkToolbarPainted = BookmarkToolbarVisible)) return;
         string texture = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
-        c.Fill(panel, 0x1D2732, 6);
-        c.Image(texture, panel, source: new(40, 225, 2090, 224));
+        c.Fill(panel, Chrome(0x1D2732, Panel), 6);
+        if (UsesGraphiteTheme) c.Image(texture, panel, source: new(40, 225, 2090, 224));
         DrawOverlayGrip(c, BookmarkToolbarGrip);
         var bookmarks = OsuTimeline.Bookmarks(Document);
         int current = (int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue);
@@ -87,14 +87,14 @@ public sealed partial class EditorView
             var r = i < 4 ? new Rect(panel.X + 22 + i * 36, panel.Y + 5, 30, 24)
                 : new Rect(panel.X + 166, panel.Y + 5, 90, 24);
             bool hover = r.Contains(mouseX, mouseY);
-            c.Fill(r, hover ? 0x405065u : 0x19232Du, 4);
-            uint ink = enabled[i] ? 0xF1F4F8u : 0x738191u;
+            c.Fill(r, hover ? Chrome(0x405065, HoverSurface) : Chrome(0x19232D, Background), 4);
+            uint ink = enabled[i] ? Chrome(0xF1F4F8, Foreground) : Chrome(0x738191, Muted);
             float cx = r.X + r.Width / 2, cy = r.Y + r.Height / 2;
             if (i is 0 or 1)
             {
                 c.Circle(cx, cy, 9, ink);
-                c.Line(cx - 4, cy, cx + 4, cy, 0x19232D, 2.5f);
-                if (i == 0) c.Line(cx, cy - 4, cx, cy + 4, 0x19232D, 2.5f);
+                c.Line(cx - 4, cy, cx + 4, cy, Chrome(0x19232D, Background), 2.5f);
+                if (i == 0) c.Line(cx, cy - 4, cx, cy + 4, Chrome(0x19232D, Background), 2.5f);
             }
             else if (i is 2 or 3)
             {
@@ -130,7 +130,7 @@ public sealed partial class EditorView
             float w = Math.Min(BookmarkToolbarArea.Width, Math.Min(360, c.MeasureText(hint, 11) + 16));
             float x = Math.Clamp(mouseX - w / 2, BookmarkToolbarArea.X, BookmarkToolbarArea.Right - w);
             float y = panel.Y - 27 >= BookmarkToolbarArea.Y ? panel.Y - 27 : panel.Bottom + 4;
-            c.Fill(new(x, y, w, 23), 0x111923, 4);
+            c.Fill(new(x, y, w, 23), Chrome(0x111923, Background), 4);
             c.Text(hint, x + 8, y + 5, 11, Foreground, w - 16);
         }
     }

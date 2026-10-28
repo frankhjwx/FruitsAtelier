@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "Nagbago ang timing sa editor. Buksan muli ang window na ito bago ilapat.",
   "media.storyboardDiagnostics": "Storyboard: nilaktawan ang {0} di-wastong command o resource.",
   "media.storyboardFailed": "Hindi ma-load ang storyboard: {0}",
-  "media.loading": "Inihahanda ang mga resource ng beatmap…"
+  "media.loading": "Inihahanda ang mga resource ng beatmap…",
+  "settings.editorTheme": "Tema ng editor",
+  "settings.theme.graphite": "Graphite",
+  "settings.theme.studio": "Studio",
+  "settings.theme.pearl": "Itim na perlas",
+  "settings.theme.midnight": "Hatinggabi",
+  "settings.theme.forest": "Gubat",
+  "settings.theme.rose": "Rosas",
+  "settings.theme.slate": "Slate"
 }

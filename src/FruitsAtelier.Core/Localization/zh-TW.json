@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "編輯器中的 Timing 已變更。請重新開啟此視窗後再套用。",
   "media.storyboardDiagnostics": "故事板：已略過 {0} 條無效指令或資源。",
   "media.storyboardFailed": "無法載入故事板：{0}",
-  "media.loading": "正在準備譜面資源…"
+  "media.loading": "正在準備譜面資源…",
+  "settings.editorTheme": "編輯器主題",
+  "settings.theme.graphite": "石墨",
+  "settings.theme.studio": "工作站",
+  "settings.theme.pearl": "黑珍珠",
+  "settings.theme.midnight": "午夜",
+  "settings.theme.forest": "森林",
+  "settings.theme.rose": "玫瑰",
+  "settings.theme.slate": "岩灰"
 }

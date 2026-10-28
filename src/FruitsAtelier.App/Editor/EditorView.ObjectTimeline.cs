@@ -539,7 +539,7 @@ public sealed partial class EditorView
         {
             var highlightedPeriod = drag == DragKind.BreakEdge ? breakEditPreview : breaks[edge.Index];
             float edgeX = X(edge.Start ? highlightedPeriod.StartMs : highlightedPeriod.EndMs);
-            c.Line(edgeX, objectTimeline.Y + 2, edgeX, objectTimeline.Bottom - 2, 0xE8ECED, 2, .8f);
+            c.Line(edgeX, objectTimeline.Y + 2, edgeX, objectTimeline.Bottom - 2, Chrome(0xE8ECED, Foreground), 2, .8f);
         }
         DrawTimelinePreviewMarker(c, objectTimeline, start, end);
         foreach (var point in displayedTiming)

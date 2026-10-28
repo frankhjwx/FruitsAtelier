@@ -201,7 +201,7 @@ public sealed partial class EditorView
         var collinearRow = new Rect(r.X + 20, collinearY + 10, toggleWidth, 32);
         c.Text(L.Get("ds.collinear"), collinearRow.X, collinearRow.Y + 8, 12, Foreground, 126);
         var collinearSwitch = new Rect(collinearRow.X + 136, collinearRow.Y + 4, 46, 24);
-        c.Fill(collinearSwitch, dsCollinear ? 0x417D77u : 0x46515Fu, 12);
+        c.Fill(collinearSwitch, dsCollinear ? Chrome(0x417D77, Accent) : Chrome(0x46515F, Grid), 12);
         c.Circle(collinearSwitch.X + (dsCollinear ? 34 : 12), collinearSwitch.Y + 12, 9, 0xF0F3F6);
         hits.Add(new(collinearRow, () => dsCollinear = !dsCollinear, true));
         if (dsSpeedMode)
@@ -209,7 +209,7 @@ public sealed partial class EditorView
             var guidesRow = new Rect(collinearRow.Right + 12, collinearRow.Y, toggleWidth, 32);
             c.Text(L.Get("ds.showGuides"), guidesRow.X, guidesRow.Y + 8, 12, Foreground, 126);
             var guidesSwitch = new Rect(guidesRow.X + 136, guidesRow.Y + 4, 46, 24);
-            c.Fill(guidesSwitch, dsShowGuides ? 0x417D77u : 0x46515Fu, 12);
+            c.Fill(guidesSwitch, dsShowGuides ? Chrome(0x417D77, Accent) : Chrome(0x46515F, Grid), 12);
             c.Circle(guidesSwitch.X + (dsShowGuides ? 34 : 12), guidesSwitch.Y + 12, 9, 0xF0F3F6);
             hits.Add(new(guidesRow, () => dsShowGuides = !dsShowGuides, true));
         }
@@ -303,7 +303,7 @@ public sealed partial class EditorView
         ObjectSnapToggleBounds = new(r.X, r.Y + 6, r.Width, 28);
         c.Text(L.Get("ds.objectSnap"), r.X, r.Y + 14, 12, Foreground, r.Width - 54, true);
         var toggle = new Rect(r.Right - 46, r.Y + 8, 46, 24);
-        c.Fill(toggle, available && dsObjectSnap ? 0x417D77u : 0x46515Fu, 12);
+        c.Fill(toggle, available && dsObjectSnap ? Chrome(0x417D77, Accent) : Chrome(0x46515F, Grid), 12);
         c.Circle(toggle.X + (available && dsObjectSnap ? 34 : 12), toggle.Y + 12, 9, 0xF0F3F6);
         hits.Add(new(ObjectSnapToggleBounds, () => dsObjectSnap = !dsObjectSnap, available));
         if (IsOsuCanvas)
@@ -429,7 +429,7 @@ public sealed partial class EditorView
         var gridRow = new Rect(r.X + 4, r.Y + 116, r.Width - 8, 32);
         c.Text(L.Get("ui.gridSnap"), gridRow.X, gridRow.Y + 8, 12, Foreground, 126);
         var switchTrack = new Rect(r.X + 136, gridRow.Y + 4, 46, 24);
-        c.Fill(switchTrack, dsGridSnap ? 0x417D77u : 0x46515Fu, 12);
+        c.Fill(switchTrack, dsGridSnap ? Chrome(0x417D77, Accent) : Chrome(0x46515F, Grid), 12);
         c.Circle(switchTrack.X + (dsGridSnap ? 34 : 12), switchTrack.Y + 12, 9, 0xF0F3F6);
         hits.Add(new(gridRow, () => dsGridSnap = !dsGridSnap, true));
         c.Text(L.Get("ui.gridLevel", L.Get("ui.grid" + dsGridSize)), r.X + 4, r.Y + 161, 12, dsGridSnap ? Foreground : Muted, 126);
@@ -477,7 +477,7 @@ public sealed partial class EditorView
         }
         foreach (var label in labels)
         {
-            c.Fill(label.Bounds, 0x000000, 3, .7f);
+            c.Fill(label.Bounds, Chrome(0x000000, Background), 3, .7f);
             c.Stroke(label.Bounds, label.Border, 1, 3);
             c.Text(label.Text, label.Bounds.X + 6, label.Bounds.Y + 3, 11, label.Color);
         }

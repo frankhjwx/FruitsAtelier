@@ -245,6 +245,20 @@ internal static class DiscussionTests
         int builds = ui.View.DiscussionLayoutBuilds, quoteBuilds = ui.View.DiscussionQuoteLayoutBuilds;
         for (int i = 0; i < 8; i++) ui.Paint();
         Check(ui.View.DiscussionLayoutBuilds == builds && ui.View.DiscussionQuoteLayoutBuilds == quoteBuilds && ReferenceEquals(conversion, ui.View.Conversion), "warm paint reuses layout and conversion");
+        var originalTheme = ui.View.LibrarySettings.EditorTheme;
+        var body = ui.Canvas.Texts.First(t => t.X > ui.View.DiscussionBounds.X && t.Size == 12
+            && t.Color == EditorThemePalette.For(originalTheme).Foreground);
+        ui.View.LibrarySettings.EditorTheme = EditorThemeId.Pearl; ui.Paint();
+        Check(ui.View.DiscussionLayoutBuilds == builds + 1 && ui.View.DiscussionQuoteLayoutBuilds > quoteBuilds,
+            "Theme changes refresh both panel and canvas quote colors.");
+        Check(ui.Canvas.Texts.Any(t => t.Value == body.Value && t.Color == EditorThemePalette.For(EditorThemeId.Pearl).Foreground),
+            "Cached discussion body text uses the new palette.");
+        int themedBuilds = ui.View.DiscussionLayoutBuilds, themedQuotes = ui.View.DiscussionQuoteLayoutBuilds;
+        ui.Paint();
+        Check(ui.View.DiscussionLayoutBuilds == themedBuilds && ui.View.DiscussionQuoteLayoutBuilds == themedQuotes
+            && ReferenceEquals(conversion, ui.View.Conversion) && before.ContentEquals(ui.View.Document),
+            "Warm themed paint reuses layout without changing content or conversion.");
+        ui.View.LibrarySettings.EditorTheme = originalTheme; ui.Paint();
         var multi = ui.View.DiscussionHighlightRanges.First(r => r.Discussion == 3 && r.Start == 1000);
         Check(multi.End == 1500, "all referenced notes form the highlighted interval");
         Check(ui.View.DiscussionHighlightRanges.Any(r => r.Start == 4000 && r.End == 5000), "slider reference includes the complete converted duration");

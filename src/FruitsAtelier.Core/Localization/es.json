@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "El timing ha cambiado en el editor. Vuelve a abrir esta ventana antes de aplicar.",
   "media.storyboardDiagnostics": "Storyboard: se omitieron {0} comandos o recursos no válidos.",
   "media.storyboardFailed": "No se pudo cargar el storyboard: {0}",
-  "media.loading": "Preparando los recursos del mapa…"
+  "media.loading": "Preparando los recursos del mapa…",
+  "settings.editorTheme": "Tema del editor",
+  "settings.theme.graphite": "Grafito",
+  "settings.theme.studio": "Estudio",
+  "settings.theme.pearl": "Perla negra",
+  "settings.theme.midnight": "Medianoche",
+  "settings.theme.forest": "Bosque",
+  "settings.theme.rose": "Rosa",
+  "settings.theme.slate": "Pizarra"
 }

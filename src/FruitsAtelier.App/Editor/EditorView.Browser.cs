@@ -134,7 +134,7 @@ public sealed partial class EditorView
         {
             var button = new Rect(left, y, 26, 28);
             Button(c, button, "", () => RequestBrowserCommand?.Invoke(command), enabled: enabled);
-            DrawBrowserIcon(c, button, command, enabled ? Foreground : 0x5B6777);
+            DrawBrowserIcon(c, button, command, enabled ? Foreground : Chrome(0x5B6777, Muted));
             if (button.Contains(mouseX, mouseY)) browserTooltip = L.Get(key);
         }
         bool available = BrowserUrl is not null;

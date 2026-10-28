@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "De timing in de editor is gewijzigd. Open dit venster opnieuw voordat je de wijzigingen toepast.",
   "media.storyboardDiagnostics": "Storyboard: {0} ongeldige opdrachten of bronnen overgeslagen.",
   "media.storyboardFailed": "Storyboard kon niet worden geladen: {0}",
-  "media.loading": "Beatmapbronnen voorbereiden…"
+  "media.loading": "Beatmapbronnen voorbereiden…",
+  "settings.editorTheme": "Editorthema",
+  "settings.theme.graphite": "Grafiet",
+  "settings.theme.studio": "Studio",
+  "settings.theme.pearl": "Zwarte parel",
+  "settings.theme.midnight": "Middernacht",
+  "settings.theme.forest": "Bos",
+  "settings.theme.rose": "Roos",
+  "settings.theme.slate": "Leisteen"
 }

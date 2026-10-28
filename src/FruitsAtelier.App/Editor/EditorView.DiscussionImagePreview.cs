@@ -42,7 +42,7 @@ public sealed partial class EditorView
         float panelWidth = Math.Min(width - 32, Math.Max(360, width * .45f));
         float panelHeight = Math.Min(height - 32, Math.Max(260, height * .45f));
         discussionPreviewBounds = new((width - panelWidth) / 2, (height - panelHeight) / 2, panelWidth, panelHeight);
-        c.Fill(discussionPreviewBounds, 0x1A2028, 5); c.Stroke(discussionPreviewBounds, Grid, radius: 5);
+        c.Fill(discussionPreviewBounds, Chrome(0x1A2028, Panel), 5); c.Stroke(discussionPreviewBounds, Grid, radius: 5);
         discussionPreviewViewport = new(discussionPreviewBounds.X + 16, discussionPreviewBounds.Y + 36,
             Math.Max(1, panelWidth - 32), Math.Max(1, panelHeight - 52));
         ClampDiscussionImagePan();

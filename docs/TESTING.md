@@ -1,5 +1,17 @@
 # Building and Testing
 
+## Editor theme checks
+
+`App.Tests --editor-theme-check` verifies all seven themes in English and Chinese,
+live preview and cancellation, settings persistence, compatibility with older or
+unknown theme IDs, per-editor isolation, text contrast and unchanged map content
+and osu! skin selection. It also runs the multilingual settings layout checks.
+
+On Windows, `FruitsAtelier.App --render-check --editor-theme-render-check` operates
+the Appearance selector through native pointer input, checks Windows title-bar
+colour application, and captures each theme's settings and full editor window
+under `artifacts/tests/editor-themes-native`.
+
 ## Video and storyboard playback
 
 `App.Tests --storyboard-source-cache-check` checks scene reuse for ordinary General

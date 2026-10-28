@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "Le timing a changé dans l’éditeur. Rouvrez cette fenêtre avant d’appliquer.",
   "media.storyboardDiagnostics": "Storyboard : {0} commandes ou ressources non valides ont été ignorées.",
   "media.storyboardFailed": "Impossible de charger le storyboard : {0}",
-  "media.loading": "Préparation des ressources de la beatmap…"
+  "media.loading": "Préparation des ressources de la beatmap…",
+  "settings.editorTheme": "Thème de l’éditeur",
+  "settings.theme.graphite": "Graphite",
+  "settings.theme.studio": "Studio",
+  "settings.theme.pearl": "Perle noire",
+  "settings.theme.midnight": "Minuit",
+  "settings.theme.forest": "Forêt",
+  "settings.theme.rose": "Rose",
+  "settings.theme.slate": "Ardoise"
 }

@@ -31,6 +31,7 @@ public sealed partial class EditorView
     public bool SupportsDisplayMode { get; set; }
     private bool draftLowLatencyDisplay;
     private int draftUiScalePercent;
+    private EditorThemeId draftEditorTheme;
     public float UiScaleFactor => StartupDialogVisible ? 1 : LibrarySettings.UiScalePercent / (float)FruitsAtelier.Core.LibrarySettings.DefaultUiScalePercent;
     public bool SupportsFullscreen { get; set; }
     public Action<bool>? RequestFullscreen { get; set; }
@@ -142,6 +143,7 @@ public sealed partial class EditorView
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
         draftUiScalePercent = LibrarySettings.UiScalePercent;
+        draftEditorTheme = LibrarySettings.EditorTheme;
         draftFullscreen = LibrarySettings.Fullscreen;
         draftSettingsColours[0] = LibrarySettings.StandIndicatorColour;
         draftSettingsColours[1] = LibrarySettings.WalkIndicatorColour;
@@ -182,6 +184,7 @@ public sealed partial class EditorView
             draftDerandomizeNewProjects != LibrarySettings.DerandomizeNewProjects) ||
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
         draftUiScalePercent != LibrarySettings.UiScalePercent ||
+        draftEditorTheme != LibrarySettings.EditorTheme ||
         draftSettingsColours[6] != LibrarySettings.SelectionHighlightColour ||
         draftFullscreen != LibrarySettings.Fullscreen ||
         draftExperimentalSnapDivisions != LibrarySettings.ExperimentalSnapDivisions ||
@@ -317,7 +320,7 @@ public sealed partial class EditorView
                 c.Text(L.Get("settings.uiScale"), SettingsContentX, SettingsTop + 278, SettingsTextSize, Foreground, SettingsContentWidth, true);
                 var scaleBounds = new Rect(SettingsContentX, SettingsTop + 306, SettingsContentWidth, SettingsControlHeight);
                 SettingsButton(c, scaleBounds, $"{draftUiScalePercent}% ▾", () => OpenUiScaleMenu(scaleBounds));
-                SettingsParagraph(c, L.Get("settings.uiScaleHint"), SettingsTop + 350);
+                DrawEditorThemeSelector(c);
                 var highlightBounds = new Rect(SettingsContentX, SettingsTop + 408, SettingsContentWidth - 130, SettingsControlHeight);
                 c.Fill(highlightBounds, Surface, 4); c.Stroke(highlightBounds, Grid, radius: 4);
                 c.Fill(new(highlightBounds.X + 7, highlightBounds.Y + 6, 20, 20), draftSettingsColours[6], 3);
@@ -399,6 +402,28 @@ public sealed partial class EditorView
         contextBounds = new(bounds.X, Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), bounds.Width, menuHeight);
     }
 
+    internal Rect EditorThemeSelectorBounds => new(SettingsContentX + Math.Min(180, SettingsContentWidth * .4f),
+        SettingsTop + 354, SettingsContentWidth - Math.Min(180, SettingsContentWidth * .4f), SettingsControlHeight);
+
+    private static string EditorThemeKey(EditorThemeId theme) => "settings.theme." + theme.ToString().ToLowerInvariant();
+
+    private void DrawEditorThemeSelector(ICanvas c)
+    {
+        var bounds = EditorThemeSelectorBounds;
+        c.Text(L.Get("settings.editorTheme"), SettingsContentX, bounds.Y + 8, SettingsTextSize,
+            Foreground, bounds.X - SettingsContentX - 12, true);
+        SettingsButton(c, bounds, L.Get(EditorThemeKey(draftEditorTheme)) + " ▾", () =>
+        {
+            languageMenuOpen = false; menu = -1; contextItems.Clear();
+            libraryField = bindingCapture = -1;
+            foreach (var theme in Enum.GetValues<EditorThemeId>())
+                contextItems.Add(new((draftEditorTheme == theme ? "✓ " : "") + L.Get(EditorThemeKey(theme)),
+                    () => draftEditorTheme = theme));
+            float menuHeight = 12 + contextItems.Count * 32;
+            contextBounds = new(bounds.X, Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), bounds.Width, menuHeight);
+        });
+    }
+
     private void OpenDisplayModeMenu(Rect bounds)
     {
         languageMenuOpen = false; menu = -1; contextItems.Clear();
@@ -447,6 +472,7 @@ public sealed partial class EditorView
             settings.DefaultDropletSeed = LibrarySettings.DefaultDropletSeed;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
             settings.UiScalePercent = draftUiScalePercent;
+            settings.EditorTheme = draftEditorTheme;
             settings.SelectionHighlightColour = draftSettingsColours[6];
             settings.Fullscreen = draftFullscreen;
             settings.ExperimentalSnapDivisions = draftExperimentalSnapDivisions;

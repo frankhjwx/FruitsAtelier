@@ -215,7 +215,7 @@ public sealed partial class EditorView
             enabled: osuLinkState.IsDefault ? RequestClearOsuLinkBinding is not null : RequestBindOsuLinks is not null);
     }
 
-    private static void DrawOsuLinkApplicationName(ICanvas c, OsuLinkApplication app, float x, float y, float width, float size)
+    private void DrawOsuLinkApplicationName(ICanvas c, OsuLinkApplication app, float x, float y, float width, float size)
     {
         float nameWidth = Math.Min(c.MeasureText(app.Name, size), width * .45f);
         c.Text(app.Name, x, y, size, Foreground, nameWidth);

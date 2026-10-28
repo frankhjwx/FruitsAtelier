@@ -292,7 +292,7 @@ public sealed partial class EditorView
         return session.Stars ?? 0;
     }
 
-    private static void DrawRatingSpinner(ICanvas c, float x, float y)
+    private void DrawRatingSpinner(ICanvas c, float x, float y)
     {
         double angle = Environment.TickCount64 / 140.0;
         for (int i = 0; i < 8; i++)
@@ -339,7 +339,7 @@ public sealed partial class EditorView
         return "…";
     }
 
-    private static void DrawChromeTab(ICanvas c, Rect rect, uint colour)
+    private void DrawChromeTab(ICanvas c, Rect rect, uint colour)
     {
         const float radius = 8;
         c.Fill(rect, colour, radius);
@@ -350,7 +350,7 @@ public sealed partial class EditorView
             var shoulder = new Rect(left ? rect.X - radius : rect.Right, rect.Bottom - radius, radius, radius);
             c.Clip(shoulder);
             c.Fill(shoulder, colour);
-            c.Circle(left ? shoulder.X : shoulder.Right, shoulder.Y, radius, 0x191E26);
+            c.Circle(left ? shoulder.X : shoulder.Right, shoulder.Y, radius, Chrome(0x191E26, Panel));
             c.Unclip();
         }
     }
@@ -375,7 +375,7 @@ public sealed partial class EditorView
         var order = DifficultyTabOrder;
         difficultyTabTargets.Clear();
         difficultyTabStrip = new(12, 40, Math.Max(220, width - 24), 44);
-        c.Fill(new(0, 40, width, 44), 0x191E26);
+        c.Fill(new(0, 40, width, 44), Chrome(0x191E26, Panel));
         c.Line(0, 83, width, 83, Grid);
         truncatedTabs.Clear();
         string[] names = order.Select(i => difficulties[i].Name).ToArray();
@@ -450,20 +450,20 @@ public sealed partial class EditorView
             bool missing = searching || DifficultySyncState(target) == WorkspaceSyncState.Missing;
             if (missing) colour = 0xC4CAD2;
             bool hover = rect.Contains(mouseX, mouseY);
-            if (tabPointer && tabMoved && target == tabPressed) c.Fill(rect, 0x2B3542);
-            if (active || hover) DrawChromeTab(c, rect, active ? Panel : 0x2B3542u);
+            if (tabPointer && tabMoved && target == tabPressed) c.Fill(rect, Chrome(0x2B3542, HoverSurface));
+            if (active || hover) DrawChromeTab(c, rect, active ? Panel : Chrome(0x2B3542, HoverSurface));
             else if (index + 1 >= order.Length || order[index + 1] != activeDifficulty) c.Line(rect.Right + 3, 56, rect.Right + 3, 73, Grid);
             float iconX = x + 9 + pinPadding[index];
             if (IsDifficultyPinned(target)) DrawDifficultyPin(c, x + 8, 53, active ? Foreground : Muted);
             // A light backing keeps even the official black (9★+) icon readable on dark chrome.
             if (stars >= 6.7) c.Circle(iconX + 10, 62, 10, 0xE7EBF2);
             c.Image(catchIconPath, new(iconX, 52, 20, 20), colour);
-            c.Text(names[index], x + 36 + pinPadding[index], 54, 12, missing ? 0x718092u : active ? Foreground : Muted,
+            c.Text(names[index], x + 36 + pinPadding[index], 54, 12, missing ? Chrome(0x718092, Muted) : active ? Foreground : Muted,
                 rect.Width - 101 - pinPadding[index], active);
             if (difficulties[target].FaOnly) c.Text(L.Get("song.faOnly"),
                 x + 36 + pinPadding[index], 69, 9, Muted, rect.Width - 45 - pinPadding[index]);
             else if (missing) c.Text(L.Get(searching ? "sync.searchingReference" : "sync.missingBadge"),
-                x + 36 + pinPadding[index], 69, 9, 0x718092, rect.Width - 45 - pinPadding[index]);
+                x + 36 + pinPadding[index], 69, 9, Chrome(0x718092, Muted), rect.Width - 45 - pinPadding[index]);
             c.Text(stars is null ? L.Get("project.starsUnavailable") : L.Get("project.stars", stars.Value),
                 rect.Right - 59, 55, 10, active ? Foreground : Muted, 47);
             if (RatingRefreshing(target)) DrawRatingSpinner(c, rect.Right - 9, 106);

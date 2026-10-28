@@ -47,7 +47,7 @@ public sealed partial class EditorView
         objectTimeline = default;
         var r = WaveformBounds;
         zoomSlider = default;
-        c.Fill(CanvasToolbarBounds, 0x1C2129);
+        c.Fill(CanvasToolbarBounds, Chrome(0x1C2129, Panel));
         c.Text(L.Get("timing.waveform"), CanvasToolbarBounds.X + 12, 97, 14, Foreground, Math.Max(0, CanvasToolbarBounds.Width - 180));
         snapSlider = new(CanvasToolbarBounds.Right - 118, 88, 106, 29);
         c.Text(L.Get("ui.snap"), snapSlider.X - 40, 97, 11, Muted, 40);

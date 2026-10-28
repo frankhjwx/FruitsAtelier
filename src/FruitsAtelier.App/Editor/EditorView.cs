@@ -8,9 +8,31 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private const uint Background = 0x171A20, Panel = 0x20252E, Surface = 0x282F3A;
-    private const uint Foreground = 0xE7EBF2, Muted = 0x9AA8BC, Grid = 0x343C49;
-    private const uint Accent = 0x59D3C3, Gold = 0xF2C66D, Purple = 0xAB9DF2, Error = 0xFF7F8D;
+    private EditorThemePalette Theme => EditorThemePalette.For(librarySettingsOpen ? draftEditorTheme : LibrarySettings.EditorTheme);
+    private uint Background => Theme.Background;
+    private uint Panel => Theme.Panel;
+    private uint Surface => Theme.Surface;
+    private uint Foreground => Theme.Foreground;
+    private uint Muted => Theme.Muted;
+    private uint Grid => Theme.Grid;
+    private uint Accent => Theme.Accent;
+    private uint Gold => Theme.Gold;
+    private uint Purple => Theme.Purple;
+    private uint Error => Theme.Error;
+    private uint HoverSurface => MixThemeColour(Surface, Foreground, .08f);
+    private uint SelectedSurface => MixThemeColour(Surface, Accent, .18f);
+    private uint SelectedHoverSurface => MixThemeColour(Surface, Accent, .28f);
+    private uint AccentForeground => ((Accent >> 16 & 255) * 299 + (Accent >> 8 & 255) * 587 + (Accent & 255) * 114) > 145000 ? 0x171A20u : 0xFFFFFFu;
+    private static uint MixThemeColour(uint from, uint to, float amount)
+    {
+        uint Channel(int shift) => (uint)(((from >> shift) & 255) * (1 - amount) + ((to >> shift) & 255) * amount);
+        return Channel(16) << 16 | Channel(8) << 8 | Channel(0);
+    }
+    private bool UsesGraphiteTheme => ReferenceEquals(Theme, EditorThemePalette.For(EditorThemeId.Graphite));
+    internal bool LightEditorTheme => ((Background >> 16 & 255) * 299 + (Background >> 8 & 255) * 587 + (Background & 255) * 114) > 145000;
+    internal uint TitleBarBackground => Chrome(0x1B2028, Panel);
+    internal uint TitleBarForeground => Foreground;
+    private uint Chrome(uint graphite, uint themed) => UsesGraphiteTheme ? graphite : themed;
     private sealed class DifficultySession(ProjectDifficulty difficulty)
     {
         public Guid Id { get; } = difficulty.Id;

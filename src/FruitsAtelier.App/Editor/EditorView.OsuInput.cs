@@ -783,7 +783,7 @@ public sealed partial class EditorView
         var input = OsuSliderDefaultSvValueBounds;
         int index = fields.Count;
         bool focused = editField == index;
-        c.Fill(input, focused ? 0x273638u : 0x151B24u, 3);
+        c.Fill(input, focused ? Chrome(0x273638, SelectedSurface) : Chrome(0x151B24, Background), 3);
         c.Stroke(input, focused ? (fieldError.Length > 0 ? Error : Accent) : Grid, 1, 3);
         DrawInputText(c, new(input.X + 5, input.Y + 4, input.Width - 10, 18),
             focused ? editBuffer : LibrarySettings.OsuSliderDefaultSv.ToString("0.00", CultureInfo.InvariantCulture),

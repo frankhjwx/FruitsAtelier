@@ -1932,5 +1932,13 @@
   "timing.sourceChanged": "Timing changed in the editor. Reopen this window before applying.",
   "media.storyboardDiagnostics": "Storyboard: {0} invalid commands or resources were skipped.",
   "media.storyboardFailed": "Storyboard could not be loaded: {0}",
-  "media.loading": "Preparing map resources…"
+  "media.loading": "Preparing map resources…",
+  "settings.editorTheme": "Editor theme",
+  "settings.theme.graphite": "Graphite",
+  "settings.theme.studio": "Studio",
+  "settings.theme.pearl": "Black Pearl",
+  "settings.theme.midnight": "Midnight",
+  "settings.theme.forest": "Forest",
+  "settings.theme.rose": "Rose",
+  "settings.theme.slate": "Slate"
 }
