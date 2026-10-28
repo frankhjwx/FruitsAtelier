@@ -41,7 +41,7 @@ public sealed partial class EditorView
     public Rect PreserveSameTimeObjectsToggleBounds { get; private set; }
     private bool draftLazerEditing;
     private CatchHitLightingMode draftCatchHitLighting;
-    internal Rect HitLightingSettingsBounds => new(SettingsContentX, SettingsTop + 464, SettingsContentWidth, SettingsControlHeight);
+    internal Rect HitLightingSettingsBounds => new(SettingsContentX, SettingsTop + 476, SettingsContentWidth, SettingsControlHeight);
     internal Rect LazerEditingToggleBounds { get; private set; }
     private bool draftReverseCanvasScroll;
     private double draftTestplayStartupDelaySeconds;
@@ -70,7 +70,7 @@ public sealed partial class EditorView
     private const float SettingsControlPadding = 12;
     private float SettingsContentWidth => SettingsRight - SettingsContentX - 32 - (FirstRunSetupVisible && firstRunStep == 1 ? 300 : 0);
     private bool SettingsAudioVisible => librarySettingsOpen && (FirstRunSetupVisible ? firstRunStep == 2 : settingsCategory == SettingsCategory.Audio);
-    internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 128,
+    internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 190,
         SettingsContentWidth, SettingsControlHeight);
 
     private void SettingsButton(ICanvas c, Rect bounds, string label, Action action, bool active = false, bool enabled = true)
@@ -315,12 +315,13 @@ public sealed partial class EditorView
                 DrawWorkspaceSettings(c);
                 break;
             case SettingsCategory.Appearance:
-                DrawSkinSelector(c, SettingsSkinSelectorBounds);
-                LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 184);
-                c.Text(L.Get("settings.uiScale"), SettingsContentX, SettingsTop + 278, SettingsTextSize, Foreground, SettingsContentWidth, true);
-                var scaleBounds = new Rect(SettingsContentX, SettingsTop + 306, SettingsContentWidth, SettingsControlHeight);
-                SettingsButton(c, scaleBounds, $"{draftUiScalePercent}% ▾", () => OpenUiScaleMenu(scaleBounds));
                 DrawEditorThemeSelector(c);
+                c.Line(SettingsContentX, SettingsTop + 174, SettingsContentX + SettingsContentWidth, SettingsTop + 174, Grid);
+                DrawSkinSelector(c, SettingsSkinSelectorBounds);
+                LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 240);
+                c.Text(L.Get("settings.uiScale"), SettingsContentX, SettingsTop + 334, SettingsTextSize, Foreground, SettingsContentWidth, true);
+                var scaleBounds = new Rect(SettingsContentX, SettingsTop + 362, SettingsContentWidth, SettingsControlHeight);
+                SettingsButton(c, scaleBounds, $"{draftUiScalePercent}% ▾", () => OpenUiScaleMenu(scaleBounds));
                 var highlightBounds = new Rect(SettingsContentX, SettingsTop + 408, SettingsContentWidth - 130, SettingsControlHeight);
                 c.Fill(highlightBounds, Surface, 4); c.Stroke(highlightBounds, Grid, radius: 4);
                 c.Fill(new(highlightBounds.X + 7, highlightBounds.Y + 6, 20, 20), draftSettingsColours[6], 3);
@@ -330,6 +331,7 @@ public sealed partial class EditorView
                 hits.Add(new(highlightBounds, () => OpenSettingsColourPicker(6), true));
                 SettingsButton(c, new(highlightBounds.Right + 10, highlightBounds.Y, 120, SettingsControlHeight),
                     L.Get("settings.indicatorReset"), () => draftSettingsColours[6] = FruitsAtelier.Core.LibrarySettings.DefaultSelectionHighlightColour);
+                c.Line(SettingsContentX, SettingsTop + 458, SettingsContentX + SettingsContentWidth, SettingsTop + 458, Grid);
                 SettingsButton(c, HitLightingSettingsBounds, L.Get(HitLightingKey(draftCatchHitLighting)) + " ▾",
                     () => OpenHitLightingMenu(HitLightingSettingsBounds));
                 break;
@@ -403,7 +405,7 @@ public sealed partial class EditorView
     }
 
     internal Rect EditorThemeSelectorBounds => new(SettingsContentX + Math.Min(180, SettingsContentWidth * .4f),
-        SettingsTop + 354, SettingsContentWidth - Math.Min(180, SettingsContentWidth * .4f), SettingsControlHeight);
+        SettingsTop + 128, SettingsContentWidth - Math.Min(180, SettingsContentWidth * .4f), SettingsControlHeight);
 
     private static string EditorThemeKey(EditorThemeId theme) => "settings.theme." + theme.ToString().ToLowerInvariant();
 
