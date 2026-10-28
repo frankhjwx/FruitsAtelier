@@ -70,7 +70,7 @@ public sealed partial class EditorView
     private const float SettingsControlPadding = 12;
     private float SettingsContentWidth => SettingsRight - SettingsContentX - 32 - (FirstRunSetupVisible && firstRunStep == 1 ? 300 : 0);
     private bool SettingsAudioVisible => librarySettingsOpen && (FirstRunSetupVisible ? firstRunStep == 2 : settingsCategory == SettingsCategory.Audio);
-    internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 190,
+    internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 320,
         SettingsContentWidth, SettingsControlHeight);
 
     private void SettingsButton(ICanvas c, Rect bounds, string label, Action action, bool active = false, bool enabled = true)
@@ -316,13 +316,10 @@ public sealed partial class EditorView
                 break;
             case SettingsCategory.Appearance:
                 DrawEditorThemeSelector(c);
-                c.Line(SettingsContentX, SettingsTop + 174, SettingsContentX + SettingsContentWidth, SettingsTop + 174, Grid);
-                DrawSkinSelector(c, SettingsSkinSelectorBounds);
-                LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 240);
-                c.Text(L.Get("settings.uiScale"), SettingsContentX, SettingsTop + 334, SettingsTextSize, Foreground, SettingsContentWidth, true);
-                var scaleBounds = new Rect(SettingsContentX, SettingsTop + 362, SettingsContentWidth, SettingsControlHeight);
+                c.Text(L.Get("settings.uiScale"), SettingsContentX, SettingsTop + 180, SettingsTextSize, Foreground, SettingsContentWidth, true);
+                var scaleBounds = new Rect(SettingsContentX, SettingsTop + 208, SettingsContentWidth, SettingsControlHeight);
                 SettingsButton(c, scaleBounds, $"{draftUiScalePercent}% ▾", () => OpenUiScaleMenu(scaleBounds));
-                var highlightBounds = new Rect(SettingsContentX, SettingsTop + 408, SettingsContentWidth - 130, SettingsControlHeight);
+                var highlightBounds = new Rect(SettingsContentX, SettingsTop + 254, SettingsContentWidth - 130, SettingsControlHeight);
                 c.Fill(highlightBounds, Surface, 4); c.Stroke(highlightBounds, Grid, radius: 4);
                 c.Fill(new(highlightBounds.X + 7, highlightBounds.Y + 6, 20, 20), draftSettingsColours[6], 3);
                 c.Text(L.Get("settings.selectionHighlight"), highlightBounds.X + 36, highlightBounds.Y + 7.5f,
@@ -331,6 +328,9 @@ public sealed partial class EditorView
                 hits.Add(new(highlightBounds, () => OpenSettingsColourPicker(6), true));
                 SettingsButton(c, new(highlightBounds.Right + 10, highlightBounds.Y, 120, SettingsControlHeight),
                     L.Get("settings.indicatorReset"), () => draftSettingsColours[6] = FruitsAtelier.Core.LibrarySettings.DefaultSelectionHighlightColour);
+                c.Line(SettingsContentX, SettingsTop + 304, SettingsContentX + SettingsContentWidth, SettingsTop + 304, Grid);
+                DrawSkinSelector(c, SettingsSkinSelectorBounds);
+                LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 370);
                 c.Line(SettingsContentX, SettingsTop + 458, SettingsContentX + SettingsContentWidth, SettingsTop + 458, Grid);
                 SettingsButton(c, HitLightingSettingsBounds, L.Get(HitLightingKey(draftCatchHitLighting)) + " ▾",
                     () => OpenHitLightingMenu(HitLightingSettingsBounds));
