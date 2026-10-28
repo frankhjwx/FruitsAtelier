@@ -109,8 +109,10 @@ internal static class MappingCanvasRenderCheck
                 {
                     var bookmarks = view.BookmarkToolbarBounds;
                     view.PointerMove(bookmarks.X + 20, bookmarks.Bottom + 15, false, false);
-                    clock.Advance(499); Paint("bookmark-pending");
-                    clock.Advance(1);
+                    clock.Advance(250); Paint("bookmark-pending");
+                    clock.Advance(125); Paint("bookmark-half");
+                    if (view.BookmarkToolbarOpacity != .5f) throw new InvalidOperationException("Native bookmark fade did not reach half opacity.");
+                    clock.Advance(125);
                     if (!view.BookmarkToolbarNeedsRedraw) throw new InvalidOperationException("Native bookmark hover missed its deadline.");
                     Paint("bookmark-visible");
                     var handle = view.BookmarkToolbarGrip;

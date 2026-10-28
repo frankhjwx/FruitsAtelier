@@ -387,9 +387,13 @@ internal static class TimelineOverviewTests
         {
             ui.View.PointerLeave(); ui.Paint();
             ui.View.PointerMove(area.X + 20, area.Y + 10, false, false); ui.Paint();
-            clock.Advance(499); ui.Paint();
+            clock.Advance(250); ui.Paint();
             Check(!ui.Canvas.Images.Any(i => i.Path.EndsWith("toolbar-panel.png", StringComparison.Ordinal)), "Toolbar appeared before the hover delay");
-            clock.Advance(1);
+            clock.Advance(125); ui.Paint();
+            Check(Math.Abs(ui.View.BookmarkToolbarOpacity - .5f) < .001f, "Bookmark toolbar did not reach half opacity at 375 ms");
+            Check(ui.View.BookmarkToolbarNeedsRedraw, "Bookmark fade stopped requesting frames midway");
+            clock.Advance(125);
+            Check(ui.View.BookmarkToolbarOpacity == 1, "Bookmark toolbar did not reach full opacity at 500 ms");
             Check(ui.View.BookmarkToolbarNeedsRedraw, "Hover deadline did not request a frame");
             ui.Paint();
             Check(!ui.View.BookmarkToolbarNeedsRedraw, "Visible toolbar kept requesting frames");
