@@ -244,6 +244,15 @@ internal static class SliderMultiplierTests
         ui.View.SliderMultiplierClock = () => now + 1000;
     }
 
+    private static void ApplyBeforePaint(Ui ui)
+    {
+        // Painting publishes completed validation; let pending-state checks run before that boundary.
+        var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("library.apply"));
+        ui.View.PointerDown(label.X + 4, label.Y + 5, 0, false, false);
+        ui.View.PointerUp(label.X + 4, label.Y + 5, 0);
+        Check(ui.View.SliderMultiplierValidationBusy, "Apply queues validation before painting");
+    }
+
     private static void DialogChanges()
     {
         var ui = new Ui(false); ui.LoadDocument(Fixture()); ui.Resize(980, 620); ui.Key(114);
@@ -261,7 +270,7 @@ internal static class SliderMultiplierTests
         ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(L.Get("ui.sv"));
         Set(ui, "1.3"); ui.ClickText(L.Get("ui.dpb"));
         Check(ui.Canvas.Texts.Any(t => t.Value == "130"), "Edited SV converts to DPB in the same draft");
-        ui.ClickText(L.Get("ui.sv")); ui.ClickText(L.Get("library.apply"));
+        ui.ClickText(L.Get("ui.sv")); ApplyBeforePaint(ui);
         Check(ui.View.SliderMultiplierValidationBusy && !ui.View.PrepareFileOperation(), "SV Apply waits for background validation");
         Wait(ui);
         Check(!ui.View.DistanceSnapDialogVisible && ui.View.Document.EffectiveSliderMultiplier == 1.3
@@ -273,9 +282,9 @@ internal static class SliderMultiplierTests
         ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(confirmed), "SV and DPB redo together");
         ui.View.OpenDistanceSnapDialog(); ui.Paint(); Set(ui, "3.61"); ui.ClickText(L.Get("library.apply"));
         Check(!ui.View.SliderMultiplierValidationBusy && ui.View.Document.ContentEquals(confirmed), "Invalid SV remains a draft");
-        Set(ui, "1.4"); ui.ClickText(L.Get("library.apply")); ui.Key(27); Wait(ui);
+        Set(ui, "1.4"); ApplyBeforePaint(ui); ui.Key(27); Wait(ui);
         Check(ui.View.Document.ContentEquals(confirmed), "Cancel discards pending SV validation");
-        ui.View.OpenDistanceSnapDialog(); ui.Paint(); Set(ui, "1.4"); ui.ClickText(L.Get("library.apply"));
+        ui.View.OpenDistanceSnapDialog(); ui.Paint(); Set(ui, "1.4"); ApplyBeforePaint(ui);
         ui.View.Document.Fruits.Add(new() { TimeMs = 6000, X = 200 }); Wait(ui);
         Check(ui.View.Document.EffectiveSliderMultiplier == 1.3 && ui.View.Document.Fruits.Count == 1, "Stale validation cannot overwrite later content");
         ui.Key(27);
