@@ -40,6 +40,7 @@ internal sealed partial class EditorWindow : IDisposable
         ConfigureFiles();
         ConfigureOsuLinks();
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
+        view.RequestPasteObjects = () => view.PasteClipboardText(Native.ReadClipboardText(hwnd));
         view.RequestClearBrowserData = () =>
         {
             var previous = osuBrowser; osuBrowser = null;

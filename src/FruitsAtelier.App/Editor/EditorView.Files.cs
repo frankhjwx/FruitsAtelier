@@ -45,6 +45,7 @@ public sealed partial class EditorView
         patternRestoringTransport = null;
         if (MapTemplatesVisible) CloseMapTemplates(false);
         ClearFadReview();
+        copiedPatternText = null; pendingPatternPaste = null; pendingPatternImport = null;
         objectClipboard = null; clipboardDifficulty = null; ObjectClipboardText = "";
         foreach (var difficulty in project.Difficulties) WorkspaceTimingSynchronization.NormalizeDocument(difficulty.Document);
         CancelLegacyDropletRefresh();

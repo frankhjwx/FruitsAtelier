@@ -353,6 +353,11 @@ settings, saved AR, hyperdash starts and deterministic previews. `Formats.Tests 
 checks snapshot isolation, AR-preserving `.fpt` round trips, rename/delete persistence,
 validation and atomic gallery writes, folder migration, copy/move identity isolation,
 folder merges/deletion, Default preservation, version 4 folder packages and import collisions.
+`App.Tests --pattern-clipboard-check` checks visible Base64 text round trips, malformed
+input, a 100-character budget for short mixed and 20-fruit fixtures, archive-text compatibility,
+cross-language decoding, cross-editor matching, beat-relative playhead insertion, complete selection,
+undo/redo and import of unknown patterns in English and Chinese.
+
 `App.Tests --pattern-gallery-check` checks gallery input, placement choices/cancellation,
 drop/undo, context rename/delete, fixed card sizes during dock resizing,
 preview alignment, saved-AR spacing, canvas scroll-direction settings, scrollbar position,

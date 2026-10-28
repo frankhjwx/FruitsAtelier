@@ -114,6 +114,23 @@ source map does not change it. Stream and stack parameters and individual fruit
 adjustments remain editable. Source artist, title, difficulty, creator and start
 time are retained alongside the authoring data, AR and timing context.
 
+Select one card and press **Ctrl+C** (**Cmd+C** on macOS) to copy
+`Pattern Name：Base64 Content` to the system clipboard. Text sharing stores relative
+point timing, X positions, object types and the curve controls or repeat parameters
+needed to rebuild their geometry. Coordinates use a compact binary delta encoding;
+compression is applied only when it shortens the text. Source metadata, tags, object
+IDs, hitsounds and map preferences are excluded. Use `.fpt` export to exchange the
+complete saved pattern, including its source and tags.
+
+Paste into an open editor with **Ctrl+V** to insert matching local geometry at the
+current playhead, retimed by musical beats to the destination timing while retaining
+its width. All inserted objects are selected, and one undo removes them. Matching
+uses geometry independently of names, object IDs and source-map offsets. Unknown
+geometry opens the import destination choices and is saved as a new pattern using
+the supplied name. Imported text uses the editor's default presentation settings.
+New folders use the pattern name. Text fields retain their normal text-paste behavior.
+Category paste and multi-card copy/paste retain their folder organization behavior.
+
 **Export** offers selected patterns, the current folder, or the complete gallery.
 The card context menu's **Export** shares only the selected patterns, including multiple selections.
 The category context menu exports the selected folders.

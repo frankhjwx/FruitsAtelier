@@ -1570,7 +1570,7 @@ public sealed partial class EditorView
             else if (virtualKey == 83 && !shift) RequestSave?.Invoke();
             else if (virtualKey == 67 && !shift) CopySelection();
             else if (virtualKey == 88 && !shift) CutSelection();
-            else if (virtualKey == 86 && !shift) PasteSelection();
+            else if (virtualKey == 86 && !shift) RequestClipboardPaste();
             else if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
             else if (virtualKey == 71 && !shift) ReverseSelection();
             else if (virtualKey == 76 && !shift) RequestPreviousSave();

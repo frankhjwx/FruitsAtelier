@@ -56,7 +56,7 @@ public sealed partial class EditorView
     }
 
     public bool PatternGalleryWantsCapture => galleryPressedId != Guid.Empty || galleryPreviewPanning;
-    public bool PatternGalleryNeedsRedraw => galleryTagReordering || GalleryTagAutosavePending || PatternEditingNeedsRedraw || PatternSourceNeedsRedraw || galleryIoTask is not null || galleryPreviewTask is not null
+    public bool PatternGalleryNeedsRedraw => pendingPatternPaste is not null || pendingPatternImport is not null || galleryTagReordering || GalleryTagAutosavePending || PatternEditingNeedsRedraw || PatternSourceNeedsRedraw || galleryIoTask is not null || galleryPreviewTask is not null
         || galleryPlacementTask is not null || galleryDropTask is not null || galleryDragging && !galleryDropChoosing || galleryPendingDirectory is not null || galleryPendingImportPath is not null
         || PatternGalleryAvailable && (GalleryFullPreviewMissing || galleryVisibleIds.Any(GalleryPreviewMissing));
     private bool GalleryPreviewMissing(Guid id) => id != Guid.Empty && !galleryPreviews.ContainsKey(id) && !galleryPreviewErrors.ContainsKey(id);
@@ -85,6 +85,7 @@ public sealed partial class EditorView
         if (PatternEditingActive || PatternEditingBusy || galleryIoTask is not null || GalleryTagAutosavePending)
         { FlushGalleryTagAutosave(); galleryPendingDirectory = directory; return; }
         galleryPendingDirectory = null;
+        pendingPatternPaste = null; pendingPatternImport = null;
         galleryTagLayouts.Clear();
         galleryTagEdits.Clear(); galleryCurrentTagEdit = null;
         CloseGalleryTags();
@@ -273,6 +274,7 @@ public sealed partial class EditorView
                 });
             }
         }
+        PumpPatternClipboard();
         PumpGalleryPlacement();
     }
 

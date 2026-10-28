@@ -23,6 +23,7 @@ internal static class PatternGalleryTests
             SliderVelocityMultiplier = 1.5, ControlPoints = { new(128, 192), new(228, 192) } };
         map.ImportedSliders.Add(slider);
         var shower = new BananaShower { TimeMs = 5000, EndTimeMs = 6000, Pattern = new(1, 4, 1, 4) }; map.BananaShowers.Add(shower);
+        map.HitsoundOverrides.Add(new(track.Id, 1, new()));
         var ids = new[] { fruit.Id, track.Id, slider.Id, shower.Id };
         var snapshot = PatternSnapshot.Capture(map, ids, "My pattern");
         snapshot = snapshot.WithTags([new("Stream", 0x58D8C1), new("Jump", 0xFFB45C)]);
@@ -62,6 +63,14 @@ internal static class PatternGalleryTests
             }
         legacy.Position = 0;
         Check(PatternArchive.Read(legacy).Single().Tags.Count == 0, "Version 1 galleries remain readable without tags");
+        var shared = PatternClipboard.Decode(PatternClipboard.Encode(snapshot));
+        Check(shared.HasSameGeometry(snapshot) && shared.Source.Artist == "" && shared.Tags.Count == 0,
+            "Geometry clipboard retains mixed parents without source metadata or tags");
+        var destination = snapshot.CreateDocument();
+        var placedOriginal = PatternPlacement.Prepare(snapshot, destination, snapshot.StartTimeMs).CreateDocument();
+        var placedShared = PatternPlacement.Prepare(shared, destination, snapshot.StartTimeMs).CreateDocument();
+        Check(snapshot.WithDocument(placedOriginal).HasSameGeometry(snapshot.WithDocument(placedShared)),
+            "Compact clipboard retains beat-relative mixed placement and editable geometry");
         Check(restored.CreateDocument().ApproachRate == 9.3 && PatternPreview.Create(restored).ApproachRate == 9.3,
             "Saved AR survives sharing and drives preview independently of the active map");
         Check(restored.Id == snapshot.Id && restored.Name == snapshot.Name && restored.Source == snapshot.Source

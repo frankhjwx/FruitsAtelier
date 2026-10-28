@@ -18,6 +18,10 @@ public sealed class PatternSnapshot
     public double StartTimeMs { get; }
     public int ObjectCount => document.Fruits.Count + document.Tracks.Count + document.ImportedSliders.Count + document.BananaShowers.Count;
     public MapDocument CreateDocument() => document.DeepClone();
+    private byte[]? clipboardGeometry;
+    internal byte[] ClipboardGeometry => clipboardGeometry ??= PatternGeometryCodec.Encode(document);
+    public bool HasSameGeometry(PatternSnapshot other) => ObjectCount == other.ObjectCount
+        && ClipboardGeometry.AsSpan().SequenceEqual(other.ClipboardGeometry);
     public PatternSnapshot WithDocument(MapDocument edited) => new(Id, Name, Source, edited, Tags);
     public PatternSnapshot WithName(string name) => new(Id, name, Source, document, Tags);
     public PatternSnapshot WithTags(IEnumerable<PatternTag> tags) => new(Id, Name, Source, document, tags);

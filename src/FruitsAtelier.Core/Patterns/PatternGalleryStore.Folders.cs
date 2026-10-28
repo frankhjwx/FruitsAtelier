@@ -114,7 +114,11 @@ public sealed partial class PatternGalleryStore
 
     private int ImportFolders(string path, Guid? destination)
     {
-        var incoming = PatternArchive.ReadContentsFile(path);
+        return Import(PatternArchive.ReadContentsFile(path), ExportFolderName(path), destination);
+    }
+
+    public int Import(PatternArchive.Contents incoming, string folderName, Guid? destination = null)
+    {
         var contents = LoadContents();
         if (destination is { } target) RequireFolder(contents, target);
         var folders = contents.Folders!.ToList();
@@ -137,7 +141,7 @@ public sealed partial class PatternGalleryStore
         }
         else
         {
-            var importedFolders = incoming.Folders ?? [new(Guid.NewGuid(), ExportFolderName(path), incoming.Patterns.Select(p => p.Id).ToArray())];
+            var importedFolders = incoming.Folders ?? [new(Guid.NewGuid(), folderName[..Math.Min(folderName.Length, 128)], incoming.Patterns.Select(p => p.Id).ToArray())];
             foreach (var folder in importedFolders)
                 folders.Add(new(Guid.NewGuid(), UniqueFolderName(folder.Name, folders), folder.PatternIds.Select(id => remap[id]).ToArray()));
         }

@@ -326,7 +326,8 @@ public sealed partial class EditorView
         { if (!galleryCategoriesFocused) CopyGalleryPatterns(key == 88); return true; }
         if (galleryFocused && ctrl && key == 86)
         {
-            if (!galleryCategoriesFocused) PasteGalleryPatterns(galleryFolderId);
+            if (!galleryCategoriesFocused && !galleryClipboardCut && galleryClipboard.Length <= 1) RequestClipboardPaste();
+            else if (!galleryCategoriesFocused) PasteGalleryPatterns(galleryFolderId);
             else if (galleryFolderSelection.Count == 1) PasteGalleryPatterns(galleryFolderSelection.Single());
             return true;
         }
@@ -423,13 +424,18 @@ public sealed partial class EditorView
         catch (InvalidOperationException error) { StatusMessage = error.Message; CancelPatternGalleryInteraction(); return; }
         int dropVersion = galleryDragVersion;
         var before = galleryDragTarget;
+        StartGalleryInsertion(before!, dropVersion, () => preparedPlacement.CreateDocument(offset, order));
+    }
+
+    private void StartGalleryInsertion(MapDocument before, int dropVersion, Func<MapDocument> createInsertion)
+    {
         bool compensation = compensateTinyDroplets;
         string language = L.Language;
         galleryDropTask = Task.Run(() =>
         {
             try
             {
-                var inserted = preparedPlacement.CreateDocument(offset, order);
+                var inserted = createInsertion();
                 var candidate = before.DeepClone();
                 AppendGalleryObjects(candidate, inserted);
                 var cache = new OsuWriteCache();

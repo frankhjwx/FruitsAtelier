@@ -183,6 +183,7 @@ internal static class PatternGalleryUiTests
             PatternGalleryTagPreviewTests.Run();
             PatternFolderUiTests.Run();
             PatternGalleryInteractionTests.Run();
+            PatternClipboardTests.Run();
         }
         finally { Directory.Delete(directory, true); }
     }

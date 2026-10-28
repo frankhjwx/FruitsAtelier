@@ -32,6 +32,7 @@ if (args.Contains("--storage-check")) { StorageSettingsTests.Run(); return 0; }
 if (args.Contains("--history-maintenance-check")) { DeferredHistoryUiTests.Run(); return 0; }
 if (args.Length == 3 && args[0] == "--library-search-profile") { LibrarySearchTests.Profile(args[1], args[2]); return 0; }
 if (args.Contains("--library-search-check")) { LibrarySearchTests.Run(); return 0; }
+if (args.Contains("--pattern-clipboard-check")) { PatternClipboardTests.Run(); Console.WriteLine("PASS pattern text clipboard and import"); return 0; }
 if (args.Contains("--pattern-gallery-check")) { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); Console.WriteLine("PASS Pattern Gallery, editing sessions and source navigation"); return 0; }
 if (args.Contains("--cross-difficulty-clipboard-check")) { CrossDifficultyClipboardTests.Run(); Console.WriteLine("PASS mapset clipboard, target settings, independent SV, undo and rejection"); return 0; }
 if (args.Length == 3 && args[0] == "--new-difficulty-profile") return NewDifficultyPerformance.Run(args[1], args[2]);

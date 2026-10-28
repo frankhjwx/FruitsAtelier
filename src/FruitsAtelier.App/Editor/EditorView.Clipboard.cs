@@ -14,6 +14,7 @@ public sealed partial class EditorView
 
     private void StoreClipboard(MapDocument snapshot, string text)
     {
+        copiedPatternText = null;
         objectClipboard = snapshot;
         clipboardDifficulty = difficulties[activeDifficulty].Id;
         ObjectClipboardText = text;
