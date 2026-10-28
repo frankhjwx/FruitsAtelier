@@ -69,6 +69,10 @@ These rules follow the [official format document](https://github.com/ppy/osu-wik
 Conversion and export preserve authored one-millisecond offsets in circles,
 slider heads, Stream/Stack subdivisions and spinner edges. Export applies ordinary
 integer truncation without automatically aligning these times to a beat grid.
+Legacy sliders authored in the osu! canvas also truncate their exported head time,
+including when their retained object text contains a fractional authoring time.
+Their generated SV points use the same integer head; project times and native
+path geometry remain unchanged.
 Mapset Verifier exposes explicit, undoable fixes for object and timing-line offsets
 in the current difficulty. The on-open timing-alignment prompt also detects these
 offsets and applies corrections only when confirmed.

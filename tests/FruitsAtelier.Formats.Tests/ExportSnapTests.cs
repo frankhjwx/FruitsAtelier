@@ -6,6 +6,7 @@ internal static class ExportSnapTests
     {
         Spinners();
         Kiai();
+        NativeSliderHeads();
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:2.02\nSliderTickRate:2\n[TimingPoints]\n670,254.237288135593,3,2,1,85,1,0\n12873,254.237288135593,4,2,1,85,1,0\n[HitObjects]\n215,192,33212,5,0,2:0:0:0:\n100,192,38297,5,8,2:0:0:0:\n442,192,55585,5,4,1:2:0:0:\n");
         var before = map.DeepClone();
         var cache = new OsuWriteCache();
@@ -70,6 +71,33 @@ internal static class ExportSnapTests
         var exportedSamples = new HitsoundResolver(sampleExport.ReadBack, sampleExport.PlayableObjects);
         Check(sourceEvents.Zip(sampleExport.PlayableObjects).All(p => sourceSamples.Describe(p.First) == exportedSamples.Describe(p.Second)),
             "Pruning preserves every event's sample settings");
+    }
+
+    private static void NativeSliderHeads()
+    {
+        foreach (double sv in new[] { 1d, 2d })
+        {
+            var map = OsuBeatmapReader.Read("osu file format v14\n[Difficulty]\nSliderMultiplier:2\nSliderTickRate:1\n[TimingPoints]\n0,324.324324324324,4,2,1,50,1,0\n32439.432432432397,-100,4,2,1,50,0,0\n[HitObjects]\n230,187,32439.432432432397,6,0,P|194:171|189:38,1,200.00000000000003,0|0,0:0|\n");
+            map.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = -50, Uninherited = false, SampleSet = 2, SampleIndex = 1, Volume = 50 });
+            var slider = map.ImportedSliders.Single();
+            slider.PreserveNativeGeometry = true;
+            slider.SliderVelocityMultiplier = sv;
+            var before = map.DeepClone();
+            var cache = new OsuWriteCache();
+            var output = OsuBeatmapWriter.Serialize(map, cache: cache);
+            var emitted = output.ReadBack.ImportedSliders.Single();
+            Check(emitted.TimeMs == 32439 && output.ObjectSequenceMatches, $"Canvas slider heads must export integer milliseconds (SV {sv}): {string.Join("; ", output.Diagnostics)}\n{output.Text}");
+            Check(Math.Abs(ImportedSliderConverter.SliderVelocityAt(output.ReadBack, emitted) - sv) < 1e-9,
+                "The exported integer slider head must use its authored SV");
+            Check(Math.Abs(ImportedSliderConverter.DurationMs(map, slider) - ImportedSliderConverter.DurationMs(output.ReadBack, emitted)) < 1e-6,
+                "Quantizing a canvas slider head must preserve its SV and duration");
+            Check(emitted.PathType == slider.PathType && emitted.ControlPoints.SequenceEqual(slider.ControlPoints)
+                && emitted.PixelLength == slider.PixelLength, "Head quantization changed native geometry");
+            Check(output.MaxTimeQuantizationMs > .43 && output.MaxTimeQuantizationMs < .44, "Native head quantization must be reported");
+            Check(output.Text == OsuBeatmapWriter.Serialize(map, cache: cache).Text
+                && output.Text == OsuBeatmapWriter.Serialize(map).Text, "Cached native export differs");
+            Check(map.ContentEquals(before), "Export must retain exact authoring times");
+        }
     }
 
     private static void Kiai()
