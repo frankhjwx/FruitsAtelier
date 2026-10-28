@@ -8,7 +8,7 @@ Windows와 macOS에서 사용할 수 있는 독립 osu!catch 비트맵 편집기
 
 [공식 웹사이트](https://fruitsatelier.himiko.moe/) · [다운로드](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**현재 버전: 1.3.1**
+**현재 버전: 1.3.2**
 
 ![FruitsAtelier의 편집 캔버스, 오브젝트 타임라인, Catch 미리 보기](assets/screenshots/twin-bloom.png)
 
