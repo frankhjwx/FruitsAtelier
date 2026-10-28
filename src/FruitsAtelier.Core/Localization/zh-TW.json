@@ -1302,6 +1302,7 @@
   "randomize.disableAll": "停用所有 FSlider 的隨機化",
   "randomize.enableSelected": "開啟隨機化",
   "randomize.disableSelected": "關閉隨機化",
+  "randomize.advanced": "進階設定",
   "randomize.resetStrength": "重設強度（20）",
   "randomize.resetAdjustments": "重設水滴手動修正",
   "randomize.settings": "隨機化設定…",

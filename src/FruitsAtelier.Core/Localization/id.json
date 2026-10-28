@@ -1302,6 +1302,7 @@
   "randomize.disableAll": "Nonaktifkan pengacakan semua FSlider",
   "randomize.enableSelected": "Aktifkan pengacakan",
   "randomize.disableSelected": "Nonaktifkan pengacakan",
+  "randomize.advanced": "Pengaturan lanjutan",
   "randomize.resetStrength": "Reset kekuatan (20)",
   "randomize.resetAdjustments": "Atur ulang penyesuaian manual",
   "randomize.settings": "Pengaturan pengacakan…",

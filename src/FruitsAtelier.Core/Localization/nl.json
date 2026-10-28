@@ -1302,6 +1302,7 @@
   "randomize.disableAll": "Randomisatie uitschakelen voor alle FSliders",
   "randomize.enableSelected": "Randomisatie inschakelen",
   "randomize.disableSelected": "Randomisatie uitschakelen",
+  "randomize.advanced": "Geavanceerde instellingen",
   "randomize.resetStrength": "Sterkte resetten (20)",
   "randomize.resetAdjustments": "Handmatige aanpassingen herstellen",
   "randomize.settings": "Randomisatie-instellingen…",

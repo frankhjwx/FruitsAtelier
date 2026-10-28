@@ -14,13 +14,16 @@ public sealed partial class EditorView
     private int randomField = -1;
     private Rect randomBounds, randomStrengthBounds;
     private float randomScroll;
-    private bool randomDragging;
+    private bool randomDragging, randomAdvanced;
     private RandomDraft? randomBaseline;
     private string randomError = "";
-    private const float RandomContentHeight = 480;
+    private float RandomContentHeight => randomAdvanced ? 400 : 316;
     internal Rect RandomDockViewport => randomBounds;
-    internal Rect RandomDockValueBounds(int field) => new(randomBounds.X, randomBounds.Y - randomScroll + (field == 0 ? 142 : 244),
-        field == 0 ? Math.Min(78, randomBounds.Width * .35f) : randomBounds.Width, 32);
+    private float RandomLabelWidth => Math.Min(90, randomBounds.Width * .3f);
+    private float RandomResetWidth => Math.Min(66, randomBounds.Width * .25f);
+    internal Rect RandomDockAdvancedBounds => new(randomBounds.X, randomBounds.Y - randomScroll + 118, randomBounds.Width, 30);
+    internal Rect RandomDockValueBounds(int field) => new(randomBounds.X + RandomLabelWidth, randomBounds.Y - randomScroll + 154 + field * 40,
+        Math.Max(1, randomBounds.Width - RandomLabelWidth - RandomResetWidth - 8), 32);
     private bool RandomDockEditing => DockContentInputAvailable && PanelVisible(DockPanel.RandomizeDroplets)
         && ReferenceEquals(randomDockSnapshot, convertedSnapshot);
     private bool RandomDockFocused => RandomDockEditing && randomField >= 0;
@@ -94,22 +97,41 @@ public sealed partial class EditorView
             Document.RandomizeNewSliders = !randomDerandomize;
         }), randomDerandomize, editable, fontSize: 12);
         Button(c, new(bounds.X, y + 44, bounds.Width, 38), L.Get(randomHardRock ? "randomize.derandomizeHrOn" : "randomize.derandomizeHrOff"), () => RunRandomDockAction(() => Document.DerandomizeDropletsForHardRock = randomHardRock = !randomHardRock), randomHardRock, editable, fontSize: 12);
-        for (int i = 0; i < 2; i++)
+        Button(c, RandomDockAdvancedBounds, (randomAdvanced ? "▾ " : "▸ ") + L.Get("randomize.advanced"), () =>
         {
-            int field = i; float row = y + 94 + i * 102;
-            c.Text(L.Get(i == 0 ? "song.RandomizeDropletStrength" : "song.RandomizeDropletSeed"), bounds.X, row, 12, Foreground, bounds.Width);
-            var box = RandomDockValueBounds(i);
-            c.Fill(box, Surface, 4); c.Stroke(box, randomField == i ? Accent : Grid, radius: 4);
-            DrawInputText(c, new(box.X + 8, box.Y + 7, box.Width - 16, 20), randomNumbers[i], 13, randomField == i, "random:" + i);
-            hits.Add(new(box, () => { randomField = field; FocusInput("random:" + field, randomNumbers[field], mouseX); }, editable));
+            CommitRandomDock(); randomAdvanced = !randomAdvanced; randomField = -1; randomDragging = false;
+        }, fontSize: 12);
+        randomStrengthBounds = default;
+        if (randomAdvanced)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                int field = i;
+                var box = RandomDockValueBounds(i);
+                c.Text(L.Get(i == 0 ? "song.RandomizeDropletStrength" : "song.RandomizeDropletSeed"), bounds.X, box.Y + 8, 12, Foreground, RandomLabelWidth - 4);
+                if (i == 0)
+                {
+                    randomStrengthBounds = new(box.X + 7, box.Y + 4, Math.Max(1, box.Width - 14), 24);
+                    c.Line(randomStrengthBounds.X, randomStrengthBounds.Y + 12, randomStrengthBounds.Right, randomStrengthBounds.Y + 12, Grid, 4);
+                    if (double.TryParse(randomNumbers[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double strength))
+                        c.Circle(randomStrengthBounds.X + (float)Math.Clamp(strength / 100, 0, 1) * randomStrengthBounds.Width, randomStrengthBounds.Y + 12, 7, Accent);
+                }
+                else
+                {
+                    c.Fill(box, Surface, 4); c.Stroke(box, randomField == i ? Accent : Grid, radius: 4);
+                    DrawInputText(c, new(box.X + 8, box.Y + 7, box.Width - 16, 20), randomNumbers[i], 13, randomField == i, "random:" + i);
+                    hits.Add(new(box, () => { randomField = field; FocusInput("random:" + field, randomNumbers[field], mouseX); }, editable));
+                }
+                Button(c, new(bounds.Right - RandomResetWidth, box.Y, RandomResetWidth, 32), L.Get("ds.reset"), () => RunRandomDockAction(() =>
+                {
+                    if (field == 0) { randomNumbers[0] = "20"; Document.RandomizeDropletStrength = 20; }
+                    else { randomNumbers[1] = "1337"; Document.RandomizeDropletSeed = 1337; }
+                }), enabled: editable, fontSize: 12);
+            }
         }
-        randomStrengthBounds = new(bounds.X + RandomDockValueBounds(0).Width + 15, y + 122, Math.Max(1, bounds.Width - RandomDockValueBounds(0).Width - 22), 24);
-        c.Line(randomStrengthBounds.X, randomStrengthBounds.Y + 12, randomStrengthBounds.Right, randomStrengthBounds.Y + 12, Grid, 4);
-        if (double.TryParse(randomNumbers[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double strength))
-            c.Circle(randomStrengthBounds.X + (float)Math.Clamp(strength / 100, 0, 1) * randomStrengthBounds.Width, randomStrengthBounds.Y + 12, 7, Accent);
-        Button(c, new(bounds.X, y + 158, bounds.Width, 30), L.Get("randomize.resetStrength"), () => RunRandomDockAction(() => { randomNumbers[0] = "20"; Document.RandomizeDropletStrength = 20; }), enabled: editable, fontSize: 12);
-        c.Text(randomError, bounds.X, y + 266, 12, Error, bounds.Width);
-        DrawDropletDefaults(c, new(bounds.X, y + 304, bounds.Width, 132));
+        float bottom = y + (randomAdvanced ? 222 : 138);
+        c.Text(randomError, bounds.X, bottom, 12, Error, bounds.Width);
+        DrawDropletDefaults(c, new(bounds.X, bottom + 40, bounds.Width, 132));
         c.Unclip();
         for (int i = hits.Count - 1; i >= firstHit; i--) if (hits[i].Bounds.Y < bounds.Y || hits[i].Bounds.Bottom > bounds.Bottom) hits.RemoveAt(i);
         if (RandomContentHeight > bounds.Height)
@@ -123,7 +145,7 @@ public sealed partial class EditorView
         if (!RandomDockEditing || menu >= 0 || contextItems.Count > 0) return false;
         if (!randomBounds.Contains(x, y)) { randomField = -1; return false; }
         if (button != 0) return true;
-        if (!notesLocked && randomStrengthBounds.Contains(x, y)) { randomDragging = true; randomField = -1; MoveRandomStrength(x); return true; }
+        if (randomAdvanced && !notesLocked && randomStrengthBounds.Contains(x, y)) { randomDragging = true; randomField = -1; MoveRandomStrength(x); return true; }
         for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return true; }
         randomField = -1; return true;
     }

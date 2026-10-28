@@ -1302,6 +1302,7 @@
   "randomize.disableAll": "すべての FSlider のランダム化を無効化",
   "randomize.enableSelected": "ランダム化を有効にする",
   "randomize.disableSelected": "ランダム化を無効にする",
+  "randomize.advanced": "詳細設定",
   "randomize.resetStrength": "強度をリセット（20）",
   "randomize.resetAdjustments": "水滴の手動調整をリセット",
   "randomize.settings": "ランダム化設定…",

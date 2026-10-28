@@ -1302,6 +1302,7 @@
   "randomize.disableAll": "모든 FSlider 무작위화 비활성화",
   "randomize.enableSelected": "무작위화 켜기",
   "randomize.disableSelected": "무작위화 끄기",
+  "randomize.advanced": "고급 설정",
   "randomize.resetStrength": "강도 초기화 (20)",
   "randomize.resetAdjustments": "물방울 수동 조정 초기화",
   "randomize.settings": "무작위화 설정…",

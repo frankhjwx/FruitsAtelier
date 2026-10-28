@@ -122,8 +122,9 @@ internal static class DropletDefaultsTests
         var saved = LibrarySettings.Load(path);
         Check(saved.DerandomizeNewProjects, "Droplet Settings mode did not save globally");
         ui.ClickText(L.Get("randomize.derandomizeHrOff"));
+        var advanced = ui.View.RandomDockAdvancedBounds; ui.Click(advanced.X + 20, advanced.Y + 15);
         var field = ui.View.RandomDockValueBounds(0);
-        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true); ui.View.TextInput('3'); ui.View.TextInput('7'); ui.Key(13); ui.Paint();
+        ui.Click(field.X + 7 + (field.Width - 14) * .37f, field.Y + 16); ui.Paint();
         field = ui.View.RandomDockValueBounds(1);
         ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true); ui.View.TextInput('4'); ui.View.TextInput('2'); ui.Key(13); ui.Paint();
         saved = LibrarySettings.Load(path);

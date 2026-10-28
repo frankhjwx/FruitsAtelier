@@ -1324,6 +1324,7 @@
   "randomize.disableAll": "Disable randomization for all FSliders",
   "randomize.enableSelected": "Enable randomization",
   "randomize.disableSelected": "Disable randomization",
+  "randomize.advanced": "Advanced Settings",
   "randomize.resetStrength": "Reset strength (20)",
   "randomize.resetAdjustments": "Reset manual droplet adjustments",
   "randomize.settings": "Randomization settings…",

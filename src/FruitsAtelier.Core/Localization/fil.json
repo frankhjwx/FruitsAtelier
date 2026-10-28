@@ -1302,6 +1302,7 @@
   "randomize.disableAll": "I-disable ang randomization sa lahat ng FSlider",
   "randomize.enableSelected": "Paganahin ang randomization",
   "randomize.disableSelected": "I-disable ang randomization",
+  "randomize.advanced": "Mga advanced na setting",
   "randomize.resetStrength": "I-reset ang lakas (20)",
   "randomize.resetAdjustments": "I-reset ang manu-manong pagsasaayos",
   "randomize.settings": "Mga setting ng randomization…",

@@ -1302,6 +1302,7 @@
   "randomize.disableAll": "Выключить случайность для всех FSlider",
   "randomize.enableSelected": "Включить рандомизацию",
   "randomize.disableSelected": "Выключить рандомизацию",
+  "randomize.advanced": "Расширенные настройки",
   "randomize.resetStrength": "Сбросить силу (20)",
   "randomize.resetAdjustments": "Сбросить ручные поправки капель",
   "randomize.settings": "Настройки рандомизации…",

@@ -1302,6 +1302,7 @@
   "randomize.disableAll": "ปิดการสุ่มสำหรับ FSlider ทั้งหมด",
   "randomize.enableSelected": "เปิดการสุ่ม",
   "randomize.disableSelected": "ปิดการสุ่ม",
+  "randomize.advanced": "การตั้งค่าขั้นสูง",
   "randomize.resetStrength": "รีเซ็ตความแรง (20)",
   "randomize.resetAdjustments": "รีเซ็ตการปรับหยดน้ำด้วยตนเอง",
   "randomize.settings": "ตั้งค่าการสุ่ม…",

@@ -739,8 +739,9 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 Its current-difficulty section contains the default droplet mode
 (Derandomize or Randomize), Strength (0–100 playfield pixels), a signed 32-bit
 Seed, and the NM/HR compensation target. Valid edits apply immediately with undo;
-invalid numeric input leaves the last valid value intact. Strength has a numeric
-field and slider, plus Reset strength to restore 20.
+invalid numeric input leaves the last valid value intact. Advanced Settings starts collapsed. Expand it to show two rows: Strength with its
+slider and Reset button, and Seed with its numeric field and Reset button. Reset
+restores Strength to 20 or Seed to 1337.
 
 The separate **Global Derandomize** section controls derandomization for new projects
 and imported maps. These preferences save immediately and do not

@@ -1302,6 +1302,7 @@
   "randomize.disableAll": "Wyłącz losowość wszystkich FSliderów",
   "randomize.enableSelected": "Włącz losowość",
   "randomize.disableSelected": "Wyłącz losowość",
+  "randomize.advanced": "Ustawienia zaawansowane",
   "randomize.resetStrength": "Resetuj siłę (20)",
   "randomize.resetAdjustments": "Zresetuj ręczne korekty kropelek",
   "randomize.settings": "Ustawienia losowania…",

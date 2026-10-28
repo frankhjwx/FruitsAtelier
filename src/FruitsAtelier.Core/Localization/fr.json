@@ -1302,6 +1302,7 @@
   "randomize.disableAll": "Désactiver la randomisation de tous les FSliders",
   "randomize.enableSelected": "Activer la randomisation",
   "randomize.disableSelected": "Désactiver la randomisation",
+  "randomize.advanced": "Paramètres avancés",
   "randomize.resetStrength": "Réinitialiser l’intensité (20)",
   "randomize.resetAdjustments": "Réinitialiser les ajustements manuels",
   "randomize.settings": "Réglages de randomisation…",
