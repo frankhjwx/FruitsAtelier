@@ -14,7 +14,8 @@ public sealed partial class EditorView
     private Rect CanvasControlsArea => new(canvas.X, canvas.Y, canvas.Width, Math.Max(0, plot.Bottom - canvas.Y));
     private bool CanvasControlsHasDiscussion => PanelVisible(DockPanel.Discussion) && !IsOsuCanvas;
     private float CanvasControlsScale => LibrarySettings.CanvasControlsScale;
-    private float CanvasControlsBaseWidth => Math.Min(336, Math.Max(0, canvas.Width - 104));
+    private float CanvasControlsAvailableWidth => Math.Min(336, Math.Max(0, canvas.Width - 104));
+    private float CanvasControlsBaseWidth => CanvasControlsAvailableWidth - Math.Max(0, CanvasControlsAvailableWidth - 154) / 2;
     private float CanvasControlsBaseHeight => CanvasControlsHasDiscussion ? 84 : 56;
     private Rect CanvasControlsOrigin => new(canvas.X + 82, plot.Bottom - 8 - CanvasControlsBaseHeight * CanvasControlsScale,
         CanvasControlsBaseWidth * CanvasControlsScale, CanvasControlsBaseHeight * CanvasControlsScale);
@@ -39,7 +40,7 @@ public sealed partial class EditorView
         && !IsEditingText && drag == DragKind.None && !SliderHoldNeedsRedraw && !movementPanelPointer && dockPressed is null
         && menu < 0 && contextItems.Count == 0 && !panelMenuOpen && !volumePopoverOpen
         && !PatternGalleryPopupContains(mouseX, mouseY)
-        && CanvasControlsBaseWidth >= 176;
+        && CanvasControlsAvailableWidth >= 176;
     private bool PointerOverCanvasBackgroundDim => CanUseCanvasBackgroundDim && (CanvasOverlayControlsBounds.Contains(mouseX, mouseY) || CanvasControlsGrip.Contains(mouseX, mouseY));
     internal float CanvasBackgroundDimOpacity => canvasDimFadeFrom + (canvasDimFadeTarget - canvasDimFadeFrom)
         * (float)Math.Clamp((CanvasDimNowMs - canvasDimFadeAt) / 150, 0, 1);
