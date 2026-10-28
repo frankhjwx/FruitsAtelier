@@ -139,6 +139,12 @@ public sealed class LibrarySettings
     public bool ShowTestplayCombo { get; set; } = true;
     public bool ForceBackgroundDim { get; set; }
     public bool EnableVideoStoryboard { get; set; } = true;
+    public float CanvasControlsOffsetX { get; set; }
+    public float CanvasControlsOffsetY { get; set; }
+    private float canvasControlsScale = 1;
+    public float CanvasControlsScale { get => canvasControlsScale; set => canvasControlsScale = float.IsFinite(value) ? Math.Clamp(value, .5f, 1) : 1; }
+    public float BookmarkToolbarOffsetX { get; set; }
+    public float BookmarkToolbarOffsetY { get; set; }
     public uint CanvasGridColour { get; set; } = DefaultCanvasGridColour;
     public uint CanvasCentreLineColour { get; set; } = DefaultCanvasCentreLineColour;
     private int canvasGridOpacity = DefaultCanvasGridOpacity;

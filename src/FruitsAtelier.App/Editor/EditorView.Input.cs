@@ -21,6 +21,7 @@ public sealed partial class EditorView
         if (WantsCapture) return;
         mouseX = mouseY = -1;
         AdvanceCanvasBackgroundDim();
+        _ = BookmarkToolbarVisible;
     }
 
     private void PointerDownCore(float x, float y, int button, bool shift, bool ctrl)
@@ -149,6 +150,8 @@ public sealed partial class EditorView
         if (drag != DragKind.None) return;
         if (PatternEditingPointerDown(x, y, button)) return;
         if (PatternGalleryPointerDown(x, y, button, shift, ctrl)) return;
+        if (BeginOverlayDrag(x, y, button)) return;
+        if (BookmarkToolbarPointerDown(x, y, button)) return;
         if (BeginTimelinePanelResize(x, y, button)) return;
         if (BeginDockHorizontal(x, y, button)) return;
         if (BeginDockPointer(x, y, button)) return;
@@ -487,6 +490,8 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (MoveOverlayDrag(x, y)) return;
+        UpdateBookmarkHover(x, y);
         if (DiscussionImageVisible) { DiscussionImagePointerMove(x, y); return; }
         if (discussionTextPressed is not null) { mouseX = x; mouseY = y; MoveDiscussionTextSelection(x, y); return; }
         if (discussionQuoteDrag is not null) { MoveDiscussionQuoteScrollbar(y); return; }
@@ -659,6 +664,7 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (overlayDragging != 0 && button == 0) { MoveOverlayDrag(x, y); FinishOverlayDrag(); return; }
         if (DiscussionImageVisible) { DiscussionImagePointerUp(x, y, button); return; }
         if (discussionTextPressed is not null) { EndDiscussionTextSelection(x, y); return; }
         if (discussionQuoteDrag is not null) { MoveDiscussionQuoteScrollbar(y); discussionQuoteDrag = null; return; }
@@ -1710,6 +1716,8 @@ public sealed partial class EditorView
         workspaceScrollDragging = false;
         FinishVolumeDrag();
         FinishBackgroundDimDrag();
+        FinishOverlayDrag();
+        bookmarkHoverAt = null; bookmarkToolbarVisible = false;
         HideCanvasBackgroundDim();
         testplayEscapeConsumed = false;
         testplaySpeedHeld = false;

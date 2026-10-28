@@ -11,26 +11,36 @@ public sealed partial class EditorView
     private double canvasDimFadeAt;
     private double? canvasDimLeftAt;
     private double CanvasDimNowMs => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
-    public Rect CanvasBackgroundDimBounds => new(canvas.X + 82, plot.Bottom - 76, Math.Min(320, Math.Max(0, canvas.Width - 104)), 32);
-    internal Rect CanvasMediaToggleBounds => new(CanvasBackgroundDimBounds.X, CanvasBackgroundDimBounds.Bottom + 4, CanvasBackgroundDimBounds.Width, 32);
-    internal Rect CanvasDiscussionToggleBounds => PanelVisible(DockPanel.Discussion) && !IsOsuCanvas
-        ? new(CanvasBackgroundDimBounds.X, CanvasBackgroundDimBounds.Y - 36, CanvasBackgroundDimBounds.Width, 32) : default;
-    private Rect CanvasOverlayControlsBounds => CanvasDiscussionToggleBounds.Width > 0
-        ? new(CanvasBackgroundDimBounds.X, CanvasDiscussionToggleBounds.Y, CanvasBackgroundDimBounds.Width, 104) : new(CanvasBackgroundDimBounds.X, CanvasBackgroundDimBounds.Y, CanvasBackgroundDimBounds.Width, 68);
+    private Rect CanvasControlsArea => new(canvas.X, canvas.Y, canvas.Width, Math.Max(0, plot.Bottom - canvas.Y));
+    private bool CanvasControlsHasDiscussion => PanelVisible(DockPanel.Discussion) && !IsOsuCanvas;
+    private float CanvasControlsScale => LibrarySettings.CanvasControlsScale;
+    private float CanvasControlsBaseWidth => Math.Min(336, Math.Max(0, canvas.Width - 104));
+    private float CanvasControlsBaseHeight => CanvasControlsHasDiscussion ? 84 : 56;
+    private Rect CanvasControlsOrigin => new(canvas.X + 82, plot.Bottom - 8 - CanvasControlsBaseHeight * CanvasControlsScale,
+        CanvasControlsBaseWidth * CanvasControlsScale, CanvasControlsBaseHeight * CanvasControlsScale);
+    internal Rect CanvasControlsPanelBounds => PositionedOverlay(CanvasControlsOrigin,
+        LibrarySettings.CanvasControlsOffsetX, LibrarySettings.CanvasControlsOffsetY, CanvasControlsArea);
+    private Rect CanvasControlsGrip => new(CanvasControlsPanelBounds.X, CanvasControlsPanelBounds.Y, 16 * CanvasControlsScale, CanvasControlsPanelBounds.Height);
+    public Rect CanvasBackgroundDimBounds => new(CanvasControlsPanelBounds.X + 16 * CanvasControlsScale,
+        CanvasControlsPanelBounds.Y + (CanvasControlsHasDiscussion ? 28 : 0) * CanvasControlsScale, CanvasControlsPanelBounds.Width - 16 * CanvasControlsScale, 28 * CanvasControlsScale);
+    internal Rect CanvasMediaToggleBounds => new(CanvasBackgroundDimBounds.X, CanvasBackgroundDimBounds.Bottom, CanvasBackgroundDimBounds.Width, 28 * CanvasControlsScale);
+    internal Rect CanvasDiscussionToggleBounds => CanvasControlsHasDiscussion
+        ? new(CanvasBackgroundDimBounds.X, CanvasControlsPanelBounds.Y, CanvasBackgroundDimBounds.Width, 28 * CanvasControlsScale) : default;
+    private Rect CanvasOverlayControlsBounds => CanvasControlsPanelBounds;
     public Rect CanvasBackgroundDimSliderBounds
     {
         get
         {
             var r = CanvasBackgroundDimBounds;
-            return new(r.X + 124, r.Y + 4, Math.Max(0, r.Width - 138), r.Height - 8);
+            return new(r.X + 124 * CanvasControlsScale, r.Y + 4 * CanvasControlsScale, Math.Max(0, r.Width - 138 * CanvasControlsScale), r.Height - 8 * CanvasControlsScale);
         }
     }
     private bool CanUseCanvasBackgroundDim => CanDropBackground && !TimingPageVisible && !TimeJumpVisible
         && !IsEditingText && drag == DragKind.None && !SliderHoldNeedsRedraw && !movementPanelPointer && dockPressed is null
         && menu < 0 && contextItems.Count == 0 && !panelMenuOpen && !volumePopoverOpen
         && !PatternGalleryPopupContains(mouseX, mouseY)
-        && CanvasBackgroundDimBounds.Width >= 160;
-    private bool PointerOverCanvasBackgroundDim => CanUseCanvasBackgroundDim && CanvasOverlayControlsBounds.Contains(mouseX, mouseY);
+        && CanvasControlsBaseWidth >= 176;
+    private bool PointerOverCanvasBackgroundDim => CanUseCanvasBackgroundDim && (CanvasOverlayControlsBounds.Contains(mouseX, mouseY) || CanvasControlsGrip.Contains(mouseX, mouseY));
     internal float CanvasBackgroundDimOpacity => canvasDimFadeFrom + (canvasDimFadeTarget - canvasDimFadeFrom)
         * (float)Math.Clamp((CanvasDimNowMs - canvasDimFadeAt) / 150, 0, 1);
 
@@ -48,7 +58,7 @@ public sealed partial class EditorView
     {
         if (!CanUseCanvasBackgroundDim) { HideCanvasBackgroundDim(); return; }
         var r = CanvasOverlayControlsBounds;
-        bool near = canvasDimDragging || new Rect(r.X - 18, r.Y - 12, r.Width + 36, r.Height + 24).Contains(mouseX, mouseY);
+        bool near = canvasDimDragging || overlayDragging == 2 || new Rect(r.X - 18, r.Y - 12, r.Width + 36, r.Height + 24).Contains(mouseX, mouseY);
         double now = CanvasDimNowMs;
         if (near)
         {
@@ -133,31 +143,40 @@ public sealed partial class EditorView
         AdvanceCanvasBackgroundDim();
         float opacity = canvasDimPaintedOpacity = CanvasBackgroundDimOpacity;
         if (opacity <= 0) return;
+        float scale = CanvasControlsScale;
+        var panel = CanvasControlsPanelBounds;
+        c.Fill(panel, 0, 5 * scale, .65f * opacity);
+        var grip = CanvasControlsGrip;
+        for (int row = -1; row <= 1; row++)
+        for (int col = 0; col < 2; col++)
+            c.Circle(grip.X + (6 + col * 4) * scale, grip.Y + grip.Height / 2 + row * 5 * scale, scale, Muted, opacity: opacity);
         var toggle = CanvasDiscussionToggleBounds;
         if (toggle.Width > 0)
-        {
-            c.Fill(toggle, 0, 5, .65f * opacity);
             c.TextOpacity((LibrarySettings.ShowCanvasDiscussionAnnotations ? "✓ " : "") + L.Get("discussion.showCanvasAnnotations"),
-                toggle.X + 10, toggle.Y + 8, 12, Foreground, toggle.Width - 20, false, opacity);
-        }
+                toggle.X + 10 * scale, toggle.Y + 6 * scale, 12 * scale, Foreground, toggle.Width - 20 * scale, false, opacity);
         var media = CanvasMediaToggleBounds;
-        c.Fill(media, 0, 5, .65f * opacity);
-        var check = new Rect(media.X + 9, media.Y + 8, 16, 16);
-        c.StrokeOpacity(check, Foreground, 1, 2, opacity);
+        var check = new Rect(media.X + 9 * scale, media.Y + 6 * scale, 16 * scale, 16 * scale);
+        c.StrokeOpacity(check, Foreground, scale, 2 * scale, opacity);
         if (LibrarySettings.EnableVideoStoryboard)
         {
-            c.Line(check.X + 3, check.Y + 8, check.X + 7, check.Y + 12, Foreground, 2, opacity);
-            c.Line(check.X + 7, check.Y + 12, check.X + 13, check.Y + 4, Foreground, 2, opacity);
+            c.Line(check.X + 3 * scale, check.Y + 8 * scale, check.X + 7 * scale, check.Y + 12 * scale, Foreground, 2 * scale, opacity);
+            c.Line(check.X + 7 * scale, check.Y + 12 * scale, check.X + 13 * scale, check.Y + 4 * scale, Foreground, 2 * scale, opacity);
         }
-        c.TextOpacity(L.Get("settings.enableVideoStoryboard"), media.X + 33, media.Y + 8, 12, Foreground, media.Width - 39, false, opacity);
+        c.TextOpacity(L.Get("settings.enableVideoStoryboard"), media.X + 33 * scale, media.Y + 6 * scale, 12 * scale, Foreground, media.Width - 39 * scale, false, opacity);
         var r = CanvasBackgroundDimBounds;
-        c.Fill(r, 0, 5, .65f * opacity);
-        c.TextOpacity(L.Get("settings.canvasBackgroundDimLabel"), r.X + 10, r.Y + 8, 12, Foreground, 110, false, opacity);
+        c.TextOpacity(L.Get("settings.canvasBackgroundDimLabel"), r.X + 10 * scale, r.Y + 6 * scale, 12 * scale, Foreground, 110 * scale, false, opacity);
         var slider = CanvasBackgroundDimSliderBounds;
         float y = slider.Y + slider.Height / 2;
         float x = slider.X + slider.Width * LibrarySettings.MappingCanvasBackgroundDim / 100f;
-        c.Line(slider.X, y, slider.Right, y, Foreground, 3, .35f * opacity);
-        c.Line(slider.X, y, x, y, Accent, 3, opacity);
-        c.Circle(x, y, 5, Accent, opacity: opacity);
+        c.Line(slider.X, y, slider.Right, y, Foreground, 3 * scale, .35f * opacity);
+        c.Line(slider.X, y, x, y, Accent, 3 * scale, opacity);
+        c.Circle(x, y, 5 * scale, Accent, opacity: opacity);
+        for (int corner = 1; corner <= 4; corner++)
+        {
+            bool left = corner is 1 or 3, top = corner is 1 or 2;
+            float cx = left ? panel.X + 2 : panel.Right - 2, cy = top ? panel.Y + 2 : panel.Bottom - 2;
+            c.Line(cx, cy, cx + (left ? 4 : -4), cy, Muted, opacity: opacity);
+            c.Line(cx, cy, cx, cy + (top ? 4 : -4), Muted, opacity: opacity);
+        }
     }
 }

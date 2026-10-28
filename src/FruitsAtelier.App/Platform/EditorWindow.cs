@@ -277,6 +277,12 @@ internal sealed partial class EditorWindow : IDisposable
             }
             // Native diagnostics exercise view gestures without saving personal preferences.
             view.RequestViewPreference = null;
+            if (Environment.GetCommandLineArgs().Contains("--canvas-overlay-render-check"))
+            {
+                Diagnostics.MappingCanvasRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
             // DXGI need not signal frame readiness for an entirely hidden window.
             if (ImmediatePresentation) Native.ShowWindow(hwnd, 4);
@@ -509,7 +515,7 @@ internal sealed partial class EditorWindow : IDisposable
                 }
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.BrowserFeedbackNeedsRedraw || view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
-                    || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.DiscussionNeedsRedraw || view.MapsetVerifierNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
+                    || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.BookmarkToolbarNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.DiscussionNeedsRedraw || view.MapsetVerifierNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
                     || view.MediaNeedsRedraw || canvas?.MediaNeedsRedraw == true || canvas?.SliderRasterNeedsRedraw == true) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: RefreshUiScale(window); Invalidate(); return 0; // WM_SIZE

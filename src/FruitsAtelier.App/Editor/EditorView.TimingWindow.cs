@@ -10,8 +10,8 @@ public sealed partial class EditorView
     private (float X, float Y) timingWindowResizePointer;
     private bool timingWindowDrawing;
     private float TimingRowScale => timingWindowDrawing || !TimingSetupVisible || TimingModal ? 1 : timingWindowScale;
-    public int FloatingPanelResizeCursor => timingWindowDragging || TimingWindowContains(mouseX, mouseY)
-        ? TimingWindowResizeCursor : MovementPanelResizeCursor;
+    public int FloatingPanelResizeCursor => CanvasControlsResizeCursor is var corner && corner != 0 ? corner
+        : timingWindowDragging || TimingWindowContains(mouseX, mouseY) ? TimingWindowResizeCursor : MovementPanelResizeCursor;
     private int TimingWindowResizeCursor => timingWindowDragging ? timingWindowCorner
         : TimingWindowContains(mouseX, mouseY) ? TimingWindowCorner(mouseX, mouseY) : 0;
 

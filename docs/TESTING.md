@@ -1435,3 +1435,14 @@ object edits, stale timing rejection and document retirement in English and Chin
 Windows `FruitsAtelier.App --render-check --timing-sv-render-check` captures and
 operates the half-size window before and after dragging at both window sizes and
 96/144/192 DPI under `artifacts/tests/timing-sv-native`.
+
+## Canvas overlay controls
+
+`App.Tests --mapping-canvas-check` verifies compact Background Dim,
+Video/Storyboard and optional Discussion annotation rows, panel dragging,
+proportional resizing from each corner down to 50%, scaled input and preference
+persistence. `App.Tests --timeline-layout-check` checks the bookmark toolbar's
+500 ms hover delay, dragging and content isolation alongside timeline controls.
+Windows `FruitsAtelier.App.exe --render-check --canvas-overlay-render-check`
+operates the panels in English and Chinese at three window sizes and three DPI
+values, with captures under `artifacts/tests/mapping-canvas-native`.
