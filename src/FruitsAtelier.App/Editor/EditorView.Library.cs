@@ -562,7 +562,7 @@ public sealed partial class EditorView
                 Math.Max(0, Math.Min(rect.Bottom, libraryListBounds.Bottom) - Math.Max(rect.Y, libraryListBounds.Y))), map));
             bool outsideSongs = group.InSongs == false;
             bool selected = selectedLibraryGroup == group.Key;
-            uint cardColour = outsideSongs ? 0x303449u : selected ? 0x304445u : Surface;
+            uint cardColour = outsideSongs ? Chrome(0x303449, MixThemeColour(Surface, Purple, .10f)) : selected ? Chrome(0x304445, SelectedSurface) : Surface;
             c.Fill(rect, cardColour, 6);
             if (outsideSongs && selected) c.Stroke(rect, Accent, 2, 6);
             c.Clip(rect);
@@ -582,7 +582,7 @@ public sealed partial class EditorView
                 string presence = L.Get("library.notInSongs");
                 float badgeWidth = c.MeasureText(presence, 11) + 16;
                 var badge = new Rect(rect.Right - badgeWidth - 12, y + 49, badgeWidth, 22);
-                c.Fill(badge, 0x41465Fu, 4);
+                c.Fill(badge, Chrome(0x41465F, MixThemeColour(Surface, Purple, .15f)), 4);
                 c.Text(presence, badge.X + 8, y + 53, 11, Foreground, badgeWidth - 16);
                 countWidth = Math.Max(0, badge.X - 324);
             }
@@ -630,14 +630,14 @@ public sealed partial class EditorView
                 || diff.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))) pending.Add(diff);
             float y = 334 + (i - libraryDiffScroll) * 40;
             var row = new Rect(x - 4, y - 5, 296, 38);
-            if (row.Contains(mouseX, mouseY)) c.Fill(row, 0x2B3542, 4);
+            if (row.Contains(mouseX, mouseY)) c.Fill(row, Chrome(0x2B3542, HoverSurface), 4);
             hits.Add(new(row, () => OpenSelectedLibraryMap(diff, selectDifficulty: true), true));
             libraryRatings.TryGetValue(diff.Path, out var stars);
             if (stars >= 6.7) c.Circle(x + 11, y + 11, 11, 0xE7EBF2);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "osu", "RulesetCatch.png"), new(x, y, 22, 22), DifficultyColour(stars));
-            c.Text(diff.Difficulty, x + 32, y + 3, 13, diff.ExternalMissing || diff.ReferenceSearching ? 0x718092u : Foreground, 200);
+            c.Text(diff.Difficulty, x + 32, y + 3, 13, diff.ExternalMissing || diff.ReferenceSearching ? Chrome(0x718092, Muted) : Foreground, 200);
             if (diff.ReferenceSearching) c.Text(L.Get("sync.searchingReference"), x + 32, y + 20, 10, Muted, 200);
-            else if (diff.ExternalMissing) c.Text(L.Get("sync.missingBadge"), x + 32, y + 20, 10, 0x718092, 200);
+            else if (diff.ExternalMissing) c.Text(L.Get("sync.missingBadge"), x + 32, y + 20, 10, Chrome(0x718092, Muted), 200);
             else if (diff.Mode != 2) c.Text(diff.Mode == 0 ? L.Get("sync.readOnlyStandard") : L.Get("sync.readOnlyMode", diff.Mode), x + 32, y + 20, 10, Muted, 200);
             c.Text(stars is null ? "—" : stars.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "★", x + 238, y + 3, 12, Foreground, 60);
         }

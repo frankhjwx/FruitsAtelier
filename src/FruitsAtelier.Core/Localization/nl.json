@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "Dichtstbijzijnde slag {0}/{1} · {2} · tijdelijke Snap 1/{3}",
   "editor.status.noteOffGrid": "Off-grid · {0}",
   "editor.status.objectsCopied": "Gekopieerde {0}-objecten · Plakken lijnt het vroegste begin uit met de afspeelkop",
+  "editor.status.timestampCopied": "Tijdstempel naar het klembord gekopieerd",
   "editor.status.objectsCut": "{0}-objecten knippen · Ctrl + Z om ongedaan te maken",
   "editor.status.objectsDeleted": "Deleted {0} objecten · Ctrl + Z om ongedaan te maken",
   "editor.status.objectsPasted": "{0}-objecten in de afspeelkop geplakt · Ctrl + Z om ongedaan te maken",
@@ -1302,6 +1303,7 @@
   "randomize.disableAll": "Randomisatie uitschakelen voor alle FSliders",
   "randomize.enableSelected": "Randomisatie inschakelen",
   "randomize.disableSelected": "Randomisatie uitschakelen",
+  "randomize.advanced": "Geavanceerde instellingen",
   "randomize.resetStrength": "Sterkte resetten (20)",
   "randomize.resetAdjustments": "Handmatige aanpassingen herstellen",
   "randomize.settings": "Randomisatie-instellingen…",
@@ -1932,5 +1934,13 @@
   "timing.sourceChanged": "De timing in de editor is gewijzigd. Open dit venster opnieuw voordat je de wijzigingen toepast.",
   "media.storyboardDiagnostics": "Storyboard: {0} ongeldige opdrachten of bronnen overgeslagen.",
   "media.storyboardFailed": "Storyboard kon niet worden geladen: {0}",
-  "media.loading": "Beatmapbronnen voorbereiden…"
+  "media.loading": "Beatmapbronnen voorbereiden…",
+  "settings.editorTheme": "Editorthema",
+  "settings.theme.graphite": "Grafiet",
+  "settings.theme.studio": "Studio",
+  "settings.theme.pearl": "Zwarte parel",
+  "settings.theme.midnight": "Middernacht",
+  "settings.theme.forest": "Bos",
+  "settings.theme.rose": "Roos",
+  "settings.theme.slate": "Leisteen"
 }

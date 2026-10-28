@@ -139,7 +139,7 @@ public sealed partial class EditorView
         string state = galleryTagError.Length > 0 ? galleryTagError
             : GalleryExistingTagDraft is not null ? L.Get("gallery.existingTagHint")
             : galleryTagCreating ? L.Get("gallery.tagDraftHint") : L.Get(galleryCurrentTagEdit?.Pending == true || galleryTagSaving?.Edit == galleryCurrentTagEdit ? "gallery.tagSaving" : "gallery.tagSaved");
-        c.Text(state, x, box.Y + 100, 11, galleryTagError.Length > 0 ? 0xFF9A9Au : Muted, rw);
+        c.Text(state, x, box.Y + 100, 11, galleryTagError.Length > 0 ? Error : Muted, rw);
         c.Text(L.Get("gallery.tagName"), x, box.Y + 124, 12, Muted, rw);
         galleryTagNameBounds = new(x, box.Y + 144, rw, 32);
         DrawGalleryTagField(c, galleryTagNameBounds, "gallery:tag-name", galleryTagName);
@@ -181,9 +181,9 @@ public sealed partial class EditorView
     private void GalleryTagActionButton(ICanvas c, Rect bounds, string label, Action action, bool primary = false, bool danger = false, bool enabled = true)
     {
         bool hover = enabled && bounds.Contains(mouseX, mouseY);
-        uint fill = !enabled ? Surface : primary ? Accent : danger ? 0x3B292Fu : hover ? 0x354353u : Surface;
-        uint border = !enabled ? Grid : primary ? Accent : danger ? 0x87505Cu : hover ? Muted : Grid;
-        uint ink = !enabled ? Muted : primary ? 0x13282Au : danger ? 0xFFABABu : Foreground;
+        uint fill = !enabled ? Surface : primary ? Accent : danger ? MixThemeColour(Surface, Error, .15f) : hover ? Chrome(0x354353, HoverSurface) : Surface;
+        uint border = !enabled ? Grid : primary ? Accent : danger ? Error : hover ? Muted : Grid;
+        uint ink = !enabled ? Muted : primary ? AccentForeground : danger ? Error : Foreground;
         c.Fill(bounds, fill, 5); c.Stroke(bounds, border, radius: 5);
         float labelWidth = c.MeasureText(label, 12, primary);
         c.Text(label, bounds.X + Math.Max(9, (bounds.Width - labelWidth) / 2), bounds.Y + 9, 12, ink, bounds.Width - 18, primary);

@@ -100,7 +100,8 @@ internal static class DockingRenderCheck
                 editor.Wheel(horizontalBounds.X + 10, horizontalBounds.Y + 20, 1200, false, true); Paint();
                 var inspectorBounds = editor.SliderInspectorViewport;
                 editor.Wheel(inspectorBounds.X + 10, inspectorBounds.Y + 40, -12000, false, false); Paint("inspector-scrolled");
-                editor.ShowRandomDock(); Paint();
+                editor.ShowRandomDock(); Paint("random-collapsed");
+                Click(editor.RandomDockAdvancedBounds); Paint("random-expanded");
                 var tabBar = editor.DockTabBounds(EditorView.DockPanel.RandomizeDroplets);
                 var activeViewport = editor.RandomDockViewport;
                 editor.Wheel(tabBar.X + 2, tabBar.Y + 2, 12000, false); Paint("tabs-wheel-left");
@@ -109,8 +110,10 @@ internal static class DockingRenderCheck
                 if (editor.DockTabBounds(EditorView.DockPanel.RandomizeDroplets) == randomTabAfterLeft
                     || editor.RandomDockViewport != activeViewport)
                     throw new InvalidOperationException("Wheel did not scroll the tabs while retaining the active panel.");
-                var randomField = editor.RandomDockValueBounds(0); Click(randomField);
-                editor.KeyDown(65, true, false); editor.PasteFieldText("70"); Paint();
+                var randomField = editor.RandomDockValueBounds(0);
+                float strengthX = randomField.X + 7 + (randomField.Width - 14) * .7f;
+                editor.PointerDown(strengthX, randomField.Y + 16, 0, false, false);
+                editor.PointerUp(strengthX, randomField.Y + 16, 0); Paint();
                 var deadline = DateTime.UtcNow.AddSeconds(30);
                 while (!editor.RandomDockValid && DateTime.UtcNow < deadline) { Thread.Sleep(5); Paint(); }
                 if (!editor.RandomDockValid || editor.Document.RandomizeDropletStrength != 70)

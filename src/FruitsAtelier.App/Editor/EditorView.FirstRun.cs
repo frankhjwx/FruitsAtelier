@@ -143,7 +143,7 @@ public sealed partial class EditorView
         }
         var r = SettingsBounds;
         float tabWidth = r.Width / FirstRunTitles.Length;
-        uint TabColour(int i) => i == firstRunStep ? Accent : i % 2 == 0 ? Surface : 0x303845u;
+        uint TabColour(int i) => i == firstRunStep ? Accent : i % 2 == 0 ? Surface : Chrome(0x303845, HoverSurface);
         c.Clip(new(r.X, r.Y, r.Width, 46));
         for (int i = 0; i < FirstRunTitles.Length; i++)
             c.Fill(new(r.X + i * tabWidth, r.Y, tabWidth, 46), TabColour(i));
@@ -165,7 +165,7 @@ public sealed partial class EditorView
         {
             float x = r.X + i * tabWidth;
             c.Text(L.Get("setup.step", i + 1, L.Get(FirstRunTitles[i])), x + 30, r.Y + 15, 12,
-                Foreground, tabWidth - 46, true);
+                i == firstRunStep ? Chrome(0xE7EBF2, AccentForeground) : Foreground, tabWidth - 46, true);
         }
         c.Unclip();
         c.Fill(new(r.X, r.Y + 60, r.Width, r.Height - 60), Panel, 8);

@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "最近的節拍 {0}/{1} · {2} · 臨時快照 1/{3}",
   "editor.status.noteOffGrid": "離網·{0}",
   "editor.status.objectsCopied": "複製的 {0} 物件 · 貼上將最早的開始位置與播放頭對齊",
+  "editor.status.timestampCopied": "已複製時間戳記到剪貼簿",
   "editor.status.objectsCut": "剪切 {0} 物件 · Ctrl + Z 撤銷",
   "editor.status.objectsDeleted": "Deleted {0} 要撤銷的物件 · Ctrl + Z",
   "editor.status.objectsPasted": "在播放頭處貼上了 {0} 物件 · Ctrl + Z 要撤銷",
@@ -1302,6 +1303,7 @@
   "randomize.disableAll": "停用所有 FSlider 的隨機化",
   "randomize.enableSelected": "開啟隨機化",
   "randomize.disableSelected": "關閉隨機化",
+  "randomize.advanced": "進階設定",
   "randomize.resetStrength": "重設強度（20）",
   "randomize.resetAdjustments": "重設水滴手動修正",
   "randomize.settings": "隨機化設定…",
@@ -1932,5 +1934,13 @@
   "timing.sourceChanged": "編輯器中的 Timing 已變更。請重新開啟此視窗後再套用。",
   "media.storyboardDiagnostics": "故事板：已略過 {0} 條無效指令或資源。",
   "media.storyboardFailed": "無法載入故事板：{0}",
-  "media.loading": "正在準備譜面資源…"
+  "media.loading": "正在準備譜面資源…",
+  "settings.editorTheme": "編輯器主題",
+  "settings.theme.graphite": "石墨",
+  "settings.theme.studio": "工作站",
+  "settings.theme.pearl": "黑珍珠",
+  "settings.theme.midnight": "午夜",
+  "settings.theme.forest": "森林",
+  "settings.theme.rose": "玫瑰",
+  "settings.theme.slate": "岩灰"
 }

@@ -155,11 +155,16 @@ public sealed partial class EditorView
 
     private void ShowGalleryImportDestination(string path)
     {
+        ShowGalleryImportDestination(folder => ImportGalleryInto(path, folder));
+    }
+
+    private void ShowGalleryImportDestination(Action<Guid?> import)
+    {
         if (galleryStore is null || galleryIoTask is not null) return;
         contextItems.Clear(); menu = -1;
-        contextItems.Add(new(L.Get("gallery.importNewFolders"), () => ImportGalleryInto(path, null), Active: true));
+        contextItems.Add(new(L.Get("gallery.importNewFolders"), () => import(null), Active: true));
         contextItems.Add(new(L.Get("gallery.importExistingFolders"), () => { }, Children:
-            galleryFolders.Select(folder => new ContextItem(folder.Name, () => ImportGalleryInto(path, folder.Id))).ToArray()));
+            galleryFolders.Select(folder => new ContextItem(folder.Name, () => import(folder.Id))).ToArray()));
         PositionGalleryMenu(galleryBounds.X, galleryBounds.Y + 64);
     }
 
@@ -187,6 +192,7 @@ public sealed partial class EditorView
         if (!CanEditGalleryTags || gallerySelection.Count == 0) return;
         galleryClipboard = galleryFilteredPatterns.Where(p => gallerySelection.Contains(p.Id)).Select(p => p.Id).ToArray();
         galleryClipboardCut = cut;
+        if (!cut && galleryClipboard.Length == 1) CopyPatternText(galleryPatterns.Single(p => p.Id == galleryClipboard[0]));
         galleryPopupId = Guid.Empty;
     }
 

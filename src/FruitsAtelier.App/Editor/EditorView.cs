@@ -8,9 +8,31 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private const uint Background = 0x171A20, Panel = 0x20252E, Surface = 0x282F3A;
-    private const uint Foreground = 0xE7EBF2, Muted = 0x9AA8BC, Grid = 0x343C49;
-    private const uint Accent = 0x59D3C3, Gold = 0xF2C66D, Purple = 0xAB9DF2, Error = 0xFF7F8D;
+    private EditorThemePalette Theme => EditorThemePalette.For(librarySettingsOpen ? draftEditorTheme : LibrarySettings.EditorTheme);
+    private uint Background => Theme.Background;
+    private uint Panel => Theme.Panel;
+    private uint Surface => Theme.Surface;
+    private uint Foreground => Theme.Foreground;
+    private uint Muted => Theme.Muted;
+    private uint Grid => Theme.Grid;
+    private uint Accent => Theme.Accent;
+    private uint Gold => Theme.Gold;
+    private uint Purple => Theme.Purple;
+    private uint Error => Theme.Error;
+    private uint HoverSurface => MixThemeColour(Surface, Foreground, .08f);
+    private uint SelectedSurface => MixThemeColour(Surface, Accent, .18f);
+    private uint SelectedHoverSurface => MixThemeColour(Surface, Accent, .28f);
+    private uint AccentForeground => ((Accent >> 16 & 255) * 299 + (Accent >> 8 & 255) * 587 + (Accent & 255) * 114) > 145000 ? 0x171A20u : 0xFFFFFFu;
+    private static uint MixThemeColour(uint from, uint to, float amount)
+    {
+        uint Channel(int shift) => (uint)(((from >> shift) & 255) * (1 - amount) + ((to >> shift) & 255) * amount);
+        return Channel(16) << 16 | Channel(8) << 8 | Channel(0);
+    }
+    private bool UsesGraphiteTheme => ReferenceEquals(Theme, EditorThemePalette.For(EditorThemeId.Graphite));
+    internal bool LightEditorTheme => ((Background >> 16 & 255) * 299 + (Background >> 8 & 255) * 587 + (Background & 255) * 114) > 145000;
+    internal uint TitleBarBackground => Chrome(0x1B2028, Panel);
+    internal uint TitleBarForeground => Foreground;
+    private uint Chrome(uint graphite, uint themed) => UsesGraphiteTheme ? graphite : themed;
     private sealed class DifficultySession(ProjectDifficulty difficulty)
     {
         public Guid Id { get; } = difficulty.Id;
@@ -123,7 +145,7 @@ public sealed partial class EditorView
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectNotes != savedProjectNotes || projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
     public bool IsEditingText => PatternNameVisible || GalleryTagTextFocused || GallerySearchFocused || MapTemplatesVisible || addDifficultyConfirmation || CollaborationFocused || RandomDockFocused || SongDockFocused || NotesFocused || PatternDockEditing && (stackNumericField >= 0 || bananaEditField >= 0) || BananaEditVisible && bananaEditField >= 0 || HitsoundCopierVisible && copierNewDiff && copierNameFocused || StreamDialogVisible && stackMode && stackNumericField >= 0 || timingField.Length > 0 || SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || RotationVisible || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
-    public bool WantsCapture => verifierScrollbarDragging || discussionTextPressed is not null || discussionPreviewDragging || discussionQuoteDrag is not null || discussionScrollbarDragging || galleryTagOrderPressed is not null || galleryTagDrag != 0 || PatternGalleryWantsCapture || templatePointer || collaborationReportDragging || rotationWindowDragging || rotationDragging || aimodGesture != AimodGesture.None || dockHorizontalDrag is not null || randomDragging || notesSelecting || dockPressed is not null || acknowledgementsScrollDragging || canvasDimDragging || movementPanelPointer || backgroundDimDragging || workspaceScrollDragging || timingWindowDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || stackPointDragging >= 0 || stackFruitDragging >= 0 || SliderHoldNeedsRedraw || sliderHoldConsumed;
+    public bool WantsCapture => overlayDragging != 0 || verifierScrollbarDragging || discussionTextPressed is not null || discussionPreviewDragging || discussionQuoteDrag is not null || discussionScrollbarDragging || galleryTagOrderPressed is not null || galleryTagDrag != 0 || PatternGalleryWantsCapture || templatePointer || collaborationReportDragging || rotationWindowDragging || rotationDragging || aimodGesture != AimodGesture.None || dockHorizontalDrag is not null || randomDragging || notesSelecting || dockPressed is not null || acknowledgementsScrollDragging || canvasDimDragging || movementPanelPointer || backgroundDimDragging || workspaceScrollDragging || timingWindowDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || stackPointDragging >= 0 || stackFruitDragging >= 0 || SliderHoldNeedsRedraw || sliderHoldConsumed;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;

@@ -48,14 +48,14 @@ public sealed partial class EditorView
         bool active = item.Active || ReferenceEquals(item, contextSubmenu);
         if (active)
         {
-            c.Fill(rect, hover ? 0x3A6260u : 0x31494Bu, 4);
-            c.Stroke(rect, 0x477E7B, 1, 4);
+            c.Fill(rect, hover ? Chrome(0x3A6260, SelectedHoverSurface) : Chrome(0x31494B, SelectedSurface), 4);
+            c.Stroke(rect, Chrome(0x477E7B, Accent), 1, 4);
         }
-        else if (hover) c.Fill(rect, 0x343E4D, 4);
-        c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? item.Color ?? (active ? Accent : Foreground) : 0x5B6777, rect.Width - (item.Shortcut.Length > 0 ? 90 : item.Children is not null ? 34 : 18), active);
+        else if (hover) c.Fill(rect, Chrome(0x343E4D, HoverSurface), 4);
+        c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? item.Color ?? (active ? Accent : Foreground) : Chrome(0x5B6777, Muted), rect.Width - (item.Shortcut.Length > 0 ? 90 : item.Children is not null ? 34 : 18), active);
         if (item.Children is not null)
         {
-            uint color = item.Enabled ? Foreground : 0x5B6777;
+            uint color = item.Enabled ? Foreground : Chrome(0x5B6777, Muted);
             c.Line(rect.Right - 17, rect.Y + 10, rect.Right - 12, rect.Y + 15, color);
             c.Line(rect.Right - 12, rect.Y + 15, rect.Right - 17, rect.Y + 20, color);
         }
@@ -63,7 +63,7 @@ public sealed partial class EditorView
         if (shortcut.Length > 0)
         {
             float shortcutWidth = c.MeasureText(shortcut, 11);
-            c.Text(shortcut, rect.Right - 9 - shortcutWidth, rect.Y + 7, 11, item.Enabled ? Muted : 0x5B6777, shortcutWidth + 1);
+            c.Text(shortcut, rect.Right - 9 - shortcutWidth, rect.Y + 7, 11, item.Enabled ? Muted : Chrome(0x5B6777, Muted), shortcutWidth + 1);
         }
     }
 

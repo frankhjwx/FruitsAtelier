@@ -1,5 +1,17 @@
 # Building and Testing
 
+## Editor theme checks
+
+`App.Tests --editor-theme-check` verifies all seven themes in English and Chinese,
+live preview and cancellation, settings persistence, compatibility with older or
+unknown theme IDs, per-editor isolation, text contrast and unchanged map content
+and osu! skin selection. It also runs the multilingual settings layout checks.
+
+On Windows, `FruitsAtelier.App --render-check --editor-theme-render-check` operates
+the Appearance selector through native pointer input, checks Windows title-bar
+colour application, and captures each theme's settings and full editor window
+under `artifacts/tests/editor-themes-native`.
+
 ## Video and storyboard playback
 
 `App.Tests --storyboard-source-cache-check` checks scene reuse for ordinary General
@@ -353,6 +365,11 @@ settings, saved AR, hyperdash starts and deterministic previews. `Formats.Tests 
 checks snapshot isolation, AR-preserving `.fpt` round trips, rename/delete persistence,
 validation and atomic gallery writes, folder migration, copy/move identity isolation,
 folder merges/deletion, Default preservation, version 4 folder packages and import collisions.
+`App.Tests --pattern-clipboard-check` checks visible Base64 text round trips, malformed
+input, a 100-character budget for short mixed and 20-fruit fixtures, archive-text compatibility,
+cross-language decoding, cross-editor matching, beat-relative playhead insertion, complete selection,
+undo/redo and import of unknown patterns in English and Chinese.
+
 `App.Tests --pattern-gallery-check` checks gallery input, placement choices/cancellation,
 drop/undo, context rename/delete, fixed card sizes during dock resizing,
 preview alignment, saved-AR spacing, canvas scroll-direction settings, scrollbar position,
@@ -1435,3 +1452,14 @@ object edits, stale timing rejection and document retirement in English and Chin
 Windows `FruitsAtelier.App --render-check --timing-sv-render-check` captures and
 operates the half-size window before and after dragging at both window sizes and
 96/144/192 DPI under `artifacts/tests/timing-sv-native`.
+
+## Canvas overlay controls
+
+`App.Tests --mapping-canvas-check` verifies compact Background Dim,
+Video/Storyboard and optional Discussion annotation rows, panel dragging,
+proportional resizing from each corner down to 50%, scaled input and preference
+persistence. `App.Tests --timeline-layout-check` checks the bookmark toolbar's
+250 ms hover delay and fade to full opacity at 500 ms, dragging and content isolation alongside timeline controls.
+Windows `FruitsAtelier.App.exe --render-check --canvas-overlay-render-check`
+operates the panels in English and Chinese at three window sizes and three DPI
+values, with captures under `artifacts/tests/mapping-canvas-native`.

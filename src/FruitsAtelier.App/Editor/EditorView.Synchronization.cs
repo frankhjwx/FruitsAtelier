@@ -663,7 +663,7 @@ public sealed partial class EditorView
         }
         catch (Exception e) { ShowError(e.Message); }
     }
-    private static void DrawSyncValue(ICanvas c, string value, float x, float y, float w)
+    private void DrawSyncValue(ICanvas c, string value, float x, float y, float w)
     {
         var lines = value.Split('\n');
         for (int i = 0; i < Math.Min(4, lines.Length); i++) c.Text(lines[i], x, y + i * 21, 12, Foreground, w);

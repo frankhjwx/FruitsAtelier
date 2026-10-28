@@ -218,8 +218,8 @@ public sealed partial class EditorView
         if (MovementPanelBounds() is not { } r) return;
         float scale = r.Width / MovementPanelWidth;
         MovementOverlayBounds = r;
-        c.Fill(r, 0x171C24, 6 * scale, .82f);
-        c.Stroke(r, 0x424D5C, scale, 6 * scale);
+        c.Fill(r, Chrome(0x171C24, Background), 6 * scale, .82f);
+        c.Stroke(r, Chrome(0x424D5C, Muted), scale, 6 * scale);
         c.Text(L.Get("movement.previous", Label(MovementReadout.Previous)), r.X + 10 * scale, r.Y + 7 * scale, MovementPanelFontSize * scale, Foreground, r.Width / 2 - 14 * scale);
         string next = L.Get("movement.next", Label(MovementReadout.Next));
         float nextWidth = Math.Min(c.MeasureText(next, MovementPanelFontSize * scale), r.Width / 2 - 14 * scale);

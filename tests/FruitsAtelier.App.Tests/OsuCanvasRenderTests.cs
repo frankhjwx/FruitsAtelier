@@ -21,6 +21,7 @@ internal static class OsuCanvasRenderTests
         OsuMappingPresentationTests.Run();
         StableGridAndControlMarkers();
         QuantizedTrackGeometry();
+        TemporalLayers();
         var collapsed = new MapDocument { DurationMs = 10000, IsDemo = false };
         var collapsedSlider = new ImportedSlider { X = 100, Y = 96, TimeMs = 1000, PixelLength = 140 };
         collapsedSlider.ControlPoints.AddRange([new(100, 96), new(100, 96)]);
@@ -131,6 +132,22 @@ internal static class OsuCanvasRenderTests
         var item = items.GetValue(0)!;
         var actual = (IReadOnlyList<SliderPathPoint>)item.GetType().GetField("Path")!.GetValue(item)!;
         if (!actual.SequenceEqual(expected)) throw new Exception("Readonly FSlider canvas did not use exported integer geometry.");
+    }
+
+    private static void TemporalLayers()
+    {
+        var map = new MapDocument { DurationMs = 5000, IsDemo = false };
+        map.Fruits.AddRange([new() { TimeMs = 1000, X = 100, Y = 100 }, new() { TimeMs = 1100, X = 110, Y = 100 }]);
+        var ui = new Ui(false); ui.LoadDocument(map); ui.View.ToggleOsuCanvas(); ui.Key('1');
+        foreach (var (time, foreground) in new[] { (1000, 0), (1100, 1), (1050, 0), (1200, 1) })
+        {
+            ui.View.UpdateTransport(time, 5000, true, false, false, null, "fixture.wav"); ui.Paint();
+            var expected = ui.View.OsuCanvasScreen(map.Fruits[foreground].X, 100);
+            var overlap = ui.View.OsuCanvasScreen(105, 100);
+            var last = ui.Canvas.Circles.Last(c => c.Filled && Math.Abs(c.Y - expected.Y) < .05);
+            if (Math.Abs(last.X - expected.X) > .05 || ui.View.OsuCanvasHit(overlap.X, overlap.Y) != map.Fruits[foreground].Id)
+                throw new Exception("Standard canvas picking and visible foreground disagree at " + time);
+        }
     }
 
     private static void StableGridAndControlMarkers()

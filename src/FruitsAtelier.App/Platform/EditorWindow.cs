@@ -40,6 +40,7 @@ internal sealed partial class EditorWindow : IDisposable
         ConfigureFiles();
         ConfigureOsuLinks();
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
+        view.RequestPasteObjects = () => view.PasteClipboardText(Native.ReadClipboardText(hwnd));
         view.RequestClearBrowserData = () =>
         {
             var previous = osuBrowser; osuBrowser = null;
@@ -112,8 +113,7 @@ internal sealed partial class EditorWindow : IDisposable
         if (hwnd == 0) throw new Win32Exception();
         Native.DragAcceptFiles(hwnd, true);
         dpi = Native.GetDpiForWindow(hwnd);
-        int dark = 1;
-        Native.DwmSetWindowAttribute(hwnd, 20, ref dark, 4);
+        RefreshTitleBarTheme();
         Native.GetClientRect(hwnd, out var client);
         RefreshUiScale(hwnd);
         canvas = new D2DCanvas(hwnd, client.Right, client.Bottom, uiDpi) { Performance = view.Performance };
@@ -189,6 +189,10 @@ internal sealed partial class EditorWindow : IDisposable
             if (Environment.GetCommandLineArgs().Contains("--osu-link-render-check"))
             {
                 CheckOsuLinks(); Native.DestroyWindow(hwnd); return 0;
+            }
+            if (Environment.GetCommandLineArgs().Contains("--editor-theme-render-check"))
+            {
+                CheckEditorThemes(); Native.DestroyWindow(hwnd); return 0;
             }
             if (Environment.GetCommandLineArgs().Contains("--ui-scale-render-check") || Environment.GetCommandLineArgs().Contains("--timeline-layout-render-check"))
             {
@@ -277,6 +281,12 @@ internal sealed partial class EditorWindow : IDisposable
             }
             // Native diagnostics exercise view gestures without saving personal preferences.
             view.RequestViewPreference = null;
+            if (Environment.GetCommandLineArgs().Contains("--canvas-overlay-render-check"))
+            {
+                Diagnostics.MappingCanvasRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
             // DXGI need not signal frame readiness for an entirely hidden window.
             if (ImmediatePresentation) Native.ShowWindow(hwnd, 4);
@@ -443,6 +453,7 @@ internal sealed partial class EditorWindow : IDisposable
                     if (canvas is not null && rect.Right > 0 && rect.Bottom > 0 && !Native.IsIconic(window))
                     {
                         RefreshUiScale(window);
+                        RefreshTitleBarTheme();
                         RecordFrameGap();
                         // Continuous repainting can starve WM_TIMER, including update status polling.
                         renderTimer.Restart();
@@ -509,7 +520,7 @@ internal sealed partial class EditorWindow : IDisposable
                 }
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.BrowserFeedbackNeedsRedraw || view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
-                    || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.DiscussionNeedsRedraw || view.MapsetVerifierNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
+                    || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.BookmarkToolbarNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.DiscussionNeedsRedraw || view.MapsetVerifierNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
                     || view.MediaNeedsRedraw || canvas?.MediaNeedsRedraw == true || canvas?.SliderRasterNeedsRedraw == true) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: RefreshUiScale(window); Invalidate(); return 0; // WM_SIZE

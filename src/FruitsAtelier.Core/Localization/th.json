@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "จังหวะที่ใกล้ที่สุด {0}/{1} · {2} · Snap ชั่วคราว 1/{3}",
   "editor.status.noteOffGrid": "นอกระบบ · {0}",
   "editor.status.objectsCopied": "คัดลอกวัตถุ {0} แล้ว · การวางจะจัดตำแหน่งจุดเริ่มต้นแรกสุดให้กับส่วนหัวของตัวควบคุมการเล่น",
+  "editor.status.timestampCopied": "คัดลอกเวลาลงในคลิปบอร์ดแล้ว",
   "editor.status.objectsCut": "ตัดวัตถุ {0} · Ctrl + Z เพื่อเลิกทำ",
   "editor.status.objectsDeleted": "อ็อบเจ็กต์ Deleted {0} · Ctrl + Z เพื่อเลิกทำ",
   "editor.status.objectsPasted": "วางวัตถุ {0} ที่ส่วนหัวของตัวควบคุมการเล่น · Ctrl + Z เพื่อเลิกทำ",
@@ -1302,6 +1303,7 @@
   "randomize.disableAll": "ปิดการสุ่มสำหรับ FSlider ทั้งหมด",
   "randomize.enableSelected": "เปิดการสุ่ม",
   "randomize.disableSelected": "ปิดการสุ่ม",
+  "randomize.advanced": "การตั้งค่าขั้นสูง",
   "randomize.resetStrength": "รีเซ็ตความแรง (20)",
   "randomize.resetAdjustments": "รีเซ็ตการปรับหยดน้ำด้วยตนเอง",
   "randomize.settings": "ตั้งค่าการสุ่ม…",
@@ -1932,5 +1934,13 @@
   "timing.sourceChanged": "Timing ในตัวแก้ไขเปลี่ยนไปแล้ว โปรดเปิดหน้าต่างนี้ใหม่ก่อนนำไปใช้",
   "media.storyboardDiagnostics": "สตอรีบอร์ด: ข้ามคำสั่งหรือทรัพยากรที่ไม่ถูกต้อง {0} รายการ",
   "media.storyboardFailed": "ไม่สามารถโหลดสตอรีบอร์ดได้: {0}",
-  "media.loading": "กำลังเตรียมทรัพยากรบีตแมป…"
+  "media.loading": "กำลังเตรียมทรัพยากรบีตแมป…",
+  "settings.editorTheme": "ธีมตัวแก้ไข",
+  "settings.theme.graphite": "กราไฟต์",
+  "settings.theme.studio": "สตูดิโอ",
+  "settings.theme.pearl": "ไข่มุกดำ",
+  "settings.theme.midnight": "เที่ยงคืน",
+  "settings.theme.forest": "ป่า",
+  "settings.theme.rose": "กุหลาบ",
+  "settings.theme.slate": "หินชนวน"
 }

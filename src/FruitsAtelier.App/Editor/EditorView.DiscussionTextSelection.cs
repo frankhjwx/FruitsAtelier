@@ -89,7 +89,7 @@ public sealed partial class EditorView
         int end = Math.Min(run.TextStart + run.Text.Length, Math.Max(discussionTextAnchor, discussionTextEnd));
         if (end <= start) return;
         float x = Measure(start - run.TextStart), right = Measure(end - run.TextStart);
-        c.Fill(new(bounds.X + x, bounds.Y, Math.Max(0, right - x), bounds.Height), 0x3B708B, 2, .8f);
+        c.Fill(new(bounds.X + x, bounds.Y, Math.Max(0, right - x), bounds.Height), Chrome(0x3B708B, SelectedSurface), 2, .8f);
         float Measure(int length) => c.MeasureStyledText(run.Text[..length], 12,
             run.Style.HasFlag(DiscussionTextStyle.Bold), run.Style.HasFlag(DiscussionTextStyle.Italic));
     }

@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "Battement le plus proche {0}/{1} · {2} · Snap temporaire 1/{3}",
   "editor.status.noteOffGrid": "Hors réseau · {0}",
   "editor.status.objectsCopied": "Objets {0} copiés · Coller aligne le premier démarrage sur la tête de lecture",
+  "editor.status.timestampCopied": "Horodatage copié dans le presse-papiers",
   "editor.status.objectsCut": "Couper les objets {0} · Ctrl + Z pour annuler",
   "editor.status.objectsDeleted": "Objets Deleted {0} · Ctrl + Z pour annuler",
   "editor.status.objectsPasted": "Objets {0} collés au niveau de la tête de lecture · Ctrl + Z pour annuler",
@@ -1302,6 +1303,7 @@
   "randomize.disableAll": "Désactiver la randomisation de tous les FSliders",
   "randomize.enableSelected": "Activer la randomisation",
   "randomize.disableSelected": "Désactiver la randomisation",
+  "randomize.advanced": "Paramètres avancés",
   "randomize.resetStrength": "Réinitialiser l’intensité (20)",
   "randomize.resetAdjustments": "Réinitialiser les ajustements manuels",
   "randomize.settings": "Réglages de randomisation…",
@@ -1932,5 +1934,13 @@
   "timing.sourceChanged": "Le timing a changé dans l’éditeur. Rouvrez cette fenêtre avant d’appliquer.",
   "media.storyboardDiagnostics": "Storyboard : {0} commandes ou ressources non valides ont été ignorées.",
   "media.storyboardFailed": "Impossible de charger le storyboard : {0}",
-  "media.loading": "Préparation des ressources de la beatmap…"
+  "media.loading": "Préparation des ressources de la beatmap…",
+  "settings.editorTheme": "Thème de l’éditeur",
+  "settings.theme.graphite": "Graphite",
+  "settings.theme.studio": "Studio",
+  "settings.theme.pearl": "Perle noire",
+  "settings.theme.midnight": "Minuit",
+  "settings.theme.forest": "Forêt",
+  "settings.theme.rose": "Rose",
+  "settings.theme.slate": "Ardoise"
 }

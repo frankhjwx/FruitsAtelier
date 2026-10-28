@@ -103,11 +103,11 @@ internal static class InspectorPanelsTests
                 SetStrength("70"); Wait();
                 var preview = ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X)).ToArray();
                 Check(!preview.SequenceEqual(baseline) && ui.View.Document.RandomizeDropletStrength == 70 && ui.View.IsDirty,
-                    "Randomization edits immediately update content and canvas");
+                    $"Randomization edits immediately update content and canvas ({ui.View.Document.RandomizeDropletStrength})");
                 Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply") || t.Value == L.Get("mac.cancel")), "Random panel has no confirmation controls");
-                ui.Key(27); ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Randomization edit undoes in one step");
-                ui.Paint(); Wait(); SetStrength("101");
-                Check(!ui.View.RandomDockValid && ui.View.Document.ContentEquals(map), "Invalid strength cannot change content");
+                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Randomization edit undoes in one step");
+                ui.Paint(); Wait(); SetStrength("90");
+                Check(ui.View.RandomDockValid && ui.View.Document.RandomizeDropletStrength == 90, "Strength slider remains editable after undo");
                 RandomActions();
                 ui.View.ShowSongDock(); ui.Paint();
                 var song = ui.View.SongDockViewport;
@@ -175,7 +175,10 @@ internal static class InspectorPanelsTests
                 void SetStrength(string value)
                 {
                     var b = ui.View.RandomDockViewport; ui.View.Wheel(b.X + 10, b.Y + 40, 12000, false, false); ui.Paint();
-                    var field = ui.View.RandomDockValueBounds(0); ui.Click(field.X + 10, field.Y + 12); ui.Key('A', ctrl: true); ui.View.PasteFieldText(value); ui.Paint();
+                    if (!ui.Canvas.Texts.Any(t => t.Value == L.Get("song.RandomizeDropletStrength")))
+                    { var advanced = ui.View.RandomDockAdvancedBounds; ui.Click(advanced.X + 20, advanced.Y + 15); }
+                    var field = ui.View.RandomDockValueBounds(0);
+                    ui.Click(field.X + 7 + (field.Width - 14) * float.Parse(value, System.Globalization.CultureInfo.InvariantCulture) / 100, field.Y + 16); ui.Paint();
                 }
                 void Wait()
                 {

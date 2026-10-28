@@ -16,6 +16,7 @@ internal static class OsuCanvasInputTests
         NativeCircleAndLegacySlider();
         SameTimePlacement();
         NativeSelectionAndCancellation();
+        PastedOverlapDrag();
         StackedMarqueeUsesVisibleCenters();
         NativePlacementPreservesGeometry();
         NativeRepeatSamples();
@@ -263,6 +264,44 @@ internal static class OsuCanvasInputTests
         return ui;
     }
 
+    private static void PastedOverlapDrag()
+    {
+        foreach (bool slider in new[] { false, true })
+        {
+            var ui = NewUi();
+            string line = slider ? "64,64,1000,2,0,L|192:64,1,128" : "128,64,1000,1,0";
+            var map = OsuBeatmapReader.Read("osu file format v14\n[TimingPoints]\n0,500\n[HitObjects]\n" + line);
+            ui.LoadDocument(map); ui.View.ToggleOsuCanvas(); ui.Key('1');
+            ui.View.UpdateTransport(1000, 5000, true, false, false, null, "fixture.wav"); ui.Paint();
+            Click(ui, 128, 64);
+            Check(ui.View.CopySelection(), "Overlap fixture copy failed.");
+            ui.View.UpdateTransport(1100, 5000, true, false, false, null, "fixture.wav");
+            Check(ui.View.PasteSelection(), "Overlap fixture paste failed.");
+            ui.Paint();
+            Guid pasted = ui.View.SelectedObjectIds.Single();
+            var before = ui.View.Document.DeepClone();
+            var from = ui.View.OsuCanvasScreen(128, 64);
+            var to = ui.View.OsuCanvasScreen(128, 200);
+            Check(ui.View.OsuCanvasHit(from.X, from.Y) == pasted, "Overlap hit did not follow the current-time foreground object.");
+            ui.View.UpdateTransport(1000, 5000, true, false, false, null, "fixture.wav"); ui.Paint();
+            Check(ui.View.OsuCanvasHit(from.X, from.Y) != pasted, "Selection overrode the earlier object's foreground layer after seeking.");
+            ui.View.UpdateTransport(1100, 5000, true, false, false, null, "fixture.wav"); ui.Paint();
+            ui.View.PointerDown(from.X, from.Y, 0, false, false);
+            ui.View.PointerMove(to.X, to.Y, false, false);
+            ui.View.PointerUp(to.X, to.Y, 0); ui.Paint();
+            Check(ui.View.SelectedObjectIds.Single() == pasted, "Dragging replaced the pasted selection.");
+            if (slider)
+                Check(ui.View.Document.ImportedSliders.Single(s => s.Id == pasted).Y > 100
+                    && ui.View.Document.ImportedSliders.Single(s => s.Id != pasted).Y == 64, "Slider drag moved the source.");
+            else
+                Check(ui.View.Document.Fruits.Single(s => s.Id == pasted).Y > 100
+                    && ui.View.Document.Fruits.Single(s => s.Id != pasted).Y == 64, "Circle drag moved the source.");
+            var after = ui.View.Document.DeepClone();
+            ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Overlap drag did not undo in one step.");
+            ui.Key('Y', ctrl: true); Check(after.ContentEquals(ui.View.Document), "Overlap drag redo changed content.");
+        }
+    }
+
     private static void ChangeRepeat(Ui ui, bool add)
     {
         ui.Key('1');
@@ -296,6 +335,12 @@ internal static class OsuCanvasInputTests
             "Removing native repeats left the tail override on a deleted edge.");
         ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ContentEquals(map), "Native repeat sample edits were not reversible.");
+        var emptyEdges = OsuBeatmapReader.Read("osu file format v14\n[TimingPoints]\n0,500\n[HitObjects]\n64,64,1000,2,0,L|192:64,2,128,0|0|,0:0|0:0|,0:0:0:0:\n");
+        ui.LoadDocument(emptyEdges); ui.Paint();
+        Click(ui, 64, 64); ChangeRepeat(ui, true);
+        fields = ui.View.Document.ImportedSliders.Single().OriginalLine!.Split(',');
+        Check(fields[8] == "0|0|0|0" && fields[9] == "0:0|0:0|0:0|0:0",
+            "Native repeat editing retained empty tail samples.");
     }
 
     private static void Click(Ui ui, double x, double y)

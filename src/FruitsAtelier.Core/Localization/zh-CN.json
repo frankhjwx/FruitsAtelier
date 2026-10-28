@@ -573,6 +573,7 @@
   "editor.status.noteBeatPosition": "最近拍位 {0}/{1} · {2} · 临时吸附 1/{3}",
   "editor.status.noteOffGrid": "未对齐网格 · {0}",
   "editor.status.objectsCopied": "已复制 {0} 个对象 · 粘贴时最早起点位于播放头",
+  "editor.status.timestampCopied": "已复制时间戳到剪贴板",
   "editor.status.objectsCut": "已剪切 {0} 个对象 · Ctrl + Z 撤销",
   "editor.status.objectsDeleted": "已删除 {0} 个对象 · Ctrl + Z 撤销",
   "editor.status.objectsPasted": "已在播放头粘贴 {0} 个对象 · Ctrl + Z 撤销",
@@ -1324,6 +1325,7 @@
   "randomize.disableAll": "禁用所有 FSlider 的随机化",
   "randomize.enableSelected": "开启随机化",
   "randomize.disableSelected": "关闭随机化",
+  "randomize.advanced": "高级设置",
   "randomize.resetStrength": "重置强度（20）",
   "randomize.resetAdjustments": "重置水滴手动修正",
   "randomize.settings": "随机化设置…",
@@ -1932,5 +1934,13 @@
   "timing.sourceChanged": "编辑器中的 Timing 已更改。请重新打开此窗口后再应用。",
   "media.storyboardDiagnostics": "故事板：已跳过 {0} 条无效指令或资源。",
   "media.storyboardFailed": "无法载入故事板：{0}",
-  "media.loading": "正在准备谱面资源…"
+  "media.loading": "正在准备谱面资源…",
+  "settings.editorTheme": "编辑器主题",
+  "settings.theme.graphite": "石墨",
+  "settings.theme.studio": "工作站",
+  "settings.theme.pearl": "黑珍珠",
+  "settings.theme.midnight": "午夜",
+  "settings.theme.forest": "森林",
+  "settings.theme.rose": "玫瑰",
+  "settings.theme.slate": "岩灰"
 }

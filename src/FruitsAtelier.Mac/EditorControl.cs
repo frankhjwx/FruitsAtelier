@@ -52,6 +52,20 @@ internal sealed class EditorControl : Control, IDisposable
             View.DropLibraryFiles(DroppedPaths(e));
             e.Handled = true; Refresh();
         });
+        View.RequestPasteObjects = async () =>
+        {
+            var document = View.Document;
+            try
+            {
+                if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                {
+                    string text = await clipboard.TryGetTextAsync() ?? "";
+                    if (ReferenceEquals(document, View.Document)) View.PasteClipboardText(text);
+                }
+            }
+            catch (Exception error) { View.SetNotice(error.Message); }
+            Refresh();
+        };
         View.RequestPasteHitsoundName = async () =>
         {
             int session = View.HitsoundCopierInputSession;
@@ -132,8 +146,8 @@ internal sealed class EditorControl : Control, IDisposable
         using var canvas = new MacCanvas(context, images, (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * uiScale);
         View.Render(canvas, (float)Bounds.Width / uiScale, (float)Bounds.Height / uiScale);
         UpdatePointerCursor();
-        if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)
-            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw) InvalidateVisual(); });
+        if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)
+            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw) InvalidateVisual(); });
     }
     private StandardCursorType? pointerCursorType;
     private void UpdatePointerCursor()
@@ -146,7 +160,15 @@ internal sealed class EditorControl : Control, IDisposable
     private static IEnumerable<string> DroppedPaths(DragEventArgs e)
         => e.DataTransfer.TryGetFiles()?.OfType<IStorageFile>().Select(f => f.TryGetLocalPath()).OfType<string>() ?? [];
 
-    internal void Refresh() { InvalidateVisual(); Changed?.Invoke(); }
+    internal void Refresh()
+    {
+        if (TopLevel.GetTopLevel(this) is Window window)
+        {
+            var theme = View.LightEditorTheme ? Avalonia.Styling.ThemeVariant.Light : Avalonia.Styling.ThemeVariant.Dark;
+            if (window.RequestedThemeVariant != theme) window.RequestedThemeVariant = theme;
+        }
+        InvalidateVisual(); Changed?.Invoke();
+    }
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));

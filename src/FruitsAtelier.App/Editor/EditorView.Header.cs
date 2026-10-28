@@ -33,7 +33,7 @@ public sealed partial class EditorView
 
     private void DrawHeader(ICanvas c)
     {
-        c.Fill(new(0, 0, width, HeaderHeight), 0x1B2028);
+        c.Fill(new(0, 0, width, HeaderHeight), TitleBarBackground);
         c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png"), new(26, 2, 52, 36));
         c.Line(0, HeaderHeight - 1, width, HeaderHeight - 1, Grid);
     }

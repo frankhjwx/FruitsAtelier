@@ -10,7 +10,49 @@ internal static class PatternPlacementTests
         CurveBoundsAndHistory();
         LegacyAndPreview();
         PreviewDifficulty();
+        GeometrySharing();
         PreparationCost();
+    }
+
+    private static void GeometrySharing()
+    {
+        var arcMap = new MapDocument { IsDemo = false, DurationMs = 5000, BeatLengthMs = 500 };
+        var arcTrack = Track(1000, 1500, 200, 300);
+        arcTrack.Nodes[0].OutgoingCurve = new() { Kind = ControlCurveKind.CircularArc, ReferenceScale = .4 };
+        arcTrack.Nodes[0].OutgoingCurve!.Controls.Add(new() { Offset = new(250, 80) }); arcMap.Tracks.Add(arcTrack);
+        var arcSnapshot = Capture(arcMap);
+        var sharedArc = PatternClipboard.Decode(PatternClipboard.Encode(arcSnapshot));
+        Check(sharedArc.HasSameGeometry(arcSnapshot), "circular arc geometry round trip");
+        var arcBefore = PatternPlacement.Prepare(arcSnapshot, new(), 3000).CreateDocument();
+        var arcAfter = PatternPlacement.Prepare(sharedArc, new(), 3000).CreateDocument();
+        for (int i = 0; i <= 20; i++)
+        {
+            var a = ControlCurveMath.Evaluate(arcBefore.Tracks[0], 0, i / 20.0); var b = ControlCurveMath.Evaluate(arcAfter.Tracks[0], 0, i / 20.0);
+            Near(a.TimeMs, b.TimeMs, "arc time round trip"); Near(a.X, b.X, "arc X round trip");
+        }
+        for (int i = 0; i < 16; i++)
+        {
+            var source = new MapDocument { IsDemo = false, DurationMs = 10000, BeatLengthMs = 333.33 + i * 13.7, SliderMultiplier = 1.4 };
+            var track = Track(1000.125, 1456.875, 120.25, 335.125);
+            track.Kind = CurveKind.Bezier;
+            track.Nodes[0].HandleOut = new(123.456, 31.25); track.Nodes[1].HandleIn = new(-145.678, -23.125);
+            source.Tracks.Add(track);
+            var slider = new ImportedSlider { TimeMs = 2000.375, X = 100.25, Y = 192, PathType = 'L', PixelLength = 205.125,
+                SliderVelocityMultiplier = .4 + i * .37, SourceOrder = 1 };
+            slider.ControlPoints.AddRange([new(100.25, 192), new(315.375, 192)]); source.ImportedSliders.Add(slider);
+            var snapshot = Capture(source);
+            var shared = PatternClipboard.Decode(PatternClipboard.Encode(snapshot));
+            Check(snapshot.HasSameGeometry(shared), $"fractional native and Bezier geometry round trip {i}");
+            var target = new MapDocument { BeatLengthMs = source.BeatLengthMs, SliderMultiplier = source.SliderMultiplier };
+            var before = PatternPlacement.Prepare(snapshot, target, 3000).CreateDocument();
+            var after = PatternPlacement.Prepare(shared, target, 3000).CreateDocument();
+            Near(ImportedSliderConverter.DurationMs(before, before.ImportedSliders[0]), ImportedSliderConverter.DurationMs(after, after.ImportedSliders[0]), "native duration round trip");
+            for (int j = 0; j <= 20; j++)
+            {
+                var a = CurveMath.Evaluate(before.Tracks[0], 0, j / 20.0); var b = CurveMath.Evaluate(after.Tracks[0], 0, j / 20.0);
+                Near(a.TimeMs, b.TimeMs, "Bezier time round trip"); Near(a.X, b.X, "Bezier X round trip");
+            }
+        }
     }
 
     private static void PreviewDifficulty()
@@ -87,7 +129,10 @@ internal static class PatternPlacementTests
         track.Nodes[0].OutgoingCurve = new() { Kind = ControlCurveKind.Bezier };
         track.Nodes[0].OutgoingCurve!.Controls.Add(new() { Offset = new(500, 300) });
         source.Tracks.Add(track);
-        var prepared = PatternPlacement.Prepare(Capture(source), new(), 3000);
+        var snapshot = Capture(source);
+        var shared = PatternClipboard.Decode(PatternClipboard.Encode(snapshot));
+        Check(shared.HasSameGeometry(snapshot), "geometry clipboard retains exact control curves");
+        var prepared = PatternPlacement.Prepare(shared, new(), 3000);
         Near(prepared.MaximumOffsetX, 162, "bounds include quadratic interior maximum");
         var placed = prepared.CreateDocument(10000);
         Near(CurveMath.Evaluate(placed.Tracks[0], 0, .5).X, 512, "interior extremum limits translation");
@@ -114,6 +159,8 @@ internal static class PatternPlacementTests
         Check(refreshed.Success, "target derandomization can refresh placed Legacy: " + string.Join(";", refreshed.Diagnostics));
         Check(placed.ImportedSliders[0].RandomizationTrack is not null, "target derandomization establishes reusable baseline");
         var refreshedSnapshot = Capture(placed);
+        var sharedRefreshed = PatternClipboard.Decode(PatternClipboard.Encode(refreshedSnapshot));
+        Check(sharedRefreshed.HasSameGeometry(refreshedSnapshot), "geometry clipboard retains the current Legacy path and duration");
         var randomTarget = new MapDocument { BeatLengthMs = 500, SliderMultiplier = 1.4, DerandomizeFSliderDroplets = false };
         var randomized = PatternPlacement.Prepare(refreshedSnapshot, randomTarget, 1000).CreateDocument();
         Check(randomized.ImportedSliders[0].RandomizationTrack?.DropletMode == SliderDropletMode.FollowMap, "saved baseline follows target mode");

@@ -8,7 +8,7 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 
 [公式サイト](https://fruitsatelier.himiko.moe/) · [ダウンロード](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**現在のバージョン：1.3.1**
+**現在のバージョン：1.3.2**
 
 ![FruitsAtelier の編集キャンバス、オブジェクトタイムライン、Catch プレビュー](assets/screenshots/twin-bloom.png)
 

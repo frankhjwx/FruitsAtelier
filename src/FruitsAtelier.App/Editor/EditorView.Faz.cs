@@ -200,7 +200,7 @@ public sealed partial class EditorView
                 var candidate = package.Projects[i]; var map = candidate.Map;
                 var rect = new Rect(x + 20, y + 164 + (i % 2) * 86, w - 40, 78);
                 bool selected = ReferenceEquals(fazSelected, candidate);
-                c.Fill(rect, selected ? 0x304445u : Surface, 6);
+                c.Fill(rect, selected ? Chrome(0x304445, SelectedSurface) : Surface, 6);
                 if (selected) c.Stroke(rect, Accent, 2, 6);
                 c.Clip(rect);
                 if (map.Background.Length > 0) c.Thumbnail(map.Background, new(rect.X + 10, rect.Y + 9, 76, 60));

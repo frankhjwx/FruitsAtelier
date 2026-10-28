@@ -157,9 +157,9 @@ public sealed partial class EditorView
                 c.Line(bounds.X, bounds.Bottom - 6, bounds.X, bounds.Bottom, Grid);
                 c.Line(bounds.Right, bounds.Bottom - 6, bounds.Right, bounds.Bottom, Grid);
             }
-            else if (newDifficultyUseSource && bounds.Contains(mouseX, mouseY)) c.Fill(bounds, 0x2B3542, 6);
+            else if (newDifficultyUseSource && bounds.Contains(mouseX, mouseY)) c.Fill(bounds, Chrome(0x2B3542, HoverSurface), 6);
             c.Text(L.Get(key), bounds.X + 12, bounds.Y + 12, 13,
-                !newDifficultyUseSource ? 0x5B6777u : active ? Accent : Muted, bounds.Width - 24, active);
+                !newDifficultyUseSource ? Chrome(0x5B6777, Muted) : active ? Accent : Muted, bounds.Width - 24, active);
             hits.Add(new(bounds, () => { newDifficultyTemplateTab = template; newDifficultySourcesOpen = false; }, newDifficultyUseSource));
         }
     }

@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "Ketukan terdekat {0}/{1} · {2} · Snap sementara 1/{3}",
   "editor.status.noteOffGrid": "Di luar jaringan · {0}",
   "editor.status.objectsCopied": "Objek {0} yang disalin · Tempel menyelaraskan awal paling awal ke playhead",
+  "editor.status.timestampCopied": "Stempel waktu disalin ke papan klip",
   "editor.status.objectsCut": "Potong objek {0} · Ctrl + Z untuk membatalkan",
   "editor.status.objectsDeleted": "Deleted {0} objek · Ctrl + Z untuk membatalkan",
   "editor.status.objectsPasted": "Menempelkan objek {0} di playhead · Ctrl + Z untuk membatalkan",
@@ -1302,6 +1303,7 @@
   "randomize.disableAll": "Nonaktifkan pengacakan semua FSlider",
   "randomize.enableSelected": "Aktifkan pengacakan",
   "randomize.disableSelected": "Nonaktifkan pengacakan",
+  "randomize.advanced": "Pengaturan lanjutan",
   "randomize.resetStrength": "Reset kekuatan (20)",
   "randomize.resetAdjustments": "Atur ulang penyesuaian manual",
   "randomize.settings": "Pengaturan pengacakan…",
@@ -1932,5 +1934,13 @@
   "timing.sourceChanged": "Timing di editor telah berubah. Buka kembali jendela ini sebelum menerapkan.",
   "media.storyboardDiagnostics": "Storyboard: {0} perintah atau sumber daya tidak valid dilewati.",
   "media.storyboardFailed": "Storyboard tidak dapat dimuat: {0}",
-  "media.loading": "Menyiapkan sumber daya beatmap…"
+  "media.loading": "Menyiapkan sumber daya beatmap…",
+  "settings.editorTheme": "Tema editor",
+  "settings.theme.graphite": "Grafit",
+  "settings.theme.studio": "Studio",
+  "settings.theme.pearl": "Mutiara hitam",
+  "settings.theme.midnight": "Tengah malam",
+  "settings.theme.forest": "Hutan",
+  "settings.theme.rose": "Mawar",
+  "settings.theme.slate": "Batu sabak"
 }

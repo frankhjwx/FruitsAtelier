@@ -1,5 +1,19 @@
 # Editing Controls
 
+## Editor themes
+
+**Settings → Appearance → Editor theme** offers seven dark themes: Graphite, Studio, Black Pearl,
+Midnight, Forest, Rose and Slate. Selecting a theme previews the editor colours
+immediately; **Apply** saves it for subsequent launches. Closing Settings without
+applying restores the saved theme. Graphite is the default for existing settings.
+
+Themes colour the shared editor interface, including the library, panels, menus,
+dialogs and canvas surfaces. The osu! skin selector remains independent: themes
+do not replace skin textures, beatmap backgrounds or authored object colours.
+Changing themes does not modify beatmap content or undo history.
+On Windows 11, the native title bar uses the same background and text colours as
+the editor header, including during preview.
+
 Settings combines protocol handling and browser data controls in **osu! Links & Web**.
 New settings categories appear before the fixed **Experimental**, **Application updates**
 navigation tail; Experimental stays second to last when application updates are available.
@@ -384,6 +398,10 @@ Temporary beat grids shown by inspecting a note do not replace the saved divisor
 
 ## osu! canvas
 
+The standard canvas draws objects whose start or end is closest to the current
+playhead in front. Picking follows this same layer order; equal distances retain
+chronological and source order. Selection does not change object layers.
+
 Tab switches the Compose canvas between Catch's time–X view and an
 osu!standard 512×384 geometric view. Text fields, dialogs, Ctrl+Tab difficulty
 navigation and Testplay retain their own key handling. Switching views does not
@@ -725,8 +743,9 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 Its current-difficulty section contains the default droplet mode
 (Derandomize or Randomize), Strength (0–100 playfield pixels), a signed 32-bit
 Seed, and the NM/HR compensation target. Valid edits apply immediately with undo;
-invalid numeric input leaves the last valid value intact. Strength has a numeric
-field and slider, plus Reset strength to restore 20.
+invalid numeric input leaves the last valid value intact. Advanced Settings starts collapsed. Expand it to show two rows: Strength with its
+slider and Reset button, and Seed with its numeric field and Reset button. Reset
+restores Strength to 20 or Seed to 1337.
 
 The separate **Global Derandomize** section controls derandomization for new projects
 and imported maps. These preferences save immediately and do not
@@ -763,6 +782,11 @@ including sliders with their effect disabled. Identical sliders use different
 parts of the sequence. Adding or removing earlier RNG-consuming objects changes
 later offsets; ordinary NM fruits do not. Unchanged content and Seed reproduce
 the same result. HR gameplay applies osu!'s usual additional position rules.
+
+Legacy sliders authored in the osu! canvas retain their original path geometry
+on export when randomization is effective with Strength 20, Seed 1337 and no
+manual corrections. Returning from custom randomization settings to these defaults
+restores the authored geometry.
 
 Randomization affects TinyDroplets. Drag a TinyDroplet in Select mode or edit its
 X coordinate to save a correction without changing the base curve. Unlock droplet
@@ -1192,9 +1216,9 @@ edit; Esc or lost capture restores the gesture's starting content.
 
 In the upper object timeline, clicking a slider head, tail, or reverse marker selects that edge for Whistle, Finish, and Clap edits. Only the selected edge marker is highlighted. Clicking the slider body selects the whole slider for sound edits. Head/body movement and tail repeat resizing retain their existing drag behavior.
 
-The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and blue bookmarks extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 80% opacity and colors tuned against osu!legacy. Hovering over the overview reveals a fixed bookmark toolbar above its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar stays visible while moving from the overview to its controls, and its tooltip appears above it. The toolbar uses an ImageGen-created background texture. The time display and separate Play, Pause, Stop, and Testplay controls sit to the left of the overview; Stop pauses audio and seeks to the start. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right seeks to the previous/next bookmark; Ctrl+Shift+Left/Right moves selected objects one X unit. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
+The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and blue bookmarks extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 80% opacity and colors tuned against osu!legacy. Hovering over the overview starts fading in a bookmark toolbar after 0.25 seconds and reaches full opacity at 0.5 seconds, initially above its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar stays visible while moving from the overview to its controls, and its tooltip appears above it. The toolbar uses an ImageGen-created background texture. The time display and separate Play, Pause, Stop, and Testplay controls sit to the left of the overview; Stop pauses audio and seeks to the start. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right seeks to the previous/next bookmark; Ctrl+Shift+Left/Right moves selected objects one X unit. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
 
-Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow line and bookmarks as blue lower lines. Preview lines draw before timing points, the playhead and bookmarks, so overlapping markers remain visible. Red and green timing points meet the overview center line and also appear on the upper object timeline. Short overview spans retain a minimum two-DIP width. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, blue bookmark labels, and ordinary time labels in the default muted color. Red timing and blue bookmark lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. Double-click an upper timeline object to select it and seek to its start without editing content. During a slider endpoint or timeline-tail drag, wheel navigation, Ctrl+wheel Snap, Alt+wheel zoom and Space/C playback remain available; release commits one edit and Esc restores its starting content. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. The bookmark toolbar is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
+Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow line and bookmarks as blue lower lines. Preview lines draw before timing points, the playhead and bookmarks, so overlapping markers remain visible. Red and green timing points meet the overview center line and also appear on the upper object timeline. Short overview spans retain a minimum two-DIP width. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, blue bookmark labels, and ordinary time labels in the default muted color. Red timing and blue bookmark lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. Double-click an upper timeline object to select it and seek to its start without editing content. During a slider endpoint or timeline-tail drag, wheel navigation, Ctrl+wheel Snap, Alt+wheel zoom and Space/C playback remain available; release commits one edit and Esc restores its starting content. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. Drag the handle on the left of the bookmark toolbar to move it horizontally within the editor at its fixed height above the overview; its horizontal position is saved as a view preference. Initially it is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
 
 Drag the divider below the upper object timeline or above the bottom overview to
 adjust their heights: 32–64 DIP for the upper timeline and 16–40 DIP for the
@@ -1655,6 +1679,10 @@ Notes changes mark the project dirty and are saved with the project, including
 workspace manifests and compatibility project files. Closing or moving its tab
 does not delete the notes. Notes are not exported to `.osu` files.
 
+In Select mode, Ctrl+C with no objects selected copies the current playhead as
+`mm:ss:fff - ` for Notes or modding. This replaces the object clipboard without
+changing beatmap content.
+
 Copy selected map objects with Ctrl+C and paste into Notes with Ctrl+V. Notes keeps
 exactly the external plain-text reference format, for example `00:12:345 (1,2) - `.
 The timestamp and object numbers appear as an underlined link. Click to seek and
@@ -1939,7 +1967,7 @@ The canvas has a **Background Dim** slider in its lower-left corner. It is hidde
 until the pointer approaches, then fades in over 150 ms. After the pointer leaves,
 it stays visible for one second and fades out over 150 ms. Dragging keeps it visible
 and adjusts the mapping background immediately; release saves the preference.
-The control remains fixed in screen coordinates when zooming or scrolling. It does
+Background Dim and Video/Storyboard share one compact panel. Drag its left handle to move it within the canvas, or drag any corner to scale it proportionally between 50% and 100%, keeping the opposite corner fixed. When Discussion is visible, **Show canvas annotations** joins the same panel as a third row. The panel position and scale are saved as view preferences and kept visible when the window is resized. The controls remain fixed in screen coordinates when zooming or scrolling. This does
 not change beatmap content or preview/testplay dim, and modal dialogs hide it.
 
 ## Banana Shower Edit Window

@@ -57,6 +57,58 @@ static class CanvasBackgroundDimControlTests
         ui.View.PointerDown(slider.X, slider.Y + 12, 0, false, false);
         ui.View.CancelInteraction(); ui.Paint();
         Check(!ui.View.WantsCapture && saves == beforeInterruptedDrag + 1, "Interrupted drag did not release capture and persist its value.");
+        var panel = ui.View.CanvasControlsPanelBounds;
+        ui.View.PointerDown(panel.X + 8, panel.Y + panel.Height / 2, 0, false, false);
+        Check(ui.View.WantsCapture, "Panel handle did not capture the pointer.");
+        ui.View.PointerMove(panel.X + 48, panel.Y + panel.Height / 2 - 80, false, false);
+        ui.View.PointerUp(panel.X + 48, panel.Y + panel.Height / 2 - 80, 0); ui.Paint();
+        var moved = ui.View.CanvasControlsPanelBounds;
+        Check(moved.X == panel.X + 40 && moved.Y == panel.Y - 80, "Panel drag did not move both rows.");
+        Check(ui.View.CanvasMediaToggleBounds.Y == ui.View.CanvasBackgroundDimBounds.Bottom, "Compact rows have a gap.");
+        for (int corner = 1; corner <= 4; corner++)
+        {
+            ui.View.LibrarySettings.CanvasControlsScale = 1;
+            ui.Paint();
+            var r = ui.View.CanvasControlsPanelBounds;
+            bool left = corner is 1 or 3, top = corner is 1 or 2;
+            float x = left ? r.X : r.Right, y = top ? r.Y : r.Bottom;
+            float endX = x + (left ? 1 : -1) * r.Width, endY = y + (top ? 1 : -1) * r.Height;
+            ui.View.PointerDown(x, y, 0, false, false);
+            ui.View.PointerMove(endX, endY, false, false);
+            ui.View.PointerUp(endX, endY, 0); ui.Paint();
+            var small = ui.View.CanvasControlsPanelBounds;
+            Check(ui.View.LibrarySettings.CanvasControlsScale == .5f && small.Width == r.Width / 2 && small.Height == r.Height / 2,
+                "Corner resizing did not clamp proportionally at 50%.");
+            Check(Math.Abs((left ? small.Right : small.X) - (left ? r.Right : r.X)) < .01f
+                && Math.Abs((top ? small.Bottom : small.Y) - (top ? r.Bottom : r.Y)) < .01f, "Resize moved the opposite corner.");
+            var scaledSlider = ui.View.CanvasBackgroundDimSliderBounds;
+            ui.View.PointerDown(scaledSlider.X + scaledSlider.Width / 2, scaledSlider.Y + scaledSlider.Height / 2, 0, false, false);
+            ui.View.PointerUp(scaledSlider.X + scaledSlider.Width / 2, scaledSlider.Y + scaledSlider.Height / 2, 0);
+            Check(ui.View.LibrarySettings.MappingCanvasBackgroundDim == 50, "Half-size slider hit region was not scaled.");
+        }
+        ui.View.LibrarySettings.CanvasControlsOffsetX = 100000;
+        ui.View.LibrarySettings.CanvasControlsOffsetY = -100000;
+        ui.Paint();
+        var clamped = ui.View.CanvasControlsPanelBounds;
+        ui.View.PointerDown(clamped.X + 4, clamped.Y + clamped.Height / 2, 0, false, false);
+        ui.View.PointerMove(clamped.X - 26, clamped.Y + clamped.Height / 2 + 40, false, false);
+        ui.View.PointerUp(clamped.X - 26, clamped.Y + clamped.Height / 2 + 40, 0); ui.Paint();
+        Check(ui.View.CanvasControlsPanelBounds.X == clamped.X - 30 && ui.View.CanvasControlsPanelBounds.Y == clamped.Y + 40,
+            "Clamped panel could not be dragged after a viewport change.");
+        ui.View.ShowDiscussionPanel(); ui.Paint();
+        var grouped = ui.View.CanvasControlsPanelBounds;
+        var annotations = ui.View.CanvasDiscussionToggleBounds;
+        Check(annotations.Y == grouped.Y && ui.View.CanvasBackgroundDimBounds.Y == annotations.Bottom
+            && ui.View.CanvasMediaToggleBounds.Bottom == grouped.Bottom, "Discussion toggle is outside the compact panel.");
+        bool visible = ui.View.LibrarySettings.ShowCanvasDiscussionAnnotations;
+        ui.Click(annotations.X + annotations.Width / 2, annotations.Y + annotations.Height / 2);
+        Check(ui.View.LibrarySettings.ShowCanvasDiscussionAnnotations != visible, "Half-size annotation toggle did not respond.");
+        string preferences = Path.GetFullPath("artifacts/tests/overlay-preferences.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(preferences)!);
+        ui.View.LibrarySettings.Save(preferences);
+        var restored = LibrarySettings.Load(preferences);
+        Check(restored.CanvasControlsScale == .5f && restored.CanvasControlsOffsetX == ui.View.LibrarySettings.CanvasControlsOffsetX
+            && restored.CanvasControlsOffsetY == ui.View.LibrarySettings.CanvasControlsOffsetY, "Panel preferences did not roundtrip.");
         ui.View.OpenSettings(); ui.Paint();
         Check(ui.View.CanvasBackgroundDimOpacity == 0 && !ui.View.CanvasBackgroundDimNeedsRedraw,
             "Settings did not hide and isolate the canvas control.");

@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 using L = FruitsAtelier.Localization.Strings;
@@ -95,7 +95,7 @@ public sealed partial class EditorView
         {
             var entry = entries[i]; var p = entry.Point;
             var row = new Rect(list.X + 3, list.Y + 32 + (i - timingScroll) * 28, list.Width - 12, 28);
-            c.Fill(row, timingSelected.Contains(entry.Id) ? 0x35495B : i % 2 == 0 ? 0x222832u : Background);
+            c.Fill(row, timingSelected.Contains(entry.Id) ? Chrome(0x35495B, SelectedSurface) : i % 2 == 0 ? Chrome(0x222832, Surface) : Background);
             c.Circle(row.X + 6, row.Y + 14, 3, p.Uninherited ? Error : entry.SvOnly && showTimingSv ? TimingSvGreen : Accent);
             string[] values = [Time(p.TimeMs), p.Uninherited ? TimingN(TimingPageValue("bpm", 60000 / TimingMap.EffectiveBeatLength(p.BeatLengthMs))) : showTimingSv ? TimingN(-100 / p.BeatLengthMs) + "×" : "",
                 p.Uninherited ? p.Meter + "/4" : "", (p.SampleSet switch { 1 => "N", 2 => "S", 3 => "D", _ => "–" }) + (p.SampleIndex == 0 ? "" : ":C" + p.SampleIndex),
@@ -143,7 +143,7 @@ public sealed partial class EditorView
     {
         Button(c, bounds, "", action, active: add, enabled: enabled);
         float x = bounds.X + bounds.Width / 2, y = bounds.Y + bounds.Height / 2;
-        uint color = !enabled ? 0x5B6777u : add ? Accent : Foreground;
+        uint color = !enabled ? Chrome(0x5B6777, Muted) : add ? Accent : Foreground;
         c.Line(x - 3, y, x + 3, y, color, 1.2f);
         if (add) c.Line(x, y - 3, x, y + 3, color, 1.2f);
     }
@@ -244,6 +244,7 @@ public sealed partial class EditorView
     private void TimingButton(ICanvas c, Rect r, string text, Action action, int sprite = -1, bool enabled = true, bool flatArrow = false)
     {
         bool arrow = text is "‹" or "›";
+        if (!UsesGraphiteTheme) { flatArrow = true; sprite = -1; }
         if (arrow && !flatArrow)
         {
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "ui", "timing", "arrows.png"), r,

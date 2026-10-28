@@ -56,7 +56,7 @@ public sealed partial class EditorView
     private List<DiscussionLine> discussionLines => discussionPanelLayout.Lines;
     private List<(float Top, float Bottom, long Id)> discussionCards => discussionPanelLayout.Cards;
     private float discussionContentHeight { get => discussionPanelLayout.ContentHeight; set => discussionPanelLayout.ContentHeight = value; }
-    private (OsuDiscussionSnapshot? Snapshot, long Beatmap, DiscussionCategory Category, float Width, string Language, Type Canvas)? discussionLayoutKey;
+    private (OsuDiscussionSnapshot? Snapshot, long Beatmap, DiscussionCategory Category, float Width, string Language, Type Canvas, EditorThemePalette Theme)? discussionLayoutKey;
     private DiscussionAnchor[] discussionAnchors = [];
     private BeatmapDiscussion[][] discussionRoots = [[], [], [], []];
     private string[] discussionTabLabels = ["", "", "", ""];
@@ -320,7 +320,7 @@ public sealed partial class EditorView
             string message = discussionSetId <= 0 ? L.Get("discussion.noOnlineSet") : discussionError is { } error ? L.Reformat(error) : L.Get("discussion.loading");
             c.Text(message, bounds.X + 8, discussionListBounds.Y + 10, 12, Muted, Math.Max(0, bounds.Width - 16)); return;
         }
-        var key = (discussionSnapshot, discussionBeatmapId, discussionCategory, bounds.Width, L.Language, c.GetType());
+        var key = (discussionSnapshot, discussionBeatmapId, discussionCategory, bounds.Width, L.Language, c.GetType(), Theme);
         if (discussionLayoutKey != key) { BuildDiscussionLayout(c, Math.Max(20, bounds.Width - 64)); discussionLayoutKey = key; }
         if (discussionRevealThread is { } id)
         {
@@ -336,10 +336,10 @@ public sealed partial class EditorView
             var r = new Rect(bounds.X + 36, discussionListBounds.Y + card.Top - discussionScroll, bounds.Width - 46, card.Bottom - card.Top - 8);
             var thread = discussionRoots[(int)discussionCategory].First(d => d.Id == card.Id);
             uint state = thread.Resolved ? DiscussionResolvedColour : thread.CanResolve ? DiscussionPendingColour : Accent;
-            c.Line(bounds.X + 8, r.Y, bounds.X + 8, r.Bottom + 8, 0x151B20, 3);
+            c.Line(bounds.X + 8, r.Y, bounds.X + 8, r.Bottom + 8, Chrome(0x151B20, Background), 3);
             c.Fill(new(bounds.X, r.Y + 10, DiscussionHasState(thread) ? 30 : 14, 20), Background);
             DrawDiscussionTypeIcons(c, thread, bounds.X + 1, r.Y + 14);
-            c.Fill(r, 0x343E43, 5);
+            c.Fill(r, Chrome(0x343E43, Surface), 5);
             c.Fill(new(r.X, r.Y + 4, 3, r.Height - 8), state, 1);
             if (card.Id == discussionFocused) c.Stroke(r, Accent, radius: 5);
             if (thread.Timestamp is { } time)
@@ -371,7 +371,7 @@ public sealed partial class EditorView
             if (block.Top > scroll + viewport.Height) break;
             float top = viewport.Y + block.Top - scroll;
             if (block.Reply) c.Fill(new(contentX - 5 + block.Indent, top - 5,
-                Math.Max(1, contentWidth - block.Indent + 8), block.Bottom - block.Top + 3), 0x2C3439);
+                Math.Max(1, contentWidth - block.Indent + 8), block.Bottom - block.Top + 3), Chrome(0x2C3439, Surface));
             float divider = contentX + block.Divider;
             c.Line(divider, top, divider, top + block.Bottom - block.Top - 6, block.Colour, 2, .7f);
         }
@@ -383,13 +383,13 @@ public sealed partial class EditorView
             float left = contentX + line.Indent;
             if (line.Runs.Any(run => run.TextStart >= 0))
                 discussionBodyHits.Add(DiscussionIntersection(new(left, y, Math.Max(0, contentWidth - line.Indent), line.Height), viewport));
-            if (line.Quoted) c.Line(left - 7, y, left - 7, y + line.Height, 0xA6C5D0, 2, .65f);
-            if (line.CodeBlock) c.Fill(new(left - 2, y, Math.Max(1, contentWidth - line.Indent + 2), line.Height), 0x20262D, 2);
+            if (line.Quoted) c.Line(left - 7, y, left - 7, y + line.Height, Chrome(0xA6C5D0, Accent), 2, .65f);
+            if (line.CodeBlock) c.Fill(new(left - 2, y, Math.Max(1, contentWidth - line.Indent + 2), line.Height), Chrome(0x20262D, Background), 2);
             if (line.Image is { } image && line.ImageUrl is { } imageUrl)
             {
                 float imageWidth = Math.Min(image.Width, Math.Max(12, contentWidth - line.Indent));
                 var imageBounds = new Rect(left, y, imageWidth, line.Height - 6);
-                if (!c.Image(image.Path, imageBounds)) c.Text(imageUrl, left, y + 2, 12, 0xA6C5D0, imageWidth);
+                if (!c.Image(image.Path, imageBounds)) c.Text(imageUrl, left, y + 2, 12, Chrome(0xA6C5D0, Accent), imageWidth);
                 var imageHit = DiscussionIntersection(imageBounds, viewport);
                 if (imageHit.Height > 0) { discussionHandHits.Add(imageHit); Register(imageHit, () => OpenDiscussionImage(image)); }
             }
@@ -427,8 +427,8 @@ public sealed partial class EditorView
             foreach (var run in line.Runs)
             {
                 var r = new Rect(left + run.X, y, run.Width, line.Height);
-                if (run.Time is not null) c.Fill(r, 0x28413F, 3);
-                else if (run.Style.HasFlag(DiscussionTextStyle.Code)) c.Fill(r, 0x20262D, 2);
+                if (run.Time is not null) c.Fill(r, Chrome(0x28413F, SelectedSurface), 3);
+                else if (run.Style.HasFlag(DiscussionTextStyle.Code)) c.Fill(r, Chrome(0x20262D, Background), 2);
                 if (run.TextStart >= 0)
                 {
                     var textBounds = new Rect(r.X + (run.Time is null ? 0 : 3), r.Y, Math.Max(0, run.Width - (run.Time is null ? 0 : 6)), r.Height);
@@ -461,14 +461,14 @@ public sealed partial class EditorView
             {
                 float footerWidth = Math.Max(1, contentWidth - line.Indent);
                 string label = L.Get("discussion.permalink"); float labelWidth = c.MeasureText(label, 10);
-                c.Text(label, left, y + 2, 10, 0xA6C5D0, Math.Min(footerWidth, labelWidth + 1));
+                c.Text(label, left, y + 2, 10, Chrome(0xA6C5D0, Accent), Math.Min(footerWidth, labelWidth + 1));
                 var link = DiscussionIntersection(new(left, y, Math.Min(footerWidth, labelWidth + 4), line.Height), viewport);
                 if (link.Height > 0)
                 {
                     discussionHandHits.Add(link);
                     Register(link, () => CopyDiscussionPermalink(postId, line.Thread, canvasQuote));
                     if (DiscussionLinkHovered(link))
-                    { c.Line(left, y + 15, left + labelWidth, y + 15, 0xA6C5D0); discussionCopyHoverBounds = link; }
+                    { c.Line(left, y + 15, left + labelWidth, y + 15, Chrome(0xA6C5D0, Accent)); discussionCopyHoverBounds = link; }
                     if (discussionCopiedLink == (postId, canvasQuote)) discussionCopyFeedbackBounds = link;
                 }
                 if (line.PostedAt is { } date)
@@ -477,7 +477,7 @@ public sealed partial class EditorView
                     float room = Math.Max(0, footerWidth - labelWidth - 8), size = 9;
                     if (c.MeasureText(age, size) > room) age = DiscussionRelativeAge(date, timeProvider.GetUtcNow(), compact: true);
                     float w = Math.Min(room, c.MeasureText(age, size));
-                    if (w > 0) c.Text(age, left + footerWidth - w, y + 3, size, 0x829097, w);
+                    if (w > 0) c.Text(age, left + footerWidth - w, y + 3, size, Chrome(0x829097, Muted), w);
                 }
             }
             if (line.Toggle is { } toggle)
@@ -589,24 +589,25 @@ public sealed partial class EditorView
     private static float DiscussionBadgeWidth(ICanvas c, string label, IReadOnlyList<string> modes)
         => c.MeasureText(label, 9, true) + 10 + (modes.Count > 0 ? 3 + modes.Count * 14 : 0);
 
-    private static void DrawDiscussionModeIcon(ICanvas c, string mode, Rect bounds)
+    private void DrawDiscussionModeIcon(ICanvas c, string mode, Rect bounds)
     {
-        if (mode == "fruits" && c.Image(catchIconPath, bounds, 0xFFFFFF)) return;
+        uint color = Chrome(0xFFFFFF, Foreground);
+        if (mode == "fruits" && c.Image(catchIconPath, bounds, color)) return;
         float x = bounds.X + bounds.Width / 2, y = bounds.Y + bounds.Height / 2, r = bounds.Width * .45f;
-        c.Circle(x, y, r, 0xFFFFFF, false, 1);
+        c.Circle(x, y, r, color, false, 1);
         switch (mode)
         {
             case "fruits":
-                c.Circle(x - r * .15f, y - r * .33f, r * .16f, 0xFFFFFF);
-                c.Circle(x + r * .25f, y, r * .16f, 0xFFFFFF);
-                c.Circle(x - r * .15f, y + r * .33f, r * .16f, 0xFFFFFF); break;
+                c.Circle(x - r * .15f, y - r * .33f, r * .16f, color);
+                c.Circle(x + r * .25f, y, r * .16f, color);
+                c.Circle(x - r * .15f, y + r * .33f, r * .16f, color); break;
             case "mania":
                 for (int i = -1; i <= 1; i++) c.Line(x + i * r * .34f, y - r * (i == 0 ? .6f : .25f),
-                    x + i * r * .34f, y + r * (i == 0 ? .6f : .25f), 0xFFFFFF, 1.2f);
+                    x + i * r * .34f, y + r * (i == 0 ? .6f : .25f), color, 1.2f);
                 break;
             case "taiko":
-                c.Circle(x, y, r * .55f, 0xFFFFFF, false, 1); c.Line(x, y - r * .55f, x, y + r * .55f, 0xFFFFFF); break;
-            default: c.Circle(x, y, r * .42f, 0xFFFFFF); break;
+                c.Circle(x, y, r * .55f, color, false, 1); c.Line(x, y - r * .55f, x, y + r * .55f, color); break;
+            default: c.Circle(x, y, r * .42f, color); break;
         }
     }
 
@@ -790,7 +791,7 @@ public sealed partial class EditorView
             {
                 int linkStart = textPosition; textPosition += value.Length;
                 float padding = time is null ? 0 : 6;
-                uint linkColour = url is null ? Accent : symbol is not null ? colour : 0xA6C5D0;
+                uint linkColour = url is null ? Accent : symbol is not null ? colour : Chrome(0xA6C5D0, Accent);
                 float w = Measure(value) + padding;
                 if (x + w > width && x > 0) Flush();
                 if (w <= width) { runs.Add(new(x, w, value, linkColour, time, owner, url, style, numbers, linkStart, linkStart)); x += w + (time is null ? 0 : 3); return; }

@@ -177,7 +177,7 @@ public sealed partial class EditorView
         Rect? copiedButton = null;
         verifierScrollbarTrack = verifierScrollbarThumb = default;
         float y = bounds.Y + 6;
-        c.Fill(bounds, 0x202B3B, 7);
+        c.Fill(bounds, Chrome(0x202B3B, Panel), 7);
         string version = verifierReport?.UpstreamTag ?? "";
         float versionWidth = Math.Min(c.MeasureText(version, 10) + 2, bounds.Width * .18f);
         verifierRefreshButton = new(bounds.Right - 8 - versionWidth - 32, y, 26, 28);

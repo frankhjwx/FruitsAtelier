@@ -6,6 +6,14 @@ licenses. The project license does not replace their notices or grant additional
 rights to those resources. Community-tool acknowledgements are listed in the
 [README credits](README.md#credits).
 
+## Standard canvas temporal layers
+
+`EditorView.OsuCanvas.cs` uses an independently implemented time-proximity layer
+order informed by `ComposeBlueprintContainer.ApplySelectionOrder` in
+[ppy/osu revision 40106d1a054423524bb13fc5a7fe9f2b52c528a3](https://github.com/ppy/osu/blob/40106d1a054423524bb13fc5a7fe9f2b52c528a3/osu.Game/Screens/Edit/Compose/Components/ComposeBlueprintContainer.cs).
+FA shares this order between drawing and picking. The upstream MIT notice is
+retained in `src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt`.
+
 ## Localization terminology
 
 Equivalent editor labels and gameplay terms reference osu!stable's official

@@ -51,7 +51,7 @@ public sealed partial class EditorView
             int i = languageFirstRow + rowIndex;
             string code = L.AvailableLanguages[i];
             var row = new Rect(languageMenuBounds.X + 6, languageMenuBounds.Y + 6 + rowIndex * 34, languageMenuBounds.Width - 12, 32);
-            if (row.Contains(mouseX, mouseY) || i == languageSelection) c.Fill(row, 0x343E4D, 4);
+            if (row.Contains(mouseX, mouseY) || i == languageSelection) c.Fill(row, Chrome(0x343E4D, HoverSurface), 4);
             c.Text((code == L.Language ? "✓ " : "") + LanguageName(code), row.X + 8, row.Y + 8, librarySettingsOpen ? SettingsTextSize : 12, Foreground, row.Width - 16);
         }
     }

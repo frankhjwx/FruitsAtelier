@@ -60,7 +60,7 @@ public sealed partial class EditorView
             if (focused && textEditor.Field == "song:Tags" && textEditor.HasSelection)
             {
                 int from = Math.Max(row.Start, textEditor.Start), to = Math.Min(row.End, textEditor.End);
-                if (to > from) c.Fill(new(songTagContent.X + X(from), y, X(to) - X(from), songTagSize + 5), 0x365D77);
+                if (to > from) c.Fill(new(songTagContent.X + X(from), y, X(to) - X(from), songTagSize + 5), Chrome(0x365D77, SelectedSurface));
             }
             c.Text(songTagText![row.Start..row.End], songTagContent.X, y, songTagSize, Foreground, songTagContent.Width);
             if (caret >= row.Start && (caret < row.End || i == songTagRows.Count - 1) && !textEditor.HasSelection)

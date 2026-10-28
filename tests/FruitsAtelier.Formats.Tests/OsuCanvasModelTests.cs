@@ -5,6 +5,7 @@ internal static class OsuCanvasModelTests
 {
     public static void Run()
     {
+        NativeRandomizationPreservesExport();
         var imported = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:0\n[Difficulty]\nSliderMultiplier:1.92\n[TimingPoints]\n0,500\n[HitObjects]\n100,70,1000,5,2,1:2:3:60:hit.wav\n100,80,2000,2,0,L|200:80,1,192,2|4,1:2|2:3,1:2:3:60:slide.wav");
         Check(imported.Fruits[0].Y == 70, "Standard circle Y was lost");
         var exported = OsuBeatmapWriter.Serialize(imported);
@@ -131,6 +132,64 @@ internal static class OsuCanvasModelTests
         history.Commit();
         var preference = history.Document.DeepClone(); preference.OsuDistanceSpacing = 2;
         Check(!SliderRepresentationEditing.NeedsLegacyDropletRefresh(history.Document, preference), "DS preference triggers Legacy fitting");
+    }
+
+    private static void NativeRandomizationPreservesExport()
+    {
+        foreach (bool legacyTicks in new[] { false, true })
+        foreach (bool hardRock in new[] { false, true })
+        foreach (string path in new[] { "L|320:64", "B|128:160|320:64", "P|192:192|320:64", "C|128:160|320:64" })
+        {
+            var map = OsuBeatmapReader.Read($"osu file format v14\n[TimingPoints]\n0,500\n[HitObjects]\n64,64,1000,6,2,{path},2,256,2|4|8,1:2|2:3|3:1,1:2:3:60:slide.wav\n");
+            map.LegacySliderTicks = legacyTicks;
+            map.DerandomizeFSliderDroplets = true;
+            map.DerandomizeDropletsForHardRock = hardRock;
+            var slider = map.ImportedSliders.Single();
+            slider.PreserveNativeGeometry = true;
+            slider.DropletMode = SliderDropletMode.Randomize;
+            var original = map.DeepClone().ImportedSliders.Single();
+            var expected = OsuBeatmapWriter.Serialize(map);
+            var cache = new OsuWriteCache();
+            VerifyNative();
+            foreach (var settings in new[] { (Strength: 8d, Seed: 1337), (Strength: 20d, Seed: 99) })
+            {
+                map.RandomizeDropletStrength = settings.Strength; map.RandomizeDropletSeed = settings.Seed;
+                var changed = SliderRepresentationEditing.RefreshLegacyDroplets(map, cache: cache);
+                Check(changed.Success && map.ImportedSliders.Single().RandomizationTrack is not null,
+                    "Custom random parameters must still process native sliders: " + string.Join("; ", changed.Diagnostics));
+                map = ProjectSerializer.Read(ProjectSerializer.Serialize(map));
+                map.RandomizeDropletStrength = 20; map.RandomizeDropletSeed = 1337;
+                VerifyNative();
+            }
+
+            void VerifyNative()
+            {
+                var result = SliderRepresentationEditing.RefreshLegacyDroplets(map, cache: cache);
+                Check(result.Success, string.Join("; ", result.Diagnostics));
+                var retained = map.ImportedSliders.Single();
+                Check(retained.RandomizationTrack is null && retained.PathType == original.PathType
+                    && retained.X == original.X && retained.Y == original.Y && retained.PixelLength == original.PixelLength
+                    && retained.SpanCount == original.SpanCount && retained.ControlPoints.SequenceEqual(original.ControlPoints),
+                    "Default randomization must preserve native geometry without fitting");
+                var output = OsuBeatmapWriter.Serialize(map, cache: cache);
+                Check(output.ObjectSequenceMatches && output.ReadBack.ImportedSliders.Single().OriginalLine == original.OriginalLine,
+                    "Native export must retain geometry, repeats and samples");
+                Check(output.PlayableObjects.SequenceEqual(expected.PlayableObjects)
+                    && output.PlayableHardRockObjects.SequenceEqual(expected.PlayableHardRockObjects), "Native NM/HR playback changed");
+                Check(output.Text == OsuBeatmapWriter.Serialize(map).Text, "Cached native export differs");
+            }
+        }
+        var mixed = OsuBeatmapReader.Read("osu file format v14\n[TimingPoints]\n0,500\n[HitObjects]\n64,64,1000,2,0,B|128:192|320:64,1,256\n256,192,3000,2,0,L|256:392,1,200\n");
+        mixed.ImportedSliders[0].PreserveNativeGeometry = true;
+        mixed.ImportedSliders[0].DropletMode = SliderDropletMode.Randomize;
+        mixed.ImportedSliders[1].DropletMode = SliderDropletMode.Derandomize;
+        string nativeLine = mixed.ImportedSliders[0].OriginalLine!;
+        var refreshed = SliderRepresentationEditing.RefreshLegacyDroplets(mixed);
+        Check(refreshed.Success, string.Join("; ", refreshed.Diagnostics));
+        var mixedOutput = OsuBeatmapWriter.Serialize(mixed);
+        Check(mixedOutput.ObjectSequenceMatches && mixedOutput.ReadBack.ImportedSliders[0].OriginalLine == nativeLine
+            && mixed.ImportedSliders.Single(s => s.DropletMode == SliderDropletMode.Derandomize).RandomizationTrack is not null,
+            "Mixed refresh must retain the native path while processing derandomized sliders");
     }
 
     private static void Check(bool condition, string message)

@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "ニアレストビート {0}/{1} ・ {2} ・ 一時スナップ 1/{3}",
   "editor.status.noteOffGrid": "オフグリッド・{0}",
   "editor.status.objectsCopied": "コピーされた {0} オブジェクト · 貼り付けは最も早い開始を再生ヘッドに揃えます",
+  "editor.status.timestampCopied": "タイムスタンプをクリップボードにコピーしました",
   "editor.status.objectsCut": "{0} オブジェクトを切り取る · Ctrl + Z を元に戻す",
   "editor.status.objectsDeleted": "Deleted {0} オブジェクト · 元に戻す Ctrl + Z",
   "editor.status.objectsPasted": "再生ヘッドに {0} オブジェクトを貼り付けました · Ctrl + Z を元に戻す",
@@ -1302,6 +1303,7 @@
   "randomize.disableAll": "すべての FSlider のランダム化を無効化",
   "randomize.enableSelected": "ランダム化を有効にする",
   "randomize.disableSelected": "ランダム化を無効にする",
+  "randomize.advanced": "詳細設定",
   "randomize.resetStrength": "強度をリセット（20）",
   "randomize.resetAdjustments": "水滴の手動調整をリセット",
   "randomize.settings": "ランダム化設定…",
@@ -1932,5 +1934,13 @@
   "timing.sourceChanged": "エディターのタイミングが変更されました。適用前にこのウィンドウを開き直してください。",
   "media.storyboardDiagnostics": "ストーリーボード：無効なコマンドまたはリソースを {0} 件スキップしました。",
   "media.storyboardFailed": "ストーリーボードを読み込めませんでした：{0}",
-  "media.loading": "譜面のリソースを準備しています…"
+  "media.loading": "譜面のリソースを準備しています…",
+  "settings.editorTheme": "エディターテーマ",
+  "settings.theme.graphite": "グラファイト",
+  "settings.theme.studio": "スタジオ",
+  "settings.theme.pearl": "ブラックパール",
+  "settings.theme.midnight": "ミッドナイト",
+  "settings.theme.forest": "フォレスト",
+  "settings.theme.rose": "ローズ",
+  "settings.theme.slate": "スレート"
 }

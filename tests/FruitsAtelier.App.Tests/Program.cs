@@ -32,6 +32,7 @@ if (args.Contains("--storage-check")) { StorageSettingsTests.Run(); return 0; }
 if (args.Contains("--history-maintenance-check")) { DeferredHistoryUiTests.Run(); return 0; }
 if (args.Length == 3 && args[0] == "--library-search-profile") { LibrarySearchTests.Profile(args[1], args[2]); return 0; }
 if (args.Contains("--library-search-check")) { LibrarySearchTests.Run(); return 0; }
+if (args.Contains("--pattern-clipboard-check")) { PatternClipboardTests.Run(); Console.WriteLine("PASS pattern text clipboard and import"); return 0; }
 if (args.Contains("--pattern-gallery-check")) { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); Console.WriteLine("PASS Pattern Gallery, editing sessions and source navigation"); return 0; }
 if (args.Contains("--cross-difficulty-clipboard-check")) { CrossDifficultyClipboardTests.Run(); Console.WriteLine("PASS mapset clipboard, target settings, independent SV, undo and rejection"); return 0; }
 if (args.Length == 3 && args[0] == "--new-difficulty-profile") return NewDifficultyPerformance.Run(args[1], args[2]);
@@ -132,6 +133,7 @@ if (args.Contains("--timeline-layout-check"))
     Console.WriteLine("PASS Resizable timelines, compact transport, speed selector and input"); return 0;
 }
 
+if (args.Contains("--editor-theme-check")) { EditorThemeTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS Editor themes, preview, persistence and settings layout"); return 0; }
 if (args.Contains("--ui-scale-check")) { UiScaleTests.Run(); SettingsTests.Layout(); DisplaySettingsTests.Run(); Console.WriteLine("PASS UI scale preferences, layout and input"); return 0; }
 
 if (args.Contains("--conversion-docks-check")) { ConversionDockShortcutTests.Run(); PatternNotesTests.Run(); Console.WriteLine("PASS Conversion dock shortcuts, action menus and live editing"); return 0; }
@@ -385,6 +387,7 @@ var tests = new (string Name, Action Run)[]
     ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
+    ("Editor themes preview, cancel and persist without changing content", EditorThemeTests.Run),
     ("UI scale defaults, steps, draft cancellation and persistence preserve content", UiScaleTests.Run),
     ("Window and canvas display preferences persist without content edits", WindowPreferenceTests.Run),
     ("Fullscreen settings and Alt Enter preserve drafts, content and testplay", FullscreenSettingsTests.Run),
@@ -706,6 +709,7 @@ var tests = new (string Name, Action Run)[]
     ("One authoring gesture mixes straight and Bezier segments with reversible edits", MixedSliderTests.Author),
     ("Legacy Sliders convert to FSliders and preserve repeats through project and osu export", MixedSliderTests.Import),
     ("Beatmap resource export excludes output subtrees and preserves selected audio", ResourceTests.Run),
+    ("Empty selection clipboard copies playhead timestamps on both canvases", ClipboardTests.EmptySelectionTimestamp),
     ("Fruit clipboard snapshots preserve metadata and undo identities", ClipboardTests.FruitSnapshotAndHistory),
     ("Anchor clipboard actions copy and cut the entire repeated slider", ClipboardTests.AnchorCopiesAndCutsParent),
     ("Legacy Slider and banana clipboard preserve geometry and export samples", ClipboardTests.ImportedAndBananaMetadata),

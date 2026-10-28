@@ -56,7 +56,7 @@ public sealed partial class EditorView
     }
 
     public bool PatternGalleryWantsCapture => galleryPressedId != Guid.Empty || galleryPreviewPanning;
-    public bool PatternGalleryNeedsRedraw => galleryTagReordering || GalleryTagAutosavePending || PatternEditingNeedsRedraw || PatternSourceNeedsRedraw || galleryIoTask is not null || galleryPreviewTask is not null
+    public bool PatternGalleryNeedsRedraw => pendingPatternPaste is not null || pendingPatternImport is not null || galleryTagReordering || GalleryTagAutosavePending || PatternEditingNeedsRedraw || PatternSourceNeedsRedraw || galleryIoTask is not null || galleryPreviewTask is not null
         || galleryPlacementTask is not null || galleryDropTask is not null || galleryDragging && !galleryDropChoosing || galleryPendingDirectory is not null || galleryPendingImportPath is not null
         || PatternGalleryAvailable && (GalleryFullPreviewMissing || galleryVisibleIds.Any(GalleryPreviewMissing));
     private bool GalleryPreviewMissing(Guid id) => id != Guid.Empty && !galleryPreviews.ContainsKey(id) && !galleryPreviewErrors.ContainsKey(id);
@@ -85,6 +85,7 @@ public sealed partial class EditorView
         if (PatternEditingActive || PatternEditingBusy || galleryIoTask is not null || GalleryTagAutosavePending)
         { FlushGalleryTagAutosave(); galleryPendingDirectory = directory; return; }
         galleryPendingDirectory = null;
+        pendingPatternPaste = null; pendingPatternImport = null;
         galleryTagLayouts.Clear();
         galleryTagEdits.Clear(); galleryCurrentTagEdit = null;
         CloseGalleryTags();
@@ -273,6 +274,7 @@ public sealed partial class EditorView
                 });
             }
         }
+        PumpPatternClipboard();
         PumpGalleryPlacement();
     }
 
@@ -509,10 +511,10 @@ public sealed partial class EditorView
         return low;
     }
 
-    private static void DrawGalleryScrollbar(ICanvas c, Rect bounds, float scroll, float maximum)
+    private void DrawGalleryScrollbar(ICanvas c, Rect bounds, float scroll, float maximum)
     {
         if (maximum <= 0) return;
         float thumb = Math.Max(18, bounds.Height * bounds.Height / (bounds.Height + maximum));
-        c.Fill(new(bounds.Right - 4, bounds.Y + scroll / maximum * (bounds.Height - thumb), 3, thumb), 0x75818D, 1);
+        c.Fill(new(bounds.Right - 4, bounds.Y + scroll / maximum * (bounds.Height - thumb), 3, thumb), Chrome(0x75818D, Muted), 1);
     }
 }

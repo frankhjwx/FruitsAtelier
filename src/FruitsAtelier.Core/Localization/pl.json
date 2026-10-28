@@ -551,6 +551,7 @@
   "editor.status.noteBeatPosition": "Najbliższy rytm {0}/{1} · {2} · tymczasowy Snap 1/{3}",
   "editor.status.noteOffGrid": "Poza siecią · {0}",
   "editor.status.objectsCopied": "Skopiowane obiekty {0} · Wklej wyrównuje najwcześniejszy początek do głowicy odtwarzania",
+  "editor.status.timestampCopied": "Znacznik czasu skopiowany do schowka",
   "editor.status.objectsCut": "Wytnij obiekty {0} · Ctrl + Z, aby cofnąć",
   "editor.status.objectsDeleted": "Deleted {0} obiekty · Ctrl + Z, aby cofnąć",
   "editor.status.objectsPasted": "Wklejono obiekty {0} do głowicy odtwarzania · Ctrl + Z, aby cofnąć",
@@ -1302,6 +1303,7 @@
   "randomize.disableAll": "Wyłącz losowość wszystkich FSliderów",
   "randomize.enableSelected": "Włącz losowość",
   "randomize.disableSelected": "Wyłącz losowość",
+  "randomize.advanced": "Ustawienia zaawansowane",
   "randomize.resetStrength": "Resetuj siłę (20)",
   "randomize.resetAdjustments": "Zresetuj ręczne korekty kropelek",
   "randomize.settings": "Ustawienia losowania…",
@@ -1932,5 +1934,13 @@
   "timing.sourceChanged": "Timing w edytorze uległ zmianie. Przed zastosowaniem otwórz to okno ponownie.",
   "media.storyboardDiagnostics": "Storyboard: pominięto {0} nieprawidłowych poleceń lub zasobów.",
   "media.storyboardFailed": "Nie udało się wczytać storyboardu: {0}",
-  "media.loading": "Przygotowywanie zasobów mapy…"
+  "media.loading": "Przygotowywanie zasobów mapy…",
+  "settings.editorTheme": "Motyw edytora",
+  "settings.theme.graphite": "Grafit",
+  "settings.theme.studio": "Studio",
+  "settings.theme.pearl": "Czarna perła",
+  "settings.theme.midnight": "Północ",
+  "settings.theme.forest": "Las",
+  "settings.theme.rose": "Róża",
+  "settings.theme.slate": "Łupek"
 }

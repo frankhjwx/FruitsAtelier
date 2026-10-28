@@ -169,7 +169,7 @@ public sealed partial class EditorView
                 for (int i = 0; i < SongCountdownSpeeds.Length; i++)
                 {
                     var row = new Rect(menu.X + 6, menu.Y + 6 + i * 32, menu.Width - 12, 30);
-                    if (row.Contains(mouseX, mouseY)) c.Fill(row, 0x343E4D, 4);
+                    if (row.Contains(mouseX, mouseY)) c.Fill(row, Chrome(0x343E4D, HoverSurface), 4);
                     c.Text(L.Get(SongCountdownSpeeds[i]), row.X + 9, row.Y + 7, 12, i == countdown ? Accent : Foreground, row.Width - 18);
                 }
             }
@@ -197,7 +197,7 @@ public sealed partial class EditorView
         string inputKey = "song:" + key;
         if (key == "Tags") DrawSongTags(c, box, focused);
         else if (enabled) DrawInputText(c, new(box.X + 9, box.Y + 7, box.Width - 18, 20), value, 13, focused, inputKey);
-        else c.Text(value, box.X + 9, box.Y + 7, 13, key is "Artist" or "Title" ? 0xB8C2CEu : Muted, box.Width - 18);
+        else c.Text(value, box.X + 9, box.Y + 7, 13, key is "Artist" or "Title" ? Chrome(0xB8C2CE, Foreground) : Muted, box.Width - 18);
         hits.Add(new(box, () => { songField = key; SongSetupInputSession++; FocusInput(inputKey, value, mouseX); }, enabled));
     }
 

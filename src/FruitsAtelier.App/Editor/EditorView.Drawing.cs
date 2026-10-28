@@ -236,7 +236,7 @@ public sealed partial class EditorView
         axisTooltip = null;
         float toolbarRight = CanvasToolbarBounds.Right;
         float toolbarLeft = CanvasToolbarBounds.X;
-        c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
+        c.Fill(new(0, canvas.Y, toolbarRight, 38), Chrome(0x1C2129, Panel));
         float snapLeft = toolbarRight - 158;
         bool compactToolbar = CanvasToolbarBounds.Width < 900;
         bool narrowZoom = compactToolbar;
@@ -300,7 +300,7 @@ public sealed partial class EditorView
         DrawObjectTimeline(c);
         var breakButton = new Rect(breakX, canvas.Y + 4, breakWidth, 29);
         bool canInsertBreak = InsertBreakCandidate() is not null;
-        if (breakButton.Contains(mouseX, mouseY) && canInsertBreak) c.Fill(breakButton, 0x35455A, 4);
+        if (breakButton.Contains(mouseX, mouseY) && canInsertBreak) c.Fill(breakButton, Chrome(0x35455A, HoverSurface), 4);
         string breakLabel = L.Get("timeline.insertBreak");
         c.Text(breakLabel, breakButton.X + (breakButton.Width - c.MeasureText(breakLabel, 12)) / 2,
             breakButton.Y + (breakButton.Height - 16) / 2, 12, canInsertBreak ? Foreground : Muted, breakButton.Width - 6);
@@ -619,7 +619,7 @@ public sealed partial class EditorView
             stage = new(stage.X + (stage.Width - viewHeight * aspect) / 2, stage.Y + (stage.Height - viewHeight) / 2, viewHeight * aspect, viewHeight);
         }
         PreviewViewport = stage;
-        c.Fill(stage, 0x151A22);
+        c.Fill(stage, Chrome(0x151A22, Background));
         DrawBeatmapBackground(c, stage, LibrarySettings.BackgroundDim / 100f);
         if (previewDisplayMode == 2) c.Stroke(stage, Grid);
         c.Clip(stage);
@@ -633,7 +633,7 @@ public sealed partial class EditorView
             : stage.Y + stage.Height * .15f + (float)CatchScrollTiming.CatchY * fieldWidth / 512;
         // Fit extends visibility above the complete legacy 4:3 reference view, including its catcher area.
         if (previewDisplayMode == 2)
-            c.Stroke(new(stage.X + 9, referenceTop, referenceWidth, referenceHeight), 0x2B3442);
+            c.Stroke(new(stage.X + 9, referenceTop, referenceWidth, referenceHeight), Chrome(0x2B3442, Grid));
         double scrollSpeed = CatchScrollTiming.PixelsPerMs(PreviewApproachRate, fieldWidth);
         double visibleAhead = (catchY - stage.Y + CatchSize.FruitDiameter(PreviewCircleSize) * fieldWidth / 512 * 1.2) / scrollSpeed;
         DrawPreviewPlate(c, fieldLeft, fieldWidth, catchY);
@@ -668,12 +668,12 @@ public sealed partial class EditorView
         float phase = (float)Math.Clamp((playhead - lastPulse) / beatLength, 0, 1);
         float pulse = (1 - phase) * (1 - phase);
         var badge = new Rect(plot.X + 10, plot.Y + 10, 88, 28);
-        c.Fill(badge, 0x182430, 14, .92f);
+        c.Fill(badge, Chrome(0x182430, Panel), 14, .92f);
         c.Fill(badge, 0xD89532, 14, .08f + .29f * pulse);
         c.Stroke(badge, Blend(0xF5BB62, 0x526070, .3f + .7f * pulse), 1.3f, 14);
         c.Circle(badge.X + 15, badge.Y + 14, 4, 0xFFD174, true, 1, .45f + .55f * pulse);
         c.Text(L.Get("timeline.kiaiIndicator"), badge.X + 27, badge.Y + 5, 13,
-            Blend(0xFFF0D4, 0xA1A9AC, .35f + .65f * pulse), badge.Width - 31);
+            Chrome(Blend(0xFFF0D4, 0xA1A9AC, .35f + .65f * pulse), Foreground), badge.Width - 31);
 
         static uint Blend(uint bright, uint dim, float amount)
         {
@@ -687,7 +687,7 @@ public sealed partial class EditorView
         TimeDisplayBounds = TestplayButtonBounds = default;
         if (OverviewTimelineCollapsed) return;
         float top = TransportTop;
-        c.Fill(new(0, top, width, height - 28 - top), 0x20252E);
+        c.Fill(new(0, top, width, height - 28 - top), Chrome(0x20252E, Panel));
         c.Line(0, top, width, top, Grid);
         float scale = TransportScale;
         float timeY = overview.Y + (overview.Height - 20 * scale) / 2;
@@ -706,13 +706,13 @@ public sealed partial class EditorView
             c.Text(L.Get("timeJump.title"), 20, top - 20, 12, Foreground, 200);
         if (!AudioReady) c.Text(AudioNotice, 16, height - 39, 10, Gold, 192);
         DrawTransportControls(c);
-        c.Fill(overview, 0x141922, 4);
+        c.Fill(overview, Chrome(0x141922, Background), 4);
         if (AudioLoading) return;
         const float timelineMarkerOpacity = .8f;
         float TimelineX(double time) => overview.X + (float)(Math.Clamp(time, 0, TimelineDurationMs) / TimelineDurationMs) * overview.Width;
         var timing = displayedTiming;
         float centerY = overview.Y + overview.Height / 2;
-        c.Line(overview.X, centerY, overview.Right, centerY, 0xA0A0A0, 1, timelineMarkerOpacity);
+        c.Line(overview.X, centerY, overview.Right, centerY, Chrome(0xA0A0A0, Muted), 1, timelineMarkerOpacity);
         float spanHeight = Math.Min(12, overview.Height * .6f);
         float spanY = centerY - spanHeight / 2;
         double? kiaiStart = null;
@@ -751,10 +751,10 @@ public sealed partial class EditorView
         double visibleEnd = Math.Clamp(PresentationViewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);
         float viewX = overview.X + (float)(visibleStart / TimelineDurationMs) * overview.Width;
         float viewWidth = (float)((visibleEnd - visibleStart) / TimelineDurationMs) * overview.Width;
-        c.Stroke(new(viewX, overview.Y + 1, viewWidth, overview.Height - 2), 0x71849A, 1, 3);
+        c.Stroke(new(viewX, overview.Y + 1, viewWidth, overview.Height - 2), Chrome(0x71849A, Muted), 1, 3);
         float headX = IsLazerEditing ? TimelineX(LazerPresentationTime) : TimelineHeadX;
-        c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, 0xFFFFFF, 2);
-        c.Fill(new(headX - 2, overview.Y - 5, 4, 6), 0xFFFFFF);
+        c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, Chrome(0xFFFFFF, Foreground), 2);
+        c.Fill(new(headX - 2, overview.Y - 5, 4, 6), Chrome(0xFFFFFF, Foreground));
         DrawTimelineBookmarks(c, overview, 0, TimelineDurationMs);
         DrawCollaborationLocks(c, overview, 0, TimelineDurationMs);
         DrawBookmarkToolbar(c);
@@ -762,7 +762,7 @@ public sealed partial class EditorView
 
     private void DrawStatus(ICanvas c)
     {
-        c.Fill(new(0, height - 28, width, 28), 0x171C23);
+        c.Fill(new(0, height - 28, width, 28), Chrome(0x171C23, Background));
         c.Circle(13, height - 14, 3, IsDirty ? Gold : Accent);
         string notice = workspaceSaveTask is not null || difficultySaveTask is not null ? L.Get("files.saving") : SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
             : deferredConversion ? L.Get("editor.status.convertingSlider") : conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
@@ -818,8 +818,8 @@ public sealed partial class EditorView
             Item(L.Get("editor.command.reversePath"), ReverseSelectedPath, SelectedTrack is not null && ClipboardInteractionReady && !notesLocked);
             Item(L.Get("ui.splitMenu"), SplitSelected, SelectedTrack is not null && draftTrack == Guid.Empty);
             Item(L.Get("ui.cutMenu"), () => CutSelection(), CanCopySelection);
-            Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection);
-            Item(L.Get("ui.pasteMenu"), () => PasteSelection(), CanPasteSelection);
+            Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection || CanCopyTimestamp);
+            Item(L.Get("ui.pasteMenu"), RequestClipboardPaste, ClipboardInteractionReady && (CanPasteSelection || RequestPasteObjects is not null));
             if (CanEditBananas) Item(L.Get("bananaEdit.title") + "  Ctrl+F", OpenBananaEdit, !notesLocked);
             Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), ShowPatternDock, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
@@ -992,11 +992,11 @@ public sealed partial class EditorView
         if (drawingDockContent) { c.Fill(r, Surface, 4); c.Stroke(r, Grid, radius: 4); }
         bool textBold = bold ?? active;
         bool hover = enabled && contextItems.Count == 0 && r.Contains(mouseX, mouseY);
-        if (hover) c.Fill(r, active ? 0x3A6260u : 0x3D495Au, 4);
-        else if (active) c.Fill(r, 0x31494B, 4);
-        if (hover) c.Stroke(r, 0x71849A, 1, 4);
-        if (active) c.Stroke(r, 0x477E7B, 1, 4);
-        uint color = !enabled ? 0x5B6777u : active ? Accent : Foreground;
+        if (hover) c.Fill(r, active ? Chrome(0x3A6260, SelectedHoverSurface) : Chrome(0x3D495A, HoverSurface), 4);
+        else if (active) c.Fill(r, Chrome(0x31494B, SelectedSurface), 4);
+        if (hover) c.Stroke(r, Chrome(0x71849A, Muted), 1, 4);
+        if (active) c.Stroke(r, Chrome(0x477E7B, Accent), 1, 4);
+        uint color = !enabled ? Chrome(0x5B6777, Muted) : active ? Accent : Foreground;
         int shortcut = label.IndexOf("  ", StringComparison.Ordinal);
         if (label == "×")
         {
@@ -1017,17 +1017,17 @@ public sealed partial class EditorView
 
     private void ToggleSwitch(ICanvas c, Rect r, string label, bool value, Action action)
     {
-        if (contextItems.Count == 0 && r.Contains(mouseX, mouseY)) c.Fill(r, 0x303A46, 5);
+        if (contextItems.Count == 0 && r.Contains(mouseX, mouseY)) c.Fill(r, Chrome(0x303A46, HoverSurface), 5);
         c.Text(label, r.X + 10, r.Y + (r.Height - 17) / 2, 13, Foreground, r.Width - 82);
         var track = new Rect(r.Right - 58, r.Y + (r.Height - 24) / 2, 46, 24);
-        c.Fill(track, value ? 0x417D77u : 0x46515Fu, 12);
+        c.Fill(track, value ? Chrome(0x417D77, Accent) : Chrome(0x46515F, Grid), 12);
         c.Circle(track.X + (value ? 34 : 12), track.Y + 12, 9, 0xF0F3F6);
         hits.Add(new(r, action, true));
     }
 
-    private static void Badge(ICanvas c, Rect r, string label, uint color)
+    private void Badge(ICanvas c, Rect r, string label, uint color)
     {
-        c.Fill(r, 0x2B323B, 4);
+        c.Fill(r, Chrome(0x2B323B, Surface), 4);
         c.Text(label, r.X + 8, r.Y + 5, 11, color, r.Width - 12);
     }
 
@@ -1038,8 +1038,8 @@ public sealed partial class EditorView
         int index = fields.Count;
         bool focused = editField == index;
         bool timestamp = label == L.Get("ui.timeField") || label == L.Get("ui.startTimeField") || label == L.Get("ui.endTimeField");
-        c.Fill(r, focused ? 0x273638u : 0x151B24u, 3);
-        c.Stroke(r, focused ? (fieldError.Length > 0 ? Error : Accent) : r.Contains(mouseX, mouseY) ? 0x67758B : Grid, 1, 3);
+        c.Fill(r, focused ? Chrome(0x273638, SelectedSurface) : Chrome(0x151B24, Background), 3);
+        c.Stroke(r, focused ? (fieldError.Length > 0 ? Error : Accent) : r.Contains(mouseX, mouseY) ? Chrome(0x67758B, Muted) : Grid, 1, 3);
         DrawInputText(c, new(r.X + 9, r.Y + 7, r.Width - 18, 18), focused ? editBuffer : timestamp ? Time(value) : Number(value), 12, focused, "numeric:" + index);
         fields.Add(new(r, label, value, apply, timestamp));
         y += 37;

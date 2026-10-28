@@ -104,7 +104,7 @@ public sealed partial class EditorView
             float top = Math.Max(y, aimodListBounds.Y);
             var row = new Rect(bounds.X, top, bounds.Width, Math.Max(0, Math.Min(y + rowHeight, aimodListBounds.Bottom) - top));
             aimodRowBounds.Add((index, row)); aimodVisibleRows++;
-            if (aimodSelected.Contains(index)) c.Fill(row, 0x31494B);
+            if (aimodSelected.Contains(index)) c.Fill(row, Chrome(0x31494B, SelectedSurface));
             else if ((index & 1) != 0) c.Fill(row, Panel);
             uint colour = issue.Severity == AimodSeverity.Error ? Error : issue.Severity == AimodSeverity.Warning ? 0xE3AD42u : Foreground;
             x = bounds.X - aimodScrollX;

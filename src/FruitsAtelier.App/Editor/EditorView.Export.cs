@@ -112,7 +112,7 @@ public sealed partial class EditorView
         return Path.Combine(directory, filename);
     }
 
-    private static void DrawExportPath(ICanvas c, string path, float x, float y, float available)
+    private void DrawExportPath(ICanvas c, string path, float x, float y, float available)
     {
         for (int line = 0; line < 4 && path.Length > 0; line++)
         {

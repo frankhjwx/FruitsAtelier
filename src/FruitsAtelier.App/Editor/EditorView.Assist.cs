@@ -275,7 +275,7 @@ public sealed partial class EditorView
             float font = IsOsuCanvas ? 8 : 52 * scale;
             font = Math.Min(font, (r.Width - 8) / Math.Max(1, c.MeasureText(label, font, true)) * font);
             c.Text(label, r.X + (r.Width - c.MeasureText(label, font, true)) / 2, IsOsuCanvas ? r.Bottom - 14 : r.Y + size * .76f,
-                font, active[i] ? Foreground : 0x747B85, r.Width - 8, true);
+                font, active[i] ? Foreground : Chrome(0x747B85, Muted), r.Width - 8, true);
             if (mixed) c.Line(frame.X + 6, frame.Y + 8, frame.X + 14, frame.Y + 8, Gold, 2);
             var hit = new Rect(r.X, Math.Max(r.Y, assistPalette.Y), r.Width,
                 Math.Min(r.Bottom, assistPalette.Bottom) - Math.Max(r.Y, assistPalette.Y));
@@ -298,7 +298,7 @@ public sealed partial class EditorView
                 tip = L.Get(hovered == 4 ? "assist.lazerGridHint" : "assist.lazerDistanceHint");
             DrawPaletteTooltip(c, tip, assistButtons[hovered], left: true, above: hovered is 5 or 6);
         }
-        static uint Dim(uint color, float opacity)
+        uint Dim(uint color, float opacity)
         {
             uint Blend(int shift) => (uint)(((color >> shift) & 255) * opacity + ((Background >> shift) & 255) * (1 - opacity));
             return Blend(16) << 16 | Blend(8) << 8 | Blend(0);

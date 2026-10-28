@@ -46,7 +46,7 @@ public sealed partial class EditorView
                 : i switch { 0 => "tools.select", 1 => "tools.fruit", 2 => "tools.fslider", _ => "tools.banana" });
             float fontSize = size * 52 / 512;
             c.Text(label, bounds.X + (size - c.MeasureText(label, fontSize, true)) / 2, bounds.Y + size * .76f,
-                fontSize, active ? Foreground : 0x747B85, size, true);
+                fontSize, active ? Foreground : Chrome(0x747B85, Muted), size, true);
             hits.Add(new(bounds, () =>
             {
                 if (mode == Tool.Slider && draftTrack == Guid.Empty) Select(Guid.Empty);

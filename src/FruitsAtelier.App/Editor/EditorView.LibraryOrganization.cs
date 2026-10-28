@@ -82,8 +82,8 @@ public sealed partial class EditorView
         LibraryChoice(c, librarySortBounds, L.Get("library.sortBy", L.Get("library.order." + librarySort)), () =>
             ShowLibraryOrderMenu(librarySortBounds, false));
         bool hover = libraryDirectionBounds.Contains(mouseX, mouseY);
-        c.Fill(libraryDirectionBounds, hover ? 0x3D495Au : Surface, 4);
-        c.Stroke(libraryDirectionBounds, hover ? 0x71849Au : Grid, radius: 4);
+        c.Fill(libraryDirectionBounds, hover ? Chrome(0x3D495A, HoverSurface) : Surface, 4);
+        c.Stroke(libraryDirectionBounds, hover ? Chrome(0x71849A, Muted) : Grid, radius: 4);
         float cx = libraryDirectionBounds.X + libraryDirectionBounds.Width / 2;
         float cy = libraryDirectionBounds.Y + libraryDirectionBounds.Height / 2;
         float tip = cy + (libraryDescending ? 4 : -4), tail = cy - (libraryDescending ? 4 : -4);
@@ -179,8 +179,8 @@ public sealed partial class EditorView
             if (sectionHeight > 32) c.Line(section.X + 1, section.Y + 32, section.Right - 1, section.Y + 32, Grid, 1);
             if (!addButton) return;
             var add = new Rect(section.Right - 32, section.Y + 2, 30, 28);
-            c.Fill(add, add.Contains(mouseX, mouseY) ? 0x3D495Au : Surface, 4);
-            c.Stroke(add, add.Contains(mouseX, mouseY) ? 0x71849Au : Grid, radius: 4);
+            c.Fill(add, add.Contains(mouseX, mouseY) ? Chrome(0x3D495A, HoverSurface) : Surface, 4);
+            c.Stroke(add, add.Contains(mouseX, mouseY) ? Chrome(0x71849A, Muted) : Grid, radius: 4);
             float cx = add.X + add.Width / 2, cy = add.Y + add.Height / 2;
             c.Line(cx - 3, cy, cx + 3, cy, Foreground, 1.2f);
             c.Line(cx, cy - 3, cx, cy + 3, Foreground, 1.2f);
@@ -196,8 +196,8 @@ public sealed partial class EditorView
                 Math.Max(0, Math.Min(bounds.Bottom, collectionsBounds.Bottom) - Math.Max(bounds.Y, collectionsBounds.Y)));
             collectionRows.Add((clipped, id));
             bool selected = libraryCollection == id;
-            c.Fill(bounds, selected ? 0x31494Bu : Surface, 4, selected ? 1 : .4f);
-            c.Stroke(bounds, selected ? 0x477E7Bu : Grid, radius: 4);
+            c.Fill(bounds, selected ? Chrome(0x31494B, SelectedSurface) : Surface, 4, selected ? 1 : .4f);
+            c.Stroke(bounds, selected ? Chrome(0x477E7B, Accent) : Grid, radius: 4);
             c.Text(name, bounds.X + 10, bounds.Y + 8, 12, selected ? Accent : Foreground, bounds.Width - 50, selected);
             c.Text(count.ToString(System.Globalization.CultureInfo.CurrentCulture), bounds.Right - 28, bounds.Y + 8, 11, Muted, 22);
             hits.Add(new(clipped, () => SwitchLibraryCategory(false, collection: id), true));
@@ -312,7 +312,7 @@ public sealed partial class EditorView
                 var collection = entries[i];
                 var row = new Rect(list.X, list.Y + i * 34 - collectionDialogScroll, list.Width, 32);
                 bool selected = collectionChoices.Contains(collection.Id);
-                if (selected || row.Contains(mouseX, mouseY)) c.Fill(row, selected ? 0x31494Bu : Surface, 3);
+                if (selected || row.Contains(mouseX, mouseY)) c.Fill(row, selected ? Chrome(0x31494B, SelectedSurface) : Surface, 3);
                 c.Text(selected ? "☑" : "☐", row.X + 8, row.Y + 7, 14, selected ? Accent : Muted, 24);
                 c.Text(collection.Name, row.X + 36, row.Y + 8, 13, Foreground, row.Width - 44);
                 var clipped = new Rect(row.X, Math.Max(row.Y, list.Y), row.Width, Math.Max(0, Math.Min(row.Bottom, list.Bottom) - Math.Max(row.Y, list.Y)));

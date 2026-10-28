@@ -29,6 +29,8 @@ public sealed partial class EditorView
     private OsuCanvasObject[] osuCanvasObjects = [];
     private double[] osuCanvasMaximumEnds = [];
     private readonly List<int> osuCanvasVisible = [];
+    private Comparison<int>? osuCanvasLayerComparison;
+    private double osuCanvasLayerTime;
     private ImportedSlider? osuDraftPathSource;
     private int osuDraftPathCount;
     private char osuDraftPathType;
@@ -188,6 +190,18 @@ public sealed partial class EditorView
         while (low < high) { int mid = (low + high) / 2; if (osuCanvasMaximumEnds[mid] < now - 700) low = mid + 1; else high = mid; }
         for (int i = low; i < osuCanvasObjects.Length && osuCanvasObjects[i].Start <= now + OsuCanvasPreempt; i++)
             if (osuCanvasObjects[i].End + 700 > now) osuCanvasVisible.Add(i);
+        osuCanvasLayerTime = now;
+        if (osuCanvasVisible.Count > 1) osuCanvasVisible.Sort(osuCanvasLayerComparison ??= CompareOsuCanvasLayers);
+    }
+
+    private int CompareOsuCanvasLayers(int left, int right)
+    {
+        var a = osuCanvasObjects[left]; var b = osuCanvasObjects[right];
+        double aDistance = Math.Min(Math.Abs(a.Start - osuCanvasLayerTime), Math.Abs(a.End - osuCanvasLayerTime));
+        double bDistance = Math.Min(Math.Abs(b.Start - osuCanvasLayerTime), Math.Abs(b.End - osuCanvasLayerTime));
+        int distance = aDistance.CompareTo(bDistance);
+        // Picking visits front to back; drawing traverses the same list in reverse.
+        return distance != 0 ? distance : left.CompareTo(right);
     }
     internal Guid? OsuCanvasHit(float x, float y)
     {

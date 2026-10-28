@@ -406,7 +406,7 @@ public sealed partial class EditorView
             float size = 40 * scale;
             uint faded = 0;
             for (int shift = 0; shift <= 16; shift += 8)
-                faded |= (uint)(((colour >> shift) & 255) * opacity + ((0x151A22 >> shift) & 255) * (1 - opacity)) << shift;
+                faded |= (uint)(((colour >> shift) & 255) * opacity + ((Chrome(0x151A22, Background) >> shift) & 255) * (1 - opacity)) << shift;
             c.Text(text, x - c.MeasureText(text, size) / 2, y - size / 2, size, faded);
         }
     }

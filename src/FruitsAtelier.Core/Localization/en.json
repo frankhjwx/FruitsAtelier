@@ -573,6 +573,7 @@
   "editor.status.noteBeatPosition": "Nearest beat {0}/{1} · {2} · temporary Snap 1/{3}",
   "editor.status.noteOffGrid": "Off-grid · {0}",
   "editor.status.objectsCopied": "Copied {0} objects · Paste aligns the earliest start to the playhead",
+  "editor.status.timestampCopied": "Timestamp copied to clipboard",
   "editor.status.objectsCut": "Cut {0} objects · Ctrl + Z to undo",
   "editor.status.objectsDeleted": "Deleted {0} objects · Ctrl + Z to undo",
   "editor.status.objectsPasted": "Pasted {0} objects at the playhead · Ctrl + Z to undo",
@@ -1324,6 +1325,7 @@
   "randomize.disableAll": "Disable randomization for all FSliders",
   "randomize.enableSelected": "Enable randomization",
   "randomize.disableSelected": "Disable randomization",
+  "randomize.advanced": "Advanced Settings",
   "randomize.resetStrength": "Reset strength (20)",
   "randomize.resetAdjustments": "Reset manual droplet adjustments",
   "randomize.settings": "Randomization settings…",
@@ -1932,5 +1934,13 @@
   "timing.sourceChanged": "Timing changed in the editor. Reopen this window before applying.",
   "media.storyboardDiagnostics": "Storyboard: {0} invalid commands or resources were skipped.",
   "media.storyboardFailed": "Storyboard could not be loaded: {0}",
-  "media.loading": "Preparing map resources…"
+  "media.loading": "Preparing map resources…",
+  "settings.editorTheme": "Editor theme",
+  "settings.theme.graphite": "Graphite",
+  "settings.theme.studio": "Studio",
+  "settings.theme.pearl": "Black Pearl",
+  "settings.theme.midnight": "Midnight",
+  "settings.theme.forest": "Forest",
+  "settings.theme.rose": "Rose",
+  "settings.theme.slate": "Slate"
 }
