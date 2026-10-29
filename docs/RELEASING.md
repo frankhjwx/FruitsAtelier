@@ -12,6 +12,18 @@ The application is currently unsigned. This workflow does not produce an install
 Windows ARM64 build, or macOS release. macOS development and packaging remain in
 [the Mac guide](MACOS.md).
 
+## Discord test packages
+
+Papaya links the `windows-experimental-TASK` artifact from the Discord preview
+workflow. Extract that download once to get the `FruitsAtelier/` folder, then run
+`FruitsAtelier.exe` inside it. Keep the whole folder together, including `Update.exe`,
+`.portable` and `current/`.
+
+The corresponding Mapset Verifier source ZIP and checksum are available in the
+separate `mapset-verifier-source-TASK` artifact on the same workflow run. They are
+not included in the runnable download. The application retains its bundled engine,
+licenses and source download directions.
+
 ## Local package
 
 From the repository root, using PowerShell 7 and the SDK pinned in `global.json`:

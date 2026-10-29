@@ -79,12 +79,22 @@ jobs:
         run: |
           ./scripts/Publish-Windows.ps1 -Version "0.0.2-alpha.$env:BUILD_NUMBER"
           ./scripts/Test-WindowsPackage.ps1 -Archive "artifacts/releases/FruitsAtelier-0.0.2-alpha.$env:BUILD_NUMBER-win-x64.zip"
+          Expand-Archive -LiteralPath "artifacts/releases/FruitsAtelier-0.0.2-alpha.$env:BUILD_NUMBER-win-x64.zip" -DestinationPath artifacts/preview/FruitsAtelier
       - uses: actions/upload-artifact@v4
         with:
           name: windows-experimental-${{ inputs.job_id }}
+          path: artifacts/preview/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - name: Save Mapset Verifier corresponding source
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapset-verifier-source-${{ inputs.job_id }}
           path: |
-            artifacts/releases/*.zip
-            artifacts/releases/*.sha256
+            artifacts/releases/FruitsAtelier-MapsetVerifier-*-source.zip
+            artifacts/releases/FruitsAtelier-MapsetVerifier-*-source.zip.sha256
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
