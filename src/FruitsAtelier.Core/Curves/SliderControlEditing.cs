@@ -44,9 +44,30 @@ public static class SliderControlEditing
     public static SliderCurveType AutomaticType(int pointCount) => pointCount <= 2 ? SliderCurveType.Linear
         : pointCount == 3 ? SliderCurveType.CircularArc : SliderCurveType.Bezier;
 
-    public static void Apply(CurveTrack track, IReadOnlyList<SliderVertex> vertices, bool allowArcFallback = false)
+    public static void Apply(CurveTrack track, IReadOnlyList<SliderVertex> vertices, bool allowArcFallback = false, bool exchangeEndpoints = false)
     {
         if (vertices.Count < 2) throw new ArgumentException(L.Get("core.points.minimumRemaining"));
+        if (exchangeEndpoints)
+        {
+            // Exchange roles, not coordinates: keep the dragged ID selected and the
+            // old endpoint as a control at the dragged vertex's former path slot.
+            var moved = vertices.ToList();
+            var previous = Vertices(track).ToDictionary(v => v.Id);
+            for (int i = 1; i + 1 < moved.Count; i++)
+            {
+                var control = moved[i];
+                if (control.Type is not null || !previous.TryGetValue(control.Id, out var before)
+                    || control.Point.TimeMs == before.Point.TimeMs && before.Type is null) continue;
+                int end = control.Point.TimeMs < moved[0].Point.TimeMs ? 0
+                    : control.Point.TimeMs > moved[^1].Point.TimeMs ? moved.Count - 1 : -1;
+                if (end < 0) continue;
+                var endpoint = moved[end];
+                moved[end] = control with { Type = endpoint.Type, ReferenceScale = endpoint.ReferenceScale };
+                moved[i] = endpoint with { Type = null };
+                break;
+            }
+            vertices = moved;
+        }
         var working = track.DeepClone();
         working.Nodes.Clear();
         var old = track.Nodes.ToDictionary(n => n.Id);
@@ -105,7 +126,9 @@ public static class SliderControlEditing
     {
         var vertices = Vertices(track);
         for (int i = 0; i < vertices.Count; i++) if (ids.Contains(vertices[i].Id)) vertices[i] = vertices[i] with { Point = vertices[i].Point + delta };
-        try { Apply(track, vertices); error = ""; return true; }
+        bool crossing = ids.Count == 1 && vertices.Skip(1).Take(vertices.Count - 2).Any(v => ids.Contains(v.Id) && v.Type is null
+            && (v.Point.TimeMs < vertices[0].Point.TimeMs || v.Point.TimeMs > vertices[^1].Point.TimeMs));
+        try { Apply(track, vertices, allowArcFallback: crossing, exchangeEndpoints: crossing); error = ""; return true; }
         catch (ArgumentException ex) { error = ex.Message; return false; }
     }
 

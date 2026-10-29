@@ -221,7 +221,7 @@ public sealed partial class EditorView
         bool Try(MapPoint offset)
         {
             var candidate = legacyDragStart.Select(v => anchorSelection.Contains(v.Id) ? v with { Point = v.Point + offset } : v).ToList();
-            try { SliderControlEditing.Apply(track, candidate, allowArcFallback: true); return true; }
+            try { SliderControlEditing.Apply(track, candidate, allowArcFallback: true, exchangeEndpoints: anchorSelection.Count == 1); return true; }
             catch (ArgumentException ex) { StatusMessage = ex.Message; return false; }
         }
         if (!Try(delta))

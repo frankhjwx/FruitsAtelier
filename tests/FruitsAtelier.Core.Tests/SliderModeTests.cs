@@ -75,6 +75,7 @@ internal static class SliderModeTests
 
     public static void SharedEditing()
     {
+        EndpointCrossings();
         var map = ArcMap(); var track = map.Tracks[0];
         var original = map.DeepClone(); var vertices = SliderControlEditing.Vertices(track);
         SliderControlEditing.Apply(track, vertices);
@@ -93,6 +94,38 @@ internal static class SliderModeTests
         Check(map.ContentEquals(before), "Invalid edit partially applied.");
         Check(SliderControlEditing.Remove(track, [point.Id]), "Removing one control deleted the slider.");
         Check(CurveMath.Validate(map).Count == 0, "Control removal broke curve validation.");
+    }
+
+    private static void EndpointCrossings()
+    {
+        foreach (bool head in new[] { true, false })
+        {
+            var history = new EditorHistory(ArcMap());
+            var before = history.Document.DeepClone();
+            var track = history.Document.Tracks[0];
+            var vertices = SliderControlEditing.Vertices(track);
+            Guid dragged = vertices[1].Id, replaced = vertices[head ? 0 : 2].Id;
+            double time = head ? 750 : 1750;
+            history.Begin("cross endpoint");
+            Check(SliderControlEditing.TryMove(track, [dragged], new(time - 1250, 0), out var error), error);
+            Check(track.Nodes[head ? 0 : track.Nodes.Count - 1].Id == dragged, "Dragged control did not become endpoint.");
+            Check(SliderControlEditing.Vertices(track).Any(v => v.Id == replaced && v.Type is null), "Old endpoint did not become interior.");
+            Near(head ? 750 : 1000, track.Nodes[0].TimeMs);
+            Near(head ? 1500 : 1750, CurveMath.EndTimeMs(track));
+            Check(CurveMath.Validate(history.Document).Count == 0, "Crossing produced invalid geometry.");
+            history.Commit(); var after = history.Document.DeepClone();
+            history.Undo(); Check(before.ContentEquals(history.Document), "Crossing undo changed geometry.");
+            history.Redo(); Check(after.ContentEquals(history.Document), "Crossing redo changed geometry.");
+            track = history.Document.Tracks[0];
+            Check(SliderControlEditing.TryMove(track, [dragged], new(head ? -25 : 25, 5), out error), error);
+            Check(track.Nodes[head ? 0 : track.Nodes.Count - 1].Id == dragged, "Continued editing lost endpoint identity.");
+        }
+        var ordinary = ArcMap(); var curve = ordinary.Tracks[0];
+        var controls = SliderControlEditing.Vertices(curve);
+        Check(SliderControlEditing.TryMove(curve, [controls[1].Id], new(10, 5), out var ordinaryError), ordinaryError);
+        Check(curve.Nodes[0].Id == controls[0].Id && curve.Nodes[^1].Id == controls[^1].Id, "Ordinary dragging exchanged endpoints.");
+        Near(1260, SliderControlEditing.Vertices(curve)[1].Point.TimeMs);
+        Near(255, SliderControlEditing.Vertices(curve)[1].Point.X);
     }
 
     public static void PenConversionAndHistory()
