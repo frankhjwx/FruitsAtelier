@@ -1,6 +1,6 @@
 namespace FruitsAtelier.Core;
 
-public enum EditorThemeId { Graphite, Studio, Pearl, Midnight, Forest, Rose, Slate }
+public enum EditorThemeId { Graphite, Studio, Pearl, Midnight, Forest, Rose, Slate, OsuPink }
 
 public sealed record EditorThemePalette(uint Background, uint Panel, uint Surface, uint Foreground,
     uint Muted, uint Grid, uint Accent, uint Gold, uint Purple, uint Error)
@@ -13,7 +13,8 @@ public sealed record EditorThemePalette(uint Background, uint Panel, uint Surfac
         new(0x101825, 0x182438, 0x22334C, 0xE5EFFA, 0xA0B4CE, 0x344A68, 0x75BCF7, 0xE9C379, 0xB6A2EF, 0xFF8B9A),
         new(0x14201B, 0x1C2B24, 0x283B30, 0xE7F0E7, 0xA3B8A7, 0x3A5142, 0x8DD5AC, 0xE7C77B, 0xBDB0E7, 0xF49494),
         new(0x1D1B1D, 0x282528, 0x343034, 0xEEE9EB, 0xB6ABB0, 0x494249, 0xD6A0AE, 0xDCC191, 0xBAACCD, 0xEF9299),
-        new(0x1B1F23, 0x272C31, 0x343B42, 0xE7EDF1, 0xA9B5BF, 0x49545E, 0x9DBFD2, 0xD9C391, 0xB8B1CF, 0xEC969E)
+        new(0x1B1F23, 0x272C31, 0x343B42, 0xE7EDF1, 0xA9B5BF, 0x49545E, 0x9DBFD2, 0xD9C391, 0xB8B1CF, 0xEC969E),
+        new(0x241822, 0x322230, 0x422D3D, 0xFFF0F7, 0xD3B2C5, 0x604259, 0xFF66AA, 0xF2CA80, 0xD5A6F2, 0xFF929E)
     ];
 
     public static EditorThemePalette For(EditorThemeId id) => Palettes[(uint)id < Palettes.Length ? (int)id : 0];

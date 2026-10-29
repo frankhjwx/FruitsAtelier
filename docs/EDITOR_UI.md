@@ -2,8 +2,8 @@
 
 ## Editor themes
 
-**Settings → Appearance → Editor theme** offers seven dark themes: Graphite, Studio, Black Pearl,
-Midnight, Forest, Rose and Slate. Selecting a theme previews the editor colours
+**Settings → Appearance → Editor theme** offers eight dark themes: Graphite, Studio, Black Pearl,
+Midnight, Forest, Rose, Slate and osu! Pink. Selecting a theme previews the editor colours
 immediately; **Apply** saves it for subsequent launches. Closing Settings without
 applying restores the saved theme. Graphite is the default for existing settings.
 

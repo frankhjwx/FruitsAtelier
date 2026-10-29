@@ -40,6 +40,17 @@ static class SettingsTests
                     Check(page.Size == 24 && page.Bold, "page headings share their typography");
                     var apply = ui.Canvas.Texts.Single(t => t.Value == L.Get("library.apply"));
                     Check(apply.Size == 13 && !apply.Bold, "actions keep a regular body weight");
+                    if (category == "settings.appearance")
+                    {
+                        var selector = ui.View.EditorThemeSelectorBounds;
+                        ui.Click(selector.X + 12, selector.Y + 12);
+                        var pink = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.theme.osupink"));
+                        Check(pink.Y >= 0 && pink.Y + 24 <= size.Item2,
+                            "osu! Pink remains visible in the theme dropdown at every settings size");
+                        ui.Click(pink.X + 3, pink.Y + 3);
+                        Check(ui.Canvas.Fills.Any(f => f.Color == EditorThemePalette.For(EditorThemeId.OsuPink).Panel),
+                            "The settings layout supports the pink theme preview");
+                    }
                     if (category == "settings.general")
                     {
                         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.dropletDefaults")), "General omits droplet defaults");

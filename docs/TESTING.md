@@ -2,7 +2,7 @@
 
 ## Editor theme checks
 
-`App.Tests --editor-theme-check` verifies all seven themes in English and Chinese,
+`App.Tests --editor-theme-check` verifies all eight themes in English and Chinese,
 live preview and cancellation, settings persistence, compatibility with older or
 unknown theme IDs, per-editor isolation, text contrast and unchanged map content
 and osu! skin selection. It also runs the multilingual settings layout checks.

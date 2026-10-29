@@ -13,7 +13,7 @@ internal static class EditorThemeTests
         Check(LibrarySettings.Load(path).EditorTheme == EditorThemeId.Graphite, "Older settings retain Graphite.");
         File.WriteAllText(path, "{\"EditorTheme\":999}");
         Check(LibrarySettings.Load(path).EditorTheme == EditorThemeId.Graphite, "Unknown theme falls back safely.");
-        Check(Enum.GetValues<EditorThemeId>().Length == 7, "Seven editor themes are available.");
+        Check(Enum.GetValues<EditorThemeId>().Length == 8, "Eight editor themes are available.");
         try
         {
             foreach (string locale in new[] { "en", "zh-CN" })
@@ -42,7 +42,7 @@ internal static class EditorThemeTests
                 other.View.LibrarySettings.EditorTheme = EditorThemeId.Graphite; other.Paint();
                 Check(other.Canvas.Fills.Any(f => f.Color == EditorThemePalette.For(EditorThemeId.Graphite).Background), "Theme is per editor instance.");
                 var palette = EditorThemePalette.For(theme);
-                Check(!ui.View.LightEditorTheme, "All seven editor themes use dark surfaces.");
+                Check(!ui.View.LightEditorTheme, "All eight editor themes use dark surfaces.");
                 Check(Contrast(palette.Foreground, palette.Panel) >= 4.5 && Contrast(palette.Muted, palette.Surface) >= 3,
                     "Themes retain readable body and secondary text.");
 

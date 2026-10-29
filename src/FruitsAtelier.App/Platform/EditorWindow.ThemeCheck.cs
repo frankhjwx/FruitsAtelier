@@ -31,7 +31,7 @@ internal sealed partial class EditorWindow
                 var selector = view.EditorThemeSelectorBounds;
                 Click(selector.X + 12, selector.Y + 12); Paint();
                 Native.GetClientRect(hwnd, out var size);
-                float top = Math.Clamp(selector.Bottom + 4, 0, Math.Max(0, size.Bottom * 96 / uiDpi - 236));
+                float top = Math.Clamp(selector.Bottom + 4, 0, Math.Max(0, size.Bottom * 96 / uiDpi - (12 + Enum.GetValues<EditorThemeId>().Length * 32)));
                 Click(selector.X + 12, top + 6 + (int)theme * 32 + 16); Paint();
                 CheckTitleBar();
                 Capture($"{theme}-{locale}-settings");
@@ -41,7 +41,7 @@ internal sealed partial class EditorWindow
                 view.KeyDown(27, false, false); Paint(); Capture($"{theme}-{locale}-editor");
                 CheckTitleBar();
             }
-            AppLog.Write("Editor theme native checks passed: seven palettes, settings input and persistence in English and Chinese.");
+            AppLog.Write("Editor theme native checks passed: eight palettes, settings input and persistence in English and Chinese.");
         }
         finally { Native.ShowWindow(hwnd, 0); view.LibrarySettings.EditorTheme = original; view.RequestViewPreference = preference; L.SetLanguage(language); }
 
