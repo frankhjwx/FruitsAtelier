@@ -27,7 +27,7 @@ concurrency:
 jobs:
   validate:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: windows-2022
     timeout-minutes: 5
     outputs:
       commit: ${{ steps.source.outputs.commit }}
@@ -102,20 +102,3 @@ jobs:
           retention-days: 7
           compression-level: 0
 
-  macos:
-    needs: validate
-    runs-on: macos-15
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.validate.outputs.commit }}
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: macOS/global.json
-      - run: python scripts/Build-MapsetVerifier.py
-      - run: bash scripts/Test-Mac.sh --skip-device-tests

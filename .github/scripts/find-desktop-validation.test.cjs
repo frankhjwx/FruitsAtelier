@@ -9,7 +9,6 @@ function fixture() {
     { name: 'windows', conclusion: 'success', steps: [
       { name: 'Existing platform-independent and editor regression', conclusion: 'success' },
     ] },
-    { name: 'macos', conclusion: 'success', steps: [{ name: 'Mac regression', conclusion: 'success' }] },
   ];
   const outputs = {};
   const messages = [];
@@ -41,7 +40,7 @@ for (const [name, change] of Object.entries({
   'other branch': f => f.run.head_branch = 'main',
   'fork source': f => f.run.head_repository.full_name = 'fork/repo',
   'current run': f => f.run.id = 2,
-  'missing Mac job': f => f.jobs.pop(),
+  'missing Windows job': f => f.jobs.pop(),
   'failed platform job': f => f.jobs[0].conclusion = 'failure',
   'reused platform step': f => f.jobs[0].steps[0].conclusion = 'skipped',
   'missing history': f => f.args.github.rest.actions.listWorkflowRuns = async () => ({ data: { workflow_runs: [] } }),
@@ -60,6 +59,14 @@ test('continues past a reuse-only run to original executed evidence', async () =
     workflow_runs: [{ ...f.run, id: 3 }, f.run],
   } });
   f.args.github.paginate = async (_, params) => params.run_id === 3 ? [] : f.jobs;
+  await validate(f.args);
+  assert.equal(f.outputs.reused, 'true');
+});
+
+
+test('disabled macOS results do not block successful Windows evidence', async () => {
+  const f = fixture();
+  f.jobs.push({ name: 'macos', conclusion: 'failure', steps: [] });
   await validate(f.args);
   assert.equal(f.outputs.reused, 'true');
 });

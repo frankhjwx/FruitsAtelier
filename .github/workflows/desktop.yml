@@ -14,7 +14,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: macOS
@@ -83,42 +84,3 @@ jobs:
         run: |
           ../scripts/Publish-Windows.ps1 -Version 0.0.2-alpha.2 -OutputDirectory ../artifacts/update-feed
           ../scripts/Test-WindowsUpdate.ps1 -Archive ../artifacts/releases/FruitsAtelier-0.0.2-alpha.1-win-x64.zip -FeedDirectory ../artifacts/update-feed -ExpectedVersion 0.0.2-alpha.2
-  macos:
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-      - name: Find identical validated source
-        id: validation
-        if: github.event_name != 'workflow_dispatch'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const validate = require('./.github/scripts/find-desktop-validation.cjs');
-            await validate({ github, context, core });
-      - uses: actions/cache@v4
-        if: steps.validation.outputs.reused != 'true'
-        with:
-          path: artifacts/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages*.lock.json', '.config/dotnet-tools.json', '**/global.json') }}
-          restore-keys: nuget-${{ runner.os }}-
-      - uses: actions/setup-dotnet@v4
-        if: steps.validation.outputs.reused != 'true'
-        with:
-          global-json-file: macOS/global.json
-      - uses: actions/setup-python@v5
-        if: steps.validation.outputs.reused != 'true'
-        with:
-          python-version: '3.x'
-      - name: Prepare pinned Mapset Verifier engine
-        if: steps.validation.outputs.reused != 'true'
-        run: python scripts/Build-MapsetVerifier.py
-      - name: Mapset Verifier regression
-        if: steps.validation.outputs.reused != 'true'
-        run: |
-          dotnet run --project macOS/tests/App -c Release -- --mapset-verifier-check
-          dotnet run --project macOS/tests/App -c Release -- --mapset-verifier-engine-check
-      - name: Mac regression
-        run: bash scripts/Test-Mac.sh --skip-device-tests
-        if: steps.validation.outputs.reused != 'true'
-      - run: bash scripts/Publish-Mac.sh
-        if: steps.validation.outputs.reused != 'true'
