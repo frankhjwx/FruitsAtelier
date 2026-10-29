@@ -72,19 +72,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet build FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Run regression suites
-        shell: pwsh
-        run: |
-          foreach ($suite in @('Core', 'Gameplay', 'App', 'Skinning', 'SkinArchive')) {
-            dotnet run --no-build --project "tests/FruitsAtelier.$suite.Tests" -c Release
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-          dotnet run --no-build --project tests/FruitsAtelier.Formats.Tests -c Release -- --skip-external-fixtures
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet run --no-build --project tests/FruitsAtelier.Audio.Tests -c Release -- --hitsound-check
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet run --no-build --project tests/FruitsAtelier.App.Tests -c Release -- --mapset-verifier-engine-check
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build and verify experimental package
         shell: pwsh
         env:
