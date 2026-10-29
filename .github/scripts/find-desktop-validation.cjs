@@ -23,10 +23,9 @@ module.exports = async ({ github, context, core, tree }) => {
       const executed = (name, step) => jobs.some(job => job.name === name
         && job.conclusion === 'success'
         && job.steps?.some(item => item.name === step && item.conclusion === 'success'));
-      if (!executed('windows', 'Existing platform-independent and editor regression')
-          || !executed('macos', 'Mac regression')) continue;
+      if (!executed('windows', 'Existing platform-independent and editor regression')) continue;
       core.setOutput('reused', 'true');
-      core.notice(`Identical source tree passed Windows and macOS regression: ${run.html_url}`);
+      core.notice(`Identical source tree passed Windows regression: ${run.html_url}`);
       await core.summary.addRaw(`Reused desktop validation for source tree \`${tree}\`: ${run.html_url}\n`).write();
       return;
     }

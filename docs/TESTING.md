@@ -721,7 +721,7 @@ bash scripts/Test-Mac.sh --skip-device-tests  # Shared regressions, Mac key mapp
 bash scripts/Test-Mac.sh --native-only        # Mac input/audio checks only
 ```
 
-[Desktop regression](../.github/workflows/desktop.yml) runs on pushes and PRs: Windows builds the solution and runs shared regressions; macOS runs shared regressions and packages the app. Results are available in [GitHub Actions](https://github.com/frankhjwx/FruitsAtelier/actions).
+[Desktop regression](../.github/workflows/desktop.yml) runs on pushes and PRs: Windows builds the solution and runs shared regressions and Windows package checks. macOS CI is disabled; a successful CI run does not certify macOS compatibility. Results are available in [GitHub Actions](https://github.com/frankhjwx/FruitsAtelier/actions).
 
 ## Library scale benchmark
 
