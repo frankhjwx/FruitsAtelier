@@ -7,6 +7,49 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private void DrawDisplayModeHint(ICanvas c, Rect banner)
+    {
+        float width = banner.Width - 24;
+        float size = 12;
+        var lines = new List<string>();
+        // Keep the two resource sentences separate, wrapping at words (or text
+        // elements for languages without spaces) before centering each visual line.
+        while (true)
+        {
+            lines.Clear();
+            foreach (string key in new[] { "settings.displayDelayHint", "settings.displayChangeHint" })
+            {
+                string text = L.Get(key).Trim();
+                while (text.Length > 0)
+                {
+                    int[] elements = StringInfo.ParseCombiningCharacters(text);
+                    int count = text.Length;
+                    foreach (int end in elements.Skip(1).Append(text.Length))
+                        if (c.MeasureText(text[..end], size) > width)
+                        { count = elements.Last(i => i < end); break; }
+                    if (count == 0) count = elements.Length > 1 ? elements[1] : text.Length;
+                    if (count < text.Length)
+                    {
+                        int space = text.LastIndexOf(' ', count - 1, count);
+                        if (space > 0) count = space;
+                    }
+                    lines.Add(text[..count].TrimEnd());
+                    text = text[count..].TrimStart();
+                }
+            }
+            if (lines.Count * size * 1.2f <= banner.Height - 4 || size <= 8) break;
+            size -= .5f;
+        }
+        float lineHeight = size * 1.2f;
+        float y = banner.Y + (banner.Height - lines.Count * lineHeight) / 2;
+        foreach (string line in lines)
+        {
+            float lineWidth = c.MeasureText(line, size);
+            c.Text(line, banner.X + (banner.Width - lineWidth) / 2, y, size, Gold, width);
+            y += lineHeight;
+        }
+    }
+
     private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, OsuLinks, Experimental, Updates }
     // New categories precede the fixed Experimental / Updates tail regardless of enum placement.
     private static readonly SettingsCategory[] SettingsNavigation = Enum.GetValues<SettingsCategory>()
@@ -274,8 +317,7 @@ public sealed partial class EditorView
                     float displayWidth = SettingsContentWidth;
                     c.Text(L.Get("settings.displayMode"), SettingsContentX, generalTop + 232, SettingsTextSize, Foreground, displayWidth, true);
                     c.Fill(new(SettingsContentX, generalTop + 260, displayWidth, 44), Gold, 4, .12f);
-                    c.Text(L.Get("settings.displayDelayHint"), SettingsContentX + 12, generalTop + 269, 12, Gold, displayWidth - 24);
-                    c.Text(L.Get("settings.displayChangeHint"), SettingsContentX + 12, generalTop + 287, 12, Gold, displayWidth - 24);
+                    DrawDisplayModeHint(c, new(SettingsContentX, generalTop + 260, displayWidth, 44));
                     var displayBounds = new Rect(SettingsContentX, generalTop + 320, displayWidth, 32);
                     SettingsButton(c, displayBounds,
                         L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync") + " ▾",
