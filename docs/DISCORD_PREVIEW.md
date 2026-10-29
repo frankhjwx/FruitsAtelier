@@ -32,7 +32,8 @@ validation fails.
    [Actions](https://github.com/frankhjwx/FruitsAtelier/actions)).
 2. Confirm that the whole run completed successfully, including both Windows and
    macOS checks, before downloading the experimental package.
-3. In the run page's **Artifacts** section, click `windows-experimental` to download
+3. In the run page's **Artifacts** section, click `windows-experimental-<task-id>`
+   (the `windows-experimental-` prefix followed by your Discord task ID) to download
    the artifact ZIP. Extract it to access the application ZIP, checksums and
    corresponding-source archive.
 4. Extract the entire application ZIP into a new, separate test installation
