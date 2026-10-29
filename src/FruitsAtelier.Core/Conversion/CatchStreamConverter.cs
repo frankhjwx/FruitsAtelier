@@ -37,11 +37,11 @@ public static class CatchStreamConverter
         var timing = new TimingMap.Lookup(document);
         hardRockCompensation = document.DerandomizeDropletsForHardRock
             && (document.DerandomizeFSliderDroplets || document.Tracks.Any(t => t.StreamSnapDivisor is null && t.DropletMode is not null && !t.RandomizesDroplets(document)));
-        if (document.LegacySliderTicks && hardRockCompensation)
+        if (hardRockCompensation)
             cache ??= new CatchConversionCache();
         cache?.Begin(document, compensateTinyDroplets);
         Dictionary<Guid, CatchLegacyRandom>? hardRockStates = hardRockCompensation
-            ? HardRockRandomStates(document, cache, timing ??= new(document), fixedHeads) : null;
+            ? HardRockRandomStates(document, cache!, timing ??= new(document), fixedHeads, compensateTinyDroplets) : null;
         var parents = document.Fruits.Select(f => new Source(f.TimeMs, f.SourceOrder, f, null, null, null))
             .Concat(document.Tracks.Select(t => new Source(t.Nodes.Count > 0 ? t.Nodes[0].TimeMs : 0, t.SourceOrder, null, t, null, null)))
             .Concat(document.ImportedSliders.Select(s => new Source(s.TimeMs, s.SourceOrder, null, null, s, null)))
@@ -212,7 +212,9 @@ public static class CatchStreamConverter
                         Math.Max(sv * 1.01, Math.Ceiling(requestedSv * 1.01 * 1_000_000) / 1_000_000));
                     continue;
                 }
-                if (compensate)
+                // Recovered repeat samples can be one millisecond apart. Native offsets
+                // still need a realizable path when those samples exceed the SV limit.
+                if (compensate || nativeRandomize)
                 {
                     samples = TinyCompensationFitter.Fit(track, nested, velocity, positionAtTime, targetAtTime);
                 }
@@ -253,7 +255,7 @@ public static class CatchStreamConverter
         throw new CatchConversionException(L.Get("core.conversion.iterationLimit"));
     }
 
-    private static Dictionary<Guid, CatchLegacyRandom> HardRockRandomStates(MapDocument document, CatchConversionCache? cache, TimingMap.Lookup timing, Dictionary<double, double> fixedHeads)
+    private static Dictionary<Guid, CatchLegacyRandom> HardRockRandomStates(MapDocument document, CatchConversionCache cache, TimingMap.Lookup timing, Dictionary<double, double> fixedHeads, bool compensateTinyDroplets)
     {
         var sources = document.Fruits.Select(f => new Source(f.TimeMs, f.SourceOrder, f, null, null, null)).ToList();
         foreach (var track in document.Tracks.Where(t => t.Nodes.Count >= 2))
@@ -263,7 +265,7 @@ public static class CatchStreamConverter
             {
                 try
                 {
-                    var stream = cache?.ContextObjects(track: track) ?? SliderFruitStream.Convert(document, track, timing);
+                    var stream = cache.ContextObjects(track: track) ?? SliderFruitStream.Convert(document, track, timing);
                     foreach (var item in stream) sources.Add(new(item.TimeMs, track.SourceOrder,
                         new Fruit { TimeMs = item.TimeMs, X = item.X }, null, null, null, track.Nodes[0].TimeMs));
                 }
@@ -286,63 +288,39 @@ public static class CatchStreamConverter
             }
             try
             {
-                IReadOnlyList<ConvertedCatchObject>? events = cache?.ContextObjects(source.Track, source.ImportedSlider, source.BananaShower);
-                if (document.LegacySliderTicks)
-                {
-                    // v7 tick counts depend on the fitted SV; reuse the actual fit in the main pass.
-                    CatchLegacyRandom? hardRockBefore = source.Track is null || !UsesHardRockCompensation(document, source.Track) ? null : state.Random;
-                    if (source.Track is { } legacyTrack)
-                    {
-                        result[legacyTrack.Id] = state.Random;
-                        state.Slider((float)Math.Round(legacyTrack.Nodes[^1].X, MidpointRounding.AwayFromZero), OsuBeatmapWriter.QuantizeTime(source.TimeMs));
-                    }
-                    else if (source.ImportedSlider is { } legacyImport)
-                        state.Slider(legacyImport.ControlPoints.Count > 0 ? (float)legacyImport.ControlPoints[^1].X : (float)legacyImport.X, OsuBeatmapWriter.QuantizeTime(source.TimeMs));
-                    var before = normalRandom;
-                    if (!cache!.TryGet(source.Track, source.ImportedSlider, source.BananaShower, ref normalRandom, hardRockBefore, out var fitted, out events))
-                    {
-                        if (source.Track is { } authored)
-                        {
-                            ValidateTrack(document, authored);
-                            var conversion = ConvertTrack(document, authored, true, ref normalRandom, timing.At(source.TimeMs), effectRandom,
-                                cache.PositionAtTime(authored), hardRockBefore, authored.FixedSliderVelocityMultiplier
-                                    ?? authored.SliderVelocityMultiplier * document.SliderMultiplier / document.EffectiveSliderMultiplier
-                                    ?? LegacySliderVelocityEditing.ConstraintAt(fixedHeads, authored.Nodes[0].TimeMs));
-                            fitted = conversion.Slider; events = conversion.Objects;
-                        }
-                        else if (source.ImportedSlider is { } importedSlider)
-                        {
-                            var conversion = ImportedSliderConverter.Convert(document, importedSlider, ref normalRandom, timing);
-                            fitted = conversion.Slider; events = conversion.Objects;
-                        }
-                        else events = ConvertBananas(source.BananaShower!, ref normalRandom);
-                        cache.Store(source.Track, source.ImportedSlider, source.BananaShower, before, normalRandom, fitted, events, hardRockBefore);
-                    }
-                    AdvanceEffectRandom(events, ref effectRandom);
-                }
-                else if (source.Track is { } track)
+                // Stable tick-time rounding makes tiny counts depend on the fitted SV, including v8+ maps.
+                // Cache this actual fit so the main pass consumes the same NM and HR random sequences.
+                CatchLegacyRandom? hardRockBefore = source.Track is null || !UsesHardRockCompensation(document, source.Track) ? null : state.Random;
+                if (source.Track is { } track)
                 {
                     result[track.Id] = state.Random;
                     state.Slider((float)Math.Round(track.Nodes[^1].X, MidpointRounding.AwayFromZero), OsuBeatmapWriter.QuantizeTime(source.TimeMs));
-                    if (events is null)
-                    {
-                        var at = timing.At(source.TimeMs);
-                        double sv = track.FixedSliderVelocityMultiplier ?? track.SliderVelocityMultiplier * document.SliderMultiplier / document.EffectiveSliderMultiplier ?? LegacySliderVelocityEditing.ConstraintAt(fixedHeads, source.TimeMs)
-                            ?? track.SliderVelocitySeed ?? at.SliderVelocityMultiplier;
-                        double velocity = LegacyCatchRules.Velocity(at.BeatLengthMs, document.EffectiveSliderMultiplier, sv);
-                        double duration = track.Nodes[^1].TimeMs - source.TimeMs;
-                        var nested = LegacyCatchRules.CreateNested(source.TimeMs, duration, velocity,
-                            LegacyCatchRules.TickDistance(document, velocity, at.BeatLengthMs, sv), duration * velocity, track.SpanCount, quantizeStart: true);
-                        LegacyCatchRules.ApplyRandomSequence(nested, ref state.Random);
-                        continue;
-                    }
                 }
                 else if (source.ImportedSlider is { } imported)
-                {
                     state.Slider(imported.ControlPoints.Count > 0 ? (float)imported.ControlPoints[^1].X : (float)imported.X, OsuBeatmapWriter.QuantizeTime(source.TimeMs));
-                    if (events is null) { ImportedSliderConverter.Convert(document, imported, ref state.Random, timing); continue; }
+                var before = normalRandom;
+                if (!cache.TryGet(source.Track, source.ImportedSlider, source.BananaShower, ref normalRandom, hardRockBefore, out var fitted, out var events))
+                {
+                    if (source.Track is { } authored)
+                    {
+                        ValidateTrack(document, authored);
+                        bool compensate = authored.DropletMode is not null ? !authored.RandomizesDroplets(document)
+                            : document.DerandomizeFSliderDroplets || (authored.CompensateTinyDroplets ?? compensateTinyDroplets);
+                        var conversion = ConvertTrack(document, authored, compensate, ref normalRandom, timing.At(source.TimeMs), effectRandom,
+                            cache.PositionAtTime(authored), hardRockBefore, authored.FixedSliderVelocityMultiplier
+                                ?? authored.SliderVelocityMultiplier * document.SliderMultiplier / document.EffectiveSliderMultiplier
+                                ?? LegacySliderVelocityEditing.ConstraintAt(fixedHeads, authored.Nodes[0].TimeMs));
+                        fitted = conversion.Slider; events = conversion.Objects;
+                    }
+                    else if (source.ImportedSlider is { } importedSlider)
+                    {
+                        var conversion = ImportedSliderConverter.Convert(document, importedSlider, ref normalRandom, timing);
+                        fitted = conversion.Slider; events = conversion.Objects;
+                    }
+                    else events = ConvertBananas(source.BananaShower!, ref normalRandom);
+                    cache.Store(source.Track, source.ImportedSlider, source.BananaShower, before, normalRandom, fitted, events, hardRockBefore);
                 }
-                else if (events is null) { ConvertBananas(source.BananaShower!, ref state.Random); continue; }
+                AdvanceEffectRandom(events, ref effectRandom);
                 foreach (var item in events!)
                 {
                     if (item.Kind == CatchObjectKind.Banana) { state.Random.Next(); state.Random.Next(); state.Random.Next(); state.Random.Next(); }

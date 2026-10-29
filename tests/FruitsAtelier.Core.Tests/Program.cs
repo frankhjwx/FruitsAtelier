@@ -1,4 +1,6 @@
 using FruitsAtelier.Core;
+try
+{
 if (args.Contains("--timing-batch-check")) { TimingBatchEditingTests.Run(); return 0; }
 if (args.Contains("--storyboard-check")) return StoryboardTests.Run();
 if (args.Contains("--storyboard-compile-performance")) { StoryboardCompileTests.RunPerformance(); return 0; }
@@ -482,4 +484,11 @@ static void Throws<T>(Action action) where T : Exception
     try { action(); }
     catch (T) { return; }
     throw new Exception($"Expected {typeof(T).Name}.");
+}
+
+}
+catch (Exception error)
+{
+    Console.Error.WriteLine(error);
+    return 1;
 }

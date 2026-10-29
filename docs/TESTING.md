@@ -226,7 +226,7 @@ Native `--render-check --legacy-droplet-modes-render-check` operates
 the Inspector dropdown in English and Chinese at two sizes and three DPI scales;
 captures go to `artifacts/tests/legacy-droplet-modes/native`.
 
-Focused App test commands print uncaught test exceptions to standard error and
+Focused Core, Formats and App test commands catch test exceptions, print them to standard error and
 return exit code 1. The full suite records failures per test and continues through
 the remaining cases. Capture both output streams when retaining test logs.
 
@@ -350,6 +350,14 @@ finish before the initial media frame is ready. Library fixtures must also pump
 `LibraryLoading` and complete cache writes before deleting their directories.
 
 ## Automated regressions
+
+`Formats.Tests --stable-droplets-check` covers the BUNASYNERGY!!! Overdose slider
+at 01:32:782 with its original Legacy geometry and retained FSlider authoring data.
+Golden stable tick/tiny times verify six droplets and eleven tiny droplets in the
+native slider, including both three-tiny intervals. FSlider counts and times are
+also checked against an independent calculation from the emitted SV and length.
+NM/HR compensation, downstream RNG, cold/warm
+exports, mode changes, undo/redo and project reopening are checked together.
 
 App integration output includes each test's elapsed time and the total suite duration.
 Library fixtures wait for loading and their expected results instead of rendering a

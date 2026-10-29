@@ -70,7 +70,7 @@ internal static class LegacyCatchRules
             throw new CatchConversionException(L.Get("core.legacyRules.lengthLimit"));
         var nested = new List<NestedCatchEvent>();
         SliderEvent? previous = null;
-        // FSlider export truncates its head. Count tiny intervals at that origin, then
+        // Export truncates slider heads. Count tiny intervals at that origin, then
         // restore authored time so curve targets and editing retain sub-millisecond precision.
         double eventStart = quantizeStart ? OsuBeatmapWriter.QuantizeTime(start) : start;
         double timeOffset = start - eventStart;
@@ -81,11 +81,16 @@ internal static class LegacyCatchRules
                 double interval = (int)current.TimeMs - (int)last.TimeMs;
                 if (interval > 80)
                 {
-                    double spacing = interval;
+                    float spacing = (float)interval;
                     while (spacing > 100) spacing /= 2;
-                    for (double elapsed = spacing; elapsed < interval; elapsed += spacing)
-                        Add(CatchObjectKind.TinyDroplet, last.TimeMs + elapsed,
-                            last.Progress + elapsed / interval * (current.Progress - last.Progress));
+                    for (float time = (int)last.TimeMs + spacing; time < (int)current.TimeMs;)
+                    {
+                        double tinyTime = (int)time;
+                        Add(CatchObjectKind.TinyDroplet, tinyTime, ProgressAt(tinyTime));
+                        float next = time + spacing;
+                        if (next <= time) throw new CatchConversionException(L.Get("core.legacyRules.objectLimit"));
+                        time = next;
+                    }
                 }
             }
 
@@ -104,6 +109,15 @@ internal static class LegacyCatchRules
                 throw new CatchConversionException(L.Get("core.legacyRules.objectLimit"));
             nested.Add(new(kind, time + timeOffset, progress));
         }
+
+        double ProgressAt(double time)
+        {
+            if (duration <= 0) return 0;
+            double position = Math.Clamp((time - eventStart) / duration, 0, spanCount);
+            int span = Math.Min(spanCount - 1, (int)position);
+            double progress = position - span;
+            return span % 2 == 0 ? progress : 1 - progress;
+        }
     }
 
     public static void ApplyRandomSequence(List<NestedCatchEvent> nested, ref CatchLegacyRandom rng)
@@ -117,6 +131,7 @@ internal static class LegacyCatchRules
 
     private static IEnumerable<SliderEvent> Events(double start, double duration, double velocity, double tickDistance, double length, int spanCount)
     {
+        double spanLength = length;
         // Legacy tick progress uses the capped distance while span timing retains the full path duration.
         length = Math.Min(MaximumPathLength, length);
         tickDistance = Math.Clamp(tickDistance, 0, length);
@@ -139,13 +154,19 @@ internal static class LegacyCatchRules
             for (int tick = 0; tick < tickProgress.Count; tick++)
             {
                 double progress = tickProgress[reversed ? tickProgress.Count - 1 - tick : tick];
-                yield return new(SliderEventKind.Tick, spanStart + (reversed ? 1 - progress : progress) * duration, progress);
+                // Stable converts the travelled distance to float before truncating its time.
+                // A 200 ms tick gap can consequently become 201 ms and contain three tiny droplets.
+                double distance = span * spanLength + (reversed ? 1 - progress : progress) * spanLength;
+                double time = (int)(start + (float)distance / (velocity * 1000) * 1000);
+                double timedProgress = duration <= 0 ? 0 : Math.Clamp((time - spanStart) / duration, 0, 1);
+                yield return new(SliderEventKind.Tick, time, reversed ? 1 - timedProgress : timedProgress);
             }
             if (span < spanCount - 1) yield return new(SliderEventKind.Repeat, spanStart + duration, (span + 1) % 2);
         }
         double finalStart = start + (spanCount - 1) * duration;
         double totalDuration = duration * spanCount;
-        double lastTickTime = Math.Max(start + totalDuration / 2, finalStart + duration - 36);
+        double stableEnd = (int)(start + (float)(spanLength * spanCount) / (velocity * 1000) * 1000);
+        double lastTickTime = Math.Max((int)start + (int)totalDuration / 2, stableEnd - 36);
         double lastProgress = duration == 0 ? 0 : (lastTickTime - finalStart) / duration;
         yield return new(SliderEventKind.LegacyLastTick, lastTickTime, spanCount % 2 == 0 ? 1 - lastProgress : lastProgress);
         yield return new(SliderEventKind.Tail, start + totalDuration, spanCount % 2);

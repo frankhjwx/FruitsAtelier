@@ -30,6 +30,17 @@ Bezier, perfect-circle and Catmull approximation also adapt
 the `2026.807.0` dependency tag used by this pinned lazer commit. The framework
 MIT notice is retained separately in `LICENCE.osu-framework.txt`.
 
+Stable tick compatibility also follows the integer event-time boundary reviewed
+by the osu! maintainers in [ppy/osu#20508](https://github.com/ppy/osu/issues/20508#issuecomment-1853909745),
+which identifies stable reference revision `7272e19dcc0d3e5a9bb66a636cc2c7174f82cb58`
+(`osu!/GameplayElements/HitObjects/Fruits/SliderFruits.cs`). Tick distance is cast
+to single precision before conversion to an integer absolute time. Tiny spacing
+uses the difference between those integer times, halves in single precision, and
+accumulates absolute single-precision times before truncation. Path positions use
+the resulting integer event time rather than the ideal tick or interpolated
+tiny progress. These precision boundaries affect tiny counts and downstream RNG.
+Authoring head offsets and parent durations remain in double precision.
+
 `CatchStreamConverter` retains the source Bezier handles. Its derived path
 is constrained only by actual event positions, without intermediate curve samples. It
 queries the resulting path for each event rather than assigning the target X
@@ -38,9 +49,15 @@ directly to generated objects. Internal fruit/tick alignment must remain within
 
 Tiny compensation uses the actual seeded offset and the path-progress time of
 each event, including legacy timing discrepancies. The desired pre-offset X is
-limited to 0..512. Single-span FSliders that require compensation fail when the target is unreachable. Repeated FSliders treat this saved preference as best effort: conflicting random offsets fall back to the normal uncompensated stream while preserving fruit/droplet targets.
+limited to 0..512. Unreachable tiny targets use a bounded fit at the maximum allowed
+SV while preserving fruit/droplet targets. This also keeps native Randomize usable
+when a recovered repeat has nearby tiny samples that exceed the speed bound.
 Legacy compatibility settings can instead retain uncompensated positions. The result reports both whether compensation was applied
 and whether every tiny target met the internal tolerance.
+
+HR compensation fits each parent once and caches its actual nested sequence for
+the main conversion pass. Even modern tick rules can change tiny counts when the
+fit raises SV, so a base-SV estimate cannot determine subsequent HR random states.
 
 Each authoring track stores one traversal and an explicit span count. Individual
 segments can be linear or Bezier; a nullable outgoing kind inherits the track's

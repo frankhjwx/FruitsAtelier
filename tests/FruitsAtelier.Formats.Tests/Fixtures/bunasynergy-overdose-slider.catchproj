@@ -1,0 +1,249 @@
+{
+  "SchemaVersion": 37,
+  "Document": {
+    "Name": "BUNA*SYNERGY!!!",
+    "DurationMs": 122282,
+    "BeatLengthMs": 400,
+    "TimingOffsetMs": 1582,
+    "ApproachRate": 9.3,
+    "CircleSize": 4.1,
+    "SliderMultiplier": 1.92,
+    "SliderTickRate": 2,
+    "DerandomizeDroplets": true,
+    "SliderImportState": 3,
+    "DerandomizeFSliderDroplets": true,
+    "Tracks": [
+      {
+        "Id": "cf764842-e2d7-46fb-8624-83a63f72d312",
+        "Name": "FSlider B @92782",
+        "Kind": 0,
+        "SourceOrder": 611,
+        "Nodes": [
+          {
+            "Id": "5b249e50-e471-4260-97c1-3be24254da70",
+            "TimeMs": 92782,
+            "X": 339,
+            "HandleIn": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "HandleOut": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "OutgoingKind": 0
+          },
+          {
+            "Id": "00354366-d4a4-4853-b422-a8eb5013eed1",
+            "TimeMs": 92882,
+            "X": 269.88916015625,
+            "HandleIn": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "HandleOut": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "OutgoingKind": 1,
+            "OutgoingCurve": {
+              "Kind": 0,
+              "ReferenceScale": 1,
+              "Controls": [
+                {
+                  "Id": "c706754c-893c-4e00-a05d-b3ee90b3f482",
+                  "Offset": {
+                    "TimeMs": 273.896484375,
+                    "X": -172.55058899558003
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Id": "468f28e5-f6dd-42e7-a730-45bdab562f27",
+            "TimeMs": 93182,
+            "X": 133.0111846923828,
+            "HandleIn": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "HandleOut": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "OutgoingKind": 1,
+            "OutgoingCurve": {
+              "Kind": 0,
+              "ReferenceScale": 1,
+              "Controls": [
+                {
+                  "Id": "819c3cf3-5083-4c3d-8783-f8dc726fe0b8",
+                  "Offset": {
+                    "TimeMs": 100,
+                    "X": 3.0384140014648438
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Id": "ab1afa61-ce5e-4dd1-8b27-ad8358ad2d72",
+            "TimeMs": 93382,
+            "X": 215.54653930664062,
+            "HandleIn": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "HandleOut": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "OutgoingKind": 1,
+            "OutgoingCurve": {
+              "Kind": 0,
+              "ReferenceScale": 1,
+              "Controls": [
+                {
+                  "Id": "9580e5b4-3045-43fd-82da-33167b7d1e23",
+                  "Offset": {
+                    "TimeMs": 100,
+                    "X": 109.85301208496094
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Id": "b02e8896-8e58-44d1-a81c-e59c533d3fdd",
+            "TimeMs": 93582,
+            "X": 480.89849853515625,
+            "HandleIn": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "HandleOut": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "OutgoingKind": 1,
+            "OutgoingCurve": {
+              "Kind": 0,
+              "ReferenceScale": 1,
+              "Controls": [
+                {
+                  "Id": "da5a71ff-1f09-4924-9aee-58a436d6c4fe",
+                  "Offset": {
+                    "TimeMs": 100,
+                    "X": -0.0808563232421875
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Id": "c49202d0-0264-42b1-b53c-e50e2730d6ec",
+            "TimeMs": 93782,
+            "X": 393.0771789550781,
+            "HandleIn": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "HandleOut": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "OutgoingKind": 1,
+            "OutgoingCurve": {
+              "Kind": 0,
+              "ReferenceScale": 1,
+              "Controls": [
+                {
+                  "Id": "d75ae141-214f-4b35-a4d7-5b3225e015f9",
+                  "Offset": {
+                    "TimeMs": 100,
+                    "X": -138.65280151367188
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Id": "56f5c77f-a610-44ae-8e75-0ff6d3edb773",
+            "TimeMs": 93982,
+            "X": 105.70504760742188,
+            "HandleIn": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "HandleOut": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "OutgoingKind": 1,
+            "OutgoingCurve": {
+              "Kind": 0,
+              "ReferenceScale": 1,
+              "Controls": [
+                {
+                  "Id": "a5c9b1ed-7141-4e3d-8e6a-aec202c961bf",
+                  "Offset": {
+                    "TimeMs": 100,
+                    "X": -104.00460184009769
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Id": "f35d600a-c32d-40b2-a1e7-a79eefeb5ece",
+            "TimeMs": 94182,
+            "X": 32,
+            "HandleIn": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "HandleOut": {
+              "TimeMs": 0,
+              "X": 0
+            },
+            "OutgoingKind": null
+          }
+        ],
+        "SpanCount": 1,
+        "OriginalLine": "339,192,92782,6,0,B|264:58|264:58|242:1|242:1|209:88|209:88|167:236|167:236|133:383|133:383|133:380|133:380|173:232|173:232|215:84|215:84|349:9|349:9|363:1|363:1|481:73|481:73|446:223|446:223|394:367|394:367|365:383|365:383|258:325|258:325|106:304|106:304|34:200|34:200|32:19,1,2154.16387018505,6|2,1:2|0:0,0:0:0:0:",
+        "CompensateTinyDroplets": true,
+        "DropletMode": 0
+      }
+    ],
+    "TimingPoints": [
+      {
+        "TimeMs": 1582,
+        "BeatLengthMs": 400,
+        "Meter": 4,
+        "SampleSet": 2,
+        "SampleIndex": 1,
+        "Volume": 50,
+        "Effects": 0,
+        "Uninherited": true,
+        "SourceOrder": 0,
+        "OriginalLine": null
+      },
+      {
+        "TimeMs": 92782,
+        "BeatLengthMs": -100,
+        "Meter": 4,
+        "SampleSet": 2,
+        "SampleIndex": 1,
+        "Volume": 100,
+        "Effects": 0,
+        "Uninherited": false,
+        "SourceOrder": 163,
+        "OriginalLine": null
+      }
+    ],
+    "Fruits": [],
+    "ImportedSliders": [],
+    "BananaShowers": []
+  }
+}

@@ -12,7 +12,7 @@ internal static class ConversionTests
         var tick = result.Objects.Single(o => o.Kind == CatchObjectKind.Droplet);
         Near(500, tick.TimeMs);
         var tiny = result.Objects.Where(o => o.Kind == CatchObjectKind.TinyDroplet).ToArray();
-        double[] times = [62.5, 125, 187.5, 250, 312.5, 375, 437.5, 558, 616, 674, 732, 790, 848, 906];
+        double[] times = [62, 125, 187, 250, 312, 375, 437, 558, 616, 674, 732, 790, 848, 906];
         int[] offsets = [-14, -10, -2, 15, 17, 1, 0, -7, -11, -3, 14, 4, -8, 5];
         for (int i = 0; i < tiny.Length; i++)
         {
@@ -159,7 +159,7 @@ internal static class ConversionTests
         var combined = CatchStreamConverter.Convert(document, false);
         Valid(combined);
         var secondFirstTiny = combined.Objects.First(o => o.SourceId == second.Id && o.Kind == CatchObjectKind.TinyDroplet);
-        Near(162.5, secondFirstTiny.TimeMs);
+        Near(162, secondFirstTiny.TimeMs);
         Near(-18, secondFirstTiny.RandomOffset);
         var onlySecond = CatchStreamConverter.Convert(With(second), false);
         Valid(onlySecond);

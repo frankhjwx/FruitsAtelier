@@ -1,6 +1,9 @@
 using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
+try
+{
+if (args.Contains("--stable-droplets-check")) { StableDropletTests.Run(); Console.WriteLine("PASS stable droplet counts, timing and NM/HR derandomization"); return 0; }
 if (args.Contains("--timing-retiming-check")) { TimingRetimingTests.Run(); return 0; }
 if (args.Contains("--export-snap-check")) { ExportSnapTests.Run(); Console.WriteLine("PASS export offset preservation and stream grid"); return 0; }
 if (args.Contains("--pattern-gallery-check")) { PatternGalleryTests.Run(); return 0; }
@@ -81,6 +84,7 @@ if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Stable droplet timing and Overdose derandomization survive export, modes, cache and history", StableDropletTests.Run),
     ("Retimed Legacy sliders preserve project and export data", TimingRetimingTests.Run),
     ("Circle and spinner offsets are preserved and stream grids agree with internal playback", ExportSnapTests.Run),
     ("Pattern snapshots and FPT packages preserve independent authoring data", PatternGalleryTests.Run),
@@ -855,4 +859,11 @@ static void Throws(Action action, string label)
     try { action(); }
     catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or ArgumentException) { return; }
     throw new Exception("Expected rejection: " + label);
+}
+
+}
+catch (Exception error)
+{
+    Console.Error.WriteLine(error);
+    return 1;
 }
