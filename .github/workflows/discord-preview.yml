@@ -87,7 +87,7 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
-          compression-level: 0
+          compression-level: 6
       - name: Save Mapset Verifier corresponding source
         uses: actions/upload-artifact@v4
         with:
