@@ -24,3 +24,17 @@ with a GitHub login can download them from the run page. These packages use
 The workflow does not publish a Release, update the stable feed or merge source.
 Check the whole run's conclusion: a Windows artifact can exist even when macOS
 validation fails.
+
+## Download and try a Windows package
+
+1. Sign in to GitHub, then open the shared public FruitsAtelier Actions run link
+   (or find the `Discord preview package` run under
+   [Actions](https://github.com/frankhjwx/FruitsAtelier/actions)).
+2. Confirm that the whole run completed successfully, including both Windows and
+   macOS checks, before downloading the experimental package.
+3. In the run page's **Artifacts** section, click `windows-experimental` to download
+   the artifact ZIP. Extract it to access the application ZIP, checksums and
+   corresponding-source archive.
+4. Extract the entire application ZIP into a new, separate test installation
+   folder, not over your stable installation. Keep its files together and launch
+   `FruitsAtelier.exe` from that folder.
