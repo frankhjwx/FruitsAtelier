@@ -611,6 +611,11 @@ public sealed partial class EditorView
                     p = new(Math.Clamp(time, 0, EditableDurationMs), p.X);
                 }
                 var start = Point(node);
+                // Snapped endpoint edits keep their previous time when the grid
+                // target crosses a neighbor. Interior anchors may change roles.
+                if (endpoint && snapTime && track.Nodes.Count > 1 &&
+                    (node == track.Nodes[0] ? p.TimeMs >= track.Nodes[1].TimeMs : p.TimeMs <= track.Nodes[^2].TimeMs))
+                    p = new(start.TimeMs, p.X);
                 if (!CurveMath.TryMoveAnchor(track, node.Id, p.TimeMs, p.X, out var error))
                 {
                     if (endpoint && snapTime)

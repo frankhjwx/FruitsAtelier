@@ -283,6 +283,14 @@ static void MoveAnchor()
     linear.Nodes.Add(new Anchor { TimeMs = 100, X = 200 });
     linear.Nodes.Add(new Anchor { TimeMs = 101, X = 200 });
     True(!CurveMath.TryMoveAnchor(linear, linear.Nodes[1].Id, 100.0005, 200, out _), "Minimum spacing not enforced.");
+    var head = linear.Nodes[0]; var tail = linear.Nodes[1];
+    True(CurveMath.TryMoveAnchor(linear, tail.Id, 50, 250, out error), error);
+    True(linear.Nodes[0] == tail && linear.Nodes[1] == head, "Crossing the head did not exchange endpoint roles.");
+    True(CurveMath.TryMoveAnchor(linear, tail.Id, 150, 300, out error), error);
+    True(linear.Nodes[1] == tail && linear.Nodes[0] == head, "Crossing the tail did not exchange endpoint roles.");
+    True(!CurveMath.TryMoveAnchor(linear, tail.Id, 100, 400, out _), "Coincident anchors accepted.");
+    True(linear.Nodes[1] == tail, "Rejected crossing changed anchor order.");
+    Near(150, tail.TimeMs); Near(300, tail.X);
     linear.Nodes[0].TimeMs = 1;
     True(CurveMath.TryMoveAnchor(linear, linear.Nodes[1].Id, 1.001, 200, out error), error);
 }

@@ -123,10 +123,18 @@ public static class CurveMath
         var node = track.Nodes.Find(n => n.Id == id);
         if (node is null) { error = L.Get("core.curves.missingAnchor"); return false; }
         double oldTime = node.TimeMs, oldX = node.X;
+        int oldIndex = track.Nodes.IndexOf(node);
         node.TimeMs = time;
         node.X = x;
+        // Endpoint roles follow chronological order, not anchor identity. Keep the
+        // dragged anchor (and its relative handles) intact as it crosses a neighbor.
+        track.Nodes.RemoveAt(oldIndex);
+        int newIndex = track.Nodes.FindIndex(n => n.TimeMs > time);
+        track.Nodes.Insert(newIndex < 0 ? track.Nodes.Count : newIndex, node);
         error = ValidateTrack(track, requireComplete: false).FirstOrDefault() ?? "";
         if (error.Length == 0) return true;
+        track.Nodes.Remove(node);
+        track.Nodes.Insert(oldIndex, node);
         node.TimeMs = oldTime;
         node.X = oldX;
         return false;
