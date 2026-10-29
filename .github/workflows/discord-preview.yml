@@ -13,14 +13,15 @@ on:
         required: true
         type: string
       branch:
-        description: Isolated codex/discord-ID source branch
+        description: Shared repair branch
+        default: codex-discord-bug-fix
         required: true
         type: string
 
 permissions:
   contents: read
 concurrency:
-  group: discord-preview-${{ inputs.branch }}
+  group: discord-preview
   cancel-in-progress: false
 
 jobs:
@@ -42,7 +43,7 @@ jobs:
           script: |
             const branch = process.env.TASK_BRANCH;
             const sha = process.env.SOURCE_SHA;
-            if (!/^codex\/discord-\d{15,22}$/.test(branch) || !/^[a-f0-9]{40}$/.test(sha) || !/^\d{15,22}$/.test(process.env.JOB_ID)) {
+            if (branch !== 'codex-discord-bug-fix' || !/^[a-f0-9]{40}$/.test(sha) || !/^\d{15,22}$/.test(process.env.JOB_ID)) {
               throw new Error('Invalid task or source identity');
             }
             const ref = await github.rest.git.getRef({...context.repo, ref: `heads/${branch}`});
@@ -89,8 +90,8 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          ./scripts/Publish-Windows.ps1 -Version "0.0.0-alpha.$env:BUILD_NUMBER"
-          ./scripts/Test-WindowsPackage.ps1 -Archive "artifacts/releases/FruitsAtelier-0.0.0-alpha.$env:BUILD_NUMBER-win-x64.zip"
+          ./scripts/Publish-Windows.ps1 -Version "0.0.2-alpha.$env:BUILD_NUMBER"
+          ./scripts/Test-WindowsPackage.ps1 -Archive "artifacts/releases/FruitsAtelier-0.0.2-alpha.$env:BUILD_NUMBER-win-x64.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: windows-experimental-${{ inputs.job_id }}
