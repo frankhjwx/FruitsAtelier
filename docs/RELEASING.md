@@ -242,7 +242,11 @@ are not reused. Already-compressed release assets are uploaded without recompres
 
 Use **Run workflow** on Desktop regression to force a full check. The manual Windows
 release entry always builds and tests an existing tag and stores downloadable Actions
-artifacts without publishing a GitHub Release. Manual runs do not reuse validation.
+artifacts without publishing a GitHub Release by default. To recover publication
+with an updated workflow, run it from `main` for the unchanged tag with `publish`
+enabled. This builds and verifies the tagged source before publishing its assets;
+existing public releases are never overwritten. Manual runs do not reuse validation.
+Checksum verification accepts both Windows CRLF and Unix LF checksum files.
 
 A failed test or package check prevents release publication. Re-running a failed
 tag workflow can complete an unfinished draft; published releases are never
