@@ -6,9 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing version tag to build and test (does not publish a Release)'
+        description: 'Existing version tag to build and test'
         required: true
         type: string
+      publish:
+        description: 'Publish the verified tag assets (existing public releases are never overwritten)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -106,7 +110,7 @@ jobs:
           if-no-files-found: ignore
 
   release:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || inputs.publish
     needs: build
     runs-on: windows-2022
     permissions:
@@ -129,7 +133,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT" || { echo 'Tag moved since the build; refusing to publish.'; exit 1; }
-          (cd release-assets && sha256sum --check *.sha256)
+          (cd release-assets && for checksum in *.sha256; do
+            tr -d '\r' < "$checksum" | sha256sum --check - || exit 1
+          done)
           cp "release-assets/FruitsAtelier-${RELEASE_TAG#v}-win-x64.zip" release-assets/FruitsAtelier-win-x64.zip
           (cd release-assets && sha256sum FruitsAtelier-win-x64.zip > FruitsAtelier-win-x64.zip.sha256)
           notes="docs/releases/$RELEASE_TAG.md"
