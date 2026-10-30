@@ -926,6 +926,8 @@
   "movement.previous": "Nakaraan · {0}",
   "movement.next": "Susunod · {0}",
   "movement.includeTiny": "Isama ang maliliit na patak",
+  "settings.movementLabelReset": "I-reset",
+  "settings.movementLabelTimeThreshold": "Limitasyon ng label: {0} ms",
   "movement.analysis": "Pagsusuri sa Paggalaw",
   "movement.stand": "Stand",
   "movement.walk": "Walk",

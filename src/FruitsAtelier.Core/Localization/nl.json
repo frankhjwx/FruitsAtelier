@@ -926,6 +926,8 @@
   "movement.previous": "Vorige · {0}",
   "movement.next": "Volgende · {0}",
   "movement.includeTiny": "Voeg kleine druppeltjes toe",
+  "settings.movementLabelReset": "Opnieuw instellen",
+  "settings.movementLabelTimeThreshold": "Drempel analyselabels: {0} ms",
   "movement.analysis": "Bewegingsanalyse",
   "movement.stand": "Stand",
   "movement.walk": "Walk",

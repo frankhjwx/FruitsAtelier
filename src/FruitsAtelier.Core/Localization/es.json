@@ -926,6 +926,8 @@
   "movement.previous": "Anterior · {0}",
   "movement.next": "Siguiente · {0}",
   "movement.includeTiny": "Incluye pequeñas gotas",
+  "settings.movementLabelReset": "Reiniciar",
+  "settings.movementLabelTimeThreshold": "Umbral de etiquetas: {0} ms",
   "movement.analysis": "Análisis de movimiento",
   "movement.stand": "Stand",
   "movement.walk": "Walk",

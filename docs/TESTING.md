@@ -1,5 +1,13 @@
 # Building and Testing
 
+## Movement Analysis labels
+
+`App.Tests --mapping-canvas-check` also checks the Movement Analysis label time
+cutoff: older-settings defaults, finite bounds, draft cancellation, persistence,
+cache refresh, exact cutoff boundaries, DS/speed modes and narrow English/Chinese
+settings. `FruitsAtelier.App --render-check --mapping-canvas-settings-render-check` captures
+the scrolled control and applies it through native pointer input.
+
 ## Editor theme checks
 
 `App.Tests --editor-theme-check` verifies all seven themes in English and Chinese,

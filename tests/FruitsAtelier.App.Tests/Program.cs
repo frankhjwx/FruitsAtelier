@@ -200,7 +200,7 @@ if (args.Contains("--mapping-canvas-check"))
 {
     try
     {
-        MappingCanvasBackgroundTests.Run(); CanvasGridSettingsTests.Run(); CanvasBackgroundDimControlTests.Run(); SettingsTests.Layout(); SettingsTests.IndicatorColours();
+        MappingCanvasBackgroundTests.Run(); CanvasGridSettingsTests.Run(); MovementLabelSettingsTests.Run(); DistanceEditingTests.Labels(); CanvasBackgroundDimControlTests.Run(); SettingsTests.Layout(); SettingsTests.IndicatorColours();
         DisplaySettingsTests.Run(); TestplayPresentationTests.ControlsAndBackground();
         Console.WriteLine("PASS Mapping canvas backgrounds, preferences, replacement and presentation checks"); return 0;
     }
@@ -510,6 +510,7 @@ var tests = new (string Name, Action Run)[]
     ("X coordinate input clamps, previews and supports undo", DistanceEditingTests.XCoordinate),
     ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),
     ("Movement DS labels use base SV and avoid collisions", DistanceEditingTests.Labels),
+    ("Movement label cutoff persists and refreshes DS and speed labels", MovementLabelSettingsTests.Run),
     ("Movement Analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
     ("Movement Analysis optionally includes tiny droplets without editing content", AssistToolsTests.TinyMovementDisplay),
     ("Floating movement panel follows placement, selection, dragging and language", AssistToolsTests.MovementOverlay),

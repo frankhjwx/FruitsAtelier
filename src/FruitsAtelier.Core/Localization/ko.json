@@ -926,6 +926,8 @@
   "movement.previous": "이전 · {0}",
   "movement.next": "다음 · {0}",
   "movement.includeTiny": "작은 물방울 포함",
+  "settings.movementLabelReset": "재설정",
+  "settings.movementLabelTimeThreshold": "분석 수치 표시 기준: {0} ms",
   "movement.analysis": "움직임 분석",
   "movement.stand": "Stand",
   "movement.walk": "Walk",

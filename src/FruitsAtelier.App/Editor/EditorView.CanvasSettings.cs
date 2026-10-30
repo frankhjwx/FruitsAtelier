@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private const float MappingCanvasContentHeight = 424;
+    internal const float MappingCanvasContentHeight = 512;
     private float MappingCanvasSettingsTop => SettingsTop - workspaceScroll;
 
     private void DrawMappingCanvasSettings(ICanvas c)
@@ -48,9 +48,30 @@ public sealed partial class EditorView
             () => OpenCanvasGridOpacityMenu(opacity));
         SettingsButton(c, new(opacity.Right - 30, opacity.Y, 30, opacity.Height), "+",
             () => draftCanvasGridOpacity = Math.Min(100, draftCanvasGridOpacity + 5), enabled: draftCanvasGridOpacity < 100);
+        c.Text(L.Get("movement.analysis"), SettingsContentX, top + 552, SettingsSectionSize, Foreground, available - 190, true);
+        SettingsButton(c, new(SettingsContentX + available - 174, top + 546, 174, SettingsControlHeight),
+            L.Get("settings.movementLabelReset"), () => draftMovementLabelTimeThresholdMs = LibrarySettings.DefaultMovementLabelTimeThresholdMs);
+        var threshold = new Rect(SettingsContentX, top + 584, opacity.Width, SettingsControlHeight);
+        SettingsButton(c, new(threshold.X, threshold.Y, 30, threshold.Height), "−",
+            () => draftMovementLabelTimeThresholdMs = Math.Max(0, draftMovementLabelTimeThresholdMs - 2.5), enabled: draftMovementLabelTimeThresholdMs > 0);
+        SettingsButton(c, new(threshold.X + 36, threshold.Y, threshold.Width - 72, threshold.Height),
+            L.Get("settings.movementLabelTimeThreshold", draftMovementLabelTimeThresholdMs) + " ▾",
+            () => OpenMovementLabelTimeThresholdMenu(threshold));
+        SettingsButton(c, new(threshold.Right - 30, threshold.Y, 30, threshold.Height), "+",
+            () => draftMovementLabelTimeThresholdMs = Math.Min(500, draftMovementLabelTimeThresholdMs + 2.5), enabled: draftMovementLabelTimeThresholdMs < 500);
         c.Unclip();
         ClipSettingsHits(firstHit);
         DrawSettingsScrollbar(c, MappingCanvasContentHeight);
+    }
+
+    private void OpenMovementLabelTimeThresholdMenu(Rect bounds)
+    {
+        languageMenuOpen = false; menu = -1; contextItems.Clear(); libraryField = bindingCapture = -1;
+        foreach (double value in new double[] { 0, 10, 20, 37.5, 50, 75, 100, 150, 200, 500 })
+            contextItems.Add(new((draftMovementLabelTimeThresholdMs == value ? "✓ " : "") + L.Get("settings.movementLabelTimeThreshold", value),
+                () => draftMovementLabelTimeThresholdMs = value));
+        float menuHeight = 12 + contextItems.Count * 32;
+        contextBounds = new(bounds.X + 36, Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), bounds.Width - 72, menuHeight);
     }
 
     private void OpenCanvasGridOpacityMenu(Rect bounds)

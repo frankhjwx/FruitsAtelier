@@ -926,6 +926,8 @@
   "movement.previous": "前へ · {0}",
   "movement.next": "次へ · {0}",
   "movement.includeTiny": "小さな水滴を含む",
+  "settings.movementLabelReset": "リセット",
+  "settings.movementLabelTimeThreshold": "分析ラベルの閾値: {0} ms",
   "movement.analysis": "動きの分析",
   "movement.stand": "Stand",
   "movement.walk": "Walk",

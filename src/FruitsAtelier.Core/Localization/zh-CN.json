@@ -948,6 +948,8 @@
   "movement.previous": "前一对象 · {0}",
   "movement.next": "后一对象 · {0}",
   "movement.includeTiny": "包含小水滴",
+  "settings.movementLabelReset": "重置",
+  "settings.movementLabelTimeThreshold": "分析数值隐藏阈值：{0} ms",
   "movement.analysis": "移动分析",
   "movement.stand": "Stand",
   "movement.walk": "Walk",

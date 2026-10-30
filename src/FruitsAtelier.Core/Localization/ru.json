@@ -926,6 +926,8 @@
   "movement.previous": "Предыдущий · {0}",
   "movement.next": "Далее · {0}",
   "movement.includeTiny": "Включите крошечные капельки",
+  "settings.movementLabelReset": "Сброс",
+  "settings.movementLabelTimeThreshold": "Порог меток анализа: {0} мс",
   "movement.analysis": "Анализ движения",
   "movement.stand": "Stand",
   "movement.walk": "Walk",

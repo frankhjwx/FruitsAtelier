@@ -44,6 +44,7 @@ public sealed partial class EditorView
     internal Rect HitLightingSettingsBounds => new(SettingsContentX, SettingsTop + 476, SettingsContentWidth, SettingsControlHeight);
     internal Rect LazerEditingToggleBounds { get; private set; }
     private bool draftReverseCanvasScroll;
+    private double draftMovementLabelTimeThresholdMs;
     private double draftTestplayStartupDelaySeconds;
     private double draftTestplaySpeed;
     private bool draftShowTestplayCombo;
@@ -153,6 +154,7 @@ public sealed partial class EditorView
         draftSettingsColours[5] = LibrarySettings.CanvasCentreLineColour;
         draftSettingsColours[6] = LibrarySettings.SelectionHighlightColour;
         draftCanvasGridOpacity = LibrarySettings.CanvasGridOpacity;
+        draftMovementLabelTimeThresholdMs = LibrarySettings.MovementLabelTimeThresholdMs;
         settingsColourIndex = -1; settingsColourDrag = 0; settingsColourHex = settingsColourError = "";
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
         draftTestplayStartupDelaySeconds = LibrarySettings.TestplayStartupDelaySeconds;
@@ -171,6 +173,7 @@ public sealed partial class EditorView
         draftSettingsColours[4] != LibrarySettings.CanvasGridColour ||
         draftSettingsColours[5] != LibrarySettings.CanvasCentreLineColour ||
         draftCanvasGridOpacity != LibrarySettings.CanvasGridOpacity ||
+        draftMovementLabelTimeThresholdMs != LibrarySettings.MovementLabelTimeThresholdMs ||
         draftAudioDiagnostics != LibrarySettings.AudioDiagnostics ||
         draftAudioDiagnosticFrames != LibrarySettings.AudioDiagnosticFrames ||
         draftAudioDiagnosticProfile != LibrarySettings.AudioDiagnosticProfile ||
@@ -459,6 +462,7 @@ public sealed partial class EditorView
             settings.CanvasGridColour = draftSettingsColours[4];
             settings.CanvasCentreLineColour = draftSettingsColours[5];
             settings.CanvasGridOpacity = draftCanvasGridOpacity;
+            settings.MovementLabelTimeThresholdMs = draftMovementLabelTimeThresholdMs;
             settings.ForceBackgroundDim = draftForceBackgroundDim;
             settings.EnableVideoStoryboard = draftEnableVideoStoryboard;
             settings.RomanisedMetadata = draftRomanisedMetadata;

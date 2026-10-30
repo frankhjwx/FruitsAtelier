@@ -926,6 +926,8 @@
   "movement.previous": "Sebelumnya · {0}",
   "movement.next": "Berikutnya · {0}",
   "movement.includeTiny": "Sertakan tetesan kecil",
+  "settings.movementLabelReset": "Setel ulang",
+  "settings.movementLabelTimeThreshold": "Ambang label analisis: {0} ms",
   "movement.analysis": "Analisis Gerakan",
   "movement.stand": "Stand",
   "movement.walk": "Walk",
