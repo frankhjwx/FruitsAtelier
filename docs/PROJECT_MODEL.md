@@ -15,6 +15,13 @@ and rejects values outside 0.1-10x. Older projects remain readable; projects wit
 this field retain their previous schema. Timing display and SV editing locks are
 editor session state and are not stored as beatmap timing or project content.
 
+Isolated event edits can retain an automatic fitting floor in optional
+`CurveTrack.MinimumSliderVelocityMultiplier`, also in the source base-SV basis.
+This uses schema 45/46 and participates in snapshots, cache invalidation and undo.
+It preserves stable's rounded event times across reloads without fixing the user's
+SV: later edits can still require a higher automatic value. Explicit SV takes
+precedence. Older documents omit the floor and keep their original fitting behavior.
+
 Independent Legacy slider SV uses schema 29 (single difficulty) or 30 (multiple
 difficulties). Each Legacy slider stores its authored `SliderVelocityMultiplier`
 and an optional `ProcessedSliderVelocityMultiplier` for materialized droplet

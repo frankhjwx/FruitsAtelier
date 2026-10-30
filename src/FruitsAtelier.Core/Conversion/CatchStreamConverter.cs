@@ -155,7 +155,8 @@ public static class CatchStreamConverter
         positionAtTime ??= time => CurveMath.PositionAtTime(track, time);
         double start = track.Nodes[0].TimeMs;
         double duration = track.Nodes[^1].TimeMs - start;
-        double sv = fixedSv ?? track.SliderVelocitySeed ?? timing.SliderVelocityMultiplier;
+        double sv = fixedSv ?? Math.Max(track.SliderVelocitySeed ?? timing.SliderVelocityMultiplier,
+            track.MinimumSliderVelocityMultiplier * document.SliderMultiplier / document.EffectiveSliderMultiplier ?? 0);
         // Inherited beat lengths round to float; leave room below the path-length limit.
         double maximumSv = Math.Min(LegacyCatchRules.MaximumSliderVelocityMultiplier,
             Math.Max(sv, LegacyCatchRules.MaximumPathLength * timing.BeatLengthMs
@@ -367,6 +368,9 @@ public static class CatchStreamConverter
 
     private static void ValidateTrack(MapDocument document, CurveTrack track)
     {
+        if (track.MinimumSliderVelocityMultiplier is { } minimum
+            && (!double.IsFinite(minimum) || minimum is < .1 or > 10))
+            throw new CatchConversionException(L.Get("legacySv.range"));
         if (!double.IsFinite(document.RandomizeDropletStrength) || document.RandomizeDropletStrength is < 0 or > 100
             || track.DropletMode is { } mode && !Enum.IsDefined(mode)
             || track.DropletRandomization is { IsValid: false })

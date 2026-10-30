@@ -264,6 +264,11 @@ internal static class SelectionTransformTests
                     $"{mode}, imported={imported}, hidden={hidden}, {kind} #{target.EventIndex}: event #{old.EventIndex} expected X {expected}, got {current.X}.");
             }
             var moved = ui.View.Document.DeepClone();
+            var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(moved));
+            Check(moved.ContentEquals(restored), "Droplet edit lost its automatic SV floor after reload.");
+            var reloaded = CatchStreamConverter.Convert(restored);
+            Check(after.Objects.SequenceEqual(reloaded.Objects), "Reload changed edited event times or positions.");
+            Check(restored.Tracks.Single().SliderVelocityMultiplier is null, "Automatic fitting pinned the user SV control.");
             Check(!original.ContentEquals(moved), "Droplet drag did not edit the slider.");
             var movedTarget = OsuBeatmapWriter.Serialize(moved).PlayableObjects.Single(o => o.EventIndex == target.EventIndex);
             ui.DownMap(movedTarget.TimeMs, movedTarget.X); ui.MoveMap(movedTarget.TimeMs, movedTarget.X + 5);

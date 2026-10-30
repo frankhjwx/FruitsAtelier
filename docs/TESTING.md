@@ -1,5 +1,15 @@
 # Building and Testing
 
+## Slider event timing
+
+`Core.Tests --slider-event-timing-check` exercises isolated event edits that need
+more automatic SV while preserving rounded event times and neighbouring positions.
+It covers consecutive edits, cached conversion, explicit-SV precedence, invalid
+floors, schema 45/46 persistence and identical export after reload.
+The editor integration suite covers DS numeric fields, preceding-event snapping,
+selection-box priority, undo/cancel, and both shared and distinct rounded repeat
+samples. DS expectations use actual converted event times, not ideal beat fractions.
+
 ## Movement Analysis labels
 
 `App.Tests --mapping-canvas-check` also checks the Movement Analysis label time

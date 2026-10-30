@@ -256,8 +256,8 @@ public sealed partial class EditorView
         var target = distanceEditTarget!;
         try
         {
-            if (editingXCoordinate) DistanceSpacingEditing.ApplyX(Document, target, value, compensateTinyDroplets);
-            else DistanceSpacingEditing.Apply(Document, target, distanceEditReference!, false, value, compensateTinyDroplets);
+            if (editingXCoordinate) DistanceSpacingEditing.ApplyX(Document, target, value, compensateTinyDroplets, editorConversionCache);
+            else DistanceSpacingEditing.Apply(Document, target, distanceEditReference!, false, value, compensateTinyDroplets, editorConversionCache);
         }
         catch (InvalidOperationException error) { throw new ArgumentException(error.Message, error); }
         EnsureConversion();

@@ -95,7 +95,7 @@ public sealed class CatchConversionCache
     {
         if (a.Id != b.Id || a.Kind != b.Kind || a.Name != b.Name || a.SourceOrder != b.SourceOrder || a.SpanCount != b.SpanCount
             || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets || a.Nodes.Count != b.Nodes.Count
-            || a.SliderVelocityMultiplier != b.SliderVelocityMultiplier || a.SliderVelocitySeed != b.SliderVelocitySeed || a.FixedSliderVelocityMultiplier != b.FixedSliderVelocityMultiplier
+            || a.SliderVelocityMultiplier != b.SliderVelocityMultiplier || a.MinimumSliderVelocityMultiplier != b.MinimumSliderVelocityMultiplier || a.SliderVelocitySeed != b.SliderVelocitySeed || a.FixedSliderVelocityMultiplier != b.FixedSliderVelocityMultiplier
             || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
             || !a.StreamNewComboOffsets.SequenceEqual(b.StreamNewComboOffsets)
             || includeRandomization && (a.DropletMode != b.DropletMode || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization))) return false;
