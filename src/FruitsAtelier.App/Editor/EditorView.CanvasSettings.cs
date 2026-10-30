@@ -48,9 +48,7 @@ public sealed partial class EditorView
             () => OpenCanvasGridOpacityMenu(opacity));
         SettingsButton(c, new(opacity.Right - 30, opacity.Y, 30, opacity.Height), "+",
             () => draftCanvasGridOpacity = Math.Min(100, draftCanvasGridOpacity + 5), enabled: draftCanvasGridOpacity < 100);
-        c.Text(L.Get("movement.analysis"), SettingsContentX, top + 552, SettingsSectionSize, Foreground, available - 190, true);
-        SettingsButton(c, new(SettingsContentX + available - 174, top + 546, 174, SettingsControlHeight),
-            L.Get("settings.movementLabelReset"), () => draftMovementLabelTimeThresholdMs = LibrarySettings.DefaultMovementLabelTimeThresholdMs);
+        c.Text(L.Get("movement.analysis"), SettingsContentX, top + 552, SettingsSectionSize, Foreground, available, true);
         var threshold = new Rect(SettingsContentX, top + 584, opacity.Width, SettingsControlHeight);
         SettingsButton(c, new(threshold.X, threshold.Y, 30, threshold.Height), "−",
             () => draftMovementLabelTimeThresholdMs = Math.Max(0, draftMovementLabelTimeThresholdMs - 2.5), enabled: draftMovementLabelTimeThresholdMs > 0);
@@ -59,6 +57,8 @@ public sealed partial class EditorView
             () => OpenMovementLabelTimeThresholdMenu(threshold));
         SettingsButton(c, new(threshold.Right - 30, threshold.Y, 30, threshold.Height), "+",
             () => draftMovementLabelTimeThresholdMs = Math.Min(500, draftMovementLabelTimeThresholdMs + 2.5), enabled: draftMovementLabelTimeThresholdMs < 500);
+        SettingsButton(c, new(threshold.Right + 12, threshold.Y, Math.Min(174, available - threshold.Width - 12), threshold.Height),
+            L.Get("settings.movementLabelReset"), () => draftMovementLabelTimeThresholdMs = LibrarySettings.DefaultMovementLabelTimeThresholdMs);
         c.Unclip();
         ClipSettingsHits(firstHit);
         DrawSettingsScrollbar(c, MappingCanvasContentHeight);

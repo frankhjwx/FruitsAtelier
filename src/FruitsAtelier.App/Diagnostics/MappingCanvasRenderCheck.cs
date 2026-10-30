@@ -146,7 +146,9 @@ internal static class MappingCanvasRenderCheck
                 view.ApplySettings(preferences); Paint("movement-label-cutoff");
                 if (LibrarySettings.Load(preferences).MovementLabelTimeThresholdMs != 35 || !original.ContentEquals(view.Document))
                     throw new InvalidOperationException("Native movement label cutoff did not apply or edited content.");
-                Click(settings.Right - 119, settings.Y + 562 - scroll);
+                float rowWidth = Math.Min(360, settings.Width - 262);
+                Click(settings.X + 230 + rowWidth + 12 + Math.Min(174, settings.Width - 274 - rowWidth) / 2,
+                    settings.Y + 600 - scroll);
                 view.ApplySettings(preferences); Paint("movement-label-reset");
                 if (LibrarySettings.Load(preferences).MovementLabelTimeThresholdMs != LibrarySettings.DefaultMovementLabelTimeThresholdMs)
                     throw new InvalidOperationException("Native movement label Reset did not restore the default cutoff.");

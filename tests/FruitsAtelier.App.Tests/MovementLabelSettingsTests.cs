@@ -48,6 +48,10 @@ static class MovementLabelSettingsTests
                 ui.Paint();
                 Check(ui.View.DistanceLabelBounds.Count == 1, "Interval above cutoff was hidden.");
                 Open();
+                var reset = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.movementLabelReset"));
+                var cutoff = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.movementLabelTimeThreshold", 36.5) + " ▾");
+                Check(reset.Y == cutoff.Y && reset.X > cutoff.X + cutoff.MaxWidth,
+                    "Reset is not beside the cutoff row.");
                 ui.ClickText(L.Get("settings.movementLabelReset"));
                 Check(ui.View.LibrarySettings.MovementLabelTimeThresholdMs == 36.5, "Reset applied before Apply.");
                 ui.View.ApplySettings(path); ui.Key(27);
