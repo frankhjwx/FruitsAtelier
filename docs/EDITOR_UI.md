@@ -525,7 +525,8 @@ unapplied changes. Drawing and pointer coordinates use the same scale on both
 platforms. Compact startup dialogs retain their fitted layout size.
 
 Outside text fields, dialogs and active gestures, Ctrl+= / Ctrl+- adjusts UI scale
-by one step with any selection. Ctrl+Shift+= and Ctrl+keypad plus/minus are aliases.
+by one step when no slider is selected. With a slider selected, these keys instead
+increase/decrease its repeat count. Ctrl+Shift+= and Ctrl+keypad plus/minus are aliases.
 Shortcut changes save immediately and do not enter content history.
 
 **Settings → Appearance → Selection highlight** sets the colour of selected-object
@@ -1348,7 +1349,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Ctrl+Shift+F | Catch: Stream/Stack dock; osu!: convert slider to notes with X/Y |
 | Ctrl+Shift+R | Open Rotate by |
 | Ctrl+comma / Ctrl+period | Rotate selection −90°/+90° in osu!, −5°/+5° in Catch |
-| Ctrl+= / Ctrl+− | Increase / decrease UI scale |
+| Ctrl+= / Ctrl+− | Increase / decrease selected slider repeat count; UI scale when no slider is selected |
 | Ctrl+J | Extend the selected FSlider to the pointer |
 | Esc | Cancel an active drag, box selection, draft, or text input |
 

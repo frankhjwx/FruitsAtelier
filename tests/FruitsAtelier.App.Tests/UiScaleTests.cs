@@ -70,17 +70,26 @@ internal static class UiScaleTests
             ui.SelectTrack(track.Id);
             int spans = track.SpanCount;
             ui.Key(187, ctrl: true);
-            Check(ui.View.Document.Tracks.First(t => t.Id == track.Id).SpanCount == spans
-                && ui.View.LibrarySettings.UiScalePercent == 175, "Main-row scale shortcut changed slider reverses.");
+            Check(ui.View.Document.Tracks.First(t => t.Id == track.Id).SpanCount == spans + 1
+                && ui.View.LibrarySettings.UiScalePercent == 150 && saves == 0, "Selected slider must gain a repeat without scaling.");
             ui.Key(189, ctrl: true);
-            // Keypad bindings work even with an existing slider selection.
+            Check(ui.View.Document.Tracks.First(t => t.Id == track.Id).SpanCount == spans,
+                "Selected slider must lose a repeat.");
             ui.Key(107, ctrl: true);
-            Check(ui.View.LibrarySettings.UiScalePercent == 175 && LibrarySettings.Load(path).UiScalePercent == 175,
-                "Keypad zoom did not activate and persist.");
+            Check(ui.View.Document.Tracks.First(t => t.Id == track.Id).SpanCount == spans + 1
+                && ui.View.LibrarySettings.UiScalePercent == 150, "Keypad plus must preserve repeat editing.");
             ui.Key(109, ctrl: true);
             ui.Key(187, ctrl: true, shift: true);
-            Check(ui.View.LibrarySettings.UiScalePercent == 175, "Ctrl+plus did not resize with a slider selected.");
+            Check(ui.View.Document.Tracks.First(t => t.Id == track.Id).SpanCount == spans + 1
+                && ui.View.LibrarySettings.UiScalePercent == 150, "Ctrl+plus must preserve repeat editing.");
+            ui.Key('Z', ctrl: true);
+            Check(ui.View.Document.Tracks.First(t => t.Id == track.Id).SpanCount == spans,
+                "Repeat count change must undo.");
+            ui.LoadDocument(before.DeepClone());
             ui.Key('2'); ui.Key('1');
+            ui.Key(187, ctrl: true);
+            Check(ui.View.LibrarySettings.UiScalePercent == 175 && LibrarySettings.Load(path).UiScalePercent == 175,
+                "Unselected scale shortcut must activate and persist.");
             ui.Key(189, ctrl: true);
             Check(ui.View.LibrarySettings.UiScalePercent == 150, "Main-row minus did not resize without a slider.");
             ui.Key(187, ctrl: true);
