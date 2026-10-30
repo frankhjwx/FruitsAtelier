@@ -72,7 +72,8 @@ public static class ImportedSliderConverter
         double tickDistance = LegacyCatchRules.TickDistance(document, velocity, timing.BeatLengthMs, sv);
         if (!double.IsFinite(duration) || duration < 0 || slider.TimeMs + duration * slider.SpanCount > int.MaxValue)
             throw new CatchConversionException(L.Get("core.importConverter.duration"));
-        var nested = LegacyCatchRules.CreateNested(slider.TimeMs, duration, velocity, tickDistance, path.Distance, slider.SpanCount, legacyImported: true);
+        var nested = LegacyCatchRules.CreateNested(slider.TimeMs, duration, velocity, tickDistance, path.Distance, slider.SpanCount,
+            quantizeStart: true, legacyImported: true);
         LegacyCatchRules.ApplyRandomSequence(nested, ref rng);
         var objects = new List<ConvertedCatchObject>(nested.Count);
         for (int i = 0; i < nested.Count; i++)

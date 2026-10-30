@@ -409,6 +409,7 @@ public sealed partial class EditorView
 
     private void ChangeTool(Tool next)
     {
+        if (next == Tool.Slider && RejectReadOnlySelection()) return;
         if (osuDraftSlider is not null || osuSpinnerStart is not null) CancelOsuInteraction();
         if (draftBanana != Guid.Empty)
         {
@@ -476,7 +477,7 @@ public sealed partial class EditorView
             if (allowSliderDeletion)
                 readOnlyIds.IntersectWith(Document.Tracks.Select(t => t.Id).Concat(Document.ImportedSliders.Select(s => s.Id)));
             if (!osuAllowSliderConversion && history.TransactionChangesSliderGeometry(readOnlyIds, ignoreSliderVelocity: allowTimingSv, ignoreDropletMode: allowDropletMode))
-            { history.Cancel(); ShowEditorNotice("osu.readOnlySlider"); return false; }
+            { var changed = readOnlyIds.Where(id => history.TransactionChangesSliderGeometry([id], ignoreSliderVelocity: allowTimingSv, ignoreDropletMode: allowDropletMode)).ToArray(); history.Cancel(); ShowSliderCanvasChoice(changed); return false; }
             if (before is not null && !PositionsEqual(before, Document))
             { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }
             if (Document.DerandomizeDroplets is null && Document.ImportedSliders.Count < importedBefore)

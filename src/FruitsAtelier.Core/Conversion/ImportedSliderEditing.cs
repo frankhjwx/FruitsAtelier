@@ -52,7 +52,8 @@ public static class ImportedSliderEditing
                 {
                     Id = source.Id, EndpointSnap = source.EndpointSnap, SourceOrder = source.SourceOrder, OriginalLine = source.OriginalLine,
                     Name = L.Get("core.names.importedSlider", source.PathType, source.TimeMs),
-                    SpanCount = source.SpanCount, Kind = CurveKind.Linear, CompensateTinyDroplets = true
+                    SpanCount = source.SpanCount, Kind = CurveKind.Linear, CompensateTinyDroplets = true,
+                    SliderVelocitySeed = ImportedSliderConverter.SliderVelocityAt(document, source)
                 };
                 track.Nodes.Add(new Anchor { TimeMs = source.TimeMs, X = objects[0].X });
                 track.Nodes.Add(new Anchor { TimeMs = source.TimeMs + duration, X = objects.First(o => o.Kind == CatchObjectKind.Fruit && o.EventIndex > 0).X });
@@ -151,7 +152,8 @@ public static class ImportedSliderEditing
                 {
                     Id = slider.Id, EndpointSnap = slider.EndpointSnap, SourceOrder = slider.SourceOrder, OriginalLine = slider.OriginalLine,
                     Name = L.Get("core.names.importedSlider", slider.PathType, slider.TimeMs),
-                    SpanCount = slider.SpanCount, CompensateTinyDroplets = true
+                    SpanCount = slider.SpanCount, CompensateTinyDroplets = true,
+                    SliderVelocitySeed = ImportedSliderConverter.SliderVelocityAt(document, slider)
                 };
                 paths.Add(slider.Id, (path, velocity));
                 fallbackLevel[slider.Id] = 0;

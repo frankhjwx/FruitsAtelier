@@ -25,7 +25,7 @@ public sealed partial class EditorView
 
     private void ClearSelectedInternalAnchors()
     {
-        if (!ClipboardInteractionReady || notesLocked) return;
+        if (!ClipboardInteractionReady || notesLocked || RejectReadOnlySelection()) return;
         var ids = ClipboardSelectedParentIds();
         if (!Document.Tracks.Any(t => ids.Contains(t.Id)) && !Document.ImportedSliders.Any(t => ids.Contains(t.Id))) return;
         if (Edit(L.Get("slider.clearInternal"), () =>

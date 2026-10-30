@@ -409,10 +409,20 @@ convert objects or create a content edit. Catch preview continues to show the
 exported fruits in either view.
 
 Slider shapes are edited in their matching canvas: Legacy Sliders in osu! and
-FSliders in Catch. Clicking a slider in the other canvas or attempting a blocked
-edit shows a three-second notice explaining how to switch with Tab, then fades out.
-Whole sliders can be deleted in either canvas with Delete or the object delete
-action, including mixed selections. Each deletion is one undoable edit.
+FSliders in Catch. Selection is silent in either canvas. Whole-object horizontal
+movement, horizontal mirroring, time movement, repeat-count changes (including
+the upper timeline tail and keyboard shortcuts), NC, hitsounds, copy, cut, paste
+and deletion work across canvases and preserve the slider type. Mixed selections
+use one undoable edit. SV and Droplet Settings retain their existing support.
+
+Attempting to edit a mismatched slider's anchors, controls or shape, including
+scaling and rotation, opens a modal choice: convert the mismatched sliders to the
+current canvas type, switch to their editing canvas, or cancel. Conversion is
+undoable and leaves the original selection intact on failure. Switching preserves
+selection and reveals the target without changing content. After converting or
+switching, start the editing gesture again. Cancel and Escape leave content
+unchanged. Ctrl-click selection in the object timeline remains a selection action.
+The optional slider canvas lock still controls cross-canvas selection.
 
 The osu! canvas draws circles, approach circles, Legacy Slider paths, repeats,
 slider balls and spinners. Circle size, approach rate, combo ordering and stacking
@@ -525,7 +535,8 @@ unapplied changes. Drawing and pointer coordinates use the same scale on both
 platforms. Compact startup dialogs retain their fitted layout size.
 
 Outside text fields, dialogs and active gestures, Ctrl+= / Ctrl+- adjusts UI scale
-by one step with any selection. Ctrl+Shift+= and Ctrl+keypad plus/minus are aliases.
+by one step when no slider is selected. With a slider selected, these keys instead
+increase/decrease its repeat count. Ctrl+Shift+= and Ctrl+keypad plus/minus are aliases.
 Shortcut changes save immediately and do not enter content history.
 
 **Settings → Appearance → Selection highlight** sets the colour of selected-object
@@ -549,7 +560,7 @@ Settings → Experimental → **Enable same-time object placements** disables
 the automatic replacement of fruits, FSliders and banana showers starting within
 2 ms of a newly placed fruit in the Catch canvas. In the osu! canvas, placing a
 circle, native slider or spinner replaces same-time circles, native sliders and
-spinners; the same toggle preserves them. Sliders that are read-only in the active
+spinners; the same toggle preserves them. Sliders whose shape belongs to the other
 canvas remain unchanged. The toggle defaults to off and is saved as an application
 preference. Enabling it allows fruits at the same time with
 independent X coordinates; previews retain the existing objects too. Changing the
@@ -1348,7 +1359,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Ctrl+Shift+F | Catch: Stream/Stack dock; osu!: convert slider to notes with X/Y |
 | Ctrl+Shift+R | Open Rotate by |
 | Ctrl+comma / Ctrl+period | Rotate selection −90°/+90° in osu!, −5°/+5° in Catch |
-| Ctrl+= / Ctrl+− | Increase / decrease UI scale |
+| Ctrl+= / Ctrl+− | Increase / decrease selected slider repeat count; UI scale when no slider is selected |
 | Ctrl+J | Extend the selected FSlider to the pointer |
 | Esc | Cancel an active drag, box selection, draft, or text input |
 
@@ -1406,6 +1417,13 @@ Distance snapping places fruits and the first slider draft point relative to the
 Drawing and reshaping a slider uses beat and horizontal grid snapping independently of DS. Slider endpoints, control points and Bezier handles are not constrained by DS presets or by the spacing of generated Fruit/Droplet events. Their X coordinates may extend beyond the 0–512 playfield while dragging or editing numeric values. The first draft point still distance-snaps relative to the previous source object. A completed slider remains selected in Slider mode, so its tail can be dragged immediately.
 
 When a Select-mode drag is outside the bounding box and visible slider controls, horizontal dragging of a slider head or tail keeps its time and strictly snaps relative to the preceding large event in the same slider, including zero DS, even on a curved slider. Droplet dragging also follows these rules inside the box. Endpoint candidates account for the preceding droplets that move with the reshaped curve. A selected TinyDroplet instead snaps its displayed X relative to the preceding event in the same slider, including other tiny droplets. Its compensation policy still applies. Following events impose no DS preset or maximum-distance requirement on a selected-object drag. With no preceding reference, dragging follows horizontal Grid Snap. Candidate positions are tried in pointer-distance order; unrepresentable candidates are skipped, and if none is available, the last accepted position remains unchanged. DS takes precedence over horizontal Grid Snap when a preceding reference exists.
+
+Isolated event edits preserve rounded event times and unrelated event positions.
+When automatic SV fitting would shift those times, the editor retries fitting with
+a saved automatic SV floor; later edits can still increase automatic SV. Manual SV
+remains authoritative. Repeated events move together only when they sample the same
+path position: stable's integer time rounding can separate otherwise nearby samples.
+Unreachable movements retain the last valid position.
 
 Changing DS settings, BPM, or tick rate does not reshape existing sliders.
 
@@ -1487,7 +1505,7 @@ Slider Path, Selection Rect and Movement Analysis use equal-width buttons. Long 
 
 Drag any corner of the floating movement panel to resize it proportionally, including its labels and numeric controls. The opposite corner stays fixed, and the panel remains inside the canvas. Size and position are saved with the workspace layout. The panel’s context menu offers independent **Reset position** and **Reset scale** actions; resetting scale restores 100% while retaining the position, clamped inside the canvas.
 
-**Movement Analysis**, beside **Selection Rect** in the canvas toolbar, toggles 4-DIP coloured connections above curves and behind objects on the editing canvas. The button highlights when enabled; the same toggle is also available under **View → Movement Analysis**. It is off by default and is a session display setting. Each consecutive Fruit/Droplet pair uses the same Stand, Walk, Dash, and HDash classification, using the Mapping Canvas indicator colours as the floating panel. Connections follow placement previews and content edits, retain full-sequence movement context across viewport edges, and skip simultaneous pairs and TinyDroplets. Banana shower and break intervals suppress entire connections and their DS labels whenever they overlap the pair, including links between fruits on opposite sides of an interval. Kiai intervals retain the connections and labels. Each Stand connection assumes its own departure-centre position; a sequence of Stand connections does not imply one shared standing position. Toggling the mode does not edit content or enter undo history. DS labels beside the connections use the same base-DPB formula as the floating panel. Each label has one fixed position to the right of the full connection midpoint, independent of viewport clipping. Intervals of 37.5 ms or less (a 1/8 beat at 200 BPM) omit DS labels. Longer intervals show labels wherever the fixed position fits inside the viewport without overlapping banana showers, the floating panel, or other labels. Fruit/droplet sprite bounds do not suppress labels because their transparent padding and glow overstate the occupied area. Labels do not move to alternate positions.
+**Movement Analysis**, beside **Selection Rect** in the canvas toolbar, toggles 4-DIP coloured connections above curves and behind objects on the editing canvas. The button highlights when enabled; the same toggle is also available under **View → Movement Analysis**. It is off by default and is a session display setting. Each consecutive Fruit/Droplet pair uses the same Stand, Walk, Dash, and HDash classification, using the Mapping Canvas indicator colours as the floating panel. Connections follow placement previews and content edits, retain full-sequence movement context across viewport edges, and skip simultaneous pairs and TinyDroplets. Banana shower and break intervals suppress entire connections and their DS labels whenever they overlap the pair, including links between fruits on opposite sides of an interval. Kiai intervals retain the connections and labels. Each Stand connection assumes its own departure-centre position; a sequence of Stand connections does not imply one shared standing position. Toggling the mode does not edit content or enter undo history. DS labels beside the connections use the same base-DPB formula as the floating panel. Each label has one fixed position to the right of the full connection midpoint, independent of viewport clipping. **Settings → Mapping Canvas → Analysis label cutoff** sets the interval at or below which DS and speed labels are hidden (0–500 ms, adjusted in 2.5 ms steps or selected from presets). The default is 37.5 ms (a 1/8 beat at 200 BPM); 0 disables the time cutoff. Reset restores the default cutoff in the settings draft. Apply saves this global display preference. Longer intervals show labels wherever the fixed position fits inside the viewport without overlapping banana showers, the floating panel, or other labels. Fruit/droplet sprite bounds do not suppress labels because their transparent padding and glow overstate the occupied area. Labels do not move to alternate positions.
 
 In Select mode, New Combo toggles the selected parents, or the particular Stream/Stack fruit selected in the upper timeline. On the editing canvas, a fruit with this flag has an NC label beside it in every UI language. The label sits to the right when there is room and otherwise to the left; slider heads with the flag are labelled once. A pending New Combo fruit placement shows the same NC label beside its preview. The sound buttons toggle additions independently and support mixed multi-selection. Clicking a slider fruit targets that head, repeat or tail's hitsound; selecting the whole slider through its timeline body targets every edge. Droplet/tiny selections target the parent, whose edge sounds are editable; these children retain their existing tick/silent playback rules. Banana showers use their fixed banana sound and disable the three additions. In Fruit placement mode, or with no selection, buttons set pending flags for new objects. New Combo resets after placement; pending additions remain until changed or switching difficulty.
 

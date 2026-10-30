@@ -177,8 +177,8 @@ internal static class EditableSliderTests
             Valid(CatchStreamConverter.Convert(doc));
         }
         var random = new MapDocument { SliderMultiplier = 1.4, SliderTickRate = 1 };
-        var source = new ImportedSlider { TimeMs = 1000, X = 100, Y = 100, PathType = 'L', PixelLength = 200, SpanCount = 3 };
-        source.ControlPoints.AddRange([new(100, 100), new(300, 100)]);
+        var source = new ImportedSlider { TimeMs = 1000, X = 100, Y = 100, PathType = 'L', PixelLength = 280, SpanCount = 3 };
+        source.ControlPoints.AddRange([new(100, 100), new(380, 100)]);
         random.ImportedSliders.Add(source);
         var original = CatchStreamConverter.Convert(random);
         Valid(original);
@@ -313,7 +313,7 @@ internal static class EditableSliderTests
         {
             True(before[i].SourceId == after[i].SourceId && before[i].EventIndex == after[i].EventIndex && before[i].Kind == after[i].Kind,
                 "FSlider conversion changed source order, event identity or kind.");
-            Near(before[i].TimeMs, after[i].TimeMs, 0.000001);
+            Near(before[i].TimeMs, after[i].TimeMs, 1.000001);
             Near(before[i].RandomOffset, after[i].RandomOffset);
         }
     }

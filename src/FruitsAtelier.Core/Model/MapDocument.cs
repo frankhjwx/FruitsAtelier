@@ -60,7 +60,7 @@ public sealed class CurveTrack
         var a = this; var b = other;
         if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
             || a.DropletMode != b.DropletMode || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
-            || a.SliderVelocityMultiplier != b.SliderVelocityMultiplier
+            || a.SliderVelocityMultiplier != b.SliderVelocityMultiplier || a.MinimumSliderVelocityMultiplier != b.MinimumSliderVelocityMultiplier
             || a.EndpointSnap != b.EndpointSnap || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
             || a.StreamNewComboOffsets.Count != b.StreamNewComboOffsets.Count
             || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization)) return false;
@@ -106,6 +106,9 @@ public sealed class CurveTrack
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? SliderVelocityMultiplier { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? MinimumSliderVelocityMultiplier { get; set; }
 
     internal double? SliderVelocitySeed { get; set; }
     internal double? FixedSliderVelocityMultiplier { get; set; }
@@ -194,7 +197,7 @@ public sealed class ImportedSlider
     public int SpanCount { get; set; } = 1;
     public double PixelLength { get; set; }
 
-    internal ImportedSlider DeepClone()
+    public ImportedSlider DeepClone()
     {
         var copy = new ImportedSlider
         {

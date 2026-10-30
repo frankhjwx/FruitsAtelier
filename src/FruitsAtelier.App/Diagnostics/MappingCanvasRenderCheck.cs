@@ -25,7 +25,8 @@ internal static class MappingCanvasRenderCheck
         try
         {
             bool overlaysOnly = Environment.GetCommandLineArgs().Contains("--canvas-overlay-render-check");
-            if (!overlaysOnly)
+            bool settingsOnly = Environment.GetCommandLineArgs().Contains("--mapping-canvas-settings-render-check");
+            if (!overlaysOnly && !settingsOnly)
             {
                 CheckBackgroundPreviewToggle(canvas, folder);
                 CheckBackgroundDimEdges(canvas, folder);
@@ -43,99 +44,114 @@ internal static class MappingCanvasRenderCheck
                 view.LibrarySettings.CanvasGridColour = 0x66DDFF;
                 view.LibrarySettings.CanvasCentreLineColour = 0xFFE088;
                 view.LibrarySettings.CanvasGridOpacity = 65;
+                view.LibrarySettings.MovementLabelTimeThresholdMs = LibrarySettings.DefaultMovementLabelTimeThresholdMs;
                 view.DropLibraryFiles([image]);
-                Paint("canvas");
-                view.SetModifiers(false, true); Paint("grid-snap"); view.SetModifiers(false, false);
-                int decodes = canvas.ImageDecodeCount;
-                var dimBounds = view.CanvasBackgroundDimBounds;
-                var plot = view.CanvasPlotBounds;
-                view.Wheel(plot.X + 10, plot.Y + 10, -240, false, false, true);
-                for (int i = 0; i < 20; i++) Paint();
-                if (canvas.ImageDecodeCount != decodes)
-                    throw new InvalidOperationException("Zoom repeatedly decoded the mapping background.");
-                Paint("zoom");
-                if (view.CanvasBackgroundDimBounds != dimBounds) throw new InvalidOperationException("Zoom moved the native dim control.");
                 var original = view.Document.DeepClone();
-                view.PointerMove(dimBounds.X + 10, dimBounds.Y + 10, false, false);
-                clock.Advance(75); Paint("dim-hover-half");
-                clock.Advance(75); Paint("dim-hover");
-                var dimSlider = view.CanvasBackgroundDimSliderBounds;
-                view.PointerDown(dimSlider.X + dimSlider.Width * .75f, dimSlider.Y + 12, 0, false, false);
-                view.PointerUp(dimSlider.X + dimSlider.Width * .75f, dimSlider.Y + 12, 0); Paint("dim-slider");
-                if (view.LibrarySettings.MappingCanvasBackgroundDim != 75 || !original.ContentEquals(view.Document))
-                    throw new InvalidOperationException("Native dim drag changed content or did not apply its value.");
-                view.PointerMove(plot.X + 10, plot.Y + 10, false, false);
-                clock.Advance(999); Paint("dim-delay");
-                if (view.CanvasBackgroundDimOpacity != 1) throw new InvalidOperationException("Native dim control faded before one second.");
-                clock.Advance(76); Paint("dim-fade");
-                clock.Advance(75); Paint("dim-hidden");
-                if (view.CanvasBackgroundDimOpacity != 0 || view.CanvasBackgroundDimNeedsRedraw)
-                    throw new InvalidOperationException("Native dim control did not finish hiding.");
-                var panel = view.CanvasControlsPanelBounds;
-                view.PointerMove(panel.X + 8, panel.Y + panel.Height / 2, false, false);
-                clock.Advance(150); Paint("panel-compact");
-                view.PointerDown(panel.X + 8, panel.Y + panel.Height / 2, 0, false, false);
-                view.PointerMove(panel.X + 48, panel.Y + panel.Height / 2 - 80, false, false);
-                view.PointerUp(panel.X + 48, panel.Y + panel.Height / 2 - 80, 0); Paint("panel-moved");
-                panel = view.CanvasControlsPanelBounds;
-                view.PointerDown(panel.Right, panel.Bottom, 0, false, false);
-                view.PointerMove(panel.X, panel.Y, false, false);
-                view.PointerUp(panel.X, panel.Y, 0); Paint("panel-half");
-                if (view.LibrarySettings.CanvasControlsScale != .5f || view.WantsCapture || !original.ContentEquals(view.Document))
-                    throw new InvalidOperationException("Native panel resize did not retain 50% scale or changed content.");
-                var halfSlider = view.CanvasBackgroundDimSliderBounds;
-                Click(halfSlider.X + halfSlider.Width / 2, halfSlider.Y + halfSlider.Height / 2);
-                if (view.LibrarySettings.MappingCanvasBackgroundDim != 50)
-                    throw new InvalidOperationException("Native half-size slider hit region was not scaled.");
-                var media = view.CanvasMediaToggleBounds;
-                bool enabled = view.LibrarySettings.EnableVideoStoryboard;
-                Click(media.X + media.Width / 2, media.Y + media.Height / 2);
-                if (view.LibrarySettings.EnableVideoStoryboard == enabled)
-                    throw new InvalidOperationException("Native half-size media toggle did not respond.");
-                Paint("panel-half-controls");
-                view.ShowDiscussionPanel(); Paint();
-                panel = view.CanvasControlsPanelBounds;
-                var annotations = view.CanvasDiscussionToggleBounds;
-                if (annotations.Y != panel.Y || view.CanvasBackgroundDimBounds.Y != annotations.Bottom
-                    || view.CanvasMediaToggleBounds.Bottom != panel.Bottom)
-                    throw new InvalidOperationException("Discussion toggle was not grouped with the media controls.");
-                view.PointerMove(panel.X + 8, panel.Y + panel.Height / 2, false, false);
-                clock.Advance(150); Paint("panel-half-discussion");
-                bool showAnnotations = view.LibrarySettings.ShowCanvasDiscussionAnnotations;
-                Click(annotations.X + annotations.Width / 2, annotations.Y + annotations.Height / 2);
-                if (view.LibrarySettings.ShowCanvasDiscussionAnnotations == showAnnotations || !original.ContentEquals(view.Document))
-                    throw new InvalidOperationException("Native half-size annotation toggle failed or edited content.");
-                if (size.Item1 >= 980)
+                if (!settingsOnly)
                 {
-                    var bookmarks = view.BookmarkToolbarBounds;
-                    view.PointerMove(bookmarks.X + 20, bookmarks.Bottom + 15, false, false);
-                    clock.Advance(250); Paint("bookmark-pending");
-                    clock.Advance(125); Paint("bookmark-half");
-                    if (view.BookmarkToolbarOpacity != .5f) throw new InvalidOperationException("Native bookmark fade did not reach half opacity.");
-                    clock.Advance(125);
-                    if (!view.BookmarkToolbarNeedsRedraw) throw new InvalidOperationException("Native bookmark hover missed its deadline.");
-                    Paint("bookmark-visible");
-                    var handle = view.BookmarkToolbarGrip;
-                    view.PointerDown(handle.X + 7, handle.Y + 17, 0, false, false);
-                    view.PointerMove(handle.X + 37, handle.Y - 63, false, false);
-                    view.PointerUp(handle.X + 37, handle.Y - 63, 0);
-                    view.PointerMove(handle.X + 37, handle.Y + 17, false, false); Paint("bookmark-moved");
-                    if (view.BookmarkToolbarBounds.X != bookmarks.X + 30 || view.BookmarkToolbarBounds.Y != bookmarks.Y
-                        || !original.ContentEquals(view.Document))
-                        throw new InvalidOperationException("Native bookmark drag failed or edited content.");
+                    Paint("canvas");
+                    view.SetModifiers(false, true); Paint("grid-snap"); view.SetModifiers(false, false);
+                    int decodes = canvas.ImageDecodeCount;
+                    var dimBounds = view.CanvasBackgroundDimBounds;
+                    var plot = view.CanvasPlotBounds;
+                    view.Wheel(plot.X + 10, plot.Y + 10, -240, false, false, true);
+                    for (int i = 0; i < 20; i++) Paint();
+                    if (canvas.ImageDecodeCount != decodes)
+                        throw new InvalidOperationException("Zoom repeatedly decoded the mapping background.");
+                    Paint("zoom");
+                    if (view.CanvasBackgroundDimBounds != dimBounds) throw new InvalidOperationException("Zoom moved the native dim control.");
+                    view.PointerMove(dimBounds.X + 10, dimBounds.Y + 10, false, false);
+                    clock.Advance(75); Paint("dim-hover-half");
+                    clock.Advance(75); Paint("dim-hover");
+                    var dimSlider = view.CanvasBackgroundDimSliderBounds;
+                    view.PointerDown(dimSlider.X + dimSlider.Width * .75f, dimSlider.Y + 12, 0, false, false);
+                    view.PointerUp(dimSlider.X + dimSlider.Width * .75f, dimSlider.Y + 12, 0); Paint("dim-slider");
+                    if (view.LibrarySettings.MappingCanvasBackgroundDim != 75 || !original.ContentEquals(view.Document))
+                        throw new InvalidOperationException("Native dim drag changed content or did not apply its value.");
+                    view.PointerMove(plot.X + 10, plot.Y + 10, false, false);
+                    clock.Advance(999); Paint("dim-delay");
+                    if (view.CanvasBackgroundDimOpacity != 1) throw new InvalidOperationException("Native dim control faded before one second.");
+                    clock.Advance(76); Paint("dim-fade");
+                    clock.Advance(75); Paint("dim-hidden");
+                    if (view.CanvasBackgroundDimOpacity != 0 || view.CanvasBackgroundDimNeedsRedraw)
+                        throw new InvalidOperationException("Native dim control did not finish hiding.");
+                    var panel = view.CanvasControlsPanelBounds;
+                    view.PointerMove(panel.X + 8, panel.Y + panel.Height / 2, false, false);
+                    clock.Advance(150); Paint("panel-compact");
+                    view.PointerDown(panel.X + 8, panel.Y + panel.Height / 2, 0, false, false);
+                    view.PointerMove(panel.X + 48, panel.Y + panel.Height / 2 - 80, false, false);
+                    view.PointerUp(panel.X + 48, panel.Y + panel.Height / 2 - 80, 0); Paint("panel-moved");
+                    panel = view.CanvasControlsPanelBounds;
+                    view.PointerDown(panel.Right, panel.Bottom, 0, false, false);
+                    view.PointerMove(panel.X, panel.Y, false, false);
+                    view.PointerUp(panel.X, panel.Y, 0); Paint("panel-half");
+                    if (view.LibrarySettings.CanvasControlsScale != .5f || view.WantsCapture || !original.ContentEquals(view.Document))
+                        throw new InvalidOperationException("Native panel resize did not retain 50% scale or changed content.");
+                    var halfSlider = view.CanvasBackgroundDimSliderBounds;
+                    Click(halfSlider.X + halfSlider.Width / 2, halfSlider.Y + halfSlider.Height / 2);
+                    if (view.LibrarySettings.MappingCanvasBackgroundDim != 50)
+                        throw new InvalidOperationException("Native half-size slider hit region was not scaled.");
+                    var media = view.CanvasMediaToggleBounds;
+                    bool enabled = view.LibrarySettings.EnableVideoStoryboard;
+                    Click(media.X + media.Width / 2, media.Y + media.Height / 2);
+                    if (view.LibrarySettings.EnableVideoStoryboard == enabled)
+                        throw new InvalidOperationException("Native half-size media toggle did not respond.");
+                    Paint("panel-half-controls");
+                    view.ShowDiscussionPanel(); Paint();
+                    panel = view.CanvasControlsPanelBounds;
+                    var annotations = view.CanvasDiscussionToggleBounds;
+                    if (annotations.Y != panel.Y || view.CanvasBackgroundDimBounds.Y != annotations.Bottom
+                        || view.CanvasMediaToggleBounds.Bottom != panel.Bottom)
+                        throw new InvalidOperationException("Discussion toggle was not grouped with the media controls.");
+                    view.PointerMove(panel.X + 8, panel.Y + panel.Height / 2, false, false);
+                    clock.Advance(150); Paint("panel-half-discussion");
+                    bool showAnnotations = view.LibrarySettings.ShowCanvasDiscussionAnnotations;
+                    Click(annotations.X + annotations.Width / 2, annotations.Y + annotations.Height / 2);
+                    if (view.LibrarySettings.ShowCanvasDiscussionAnnotations == showAnnotations || !original.ContentEquals(view.Document))
+                        throw new InvalidOperationException("Native half-size annotation toggle failed or edited content.");
+                    if (size.Item1 >= 980)
+                    {
+                        var bookmarks = view.BookmarkToolbarBounds;
+                        view.PointerMove(bookmarks.X + 20, bookmarks.Bottom + 15, false, false);
+                        clock.Advance(250); Paint("bookmark-pending");
+                        clock.Advance(125); Paint("bookmark-half");
+                        if (view.BookmarkToolbarOpacity != .5f) throw new InvalidOperationException("Native bookmark fade did not reach half opacity.");
+                        clock.Advance(125);
+                        if (!view.BookmarkToolbarNeedsRedraw) throw new InvalidOperationException("Native bookmark hover missed its deadline.");
+                        Paint("bookmark-visible");
+                        var handle = view.BookmarkToolbarGrip;
+                        view.PointerDown(handle.X + 7, handle.Y + 17, 0, false, false);
+                        view.PointerMove(handle.X + 37, handle.Y - 63, false, false);
+                        view.PointerUp(handle.X + 37, handle.Y - 63, 0);
+                        view.PointerMove(handle.X + 37, handle.Y + 17, false, false); Paint("bookmark-moved");
+                        if (view.BookmarkToolbarBounds.X != bookmarks.X + 30 || view.BookmarkToolbarBounds.Y != bookmarks.Y
+                            || !original.ContentEquals(view.Document))
+                            throw new InvalidOperationException("Native bookmark drag failed or edited content.");
+                    }
+                    if (overlaysOnly) continue;
                 }
-                if (overlaysOnly) continue;
-                view.OpenSettings(); Paint();
+                Paint(); view.OpenSettings(); Paint();
                 var settings = view.SettingsBounds;
                 Click(settings.X + 40, settings.Y + 78 + 5 * 48 + 16);
                 Paint("settings");
                 Click(settings.X + 230 + 180, settings.Y + 144);
                 Paint("settings-dim");
                 view.Wheel(settings.X + 300, settings.Y + 200, -1200, false); Paint("grid-settings");
-                float scroll = Math.Max(0, 424 - (settings.Height - 208));
+                float scroll = Math.Max(0, EditorView.MappingCanvasContentHeight - (settings.Height - 208));
                 Click(settings.X + 230 + 100, settings.Y + 448 - scroll + 16);
                 Paint("grid-colour");
                 view.KeyDown(27, false, false); Paint();
+                Click(settings.X + 230 + 15, settings.Y + 600 - scroll);
+                string preferences = Path.Combine(folder, $"movement-labels-{locale}-{size.Item1}x{size.Item2}-{dpi}.json");
+                view.ApplySettings(preferences); Paint("movement-label-cutoff");
+                if (LibrarySettings.Load(preferences).MovementLabelTimeThresholdMs != 35 || !original.ContentEquals(view.Document))
+                    throw new InvalidOperationException("Native movement label cutoff did not apply or edited content.");
+                float rowWidth = Math.Min(360, settings.Width - 262);
+                Click(settings.X + 230 + rowWidth + 12 + Math.Min(174, settings.Width - 274 - rowWidth) / 2,
+                    settings.Y + 600 - scroll);
+                view.ApplySettings(preferences); Paint("movement-label-reset");
+                if (LibrarySettings.Load(preferences).MovementLabelTimeThresholdMs != LibrarySettings.DefaultMovementLabelTimeThresholdMs)
+                    throw new InvalidOperationException("Native movement label Reset did not restore the default cutoff.");
                 view.KeyDown(27, false, false); Paint();
                 view.DropLibraryFiles([image]); Paint("replace");
                 if (!view.DiscardConfirmationVisible) throw new InvalidOperationException("Native replacement did not open confirmation.");

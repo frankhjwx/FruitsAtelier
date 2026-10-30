@@ -47,7 +47,7 @@ public sealed partial class EditorView
     {
         if (!osuAllowSliderConversion)
         {
-            ShowEditorNotice("osu.readOnlySlider");
+            ShowSliderCanvasChoice([id]);
             throw new InvalidOperationException(StatusMessage);
         }
         var batch = SliderImportEditing.ConvertFollowingMap(Document, [id]);

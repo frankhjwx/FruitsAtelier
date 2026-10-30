@@ -50,6 +50,12 @@ Lazer v128 imports use the same supported object and timing fields. They require
 
 Versions 8–14 share the Catch timing and slider tick rules used here. Version 7 additionally multiplies tick distance by the reciprocal of inherited SV, so changing only its header can change droplets and downstream RNG. Imported v7 maps retain this rule through project saves, undo, conversion caches, new FSliders and v7 export. New maps and other supported imports use v14 export. Synchronization reviews changes between these tick rules as `Format/Version`; this comparison field is not written as an `.osu` section. Import preserves raw sections and object/sample fields. All supported stable versions use the same legacy coordinate rules; the timing offset for versions below v5 remains outside the supported input range. These boundaries follow the pinned [LegacyBeatmapDecoder](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs) and [CatchBeatmapConverter](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapConverter.cs).
 
+Slider ticks and tiny droplets follow stable's float distance-to-time and integer
+timestamp boundaries. A nominal 200 ms gap can become 201 ms and generate three
+tiny droplets instead of one. Tiny positions sample the path at their truncated
+times; their counts also determine subsequent NM/HR random draws. See the pinned
+[conversion references](../src/FruitsAtelier.Core/Conversion/UPSTREAM.md).
+
 | Item | Representation |
 | --- | --- |
 | Standalone fruit | Hit circle preserving X, geometric Y, time, type flags, and samples |

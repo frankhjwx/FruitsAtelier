@@ -140,16 +140,18 @@ internal static class OsuCanvasInputTests
         ui.LoadDocument(map); ui.Key('1'); ui.ClickMap(1000, 64); ui.Paint();
         var before = ui.View.Document.DeepClone();
         ui.Key('H', ctrl: true);
-        Check(ui.View.Document.ContentEquals(before), "Catch canvas mutated a read-only Legacy Slider.");
+        Check(ui.View.Document.ImportedSliders.Single().X == 448 && !ui.View.SliderCanvasChoiceVisible, "Catch horizontal mirror must retain Legacy representation.");
+        ui.Key('Z', ctrl: true); ui.Key('A', ctrl: true);
         Check(ui.View.CopySelection(), "Read-only Legacy Slider could not be copied.");
-        Check(!ui.View.CutSelection() && ui.View.Document.ContentEquals(before), "Cut removed a read-only Legacy Slider.");
+        Check(ui.View.CutSelection() && ui.View.Document.ImportedSliders.Count == 0, "Cross-canvas cut must remove the selected Legacy Slider.");
+        ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(before), "Legacy cut undo must restore the source.");
         var fslider = new CurveTrack(); fslider.Nodes.Add(new() { TimeMs = 1000, X = 100 }); fslider.Nodes.Add(new() { TimeMs = 1500, X = 200 });
         map = new MapDocument(); map.Tracks.Add(fslider); ui.LoadDocument(map); ui.View.ToggleOsuCanvas(); ui.Paint();
         ui.View.UpdateTransport(1000, 5000, true, false, false, null, "fixture.wav"); ui.Paint();
         ui.Key('1'); Click(ui, 100, 192); before = ui.View.Document.DeepClone();
         Check(ui.View.CopySelection(), "Read-only FSlider was not selected on the native canvas.");
         ui.Key('H', ctrl: true);
-        Check(ui.View.Document.ContentEquals(before) && !ui.View.CutSelection(), "osu canvas mutated a read-only FSlider.");
+        Check(ui.View.Document.Tracks.Single().Nodes[0].X == 412 && ui.View.CutSelection(), "osu canvas must mirror and cut an FSlider.");
     }
 
     private static void NativeSelectionAndCancellation()

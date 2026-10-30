@@ -6,7 +6,7 @@ public static class DistanceSpacingEditing
 {
     // Call inside an editing transaction: conversion and geometry validation may reject the change.
     public static void Apply(MapDocument document, ConvertedCatchObject target, ConvertedCatchObject reference,
-        bool next, double ratio, bool compensateTinyDroplets)
+        bool next, double ratio, bool compensateTinyDroplets, CatchConversionCache? cache = null)
     {
         if (!double.IsFinite(ratio) || ratio < 0) throw new ArgumentException(L.Get("distance.nonnegative"));
         double duration = next ? reference.TimeMs - target.TimeMs : target.TimeMs - reference.TimeMs;
@@ -16,7 +16,7 @@ public static class DistanceSpacingEditing
         if (direction == 0 && distance > 0) throw new ArgumentException(L.Get("distance.direction"));
         double x = reference.X + direction * distance;
         if (!double.IsFinite(x) || x is < 0 or > 512) throw new ArgumentException(L.Get("distance.outside"));
-        ApplyPosition(document, target, reference, x, compensateTinyDroplets);
+        ApplyPosition(document, target, reference, x, compensateTinyDroplets, cache);
     }
 
     public static void ApplyX(MapDocument document, ConvertedCatchObject target, double x, bool compensateTinyDroplets, CatchConversionCache? cache = null)
@@ -88,7 +88,13 @@ public static class DistanceSpacingEditing
         if (pathX is < 0 or > 512 || !CurveMath.TryMoveAnchor(track, anchor.Id, time, pathX, out _))
             throw new ArgumentException(L.Get("coordinate.unreachable"));
 
-        var after = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache);
+        bool PreservesPositions(CatchConversionResult candidate)
+        {
+            var events = candidate.Objects.Where(o => o.SourceId == target.SourceId).ToDictionary(o => o.EventIndex);
+            return siblings.All(o => events.TryGetValue(o.EventIndex, out var current)
+                && Math.Abs(current.X - (linkedEvents.Contains(o.EventIndex) ? o.X + x - selected.X : o.X)) <= .001);
+        }
+        var after = ConvertWithEventTiming(document, track, before, compensateTinyDroplets, cache, PreservesPositions);
         if (!after.Success) throw new ArgumentException(L.Get("coordinate.unreachable"));
         var updated = after.Objects.Where(o => o.SourceId == target.SourceId).ToDictionary(o => o.EventIndex);
         if (updated.Count != siblings.Length || siblings.Any(o => !updated.TryGetValue(o.EventIndex, out var current)
@@ -111,6 +117,7 @@ public static class DistanceSpacingEditing
             throw new ArgumentException(L.Get("distance.unsupported"));
         var track = document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
             ?? ImportedSliderEditing.ConvertToTrack(document, target.SourceId).Track;
+        var before = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache);
         double time = CurveMath.FirstSpanTime(track, target.TimeMs);
         if (reference is not null && reference.SourceId == target.SourceId)
         {
@@ -128,12 +135,39 @@ public static class DistanceSpacingEditing
         if (pathX is < 0 or > 512) throw new ArgumentException(L.Get("distance.outside"));
         if (!CurveMath.TryMoveAnchor(track, anchor.Id, anchor.TimeMs, pathX, out string failure))
             throw new ArgumentException(failure);
-        var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache);
+        var converted = ConvertWithEventTiming(document, track, before, compensateTinyDroplets, cache);
         var moved = converted.Objects.FirstOrDefault(o => o.SourceId == target.SourceId && o.Kind == target.Kind && Math.Abs(o.TimeMs - target.TimeMs) < .001);
         var fixedObject = reference is null ? null : converted.Objects.FirstOrDefault(o => o.SourceId == reference.SourceId && o.Kind == reference.Kind && Math.Abs(o.TimeMs - reference.TimeMs) < .001);
         if (!converted.Success || moved is null || Math.Abs(moved.X - x) > .001
             || reference is not null && (fixedObject is null || Math.Abs(fixedObject.X - reference.X) > .001))
             throw new ArgumentException(L.Get(reference is null ? "coordinate.unreachable" : "distance.unreachable"));
+    }
+
+    private static CatchConversionResult ConvertWithEventTiming(MapDocument document, CurveTrack track,
+        CatchConversionResult before, bool compensate, CatchConversionCache? cache, Func<CatchConversionResult, bool>? preservesPositions = null)
+    {
+        var result = CatchStreamConverter.Convert(document, compensate, cache);
+        var original = before.Objects.Where(o => o.SourceId == track.Id).ToArray();
+        bool SameTiming(CatchConversionResult candidate)
+        {
+            var events = candidate.Objects.Where(o => o.SourceId == track.Id).ToArray();
+            return candidate.Success && (preservesPositions?.Invoke(candidate) ?? true) && events.Length == original.Length && events.Zip(original).All(pair =>
+                pair.First.Kind == pair.Second.Kind && Math.Abs(pair.First.TimeMs - pair.Second.TimeMs) < .001);
+        }
+        if (SameTiming(result) || track.SliderVelocityMultiplier is not null
+            || track.FixedSliderVelocityMultiplier is not null
+            || before.Sliders.FirstOrDefault(s => s.SourceId == track.Id) is not { } slider) return result;
+        var minimum = track.MinimumSliderVelocityMultiplier;
+        // Stable truncates float path distances into event times. Binary SV multiples
+        // retain those rounding boundaries while providing more room for edited geometry.
+        for (double sv = slider.SliderVelocityMultiplier; sv <= LegacyCatchRules.MaximumSliderVelocityMultiplier; sv *= 2)
+        {
+            track.MinimumSliderVelocityMultiplier = sv * document.EffectiveSliderMultiplier / document.SliderMultiplier;
+            var candidate = CatchStreamConverter.Convert(document, compensate, cache);
+            if (SameTiming(candidate)) return candidate;
+        }
+        track.MinimumSliderVelocityMultiplier = minimum;
+        return result;
     }
 
     private static bool TryRandomizedTiny(MapDocument document, ConvertedCatchObject target, double x,

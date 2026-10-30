@@ -13,11 +13,15 @@ internal static class LegacyV7Tests
             Check(converted.Success, "v7 conversion failed");
             var droplets = converted.Objects.Where(o => o.SourceId == document.ImportedSliders[0].Id && o.Kind == CatchObjectKind.Droplet).ToArray();
             Check(droplets.Length == 2, "v7 has one tick in each 200px span, independently of SV");
-            Near(200, droplets[0].X); Near(200, droplets[1].X);
             double velocity = 100 / (500 * ((float)(100 / sv) / 100d));
             double tickDistance = velocity * 500 / sv;
-            Near(1000 + tickDistance / velocity, droplets[0].TimeMs);
-            Near(1000 + (400 - tickDistance) / velocity, droplets[1].TimeMs);
+            double firstTick = (int)(1000 + (float)tickDistance / (velocity * 1000) * 1000);
+            double secondTick = (int)(1000 + (float)(400 - tickDistance) / (velocity * 1000) * 1000);
+            Near(firstTick, droplets[0].TimeMs);
+            Near(secondTick, droplets[1].TimeMs);
+            var slider = document.ImportedSliders[0];
+            Near(ImportedSliderConverter.PositionAtTime(document, slider, firstTick), droplets[0].X);
+            Near(ImportedSliderConverter.PositionAtTime(document, slider, secondTick), droplets[1].X);
             var result = RoundTrip(document);
             Check(result.PlayableHardRockObjects.Select(o => (o.Kind, o.TimeMs, o.X))
                 .SequenceEqual(CatchPreviewMods.HardRock(document, converted).Select(o => (o.Kind, o.TimeMs, o.X))), "v7 HR playback changed");

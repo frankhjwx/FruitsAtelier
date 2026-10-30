@@ -256,8 +256,8 @@ public sealed partial class EditorView
         var target = distanceEditTarget!;
         try
         {
-            if (editingXCoordinate) DistanceSpacingEditing.ApplyX(Document, target, value, compensateTinyDroplets);
-            else DistanceSpacingEditing.Apply(Document, target, distanceEditReference!, false, value, compensateTinyDroplets);
+            if (editingXCoordinate) DistanceSpacingEditing.ApplyX(Document, target, value, compensateTinyDroplets, editorConversionCache);
+            else DistanceSpacingEditing.Apply(Document, target, distanceEditReference!, false, value, compensateTinyDroplets, editorConversionCache);
         }
         catch (InvalidOperationException error) { throw new ArgumentException(error.Message, error); }
         EnsureConversion();
@@ -280,7 +280,7 @@ public sealed partial class EditorView
     private IReadOnlyList<ConvertedCatchObject>? distanceLayoutSource;
     private TimingMap.Lookup? distanceLayoutTiming;
     private IReadOnlyList<ConvertedCatchObject>? distanceLayoutAuthoredSource;
-    private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutDpb;
+    private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutDpb, distanceLayoutTimeThreshold;
     private string distanceLayoutLanguage = "";
     private bool distanceLayoutIncludeTiny, distanceLayoutSpeed;
     private IReadOnlyList<BreakPeriod>? distanceLayoutBreaks;
@@ -292,6 +292,7 @@ public sealed partial class EditorView
             && ReferenceEquals(distanceLayoutTiming, renderedTiming)
             && distanceLayoutScale == pixelsPerMs && distanceLayoutWidth == Playfield.Width
             && distanceLayoutDpb == Document.DistancePerBeat && distanceLayoutLanguage == L.Language
+            && distanceLayoutTimeThreshold == LibrarySettings.MovementLabelTimeThresholdMs
             && distanceLayoutIncludeTiny == movementIncludeTinyDroplets && distanceLayoutSpeed == UsesSpeedDistanceSnap
             && ReferenceEquals(distanceLayoutBreaks, movementBreaks)) return;
         distanceLayoutBreaks = movementBreaks;
@@ -299,6 +300,7 @@ public sealed partial class EditorView
         distanceLayoutAuthoredSource = conversion!.Objects;
         distanceLayoutScale = pixelsPerMs; distanceLayoutWidth = Playfield.Width;
         distanceLayoutDpb = Document.DistancePerBeat; distanceLayoutLanguage = L.Language;
+        distanceLayoutTimeThreshold = LibrarySettings.MovementLabelTimeThresholdMs;
         distanceLayoutIncludeTiny = movementIncludeTinyDroplets;
         distanceLayoutSpeed = UsesSpeedDistanceSnap;
         distanceLayout.Clear();
@@ -309,7 +311,7 @@ public sealed partial class EditorView
         {
             var from = objects[movementIndices[i - 1]];
             var to = objects[movementIndices[i]];
-            if (to.TimeMs - from.TimeMs <= 37.5
+            if (to.TimeMs - from.TimeMs <= distanceLayoutTimeThreshold
                 || Document.BananaShowers.Any(s => s.TimeMs <= to.TimeMs && s.EndTimeMs >= from.TimeMs)
                 || movementBreaks.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
             // Keep labels aligned with playable connections while measuring authored spacing, like the inspector.

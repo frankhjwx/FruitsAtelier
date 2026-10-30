@@ -72,6 +72,7 @@ public sealed partial class EditorView
         if (SynchronizationVisible) { DrawSynchronization(c); return; }
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();
+        if (SliderCanvasChoiceVisible) { DrawSliderCanvasChoice(c); return; }
         if (galleryDeletingFolder is not null) { DrawGalleryFolderDeletion(c); return; }
         if (pendingLanguage is not null) { DrawLanguageNotice(c); return; }
         if (previousSaveConfirmation || previousSaveRestore is not null)

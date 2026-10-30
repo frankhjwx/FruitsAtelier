@@ -46,7 +46,7 @@ public sealed partial class EditorView
     private BreakPeriod breakEditOriginal, breakEditPreview;
     private BreakPeriod[] breakPeriods = [];
     private bool IsTimelineTail((Guid Id, double Time, Rect Bounds) item, float x, float y)
-        => CanSelectCollaborationObject(item.Id) && !IsReadOnlySlider(item.Id) && item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - item.Bounds.Height / 2)) <= Math.Min(10, item.Bounds.Height / 2)
+        => CanSelectCollaborationObject(item.Id) && item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - item.Bounds.Height / 2)) <= Math.Min(10, item.Bounds.Height / 2)
         && (Document.Tracks.Any(t => t.Id == item.Id && t.Nodes.Count > 1 && t.StreamSnapDivisor is null)
             || Document.ImportedSliders.Any(s => s.Id == item.Id)
             || Document.BananaShowers.Any(s => s.Id == item.Id));
@@ -75,7 +75,7 @@ public sealed partial class EditorView
             }
             return;
         }
-        if (EndpointSnap(tailId) is not null)
+        if (!IsReadOnlySlider(tailId) && EndpointSnap(tailId) is not null)
         {
             end = SnapSliderEndpoint(tailId, end, true);
             try { SetSliderEndpointTime(tailId, true, end); }

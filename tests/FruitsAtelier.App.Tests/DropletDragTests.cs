@@ -4,20 +4,23 @@ internal static class DropletDragTests
 {
     public static void RepeatedPathDrag()
     {
+        foreach (bool fractional in new[] { false, true })
         foreach (int spans in new[] { 2, 3 })
         foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
         foreach (bool returning in new[] { false, true })
         {
-            var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 60000.0 / 220,
+            var map = new MapDocument { DurationMs = 5000, BeatLengthMs = fractional ? 60000.0 / 220 : 300,
                 SliderMultiplier = 1.8, SliderTickRate = 2, IsDemo = false };
             var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = spans, CompensateTinyDroplets = true };
             track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 400 },
-                new Anchor { TimeMs = 1000 + 45000.0 / 220, X = 330 }]);
+                new Anchor { TimeMs = fractional ? 1000 + 45000.0 / 220 : 1225, X = 330 }]);
             map.Tracks.Add(track);
             var baseline = CatchStreamConverter.Convert(map);
             Check(baseline.Success, "Repeated droplet fixture did not convert.");
             var droplets = baseline.Objects.Where(o => o.Kind == CatchObjectKind.Droplet).ToArray();
-            Check(droplets.Length == spans, "Expected one shared droplet per traversal.");
+            Check(droplets.Length == spans, "Expected one droplet per traversal.");
+            if (!fractional) Check(droplets.All(o => Math.Abs(CurveMath.FirstSpanTime(track, o.TimeMs) - CurveMath.FirstSpanTime(track, droplets[0].TimeMs)) < .000001),
+                "Shared repeat fixture must use the same rounded path sample.");
             var target = droplets[returning ? 1 : 0];
             var displayed = OsuBeatmapWriter.Serialize(map).PlayableObjects.Single(o => o.EventIndex == target.EventIndex);
             var ui = new Ui(); ui.LoadDocument(map);
@@ -32,7 +35,12 @@ internal static class DropletDragTests
             foreach (var old in baseline.Objects)
             {
                 var current = after.Objects.Single(o => o.EventIndex == old.EventIndex);
-                double expected = old.Kind == CatchObjectKind.Droplet ? displayed.X + 10 : old.X;
+                bool linked = old.Kind == CatchObjectKind.Droplet && Math.Abs(CurveMath.FirstSpanTime(track, old.TimeMs)
+                    - CurveMath.FirstSpanTime(track, target.TimeMs)) < .000001;
+                double accepted = after.Objects.Single(o => o.EventIndex == target.EventIndex).X;
+                if (fractional) Check(accepted > target.X && accepted <= displayed.X + 10 + .001,
+                    "Distinct rounded repeat samples must permit bounded movement without moving their neighbour.");
+                double expected = linked ? fractional ? old.X + accepted - target.X : displayed.X + 10 : old.X;
                 Check(Math.Abs(current.X - expected) < .001 && Math.Abs(current.TimeMs - old.TimeMs) < .001,
                     $"Repeated drag ({spans}, {mode}, returning={returning}) event {old.EventIndex}: expected {expected}, got {current.X}; {ui.View.StatusMessage}");
             }

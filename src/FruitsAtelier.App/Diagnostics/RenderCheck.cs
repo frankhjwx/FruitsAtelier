@@ -1175,7 +1175,8 @@ internal static class RenderCheck
             AppLog.Write("SV/DPB controls passed at all sizes, DPI values and languages.");
             return;
         }
-        if (Environment.GetCommandLineArgs().Contains("--mapping-canvas-render-check"))
+        if (Environment.GetCommandLineArgs().Contains("--mapping-canvas-render-check")
+            || Environment.GetCommandLineArgs().Contains("--mapping-canvas-settings-render-check"))
         {
             MappingCanvasRenderCheck.Run(canvas);
             return;

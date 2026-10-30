@@ -8,7 +8,7 @@
 
 [官网](https://fruitsatelier.himiko.moe/) · [下载](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**当前版本：1.3.2**
+**当前版本：1.3.3**
 
 ![水果工坊的编辑画布、物件时间轴与 Catch 预览](assets/screenshots/twin-bloom.png)
 

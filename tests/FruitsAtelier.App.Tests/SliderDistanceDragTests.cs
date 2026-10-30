@@ -73,11 +73,11 @@ internal static class SliderDistanceDragTests
         SliderEventTestDriver.Down(ui, target.TimeMs, target.X); ui.MoveMap(target.TimeMs, 215); ui.UpMap(target.TimeMs, 215);
         var after = CatchStreamConverter.Convert(ui.View.Document);
         var moved = after.Objects.Single(o => o.EventIndex == target.EventIndex);
-        Check(after.Success && Math.Abs(moved.X - 214.4) < .001,
+        Check(after.Success && Math.Abs(moved.X - (200 + (target.TimeMs - 1000) * DistanceSnap.BaseVelocity(map, 1000) * .6)) < .001,
             $"Following straight segment prevented preceding-event snap: {moved.X}; {ui.View.StatusMessage}");
         SliderEventTestDriver.Down(ui, moved.TimeMs, moved.X); ui.MoveMap(moved.TimeMs, 50); ui.UpMap(moved.TimeMs, 50);
         after = CatchStreamConverter.Convert(ui.View.Document);
-        Check(Math.Abs(after.Objects.Single(o => o.EventIndex == target.EventIndex).X - 166.4) < .001,
+        Check(Math.Abs(after.Objects.Single(o => o.EventIndex == target.EventIndex).X - (200 - (target.TimeMs - 1000) * DistanceSnap.BaseVelocity(map, 1000) * 1.4)) < .001,
             "Following maximum DS prevented a valid preceding-event snap.");
     }
 

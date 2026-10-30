@@ -88,7 +88,6 @@ internal static class SliderCanvasLockTests
                 var point = osu ? ui.View.OsuCanvasScreen(320, 192) : ui.ScreenAt(1000, 64);
                 ui.View.PointerDown(point.X, point.Y, 2, false, false);
                 ui.View.PointerUp(point.X, point.Y, 2); ui.Paint();
-                if (osu) ui.ClickText(L.Get("editor.command.deleteObjects"));
             }
             else
             {
@@ -127,7 +126,7 @@ internal static class SliderCanvasLockTests
                 slider.ControlPoints.AddRange([new(64, 64), new(192, 64)]);
                 map.ImportedSliders.Add(slider);
             }
-            var clock = new Clock();
+            var clock = new Clock { Milliseconds = 0 };
             var ui = new Ui(false, clock); ui.LoadDocument(map); ui.Key('1');
             if (osu)
             {
@@ -138,15 +137,13 @@ internal static class SliderCanvasLockTests
             }
             else ui.ClickMap(1000, 64);
             ui.Paint();
-            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("osu.readOnlySlider")) && ui.View.OsuLinkNoticeOpacity == 1,
-                "Cross-canvas selection must show the canvas-switch notice.");
-            clock.Milliseconds = 3000; ui.Paint();
-            Check(ui.View.OsuLinkNoticeOpacity == 1, "Canvas notice must remain opaque for three seconds.");
-            clock.Milliseconds = 3500; ui.Paint();
-            Check(!ui.View.OsuLinkNoticeNeedsRedraw, "Canvas notice must disappear after fading.");
+            Check(!ui.View.SliderCanvasChoiceVisible && ui.View.OsuLinkNoticeOpacity == 0,
+                "Cross-canvas selection must remain silent.");
             ui.Key('H', ctrl: true);
-            Check(ui.View.OsuLinkNoticeOpacity == 1 && ui.View.Document.ContentEquals(map) && !ui.View.IsDirty,
-                "A blocked edit must restart the notice without changing content or history.");
+            Check(!ui.View.SliderCanvasChoiceVisible && !ui.View.Document.ContentEquals(map),
+                "Horizontal mirror must work across canvases.");
+            ui.Key('Z', ctrl: true);
+            Check(ui.View.Document.ContentEquals(map), "Horizontal mirror undo must restore content.");
         }
 
         foreach (bool derandomize in new[] { false, true })

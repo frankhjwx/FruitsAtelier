@@ -1,5 +1,23 @@
 # Building and Testing
 
+## Slider event timing
+
+`Core.Tests --slider-event-timing-check` exercises isolated event edits that need
+more automatic SV while preserving rounded event times and neighbouring positions.
+It covers consecutive edits, cached conversion, explicit-SV precedence, invalid
+floors, schema 45/46 persistence and identical export after reload.
+The editor integration suite covers DS numeric fields, preceding-event snapping,
+selection-box priority, undo/cancel, and both shared and distinct rounded repeat
+samples. DS expectations use actual converted event times, not ideal beat fractions.
+
+## Movement Analysis labels
+
+`App.Tests --mapping-canvas-check` also checks the Movement Analysis label time
+cutoff: older-settings defaults, finite bounds, draft cancellation, persistence,
+cache refresh, exact cutoff boundaries, DS/speed modes and narrow English/Chinese
+settings. `FruitsAtelier.App --render-check --mapping-canvas-settings-render-check` captures
+the scrolled control and applies it through native pointer input.
+
 ## Editor theme checks
 
 `App.Tests --editor-theme-check` verifies all seven themes in English and Chinese,
@@ -226,7 +244,7 @@ Native `--render-check --legacy-droplet-modes-render-check` operates
 the Inspector dropdown in English and Chinese at two sizes and three DPI scales;
 captures go to `artifacts/tests/legacy-droplet-modes/native`.
 
-Focused App test commands print uncaught test exceptions to standard error and
+Focused Core, Formats and App test commands catch test exceptions, print them to standard error and
 return exit code 1. The full suite records failures per test and continues through
 the remaining cases. Capture both output streams when retaining test logs.
 
@@ -300,6 +318,8 @@ switches through every cached view, reorders osu! Collections, and verifies that
 neither memory nor disk caches are reused for another identity. The incremental
 Library suite includes this check. Native Library checks also capture switching
 the four tabs and FA/osu! Collections after restart in both languages.
+The category cache check also verifies visit-order refresh while the editor is
+open and double-click identity when a background refresh moves the clicked card.
 
 For an optional read-only startup comparison against the configured Library, run
 `App.Tests --library-startup-profile`. It copies the SQLite catalog and view
@@ -350,6 +370,14 @@ finish before the initial media frame is ready. Library fixtures must also pump
 `LibraryLoading` and complete cache writes before deleting their directories.
 
 ## Automated regressions
+
+`Formats.Tests --stable-droplets-check` covers the BUNASYNERGY!!! Overdose slider
+at 01:32:782 with its original Legacy geometry and retained FSlider authoring data.
+Golden stable tick/tiny times verify six droplets and eleven tiny droplets in the
+native slider, including both three-tiny intervals. FSlider counts and times are
+also checked against an independent calculation from the emitted SV and length.
+NM/HR compensation, downstream RNG, cold/warm
+exports, mode changes, undo/redo and project reopening are checked together.
 
 App integration output includes each test's elapsed time and the total suite duration.
 Library fixtures wait for loading and their expected results instead of rendering a
@@ -1463,3 +1491,12 @@ persistence. `App.Tests --timeline-layout-check` checks the bookmark toolbar's
 Windows `FruitsAtelier.App.exe --render-check --canvas-overlay-render-check`
 operates the panels in English and Chinese at three window sizes and three DPI
 values, with captures under `artifacts/tests/mapping-canvas-native`.
+
+## Cross-canvas slider editing
+
+`App.Tests --slider-canvas-choice-check` checks horizontal movement, mirroring,
+repeats, mixed clipboard cuts, modal input isolation, conversion, switching,
+cancellation and undo in both canvases and languages. `--osu-canvas-check` also
+checks silent selection and the optional canvas selection lock. Windows
+`FruitsAtelier.App --render-check --osu-canvas-render-check` captures the choice
+window and exercises cancellation at its supported sizes and DPI scales.

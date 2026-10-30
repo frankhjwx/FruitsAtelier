@@ -324,7 +324,9 @@ internal static class ObjectTimelineTests
         ui.View.PointerDown(X(2000), y, 0, false, false);
         ui.View.PointerMove(X(2250), y, false, false);
         ui.View.PointerUp(X(2250), y, 0); ui.Paint();
-        if (!readOnly.ContentEquals(ui.View.Document)) throw new Exception("Catch timeline changed a read-only Legacy slider.");
+        if (ui.View.Document.ImportedSliders.Single().TimeMs != 2250) throw new Exception("Catch timeline must move Legacy sliders in time.");
+        ui.Key('Z', ctrl: true);
+        if (!readOnly.ContentEquals(ui.View.Document)) throw new Exception("Cross-canvas timeline move must undo in one step.");
         ui.View.ToggleOsuCanvas(); ui.Paint();
         ui.View.UpdateTransport(1500, 10000, true, false, false, null, null); ui.Paint();
         ui.Click(X(1000), y);

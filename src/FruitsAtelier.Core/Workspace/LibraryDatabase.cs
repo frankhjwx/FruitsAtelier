@@ -154,6 +154,13 @@ public sealed class LibrarySettings
     public uint CanvasCentreLineColour { get; set; } = DefaultCanvasCentreLineColour;
     private int canvasGridOpacity = DefaultCanvasGridOpacity;
     public int CanvasGridOpacity { get => canvasGridOpacity; set => canvasGridOpacity = Math.Clamp(value, 0, 100); }
+    public const double DefaultMovementLabelTimeThresholdMs = 37.5;
+    private double movementLabelTimeThresholdMs = DefaultMovementLabelTimeThresholdMs;
+    public double MovementLabelTimeThresholdMs
+    {
+        get => movementLabelTimeThresholdMs;
+        set => movementLabelTimeThresholdMs = double.IsFinite(value) ? Math.Clamp(value, 0, 500) : DefaultMovementLabelTimeThresholdMs;
+    }
     private int mappingCanvasBackgroundDim = 90;
     public int MappingCanvasBackgroundDim { get => mappingCanvasBackgroundDim; set => mappingCanvasBackgroundDim = Math.Clamp(value, 0, 100); }
     private int backgroundDim = 90;

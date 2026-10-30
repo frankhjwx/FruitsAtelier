@@ -191,7 +191,6 @@ public sealed partial class EditorView
     private double objectDragFollowTime;
     private void BeginObjectDrag(float x, float y, bool timeline = false, bool scaleSelection = false)
     {
-        if (RejectReadOnlySelection()) return;
         if (notesLocked) return;
         if (objectSelection.Count == 0) return;
         EnsureConversion();
@@ -232,8 +231,6 @@ public sealed partial class EditorView
         {
             try
             {
-                foreach (Guid id in objectSelection.Where(id => !objectDragTimeline && Document.ImportedSliders.Any(slider => slider.Id == id)).ToArray())
-                    ConvertImportedSlider(id);
                 if (selectionScaleSide != 0)
                     foreach (var track in Document.Tracks.Where(t => objectSelection.Contains(t.Id)))
                         for (int i = track.Nodes.Count - 2; i >= 0; i--)
@@ -298,6 +295,7 @@ public sealed partial class EditorView
 
         foreach (var slider in objectDragStart.ImportedSliders.Where(item => objectSelection.Contains(item.Id)))
         {
+            IncludeX(slider.X);
             IncludeTime(slider.TimeMs);
             IncludeTime(ImportedSliderConverter.EndTimeMs(objectDragStart, slider));
         }
@@ -345,13 +343,9 @@ public sealed partial class EditorView
         foreach (var source in objectDragStart.ImportedSliders.Where(item => objectSelection.Contains(item.Id)))
         {
             var target = Document.ImportedSliders.First(s => s.Id == source.Id);
-            target.TimeMs = source.TimeMs + deltaTime;
-            if (source.OriginalLine is { } original)
-            {
-                var fields = original.Split(',');
-                fields[2] = target.TimeMs.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
-                target.OriginalLine = string.Join(',', fields);
-            }
+            var moved = source.DeepClone();
+            TransformLegacyObject(moved, deltaTime, deltaX);
+            Document.ImportedSliders[Document.ImportedSliders.IndexOf(target)] = moved;
         }
         if (double.IsFinite(maxTime)) Document.DurationMs = Math.Max(Document.DurationMs, maxTime + deltaTime);
         StatusMessage = L.Get("editor.status.objectsMoved", objectSelection.Count, Number(deltaTime), Number(deltaX));

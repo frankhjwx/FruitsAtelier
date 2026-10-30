@@ -26,7 +26,7 @@ public static class SliderImportEditing
         double tickDistance = LegacyCatchRules.TickDistance(document, velocity, timing.At(slider.TimeMs).BeatLengthMs,
             ImportedSliderConverter.SliderVelocityAt(document, slider, timing));
         var events = LegacyCatchRules.CreateNested(slider.TimeMs, length / velocity,
-            velocity, tickDistance, length, slider.SpanCount, legacyImported: true);
+            velocity, tickDistance, length, slider.SpanCount, quantizeStart: true, legacyImported: true);
         var anchors = new List<double> { 0 };
         double distance = 0;
         for (int i = 1; i < slider.ControlPoints.Count; i++)
@@ -48,8 +48,9 @@ public static class SliderImportEditing
             index = ~index;
             double error = Math.Min(index < anchors.Count ? anchors[index] - target : double.PositiveInfinity,
                 index > 0 ? target - anchors[index - 1] : double.PositiveInfinity);
-            // Exported integer coordinates can shift the cumulative distance slightly.
-            if (error > 1.5) return false;
+            // Integer coordinates shift cumulative distance; stable's truncated event time
+            // can also move a sampled anchor by up to one millisecond of path travel.
+            if (error > 1.5 + velocity) return false;
         }
         return hasDroplet;
     }

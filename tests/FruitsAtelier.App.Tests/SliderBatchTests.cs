@@ -66,7 +66,8 @@ internal static class SliderBatchTests
             Check(view.Document.ImportedSliders.Count == 2, "Clone redo failed.");
             view.KeyDown(90, true, false); Wait();
             view.ConvertAllSliders(); Click(L.Get("sliderBatch.convert")); Wait();
-            Check(view.Document.Tracks.Count == 1 && view.Document.ImportedSliders.Count == 0, "Batch conversion failed.");
+            Check(view.Document.Tracks.Count == 1 && view.Document.ImportedSliders.Count == 0,
+                $"Batch conversion failed ({locale}, {size}, global={global}, compensated={source}).");
             Check(view.Document.Tracks[0].RandomizesDroplets(view.Document) == !(source || global), "Conversion used a second droplet policy.");
             Same(OsuBeatmapWriter.Serialize(prepared).PlayableObjects, OsuBeatmapWriter.Serialize(view.Document).PlayableObjects);
             view.KeyDown(90, true, false); Check(view.Document.ContentEquals(prepared), "Conversion undo lost imported mode/baseline.");

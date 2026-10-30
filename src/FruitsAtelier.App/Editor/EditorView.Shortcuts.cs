@@ -103,16 +103,13 @@ public sealed partial class EditorView
     {
         var ids = ClipboardSelectedParentIds();
         if (ids.Count == 0 || notesLocked || !ClipboardInteractionReady) return;
-        Edit(L.Get("editor.command.moveObjects"), () =>
+        EditSliderRepresentation(L.Get("editor.command.moveObjects"), () =>
         {
-            if (x != 0)
-                foreach (var id in Document.ImportedSliders.Where(s => ids.Contains(s.Id)).Select(s => s.Id).ToArray())
-                    ConvertImportedSlider(id);
             foreach (var fruit in Document.Fruits.Where(f => ids.Contains(f.Id))) { fruit.TimeMs += time; fruit.X += x; }
             foreach (var track in Document.Tracks.Where(t => ids.Contains(t.Id)))
                 foreach (var node in track.Nodes) { node.TimeMs += time; node.X += x; }
             foreach (var slider in Document.ImportedSliders.Where(s => ids.Contains(s.Id)))
-            { slider.TimeMs += time; slider.OriginalLine = WithClipboardTimes(slider.OriginalLine, (2, slider.TimeMs)); }
+            { TransformLegacyObject(slider, time, x); }
             foreach (var shower in Document.BananaShowers.Where(s => ids.Contains(s.Id)))
             { shower.TimeMs += time; shower.EndTimeMs += time; }
             Document.DurationMs = Math.Max(Document.DurationMs, ClipboardParents(Document).Select(p => p.TimeMs)
@@ -127,10 +124,10 @@ public sealed partial class EditorView
     {
         var ids = ClipboardSelectedParentIds();
         if (ids.Count == 0 || notesLocked) return;
-        Edit(L.Get("shortcut.mirror"), () =>
+        EditSliderRepresentation(L.Get("shortcut.mirror"), () =>
         {
-            foreach (var id in Document.ImportedSliders.Where(s => ids.Contains(s.Id)).Select(s => s.Id).ToArray())
-                ConvertImportedSlider(id);
+            foreach (var slider in Document.ImportedSliders.Where(s => ids.Contains(s.Id)))
+                TransformLegacyObject(slider, 0, 0, mirror: true);
             foreach (var fruit in Document.Fruits.Where(f => ids.Contains(f.Id))) fruit.X = 512 - fruit.X;
             foreach (var track in Document.Tracks.Where(t => ids.Contains(t.Id)))
             {
@@ -150,5 +147,38 @@ public sealed partial class EditorView
                 }
             }
         });
+    }
+
+    private static void TransformLegacyObject(ImportedSlider slider, double time, double x, bool mirror = false)
+    {
+        if (time == 0 && x == 0 && !mirror) return;
+        double Position(double value) => mirror ? 512 - value : value + x;
+        slider.TimeMs += time;
+        slider.X = Position(slider.X);
+        for (int i = 0; i < slider.ControlPoints.Count; i++)
+            slider.ControlPoints[i] = new(Position(slider.ControlPoints[i].X), slider.ControlPoints[i].GeometryY);
+        var source = slider.RandomizationSource?.DeepClone();
+        var track = slider.RandomizationTrack?.DeepClone();
+        var velocity = slider.RandomizationBaseVelocity;
+        var processedSv = slider.ProcessedSliderVelocityMultiplier;
+        bool native = slider.PreserveNativeGeometry;
+        if (source is not null) TransformLegacyObject(source, time, x, mirror);
+        if (track is not null)
+        {
+            foreach (var node in track.Nodes)
+            {
+                node.TimeMs += time; node.X = Position(node.X);
+                if (!mirror) continue;
+                node.HandleIn = node.HandleIn with { X = -node.HandleIn.X };
+                node.HandleOut = node.HandleOut with { X = -node.HandleOut.X };
+                if (node.OutgoingCurve is { } curve)
+                    foreach (var control in curve.Controls) control.Offset = control.Offset with { X = -control.Offset.X };
+            }
+        }
+        // Whole-object transforms retain the authored and processed representations together.
+        OsuSyncSliderLine(slider);
+        slider.RandomizationSource = source; slider.RandomizationTrack = track;
+        slider.RandomizationBaseVelocity = velocity; slider.ProcessedSliderVelocityMultiplier = processedSv;
+        slider.PreserveNativeGeometry = native;
     }
 }

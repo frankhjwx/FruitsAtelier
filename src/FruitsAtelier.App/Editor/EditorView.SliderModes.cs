@@ -286,7 +286,7 @@ public sealed partial class EditorView
     private void ReverseSelection()
     {
         var ids = ClipboardSelectedParentIds();
-        if (ids.Count == 0 || notesLocked || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
+        if (ids.Count == 0 || notesLocked || draftTrack != Guid.Empty || draftBanana != Guid.Empty || RejectReadOnlySelection()) return;
         EnsureConversion();
         RefreshTimelineSources();
         var intervals = timelineSources.Where(s => ids.Contains(s.Id)).ToArray();

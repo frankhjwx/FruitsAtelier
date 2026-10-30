@@ -39,7 +39,7 @@ if (args.Length == 3 && args[0] == "--new-difficulty-profile") return NewDifficu
 if (args.Contains("--new-difficulty-check")) { NewDifficultyTests.Run(); Console.WriteLine("PASS difficulty copies, templates, persistence and cancellation"); return 0; }
 if (args.Contains("--my-maps-check")) { MyMapsTests.Run(); return 0; }
 if (args.Contains("--map-import-settings-check")) { MapImportSettingsTests.Run(); Console.WriteLine("PASS global map import settings, remembered choices and FA confidence thresholds"); return 0; }
-if (args.Contains("--slider-batch-check")) { SliderBatchTests.Run(); NativeImportedPathTests.Run(); WorkspaceSaveTests.Run(); LegacyReadOnlyEditingTests.Run(); SliderInteractionTests.LegacyContextConversion(); Console.WriteLine("PASS import defaults, fitted batch conversion, scope, paths, saves and undo"); return 0; }
+if (args.Contains("--slider-batch-check")) { SliderBatchTests.Run(); NativeImportedPathTests.Run(); WorkspaceSaveTests.Run(); CrossCanvasEditingTests.Run(); SliderInteractionTests.LegacyContextConversion(); Console.WriteLine("PASS import defaults, fitted batch conversion, scope, paths, saves and undo"); return 0; }
 if (args.Contains("--osu-link-check")) { OsuLinkTests.Run(); TimeJumpTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS osu! editor links, routing, activation and settings"); return 0; }
 if (args.Contains("--collaboration-check")) { CollaborationMappingUiTests.Run(); return 0; }
 if (args.Contains("--cache-lifetime-check")) { CacheLifetimeTests.Run(); Console.WriteLine("PASS closed difficulty data is collectible after both canvases and clipboard use"); return 0; }
@@ -78,6 +78,18 @@ if (args.Contains("--window-preferences-check")) { WindowPreferenceTests.Run(); 
 if (args.Contains("--legacy-droplet-worker-check"))
 {
     LegacyDropletWorkerTests.Run(); Console.WriteLine("PASS Background Legacy droplet validation"); return 0;
+}
+
+if (args.Contains("--slider-canvas-choice-check"))
+{
+    CrossCanvasEditingTests.Run(); ClipboardMultiTests.MixedCutIsOneTransaction();
+    ClipboardMultiTests.MixedBatchPreservesSnapshotAndOrder(); ClipboardTests.ImportedAndBananaMetadata();
+    StreamShortcutTests.HoldInSelectionBox(); MixedSliderTests.Import();
+    string savedLanguage = FruitsAtelier.Localization.Strings.Language;
+    try { FruitsAtelier.Localization.Strings.SetLanguage("zh-CN"); MultiSelectionTests.ObjectBoxAndParentDedup(); }
+    finally { FruitsAtelier.Localization.Strings.SetLanguage(savedLanguage); }
+    InspectorSectionTests.Run();
+    Console.WriteLine("PASS cross-canvas operations and shape choices"); return 0;
 }
 
 if (args.Contains("--osu-canvas-check"))
@@ -200,7 +212,7 @@ if (args.Contains("--mapping-canvas-check"))
 {
     try
     {
-        MappingCanvasBackgroundTests.Run(); CanvasGridSettingsTests.Run(); CanvasBackgroundDimControlTests.Run(); SettingsTests.Layout(); SettingsTests.IndicatorColours();
+        MappingCanvasBackgroundTests.Run(); CanvasGridSettingsTests.Run(); MovementLabelSettingsTests.Run(); DistanceEditingTests.Labels(); CanvasBackgroundDimControlTests.Run(); SettingsTests.Layout(); SettingsTests.IndicatorColours();
         DisplaySettingsTests.Run(); TestplayPresentationTests.ControlsAndBackground();
         Console.WriteLine("PASS Mapping canvas backgrounds, preferences, replacement and presentation checks"); return 0;
     }
@@ -391,7 +403,7 @@ var tests = new (string Name, Action Run)[]
     ("UI scale defaults, steps, draft cancellation and persistence preserve content", UiScaleTests.Run),
     ("Window and canvas display preferences persist without content edits", WindowPreferenceTests.Run),
     ("Fullscreen settings and Alt Enter preserve drafts, content and testplay", FullscreenSettingsTests.Run),
-    ("Legacy sliders stay read-only in Catch until explicit undoable conversion", LegacyReadOnlyEditingTests.Run),
+    ("Cross-canvas object operations and explicit shape-edit choices", CrossCanvasEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
     ("Release audio diagnostic settings persist, scroll and export without blocking", AudioDiagnosticSettingsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
@@ -510,6 +522,7 @@ var tests = new (string Name, Action Run)[]
     ("X coordinate input clamps, previews and supports undo", DistanceEditingTests.XCoordinate),
     ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),
     ("Movement DS labels use base SV and avoid collisions", DistanceEditingTests.Labels),
+    ("Movement label cutoff persists and refreshes DS and speed labels", MovementLabelSettingsTests.Run),
     ("Movement Analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
     ("Movement Analysis optionally includes tiny droplets without editing content", AssistToolsTests.TinyMovementDisplay),
     ("Floating movement panel follows placement, selection, dragging and language", AssistToolsTests.MovementOverlay),
@@ -729,7 +742,7 @@ var tests = new (string Name, Action Run)[]
     ("Legacy repeat insertion uses an approximate FSlider and preserves duration", SliderInteractionTests.RepeatInsertion),
     ("Moving a draft tail preserves its handles beyond both playfield edges", SliderInteractionTests.DraftTailHandleTranslation),
     ("Mixed clipboard batches preserve relative time and independent source order", ClipboardMultiTests.MixedBatchPreservesSnapshotAndOrder),
-    ("Clipboard cuts preserve read-only sliders and editable batch undo", ClipboardMultiTests.MixedCutIsOneTransaction),
+    ("Clipboard cuts preserve mixed-type batch undo", ClipboardMultiTests.MixedCutIsOneTransaction),
     ("A later overflowing pasted object rolls back the entire batch", ClipboardMultiTests.OverflowPasteRollsBackBatch),
     ("Invalid batch members cannot partially copy or cut", ClipboardMultiTests.InvalidMemberRejectsWholeCopyAndCut),
     ("Object and anchor Ctrl selections respect the active mode", MultiSelectionTests.ModesAndCtrlSelection),
