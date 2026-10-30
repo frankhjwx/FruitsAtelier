@@ -194,7 +194,7 @@ public sealed class ImportedSlider
     public int SpanCount { get; set; } = 1;
     public double PixelLength { get; set; }
 
-    internal ImportedSlider DeepClone()
+    public ImportedSlider DeepClone()
     {
         var copy = new ImportedSlider
         {

@@ -1479,3 +1479,12 @@ persistence. `App.Tests --timeline-layout-check` checks the bookmark toolbar's
 Windows `FruitsAtelier.App.exe --render-check --canvas-overlay-render-check`
 operates the panels in English and Chinese at three window sizes and three DPI
 values, with captures under `artifacts/tests/mapping-canvas-native`.
+
+## Cross-canvas slider editing
+
+`App.Tests --slider-canvas-choice-check` checks horizontal movement, mirroring,
+repeats, mixed clipboard cuts, modal input isolation, conversion, switching,
+cancellation and undo in both canvases and languages. `--osu-canvas-check` also
+checks silent selection and the optional canvas selection lock. Windows
+`FruitsAtelier.App --render-check --osu-canvas-render-check` captures the choice
+window and exercises cancellation at its supported sizes and DPI scales.

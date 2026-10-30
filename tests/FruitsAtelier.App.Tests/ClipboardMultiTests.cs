@@ -47,9 +47,9 @@ internal static class ClipboardMultiTests
         Check(shower.OriginalLine!.Contains(",3200.25,12,8,3500.25,", StringComparison.Ordinal)
             && shower.OriginalLine.EndsWith("2:3:4:60:banana.wav", StringComparison.Ordinal), "Banana range or sample metadata was lost.");
         var after = ui.View.Document.DeepClone();
-        Check(!ui.View.CutSelection() && ui.View.Document.ContentEquals(after)
-            && Selected(ui).SetEquals(pasted.Select(p => p.Id)),
-            "Cutting a pasted batch with an opposite-mode slider must preserve the entire batch and selection.");
+        Check(ui.View.CutSelection(), "A mixed pasted batch can be cut across canvases.");
+        ui.Paint(); ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.ContentEquals(after), "Mixed batch cut undo must preserve the pasted source data.");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ContentEquals(before), "One undo did not remove the whole batch without altering its originals.");
         ui.Key('Y', ctrl: true);
@@ -61,39 +61,29 @@ internal static class ClipboardMultiTests
 
     public static void MixedCutIsOneTransaction()
     {
-        var ui = new Ui();
-        ui.LoadDocument(MixedMap());
+        var ui = new Ui(); ui.LoadDocument(MixedMap());
         var before = ui.View.Document.DeepClone();
         Guid untouched = ui.View.Document.Fruits.Single(f => f.TimeMs == 800).Id;
         var ids = Parents(ui.View.Document).Select(p => p.Id).Where(id => id != untouched).ToArray();
         Select(ui, ids);
-        Check(!ui.View.CutSelection() && ui.View.Document.ContentEquals(before)
-            && Selected(ui).SetEquals(ids) && !ui.View.IsDirty,
-            "A mixed cut containing an opposite-mode slider must reject the whole transaction.");
-        Guid imported = ui.View.Document.ImportedSliders.Single().Id;
-        ids = ids.Where(id => id != imported).ToArray();
-        Select(ui, ids);
         Check(ui.View.CutSelection(), ui.View.StatusMessage);
-        Check(Parents(ui.View.Document).Select(p => p.Id).ToHashSet().SetEquals([untouched, imported])
-            && Selected(ui).Count == 0 && ui.View.CanPasteSelection,
-            "Cut did not remove every editable selected parent or removed an unselected parent.");
+        Check(Parents(ui.View.Document).Select(p => p.Id).ToHashSet().SetEquals([untouched])
+            && Selected(ui).Count == 0 && ui.View.CanPasteSelection, "Cut must remove the entire mixed selection.");
         ui.Key('Z', ctrl: true);
-        Check(ui.View.Document.ContentEquals(before), "One undo did not restore every cut object and its identity.");
+        Check(ui.View.Document.ContentEquals(before), "One undo must restore the complete cut batch.");
         ui.Key('Y', ctrl: true);
-        Check(Parents(ui.View.Document).Select(p => p.Id).ToHashSet().SetEquals([untouched, imported]), "Redo did not cut the complete editable batch.");
+        Check(Parents(ui.View.Document).Count() == 1, "Redo must cut the complete batch.");
         ui.View.UpdateTransport(4000, 10000, true, false, false, null, "fixture.wav");
-        Check(ui.View.PasteSelection() && Parents(ui.View.Document).Count() == ids.Length + 2,
-            "Cut did not retain all objects in the clipboard.");
-        ui.View.ToggleOsuCanvas();
-        Select(ui, [ui.View.Document.Tracks.Single().Id]);
+        Check(ui.View.PasteSelection() && Parents(ui.View.Document).Count() == ids.Length + 1, "Paste must restore every clipboard type.");
+        ui.Paint();
+        ui.View.ToggleOsuCanvas(); Select(ui, [ui.View.Document.Tracks.Single().Id]);
         var osuBefore = ui.View.Document.DeepClone();
-        Check(ui.View.CopySelection() && !ui.View.CutSelection() && ui.View.Document.ContentEquals(osuBefore),
-            "The standard canvas must copy an FSlider while rejecting its deletion.");
-        Check(ui.View.PasteSelection() && ui.View.Document.Tracks.Count == 2,
-            "The standard canvas must preserve an FSlider clipboard representation when inserting a new copy.");
-        var osuPasted = ui.View.Document.DeepClone();
-        Check(!ui.View.CutSelection() && ui.View.Document.ContentEquals(osuPasted),
-            "A newly pasted FSlider must remain read-only on the standard canvas.");
+        Check(ui.View.CopySelection() && ui.View.CutSelection() && ui.View.Document.Tracks.Count == 0, "FSlider cut must work in osu.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.ContentEquals(osuBefore), "FSlider cut undo must restore content.");
+        Check(ui.View.PasteSelection() && ui.View.Document.Tracks.Count == 2, "Paste must retain FSlider representation.");
+        ui.Paint();
+        Check(ui.View.CutSelection() && ui.View.Document.Tracks.Count == 1, "Pasted FSlider can be cut.");
     }
 
     public static void OverflowPasteRollsBackBatch()

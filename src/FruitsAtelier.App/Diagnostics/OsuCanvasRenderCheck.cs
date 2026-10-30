@@ -194,8 +194,14 @@ internal static class OsuCanvasRenderCheck
                 editor.KeyDown('Z', true, false); editor.KeyUp('Z'); Paint();
                 if (!map.ContentEquals(editor.Document)) throw new InvalidOperationException("Legacy Slider clone undo did not restore the map.");
                 editor.UpdateTransport(1900, 10000, true, false, false, null, null);
-                editor.ShowOsuLinkNotice("osu.readOnlySlider");
-                Paint("slider-canvas-notice");
+                editor.ToggleOsuCanvas(); Paint();
+                editor.KeyDown('A', true, false); editor.KeyUp('A');
+                editor.KeyDown('R', true, true); editor.KeyUp('R');
+                Paint("slider-canvas-choice");
+                if (!editor.SliderCanvasChoiceVisible) throw new InvalidOperationException("Cross-canvas shape edit must open the choice window.");
+                editor.KeyDown(27, false, false); editor.KeyUp(27); Paint();
+                if (editor.SliderCanvasChoiceVisible || !map.ContentEquals(editor.Document))
+                    throw new InvalidOperationException("Cancelling the canvas choice changed content.");
                 void Paint(string? name = null)
                 {
                     var wait = System.Diagnostics.Stopwatch.StartNew();

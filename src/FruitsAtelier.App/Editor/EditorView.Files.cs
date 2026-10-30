@@ -39,6 +39,7 @@ public sealed partial class EditorView
     {
         if (PatternEditingActive) throw new InvalidOperationException(L.Get("gallery.finishEditing"));
         project.Validate();
+        if (SliderCanvasChoiceVisible) AnswerDiscard(2);
         timingAlignmentChecksEnabled = false; timingAlignmentChecked.Clear();
         timingAlignmentPlan = null; timingAlignmentSource = null;
         StopDiscussions();

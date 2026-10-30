@@ -113,6 +113,7 @@ public sealed partial class EditorView
 
     private void InsertControlPoint(SliderLocation location, double? desiredX = null)
     {
+        if (IsReadOnlySlider(location.Id)) { ShowSliderCanvasChoice([location.Id]); return; }
         if (LegacyMode)
         {
             Guid insertedId = Guid.Empty;

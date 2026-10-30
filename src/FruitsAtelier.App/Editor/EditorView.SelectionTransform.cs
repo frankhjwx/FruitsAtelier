@@ -135,7 +135,6 @@ public sealed partial class EditorView
         if (side == 0 && TryBeginSelectedSliderObjectDrag(x, y, requireSelectedFruit: true)) return true;
         if (HitSelectedSliderControl(x, y)) return false;
         if (side == 0 && !bounds.Contains(x, y)) return false;
-        if (RejectReadOnlySelection()) return true;
         if (side != 0 && selectionMapBounds is { } map && map.Right - map.Left < .001) return true;
         BeginObjectDrag(x, y, scaleSelection: side != 0);
         selectionScaleSide = side;
@@ -151,7 +150,7 @@ public sealed partial class EditorView
 
     private void ScaleSelectedObjects(float x)
     {
-        if (!PrepareObjectDrag()) return;
+        if (RejectReadOnlySelection() || !PrepareObjectDrag()) return;
         double fixedX = selectionScaleSide < 0 ? selectionScaleRight : selectionScaleLeft;
         double movingX = selectionScaleSide < 0 ? selectionScaleLeft : selectionScaleRight;
         double wanted = SnapX(movingX + Transform.ToMap(x, dragStartY).X - selectionScalePointerX);

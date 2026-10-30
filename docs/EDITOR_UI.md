@@ -409,10 +409,20 @@ convert objects or create a content edit. Catch preview continues to show the
 exported fruits in either view.
 
 Slider shapes are edited in their matching canvas: Legacy Sliders in osu! and
-FSliders in Catch. Clicking a slider in the other canvas or attempting a blocked
-edit shows a three-second notice explaining how to switch with Tab, then fades out.
-Whole sliders can be deleted in either canvas with Delete or the object delete
-action, including mixed selections. Each deletion is one undoable edit.
+FSliders in Catch. Selection is silent in either canvas. Whole-object horizontal
+movement, horizontal mirroring, time movement, repeat-count changes (including
+the upper timeline tail and keyboard shortcuts), NC, hitsounds, copy, cut, paste
+and deletion work across canvases and preserve the slider type. Mixed selections
+use one undoable edit. SV and Droplet Settings retain their existing support.
+
+Attempting to edit a mismatched slider's anchors, controls or shape, including
+scaling and rotation, opens a modal choice: convert the mismatched sliders to the
+current canvas type, switch to their editing canvas, or cancel. Conversion is
+undoable and leaves the original selection intact on failure. Switching preserves
+selection and reveals the target without changing content. After converting or
+switching, start the editing gesture again. Cancel and Escape leave content
+unchanged. Ctrl-click selection in the object timeline remains a selection action.
+The optional slider canvas lock still controls cross-canvas selection.
 
 The osu! canvas draws circles, approach circles, Legacy Slider paths, repeats,
 slider balls and spinners. Circle size, approach rate, combo ordering and stacking
@@ -550,7 +560,7 @@ Settings → Experimental → **Enable same-time object placements** disables
 the automatic replacement of fruits, FSliders and banana showers starting within
 2 ms of a newly placed fruit in the Catch canvas. In the osu! canvas, placing a
 circle, native slider or spinner replaces same-time circles, native sliders and
-spinners; the same toggle preserves them. Sliders that are read-only in the active
+spinners; the same toggle preserves them. Sliders whose shape belongs to the other
 canvas remain unchanged. The toggle defaults to off and is saved as an application
 preference. Enabling it allows fruits at the same time with
 independent X coordinates; previews retain the existing objects too. Changing the

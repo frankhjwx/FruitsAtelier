@@ -80,9 +80,10 @@ internal static class ClipboardTests
         var output = OsuBeatmapWriter.Serialize(ui.View.Document, false).ReadBack.ImportedSliders.Single(s => s.TimeMs > 3000);
         Near(4000.5, output.TimeMs);
         Check(output.OriginalLine!.EndsWith("2|4|8,1:2|2:3|3:4,2:3:4:70:clap.wav", StringComparison.Ordinal), "Imported paste lost edge or hit samples.");
+        ui.Paint();
         var pastedState = ui.View.Document.DeepClone();
-        Check(!ui.View.CutSelection() && ui.View.Document.ContentEquals(pastedState),
-            "A pasted legacy slider must remain read-only on the Catch canvas.");
+        Check(ui.View.CutSelection(), "A pasted Legacy Slider can be cut in Catch.");
+        ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(pastedState), "Cut undo must preserve the pasted Legacy Slider.");
 
         ui.View.UpdateTransport(0, 10000, true, false, false, null, "fixture.wav"); ui.Paint();
         ui.Key('1'); ui.ClickMap(6200, 256);

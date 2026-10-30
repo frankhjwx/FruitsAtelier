@@ -61,7 +61,7 @@ public sealed partial class EditorView
     private bool RejectReadOnlySelection()
     {
         if (!ClipboardSelectedParentIds().Any(IsReadOnlySlider)) return false;
-        ShowEditorNotice("osu.readOnlySlider");
+        ShowSliderCanvasChoice(ClipboardSelectedParentIds());
         return true;
     }
 
@@ -180,15 +180,7 @@ public sealed partial class EditorView
             if (OsuCanvasHit(x, y) is { } id)
             {
                 SelectObjects([id], id);
-                if (IsReadOnlySlider(id))
-                {
-                    contextItems.Clear();
-                    contextItems.Add(new(L.Get("osu.readOnlySlider"), () => { }, Enabled: false));
-                    contextItems.Add(new(L.Get("osu.convertLegacy"), () => ConvertSelectedSliderRepresentation(id)));
-                    contextItems.Add(new(L.Get("editor.command.deleteObjects"), DeleteSelectedObjects));
-                    contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 320)), Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 320, ContextMenuHeight);
-                }
-                else DeleteSelectedObjects();
+                DeleteSelectedObjects();
             }
             return true;
         }
@@ -217,6 +209,9 @@ public sealed partial class EditorView
             osuDraftPointer = point;
             StatusMessage = L.Get("osu.sliderDraft"); return true;
         }
+        if (ctrl && objectSelection.Count == 1 && ClipboardSelectedParentIds().Any(IsReadOnlySlider)
+            && (OsuCanvasHit(x, y) is not { } ctrlHit || objectSelection.Contains(ctrlHit)))
+        { ShowSliderCanvasChoice(ClipboardSelectedParentIds()); return true; }
         if (SelectedImportedSlider is { } slider && HitOsuControl(slider, x, y) is int control)
         {
             osuControlSlider = slider.Id; osuSelectedControl = control;
@@ -246,8 +241,7 @@ public sealed partial class EditorView
             osuMarqueeBounds = new(x, y, 0, 0); drag = DragKind.Marquee; return true;
         }
         PickObject(hit, ctrl);
-        if (IsReadOnlySlider(hit)) ShowEditorNotice("osu.readOnlySlider");
-        else if (!ctrl) BeginOsuDrag(point);
+        if (!ctrl) BeginOsuDrag(point);
         return true;
     }
 
@@ -291,7 +285,7 @@ public sealed partial class EditorView
 
     private void BeginOsuDrag((double X, double Y) point)
     {
-        if (notesLocked || RejectReadOnlySelection()) return;
+        if (notesLocked || osuControlSlider != Guid.Empty && RejectReadOnlySelection()) return;
         history.Begin(L.Get("editor.command.moveObjects"));
         BeginOsuDragSnap();
         osuDragStart = Document.DeepClone(); osuDragOrigin = point;
@@ -317,6 +311,11 @@ public sealed partial class EditorView
         if (point == osuDragOrigin && !osuDragMoved) return true;
         if (point == osuDragOrigin)
         {
+            foreach (var source in osuDragStart.Tracks.Where(t => objectSelection.Contains(t.Id)))
+            {
+                var target = Document.Tracks.First(t => t.Id == source.Id);
+                for (int i = 0; i < source.Nodes.Count; i++) target.Nodes[i].X = source.Nodes[i].X;
+            }
             foreach (var source in osuDragStart.Fruits.Where(f => objectSelection.Contains(f.Id)))
             {
                 var target = Document.Fruits.First(f => f.Id == source.Id);
@@ -364,7 +363,15 @@ public sealed partial class EditorView
             return true;
         }
         double dx = point.X - osuDragOrigin.X, dy = point.Y - osuDragOrigin.Y;
+        if (objectSelection.Any(IsReadOnlySlider) && Math.Abs(dy) > Math.Abs(dx))
+        { ShowSliderCanvasChoice(objectSelection.ToArray()); return true; }
         (dx, dy) = SnapOsuDragOffset(dx, dy);
+        if (objectSelection.Any(IsReadOnlySlider)) dy = 0;
+        foreach (var source in osuDragStart.Tracks.Where(t => objectSelection.Contains(t.Id)))
+        {
+            var target = Document.Tracks.First(t => t.Id == source.Id);
+            for (int i = 0; i < source.Nodes.Count; i++) target.Nodes[i].X = source.Nodes[i].X + dx;
+        }
         foreach (var source in osuDragStart.Fruits.Where(f => objectSelection.Contains(f.Id)))
         {
             var target = Document.Fruits.First(f => f.Id == source.Id);
@@ -405,6 +412,7 @@ public sealed partial class EditorView
         { SetOsuSpacing(x, shift || shiftHeld); CommitContentHistory(); osuSpacingDragging = false; drag = DragKind.None; return true; }
         if (osuDragStart is null || button != 0) return false;
         OsuPointerMove(x, y, shift);
+        if (osuDragStart is null) return true;
         try
         {
             CommitContentHistory();
@@ -624,25 +632,11 @@ public sealed partial class EditorView
         return false;
     }
 
-    private void MirrorOsuSelection()
-    {
-        if (notesLocked || RejectReadOnlySelection()) return;
-        var ids = ClipboardSelectedParentIds();
-        Edit(L.Get("shortcut.mirror"), () =>
-        {
-            foreach (var fruit in Document.Fruits.Where(f => ids.Contains(f.Id))) fruit.X = 512 - fruit.X;
-            foreach (var slider in Document.ImportedSliders.Where(s => ids.Contains(s.Id)))
-            {
-                RestoreOsuControlGeometry(slider);
-                slider.X = 512 - slider.X;
-                for (int i = 0; i < slider.ControlPoints.Count; i++) slider.ControlPoints[i] = new(512 - slider.ControlPoints[i].X, slider.ControlPoints[i].GeometryY);
-                OsuSyncSliderLine(slider);
-            }
-        });
-    }
+    private void MirrorOsuSelection() => MirrorSelection();
 
     private void MoveOsuSelection(double dx, double dy)
     {
+        if (dy == 0) { NudgeSelection(0, dx); return; }
         if (notesLocked || RejectReadOnlySelection()) return;
         var ids = ClipboardSelectedParentIds();
         Edit(L.Get("editor.command.moveObjects"), () =>

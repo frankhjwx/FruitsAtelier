@@ -139,7 +139,6 @@ public sealed partial class EditorView
     {
         if (!TryCopySnapshot(out var snapshot)) return false;
         var ids = ClipboardParents(snapshot!).Select(p => p.Id).ToHashSet();
-        if (ids.Any(IsReadOnlySlider)) { ShowEditorNotice("osu.readOnlySlider"); return false; }
         string reference = SelectionReference(snapshot!);
         if (!Edit(L.Get("editor.command.cutObjects"), () =>
         {
@@ -147,7 +146,7 @@ public sealed partial class EditorView
             Document.Tracks.RemoveAll(t => ids.Contains(t.Id));
             Document.ImportedSliders.RemoveAll(s => ids.Contains(s.Id));
             Document.BananaShowers.RemoveAll(s => ids.Contains(s.Id));
-        })) return false;
+        }, allowSliderDeletion: true)) return false;
         StoreClipboard(snapshot!, reference);
         Select(Guid.Empty);
         StatusMessage = L.Get("editor.status.objectsCut", ids.Count);

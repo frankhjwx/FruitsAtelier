@@ -50,8 +50,11 @@ internal static class MixedSliderTests
         ui.Key('1'); ui.ClickMap(1000, 160);
         var original = ui.View.Document.DeepClone();
         ui.DownMap(1000, 160); ui.MoveMap(1000, 120); ui.UpMap(1000, 120);
-        Check(ui.View.Document.ContentEquals(original) && !ui.View.IsDirty,
-            "Dragging an opposite-mode slider must preserve its legacy representation and geometry.");
+        Check(ui.View.Document.ImportedSliders.Count == 1 && ui.View.Document.Tracks.Count == 0
+            && Math.Abs(ui.View.Document.ImportedSliders.Single().X - 120) < .001,
+            "Dragging a Legacy Slider in Catch must translate it without converting its representation.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.ContentEquals(original), "Cross-canvas slider movement must undo exactly.");
         ui.HoldMap(1000, 160); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
         Check(!ui.View.SliderImportPromptVisible, "Single-slider conversion prompted instead of editing.");
         var track = ui.View.Document.Tracks.Single();

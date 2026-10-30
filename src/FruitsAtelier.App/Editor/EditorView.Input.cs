@@ -300,9 +300,17 @@ public sealed partial class EditorView
         { SetNotice(L.Get("collab.locked")); return; }
         if (!IsOsuCanvas && HitCatchObject(x, y) is { } readOnlyHit && IsReadOnlySlider(readOnlyHit.SourceId))
         {
-            PickObject(readOnlyHit.SourceId, ctrl);
-            clickedCoordinate = readOnlyHit.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet ? readOnlyHit : null;
-            BeginSliderHold(x, y, ctrl || shift); ShowEditorNotice("osu.readOnlySlider"); return;
+            if (showTargets && ctrl && objectSelection.Count == 1 && objectSelection.Contains(readOnlyHit.SourceId))
+            { ShowSliderCanvasChoice([readOnlyHit.SourceId]); return; }
+            if (tool == Tool.Select)
+            {
+                if (!objectSelection.Contains(readOnlyHit.SourceId) || ctrl) PickObject(readOnlyHit.SourceId, ctrl);
+                clickedCoordinate = readOnlyHit;
+                PickSoundEdge(readOnlyHit);
+                BeginSliderHold(x, y, ctrl || shift);
+                if (!ctrl) BeginObjectDrag(x, y);
+                return;
+            }
         }
         timelineFruit = null;
         if (!ctrl && tool == Tool.Select && objectSelection.Count == 1 && SelectedDistanceObject() is { IsStandalone: false } selectedChild
@@ -768,8 +776,8 @@ public sealed partial class EditorView
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
         {
             var readOnlyIds = IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id);
-            if (history.TransactionChangesSliderGeometry(readOnlyIds))
-            { history.Cancel(); drag = DragKind.None; ShowEditorNotice("osu.readOnlySlider"); return; }
+            if (drag is not (DragKind.Objects or DragKind.TimelineTail) && history.TransactionChangesSliderGeometry(readOnlyIds))
+            { var ids = readOnlyIds.Where(id => history.TransactionChangesSliderGeometry([id])).ToArray(); history.Cancel(); drag = DragKind.None; ShowSliderCanvasChoice(ids); return; }
             try
             {
                 if (drag == DragKind.TimelineTail && tailImportedBefore is { } beforeTail
@@ -911,7 +919,7 @@ public sealed partial class EditorView
         if (Document.ImportedSliders.Any(slider => slider.Id == sourceId))
         {
             SelectObjects([sourceId], sourceId);
-            ShowEditorNotice("osu.readOnlySlider");
+            ShowSliderCanvasChoice([sourceId]);
             return;
         }
         if (Document.Tracks.FirstOrDefault(track => track.Id == sourceId) is not { } track) return;
@@ -1946,7 +1954,7 @@ public sealed partial class EditorView
                 : (IsOsuCanvas ? Document.Tracks.Select(t => t.Id) : Document.ImportedSliders.Select(s => s.Id)).ToArray();
             field.Apply(value);
             if (history.TransactionChangesSliderGeometry(readOnlyIds))
-            { history.Cancel(); ShowEditorNotice("osu.readOnlySlider"); fieldError = StatusMessage; return false; }
+            { var ids = readOnlyIds.Where(id => history.TransactionChangesSliderGeometry([id])).ToArray(); history.Cancel(); editField = -1; ShowSliderCanvasChoice(ids); return false; }
             CommitContentHistory();
             editField = -1;
             fieldError = "";

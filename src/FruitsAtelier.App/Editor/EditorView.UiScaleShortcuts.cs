@@ -12,9 +12,9 @@ public sealed partial class EditorView
         var sliders = Document.ImportedSliders.Where(s => ids.Contains(s.Id)).ToArray();
         if (!LibraryVisible && (tracks.Length > 0 || sliders.Length > 0))
         {
-            if (TimingPageVisible || notesLocked || RejectReadOnlySelection()) return true;
+            if (TimingPageVisible || notesLocked) return true;
             int delta = key is 187 or 107 ? 1 : -1;
-            Edit(FruitsAtelier.Localization.Strings.Get(delta > 0 ? "editor.command.addReverse" : "editor.command.removeReverse"), () =>
+            EditSliderRepresentation(FruitsAtelier.Localization.Strings.Get(delta > 0 ? "editor.command.addReverse" : "editor.command.removeReverse"), () =>
             {
                 foreach (var track in tracks) track.SpanCount = Math.Clamp(track.SpanCount + delta, 1, 9000);
                 foreach (var slider in sliders) ChangeOsuSpanCount(slider, Math.Clamp(slider.SpanCount + delta, 1, 9000));
