@@ -52,6 +52,7 @@ public sealed partial class EditorView
     private bool libraryPointerActive, libraryPointerMoved, libraryDraggingThumb, libraryDraggingDifficulties;
     private float libraryPointerY, libraryPointerScroll, libraryThumbOffset;
     private LibraryMap? libraryPressedMap;
+    private (Rect Bounds, LibraryMap Map)? libraryClickedCard;
     private float LibraryVisibleRows => Math.Max(1, libraryListBounds.Height / 86);
     private float LibraryMaxScroll => Math.Max(0, (libraryBrowser?.Extent ?? 0) - LibraryVisibleRows);
 
@@ -114,6 +115,7 @@ public sealed partial class EditorView
     {
         if (libraryMyMapsOnly == projects && libraryFavouritesOnly == favourites && libraryRecentOnly == recent && libraryCollection == collection) return;
         SaveLibraryPreviewOnLeave();
+        libraryClickedCard = null;
         RememberLibraryPosition();
         libraryCategoryBrowsers[LibraryPreviewCategory] = (libraryBrowser, libraryBrowserQuery);
         libraryMyMapsOnly = projects; libraryFavouritesOnly = favourites; libraryRecentOnly = recent; libraryCollection = collection; RestoreLibraryPosition();
@@ -242,6 +244,7 @@ public sealed partial class EditorView
         bool thumb = libraryScrollTrack.Contains(x, y), details = libraryDiffTrack.Contains(x, y);
         if (!thumb && !details && !libraryListBounds.Contains(x, y)) return false;
         libraryPointerActive = true; libraryPointerMoved = false; libraryDraggingThumb = thumb || details;
+        libraryClickedCard = null;
         libraryDraggingDifficulties = details;
         libraryPointerY = y; libraryPointerScroll = details ? libraryDiffScroll : libraryScroll;
         libraryPressedMap = libraryCards.FirstOrDefault(card => card.Bounds.Contains(x, y)).Map;
@@ -275,6 +278,7 @@ public sealed partial class EditorView
         MoveLibraryPointer(y);
         if (!libraryDraggingThumb && !libraryPointerMoved && libraryPressedMap is { } map && libraryListBounds.Contains(x, y))
         {
+            libraryClickedCard = libraryCards.FirstOrDefault(card => card.Map == map);
             libraryBrowser?.SelectMap(map);
             selectedLibraryGroup = LibraryUsesProjects ? map.ProjectPath ?? map.Directory : map.Directory;
             libraryDiffScroll = 0; libraryField = -1;

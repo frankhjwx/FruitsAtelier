@@ -318,6 +318,8 @@ switches through every cached view, reorders osu! Collections, and verifies that
 neither memory nor disk caches are reused for another identity. The incremental
 Library suite includes this check. Native Library checks also capture switching
 the four tabs and FA/osu! Collections after restart in both languages.
+The category cache check also verifies visit-order refresh while the editor is
+open and double-click identity when a background refresh moves the clicked card.
 
 For an optional read-only startup comparison against the configured Library, run
 `App.Tests --library-startup-profile`. It copies the SQLite catalog and view

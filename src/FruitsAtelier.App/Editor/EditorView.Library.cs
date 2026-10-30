@@ -122,6 +122,7 @@ public sealed partial class EditorView
     }
     private void LeaveEditor()
     {
+        libraryClickedCard = null;
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
         if (WorkspaceSession is { } session)
@@ -411,7 +412,7 @@ public sealed partial class EditorView
             scanTask = null;
             PumpPendingLibraryScan();
         }
-        if (searchTask is { IsCompleted: true })
+        if (!libraryPointerActive && searchTask is { IsCompleted: true })
         {
             try
             {
@@ -432,7 +433,7 @@ public sealed partial class EditorView
             searchTask = null;
             if (libraryStartupScan) { libraryStartupScan = false; StartLibraryScan(); }
         }
-        if (LibraryVisible && searchTask is null && libraryDatabase is not null && DateTime.UtcNow >= searchAfter && searchTaskQuery != LibrarySearchKey)
+        if (searchTask is null && libraryDatabase is not null && DateTime.UtcNow >= searchAfter && searchTaskQuery != LibrarySearchKey)
         {
             var db = libraryDatabase; string query = libraryQuery;
             runningSearchQuery = query; runningSearchMyMaps = libraryMyMapsOnly;
@@ -471,6 +472,13 @@ public sealed partial class EditorView
     private void OpenLibraryCard(float x, float y)
     {
         if (librarySettingsOpen || exportPage || resourcePage || collectionDialogOpen || libraryWebButtons.Any(b => b.Bounds.Contains(x, y))) return;
+        // A completed background reorder can move cards between the two clicks.
+        if (libraryClickedCard is { } clicked && clicked.Bounds.Contains(x, y))
+        {
+            libraryClickedCard = null;
+            OpenSelectedLibraryMap(clicked.Map);
+            return;
+        }
         foreach (var card in libraryCards)
         {
             if (!card.Bounds.Contains(x, y)) continue;

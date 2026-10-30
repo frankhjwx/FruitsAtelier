@@ -84,6 +84,32 @@ internal static class LibraryCategoryCacheTests
         }
         Set(view, "libraryStartupTask", startup);
         Wait(() => !view.LibraryLoading);
+        Switch(categories[3]);
+        Set(view, "libraryDescending", true);
+        Invoke(view, "QueueLibrarySearch");
+        Wait(() => !view.LibraryLoading);
+        var recentBrowser = (LibraryBrowser)Field(view, "libraryBrowser")!;
+        var visited = Enumerable.Range(0, recentBrowser.Count).Select(recentBrowser.Get).Single(r => r?.Map.Title == "Four")!.Map;
+        typeof(EditorView).GetProperty("LibraryVisible")!.SetValue(view, false);
+        Visit(visited);
+        Wait(() => !ReferenceEquals(recentBrowser, Field(view, "libraryBrowser")) && !view.LibraryLoading);
+        view.ShowLibrary(); canvas.Clear(); view.Render(canvas, 1440, 900);
+        Check(canvas.Texts.First(t => t.X == 314 && names.Contains(t.Value)).Value == "Four", "First returning frame already shows the refreshed visit order");
+
+        var clicked = canvas.Texts.First(t => t.X == 314 && t.Value == "Four");
+        view.PointerDown(clicked.X + 2, clicked.Y + 2, 0, false, false);
+        view.PointerUp(clicked.X + 2, clicked.Y + 2, 0);
+        recentBrowser = (LibraryBrowser)Field(view, "libraryBrowser")!;
+        var other = Enumerable.Range(0, recentBrowser.Count).Select(recentBrowser.Get).Single(r => r?.Map.Title == "One")!.Map;
+        Visit(other);
+        Wait(() => !view.LibraryLoading);
+        Check(canvas.Texts.First(t => t.X == 314 && names.Contains(t.Value)).Value == "One", "Background visit refresh moves a different card under the pointer");
+        LibraryMap? opened = null;
+        view.RequestLibraryOpen = (map, _) => opened = map;
+        view.PointerDoubleClick(clicked.X + 2, clicked.Y + 2, false, false);
+        Check(opened?.Path == visited.Path, "Double click opens the originally clicked map after reordering");
+
+        void Visit(LibraryMap map) => typeof(EditorView).GetMethod("RecordLibraryVisit", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(view, [map, map.Directory]);
         view.StopFileMonitoring();
         Console.WriteLine("PASS independent four-tab and FA/osu! Collection caches across restart, query preferences and reordered Collections");
 
