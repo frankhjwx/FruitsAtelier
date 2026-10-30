@@ -8,7 +8,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 [Website](https://fruitsatelier.himiko.moe/) · [Download](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**Current version: 1.3.2**
+**Current version: 1.3.3**
 
 ![FruitsAtelier's editing canvas, object timeline, and Catch preview](assets/screenshots/twin-bloom.png)
 

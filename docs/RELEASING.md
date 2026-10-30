@@ -30,7 +30,7 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 
 ```powershell
 ./scripts/Publish-Windows.ps1
-./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.3.2-win-x64.zip
+./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.3.3-win-x64.zip
 ```
 
 Publication requires Python 3 to prepare the pinned [Mapset Verifier engine](MAPSET_VERIFIER.md).
@@ -42,7 +42,7 @@ source, adapter, launcher, build script and dependency locks.
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
 `releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`
-(currently 1.3.2); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
+(currently 1.3.3); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the
@@ -124,7 +124,7 @@ The homepage is not part of the update path.
 The release source is the **merge commit of the release PR on `main`**. Development
 continues on `dev`; merge `main` back into `dev` after each release PR so `dev`
 contains the published history. Use a merge commit for `dev` → `main` PRs to retain
-the shared ancestry. `main` requires a PR and passing `windows` and `macos` checks
+the shared ancestry. `main` requires a PR and a passing `windows` check
 against an up-to-date base. Do not bypass protection or force-push either branch.
 A package built locally from `dev` is a preflight check; the tag workflow builds
 the published artifacts.
@@ -134,7 +134,7 @@ the published artifacts.
    and add user-facing notes at `docs/releases/vMAJOR.MINOR.PATCH.md` (use the full
    tag for prereleases). Keep both release lock files committed. Run the relevant
    checks in [Building and Testing](TESTING.md), and wait for the **Desktop
-   regression** on `dev` to pass on Windows and macOS. Fix failures on `dev` and
+   regression** on `dev` to pass on Windows. Fix failures on `dev` and
    wait for the new commit's checks; an earlier passing run does not validate a
    later commit.
 2. Open a `dev` → `main` pull request. If `dev` is behind `main`, merge
@@ -219,16 +219,15 @@ the published artifacts.
 ### CI validation and reuse
 
 **Desktop regression** runs on pushes to `dev` and PRs targeting `main` or `dev`.
-Pushes to `main` and tags do not start another desktop run. Its required `windows`
-and `macos` jobs keep their existing names; `main` still requires both checks and
+Pushes to `main` and tags do not start another desktop run. Its required `windows` job keeps its existing name; `main` requires this check and
 an up-to-date PR base. New commits cancel obsolete runs for the same branch or PR.
 
 Each job compares the checked-out Git tree (the merge-result tree for a PR) with
 up to 30 recent successful `dev` push runs of `desktop.yml` in this repository.
 Reuse requires identical tracked content, including workflows, scripts and lock
-files, and successful Windows and Mac regression steps that actually executed.
+files, and successful Windows regression steps that actually executed.
 Runs that only reused evidence cannot supply it. The source run must have completed
-successfully, including Windows package/upgrade checks and Mac packaging. The job
+successfully, including Windows package/upgrade checks. The job
 summary links the original run. A changed merge result, missing evidence, unavailable
 API, or insufficient read permission falls back to normal regression. An unfinished
 dev run is not evidence: wait for dev validation before opening the release PR to
