@@ -394,7 +394,7 @@ internal static class AssistToolsTests
         ui.Click(x, timeline.Y + 20); ui.Key('W');
         Check(ObjectFlags.Sounds(ui.View.Document, id).SequenceEqual(new[] { 2, 6, 10 }), "Whole-slider toggle failed");
         ui.Key('L'); var before = ui.View.Document.DeepClone(); ui.Key(187, ctrl: true);
-        Check(before.ContentEquals(ui.View.Document) && ui.View.LibrarySettings.UiScalePercent == 175, "Locked objects must allow UI scaling without content edits");
+        Check(before.ContentEquals(ui.View.Document) && ui.View.LibrarySettings.UiScalePercent == 150, "Locked slider selection must not edit content or UI scale");
         ui.View.ConvertAllSliders(); Check(!ui.View.SliderConversionBusy, "Lock allowed batch geometry conversion");
         ui.Key('L'); ui.View.ToggleOsuCanvas(); ui.Paint();
         ui.MoveMap(1000, 100); ui.HoldMap(1000, 100); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
