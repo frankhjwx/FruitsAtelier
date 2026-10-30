@@ -1,0 +1,101 @@
+name: Discord preview package
+run-name: FA preview ${{ inputs.job_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: Discord task ID
+        required: true
+        type: string
+      commit:
+        description: Exact source commit to test
+        required: true
+        type: string
+      branch:
+        description: Shared repair branch
+        default: codex-discord-bug-fix
+        required: true
+        type: string
+
+permissions:
+  contents: read
+concurrency:
+  group: discord-preview
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-2022
+    timeout-minutes: 5
+    outputs:
+      commit: ${{ steps.source.outputs.commit }}
+    steps:
+      - name: Validate immutable source identity
+        id: source
+        uses: actions/github-script@v7
+        env:
+          TASK_BRANCH: ${{ inputs.branch }}
+          SOURCE_SHA: ${{ inputs.commit }}
+          JOB_ID: ${{ inputs.job_id }}
+        with:
+          script: |
+            const branch = process.env.TASK_BRANCH;
+            const sha = process.env.SOURCE_SHA;
+            if (branch !== 'codex-discord-bug-fix' || !/^[a-f0-9]{40}$/.test(sha) || !/^\d{15,22}$/.test(process.env.JOB_ID)) {
+              throw new Error('Invalid task or source identity');
+            }
+            const ref = await github.rest.git.getRef({...context.repo, ref: `heads/${branch}`});
+            if (ref.data.object.sha !== sha) throw new Error('Source branch no longer identifies this commit');
+            core.setOutput('commit', sha);
+
+  windows:
+    needs: validate
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Prepare pinned verifier and build
+        shell: pwsh
+        run: |
+          python scripts/Build-MapsetVerifier.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build and verify experimental package
+        shell: pwsh
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          ./scripts/Publish-Windows.ps1 -Version "0.0.2-alpha.$env:BUILD_NUMBER"
+          ./scripts/Test-WindowsPackage.ps1 -Archive "artifacts/releases/FruitsAtelier-0.0.2-alpha.$env:BUILD_NUMBER-win-x64.zip"
+          Expand-Archive -LiteralPath "artifacts/releases/FruitsAtelier-0.0.2-alpha.$env:BUILD_NUMBER-win-x64.zip" -DestinationPath artifacts/preview/FruitsAtelier
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-experimental-${{ inputs.job_id }}
+          path: artifacts/preview/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 6
+      - name: Save Mapset Verifier corresponding source
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapset-verifier-source-${{ inputs.job_id }}
+          path: |
+            artifacts/releases/FruitsAtelier-MapsetVerifier-*-source.zip
+            artifacts/releases/FruitsAtelier-MapsetVerifier-*-source.zip.sha256
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+

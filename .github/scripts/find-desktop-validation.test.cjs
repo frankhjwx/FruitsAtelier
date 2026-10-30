@@ -62,3 +62,11 @@ test('continues past a reuse-only run to original executed evidence', async () =
   await validate(f.args);
   assert.equal(f.outputs.reused, 'true');
 });
+
+
+test('disabled macOS results do not block successful Windows evidence', async () => {
+  const f = fixture();
+  f.jobs.push({ name: 'macos', conclusion: 'failure', steps: [] });
+  await validate(f.args);
+  assert.equal(f.outputs.reused, 'true');
+});
