@@ -3,6 +3,8 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--imported-curve-range-check")) { ImportedCurveRangeTests.Run(false); return 0; }
+if (args.Contains("--imported-curve-range-performance")) { ImportedCurveRangeTests.Run(true); return 0; }
 if (args.Contains("--background-task-recovery-check")) { BackgroundTaskRecoveryTests.Run(); return 0; }
 if (args.Contains("--resource-error-layout-check")) { ResourceErrorLayoutTests.Run(); return 0; }
 if (args.Contains("--recovery-state-matrix-check")) { RecoveryStateMatrixTests.Run(); return 0; }

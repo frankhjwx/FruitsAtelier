@@ -37,6 +37,9 @@ public sealed partial class EditorView
         cachedAxisTimingLookup = null; cachedAxisTimingTimes = [];
         importedCurveSnapshot = null; importedCurveDistances.Clear(); importedCurveScreens.Clear();
         importedCurveSources.Clear(); importedCurvePaths.Clear();
+        importedCurveSliders = []; importedCurveOrder = []; importedCurveVisible.Clear();
+        importedCurveRangeReady = false;
+        importedCurveRange.Rebuild([], []);
         osuCanvasSource = null; osuCanvasObjects = []; osuCanvasMaximumEnds = []; osuCanvasVisible.Clear();
         osuDistanceSource = null; osuDistanceReferences = [];
         osuObjectSnapSource = null; osuObjectSnapTargets = []; EndOsuDragSnap();

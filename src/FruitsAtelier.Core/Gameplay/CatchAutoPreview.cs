@@ -18,11 +18,12 @@ public sealed class CatchAutoPreview
     {
         this.lazerEditor = lazerEditor;
         List<CatchAutoFrame> result = lazerEditor ? [] : [new(0, 256, false)];
-        var hyper = HyperDashCalculator.GetHyperDashStarts(objects, circleSize);
         var states = HyperDashCalculator.Calculate(objects, circleSize);
+        var hyper = new HashSet<(Guid SourceId, int EventIndex)>();
         var intervals = new List<CatchHyperInterval>();
         for (int i = 0; i < states.Length; i++)
         {
+            if (states[i].IsHyperDash) hyper.Add((objects[i].SourceId, objects[i].EventIndex));
             if (states[i].TargetIndex is not int target || objects[target].TimeMs <= objects[i].TimeMs) continue;
             var interval = new CatchHyperInterval(objects[i].TimeMs, objects[target].TimeMs);
             if (intervals.Count > 0 && interval.Start <= intervals[^1].End)
@@ -79,25 +80,27 @@ public sealed class CatchAutoPreview
     }
     public bool HyperDashingAt(double time)
     {
-        int index = UpperBound(hyperIntervals.Length, i => hyperIntervals[i].Start, time) - 1;
+        int index = HyperUpperBound(time) - 1;
         return index >= 0 && time < hyperIntervals[index].End;
     }
     public double HyperTintAt(double time)
     {
-        int index = UpperBound(tintChanges.Length, i => tintChanges[i].Time, time) - 1;
+        int low = 0, high = tintChanges.Length;
+        while (low < high) { int mid = low + (high - low) / 2; if (tintChanges[mid].Time <= time) low = mid + 1; else high = mid; }
+        int index = low - 1;
         return index < 0 ? 0 : Tint(tintChanges[index], time);
     }
     public IEnumerable<double> HyperStarts(double from, double to)
     {
-        int index = UpperBound(hyperIntervals.Length, i => hyperIntervals[i].Start, from);
+        int index = HyperUpperBound(from);
         for (; index < hyperIntervals.Length && hyperIntervals[index].Start <= to; index++) yield return hyperIntervals[index].Start;
     }
     private static double Tint((double Time, double From, double To) change, double time)
         => change.To + (change.From - change.To) * Math.Pow(1 - Math.Clamp((time - change.Time) / 180, 0, 1), 5);
-    private static int UpperBound(int count, Func<int, double> timeAt, double time)
+    private int HyperUpperBound(double time)
     {
-        int low = 0, high = count;
-        while (low < high) { int mid = low + (high - low) / 2; if (timeAt(mid) <= time) low = mid + 1; else high = mid; }
+        int low = 0, high = hyperIntervals.Length;
+        while (low < high) { int mid = low + (high - low) / 2; if (hyperIntervals[mid].Start <= time) low = mid + 1; else high = mid; }
         return low;
     }
     public CatchAutoFrame At(double time)
@@ -119,7 +122,9 @@ public sealed class CatchAutoPreview
 
     public bool FacingLeftAt(double time)
     {
-        int index = UpperBound(frames.Length, i => frames[i].TimeMs, time) - 1;
+        int low = 0, high = frames.Length;
+        while (low < high) { int mid = low + (high - low) / 2; if (frames[mid].TimeMs <= time) low = mid + 1; else high = mid; }
+        int index = low - 1;
         if (index < 0) return false;
         if (index + 1 < frames.Length && time > frames[index].TimeMs && frames[index + 1].X != frames[index].X)
             return frames[index + 1].X < frames[index].X;

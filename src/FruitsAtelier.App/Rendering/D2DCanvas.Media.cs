@@ -78,9 +78,11 @@ public sealed partial class D2DCanvas
     }
     private bool EvictStoryboardTexture()
     {
-        var candidates = storyboardTextures.Where(c => !storyboardPins.Contains(c.Key));
-        if (!candidates.Any()) return false;
-        FlushStoryboard(); var oldest = candidates.MinBy(c => c.Value.Used);
+        KeyValuePair<string, (ID2D1Bitmap1 Bitmap, int Width, int Height, long Used)> oldest = default;
+        foreach (var pair in storyboardTextures)
+            if (!storyboardPins.Contains(pair.Key) && (oldest.Key is null || pair.Value.Used < oldest.Value.Used)) oldest = pair;
+        if (oldest.Key is null) return false;
+        FlushStoryboard();
         oldest.Value.Bitmap.Dispose(); storyboardTextures.Remove(oldest.Key);
         storyboardTextureBytes -= (long)oldest.Value.Width * oldest.Value.Height * 4;
         return true;

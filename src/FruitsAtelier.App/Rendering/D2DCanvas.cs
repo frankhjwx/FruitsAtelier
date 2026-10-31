@@ -31,6 +31,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     private ID3D11DeviceContext? immediateContext;
     private IDXGISwapChain1? swapChain;
     private SafeWaitHandle? frameReady;
+    private readonly nint[] frameWaitHandles = new nint[1];
     private bool frameAcquired;
     private bool drawing;
     private ID2D1Factory1? factory;
@@ -167,7 +168,8 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     public bool WaitForFrameOrInput()
     {
         if (frameAcquired || frameReady is null || frameReady.IsInvalid) return true;
-        uint result = MsgWaitForMultipleObjectsEx(1, [frameReady.DangerousGetHandle()], 100, 0x04FF, 0x0004);
+        frameWaitHandles[0] = frameReady.DangerousGetHandle();
+        uint result = MsgWaitForMultipleObjectsEx(1, frameWaitHandles, 100, 0x04FF, 0x0004);
         if (result == uint.MaxValue) throw new System.ComponentModel.Win32Exception();
         // The wait consumes an auto-reset signal. Preserve it for the following WM_PAINT.
         return frameAcquired = result == 0;
@@ -400,7 +402,9 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
             // Dense stacks reuse labels such as NC; position and colour do not affect shaping.
             if (textLayouts.Count >= TextLayoutLimit)
             {
-                var oldest = textLayouts.MinBy(entry => entry.Value.Used);
+                KeyValuePair<TextLayoutKey, CachedTextLayout> oldest = default;
+                foreach (var entry in textLayouts)
+                    if (oldest.Value is null || entry.Value.Used < oldest.Value.Used) oldest = entry;
                 textLayouts.Remove(oldest.Key);
                 oldest.Value.Layout.Dispose();
             }

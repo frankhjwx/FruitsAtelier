@@ -51,6 +51,12 @@ internal static class DenseMapPerformanceCheck
                 var cpu = new List<double>(); var frames = new List<double>();
                 var slowFrames = new List<object>();
                 int frameCount = gesture == "playback" ? 1200 : 120;
+                long phaseAllocated = GC.GetTotalAllocatedBytes(precise: true);
+                long phaseThreadAllocated = GC.GetAllocatedBytesForCurrentThread();
+                int gen0 = GC.CollectionCount(0), gen1 = GC.CollectionCount(1), gen2 = GC.CollectionCount(2);
+                using var phaseProcess = Process.GetCurrentProcess();
+                TimeSpan phaseCpu = phaseProcess.TotalProcessorTime;
+                var phaseClock = Stopwatch.StartNew();
                 for (int i = 0; i < frameCount; i++)
                 {
                     clock.Restart();
@@ -73,13 +79,25 @@ internal static class DenseMapPerformanceCheck
                 }
                 cpu.Sort(); frames.Sort();
                 int median = cpu.Count / 2, p95 = (int)(cpu.Count * .95);
-                phases.Add(new { mode = standard ? "osu" : "catch", gesture, cpuMedianMs = cpu[median], cpuP95Ms = cpu[p95], frameMedianMs = frames[median], frameP95Ms = frames[p95], frameMaxMs = frames[^1], slowFrames });
+                phaseProcess.Refresh();
+                phases.Add(new { mode = standard ? "osu" : "catch", gesture, frameCount,
+                    allocatedBytes = GC.GetTotalAllocatedBytes(precise: true) - phaseAllocated,
+                    threadAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - phaseThreadAllocated,
+                    gen0Collections = GC.CollectionCount(0) - gen0, gen1Collections = GC.CollectionCount(1) - gen1,
+                    gen2Collections = GC.CollectionCount(2) - gen2,
+                    processCpuMs = (phaseProcess.TotalProcessorTime - phaseCpu).TotalMilliseconds,
+                    elapsedMs = phaseClock.Elapsed.TotalMilliseconds,
+                    workingMiB = phaseProcess.WorkingSet64 / 1048576d, privateMiB = phaseProcess.PrivateMemorySize64 / 1048576d,
+                    managedMiB = GC.GetTotalMemory(false) / 1048576d,
+                    cpuMedianMs = cpu[median], cpuP95Ms = cpu[p95], frameMedianMs = frames[median], frameP95Ms = frames[p95], frameMaxMs = frames[^1], slowFrames });
                 AppLog.Write($"Dense map {(standard ? "osu" : "catch")} {gesture}: CPU p95={cpu[p95]:F2} ms; native frame p95={frames[p95]:F2} ms; max={frames[^1]:F2} ms.");
             }
         }
         if (view.IsDirty) throw new InvalidOperationException("Dense map interaction check changed content.");
         using var process = Process.GetCurrentProcess(); process.Refresh();
-        var report = new { path, timeMs = time, readMs, loadMs, backgroundReadyMs, dpi = 168, skin = view.SkinName, workingMiB = process.WorkingSet64 / 1048576d,
+        var report = new { path, timeMs = time, readMs, loadMs, backgroundReadyMs, dpi = 168, adapter = canvas.AdapterName,
+            measurement = "CPU submission and DXGI Present; GPU completion and physical display latency are not measured. Phase allocations include diagnostic collection overhead and background workers.",
+            skin = view.SkinName, workingMiB = process.WorkingSet64 / 1048576d,
             peakWorkingMiB = process.PeakWorkingSet64 / 1048576d, privateMiB = process.PrivateMemorySize64 / 1048576d,
             managedMiB = GC.GetTotalMemory(false) / 1048576d, allocatedMiB = (GC.GetTotalAllocatedBytes() - allocated) / 1048576d, phases };
         string output = Path.GetFullPath("artifacts/tests/dense-map-performance.json");

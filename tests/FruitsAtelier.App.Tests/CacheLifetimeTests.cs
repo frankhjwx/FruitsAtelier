@@ -86,7 +86,11 @@ internal static class CacheLifetimeTests
         foreach (string name in new[] { "distanceLayoutSource", "distanceLayoutAuthoredSource", "distanceLayoutTiming", "distanceLayoutBreaks",
             "placementBreakIntervalSource", "placementBreakObjects", "placementBreakPreview", "lazerGuideMovementSource",
             "lazerGuideMovementObjects", "lazerGuideMovementContexts", "osuDistanceSource", "osuObjectSnapSource",
-            "collaborationSelectionConversion", "placementOrder", "movementStates", "movementIndices" }) references.Add(Capture(name, Field(view, name)));
+            "collaborationSelectionConversion", "placementOrder", "movementStates", "movementIndices",
+            "importedCurveSliders", "importedCurveOrder" }) references.Add(Capture(name, Field(view, name)));
+        var importedRange = Field(view, "importedCurveRange");
+        foreach (string name in new[] { "starts", "maximumEnds" })
+            references.Add(Capture("imported range " + name, importedRange.GetType().GetField(name, Private)!.GetValue(importedRange)!));
         if (view.IsDirty || !map.ContentEquals(view.Document)) throw new Exception("Warming presentation caches changed content.");
         if (replace)
         {
@@ -96,6 +100,9 @@ internal static class CacheLifetimeTests
                 throw new Exception("Replacement reused retired playable content.");
         }
         else view.ShowLibrary();
+        if (((Array)Field(view, "importedCurveSliders")).Length != 0 || ((Array)Field(view, "importedCurveOrder")).Length != 0
+            || ((Array)importedRange.GetType().GetField("starts", Private)!.GetValue(importedRange)!).Length != 0)
+            throw new Exception("Retirement retained the imported body range index.");
         return references.ToArray();
     }
 

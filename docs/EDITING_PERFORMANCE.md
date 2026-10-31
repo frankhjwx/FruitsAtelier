@@ -51,6 +51,10 @@ the winning offset; pointer updates do not rebuild DS references from moved cont
 
 ## Full-map work and cache ownership
 
+Autoplay preparation shares one hyperdash calculation between movement decisions
+and hyperdash intervals. Playback queries binary-search the retained frame,
+interval and tint arrays without allocating delegates per query.
+
 Discussion annotations reuse the timeline's committed parent durations and combo
 event numbers. Associations rebuild only when the committed conversion or online
 snapshot changes. Viewport movement queries time-sorted regions with prefix end
@@ -87,6 +91,11 @@ Catch path drawing caches the original source path for ordinary imported Legacy
 Sliders, keyed by the committed conversion snapshot. Drawing and hit testing share
 its cumulative distances; processed event positions remain separate. Source paths
 are sampled lazily and retired with the difficulty caches.
+Imported body drawing lazily builds a conversion-owned maximum-end range index
+and searches the first visible repeat before drawing. Visible parents retain their
+original conversion paint order, including tied starts and overlaps. Conversion
+replacement or difficulty retirement releases the index. Its cold setup and retained
+arrays scale with slider count; hit testing alone does not build it.
 
 Catch path drawing retains cumulative distances per conversion and binary-searches
 the visible span interval. Screen polylines are reused while the viewport is

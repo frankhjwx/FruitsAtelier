@@ -665,6 +665,11 @@ pointer movement, seeking, zoom and continuous playback in both canvases at
 168 DPI. It reports CPU and submission frame percentiles, process working-set
 peak, private memory, managed memory and cumulative allocations in
 `artifacts/tests/dense-map-performance.json`. Skin arguments apply to this check.
+Each phase also records total and current-thread allocations, GC collection
+counts, process CPU time and elapsed time; the report identifies the GPU adapter.
+Native frame times include CPU submission and DXGI Present, excluding GPU
+completion and physical display latency. Phase allocations include diagnostic
+collection overhead and background workers.
 Use `--osu-performance-time=50836` to select a specific millisecond position;
 otherwise the check starts at the slider with the most control points. Continuous
 playback covers twenty seconds and reports the maximum as well as percentiles.
@@ -1042,6 +1047,22 @@ switches, control insertion/deletion and undo through editor input.
 After changing input or drawing, manually check affected operations, language switching, window resizing, and file dialogs. Additional coverage is still needed for physical Windows window/audio behavior, Intel Mac, cross-display DPI, Mac MP3, and stable-client comparisons.
 
 ## Editing performance benchmark
+
+`App.Tests --imported-curve-range-check` compares imported-body line commands with
+an independent full traversal across unsorted and tied parents, repeated and
+overlapping sliders, selection appearance and conversion replacement/restoration.
+`--imported-curve-range-performance` also measures cold and warm CPU time,
+allocations and retained index-array payload. Existing `--osu-canvas-check`,
+`--slider-batch-check` and `--cache-lifetime-check` cover path rendering, export,
+undo and difficulty retirement.
+
+`Core.Tests --autoplay-check` compares autoplay frames, facing direction, hyperdash
+intervals and tint with an independent reference across empty, unordered and tied
+events, alternate parent traversal, CS values and classic/lazer modes. It also
+checks allocation-free warm playback queries. `--autoplay-performance` reports
+construction and query CPU time and managed allocations on 100,000 mixed events.
+`--autoplay-map-check <path.osu>` compares NM/HR autoplay against the reference at
+each event boundary and checks that the source file remains unchanged.
 
 `App.Tests --cache-lifetime-check` warms both canvases, clipboard, distance labels,
 projected breaks, movement guides, snapping and collaboration selection. It checks
