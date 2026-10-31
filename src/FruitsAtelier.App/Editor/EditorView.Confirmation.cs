@@ -54,7 +54,12 @@ public sealed partial class EditorView
     {
         if (MapTemplatesVisible) { DrawMapTemplates(c); return; }
         if (FazVisible) { DrawFaz(c); return; }
-        if (LibraryOpening) { DrawSynchronizationWait(c); return; }
+        if (LibraryOpening)
+        {
+            if (mediaPreparationInEditor) { hits.Clear(); fields.Clear(); }
+            else DrawSynchronizationWait(c);
+            return;
+        }
         if (SynchronizationWaitVisible) { DrawSynchronizationWait(c); return; }
         if (SynchronizationBlocksInput)
         {

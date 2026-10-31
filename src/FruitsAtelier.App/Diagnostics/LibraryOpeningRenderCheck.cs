@@ -74,9 +74,50 @@ internal static class LibraryOpeningRenderCheck
                 { Thread.Sleep(10); canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End(); }
                 if (view.LibraryOpening || completed != 1 || view.WorkspaceSession?.Directory != session.Directory || view.ActiveDifficultyIndex != 1)
                     throw new InvalidOperationException("Library open result did not publish on the UI thread.");
+                CheckDifficultyPreparation(canvas, view, locale, size.Item1, size.Item2, dpi);
             }
             AppLog.Write("Library opening native check passed: 12 loading/input/publication cases.");
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void CheckDifficultyPreparation(D2DCanvas canvas, EditorView view, string locale, int width, int height, int dpi)
+    {
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        if (!view.SwitchDifficulty(0)) throw new InvalidOperationException("Native difficulty switch rejected.");
+        _ = view.Conversion;
+        var source = typeof(EditorView).GetField("storyboardLoad", flags)!;
+        var worker = (Task<StoryboardScene>)source.GetValue(view)!;
+        if (!worker.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Native storyboard source did not finish.");
+        var publication = new TaskCompletionSource<StoryboardScene>();
+        source.SetValue(view, publication.Task);
+        canvas.Begin(); view.Render(canvas, width, height);
+        canvas.End(capture: () =>
+        {
+            string folder = Path.GetFullPath("artifacts/tests/library-opening");
+            Directory.CreateDirectory(folder);
+            var frame = canvas.CapturePixels();
+            using var writer = new BinaryWriter(File.Create(Path.Combine(folder, $"switch-{locale}-{width}-{dpi}.bmp")));
+            writer.Write((ushort)0x4D42); writer.Write(54 + frame.Pixels.Length); writer.Write(0); writer.Write(54);
+            writer.Write(40); writer.Write(frame.Width); writer.Write(-frame.Height);
+            writer.Write((ushort)1); writer.Write((ushort)32); writer.Write(0); writer.Write(frame.Pixels.Length);
+            writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(frame.Pixels);
+        });
+        int requests = 0;
+        view.RequestSave = view.RequestTogglePlayback = () => requests++;
+        view.KeyDown(83, true, false); view.KeyUp(83);
+        view.KeyDown(32, false, false); view.KeyUp(32);
+        view.PointerDown(width / 2, height / 2, 0, false, false);
+        view.PointerUp(width / 2, height / 2, 0);
+        view.Wheel(width / 2, height / 2, 120, false);
+        if (!view.LibraryOpening || view.PrepareFileOperation() || requests != 0 || view.ActiveDifficultyIndex != 0
+            || (bool)typeof(EditorView).GetProperty("DockContentInputAvailable", flags)!.GetValue(view)!)
+            throw new InvalidOperationException("Native difficulty preparation admitted input.");
+        publication.SetResult(worker.Result);
+        canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+        if (view.LibraryOpening || !view.PrepareFileOperation())
+            throw new InvalidOperationException("Native difficulty preparation did not unlock after publication.");
+        AppLog.Write($"Difficulty preparation native editor/input/publication passed: {locale}, {width}x{height}, DPI={dpi}.");
+        view.StopFileMonitoring(); view.CompleteLibraryCacheWrites();
     }
 }

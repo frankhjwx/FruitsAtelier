@@ -50,6 +50,14 @@ Settings combines protocol handling and browser data controls in **osu! Links & 
 New settings categories appear before the fixed **Experimental**, **Application updates**
 navigation tail; Experimental stays second to last when application updates are available.
 
+## Switching difficulties
+
+Switching difficulties in an open project keeps the editor visible while map
+resources prepare. Editing, navigation, playback and file actions wait until
+preparation finishes. Escape or the Library button can return to the Library;
+unsaved changes retain the usual save, discard and cancel choices. Opening a
+project from the Library displays its loading screen until resources are ready.
+
 ## 1 ms alignment on open
 
 Opening a map checks each difficulty when it is first shown, after slider import

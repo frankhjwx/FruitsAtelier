@@ -11,6 +11,7 @@ internal static class StoryboardPresentationTests
         string directory = Path.GetFullPath("artifacts/tests/video-storyboard/presentation-fixtures");
         Directory.CreateDirectory(directory);
         OpeningCancellation(directory);
+        DifficultySwitchPreparation(directory);
         foreach (bool widescreen in new[] { false, true })
         {
             var map = new MapDocument { SourcePath = Path.Combine(directory, "map.osu"), DurationMs = 10000 };
@@ -152,6 +153,113 @@ internal static class StoryboardPresentationTests
             throw new Exception("Discard during loading did not retire the project and return to Library.");
         view.StopFileMonitoring(); view.CompleteLibraryCacheWrites();
         Console.WriteLine("PASS loading retains save/discard/cancel input, Cancel resumes loading and Discard returns to Library");
+    }
+
+    private static void DifficultySwitchPreparation(string directory)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        object? Field(EditorView view, string name) => typeof(EditorView).GetField(name, flags)!.GetValue(view);
+        var first = new MapDocument { Name = "First difficulty", SourcePath = Path.Combine(directory, "first.osu"), DurationMs = 10000 };
+        first.Fruits.Add(new() { TimeMs = 5000, X = 256 });
+        first.OriginalSections.Add(new() { Name = "Events", Lines = { "Sprite,Foreground,Centre,\"sprite.png\",320,240", " F,0,0,10000,1,1" } });
+        var second = first.DeepClone(); second.Name = "Second difficulty";
+        var view = new EditorView(false); var canvas = new MediaCanvas { RequiredReady = false };
+        view.LoadProject(BeatmapProject.FromDocuments([first, second])); view.CloseLibrary();
+        void Paint() { canvas.Clear(); view.Render(canvas, 1440, 900); }
+        void SettleSource()
+        {
+            var watch = Stopwatch.StartNew();
+            do { Paint(); Thread.Sleep(5); } while (SourcePending(view) && watch.Elapsed.TotalSeconds < 5);
+            if (SourcePending(view)) throw new TimeoutException("Difficulty storyboard source did not settle.");
+        }
+        void Check(bool value, string message) { if (!value) throw new Exception(message); }
+        SettleSource();
+        Check(view.LibraryOpening && canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.opening")),
+            "Initial project preparation lost its opening feedback.");
+        canvas.RequiredReady = true; Paint();
+        Check(!view.LibraryOpening && view.PrepareFileOperation(), "Initial preparation did not unlock input.");
+        Check(!view.SwitchDifficulty(-1) && view.SwitchDifficulty(0), "Invalid or unchanged difficulty request failed.");
+        canvas.RequiredReady = false;
+        Check(view.SwitchDifficulty(1), "Ready editor rejected a difficulty switch.");
+        Check(view.SwitchDifficulty(0) && view.SwitchDifficulty(1), "Consecutive switches before rendering were rejected.");
+        SettleSource();
+        Check(view.LibraryOpening && canvas.Texts.Any(t => t.Value.Contains("Second difficulty", StringComparison.Ordinal))
+            && !canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.opening")
+                || t.Value == FruitsAtelier.Localization.Strings.Get("media.loading")),
+            "Difficulty preparation did not retain the visible editor without an opening overlay.");
+        Check(!canvas.Fills.Any(f => f.Bounds == new Rect(0, 0, 1440, 900) && f.Opacity < 1),
+            "Difficulty preparation dimmed the entire editor.");
+        Check(!view.PrepareFileOperation() && !view.SwitchDifficulty(0) && !view.AddDifficulty(),
+            "Difficulty preparation admitted competing file operations.");
+        Check(!(bool)typeof(EditorView).GetProperty("DockContentInputAvailable", flags)!.GetValue(view)!,
+            "Difficulty preparation left native dock content interactive.");
+        var baseline = view.Document.DeepClone();
+        var position = view.PlayheadMs;
+        var viewStart = Field(view, "viewStart"); var zoom = Field(view, "canvasZoom");
+        int actions = 0;
+        view.RequestSave = view.RequestOpen = view.RequestNewProject = view.RequestExport = view.RequestTogglePlayback = () => actions++;
+        view.RequestSeek = _ => actions++;
+        foreach (int key in new[] { 83, 79, 78, 69, 90, 89, 9 })
+        { view.KeyDown(key, true, false); view.KeyUp(key); }
+        foreach (int key in new[] { 32, 112, 46, 81, 86, 35 })
+        { view.KeyDown(key, false, false); view.KeyUp(key); }
+        view.TextInput('x');
+        view.PointerDown(650, 500, 0, false, false); view.PointerMove(720, 550, false, false); view.PointerUp(720, 550, 0);
+        view.PointerDoubleClick(650, 500, false, false);
+        view.PointerDown(300, 850, 0, false, false); view.PointerUp(300, 850, 0);
+        foreach (bool ctrl in new[] { false, true }) view.Wheel(650, 500, 120, ctrl);
+        Paint();
+        Check(actions == 0 && baseline.ContentEquals(view.Document) && view.PlayheadMs == position
+            && Equals(viewStart, Field(view, "viewStart")) && Equals(zoom, Field(view, "canvasZoom"))
+            && view.ActiveDifficultyIndex == 1 && !view.IsTestplaying,
+            "Difficulty preparation accepted keyboard, pointer, wheel or transport actions.");
+        canvas.RequiredReady = true; Paint();
+        Check(!view.LibraryOpening && view.PrepareFileOperation() && !view.IsTestplaying,
+            "Completed preparation did not unlock the editor or queued blocked testplay input.");
+        view.KeyDown(83, true, false); view.KeyUp(83);
+        Check(actions == 1, "Save shortcut did not resume after preparation.");
+        foreach (bool cancel in new[] { false, true })
+        {
+            Check(view.SwitchDifficulty(1 - view.ActiveDifficultyIndex), "Worker outcome switch failed.");
+            _ = view.Conversion;
+            var source = typeof(EditorView).GetField("storyboardLoad", flags)!;
+            var worker = (Task<StoryboardScene>)source.GetValue(view)!;
+            Check(worker.Wait(TimeSpan.FromSeconds(5)), "Source worker did not finish.");
+            var publication = new TaskCompletionSource<StoryboardScene>();
+            source.SetValue(view, publication.Task);
+            Paint();
+            Check(view.LibraryOpening && !view.PrepareFileOperation()
+                && !canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.opening")),
+                "Pending source publication obscured the editor or admitted input.");
+            if (cancel) publication.SetCanceled(); else publication.SetException(new IOException("controlled source failure"));
+            Paint();
+            Check(!view.LibraryOpening && view.PrepareFileOperation() && !view.ErrorVisible,
+                "Failed or canceled source preparation retained its input lock.");
+        }
+        canvas.RequiredReady = false; Check(view.SwitchDifficulty(0), "Second switch failed."); SettleSource();
+        view.ChangeAudioPath("unsaved.ogg");
+        view.ShowLibrary(); Paint();
+        Check(view.DiscardConfirmationVisible && canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("mac.cancel")),
+            "Difficulty preparation swallowed the save/discard/cancel dialog.");
+        view.KeyDown(27, false, false); view.KeyUp(27); Paint();
+        Check(!view.LibraryVisible && view.LibraryOpening && view.IsDirty
+            && !canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.opening")),
+            "Canceling Library exit did not resume preparation in the visible editor.");
+        view.ShowLibrary(); Paint();
+        var discard = canvas.Texts.Single(t => t.Value == FruitsAtelier.Localization.Strings.Get("mac.discard"));
+        view.PointerDown(discard.X + 3, discard.Y + 3, 0, false, false); view.PointerUp(discard.X + 3, discard.Y + 3, 0); Paint();
+        Check(view.LibraryVisible && !view.LibraryOpening, "Discard did not retire difficulty preparation.");
+        view.LoadProject(BeatmapProject.FromDocuments([first, second])); view.CloseLibrary();
+        canvas.RequiredReady = true; SettleSource(); Paint();
+        canvas.RequiredReady = false; Check(view.SwitchDifficulty(1), "Escape fixture switch failed."); SettleSource();
+        view.KeyDown(27, false, false); view.KeyUp(27); Paint();
+        Check(view.LibraryVisible && !view.LibraryOpening, "Escape did not retire preparation and return to Library.");
+        view.LoadDocument(first); view.CloseLibrary(); SettleSource();
+        Check(view.LibraryOpening && canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.opening")),
+            "Retired difficulty preparation suppressed the next project's opening feedback.");
+        canvas.RequiredReady = true; Paint();
+        view.StopFileMonitoring(); view.CompleteLibraryCacheWrites();
+        Console.WriteLine("PASS difficulty preparation retains editor, blocks input until ready and retires on Library exit");
     }
 
     private static bool Pending(EditorView view) => view.LibraryOpening || typeof(EditorView).GetField("storyboardLoad", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(view) is Task;

@@ -23,6 +23,7 @@ public sealed partial class EditorView
     private bool storyboardTargetReady;
     private readonly List<string> storyboardRetainedImages = [];
     private bool mediaOpening;
+    private bool mediaPreparationInEditor;
     private bool mediaExitPending;
     private bool mediaInitialPreparationComplete;
     private bool storyboardRendererObserved;
@@ -95,6 +96,7 @@ public sealed partial class EditorView
         storyboardDisplayFrame.Clear(); storyboardRetainedImages.Clear(); storyboardTargetReady = false;
         storyboardRequiredImages.Clear(); storyboardRequiredSeen.Clear(); storyboardPresented = false;
         mediaOpening = false;
+        mediaPreparationInEditor = false;
         mediaExitPending = false;
         mediaInitialPreparationComplete = false;
         storyboardRendererObserved = false; storyboardCanvasGeneration = 0;
@@ -130,7 +132,9 @@ public sealed partial class EditorView
         if (same && index == storyboardSource.Count) { QueueStoryboardGameplay(); return; }
         bool opening = !mediaInitialPreparationComplete;
         bool exiting = mediaExitPending;
+        bool prepareInEditor = mediaPreparationInEditor;
         RetireStoryboard(preserveDisplay: !opening, preserveHistory: true); storyboardDirectory = directory; mediaOpening = opening; mediaExitPending = exiting;
+        mediaPreparationInEditor = prepareInEditor;
         var sections = new List<(string Name, string[] Lines)>();
         foreach (var section in Document.OriginalSections)
         {
@@ -386,8 +390,9 @@ public sealed partial class EditorView
         if (storyboardScene is not null) PrepareStoryboardFrame(canvas);
         if (mediaOpening && storyboardLoad is null && storyboardGameplayLoad is null
             && (!LibrarySettings.EnableVideoStoryboard || storyboardScene is null || storyboardTargetReady)) mediaOpening = false;
-        if (!mediaOpening && storyboardLoad is null && storyboardGameplayLoad is null) mediaInitialPreparationComplete = true;
-        if (!mediaOpening) return false;
+        if (!mediaOpening && storyboardLoad is null && storyboardGameplayLoad is null)
+        { mediaInitialPreparationComplete = true; mediaPreparationInEditor = false; }
+        if (!mediaOpening || mediaPreparationInEditor) return false;
         canvas.Fill(new(0, 0, width, height), Background);
         DrawSynchronizationWait(canvas);
         if (mediaExitPending && DiscardConfirmationVisible) DrawDiscardConfirmation(canvas);

@@ -84,6 +84,12 @@ invalidate the scene; cached output is compared with a full source parse.
 
 `App.Tests --storyboard-presentation-check` verifies that Mapping retains video
 while Force background dim suppresses Preview, including pending video frames.
+It also checks visible-editor difficulty preparation, source and image readiness,
+blocked editing/navigation/playback/file actions, failure and cancellation, and
+Library exit with unsaved changes. Initial project preparation retains its loading
+feedback. `FruitsAtelier.App --render-check --library-opening-render-check` captures
+pending difficulty preparation and checks input gating and completion in both
+languages, window sizes and DPI settings.
 Frames with no video viewport, before the video offset, with visuals disabled or
 in force-dim testplay retire the decoder. On Windows,
 `App.Tests --media-toggle-native-check <video-path>` checks decoder identity across
