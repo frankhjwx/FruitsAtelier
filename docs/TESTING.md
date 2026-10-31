@@ -77,6 +77,15 @@ under `artifacts/tests/editor-themes-native`.
 
 ## Video and storyboard playback
 
+`App.Tests --difficulty-media-reuse-native-check <video-path>` uses actual Direct2D
+textures and FFmpeg playback with a large shared image and long-duration scene.
+It checks repeated same-directory difficulty switches without additional warm
+image decodes or uploads, equal-offset video decoder/frame reuse, different-offset
+frame selection, Windows path casing, per-difficulty sprites, resource removal,
+file-version invalidation and full retirement on project or directory replacement
+and Library exit. Supply a video at least two seconds long. Its hidden-window
+resource checks do not measure physical presentation latency.
+
 `App.Tests --storyboard-source-cache-check` checks scene reuse for ordinary General
 value edits, including pending preparation. Widescreen, Events, Variables, source
 directories, retirement, line positions and embedded section boundaries still
@@ -111,7 +120,9 @@ scene metadata before comparing performance; incomplete scenes are not valid bas
 muted WASAPI mixer and music clock, including pause, seek and playback speed.
 Audio output remains muted by the harness; do not change system volume.
 
-`App.Tests --storyboard-image-cache-check` uses a controlled decoder to verify
+`App.Tests --storyboard-image-cache-check` also checks cross-scene decoded-image
+identity, bounded reuse, changed/deleted/restored files, unavailable-image diagnostics
+and an in-flight common image while retiring speculative loads. It uses a controlled decoder to verify
 that current-frame requests take priority over queued prefetch, including multiple
 required images and repeated preparation without duplicate decoding.
 `App.Tests --storyboard-first-playback <Platter.osu> <output-directory> <seed>`

@@ -96,7 +96,18 @@ part of the cache key. The file monitor also invalidates changed mapset media.
 Gameplay preparation keys include committed playable identity and history revision;
 one cancellable worker computes health and hit-sample trigger matching metadata. Retired workers
 cannot publish into a new difficulty. Difficulty retirement cancels both jobs and
-releases renderer resources through `ICanvas.ReleaseDifficultyResources`.
+releases renderer geometry through `ICanvas.ReleaseDifficultyResources`. An active
+project's difficulty switch within the same resource directory preserves unchanged
+decoded storyboard images, native textures and the single resident background and
+video decoder. Resource versions include file size, modification time and creation
+time, checked at this transition. Previous image requests and pins retire while
+the existing bounded caches remain available to the next scene. Failed image
+decodes remain cached until the file changes; only the new scene's requested
+failures supply its diagnostic. New scene parsing merges its own Events, Variables
+and General with the shared `.osb` again, preserving variable scope and source
+order. Gameplay, triggers and sample cursors remain specific to the difficulty.
+Project replacement, switching resource directories and Library exit perform full
+renderer retirement.
 Map opening includes storyboard parsing, gameplay preparation and the current
 visible images reaching the renderer. The existing opening overlay remains visible
 until the prepared editor frame can be published together. Known missing images
@@ -130,7 +141,11 @@ and testplay; Mapping retains its independent media display. All viewports share
 the renderer's video decoder. The editor retains it while any viewport requests
 video in the current frame and stops it when none does, including full-screen
 pages and force-dim testplay. A requested frame still being decoded counts as
-video demand.
+video demand. During same-directory difficulty preparation an idle decoder is
+suspended rather than closed. Identical files and offsets reuse the current frame;
+another offset seeks the same decoder and suppresses the previous difficulty's
+frame until the requested timestamp is available. Ordinary frames with no visible
+video demand still stop the decoder, including positions before the video offset.
 
 `LibrarySettings.EnableVideoStoryboard` controls visuals across every viewport.
 Changing it retires scene and gameplay workers, clears displayed sprite buffers,

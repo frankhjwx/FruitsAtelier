@@ -99,7 +99,11 @@ internal sealed partial class ImageCache : IDisposable
                     }
                 }
             }
-            if (background) { beatmapBackground?.Bitmap.Dispose(); beatmapBackground = (key, result); }
+            if (background)
+            {
+                beatmapBackground?.Bitmap.Dispose(); beatmapBackground = (key, result);
+                beatmapBackgroundVersion = FruitsAtelier.App.Media.MediaFileVersion.Read(path);
+            }
             else if (isToolbar) { bookmarkToolbar?.Bitmap.Dispose(); bookmarkToolbar = (key, result); }
             else { images.Add(key, (result, ++clock)); bytes += size; }
             return result;
@@ -115,8 +119,17 @@ internal sealed partial class ImageCache : IDisposable
     internal void ReleaseDifficultyResources()
     {
         ReleaseMedia();
-        ClearPatternRasters();
         beatmapBackground?.Bitmap.Dispose(); beatmapBackground = null;
+        ReleaseDifficultyGeometry();
+    }
+    internal void ReleaseDifficultyResources(bool preserveMedia)
+    {
+        if (!preserveMedia) { ReleaseDifficultyResources(); return; }
+        ReleaseDifficultyGeometry(); ReuseMediaResources();
+    }
+    private void ReleaseDifficultyGeometry()
+    {
+        ClearPatternRasters();
         paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear();
     }
     public void Dispose() { ReleaseMedia(); StoryboardPixels.Dispose(); ClearPatternRasters(); ClearImages(); thumbnails.Dispose(); paths.Clear(); pathOrder.Clear(); sliderBorders.Clear(); sliderBorderOrder.Clear(); }
@@ -125,6 +138,7 @@ internal sealed partial class ImageCache : IDisposable
 internal sealed partial class MacCanvas(DrawingContext context, ImageCache images, double renderScale = 1) : ICanvas, IDisposable
 {
     public void ReleaseDifficultyResources() => images.ReleaseDifficultyResources();
+    public void ReleaseDifficultyResources(bool preserveMedia) => images.ReleaseDifficultyResources(preserveMedia);
     private readonly Stack<DrawingContext.PushedState> clips = [];
     private static Avalonia.Rect Convert(R r) => new(r.X, r.Y, Math.Max(0, r.Width), Math.Max(0, r.Height));
     private static SolidColorBrush Brush(uint c) => new(Color.FromRgb((byte)(c >> 16), (byte)(c >> 8), (byte)c));

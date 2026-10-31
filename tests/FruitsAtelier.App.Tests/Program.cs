@@ -14,6 +14,7 @@ if (args.Contains("--verifier-navigation-check")) { MapsetVerifierTests.Retained
 if (args.Contains("--aimod-navigation-check")) { AimodTests.StaleNavigation(); OperationErrorTests.StaleSelection(); return 0; }
 if (args.Contains("--discussion-bounds-check")) { DiscussionTests.FractionalAnnotationBounds(); return 0; }
 if (args.Contains("--storyboard-image-cache-check")) return StoryboardImageCacheTests.Run();
+if (args.Length == 2 && args[0] == "--difficulty-media-reuse-native-check") return DifficultyMediaReuseNativeTests.Run(args[1]);
 if (args.Length == 4 && args[0] == "--storyboard-first-playback") return StoryboardFirstPlaybackTests.Run(args[1], args[2], int.Parse(args[3]));
 if (args.Contains("--media-toggle-check")) return MediaToggleTests.Run();
 if (args.Length == 2 && args[0] == "--media-toggle-native-check") return MediaToggleNativeTests.Run(args[1]);

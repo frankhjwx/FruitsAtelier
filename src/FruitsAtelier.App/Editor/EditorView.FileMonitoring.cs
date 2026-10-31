@@ -62,7 +62,10 @@ public sealed partial class EditorView
             // Rewritten media can keep its filename; path-keyed renderer pixels must be retired.
             if (changes.Paths.Any(path => WorkspaceProject.Within(mediaDirectory, path)
                 && Path.GetExtension(path).ToLowerInvariant() is ".png" or ".jpg" or ".jpeg" or ".mp4" or ".m4v" or ".avi" or ".flv" or ".mov" or ".mpg" or ".wmv"))
+            {
                 difficultyGraphicsReleasePending = true;
+                difficultyMediaReusePending = false;
+            }
         }
         if (changes.FullScan) libraryRescanRequested = true;
         foreach (string path in changes.Paths)

@@ -121,7 +121,7 @@ public sealed partial class EditorView
         PreloadProjectHitsounds();
     }
 
-    private void ResetDifficultyView(bool prepareMediaInEditor = false)
+    private void ResetDifficultyView(bool prepareMediaInEditor = false, bool preserveMedia = false)
     {
         timingAlignmentPlan = null; timingAlignmentSource = null;
         RestoreTemporarySnap();
@@ -133,7 +133,7 @@ public sealed partial class EditorView
         nextSounds = 0; soundEdge = null; timelineFruit = null;
         var document = Document;
         convertedSnapshot = null;
-        ReleaseDifficultyCaches();
+        ReleaseDifficultyCaches(preserveMedia);
         mediaPreparationInEditor = prepareMediaInEditor;
         Select(Guid.Empty);
         tool = Tool.Select;
@@ -209,10 +209,14 @@ public sealed partial class EditorView
         double currentPlayhead = playhead;
         double currentViewStart = viewStart;
         bool prepareMediaInEditor = !LibraryVisible && (mediaInitialPreparationComplete || mediaPreparationInEditor);
+        string? mediaDirectory = StoryboardMediaDirectory(Document);
+        bool preserveMedia = !LibraryVisible && mediaDirectory is not null
+            && string.Equals(mediaDirectory, StoryboardMediaDirectory(difficulties[index].History.Document),
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
         activeDifficulty = index;
         collaborationField = collaborationError = ""; collaborationPanelScroll = 0;
         RevealDifficultyTab();
-        ResetDifficultyView(prepareMediaInEditor);
+        ResetDifficultyView(prepareMediaInEditor, preserveMedia);
         playhead = currentPlayhead;
         viewStart = currentViewStart;
         if (reloadAudio) RequestDifficultyChanged?.Invoke();

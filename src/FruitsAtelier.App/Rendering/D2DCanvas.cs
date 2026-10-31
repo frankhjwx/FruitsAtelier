@@ -476,11 +476,13 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
             if (fill)
             {
                 // A full-size background must not evict the skin on every frame.
-                if (beatmapBackground is not { } background || background.Key != key)
+                if (beatmapBackground is not { } background || background.Key.Version != key.Version || background.Key.Length != key.Length
+                    || background.Key.Tint != key.Tint || !string.Equals(background.Key.Path, key.Path, StringComparison.OrdinalIgnoreCase))
                 {
                     var decoded = LoadImage(filePath, key.Tint);
                     beatmapBackground?.Image.Bitmap.Dispose();
                     beatmapBackground = (key, decoded);
+                    beatmapBackgroundVersion = FruitsAtelier.App.Media.MediaFileVersion.Read(filePath);
                     ImageDecodeCount++;
                 }
                 image = beatmapBackground.Value.Image;
@@ -671,6 +673,19 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     public void ReleaseDifficultyResources()
     {
         ReleaseMedia();
+        ReleaseDifficultyGeometry();
+        beatmapBackground?.Image.Bitmap.Dispose(); beatmapBackground = null;
+    }
+
+    public void ReleaseDifficultyResources(bool preserveMedia)
+    {
+        if (!preserveMedia) { ReleaseDifficultyResources(); return; }
+        ReleaseDifficultyGeometry();
+        ReuseMediaResources();
+    }
+
+    private void ReleaseDifficultyGeometry()
+    {
         ClearPatternRasters();
         foreach (var layout in textLayouts.Values) layout.Layout.Dispose();
         textLayouts.Clear();
@@ -679,7 +694,6 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
         pathGeometries.Clear(); pathGeometryOrder.Clear();
         foreach (var border in sliderBorders.Values) border.Mask.Dispose();
         sliderBorders.Clear(); sliderBorderOrder.Clear();
-        beatmapBackground?.Image.Bitmap.Dispose(); beatmapBackground = null;
     }
 
     public void Dispose()

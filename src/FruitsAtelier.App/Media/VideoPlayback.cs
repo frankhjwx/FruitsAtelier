@@ -25,6 +25,7 @@ internal sealed class VideoPlayback : IDisposable
     private double target, ahead;
     private long generation, serial;
     internal string Path { get; }
+    internal MediaFileVersion Version { get; }
     internal string? Error { get; private set; }
     private bool errorObserved;
     internal string? ReadError() { lock (gate) { if (Error is not null) errorObserved = true; return Error; } }
@@ -53,9 +54,12 @@ internal sealed class VideoPlayback : IDisposable
     internal VideoPlayback(string path)
     {
         Path = path;
+        Version = MediaFileVersion.Read(path);
         worker = new Thread(Run) { IsBackground = true, Name = "Beatmap video" };
         worker.Start();
     }
+
+    internal void Suspend() { lock (gate) ahead = 0; }
 
     internal bool WithFrame(double time, bool playing, double rate, Action<Frame> draw)
     {

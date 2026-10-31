@@ -6,6 +6,8 @@ internal sealed class StoryboardImageCache(Func<string, StoryboardImageCache.Pix
     private readonly object gate = new();
     private readonly Dictionary<string, (Pixels? Image, long Used)> cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, long> decodedSizes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, MediaFileVersion> versions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> errors = new(StringComparer.OrdinalIgnoreCase);
     private Queue<string> pending = new();
     private string[] prepared = [];
     private string? loadingPath;
@@ -18,6 +20,23 @@ internal sealed class StoryboardImageCache(Func<string, StoryboardImageCache.Pix
     internal string? Error { get; private set; }
     internal long Revision { get; private set; }
     internal bool Loading { get { lock (gate) return running; } }
+    internal MediaFileVersion Version(string path) { lock (gate) return versions.GetValueOrDefault(path); }
+    internal void ReuseResources()
+    {
+        lock (gate)
+        {
+            // Pending preloads belong to the previous scene. A running decode can finish,
+            // but publication still requires the new scene to request its path and version.
+            generation++; pending.Clear(); prepared = []; Error = null;
+            foreach (string path in versions.Keys.ToArray())
+            {
+                if (versions[path] == MediaFileVersion.Read(path)) continue;
+                versions.Remove(path); decodedSizes.Remove(path); errors.Remove(path);
+                if (cache.Remove(path, out var value)) bytes -= value.Image?.Data.Length ?? 0;
+                Revision++;
+            }
+        }
+    }
     internal bool IsUnavailable(string path) { lock (gate) return decodedSizes.TryGetValue(path, out long size) && size < 0; }
     internal bool ExceedsCapacity(IReadOnlyList<string> paths)
     {
@@ -39,6 +58,7 @@ internal sealed class StoryboardImageCache(Func<string, StoryboardImageCache.Pix
             if (disposed) return;
             if (paths.Count == prepared.Length && paths.SequenceEqual(prepared, StringComparer.OrdinalIgnoreCase)) return;
             prepared = paths.Take(4096).ToArray();
+            Error = prepared.Select(p => errors.GetValueOrDefault(p)).FirstOrDefault(e => e is not null);
             generation++;
             pending = new(prepared.Where(p => p != loadingPath && !cache.ContainsKey(p) && !IsUnavailable(p)).Distinct(StringComparer.OrdinalIgnoreCase));
             foreach (string path in paths) if (cache.TryGetValue(path, out var value)) cache[path] = (value.Image, ++clock);
@@ -50,6 +70,7 @@ internal sealed class StoryboardImageCache(Func<string, StoryboardImageCache.Pix
     {
         lock (gate)
         {
+            if (errors.TryGetValue(path, out string? error)) Error = error;
             if (!cache.TryGetValue(path, out var value))
             {
                 if (demand && !disposed && !IsUnavailable(path) && !string.Equals(path, loadingPath, StringComparison.OrdinalIgnoreCase)
@@ -79,20 +100,32 @@ internal sealed class StoryboardImageCache(Func<string, StoryboardImageCache.Pix
             }
             Pixels? image = null;
             string? error = null;
+            var version = MediaFileVersion.Read(path);
             try { image = decode(path); if (image is null) error = "Image unavailable or exceeds the 64 MiB decoded image limit."; }
             catch (Exception ex) { error = ex.Message; }
             lock (gate)
             {
                 if (disposed) { running = false; return; }
                 loadingPath = null;
+                if (version != MediaFileVersion.Read(path))
+                {
+                    if (prepared.Contains(path, StringComparer.OrdinalIgnoreCase)) pending.Enqueue(path);
+                    continue;
+                }
                 if (generation != requestedGeneration && !prepared.Contains(path, StringComparer.OrdinalIgnoreCase)) continue;
                 DecodeCount++;
-                if (error is not null) Error = $"{System.IO.Path.GetFileName(path)}: {error}";
+                if (error is not null) errors[path] = Error = $"{System.IO.Path.GetFileName(path)}: {error}";
                 Revision++;
                 long size = image?.Data.Length ?? 0;
                 if (size > 64 * 1024 * 1024) image = null;
                 size = image?.Data.Length ?? 0;
-                if (decodedSizes.Count >= 8192) decodedSizes.Clear();
+                if (decodedSizes.Count >= 8192)
+                {
+                    decodedSizes.Clear();
+                    errors.Clear();
+                    foreach (string old in versions.Keys.Where(p => !cache.ContainsKey(p)).ToArray()) versions.Remove(old);
+                }
+                versions[path] = version;
                 decodedSizes[path] = image is null ? -1 : size;
                 while (cache.Count > 0 && (bytes + size > Limit || cache.Count >= 512))
                 {
@@ -104,7 +137,7 @@ internal sealed class StoryboardImageCache(Func<string, StoryboardImageCache.Pix
             }
         }
     }
-    public void Dispose() { lock (gate) { disposed = true; cache.Clear(); decodedSizes.Clear(); pending.Clear(); prepared = []; bytes = 0; } }
+    public void Dispose() { lock (gate) { disposed = true; cache.Clear(); decodedSizes.Clear(); versions.Clear(); errors.Clear(); pending.Clear(); prepared = []; bytes = 0; } }
 }
 
 internal static class MediaResourceIdentity

@@ -12,6 +12,7 @@ internal sealed partial class ImageCache
 {
     internal StoryboardImageCache StoryboardPixels { get; private set; } = new(DecodeStoryboard);
     private readonly Dictionary<(string Path, uint Tint), (WriteableBitmap Bitmap, long Used)> storyboardTextures = [];
+    private readonly Dictionary<(string Path, uint Tint), MediaFileVersion> storyboardTextureVersions = [];
     private long storyboardBytes, storyboardClock;
     private readonly HashSet<string> storyboardRetainedPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<(string Path, uint Tint)> storyboardPins = [];
@@ -24,6 +25,8 @@ internal sealed partial class ImageCache
     internal WriteableBitmap? VideoBitmap;
     internal long VideoSerial;
     internal float VideoLastOpacity;
+    internal bool VideoPresentationPending;
+    private MediaFileVersion beatmapBackgroundVersion;
     internal void RetainStoryboardImages(IReadOnlyList<string> paths)
     {
         if (storyboardRetainedPaths.SetEquals(paths)) return;
@@ -43,7 +46,7 @@ internal sealed partial class ImageCache
         if (!candidates.Any()) return false;
         var oldest = candidates.MinBy(c => c.Value.Used);
         storyboardBytes -= (long)oldest.Value.Bitmap.PixelSize.Width * oldest.Value.Bitmap.PixelSize.Height * 4;
-        oldest.Value.Bitmap.Dispose(); storyboardTextures.Remove(oldest.Key); return true;
+        oldest.Value.Bitmap.Dispose(); storyboardTextures.Remove(oldest.Key); storyboardTextureVersions.Remove(oldest.Key); return true;
     }
     private static unsafe StoryboardImageCache.Pixels? DecodeStoryboard(string path)
     {
@@ -84,15 +87,40 @@ internal sealed partial class ImageCache
                     row[dest + 3] = pixels.Data[source + 3];
                 }
             }
-        storyboardTextures[key] = (bitmap, ++storyboardClock); storyboardBytes += pixels.Data.Length; return bitmap;
+        storyboardTextures[key] = (bitmap, ++storyboardClock); storyboardTextureVersions[key] = StoryboardPixels.Version(path);
+        storyboardBytes += pixels.Data.Length; return bitmap;
     }
-    internal void StopVideo() { Video?.Dispose(); Video = null; VideoBitmap?.Dispose(); VideoBitmap = null; VideoSerial = 0; VideoLastOpacity = 0; }
+    internal void StopVideo() { Video?.Dispose(); Video = null; VideoBitmap?.Dispose(); VideoBitmap = null; VideoSerial = 0; VideoLastOpacity = 0; VideoPresentationPending = false; }
+    internal void ReuseMediaResources()
+    {
+        MediaGeneration = MediaResourceIdentity.Next(); StoryboardCapacityWarning = null;
+        StoryboardPixels.ReuseResources();
+        foreach (var key in storyboardTextures.Keys.ToArray())
+        {
+            if (storyboardTextureVersions[key] == MediaFileVersion.Read(key.Path)) continue;
+            var texture = storyboardTextures[key];
+            storyboardBytes -= (long)texture.Bitmap.PixelSize.Width * texture.Bitmap.PixelSize.Height * 4;
+            texture.Bitmap.Dispose(); storyboardTextures.Remove(key); storyboardTextureVersions.Remove(key);
+        }
+        storyboardRetainedPaths.Clear(); storyboardPins.Clear(); storyboardPinnedBytes = 0;
+        while (storyboardBytes > StoryboardImageCache.Limit && EvictStoryboardTexture()) { }
+        if (Video is not null && Video.Version != MediaFileVersion.Read(Video.Path)) StopVideo();
+        else Video?.Suspend();
+        VideoPresentationPending = Video is not null;
+        if (beatmapBackground is { } background)
+        {
+            var version = MediaFileVersion.Read(background.Key.Item1);
+            if (version != beatmapBackgroundVersion)
+            { background.Bitmap.Dispose(); beatmapBackground = null; }
+        }
+    }
     internal void ReleaseMedia()
     {
         MediaGeneration = MediaResourceIdentity.Next(); StoryboardCapacityWarning = null;
         StopVideo(); StoryboardPixels.Dispose(); StoryboardPixels = new(DecodeStoryboard);
         foreach (var texture in storyboardTextures.Values) texture.Bitmap.Dispose();
         storyboardTextures.Clear(); storyboardBytes = 0;
+        storyboardTextureVersions.Clear();
         storyboardRetainedPaths.Clear(); storyboardPins.Clear(); storyboardPinnedBytes = 0;
     }
 }
@@ -149,9 +177,10 @@ internal sealed partial class MacCanvas
                 images.VideoSerial = frame.Serial;
             }
             images.VideoLastOpacity = images.Video!.Opacity(positionMs);
+            images.VideoPresentationPending = false;
         });
         videoFrameRequested = true;
-        if (images.VideoBitmap is not { } bitmap || !images.Video.ContainsTime(positionMs)) return false;
+        if (images.VideoPresentationPending || images.VideoBitmap is not { } bitmap || !images.Video.ContainsTime(positionMs)) return false;
         int width = bitmap.PixelSize.Width, height = bitmap.PixelSize.Height;
         float scale = Math.Max(destination.Width / width, destination.Height / height);
         float w = destination.Width / scale, h = destination.Height / scale;
@@ -160,5 +189,10 @@ internal sealed partial class MacCanvas
         return ready || images.VideoSerial != 0;
     }
     public void StopVideo() => images.StopVideo();
+    public void RetainVideo(string? path, bool preparing = false)
+    {
+        if (!preparing || path is not null && !string.Equals(images.Video?.Path, path, StringComparison.Ordinal)) images.StopVideo();
+        else images.Video?.Suspend();
+    }
     public void ReleaseStoryboardResources() => images.ReleaseMedia();
 }

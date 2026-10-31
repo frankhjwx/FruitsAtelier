@@ -4,6 +4,7 @@ public sealed partial class EditorView
 {
     private bool projectMemoryReclaimPending;
     private bool difficultyGraphicsReleasePending;
+    private bool difficultyMediaReusePending;
     private readonly List<Task> retiredDifficultyWork = [];
 
     private void ReclaimProjectMemory()
@@ -21,10 +22,11 @@ public sealed partial class EditorView
         GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
     }
 
-    private void ReleaseDifficultyCaches()
+    private void ReleaseDifficultyCaches(bool preserveMedia = false)
     {
         RetireStoryboard();
         ClearDiscussionRegions();
+        difficultyMediaReusePending = preserveMedia && (!difficultyGraphicsReleasePending || difficultyMediaReusePending);
         difficultyGraphicsReleasePending = true;
         projectMemoryReclaimPending = true;
         // The library does not render a difficulty, so lazy invalidation cannot release its data.

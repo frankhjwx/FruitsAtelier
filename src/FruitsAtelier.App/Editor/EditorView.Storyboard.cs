@@ -109,12 +109,16 @@ public sealed partial class EditorView
         storyboardTriggers.Clear(); storyboardTriggerVersion = -1; mediaPlayPending = mediaTestplayPending = false; mediaReportedError = null;
     }
 
+    private string? StoryboardMediaDirectory(MapDocument document)
+    {
+        string? origin = document.SourcePath ?? document.AudioPath;
+        try { return origin is null ? WorkspaceSession?.Directory : Path.GetDirectoryName(Path.GetFullPath(origin)); }
+        catch (Exception e) when (e is ArgumentException or NotSupportedException) { return null; }
+    }
+
     private void RefreshStoryboard()
     {
-        string? origin = Document.SourcePath ?? Document.AudioPath;
-        string? directory;
-        try { directory = origin is null ? WorkspaceSession?.Directory : Path.GetDirectoryName(Path.GetFullPath(origin)); }
-        catch (Exception e) when (e is ArgumentException or NotSupportedException) { RetireStoryboard(); return; }
+        string? directory = StoryboardMediaDirectory(Document);
         if (directory is null) { RetireStoryboard(); return; }
         bool same = directory == storyboardDirectory; int index = 0;
         foreach (var section in Document.OriginalSections)

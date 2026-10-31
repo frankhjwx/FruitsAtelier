@@ -12,6 +12,7 @@ namespace FruitsAtelier.App.Rendering;
 public sealed partial class D2DCanvas
 {
     private StoryboardImageCache? storyboardPixels;
+    private readonly Dictionary<string, MediaFileVersion> storyboardTextureVersions = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, (ID2D1Bitmap1 Bitmap, int Width, int Height, long Used)> storyboardTextures = new(StringComparer.OrdinalIgnoreCase);
     private long storyboardTextureBytes, storyboardTextureClock;
     private readonly HashSet<string> storyboardPins = new(StringComparer.OrdinalIgnoreCase);
@@ -38,12 +39,16 @@ public sealed partial class D2DCanvas
     internal int StoryboardDrawCalls { get; private set; }
     internal int StoryboardSprites { get; private set; }
     internal long StoryboardTextureBytes => storyboardTextureBytes;
+    internal int StoryboardDecodeCount => storyboardPixels?.DecodeCount ?? 0;
+    internal int StoryboardUploadCount { get; private set; }
     private VideoPlayback? video;
     private ID2D1Bitmap1? videoBitmap;
     private long videoSerial;
     private int videoWidth, videoHeight;
     private float videoLastOpacity;
     private bool videoFrameRequested;
+    private bool videoPresentationPending;
+    private MediaFileVersion beatmapBackgroundVersion;
 
     public void PrepareStoryboardImages(IReadOnlyList<string> paths)
     {
@@ -84,6 +89,7 @@ public sealed partial class D2DCanvas
         if (oldest.Key is null) return false;
         FlushStoryboard();
         oldest.Value.Bitmap.Dispose(); storyboardTextures.Remove(oldest.Key);
+        storyboardTextureVersions.Remove(oldest.Key);
         storyboardTextureBytes -= (long)oldest.Value.Width * oldest.Value.Height * 4;
         return true;
     }
@@ -134,6 +140,8 @@ public sealed partial class D2DCanvas
                 new BitmapProperties1(new Vortice.DCommon.PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied), 96, 96));
         width = pixels.Width; height = pixels.Height;
         storyboardTextures[path] = (bitmap, width, height, ++storyboardTextureClock);
+        storyboardTextureVersions[path] = storyboardPixels.Version(path);
+        StoryboardUploadCount++;
         storyboardTextureBytes += pixels.Data.Length; storyboardUploadBytes += pixels.Data.Length;
         return bitmap;
     }
@@ -170,7 +178,7 @@ public sealed partial class D2DCanvas
     }
     public unsafe bool VideoImage(string path, Rect destination, double positionMs, bool playing, double rate)
     {
-        if (video?.Path != path) { StopVideo(); video = new(path); }
+        if (video is null || !string.Equals(video.Path, path, StringComparison.OrdinalIgnoreCase)) { StopVideo(); video = new(path); }
         if (!video.ContainsTime(positionMs)) return false;
         bool ready = false;
         if (!videoFrameRequested) ready = video.WithFrame(positionMs, playing, rate, frame =>
@@ -187,16 +195,47 @@ public sealed partial class D2DCanvas
                 videoSerial = frame.Serial;
             }
             videoLastOpacity = video!.Opacity(positionMs);
+            videoPresentationPending = false;
         });
         videoFrameRequested = true;
-        if (videoBitmap is null || !video.ContainsTime(positionMs)) return false;
+        if (videoPresentationPending || videoBitmap is null || !video.ContainsTime(positionMs)) return false;
         float scale = Math.Max(destination.Width / videoWidth, destination.Height / videoHeight);
         float w = destination.Width / scale, h = destination.Height / scale;
         context!.DrawBitmap(videoBitmap, Convert(destination), videoLastOpacity, BitmapInterpolationMode.Linear,
             new Vortice.Mathematics.Rect((videoWidth - w) / 2, (videoHeight - h) / 2, w, h));
         return ready || videoSerial != 0;
     }
-    public void StopVideo() { video?.Dispose(); video = null; videoBitmap?.Dispose(); videoBitmap = null; videoSerial = 0; videoLastOpacity = 0; videoFrameRequested = false; }
+    public void StopVideo() { video?.Dispose(); video = null; videoBitmap?.Dispose(); videoBitmap = null; videoSerial = 0; videoLastOpacity = 0; videoFrameRequested = videoPresentationPending = false; }
+    public void RetainVideo(string? path, bool preparing = false)
+    {
+        if (!preparing || path is not null && !string.Equals(video?.Path, path, StringComparison.OrdinalIgnoreCase)) StopVideo();
+        else video?.Suspend();
+    }
+    private void ReuseMediaResources()
+    {
+        mediaGeneration = MediaResourceIdentity.Next(); storyboardCapacityWarning = null;
+        FlushStoryboard();
+        storyboardPixels?.ReuseResources();
+        foreach (string path in storyboardTextures.Keys.ToArray())
+        {
+            if (storyboardTextureVersions[path] == MediaFileVersion.Read(path)) continue;
+            var texture = storyboardTextures[path]; texture.Bitmap.Dispose();
+            storyboardTextureBytes -= (long)texture.Width * texture.Height * 4;
+            storyboardTextures.Remove(path); storyboardTextureVersions.Remove(path);
+        }
+        storyboardPins.Clear(); storyboardRetainedPaths.Clear(); storyboardPinnedBytes = 0;
+        storyboardPreparedPaths = Array.Empty<string>(); storyboardPendingUpload = false;
+        while (storyboardTextureBytes > StoryboardImageCache.Limit && EvictStoryboardTexture()) { }
+        if (video is not null && video.Version != MediaFileVersion.Read(video.Path)) StopVideo();
+        else video?.Suspend();
+        videoPresentationPending = video is not null;
+        if (beatmapBackground is { } background)
+        {
+            var version = MediaFileVersion.Read(background.Key.Path);
+            if (version != beatmapBackgroundVersion)
+            { background.Image.Bitmap.Dispose(); beatmapBackground = null; }
+        }
+    }
     public void ReleaseStoryboardResources() => ReleaseMedia();
     private void ReleaseMedia()
     {
@@ -205,6 +244,7 @@ public sealed partial class D2DCanvas
         storyboardPixels?.Dispose(); storyboardPixels = null;
         foreach (var value in storyboardTextures.Values) value.Bitmap.Dispose();
         storyboardTextures.Clear(); storyboardTextureBytes = 0;
+        storyboardTextureVersions.Clear();
         storyboardPins.Clear(); storyboardRetainedPaths.Clear(); storyboardPinnedBytes = 0;
         storyboardPreparedPaths = Array.Empty<string>(); storyboardPendingUpload = false; storyboardRevision = 0;
         spriteBatch?.Dispose(); spriteBatch = null; spriteContext?.Dispose(); spriteContext = null;
