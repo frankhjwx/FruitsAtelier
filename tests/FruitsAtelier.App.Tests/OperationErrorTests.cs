@@ -4,6 +4,7 @@ internal static class OperationErrorTests
 {
     public static void Run()
     {
+        StaleSelection();
         foreach (bool library in new[] { false, true })
         foreach (string language in new[] { "en", "zh-CN" })
         {
@@ -36,6 +37,27 @@ internal static class OperationErrorTests
             if (ui.View.ErrorVisible) throw new Exception("Escape did not dismiss a later error.");
             ui.View.ShowError("again"); ui.Key(13);
             if (ui.View.ErrorVisible) throw new Exception("Enter did not dismiss the error.");
+        }
+    }
+
+    internal static void StaleSelection()
+    {
+        var ui = new Ui(false);
+        var map = new FruitsAtelier.Core.MapDocument();
+        var fruit = new FruitsAtelier.Core.Fruit { TimeMs = 1000 }; map.Fruits.Add(fruit);
+        ui.LoadDocument(map);
+        typeof(FruitsAtelier.App.Editor.EditorView).GetMethod("SelectObjects",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(ui.View, [new[] { Guid.NewGuid(), fruit.Id }, Guid.Empty]);
+        ui.View.ShowError("Selection lookup failed."); ui.Paint();
+        ui.ClickText(L.Get("mac.ok"));
+        Check(); ui.Paint(); Check();
+
+        void Check()
+        {
+            if (ui.View.ErrorVisible || !ui.View.SelectedObjectIds.SequenceEqual(new[] { fruit.Id })
+                || !map.ContentEquals(ui.View.Document) || ui.View.IsDirty || !ui.View.PrepareFileOperation())
+                throw new Exception("Error recovery must discard missing selection targets and restore usable file operations.");
         }
     }
 }

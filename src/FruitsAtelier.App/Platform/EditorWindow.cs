@@ -133,6 +133,12 @@ internal sealed partial class EditorWindow : IDisposable
         {
             CheckAudioShutdown(); Native.DestroyWindow(hwnd); return 0;
         }
+        if (renderCheck && Environment.GetCommandLineArgs().Contains("--paint-recovery-check"))
+        {
+            view.RequestViewPreference = null;
+            view.LoadDocument(Core.DemoMap.Create()); view.CloseLibrary();
+            CheckPaintLifecycle(); Native.DestroyWindow(hwnd); return 0;
+        }
         if (renderCheck && Environment.GetCommandLineArgs().Contains("--text-resources-render-check"))
         {
             Diagnostics.RenderCheck.Run(canvas, view, hwnd);

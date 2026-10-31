@@ -879,7 +879,8 @@ public sealed partial class EditorView
         for (int i = first + 1; i < timelineMarkers.Length && next < numbers.Count; i++)
             if (timelineEventNumbers.GetValueOrDefault((timelineMarkers[i].Id, timelineMarkers[i].EventIndex)) == numbers[next])
             { ids.Add(timelineMarkers[i].Id); next++; }
-        if (next != numbers.Count) return;
+        // The displayed timeline can outlive deleted objects while conversion is pending.
+        if (next != numbers.Count || ids.Any(id => !ObjectExists(id))) return;
         tool = Tool.Select; SelectObjects(ids);
         StatusMessage = L.Get("editor.status.objectsSelected", objectSelection.Count);
     }

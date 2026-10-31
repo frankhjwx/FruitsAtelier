@@ -45,6 +45,10 @@ public sealed partial class EditorView
         && objectSelection.Count <= 1 && SelectedTrack is not null;
     private bool IsObjectSelected(Guid id) => objectSelection.Contains(id) || selectedTrack == id;
 
+    private bool ObjectExists(Guid id) => Document.Fruits.Any(f => f.Id == id)
+        || Document.Tracks.Any(t => t.Id == id) || Document.ImportedSliders.Any(s => s.Id == id)
+        || Document.BananaShowers.Any(s => s.Id == id);
+
     private void SelectObjects(IEnumerable<Guid> ids, Guid primary = default)
     {
         soundEdge = null; distanceObject = null; clickedCoordinate = null; timelineFruit = null;

@@ -13,6 +13,7 @@ public sealed partial class EditorView
     {
         if (ErrorVisible) return;
         CancelInteraction(); menu = -1; contextItems.Clear();
+        if (objectSelection.Any(id => !ObjectExists(id))) SelectObjects(objectSelection.Where(ObjectExists), selection);
         operationError = message; errorScroll = 0;
         hits.Clear(); fields.Clear();
     }

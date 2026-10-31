@@ -3,6 +3,9 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--discussion-navigation-check")) { DiscussionTests.RetainedReferences(); return 0; }
+if (args.Contains("--verifier-navigation-check")) { MapsetVerifierTests.RetainedNavigation(); return 0; }
+if (args.Contains("--aimod-navigation-check")) { AimodTests.StaleNavigation(); OperationErrorTests.StaleSelection(); return 0; }
 if (args.Contains("--discussion-bounds-check")) { DiscussionTests.FractionalAnnotationBounds(); return 0; }
 if (args.Contains("--storyboard-image-cache-check")) return StoryboardImageCacheTests.Run();
 if (args.Length == 4 && args[0] == "--storyboard-first-playback") return StoryboardFirstPlaybackTests.Run(args[1], args[2], int.Parse(args[3]));

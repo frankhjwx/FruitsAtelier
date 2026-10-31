@@ -197,6 +197,9 @@ text selection/copy across formatted text, Unicode, replies and canvas annotatio
 canvas heights, including repeated wheel scrolling, nonoverlapping card bounds,
 unchanged content and conversion reuse. The native discussion check also scrolls
 three long annotations together at each supported test size and DPI.
+`App.Tests --discussion-navigation-check` follows retained numbered references
+after partial and complete deletion while conversion is pending on both canvases,
+then verifies undo, conversion reuse and unchanged authored content.
 
 On Windows, `FruitsAtelier.App.exe --render-check --discussions-render-check`
 captures compact and wide discussions, replies, type icons, offline states and
@@ -638,6 +641,12 @@ Its report excludes native rendering, media and real library filesystem variance
 `Core.Tests --aimod-check` and `App.Tests --aimod-check` cover AiMod rules,
 resource checks, read-only navigation, localization, Ctrl+Shift+A, table column
 resizing/reordering, selection/copy and dock attachment.
+`App.Tests --aimod-navigation-check` isolates retained-report navigation after
+partial and complete target deletion, undo, mouse timestamp clicks and Enter on
+both canvases in English and Chinese. It covers fruits, FSliders, Legacy sliders,
+banana showers, findings without object targets and slider draft cancellation.
+It also checks that operation-error dismissal drops missing selection targets
+while preserving valid selection, content and file operations.
 Audio-length regressions cover playback-duration reuse, delayed loading, reloads
 and the 80 percent boundary without rechecking on playback-position updates. Run
 `Core.Tests --aimod-twin-bloom <path.osu>` against the matching local Twin Bloom
@@ -648,6 +657,13 @@ category totals and overlapping source-object pairs.
 `FruitsAtelier.App.exe --render-check --aimod-render-check` checks the native
 dock panels and continuous scrolling at multiple sizes and DPI values and captures English/Chinese reports
 under `artifacts/tests/aimod-native`.
+It includes mouse and Enter navigation after deleting a retained report's objects.
+`FruitsAtelier.App.exe --render-check --paint-recovery-check` exercises native
+renderer recovery, including a missing selection target, error dismissal and
+resumed file operations without changing document content.
+`App.Tests --verifier-navigation-check` checks retained timestamps after deletion,
+undo, cross-difficulty navigation and rejection of retired difficulty targets on
+both canvases in English and Chinese.
 
 `App.Tests --group-drag-boundary-check` checks fractional fruit selections dragged
 to either playfield edge, preserving conversion, export, relative spacing,
