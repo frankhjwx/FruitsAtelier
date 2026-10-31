@@ -45,9 +45,15 @@ public sealed partial class EditorView
     }
 
     public void CompleteLibraryCacheWrites()
+        => CompleteLibraryCacheWritesAsync().GetAwaiter().GetResult();
+
+    public async Task CompleteLibraryCacheWritesAsync()
     {
-        SaveLibraryPreviewOnLeave();
-        try { libraryPreviewSave?.GetAwaiter().GetResult(); }
+        try
+        {
+            SaveLibraryPreviewOnLeave();
+            if (libraryPreviewSave is { } pending) await pending.ConfigureAwait(false);
+        }
         catch (Exception) { /* A derived cache failure must not interrupt application shutdown. */ }
     }
 

@@ -4,14 +4,21 @@
 
 `App.Tests --render-recovery-check` injects a persistent resource-release failure,
 checks that recovery rendering bypasses it, and verifies explicit retry and
-roundtripping unsaved project copies without replacing existing files.
+roundtripping unsaved project copies without replacing existing files. It also
+checks bounded, cached layout of million-character diagnostics and managed macOS
+callback recovery when logging or refreshing fails.
 `App.Tests --background-task-recovery-check` injects faulted and canceled collection
 and Legacy refresh tasks to check result retirement, transaction rollback, retained
-content, saving and undo.
+content, saving and undo. Multiplier-validation faults must retire their draft
+instead of resubmitting it. Banana preview failures must be consumed once while
+leaving the dialog editable and cancellable; pending derived preview writes must
+not block shutdown.
 
 On Windows, `FruitsAtelier.App --render-check --paint-recovery-check` exercises native
 paint, repeated polling and rendering failures, and an unavailable renderer. It
-verifies bounded error reporting, recovery-copy reopening and explicit retry;
+verifies bounded error reporting, recovery-copy reopening and explicit retry,
+shortcut callback failures, modal message reentry, frame-wait failures and the
+message-reader fallback;
 copies are stored under `artifacts/tests/paint-recovery`. These injected failures
 test recovery boundaries independently of any particular malformed input file.
 

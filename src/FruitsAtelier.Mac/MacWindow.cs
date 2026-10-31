@@ -56,7 +56,7 @@ internal sealed partial class MacWindow : Window
             }
             else if (!enabled && WindowState == WindowState.FullScreen) WindowState = windowedState;
         };
-        PropertyChanged += (_, change) =>
+        PropertyChanged += (_, change) => editor.RunUi(() =>
         {
             if (!fullscreenInitialized || change.Property != WindowStateProperty || WindowState == WindowState.Minimized) return;
             lastWindowState = WindowState;
@@ -64,12 +64,12 @@ internal sealed partial class MacWindow : Window
             if (WindowState == WindowState.FullScreen && previous is WindowState.Normal or WindowState.Maximized)
                 windowedState = previous;
             View.UpdateFullscreenState(WindowState == WindowState.FullScreen);
-        };
-        SizeChanged += (_, change) =>
+        });
+        SizeChanged += (_, change) => editor.RunUi(() =>
         {
             if (!fullscreenInitialized || View.StartupDialogVisible || WindowState != WindowState.Normal) return;
             normalWidth = change.NewSize.Width; normalHeight = change.NewSize.Height;
-        };
+        });
         View.ApplyAudioVolume();
         View.RequestScheduleHitsound = (sound, time) =>
         {
@@ -91,12 +91,12 @@ internal sealed partial class MacWindow : Window
             MacOsuBrowser.Close();
             return MacOsuBrowser.ClearDataAsync();
         };
-        AddHandler(PointerPressedEvent, (_, e) =>
+        AddHandler(PointerPressedEvent, (_, e) => editor.RunUi(() =>
         {
             if (View.StartupHeaderDraggable && e.GetPosition(this).Y < (View.FirstRunSetupComplete ? 32 : 60) &&
                 e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             { BeginMoveDrag(e); e.Handled = true; }
-        }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        }), Avalonia.Interactivity.RoutingStrategies.Tunnel);
         string icon = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "app-icon.png");
         if (File.Exists(icon)) Icon = new WindowIcon(icon);
         editor.Changed = UpdateTitle;
@@ -157,47 +157,48 @@ internal sealed partial class MacWindow : Window
         View.RequestSeek = time => { audio.Seek(time); PollAudio(); };
         timer.Tick += (_, _) =>
         {
-            if (View.ErrorVisible)
-            {
-                if (osuBrowser is { IsVisible: true }) osuBrowser.IsVisible = false;
-                return;
-            }
+            if (View.ErrorVisible) return;
             try { PollAudio(); UpdateBrowserViewport(); }
-            catch (Exception error)
-            {
-                MacPaths.Log(error.ToString()); View.ShowRenderError(error.Message); editor.Refresh();
-            }
+            catch (Exception error) { editor.ReportUiFailure(error); }
         };
         Opened += async (_, _) =>
         {
-            if (View.StartupDialogVisible) ResizeForSetup(true);
-            else if (!smokeCheck) RestoreWindowPreferences();
-            lastWindowState = WindowState;
-            if (!smokeCheck) View.RequestFullscreen(View.LibrarySettings.Fullscreen);
-            fullscreenInitialized = true;
-            MacPaths.Log($"Native macOS window opened: {Bounds}, scaling={RenderScaling}");
-            timer.Start(); editor.Focus();
-            View.InitializeSkin();
-            CompleteStartupFile();
-            if (smokeCheck)
+            try
             {
-                try
+                if (View.StartupDialogVisible) ResizeForSetup(true);
+                else if (!smokeCheck) RestoreWindowPreferences();
+                lastWindowState = WindowState;
+                if (!smokeCheck) View.RequestFullscreen(View.LibrarySettings.Fullscreen);
+                fullscreenInitialized = true;
+                MacPaths.Log($"Native macOS window opened: {Bounds}, scaling={RenderScaling}");
+                timer.Start(); editor.Focus();
+                View.InitializeSkin();
+                CompleteStartupFile();
+                if (smokeCheck)
                 {
-                    await Task.Delay(700);
-                    await SmokeCheck();
-                    MacPaths.Log("SMOKE PASS");
+                    try
+                    {
+                        await Task.Delay(700);
+                        await SmokeCheck();
+                        MacPaths.Log("SMOKE PASS");
+                    }
+                    catch (Exception ex) { MacPaths.Log("SMOKE FAIL " + ex); Environment.ExitCode = 1; }
+                    allowClose = true; Close();
                 }
-                catch (Exception ex) { MacPaths.Log("SMOKE FAIL " + ex); Environment.ExitCode = 1; }
-                allowClose = true; Close();
             }
+            catch (Exception error) { editor.ReportUiFailure(error); }
         };
         Closing += (_, e) =>
         {
-            if (View.AcknowledgementsVisible) { allowClose = true; return; }
-            View.CancelFirstRunSetup();
-            if (allowClose) { if (!smokeCheck) SaveWindowPreferences(); return; }
-            e.Cancel = true;
-            RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
+            e.Cancel = !allowClose;
+            editor.RunUi(() =>
+            {
+                if (View.AcknowledgementsVisible) { allowClose = true; e.Cancel = false; return; }
+                if (allowClose) { if (!smokeCheck) SaveWindowPreferences(); return; }
+                if (recoverySaveBusy) return;
+                if (!View.RecoveryActive) View.CancelFirstRunSetup();
+                RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
+            });
         };
         Closed += (_, _) =>
         {
@@ -209,8 +210,18 @@ internal sealed partial class MacWindow : Window
             if (osuBrowser is not null) { editorRoot.Children.Remove(osuBrowser); MacOsuBrowser.Close(); }
             View.StopMapsetVerifier(); View.CleanupFazOnExit(); View.SaveLibraryMemory(); View.ReleaseWaveform(); editor.Dispose();
         };
-        Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); View.CheckFilesOnActivation(); View.RefreshOsuLinkSettings(refreshApplications: true); editor.Refresh(); };
-        Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); editor.Refresh(); };
+        Activated += (_, _) => editor.RunUi(() =>
+        {
+            View.SetTextInputFocus(editor.IsFocused);
+            if (!View.ErrorVisible) { View.CheckFilesOnActivation(); View.RefreshOsuLinkSettings(refreshApplications: true); }
+            editor.Refresh();
+        });
+        Deactivated += (_, _) => editor.RunUi(() =>
+        {
+            View.SetTextInputFocus(false);
+            if (!View.RecoveryActive) View.CancelInteraction(preserveTestplay: true);
+            editor.Refresh();
+        });
     }
     private void UpdateTitle() => Title = View.WindowTitle;
     private void CompleteStartupFile()
@@ -300,17 +311,20 @@ internal sealed partial class MacWindow : Window
         }
         catch (Exception error)
         {
-            View.StopTestplay(); MacPaths.Log(error.ToString()); View.ShowError(L.Reformat(error.Message));
+            editor.ReportUiFailure(error);
         }
     }
 
     private async void RunFile(Func<Task> operation)
     {
         if (busy) return;
-        busy = true; editor.IsEnabled = false;
-        try { await operation(); }
-        catch (Exception error) { MacPaths.Log(error.ToString()); View.SetNotice(L.Get("files.failed", L.Localized(error.Message))); View.ShowError(L.Reformat(error.Message)); }
-        finally { busy = false; editor.IsEnabled = true; editor.Refresh(); editor.Focus(); }
+        busy = true;
+        try { editor.IsEnabled = false; await operation(); }
+        catch (Exception error)
+        {
+            editor.RunUi(() => { MacPaths.Log(error.ToString()); View.SetNotice(L.Get("files.failed", L.Localized(error.Message))); View.ShowError(L.Reformat(error.Message)); });
+        }
+        finally { busy = false; editor.RunUi(() => { editor.IsEnabled = true; editor.Refresh(); editor.Focus(); }); }
     }
     private async Task<bool> ConfirmDiscard()
     {
@@ -394,13 +408,16 @@ internal sealed partial class MacWindow : Window
             var path = await SavePicker(L.Get("recovery.save"), "catchproj", "recovery.catchproj");
             if (path is null) return false;
             View.SaveRecoveryCopy(path);
-            if (nativeRecoveryNotice is not null) nativeRecoveryNotice.Text = L.Get("recovery.saved", path);
+            editor.RunUi(() => { if (nativeRecoveryNotice is not null) nativeRecoveryNotice.Text = L.Get("recovery.saved", path); });
             return true;
         }
         catch (Exception error)
         {
-            MacPaths.Log(error.ToString()); View.RecoverySaveFailed(error.Message);
-            if (nativeRecoveryNotice is not null) nativeRecoveryNotice.Text = L.Get("recovery.failed", error.Message);
+            editor.RunUi(() =>
+            {
+                MacPaths.Log(error.ToString()); View.RecoverySaveFailed(error.Message);
+                if (nativeRecoveryNotice is not null) nativeRecoveryNotice.Text = L.Get("recovery.failed", MacUiBoundary.Preview(error.Message));
+            });
             return false;
         }
         finally { recoverySaveBusy = false; editor.Refresh(); }
@@ -410,22 +427,23 @@ internal sealed partial class MacWindow : Window
     private void ShowNativeRecovery(Exception error)
     {
         if (nativeRecovery is not null) return;
-        nativeRecovery = new StackPanel { Margin = new Thickness(32), Spacing = 16,
+        var panel = new StackPanel { Margin = new Thickness(32), Spacing = 16,
             Background = Avalonia.Media.Brushes.DarkSlateGray };
-        nativeRecovery.Children.Add(new TextBlock { Text = L.Get("recovery.title"), FontSize = 22 });
-        nativeRecovery.Children.Add(new TextBlock { Text = L.Get("recovery.help") + "\n" + error.Message,
-            TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = L.Get("recovery.title"), FontSize = 22 });
+        panel.Children.Add(new TextBlock { Text = L.Get("recovery.help") + "\n" + MacUiBoundary.Preview(error.Message),
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap, MaxHeight = 300 });
         var save = new Button { Content = L.Get("recovery.save") };
         save.Click += (_, _) => _ = SaveRecoveryCopy();
         var retry = new Button { Content = L.Get("testplay.retry") };
-        retry.Click += (_, _) =>
+        retry.Click += (_, _) => editor.RunUi(() =>
         {
-            editorRoot.Children.Remove(nativeRecovery); nativeRecovery = null; nativeRecoveryNotice = null;
+            if (recoverySaveBusy) return;
+            editorRoot.Children.Remove(panel); nativeRecovery = null; nativeRecoveryNotice = null;
             editor.IsVisible = true; View.RetryRender(); editor.Refresh(); editor.Focus();
-        };
+        });
         nativeRecoveryNotice = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
-        nativeRecovery.Children.Add(save); nativeRecovery.Children.Add(retry); nativeRecovery.Children.Add(nativeRecoveryNotice);
-        editor.IsVisible = false; editorRoot.Children.Add(nativeRecovery);
+        panel.Children.Add(save); panel.Children.Add(retry); panel.Children.Add(nativeRecoveryNotice);
+        editorRoot.Children.Add(panel); nativeRecovery = panel; editor.IsVisible = false;
     }
 
     private Task<bool> Save()

@@ -4,6 +4,8 @@ internal static class OperationErrorTests
 {
     public static void Recovery()
     {
+        BoundedErrorLayout();
+        MacCallbackRecovery();
         foreach (string language in new[] { "en", "zh-CN" })
         {
             L.SetLanguage(language);
@@ -66,9 +68,51 @@ internal static class OperationErrorTests
         Console.WriteLine("PASS bounded render recovery and retained unsaved project copies");
     }
 
+    private static void MacCallbackRecovery()
+    {
+        var ui = new Ui(false);
+        ui.View.Document.Fruits.Add(new() { TimeMs = 1234, X = 42 });
+        var retained = ui.View.Document.DeepClone();
+        int cleanups = 0;
+        ui.View.RequestPausePlayback = () => cleanups++;
+        var boundary = new FruitsAtelier.Mac.MacUiBoundary(ui.View,
+            _ => throw new UnauthorizedAccessException("Injected unwritable log"),
+            () => throw new IOException("Injected failed invalidation"));
+        boundary.Run(() => throw new InvalidOperationException("Injected native input callback"));
+        for (int i = 0; i < 20; i++) boundary.Run(() => throw new InvalidOperationException("Repeated callback"));
+        if (!ui.View.RecoveryActive || cleanups != 1 || !retained.ContentEquals(ui.View.Document))
+            throw new Exception("Native callback/logging failures did not retain one usable recovery state.");
+        string path = Path.GetFullPath("artifacts/tests/render-recovery/mac-boundary-" + Guid.NewGuid() + ".catchproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        boundary.Run(() => ui.View.SaveRecoveryCopy(path));
+        if (!retained.ContentEquals(FruitsAtelier.Core.ProjectSerializer.ReadProjectFile(path).Difficulties[0].Document))
+            throw new Exception("Native callback recovery did not keep saving available.");
+        string preview = FruitsAtelier.Mac.MacUiBoundary.Preview(new string('x', 8191) + "😀" + new string('x', 1_000_000));
+        if (preview.Length > 8193 || char.IsHighSurrogate(preview[^2]) || !preview.EndsWith("…"))
+            throw new Exception("Native fallback diagnostics exceeded their Unicode-safe preview budget.");
+    }
+
+    private static void BoundedErrorLayout()
+    {
+        var ui = new Ui(false);
+        var canvas = new FailingReleaseCanvas();
+        ui.View.ShowError(new string('x', 1_000_000));
+        ui.View.Render(canvas, 980, 620);
+        int first = canvas.Measurements;
+        if (first > 8500) throw new Exception("A large diagnostic exceeded its bounded text-layout budget.");
+        for (int i = 0; i < 20; i++) ui.View.Render(canvas, 980, 620);
+        if (canvas.Measurements != first) throw new Exception("Unchanged diagnostic text was wrapped again on each frame.");
+        ui.View.Render(canvas, 640, 620);
+        if (canvas.Measurements <= first || canvas.Measurements > first + 8500)
+            throw new Exception("Resized diagnostic wrapping did not rebuild within its bounded budget.");
+        ui.View.RetryRender();
+        ui.Paint();
+    }
+
     private sealed class FailingReleaseCanvas : FruitsAtelier.App.Rendering.ICanvas
     {
-        public int Failures;
+        public int Failures, Measurements;
+        public float MeasureText(string text, float size, bool bold = false) { Measurements++; return text.Length * size * .6f; }
         public void ReleaseDifficultyResources() { Failures++; throw new InvalidOperationException("Injected difficulty resource failure"); }
         public void Fill(FruitsAtelier.App.Rendering.Rect r, uint color, float radius = 0, float opacity = 1) { }
         public void Stroke(FruitsAtelier.App.Rendering.Rect r, uint color, float width = 1, float radius = 0) { }

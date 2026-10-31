@@ -92,6 +92,7 @@ internal sealed partial class EditorWindow
             diagnosticPaintFailure = null;
             WndProc(hwnd, 0x0100, 13, 0);
             WndProc(hwnd, 0x000F, 0, 0); CompletePendingCheckPaint();
+            CheckMessageBoundaryRecovery(directory);
             AppLog.Write("Persistent poll/render and unavailable-renderer recovery passed; four saved copies reopened unchanged.");
         }
         finally
@@ -107,6 +108,92 @@ internal sealed partial class EditorWindow
             if (!document.ContentEquals(restored.Difficulties[view.ActiveDifficultyIndex].Document)
                 || !document.ContentEquals(view.Document) || !view.RecoveryActive)
                 throw new InvalidOperationException("Recovery backup changed or lost document content.");
+        }
+    }
+
+    private void CheckMessageBoundaryRecovery(string directory)
+    {
+        var requestSeek = view.RequestSeek;
+        int seeks = 0, closePrompts = 0, savePrompts = 0;
+        try
+        {
+            view.RequestSeek = _ => seeks++;
+            using (var modal = new NativeModalScope(hwnd))
+            {
+                WndProc(hwnd, 0x0100, 36, 0);
+                DispatchShortcutBeforeTranslation(new Native.Message { Window = hwnd, Id = 0x0100, WParam = 36 });
+            }
+            if (seeks != 0) throw new InvalidOperationException("Native dialog owner executed keyboard input.");
+
+            view.RequestSeek = _ => throw new InvalidOperationException("Pretranslation callback fault");
+            if (!DispatchShortcutBeforeTranslation(new Native.Message { Window = hwnd, Id = 0x0100, WParam = 36 })
+                || !view.RecoveryActive || failed)
+                throw new InvalidOperationException("Pretranslation callback escaped recovery.");
+            view.RequestSeek = requestSeek;
+            diagnosticRecoveryClose = () => { closePrompts++; return 2; };
+            diagnosticRecoveryPath = () =>
+            {
+                savePrompts++;
+                diagnosticControl = true;
+                WndProc(hwnd, 0x0100, 83, 0);
+                diagnosticControl = false;
+                WndProc(hwnd, 0x0100, 13, 0);
+                WndProc(hwnd, 0x0010, 0, 0);
+                DispatchShortcutBeforeTranslation(new Native.Message { Window = hwnd, Id = 0x0100, WParam = 13 });
+                if (SaveRecoveryCopy()) throw new InvalidOperationException("Recovery copy reentered its save dialog.");
+                return Path.Combine(directory, "dispatch.catchproj");
+            };
+            if (!SaveRecoveryCopy() || savePrompts != 1 || closePrompts != 0 || !view.RecoveryActive)
+                throw new InvalidOperationException("Recovery save dialog accepted reentrant owner commands.");
+            view.RetryRender();
+
+            diagnosticFrameWait = () => throw new InvalidOperationException("Frame wait fault");
+            if (WaitForPendingFrame() || !view.RecoveryActive)
+                throw new InvalidOperationException("Frame wait escaped recovery.");
+            WaitForPendingFrame();
+            if (!nativeRecovery || failed) throw new InvalidOperationException("Repeated frame wait prevented native recovery.");
+            diagnosticFrameWait = null;
+            WndProc(hwnd, 0x0100, 13, 0);
+            WndProc(hwnd, 0x000F, 0, 0); CompletePendingCheckPaint();
+
+            int queueReads = 0;
+            diagnosticGetMessageResult = () =>
+            {
+                queueReads++;
+                System.Runtime.InteropServices.Marshal.SetLastPInvokeError(6);
+                return -1;
+            };
+            if (ReadQueuedMessage(out _) != 2 || !nativeRecovery || !view.RecoveryActive)
+                throw new InvalidOperationException("Failed message read escaped recovery.");
+            const uint marker = 0x8000 + 567;
+            Native.PostMessage(hwnd, marker, 0, 0);
+            bool found = false;
+            for (int i = 0; i < 256; i++)
+            {
+                if (ReadQueuedMessage(out var message) != 1) break;
+                if (message.Id == marker) { found = true; break; }
+                Native.DispatchMessage(ref message);
+            }
+            if (!found || queueReads != 1) throw new InvalidOperationException("Failed message reader did not retain native input.");
+            WndProc(hwnd, 0x0100, 13, 0);
+            WndProc(hwnd, 0x000F, 0, 0); CompletePendingCheckPaint();
+            string? nativePreview = null;
+            var reportNativeError = diagnosticNativeError;
+            diagnosticNativeError = message => nativePreview = message;
+            view.ShowRenderError("Large native diagnostic");
+            EnterNativeRecovery(hwnd, new InvalidOperationException(new string('x', 100000)));
+            if (nativePreview is null || nativePreview.Length > 9000 || !nativePreview.EndsWith("…", StringComparison.Ordinal))
+                throw new InvalidOperationException("Native recovery expanded an unbounded exception message.");
+            diagnosticNativeError = reportNativeError;
+            WndProc(hwnd, 0x0100, 13, 0);
+            WndProc(hwnd, 0x000F, 0, 0); CompletePendingCheckPaint();
+            AppLog.Write("Native dispatch recovery passed: modal owner isolation, shortcut callback, save reentry, frame wait and message read.");
+        }
+        finally
+        {
+            view.RequestSeek = requestSeek;
+            diagnosticFrameWait = null; diagnosticGetMessageResult = null; messageQueueFallback = false;
+            diagnosticControl = false; diagnosticRecoveryClose = null; diagnosticRecoveryPath = null;
         }
     }
 }

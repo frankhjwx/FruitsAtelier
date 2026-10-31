@@ -78,7 +78,10 @@ public sealed partial class EditorView
         if (bananaEditJob is { IsCompleted: false }) return;
         if (bananaEditJob is { } job)
         {
-            var result = job.GetAwaiter().GetResult(); bananaEditJob = null;
+            bananaEditJob = null;
+            (OsuWriteResult? Output, string Error) result;
+            try { result = job.GetAwaiter().GetResult(); }
+            catch (Exception error) { result = (null, L.Reformat(error.Message)); }
             if (bananaEditRequested == bananaEditPattern && bananaEditSnapshot!.ContentEquals(Document))
             {
                 bananaEditReady = bananaEditRequested;

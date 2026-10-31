@@ -9,6 +9,10 @@ project's saved state. Choose an unused filename. The copy references existing
 media; it does not package audio or images. Save failures remain visible so another
 location can be selected.
 
+Long error messages use a bounded, scrollable preview with an ellipsis when
+truncated. Repainting an unchanged message reuses its text layout. Native dialogs
+isolate editor input until they close, including repeated save and close requests.
+
 **Retry** explicitly resumes processing. A persistent failure returns to recovery
 instead of automatically retrying every frame. If Windows cannot draw the recovery
 screen, a native message explains the keyboard controls: **Ctrl+S** saves a copy

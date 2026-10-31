@@ -10,6 +10,14 @@ internal sealed partial class EditorWindow
     private Func<string?>? diagnosticRecoveryPath;
     private Func<int>? diagnosticRecoveryClose;
     private bool diagnosticControl;
+    private bool recoveryDialogActive;
+
+    private bool OwnerInputBlocked(uint message)
+        => (NativeModalScope.Active || recoveryDialogActive)
+            && (message == 0x0010 || message is >= 0x0100 and <= 0x0109 || message is >= 0x0200 and <= 0x020E);
+
+    private static string NativeErrorPreview(string message)
+        => message.Length <= 8192 ? message : message[..8192] + "…";
 
     private bool IgnoreRecoveryKeyRepeat(uint message, nuint key, nint keyData)
         => view.RecoveryActive && message == 0x0100 && (key == 13 || key == 83)
@@ -73,7 +81,7 @@ internal sealed partial class EditorWindow
         nativeRecovery = true;
         framePending = false;
         Native.SetWindowText(window, L.Get("recovery.title") + " - " + L.Get("app.name"));
-        string message = L.Get("recovery.nativeHelp") + "\n\n" + L.Localized(error.Message);
+        string message = L.Get("recovery.nativeHelp") + "\n\n" + L.Localized(NativeErrorPreview(error.Message));
         TryRecoveryStep(() =>
         {
             if (diagnosticNativeError is { } report) report(message);
@@ -85,7 +93,10 @@ internal sealed partial class EditorWindow
     {
         if (message == 0x0010)
         {
-            int answer = diagnosticRecoveryClose?.Invoke() ?? Native.ConfirmRecoveryClose(window);
+            int answer;
+            recoveryDialogActive = true;
+            try { answer = diagnosticRecoveryClose?.Invoke() ?? Native.ConfirmRecoveryClose(window); }
+            finally { recoveryDialogActive = false; }
             if (answer == 7 || answer == 6 && SaveRecoveryCopy()) Native.DestroyWindow(window);
             return true;
         }
@@ -118,6 +129,8 @@ internal sealed partial class EditorWindow
 
     private bool SaveRecoveryCopy()
     {
+        if (recoveryDialogActive) return false;
+        recoveryDialogActive = true;
         try
         {
             string? path = diagnosticRecoveryPath is { } choose ? choose() : MapFileDialog.Select(hwnd, true,
@@ -133,8 +146,9 @@ internal sealed partial class EditorWindow
         {
             AppLog.Write(error.ToString());
             view.RecoverySaveFailed(L.Reformat(error.Message));
-            if (nativeRecovery) TryRecoveryStep(() => Native.ShowError(hwnd, L.Get("recovery.failed", L.Localized(error.Message)), L.Get("app.name")));
+            if (nativeRecovery) TryRecoveryStep(() => Native.ShowError(hwnd, L.Get("recovery.failed", L.Localized(NativeErrorPreview(error.Message))), L.Get("app.name")));
         }
+        finally { recoveryDialogActive = false; }
         if (!nativeRecovery) Invalidate();
         return false;
     }

@@ -562,7 +562,10 @@ public sealed partial class EditorView
         sliderMultiplierValidation = null;
         if (sliderMultiplierWorkerVersion != sliderMultiplierVersion)
         { StartSliderMultiplierValidation(); return; }
-        var result = task.GetAwaiter().GetResult();
+        SliderMultiplierValidation result;
+        try { result = task.GetAwaiter().GetResult(); }
+        catch (Exception exception)
+        { result = new(sliderMultiplierDraft ?? Document.EffectiveSliderMultiplier, null, L.Reformat(exception.Message)); }
         bool current = ReferenceEquals(history, sliderMultiplierValidationOwner)
             && sliderMultiplierValidationSnapshot!.ContentEquals(Document)
             && sliderMultiplierValidationCompensation == compensateTinyDroplets;

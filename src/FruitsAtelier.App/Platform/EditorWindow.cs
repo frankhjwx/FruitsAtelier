@@ -324,7 +324,7 @@ internal sealed partial class EditorWindow : IDisposable
                     if (activeWait) view.Performance.End(EditorPerformanceStage.MessageWait, messageWait);
                     long frameWait = view.Performance.Start();
                     bool ready;
-                    try { ready = canvas is not null && canvas.WaitForFrameOrInput(); }
+                    try { ready = WaitForPendingFrame(); }
                     finally { view.Performance.End(EditorPerformanceStage.FrameWait, frameWait); }
                     if (ready) Invalidate();
                     continue;
@@ -333,8 +333,8 @@ internal sealed partial class EditorWindow : IDisposable
             }
             else
             {
-                int result = Native.GetMessage(out msg, 0, 0, 0);
-                if (result < 0) throw new Win32Exception();
+                int result = ReadQueuedMessage(out msg);
+                if (result == 2) continue;
                 if (result == 0) break;
             }
             if (activeWait) view.Performance.End(EditorPerformanceStage.MessageWait, messageWait);
@@ -391,6 +391,7 @@ internal sealed partial class EditorWindow : IDisposable
 
     private nint HandleMessage(nint window, uint message, nuint wParam, nint lParam)
     {
+        if (OwnerInputBlocked(message)) return 0;
         if (IgnoreRecoveryKeyRepeat(message, wParam, lParam)) return 0;
         float x = (short)((long)lParam & 0xFFFF) * 96f / uiDpi;
         float y = (short)(((long)lParam >> 16) & 0xFFFF) * 96f / uiDpi;
@@ -601,7 +602,7 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0106: // WM_SYSCHAR
                 if ((int)wParam == 13) return 0;
                 break;
-            case 0x0007: view.SetTextInputFocus(true); if (!view.ErrorVisible) { view.CheckFilesOnActivation(); view.RefreshOsuLinkSettings(refreshApplications: true); } Invalidate(); return 0; // WM_SETFOCUS
+            case 0x0007: view.SetTextInputFocus(true); if (!view.ErrorVisible && !NativeModalScope.Active) { view.CheckFilesOnActivation(); view.RefreshOsuLinkSettings(refreshApplications: true); } Invalidate(); return 0; // WM_SETFOCUS
             case 0x0008: // WM_KILLFOCUS
                 view.SetTextInputFocus(false);
                 view.CancelInteraction(preserveTestplay: true);
@@ -652,7 +653,7 @@ internal sealed partial class EditorWindow : IDisposable
         setupAudio?.Dispose();
         hitsounds.Dispose();
         osuBrowser?.Dispose();
-        view.CompleteLibraryCacheWrites();
+        _ = view.CompleteLibraryCacheWritesAsync();
         view.StopFileMonitoring();
         view.StopDiscussions(); view.StopMapsetVerifier();
         view.CleanupFazOnExit();

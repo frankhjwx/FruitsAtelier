@@ -14,9 +14,13 @@ internal static class BackgroundTaskRecoveryTests
         {
             try { CollectionFault(cancelled); } catch (Exception error) { failures.Add(error); }
             try { LegacyFault(cancelled); } catch (Exception error) { failures.Add(error); }
+            try { SliderMultiplierFault(cancelled); } catch (Exception error) { failures.Add(error); }
+            try { BananaPreviewFault(cancelled); } catch (Exception error) { failures.Add(error); }
         }
+        foreach (bool fault in new[] { false, true })
+            try { PendingPreviewClosure(fault); } catch (Exception error) { failures.Add(error); }
         if (failures.Count > 0) throw new AggregateException(failures);
-        Console.WriteLine("PASS background task faults and cancellations retire collection work and restore Legacy transactions");
+        Console.WriteLine("PASS background task faults, cancellations, validation recovery and pending preview shutdown");
     }
 
     private static void CollectionFault(bool cancelled)
@@ -65,12 +69,77 @@ internal static class BackgroundTaskRecoveryTests
         ui.Paint(); ui.Paint();
     }
 
-    private static object FailedTask(Type resultType, bool cancelled)
+    private static void SliderMultiplierFault(bool cancelled)
+    {
+        var ui = new Ui(false);
+        ui.LoadDocument(Map());
+        var before = ui.View.Document.DeepClone();
+        Field("sliderMultiplierValidationOwner").SetValue(ui.View,
+            typeof(EditorView).GetProperty("history", Private)!.GetValue(ui.View));
+        Field("sliderMultiplierValidationSnapshot").SetValue(ui.View, before.DeepClone());
+        Field("sliderMultiplierValidationCompensation").SetValue(ui.View, Field("compensateTinyDroplets").GetValue(ui.View));
+        Field("sliderMultiplierDraft").SetValue(ui.View, 2d);
+        var field = Field("sliderMultiplierValidation");
+        field.SetValue(ui.View, FailedTask(field.FieldType.GenericTypeArguments[0], cancelled,
+            new IOException("Injected slider multiplier worker failure")));
+        int exceptions = PumpRepeatedly(ui.View, "CompleteSliderMultiplierValidation");
+        Check(exceptions == 0 && !ui.View.SliderMultiplierValidationBusy && field.GetValue(ui.View) is null,
+            $"Multiplier {(cancelled ? "cancellation" : "fault")} escaped {exceptions} pumps or retained/restarted validation");
+        Check(ui.View.Document.ContentEquals(before) && ui.View.PrepareFileOperation(),
+            "Failed multiplier validation changed content or blocked saving");
+        Check(((string)Field("timingError").GetValue(ui.View)!).Length > 0, "Failed multiplier validation did not report its error");
+        SaveAndReopen(ui.View);
+        ui.Paint(); ui.Paint();
+    }
+
+    private static void BananaPreviewFault(bool cancelled)
+    {
+        var ui = new Ui(false);
+        var map = Map();
+        map.BananaShowers.Add(new() { TimeMs = 2000, EndTimeMs = 4000 });
+        ui.LoadDocument(map);
+        var before = ui.View.Document.DeepClone();
+        typeof(EditorView).GetProperty(nameof(EditorView.BananaEditVisible))!.SetValue(ui.View, true);
+        Field("bananaEditSnapshot").SetValue(ui.View, before.DeepClone());
+        Field("bananaEditTargets").SetValue(ui.View, new[] { before.BananaShowers[0].Id });
+        Field("bananaEditRequested").SetValue(ui.View, Field("bananaEditPattern").GetValue(ui.View));
+        var field = Field("bananaEditJob");
+        field.SetValue(ui.View, FailedTask(field.FieldType.GenericTypeArguments[0], cancelled));
+        int exceptions = PumpRepeatedly(ui.View, "PumpBananaPreview");
+        Check(exceptions == 0 && field.GetValue(ui.View) is null
+            && ((string)Field("bananaEditError").GetValue(ui.View)!).Length > 0,
+            $"Banana preview {(cancelled ? "cancellation" : "fault")} escaped {exceptions} pumps or restarted its task");
+        Check(ui.View.Document.ContentEquals(before), "Failed banana preview changed authoring content");
+        typeof(EditorView).GetMethod("CloseBananaEdit", Private)!.Invoke(ui.View, null);
+        Check(ui.View.PrepareFileOperation(), "Failed banana preview prevented closing its dialog and saving");
+        SaveAndReopen(ui.View);
+        ui.Paint(); ui.Paint();
+    }
+
+    private static void PendingPreviewClosure(bool fault)
+    {
+        var view = new EditorView(false);
+        var pending = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Field("libraryPreviewSave").SetValue(view, pending.Task);
+        using var entered = new ManualResetEventSlim();
+        Task? flushing = null;
+        var close = Task.Run(() => { entered.Set(); flushing = view.CompleteLibraryCacheWritesAsync(); });
+        Check(entered.Wait(TimeSpan.FromSeconds(5)), "Preview shutdown probe did not start");
+        bool returned = close.Wait(TimeSpan.FromMilliseconds(500));
+        bool awaitedPendingWrite = returned && flushing is { IsCompleted: false };
+        if (fault) pending.SetException(new IOException("Injected derived preview write failure"));
+        else pending.SetResult();
+        Check(close.Wait(TimeSpan.FromSeconds(5)), "Preview shutdown probe did not retire");
+        Check(returned, "Pending derived preview write blocked the shutdown caller");
+        Check(awaitedPendingWrite && flushing!.Wait(TimeSpan.FromSeconds(5)), "Preview shutdown abandoned pending work or failed to observe its completion");
+    }
+
+    private static object FailedTask(Type resultType, bool cancelled, Exception? fault = null)
     {
         string name = cancelled ? nameof(Task.FromCanceled) : nameof(Task.FromException);
         var method = typeof(Task).GetMethods().Single(m => m.Name == name && m.IsGenericMethodDefinition);
         return method.MakeGenericMethod(resultType).Invoke(null,
-            [cancelled ? new CancellationToken(true) : new InvalidOperationException("Injected background worker failure")])!;
+            [cancelled ? new CancellationToken(true) : fault ?? new InvalidOperationException("Injected background worker failure")])!;
     }
 
     private static int PumpRepeatedly(EditorView view, string name)
