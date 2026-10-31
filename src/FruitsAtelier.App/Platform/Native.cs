@@ -133,7 +133,8 @@ internal static partial class Native
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] internal static extern ushort RegisterClassEx(ref WindowClass value);
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] internal static extern nint CreateWindowEx(uint extended, string className, string title, uint style, int x, int y, int width, int height, nint parent, nint menu, nint instance, nint param);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern nint DefWindowProc(nint hwnd, uint message, nuint wParam, nint lParam);
-    [DllImport("user32.dll")] internal static extern int GetMessage(out Message message, nint window, uint min, uint max);
+    [DllImport("user32.dll", SetLastError = true)] internal static extern int GetMessage(out Message message, nint window, uint min, uint max);
+    [DllImport("user32.dll")] internal static extern bool WaitMessage();
     [DllImport("user32.dll")] internal static extern bool PeekMessage(out Message message, nint window, uint min, uint max, uint remove);
     [DllImport("user32.dll")] internal static extern bool PostMessage(nint window, uint message, nuint wParam, nint lParam);
     [DllImport("user32.dll")] internal static extern bool TranslateMessage(ref Message message);
@@ -179,6 +180,12 @@ internal static partial class Native
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern nint LoadCursor(nint instance, nint name);
     [DllImport("user32.dll")] internal static extern bool SetForegroundWindow(nint hwnd);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int MessageBox(nint hwnd, string text, string title, uint flags);
+    internal static int ConfirmRecoveryClose(nint owner)
+    {
+        using var modal = new NativeModalScope(owner);
+        return MessageBox(owner, FruitsAtelier.Localization.Strings.Get("recovery.closeHelp"),
+            FruitsAtelier.Localization.Strings.Get("app.name"), 0x00050023);
+    }
     internal static void ShowError(nint owner, string text, string title)
     {
         using var modal = new NativeModalScope(owner);

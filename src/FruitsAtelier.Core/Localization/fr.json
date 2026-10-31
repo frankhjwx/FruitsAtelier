@@ -1941,6 +1941,9 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Appliquez ou annulez les modifications de timing avant de changer l’affichage SV.",
   "timing.sourceChanged": "Le timing a changé dans l’éditeur. Rouvrez cette fenêtre avant d’appliquer.",
+  "core.storyboard.fileLimit": "Le fichier storyboard dépasse la limite de 32 Mio.",
+  "core.storyboard.sceneExpansionLimit": "Le texte développé du storyboard dépasse la limite de 268 435 456 caractères par scène.",
+  "core.storyboard.expansionLimit": "Le développement des variables du storyboard dépasse la limite de 33 554 432 caractères.",
   "media.storyboardDiagnostics": "Storyboard : {0} commandes ou ressources non valides ont été ignorées.",
   "media.storyboardFailed": "Impossible de charger le storyboard : {0}",
   "media.loading": "Préparation des ressources de la beatmap…",
@@ -1951,5 +1954,12 @@
   "settings.theme.midnight": "Minuit",
   "settings.theme.forest": "Forêt",
   "settings.theme.rose": "Rose",
-  "settings.theme.slate": "Ardoise"
+  "settings.theme.slate": "Ardoise",
+  "recovery.title": "Récupération de l’éditeur",
+  "recovery.help": "Le rendu est arrêté. Votre projet reste en mémoire. Enregistrez une copie de récupération avant de réessayer.",
+  "recovery.save": "Enregistrer une copie de récupération",
+  "recovery.saved": "Copie de récupération enregistrée : {0}",
+  "recovery.failed": "Impossible d’enregistrer la copie de récupération : {0}",
+  "recovery.nativeHelp": "Le moteur graphique est indisponible. Appuyez sur Ctrl+S pour enregistrer une copie de récupération, ou sur Entrée pour réessayer. Votre projet reste en mémoire.",
+  "recovery.closeHelp": "Enregistrer une copie de récupération avant de fermer ? Choisissez Non pour fermer sans enregistrer."
 }

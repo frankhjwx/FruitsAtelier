@@ -11,6 +11,9 @@ public sealed partial class EditorView
     private int[] sliderImportTargets = [];
     private string[] sliderBatchErrors = [];
     private int sliderErrorPage;
+    private WeakReference<string[]>? sliderErrorLayoutSource;
+    private (float Width, string Language, Type Canvas)? sliderErrorLayoutKey;
+    private string[] sliderErrorLines = [];
     private readonly List<HitArea> sliderDialogHits = [];
     public bool SliderImportPromptVisible => sliderImportTargets.Length > 0;
     public bool SliderConversionBusy => sliderBatchTask is not null || sliderImportTask is not null || LegacyDropletRefreshBusy;
@@ -95,6 +98,18 @@ public sealed partial class EditorView
         sliderErrorPage = 0; convertedSnapshot = null;
         SetNotice(L.Get("sliderBatch.finished", count, sliderBatchErrors.Length));
     }
+    private string[] SliderErrorLines(ICanvas canvas, float availableWidth)
+    {
+        var key = (availableWidth, L.Language, canvas.GetType());
+        if (sliderErrorLayoutKey != key || sliderErrorLayoutSource is null
+            || !sliderErrorLayoutSource.TryGetTarget(out var source) || !ReferenceEquals(source, sliderBatchErrors))
+        {
+            sliderErrorLines = WrapDiagnosticPreview(canvas, sliderBatchErrors, 11, availableWidth);
+            sliderErrorLayoutSource = new(sliderBatchErrors); sliderErrorLayoutKey = key;
+        }
+        return sliderErrorLines;
+    }
+
     private void DrawSliderDialog(ICanvas c)
     {
         PumpTimingAlignment();
@@ -118,7 +133,7 @@ public sealed partial class EditorView
             c.Text(L.Get("sliderImport.question"), rect.X + 22, rect.Y + 105, 14, Foreground, rect.Width - 44);
             c.Text(L.Get("sliderImport.detected"), rect.X + 22, rect.Y + 150, 12, Muted, rect.Width - 44);
             if (sliderBatchErrors.Length > 0)
-                c.Text(sliderBatchErrors[0], rect.X + 22, rect.Y + 185, 11, Error, rect.Width - 44);
+                c.Text(SliderErrorLines(c, rect.Width - 44).FirstOrDefault() ?? "", rect.X + 22, rect.Y + 185, 11, Error, rect.Width - 44);
             if (sliderImportTask is not null) DrawRatingSpinner(c, rect.X + 30, rect.Bottom - 40);
             Button(c, new(rect.Right - 330, rect.Bottom - 58, 144, 36), L.Get("sliderImport.no"), () => AnswerSliderImportSource(false), enabled: sliderImportTask is null);
             Button(c, new(rect.Right - 174, rect.Bottom - 58, 152, 36), L.Get("sliderImport.yes"), () => AnswerSliderImportSource(true), true, enabled: sliderImportTask is null);
@@ -147,21 +162,12 @@ public sealed partial class EditorView
         else
         {
             c.Text(L.Get("sliderBatch.preserved", sliderBatchErrors.Length), rect.X + 22, rect.Y + 60, 13, Gold, rect.Width - 44);
-            var lines = new List<string>();
-            foreach (string error in sliderBatchErrors)
-            {
-                string remaining = error;
-                while (remaining.Length > 0)
-                {
-                    int length = remaining.Length;
-                    while (length > 1 && c.MeasureText(remaining[..length], 11) > rect.Width - 44) length--;
-                    lines.Add(remaining[..length]); remaining = remaining[length..];
-                }
-            }
+            var lines = SliderErrorLines(c, rect.Width - 44);
+            sliderErrorPage = Math.Clamp(sliderErrorPage, 0, Math.Max(0, (lines.Length - 1) / 6));
             foreach (var (line, i) in lines.Skip(sliderErrorPage * 6).Take(6).Select((line, i) => (line, i)))
                 c.Text(line, rect.X + 22, rect.Y + 90 + i * 22, 11, Foreground, rect.Width - 44);
             Button(c, new(rect.X + 22, rect.Bottom - 58, 44, 36), "‹", () => sliderErrorPage--, enabled: sliderErrorPage > 0);
-            Button(c, new(rect.X + 76, rect.Bottom - 58, 44, 36), "›", () => sliderErrorPage++, enabled: (sliderErrorPage + 1) * 6 < lines.Count);
+            Button(c, new(rect.X + 76, rect.Bottom - 58, 44, 36), "›", () => sliderErrorPage++, enabled: (sliderErrorPage + 1) * 6 < lines.Length);
             Button(c, new(rect.Right - 174, rect.Bottom - 58, 152, 36), L.Get("sliderBatch.close"), () => sliderBatchErrors = []);
         }
         sliderDialogHits.AddRange(hits);

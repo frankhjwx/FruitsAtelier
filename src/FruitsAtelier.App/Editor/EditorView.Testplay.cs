@@ -280,7 +280,7 @@ public sealed partial class EditorView
         if (virtualKey == 192) CancelTestplayQuickRetry();
         if (virtualKey == 66) testplayBookmarkHeld = false;
         if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
-        if (IsTestplaying && testplayDriver is null) AdvanceTestplay();
+        if (!ErrorVisible && IsTestplaying && testplayDriver is null) AdvanceTestplay();
     }
 
     private void DrawTestplay(ICanvas c)

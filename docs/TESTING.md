@@ -1,5 +1,50 @@
 # Building and Testing
 
+## Error recovery
+
+`App.Tests --render-recovery-check` injects a persistent resource-release failure,
+checks that recovery rendering bypasses it, and verifies explicit retry and
+roundtripping unsaved project copies without replacing existing files. It also
+checks bounded, cached layout of million-character diagnostics and managed macOS
+callback recovery when logging or refreshing fails.
+It checks error input priority over synchronization and startup screens, retained
+Pattern-project recovery copies, destination collisions, and macOS recovery close
+requests while another file operation is busy.
+`App.Tests --recovery-state-matrix-check` combines cleanup failures with reentrant
+input, unfinished transactions, retained Pattern projects and simultaneous FAZ
+completion. It checks that recovery copies preserve committed edits and that
+error transitions keep ownership of the original project. Tiny viewports and
+underlying modal controls are covered by the same check.
+`App.Tests --resource-error-layout-check` checks million-character resource errors,
+viewport-only traversal of large reports, cached repaint, scrolling and resize.
+The recovery state matrix also checks bounded slider conversion diagnostics and
+cached repaint without splitting Unicode characters.
+`App.Tests --background-task-recovery-check` injects faulted and canceled collection
+and Legacy refresh tasks to check result retirement, transaction rollback, retained
+content, saving and undo. Multiplier-validation faults must retire their draft
+instead of resubmitting it. Banana preview failures must be consumed once while
+leaving the dialog editable and cancellable; pending derived preview writes must
+not block shutdown.
+
+On Windows, `FruitsAtelier.App --render-check --paint-recovery-check` exercises native
+paint, repeated polling and rendering failures, and an unavailable renderer. It
+verifies bounded error reporting, recovery-copy reopening and explicit retry,
+shortcut callback failures, modal message reentry, frame-wait failures and the
+message-reader fallback, including input reentry during playback cleanup;
+copies are stored under `artifacts/tests/paint-recovery`. These injected failures
+test recovery boundaries independently of any particular malformed input file.
+The native check also verifies that a throwing thumbnail decoder is negatively
+cached, releases worker capacity and disposes a late result after cache retirement.
+The update lifecycle tests inject notification callback failures and verify that
+subsequent checks and downloads can run.
+`Core.Tests --storyboard-check` verifies bounded macro amplification, rejection
+before oversized output allocation, per-reader output budgets, cancellation and
+unchanged substitution order, including shrinking substitutions near each limit.
+It also checks oversized and growing shared storyboard files, cancellation and
+BOM-aware decoding of normal files.
+The same suite checks AiMod and hitsound-cleanup admission, supported shared
+samples, and shared expansion budgets with independent variable scopes.
+
 ## Slider event timing
 
 `Core.Tests --slider-event-timing-check` exercises isolated event edits that need
@@ -32,6 +77,31 @@ under `artifacts/tests/editor-themes-native`.
 
 ## Video and storyboard playback
 
+`App.Tests --difficulty-media-reuse-native-check <video-path>` uses actual Direct2D
+textures and FFmpeg playback with a large shared image and long-duration scene.
+It checks repeated same-directory difficulty switches without additional warm
+image decodes or uploads, equal-offset video decoder/frame reuse, different-offset
+frame selection, Windows path casing, per-difficulty sprites, resource removal,
+file-version invalidation and full retirement on project or directory replacement
+and Library exit. Supply a video at least two seconds long. Its hidden-window
+resource checks do not measure physical presentation latency.
+
+`App.Tests --difficulty-media-continuity-native-check <map.osu>` compares the native
+Mapping media region at 72.324 seconds before a same-project switch, through six
+deliberately delayed source-publication frames and after completion. Exact pixel
+hashes, decode/upload counts and audio metadata must remain unchanged for the
+identical target. It writes before/pending/after BMPs and a JSON result under
+`artifacts/diff-media-continuity-20261031/real-map`. Supply a map with visible media
+at that time; the check reads its resources without modifying the mapset.
+
+`FruitsAtelier.App --render-check --difficulty-audio-continuity-render-check`
+exercises the actual Windows host callback with controlled silent audio output.
+Paused and playing switches retain transport/load identity and metadata while
+pausing playback; an already paused cached switch must not rebuild native output.
+Changed file versions reject reuse. Forced replacement also
+checks reentrant timer/paint messages and position initialization. macOS compile
+checks cover shared and host source; native macOS audio remains a separate check.
+
 `App.Tests --storyboard-source-cache-check` checks scene reuse for ordinary General
 value edits, including pending preparation. Widescreen, Events, Variables, source
 directories, retirement, line positions and embedded section boundaries still
@@ -39,6 +109,16 @@ invalidate the scene; cached output is compared with a full source parse.
 
 `App.Tests --storyboard-presentation-check` verifies that Mapping retains video
 while Force background dim suppresses Preview, including pending video frames.
+It also delays source publication, image readiness and video readiness independently,
+checking complete prior media and stable audio metadata until atomic publication,
+including empty target difficulties. It checks visible-editor difficulty preparation,
+and delayed pause confirmation before same/different-audio source mutation,
+frozen stale-clock snapshots, and canceled, failed or retired pause requests,
+blocked editing/navigation/playback/file actions, failure and cancellation, and
+Library exit with unsaved changes. Initial project preparation retains its loading
+feedback. `FruitsAtelier.App --render-check --library-opening-render-check` captures
+pending difficulty preparation and checks input gating and completion in both
+languages, window sizes and DPI settings.
 Frames with no video viewport, before the video offset, with visuals disabled or
 in force-dim testplay retire the decoder. On Windows,
 `App.Tests --media-toggle-native-check <video-path>` checks decoder identity across
@@ -60,7 +140,9 @@ scene metadata before comparing performance; incomplete scenes are not valid bas
 muted WASAPI mixer and music clock, including pause, seek and playback speed.
 Audio output remains muted by the harness; do not change system volume.
 
-`App.Tests --storyboard-image-cache-check` uses a controlled decoder to verify
+`App.Tests --storyboard-image-cache-check` also checks cross-scene decoded-image
+identity, bounded reuse, changed/deleted/restored files, unavailable-image diagnostics
+and an in-flight common image while retiring speculative loads. It uses a controlled decoder to verify
 that current-frame requests take priority over queued prefetch, including multiple
 required images and repeated preparation without duplicate decoding.
 `App.Tests --storyboard-first-playback <Platter.osu> <output-directory> <seed>`
@@ -192,6 +274,15 @@ difficulty selection, image preview zoom/pan and input isolation, profile links,
 hand/text cursor feedback, whole-link hover underlines across wrapped segments,
 permalink clipboard hints and expiring confirmation, and body
 text selection/copy across formatted text, Unicode, replies and canvas annotations.
+
+`App.Tests --discussion-bounds-check` isolates crowded slider annotations at fractional
+canvas heights, including repeated wheel scrolling, nonoverlapping card bounds,
+unchanged content and conversion reuse. The native discussion check also scrolls
+three long annotations together at each supported test size and DPI.
+`App.Tests --discussion-navigation-check` follows retained numbered references
+after partial and complete deletion while conversion is pending on both canvases,
+then verifies undo, conversion reuse and unchanged authored content.
+
 On Windows, `FruitsAtelier.App.exe --render-check --discussions-render-check`
 captures compact and wide discussions, replies, type icons, offline states and
 canvas quotes in English and
@@ -611,6 +702,11 @@ pointer movement, seeking, zoom and continuous playback in both canvases at
 168 DPI. It reports CPU and submission frame percentiles, process working-set
 peak, private memory, managed memory and cumulative allocations in
 `artifacts/tests/dense-map-performance.json`. Skin arguments apply to this check.
+Each phase also records total and current-thread allocations, GC collection
+counts, process CPU time and elapsed time; the report identifies the GPU adapter.
+Native frame times include CPU submission and DXGI Present, excluding GPU
+completion and physical display latency. Phase allocations include diagnostic
+collection overhead and background workers.
 Use `--osu-performance-time=50836` to select a specific millisecond position;
 otherwise the check starts at the slider with the most control points. Continuous
 playback covers twenty seconds and reports the maximum as well as percentiles.
@@ -632,6 +728,12 @@ Its report excludes native rendering, media and real library filesystem variance
 `Core.Tests --aimod-check` and `App.Tests --aimod-check` cover AiMod rules,
 resource checks, read-only navigation, localization, Ctrl+Shift+A, table column
 resizing/reordering, selection/copy and dock attachment.
+`App.Tests --aimod-navigation-check` isolates retained-report navigation after
+partial and complete target deletion, undo, mouse timestamp clicks and Enter on
+both canvases in English and Chinese. It covers fruits, FSliders, Legacy sliders,
+banana showers, findings without object targets and slider draft cancellation.
+It also checks that operation-error dismissal drops missing selection targets
+while preserving valid selection, content and file operations.
 Audio-length regressions cover playback-duration reuse, delayed loading, reloads
 and the 80 percent boundary without rechecking on playback-position updates. Run
 `Core.Tests --aimod-twin-bloom <path.osu>` against the matching local Twin Bloom
@@ -642,6 +744,13 @@ category totals and overlapping source-object pairs.
 `FruitsAtelier.App.exe --render-check --aimod-render-check` checks the native
 dock panels and continuous scrolling at multiple sizes and DPI values and captures English/Chinese reports
 under `artifacts/tests/aimod-native`.
+It includes mouse and Enter navigation after deleting a retained report's objects.
+`FruitsAtelier.App.exe --render-check --paint-recovery-check` exercises native
+renderer recovery, including a missing selection target, error dismissal and
+resumed file operations without changing document content.
+`App.Tests --verifier-navigation-check` checks retained timestamps after deletion,
+undo, cross-difficulty navigation and rejection of retired difficulty targets on
+both canvases in English and Chinese.
 
 `App.Tests --group-drag-boundary-check` checks fractional fruit selections dragged
 to either playfield edge, preserving conversion, export, relative spacing,
@@ -975,6 +1084,22 @@ switches, control insertion/deletion and undo through editor input.
 After changing input or drawing, manually check affected operations, language switching, window resizing, and file dialogs. Additional coverage is still needed for physical Windows window/audio behavior, Intel Mac, cross-display DPI, Mac MP3, and stable-client comparisons.
 
 ## Editing performance benchmark
+
+`App.Tests --imported-curve-range-check` compares imported-body line commands with
+an independent full traversal across unsorted and tied parents, repeated and
+overlapping sliders, selection appearance and conversion replacement/restoration.
+`--imported-curve-range-performance` also measures cold and warm CPU time,
+allocations and retained index-array payload. Existing `--osu-canvas-check`,
+`--slider-batch-check` and `--cache-lifetime-check` cover path rendering, export,
+undo and difficulty retirement.
+
+`Core.Tests --autoplay-check` compares autoplay frames, facing direction, hyperdash
+intervals and tint with an independent reference across empty, unordered and tied
+events, alternate parent traversal, CS values and classic/lazer modes. It also
+checks allocation-free warm playback queries. `--autoplay-performance` reports
+construction and query CPU time and managed allocations on 100,000 mixed events.
+`--autoplay-map-check <path.osu>` compares NM/HR autoplay against the reference at
+each event boundary and checks that the source file remains unchanged.
 
 `App.Tests --cache-lifetime-check` warms both canvases, clipboard, distance labels,
 projected breaks, movement guides, snapping and collaboration selection. It checks

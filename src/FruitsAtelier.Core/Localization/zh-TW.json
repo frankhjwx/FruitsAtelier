@@ -1941,6 +1941,9 @@
   "timing.sv": "SV（×）",
   "timing.finishDraft": "請先套用或取消 Timing 編輯，再切換 SV 顯示。",
   "timing.sourceChanged": "編輯器中的 Timing 已變更。請重新開啟此視窗後再套用。",
+  "core.storyboard.fileLimit": "故事板檔案超過了 32 MiB 的限制。",
+  "core.storyboard.sceneExpansionLimit": "故事板展開文字超過了整個場景 268,435,456 個字元的限制。",
+  "core.storyboard.expansionLimit": "故事板變數展開超過了 33,554,432 個字元的限制。",
   "media.storyboardDiagnostics": "故事板：已略過 {0} 條無效指令或資源。",
   "media.storyboardFailed": "無法載入故事板：{0}",
   "media.loading": "正在準備譜面資源…",
@@ -1951,5 +1954,12 @@
   "settings.theme.midnight": "午夜",
   "settings.theme.forest": "森林",
   "settings.theme.rose": "玫瑰",
-  "settings.theme.slate": "岩灰"
+  "settings.theme.slate": "岩灰",
+  "recovery.title": "編輯器復原",
+  "recovery.help": "繪製已停止。專案仍保留在記憶體中。請先儲存復原副本，再重試。",
+  "recovery.save": "儲存復原副本",
+  "recovery.saved": "復原副本已儲存：{0}",
+  "recovery.failed": "無法儲存復原副本：{0}",
+  "recovery.nativeHelp": "圖形繪製器無法使用。按 Ctrl+S 儲存復原副本，或按 Enter 重試繪製。專案仍保留在記憶體中。",
+  "recovery.closeHelp": "關閉前儲存復原副本？選擇「否」將不儲存並關閉。"
 }

@@ -18,6 +18,7 @@ public sealed partial class EditorView
 
     public void PointerLeave()
     {
+        if (ErrorVisible) { mouseX = mouseY = -1; return; }
         if (WantsCapture) return;
         mouseX = mouseY = -1;
         AdvanceCanvasBackgroundDim();
@@ -824,6 +825,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (ErrorVisible) return;
         if (BrowserToolbarContains(x, y)) return;
         if (PatternNameVisible || GalleryTagsVisible || PatternEditingBusy) return;
         if (PatternGalleryPopupContains(x, y) || PatternGalleryInputAvailable
@@ -932,6 +934,11 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (ErrorVisible)
+        {
+            errorScroll = Math.Clamp(errorScroll - (int)(delta / 120) * 3, 0, Math.Max(0, errorLineCount - errorVisibleLines));
+            return;
+        }
         if (OsuLinkPickerVisible && !ErrorVisible)
         {
             if (osuLinkApplicationList.Contains(x, y))
@@ -1108,12 +1115,7 @@ public sealed partial class EditorView
         }
         if (TimeJumpVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (languageMenuOpen) return;
-        if (ErrorVisible)
-        {
-            errorScroll = Math.Clamp(errorScroll - (int)(delta / 120) * 3, 0, Math.Max(0, errorLineCount - errorVisibleLines));
-            return;
-        }
-        if (ErrorVisible || DiscardConfirmationVisible) return;
+        if (DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (librarySettingsOpen || ExportVisible) return;
         if (LibraryVisible)
@@ -1394,7 +1396,9 @@ public sealed partial class EditorView
         ResetTextCaret();
         if (ErrorVisible)
         {
-            if (virtualKey is 27 or 13) DismissError();
+            if (RecoveryActive && ctrl && virtualKey == 'S') SaveRecovery();
+            else if (RecoveryActive && virtualKey == 13) RetryRender();
+            else if (!RecoveryActive && virtualKey is (27 or 13)) DismissError();
             return;
         }
         if (DiscardConfirmationVisible)
@@ -2000,6 +2004,14 @@ public sealed partial class EditorView
     }
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
+        if (preparingError) return;
+        if (ErrorVisible)
+        {
+            mouseX = x; mouseY = y;
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         if (OsuLinkPickerVisible && !ErrorVisible) { PointerDownCore(x, y, button, shift, ctrl); return; }
         var document = Document;
         try { PointerDownCore(x, y, button, shift, ctrl); }
@@ -2007,6 +2019,7 @@ public sealed partial class EditorView
     }
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (ErrorVisible) { mouseX = x; mouseY = y; return; }
         if (OsuLinkPickerVisible && !ErrorVisible) { mouseX = x; mouseY = y; return; }
         var document = Document;
         try { PointerMoveCore(x, y, shift, ctrl); }
@@ -2014,6 +2027,7 @@ public sealed partial class EditorView
     }
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (ErrorVisible) return;
         if (OsuLinkPickerVisible && !ErrorVisible) return;
         var document = Document;
         try { PointerUpCore(x, y, button, shift); }
@@ -2021,6 +2035,15 @@ public sealed partial class EditorView
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (preparingError) return;
+        if (ErrorVisible)
+        {
+            if (ScreenshotKeyDown(virtualKey, ctrl, shift)) return;
+            if (RecoveryActive && ctrl && virtualKey == 'S') SaveRecovery();
+            else if (RecoveryActive && virtualKey == 13) RetryRender();
+            else if (!RecoveryActive && virtualKey is (27 or 13)) DismissError();
+            return;
+        }
         if (OsuLinkPickerVisible && !ErrorVisible) { KeyDownCore(virtualKey, ctrl, shift); return; }
         bool shortcut = ctrl && !altHeld && (virtualKey is 38 or 40 || virtualKey == 82 && !shift)
             || altHeld && virtualKey is 13 or 37 or 38 or 39 or 40;
@@ -2033,6 +2056,7 @@ public sealed partial class EditorView
     }
     public void TextInput(char value)
     {
+        if (ErrorVisible) return;
         if (DiscussionImageVisible) return;
         if (discussionSelectedLayout is not null) return;
         if (OsuLinkPickerVisible) return;

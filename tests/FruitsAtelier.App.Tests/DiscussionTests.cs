@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
@@ -6,6 +7,100 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class DiscussionTests
 {
+    public static void RetainedReferences()
+    {
+        var source = OsuDiscussionClient.Parse(Fixture, 777);
+        var thread = new BeatmapDiscussion(600, 101, null, 10, 1000, "suggestion", false, true, null,
+            [new(601, 10, "00:01:000 (1,2,3)", false, null)]);
+        var snapshot = new OsuDiscussionSnapshot(777, 20, [thread], source.Users, source.Owners);
+        foreach (bool osu in new[] { false, true })
+        {
+            var ui = new Ui(false); ui.View.DiscussionLoader = (_, _) => Task.FromResult(snapshot);
+            ui.View.LoadProject(Project()); ui.View.ShowDiscussionPanel(); Wait(ui);
+            if (osu) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
+            ClickReference();
+            Check(ui.View.SelectedObjectIds.Count == 3, "Discussion selects the current numbered objects.");
+            var before = ui.View.Document.DeepClone(); var conversion = ui.View.Conversion;
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            var taskField = typeof(EditorView).GetField("deferredConversionTask", flags)!;
+            var pendingType = typeof(TaskCompletionSource<>).MakeGenericType(taskField.FieldType.GenericTypeArguments[0]);
+            var pending = Activator.CreateInstance(pendingType)!;
+            taskField.SetValue(ui.View, pendingType.GetProperty("Task")!.GetValue(pending));
+            var deferred = typeof(EditorView).GetField("deferredConversion", flags)!; deferred.SetValue(ui.View, true);
+            try
+            {
+                typeof(EditorView).GetMethod("SelectObjects", flags)!.Invoke(ui.View, [new[] { before.Fruits[0].Id }, Guid.Empty]);
+                ui.Key(46); ClickReference();
+                Check(ui.View.Document.Fruits.Count == before.Fruits.Count - 1 && ui.View.SelectedObjectIds.Count == 0,
+                    "Partially deleted numbered references preserve selection until the complete reference matches again.");
+                ui.Key('Z', ctrl: true); ClickReference();
+                ui.Key(46);
+                Check(ui.View.Document.Fruits.Count == before.Fruits.Count - 3, "Delete reference targets while conversion is pending.");
+                var deleted = ui.View.Document.DeepClone(); bool dirty = ui.View.IsDirty;
+                ClickReference();
+                Check(ui.View.SelectedObjectIds.Count == 0 && ui.View.PlayheadMs == 1000 && !ui.View.ErrorVisible,
+                    "A retained discussion reference must not select deleted objects from the displayed conversion.");
+                Check(deleted.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty && ReferenceEquals(conversion, ui.View.Conversion),
+                    "Retained reference navigation preserves content and reuses the pending conversion.");
+                ui.Key('Z', ctrl: true); ClickReference();
+                Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty && ui.View.SelectedObjectIds.Count == 3,
+                    "Undo makes the discussion's numbered targets selectable again.");
+            }
+            finally
+            {
+                deferred.SetValue(ui.View, false); taskField.SetValue(ui.View, null); ui.View.NewProject();
+            }
+            void ClickReference()
+            {
+                var link = ui.View.DiscussionReferenceHits.First(hit => hit.Time == 1000);
+                ui.Click(link.Bounds.X + 3, link.Bounds.Y + link.Bounds.Height / 2);
+            }
+        }
+        Console.WriteLine("PASS retained discussion references during pending conversion, deletion and undo");
+    }
+    public static void FractionalAnnotationBounds()
+    {
+        var source = OsuDiscussionClient.Parse(Fixture, 777);
+        var posts = new List<DiscussionPost> { new(1001, 10, string.Join(" ", Enumerable.Repeat("Long slider discussion.", 300)), false, DateTimeOffset.UtcNow) };
+        var threads = Enumerable.Range(0, 3).Select(i => new BeatmapDiscussion(100 + i, 101, null, 10, 4000 + i * 100, "problem", true, true, null, posts)).ToArray();
+        var snapshot = new OsuDiscussionSnapshot(777, 20, threads, source.Users, source.Owners);
+        var ui = new Ui(false); ui.View.DiscussionLoader = (_, _) => Task.FromResult(snapshot);
+        ui.View.LoadProject(Project()); ui.View.ShowDiscussionPanel(); Wait(ui);
+        var before = ui.View.Document.DeepClone();
+        var conversion = ui.View.Conversion;
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var plotField = typeof(EditorView).GetField("plot", flags)!;
+        var draw = typeof(EditorView).GetMethod("DrawDiscussionMarkers", flags)!;
+        typeof(EditorView).GetMethod("SeekTo", flags)!.Invoke(ui.View, [4000d]); ui.Paint();
+        for (int i = 0; i < 300; i++)
+        {
+            ui.Resize(1440, 620 + i / 7f);
+            ui.View.Wheel(ui.Plot.X + ui.Plot.Width / 2, ui.Plot.Y + ui.Plot.Height / 2, i % 2 == 0 ? -120 : 120, false, false);
+            ui.Paint();
+            CheckBounds();
+        }
+        var original = ui.Plot;
+        for (int i = 0; i < 1000; i++)
+        {
+            plotField.SetValue(ui.View, original with { Y = 222.17628f, Height = 300 + i / 7f });
+            ui.Canvas.Clear();
+            draw.Invoke(ui.View, [ui.Canvas]);
+            CheckBounds();
+        }
+        plotField.SetValue(ui.View, original); ui.Paint();
+        Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty && ReferenceEquals(conversion, ui.View.Conversion),
+            "Discussion scrolling and layout must preserve content and reuse conversion.");
+        ui.View.StopDiscussions();
+        Console.WriteLine("PASS discussion fractional annotation bounds");
+
+        void CheckBounds()
+        {
+            var cards = ui.View.DiscussionQuoteBounds.OrderBy(card => card.Y).ToArray();
+            Check(cards.Length == 3, "Three long slider annotations must be visible.");
+            Check(cards.All(card => card.Y >= ui.Plot.Y && card.Bottom <= ui.Plot.Bottom + .0001f), "Discussion card escaped the canvas.");
+            Check(cards.Zip(cards.Skip(1)).All(pair => pair.First.Bottom <= pair.Second.Y), "Discussion cards overlap.");
+        }
+    }
     private static readonly string Fixture = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "discussions.json"));
     public static void Run()
     {
@@ -40,6 +135,8 @@ internal static class DiscussionTests
             {
                 L.SetLanguage(locale); UiChecks(snapshot);
                 DiscussionModes(snapshot);
+                FractionalAnnotationBounds();
+                RetainedReferences();
             }
             BrowserTab(snapshot);
             TypeCardLayout(snapshot);

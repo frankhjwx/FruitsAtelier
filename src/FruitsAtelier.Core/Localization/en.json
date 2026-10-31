@@ -1941,6 +1941,9 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Apply or cancel timing edits before switching the SV display.",
   "timing.sourceChanged": "Timing changed in the editor. Reopen this window before applying.",
+  "core.storyboard.fileLimit": "The storyboard file exceeds the 32 MiB limit.",
+  "core.storyboard.sceneExpansionLimit": "Expanded storyboard text exceeds the scene limit of 268,435,456 characters.",
+  "core.storyboard.expansionLimit": "Storyboard variable expansion exceeds the limit of 33,554,432 characters.",
   "media.storyboardDiagnostics": "Storyboard: {0} invalid commands or resources were skipped.",
   "media.storyboardFailed": "Storyboard could not be loaded: {0}",
   "media.loading": "Preparing map resources…",
@@ -1951,5 +1954,12 @@
   "settings.theme.midnight": "Midnight",
   "settings.theme.forest": "Forest",
   "settings.theme.rose": "Rose",
-  "settings.theme.slate": "Slate"
+  "settings.theme.slate": "Slate",
+  "recovery.title": "Editor recovery",
+  "recovery.help": "Rendering stopped. Your project remains in memory. Save a recovery copy before retrying.",
+  "recovery.save": "Save recovery copy",
+  "recovery.saved": "Recovery copy saved: {0}",
+  "recovery.failed": "Recovery copy could not be saved: {0}",
+  "recovery.nativeHelp": "The graphics renderer is unavailable. Press Ctrl+S to save a recovery copy, or Enter to retry rendering. Your project remains in memory.",
+  "recovery.closeHelp": "Save a recovery copy before closing? Choose No to close without saving."
 }

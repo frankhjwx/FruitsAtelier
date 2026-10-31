@@ -1,5 +1,37 @@
 # Editing Controls
 
+## Error recovery
+
+An unexpected rendering or window polling failure pauses the editor on a recovery
+screen. **Save recovery copy** writes all retained difficulties and project notes to
+a new `.catchproj` without running beatmap conversion or changing the original
+project's saved state. Choose an unused filename. The copy references existing
+media; it does not package audio or images. Save failures remain visible so another
+location can be selected.
+
+If an interrupted edit could not be rolled back, recovery copies use the state
+before that unfinished gesture. Earlier committed edits remain in the copy even
+when they have not been saved to the original project.
+
+When Pattern editing or source navigation retains another project, recovery also
+writes `<name>.retained.catchproj` beside the chosen file. This companion preserves
+the original project's difficulties and independent notes. Both files must use
+unused names; the save reports success only after both snapshots are written.
+
+Long error messages use a bounded, scrollable preview with an ellipsis when
+truncated. Repainting an unchanged message reuses its text layout. Native dialogs
+isolate editor input until they close, including repeated save and close requests.
+Error controls take priority over underlying synchronization and startup screens.
+Input cannot dismiss or retry an error while its cleanup callbacks are running.
+Slider conversion and missing-resource reports also show bounded diagnostic
+previews. Resource reports lay out only visible entries; unchanged reports reuse
+their layout when repainted.
+
+**Retry** explicitly resumes processing. A persistent failure returns to recovery
+instead of automatically retrying every frame. If Windows cannot draw the recovery
+screen, a native message explains the keyboard controls: **Ctrl+S** saves a copy
+and **Enter** retries. Keep the original media alongside a recovered project.
+
 ## Editor themes
 
 **Settings → Appearance → Editor theme** offers seven dark themes: Graphite, Studio, Black Pearl,
@@ -17,6 +49,14 @@ the editor header, including during preview.
 Settings combines protocol handling and browser data controls in **osu! Links & Web**.
 New settings categories appear before the fixed **Experimental**, **Application updates**
 navigation tail; Experimental stays second to last when application updates are available.
+
+## Switching difficulties
+
+Switching difficulties in an open project keeps the editor visible while map
+resources prepare. Editing, navigation, playback and file actions wait until
+preparation finishes. Escape or the Library button can return to the Library;
+unsaved changes retain the usual save, discard and cancel choices. Opening a
+project from the Library displays its loading screen until resources are ready.
 
 ## 1 ms alignment on open
 

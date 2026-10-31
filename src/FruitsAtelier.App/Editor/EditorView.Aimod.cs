@@ -98,7 +98,8 @@ public sealed partial class EditorView
         if (issue.TimeMs is not double time) return;
         aimodFocused = false;
         tool = Tool.Select;
-        if (issue.ObjectIds is { Length: > 0 } ids) SelectObjects(ids, ids[0]);
+        // Reports remain navigable after edits, but their object IDs can outlive the objects.
+        if (issue.ObjectIds is { Length: > 0 } ids) SelectObjects(ids.Where(ObjectExists), ids[0]);
         SeekTo(time);
     }
 

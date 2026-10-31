@@ -1941,6 +1941,9 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Terapkan atau batalkan perubahan timing sebelum mengganti tampilan SV.",
   "timing.sourceChanged": "Timing di editor telah berubah. Buka kembali jendela ini sebelum menerapkan.",
+  "core.storyboard.fileLimit": "File storyboard melebihi batas 32 MiB.",
+  "core.storyboard.sceneExpansionLimit": "Teks storyboard yang diperluas melebihi batas adegan sebesar 268.435.456 karakter.",
+  "core.storyboard.expansionLimit": "Perluasan variabel storyboard melebihi batas 33.554.432 karakter.",
   "media.storyboardDiagnostics": "Storyboard: {0} perintah atau sumber daya tidak valid dilewati.",
   "media.storyboardFailed": "Storyboard tidak dapat dimuat: {0}",
   "media.loading": "Menyiapkan sumber daya beatmap…",
@@ -1951,5 +1954,12 @@
   "settings.theme.midnight": "Tengah malam",
   "settings.theme.forest": "Hutan",
   "settings.theme.rose": "Mawar",
-  "settings.theme.slate": "Batu sabak"
+  "settings.theme.slate": "Batu sabak",
+  "recovery.title": "Pemulihan editor",
+  "recovery.help": "Rendering dihentikan. Proyek tetap tersimpan di memori. Simpan salinan pemulihan sebelum mencoba lagi.",
+  "recovery.save": "Simpan salinan pemulihan",
+  "recovery.saved": "Salinan pemulihan disimpan: {0}",
+  "recovery.failed": "Salinan pemulihan tidak dapat disimpan: {0}",
+  "recovery.nativeHelp": "Perender grafis tidak tersedia. Tekan Ctrl+S untuk menyimpan salinan pemulihan, atau Enter untuk mencoba lagi. Proyek tetap tersimpan di memori.",
+  "recovery.closeHelp": "Simpan salinan pemulihan sebelum menutup? Pilih Tidak untuk menutup tanpa menyimpan."
 }

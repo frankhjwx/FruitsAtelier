@@ -4,8 +4,53 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class MapsetVerifierTests
 {
+    public static void RetainedNavigation()
+    {
+        string previous = L.Language;
+        try
+        {
+            foreach (string language in new[] { "en", "zh-CN" })
+            foreach (bool osu in new[] { false, true })
+            {
+                L.SetLanguage(language);
+                var clock = new Clock(); var ui = new Ui(false, clock);
+                var map = new MapDocument { IsDemo = false, DurationMs = 10000 };
+                map.Fruits.Add(new() { TimeMs = 1000, X = 100 });
+                var project = BeatmapProject.FromDocuments([map, new() { IsDemo = false, DurationMs = 10000 }]);
+                ui.View.LoadProject(project); ui.Paint();
+                if (osu) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
+                var ids = project.Difficulties.Select(d => d.Id).ToArray();
+                ui.View.VerifierAnalyze = (_, _, _) => Task.FromResult(new MapsetVerifierReport(1, [],
+                    [new(ids[0], "First", "Hard", 3, [new("Snap", "Snapping", "Warning", "00:01:000 - Old object timestamp.", DifficultyId: ids[0])])]));
+                ui.View.ShowMapsetVerifier(); Settle(ui);
+                typeof(EditorView).GetMethod("SelectObjects", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                    .Invoke(ui.View, [new[] { map.Fruits[0].Id }, Guid.Empty]);
+                ui.Key(46);
+                Check(ui.View.Document.Fruits.Count == 0, "Delete the object before following its retained Verifier timestamp.");
+                var deleted = ui.View.Document.DeepClone(); bool dirty = ui.View.IsDirty;
+                var report = ui.View.VerifierReport;
+                var link = ui.View.VerifierTimestampBounds.Single(); ui.Click(link.Bounds.X + 2, link.Bounds.Y + 5);
+                Check(ui.View.PlayheadMs == 1000 && ui.View.SelectedObjectIds.Count == 0 && !ui.View.ErrorVisible
+                    && deleted.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty && ReferenceEquals(report, ui.View.VerifierReport),
+                    "Retained Verifier timestamps seek after deletion without selecting objects or changing content.");
+                ui.Key('Z', ctrl: true); ui.Paint();
+                Check(map.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Verifier navigation preserves deletion undo.");
+                ui.View.NavigateVerifierTimestamp(ids[1], 2000); ui.Paint();
+                Check(ui.View.ActiveDifficultyIndex == 1 && ui.View.PlayheadMs == 2000, "Verifier can navigate another live difficulty.");
+                ui.View.LoadProject(BeatmapProject.FromDocuments([new() { IsDemo = false, DurationMs = 10000 }])); ui.Paint();
+                double time = ui.View.PlayheadMs;
+                ui.View.NavigateVerifierTimestamp(ids[1], 3000); ui.Paint();
+                Check(ui.View.ActiveDifficultyIndex == 0 && ui.View.PlayheadMs == time && !ui.View.ErrorVisible,
+                    "A Verifier timestamp from a retired difficulty cannot navigate the replacement project.");
+                ui.View.NewProject();
+            }
+        }
+        finally { L.SetLanguage(previous); }
+        Console.WriteLine("PASS retained Verifier timestamps, deletion, undo and retired difficulty targets");
+    }
     public static void Run()
     {
+        RetainedNavigation();
         const string message = "00:31:193 - 04:03:100 (1,2) - 104:45:399 - wrong 00:99:123";
         var tokens = MapsetVerifierClient.Tokenize(message);
         Check(string.Concat(tokens.Select(t => t.Text)) == message, "Timestamp tokenization preserves upstream text");

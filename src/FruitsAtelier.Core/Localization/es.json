@@ -1941,6 +1941,9 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Aplica o cancela los cambios de timing antes de cambiar la vista SV.",
   "timing.sourceChanged": "El timing ha cambiado en el editor. Vuelve a abrir esta ventana antes de aplicar.",
+  "core.storyboard.fileLimit": "El archivo de storyboard supera el límite de 32 MiB.",
+  "core.storyboard.sceneExpansionLimit": "El texto expandido del storyboard supera el límite de 268.435.456 caracteres por escena.",
+  "core.storyboard.expansionLimit": "La expansión de variables del storyboard supera el límite de 33.554.432 caracteres.",
   "media.storyboardDiagnostics": "Storyboard: se omitieron {0} comandos o recursos no válidos.",
   "media.storyboardFailed": "No se pudo cargar el storyboard: {0}",
   "media.loading": "Preparando los recursos del mapa…",
@@ -1951,5 +1954,12 @@
   "settings.theme.midnight": "Medianoche",
   "settings.theme.forest": "Bosque",
   "settings.theme.rose": "Rosa",
-  "settings.theme.slate": "Pizarra"
+  "settings.theme.slate": "Pizarra",
+  "recovery.title": "Recuperación del editor",
+  "recovery.help": "El renderizado se ha detenido. El proyecto permanece en memoria. Guarda una copia de recuperación antes de reintentar.",
+  "recovery.save": "Guardar copia de recuperación",
+  "recovery.saved": "Copia de recuperación guardada: {0}",
+  "recovery.failed": "No se pudo guardar la copia de recuperación: {0}",
+  "recovery.nativeHelp": "El motor gráfico no está disponible. Pulsa Ctrl+S para guardar una copia de recuperación o Intro para reintentar. El proyecto permanece en memoria.",
+  "recovery.closeHelp": "¿Guardar una copia de recuperación antes de cerrar? Elige No para cerrar sin guardar."
 }

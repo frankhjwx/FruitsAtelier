@@ -30,7 +30,7 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 
 ```powershell
 ./scripts/Publish-Windows.ps1
-./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.3.3-win-x64.zip
+./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.3.4-win-x64.zip
 ```
 
 Publication requires Python 3 to prepare the pinned [Mapset Verifier engine](MAPSET_VERIFIER.md).
@@ -42,7 +42,7 @@ source, adapter, launcher, build script and dependency locks.
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
 `releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`
-(currently 1.3.3); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
+(currently 1.3.4); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the

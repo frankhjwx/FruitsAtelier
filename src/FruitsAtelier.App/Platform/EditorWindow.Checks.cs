@@ -255,12 +255,23 @@ internal sealed partial class EditorWindow
             throw new InvalidOperationException("Paint failure did not rebuild the renderer and expose its error.");
         WndProc(hwnd, 0x000F, 0, 0);
         CompletePendingCheckPaint();
-        if (recoveringRenderer || failed) throw new InvalidOperationException("Recovered renderer could not draw its error.");
+        if (!recoveringRenderer || failed) throw new InvalidOperationException("Recovered renderer could not draw its error.");
         view.KeyDown(13, false, false); view.KeyUp(13);
         WndProc(hwnd, 0x000F, 0, 0);
         CompletePendingCheckPaint();
         if (view.ErrorVisible || !document.ContentEquals(view.Document))
             throw new InvalidOperationException("Paint recovery lost document content or trapped input.");
+        typeof(EditorView).GetMethod("SelectObjects", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(view, [new[] { Guid.NewGuid() }, Guid.Empty]);
+        WndProc(hwnd, 0x000F, 0, 0); CompletePendingCheckPaint();
+        if (!view.ErrorVisible || view.SelectedObjectIds.Count != 0 || failed)
+            throw new InvalidOperationException("Missing selection recovery did not expose a usable error.");
+        WndProc(hwnd, 0x000F, 0, 0); CompletePendingCheckPaint();
+        view.KeyDown(13, false, false); view.KeyUp(13);
+        WndProc(hwnd, 0x000F, 0, 0); CompletePendingCheckPaint();
+        if (view.ErrorVisible || failed || recoveringRenderer || !view.PrepareFileOperation() || !document.ContentEquals(view.Document))
+            throw new InvalidOperationException("Missing selection trapped repaint, file operations or error dismissal.");
+        CheckRepeatedRecovery();
         AppLog.Write("Paint lifecycle check passed: nested paint, modal owner, abandoned frame, Direct2D recovery.");
     }
 }

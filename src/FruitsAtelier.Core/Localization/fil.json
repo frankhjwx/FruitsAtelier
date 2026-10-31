@@ -1941,6 +1941,9 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Ilapat o kanselahin ang mga timing edit bago palitan ang SV display.",
   "timing.sourceChanged": "Nagbago ang timing sa editor. Buksan muli ang window na ito bago ilapat.",
+  "core.storyboard.fileLimit": "Lumampas ang storyboard file sa limitasyong 32 MiB.",
+  "core.storyboard.sceneExpansionLimit": "Lumampas ang pinalawak na teksto ng storyboard sa limitasyong 268,435,456 character bawat eksena.",
+  "core.storyboard.expansionLimit": "Lumampas ang pagpapalawak ng mga variable ng storyboard sa limitasyong 33,554,432 character.",
   "media.storyboardDiagnostics": "Storyboard: nilaktawan ang {0} di-wastong command o resource.",
   "media.storyboardFailed": "Hindi ma-load ang storyboard: {0}",
   "media.loading": "Inihahanda ang mga resource ng beatmap…",
@@ -1951,5 +1954,12 @@
   "settings.theme.midnight": "Hatinggabi",
   "settings.theme.forest": "Gubat",
   "settings.theme.rose": "Rosas",
-  "settings.theme.slate": "Slate"
+  "settings.theme.slate": "Slate",
+  "recovery.title": "Pagbawi ng editor",
+  "recovery.help": "Huminto ang pag-render. Nananatili sa memory ang proyekto. Mag-save ng kopya para sa pagbawi bago subukang muli.",
+  "recovery.save": "I-save ang kopya para sa pagbawi",
+  "recovery.saved": "Na-save ang kopya para sa pagbawi: {0}",
+  "recovery.failed": "Hindi ma-save ang kopya para sa pagbawi: {0}",
+  "recovery.nativeHelp": "Hindi magamit ang graphics renderer. Pindutin ang Ctrl+S para mag-save ng kopya para sa pagbawi, o Enter para subukan muli. Nananatili sa memory ang proyekto.",
+  "recovery.closeHelp": "Mag-save ng kopya para sa pagbawi bago isara? Piliin ang Hindi para isara nang hindi nagse-save."
 }

@@ -131,6 +131,9 @@ public sealed partial class EditorView
         if (retainedPatternProject is not { } retained || PatternEditingActive || !PrepareFileOperation()) { cancelled?.Invoke(); return false; }
         bool sameProject = difficulties.Count == retained.Difficulties.Length
             && difficulties.Zip(retained.Difficulties).All(pair => ReferenceEquals(pair.First, pair.Second));
+        if (sameProject)
+            retained = retained with { Name = ProjectName, Notes = projectNotes, SavedNotes = savedProjectNotes,
+                NotesUndo = notesUndo.ToArray(), NotesRedo = notesRedo.ToArray(), StructureDirty = projectStructureDirty };
         if (IsDirty && !sameProject)
         {
             ShowDiscardConfirmation(answer =>
@@ -149,8 +152,8 @@ public sealed partial class EditorView
 
         void RestoreRetained()
         {
-            retainedPatternProject = null;
             RestorePatternReturnSession(retained);
+            retainedPatternProject = null;
             restored?.Invoke();
         }
     }
@@ -196,10 +199,13 @@ public sealed partial class EditorView
     private void ExitPatternEditing()
     {
         if (patternReturnSession is not { } original) return;
-        if (patternRetainOriginal) retainedPatternProject = original;
+        // Retain the original while restoration callbacks can fail before or after document replacement.
+        retainedPatternProject = original;
+        bool retainOriginal = patternRetainOriginal;
         patternReturnSession = null; editingPattern = null; patternRetainOriginal = false;
         var after = patternAfterExit; patternAfterExit = patternExitCancelled = null;
         RestorePatternReturnSession(original);
+        if (!retainOriginal) retainedPatternProject = null;
         after?.Invoke();
     }
 

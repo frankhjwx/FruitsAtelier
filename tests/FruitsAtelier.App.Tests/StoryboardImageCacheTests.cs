@@ -7,8 +7,55 @@ internal static class StoryboardImageCacheTests
     {
         Check(["active", "speculative", "visible"], ["visible"], ["active", "visible", "speculative"]);
         Check(["active", "speculative", "first", "visible"], ["first", "visible"], ["active", "visible", "first", "speculative"], prepareAgain: true);
+        Reuse();
         Console.WriteLine("PASS current-image demand precedes queued prefetch, including repeated preparation and multiple required images");
         return 0;
+    }
+
+    private static void Reuse()
+    {
+        string directory = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetFullPath("artifacts/tests/storyboard-image-cache"), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        string common = Path.Combine(directory, "common"), first = Path.Combine(directory, "first"), second = Path.Combine(directory, "second");
+        File.WriteAllBytes(common, [1]); File.WriteAllBytes(first, [2]); File.WriteAllBytes(second, [3]);
+        using var cache = new StoryboardImageCache(path => File.Exists(path) ? new(1, 1, new byte[] { File.ReadAllBytes(path)[0], 0, 0, 255 }) : null);
+        Ready(common, first); var pixels = cache.Get(common);
+        cache.ReuseResources(); Ready(common, second);
+        cache.ReuseResources(); Ready(common, first);
+        if (!ReferenceEquals(pixels, cache.Get(common)) || cache.DecodeCount != 3 || cache.Bytes != 12)
+            throw new Exception("Alternating scenes decoded unchanged shared images or retained unbounded scene state.");
+        File.WriteAllBytes(common, [9, 8]); cache.ReuseResources(); Ready(common);
+        if (cache.Get(common)?.Data[0] != 9 || ReferenceEquals(pixels, cache.Get(common)) || cache.DecodeCount != 4)
+            throw new Exception("A changed shared image reused stale decoded pixels.");
+        File.Delete(common); cache.ReuseResources(); Ready(common);
+        if (cache.Get(common) is not null || !cache.IsUnavailable(common) || cache.Error is null)
+            throw new Exception("A deleted image retained its previous pixels or lost its diagnostic.");
+        cache.ReuseResources(); Ready(common);
+        if (cache.DecodeCount != 5 || cache.Error is null) throw new Exception("An unchanged unavailable image was decoded again or lost its diagnostic.");
+        File.WriteAllBytes(common, [7]); cache.ReuseResources(); Ready(common);
+        if (cache.Get(common)?.Data[0] != 7 || cache.DecodeCount != 6) throw new Exception("A restored missing image did not invalidate its unavailable entry.");
+
+        using var started = new ManualResetEventSlim(); using var release = new ManualResetEventSlim();
+        using var pending = new StoryboardImageCache(path =>
+        {
+            if (path == first) { started.Set(); if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException(); }
+            return new(1, 1, new byte[4]);
+        });
+        pending.Prepare([first, second]);
+        if (!started.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Pending decoder did not start.");
+        pending.ReuseResources(); pending.Prepare([first]); pending.Get(first); release.Set();
+        if (!SpinWait.SpinUntil(() => !pending.Loading, TimeSpan.FromSeconds(5)) || pending.Get(first) is null || pending.DecodeCount != 1 || pending.Bytes != 4)
+            throw new Exception("Reused in-flight common image was lost, duplicated or published an obsolete preload.");
+        pending.Dispose();
+        if (pending.Bytes != 0) throw new Exception("Full retirement retained reused decoded images.");
+        Console.WriteLine("PASS bounded cross-scene pixels, version/deletion/restoration invalidation, missing diagnostics and in-flight preparation retirement");
+
+        void Ready(params string[] paths)
+        {
+            cache.Prepare(paths);
+            if (!SpinWait.SpinUntil(() => !cache.Loading, TimeSpan.FromSeconds(5))) throw new TimeoutException("Cache did not finish preparing.");
+            foreach (string path in paths) if (cache.Get(path) is null && !cache.IsUnavailable(path)) throw new Exception("Prepared image is unavailable without a terminal diagnostic.");
+        }
     }
 
     private static void Check(string[] prepared, string[] required, string[] expected, bool prepareAgain = false)

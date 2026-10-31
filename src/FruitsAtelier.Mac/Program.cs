@@ -55,6 +55,6 @@ internal static class MacPaths
     public static void Log(string text)
     {
         try { Directory.CreateDirectory(Path.Combine(Artifacts, "logs")); File.AppendAllText(Path.Combine(Artifacts, "logs", "macos.log"), $"{DateTimeOffset.Now:O} {text}\n"); }
-        catch (IOException) { }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
     }
 }

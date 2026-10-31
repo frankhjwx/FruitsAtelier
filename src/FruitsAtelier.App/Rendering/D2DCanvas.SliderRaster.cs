@@ -40,8 +40,17 @@ public sealed partial class D2DCanvas
     internal Func<double>? SliderRasterTimeOverride { get; set; }
     private double SliderRasterNow => SliderRasterTimeOverride?.Invoke()
         ?? System.Diagnostics.Stopwatch.GetTimestamp() * 1000d / System.Diagnostics.Stopwatch.Frequency;
-    public bool SliderRasterNeedsRedraw => sliderRasterPending is not null || sliderRasterTransitions.Count > 0
-        || sliderRasterPreparedFrame == sliderRasterFrame && sliderRasters.Values.Any(raster => raster.Preview && raster.Frame == sliderRasterFrame);
+    public bool SliderRasterNeedsRedraw
+    {
+        get
+        {
+            if (sliderRasterPending is not null || sliderRasterTransitions.Count > 0) return true;
+            if (sliderRasterPreparedFrame == sliderRasterFrame)
+                foreach (var raster in sliderRasters.Values)
+                    if (raster.Preview && raster.Frame == sliderRasterFrame) return true;
+            return false;
+        }
+    }
     private int sliderRasterPixelBudget = (int)(sliderRasterActiveLimit / 16);
     private bool sliderRasterDeferred;
     private Task<SliderRasterPixels>? sliderRasterPending;
@@ -86,7 +95,7 @@ public sealed partial class D2DCanvas
     private void RetireSliderRasterTransitions()
     {
         double now = SliderRasterNow;
-        foreach (var pair in sliderRasterTransitions.ToArray())
+        foreach (var pair in sliderRasterTransitions)
             if (now - pair.Value.Started >= sliderRasterTransitionMs)
             {
                 sliderRasterBytes -= pair.Value.Previous.Bytes;
@@ -99,10 +108,11 @@ public sealed partial class D2DCanvas
         while (sliderRasters.Count > 0 && (sliderRasterBytes + bytes > sliderRasterLimit
             || protectedKey is null && sliderRasters.Count >= 128))
         {
-            var eligible = sliderRasters.Where(pair => pair.Key != protectedKey
-                && pair.Value.Frame < sliderRasterFrame - 1).ToArray();
-            if (eligible.Length == 0) return false;
-            var oldest = eligible.MinBy(pair => pair.Value.Used);
+            KeyValuePair<SliderRasterKey, SliderRaster> oldest = default;
+            foreach (var pair in sliderRasters)
+                if (pair.Key != protectedKey && pair.Value.Frame < sliderRasterFrame - 1
+                    && (oldest.Value is null || pair.Value.Used < oldest.Value.Used)) oldest = pair;
+            if (oldest.Value is null) return false;
             sliderRasterBytes -= oldest.Value.Bytes; oldest.Value.Dispose(); sliderRasters.Remove(oldest.Key);
             if (sliderRasterTransitions.Remove(oldest.Key, out var transition))
             {
@@ -112,8 +122,15 @@ public sealed partial class D2DCanvas
         return sliderRasterBytes + bytes <= sliderRasterLimit;
     }
 
-    private bool HasOversizedActiveSliderRaster => sliderRasters.Values.Any(raster =>
-        raster.Frame >= sliderRasterFrame - 1 && (long)raster.Width * raster.Height > sliderRasterPixelBudget);
+    private bool HasOversizedActiveSliderRaster
+    {
+        get
+        {
+            foreach (var raster in sliderRasters.Values)
+                if (raster.Frame >= sliderRasterFrame - 1 && (long)raster.Width * raster.Height > sliderRasterPixelBudget) return true;
+            return false;
+        }
+    }
 
     private bool TryDrawSliderRaster(IReadOnlyList<Vector2> points, float x, float y, float scale,
         float diameter, uint border, uint accent, float opacity)

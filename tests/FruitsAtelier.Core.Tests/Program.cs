@@ -1,6 +1,9 @@
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--autoplay-check")) { AutoPreviewPerformanceTests.Run(); return 0; }
+if (args.Contains("--autoplay-performance")) { AutoPreviewPerformanceTests.Run(); AutoPreviewPerformanceTests.Benchmark(); return 0; }
+if (args.Length == 2 && args[0] == "--autoplay-map-check") { AutoPreviewPerformanceTests.Map(args[1]); return 0; }
 if (args.Contains("--slider-event-timing-check")) { SliderEventTimingTests.Run(); Console.WriteLine("PASS Slider event timing and automatic SV persistence"); return 0; }
 if (args.Contains("--timing-batch-check")) { TimingBatchEditingTests.Run(); return 0; }
 if (args.Contains("--storyboard-check")) return StoryboardTests.Run();
@@ -51,6 +54,7 @@ if (args.Length == 2 && args[0] == "--benchmark-history")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Autoplay matches independent frames and movement intervals", AutoPreviewPerformanceTests.Run),
     ("Slider event edits preserve rounded timing, automatic SV, persistence and export", SliderEventTimingTests.Run),
     ("Batch timing edits preserve slider extents and length calculations", TimingBatchEditingTests.Run),
     ("Storyboard commands, arbitrary timestamps, health and owning judgements preserve their semantics", () => { if (StoryboardTests.Run() != 0) throw new Exception("Storyboard compatibility regression failed."); }),

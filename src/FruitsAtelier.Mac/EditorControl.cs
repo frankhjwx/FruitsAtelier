@@ -33,25 +33,36 @@ internal sealed class EditorControl : Control, IDisposable
 {
     internal EditorView View { get; } = new(loadDemo: false);
     private readonly ImageCache images = new();
+    private readonly MacUiBoundary boundary;
+    internal void RunUi(Action action) => boundary.Run(action);
+    internal void ReportUiFailure(Exception error) => boundary.Report(error);
     internal bool MediaNeedsRedraw => images.MediaNeedsRedraw;
     internal Action? Changed;
+    internal Action<Exception>? RecoveryRendererFailed;
     private float uiScale = 1;
+    private readonly MacRenderRecovery renderRecovery;
     private Point EditorPoint(PointerEventArgs e) => e.GetPosition(this) / uiScale;
     public EditorControl()
     {
+        boundary = new(View, error => MacPaths.Log(error.ToString()), InvalidateVisual);
+        renderRecovery = new(boundary.Report, error =>
+        {
+            MacPaths.Log(error.ToString());
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => boundary.Run(() => RecoveryRendererFailed?.Invoke(error)));
+        });
         Focusable = true; ClipToBounds = true;
         DragDrop.SetAllowDrop(this, true);
-        DragDrop.AddDragOverHandler(this, (_, e) =>
+        DragDrop.AddDragOverHandler(this, (_, e) => boundary.Run(() =>
         {
-            e.DragEffects = DroppedPaths(e).Any(View.CanDropFile)
+            e.DragEffects = !View.ErrorVisible && DroppedPaths(e).Any(View.CanDropFile)
                 ? DragDropEffects.Copy : DragDropEffects.None;
             e.Handled = true;
-        });
-        DragDrop.AddDropHandler(this, (_, e) =>
+        }));
+        DragDrop.AddDropHandler(this, (_, e) => boundary.Run(() =>
         {
-            View.DropLibraryFiles(DroppedPaths(e));
+            if (!View.ErrorVisible) View.DropLibraryFiles(DroppedPaths(e));
             e.Handled = true; Refresh();
-        });
+        }));
         View.RequestPasteObjects = async () =>
         {
             var document = View.Document;
@@ -60,7 +71,7 @@ internal sealed class EditorControl : Control, IDisposable
                 if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
                 {
                     string text = await clipboard.TryGetTextAsync() ?? "";
-                    if (ReferenceEquals(document, View.Document)) View.PasteClipboardText(text);
+                    if (!View.ErrorVisible && ReferenceEquals(document, View.Document)) View.PasteClipboardText(text);
                 }
             }
             catch (Exception error) { View.SetNotice(error.Message); }
@@ -72,7 +83,10 @@ internal sealed class EditorControl : Control, IDisposable
             try
             {
                 if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-                    View.PasteHitsoundName(await clipboard.TryGetTextAsync() ?? "",session);
+                {
+                    string text = await clipboard.TryGetTextAsync() ?? "";
+                    if (!View.ErrorVisible) View.PasteHitsoundName(text,session);
+                }
             }
             catch (Exception error) { View.SetNotice(error.Message); }
         };
@@ -82,7 +96,10 @@ internal sealed class EditorControl : Control, IDisposable
             try
             {
                 if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-                    View.PasteSongSetupText(await clipboard.TryGetTextAsync() ?? "", session);
+                {
+                    string text = await clipboard.TryGetTextAsync() ?? "";
+                    if (!View.ErrorVisible) View.PasteSongSetupText(text, session);
+                }
             }
             catch (Exception error) { View.SetNotice(error.Message); }
             Refresh();
@@ -93,7 +110,10 @@ internal sealed class EditorControl : Control, IDisposable
             try
             {
                 if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-                    View.PasteTimingText(await clipboard.TryGetTextAsync() ?? "", session);
+                {
+                    string text = await clipboard.TryGetTextAsync() ?? "";
+                    if (!View.ErrorVisible) View.PasteTimingText(text, session);
+                }
             }
             catch (Exception error) { View.SetNotice(error.Message); }
             Refresh();
@@ -105,7 +125,10 @@ internal sealed class EditorControl : Control, IDisposable
             try
             {
                 if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-                    View.PasteTimeJumpText(await clipboard.TryGetTextAsync() ?? "", session);
+                {
+                    string text = await clipboard.TryGetTextAsync() ?? "";
+                    if (!View.ErrorVisible) View.PasteTimeJumpText(text, session);
+                }
             }
             catch (Exception error) { View.SetNotice(error.Message); }
             Refresh();
@@ -116,7 +139,10 @@ internal sealed class EditorControl : Control, IDisposable
             try
             {
                 if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-                    View.PasteLibraryText(await clipboard.TryGetTextAsync() ?? "", field);
+                {
+                    string text = await clipboard.TryGetTextAsync() ?? "";
+                    if (!View.ErrorVisible) View.PasteLibraryText(text, field);
+                }
             }
             catch (Exception error) { View.SetNotice(error.Message); }
             Refresh();
@@ -127,7 +153,10 @@ internal sealed class EditorControl : Control, IDisposable
             try
             {
                 if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-                    View.PasteFieldText(await clipboard.TryGetTextAsync() ?? "", field);
+                {
+                    string text = await clipboard.TryGetTextAsync() ?? "";
+                    if (!View.ErrorVisible) View.PasteFieldText(text, field);
+                }
             }
             catch (Exception error) { View.SetNotice(error.Message); }
             Refresh();
@@ -140,14 +169,21 @@ internal sealed class EditorControl : Control, IDisposable
     }
     public override void Render(DrawingContext context)
     {
+        renderRecovery.BeginFrame(View.RecoveryActive);
+        try { RenderEditor(context); }
+        catch (Exception error) { renderRecovery.Fail(error, View.RecoveryActive); }
+    }
+    private void RenderEditor(DrawingContext context)
+    {
         base.Render(context);
         uiScale = View.UiScaleFactor;
-        using var transform = context.PushTransform(Matrix.CreateScale(uiScale, uiScale));
-        using var canvas = new MacCanvas(context, images, (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * uiScale);
-        View.Render(canvas, (float)Bounds.Width / uiScale, (float)Bounds.Height / uiScale);
+        using (context.PushTransform(Matrix.CreateScale(uiScale, uiScale)))
+        using (var canvas = new MacCanvas(context, images, (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * uiScale))
+            View.Render(canvas, (float)Bounds.Width / uiScale, (float)Bounds.Height / uiScale);
+        if (View.ErrorVisible) return;
         UpdatePointerCursor();
         if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)
-            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw) InvalidateVisual(); });
+            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => boundary.Run(() => { if (!View.ErrorVisible && (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)) InvalidateVisual(); }));
     }
     private StandardCursorType? pointerCursorType;
     private void UpdatePointerCursor()
@@ -162,6 +198,11 @@ internal sealed class EditorControl : Control, IDisposable
 
     internal void Refresh()
     {
+        try { RefreshEditor(); }
+        catch (Exception error) { boundary.Report(error); }
+    }
+    private void RefreshEditor()
+    {
         if (TopLevel.GetTopLevel(this) is Window window)
         {
             var theme = View.LightEditorTheme ? Avalonia.Styling.ThemeVariant.Light : Avalonia.Styling.ThemeVariant.Dark;
@@ -171,64 +212,136 @@ internal sealed class EditorControl : Control, IDisposable
     }
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        Focus(); var p = EditorPoint(e); var state = e.GetCurrentPoint(this).Properties;
-        int button = state.IsRightButtonPressed ? 2 : state.IsMiddleButtonPressed ? 1 : 0;
-        if (e.ClickCount == 2 && button == 0) View.PointerDoubleClick((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
-        else View.PointerDown((float)p.X, (float)p.Y, button, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
-        if (View.WantsCapture) e.Pointer.Capture(this);
-        e.Handled = true; Refresh();
+        try
+        {
+            View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            Focus(); var p = EditorPoint(e); var state = e.GetCurrentPoint(this).Properties;
+            int button = state.IsRightButtonPressed ? 2 : state.IsMiddleButtonPressed ? 1 : 0;
+            if (e.ClickCount == 2 && button == 0) View.PointerDoubleClick((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
+            else View.PointerDown((float)p.X, (float)p.Y, button, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
+            if (View.WantsCapture) e.Pointer.Capture(this);
+            e.Handled = true; Refresh();
+        }
+        catch (Exception error) { boundary.Report(error); e.Handled = true; }
+        if (View.RecoveryActive)
+        {
+            try { e.Pointer.Capture(null); e.Handled = true; }
+            catch (Exception error) { boundary.Report(error); e.Handled = true; }
+        }
     }
     protected override void OnPointerMoved(PointerEventArgs e)
     {
-        View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        var p = EditorPoint(e);
-        View.PointerMove((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
-        UpdatePointerCursor();
-        Refresh();
+        try
+        {
+            View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            var p = EditorPoint(e);
+            View.PointerMove((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
+            UpdatePointerCursor();
+            Refresh();
+        }
+        catch (Exception error) { boundary.Report(error); e.Handled = true; }
+        if (View.RecoveryActive)
+        {
+            try { e.Pointer.Capture(null); e.Handled = true; }
+            catch (Exception error) { boundary.Report(error); e.Handled = true; }
+        }
     }
     protected override void OnPointerExited(PointerEventArgs e)
     {
-        base.OnPointerExited(e);
-        View.PointerLeave(); Refresh();
+        try
+        {
+            base.OnPointerExited(e);
+            View.PointerLeave(); Refresh();
+        }
+        catch (Exception error) { boundary.Report(error); e.Handled = true; }
     }
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        var p = EditorPoint(e);
-        View.PointerUp((float)p.X, (float)p.Y, e.InitialPressMouseButton == MouseButton.Right ? 2 : e.InitialPressMouseButton == MouseButton.Middle ? 1 : 0,
-            e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        if (!View.WantsCapture) e.Pointer.Capture(null);
-        e.Handled = true; Refresh();
+        try
+        {
+            var p = EditorPoint(e);
+            View.PointerUp((float)p.X, (float)p.Y, e.InitialPressMouseButton == MouseButton.Right ? 2 : e.InitialPressMouseButton == MouseButton.Middle ? 1 : 0,
+                e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            if (!View.WantsCapture) e.Pointer.Capture(null);
+            e.Handled = true; Refresh();
+        }
+        catch (Exception error) { boundary.Report(error); e.Handled = true; }
+        if (View.RecoveryActive)
+        {
+            try { e.Pointer.Capture(null); e.Handled = true; }
+            catch (Exception error) { boundary.Report(error); e.Handled = true; }
+        }
     }
-    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e) { if (View.WantsCapture) View.CancelInteraction(); Refresh(); }
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        try
+        {
+            if (!View.RecoveryActive && View.WantsCapture) View.CancelInteraction();
+            Refresh();
+        }
+        catch (Exception error) { boundary.Report(error); e.Handled = true; }
+    }
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
-        View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        var p = EditorPoint(e); View.Wheel((float)p.X, (float)p.Y, (float)e.Delta.Y * 120,
-            MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift), e.KeyModifiers.HasFlag(KeyModifiers.Alt));
-        e.Handled = true; Refresh();
+        try
+        {
+            View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            var p = EditorPoint(e); View.Wheel((float)p.X, (float)p.Y, (float)e.Delta.Y * 120,
+                MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift), e.KeyModifiers.HasFlag(KeyModifiers.Alt));
+            e.Handled = true; Refresh();
+        }
+        catch (Exception error) { boundary.Report(error); e.Handled = true; }
     }
+    private readonly HashSet<Key> recoveryHeldKeys = [];
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        View.KeyDown(MacInput.VirtualKey(e.Key, View.IsEditingText || View.CapturingTestplayKey || View.IsTestplaying), MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        e.Handled = View.IsTestplaying || View.CapturingTestplayKey || e.Key is Key.Tab or Key.Space or Key.Back or Key.Delete or Key.Enter or Key.Escape
-            || MacInput.Control(e.KeyModifiers) || e.KeyModifiers.HasFlag(KeyModifiers.Alt) && e.Key is Key.Left or Key.Right or Key.Up or Key.Down;
-        Refresh();
+        try
+        {
+            bool alreadyHeld = !recoveryHeldKeys.Add(e.Key);
+            if (View.RecoveryActive && alreadyHeld) { e.Handled = true; return; }
+            View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            View.KeyDown(MacInput.VirtualKey(e.Key, View.IsEditingText || View.CapturingTestplayKey || View.IsTestplaying), MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            e.Handled = View.IsTestplaying || View.CapturingTestplayKey || e.Key is Key.Tab or Key.Space or Key.Back or Key.Delete or Key.Enter or Key.Escape
+                || MacInput.Control(e.KeyModifiers) || e.KeyModifiers.HasFlag(KeyModifiers.Alt) && e.Key is Key.Left or Key.Right or Key.Up or Key.Down;
+            Refresh();
+        }
+        catch (Exception error) { boundary.Report(error); e.Handled = true; }
     }
     protected override void OnKeyUp(KeyEventArgs e)
     {
-        base.OnKeyUp(e);
-        View.KeyUp(MacInput.VirtualKey(e.Key, View.IsEditingText || View.CapturingTestplayKey || View.IsTestplaying));
-        View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        Refresh();
+        try
+        {
+            recoveryHeldKeys.Remove(e.Key);
+            base.OnKeyUp(e);
+            View.KeyUp(MacInput.VirtualKey(e.Key, View.IsEditingText || View.CapturingTestplayKey || View.IsTestplaying));
+            View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            Refresh();
+        }
+        catch (Exception error) { boundary.Report(error); e.Handled = true; }
     }
     protected override void OnTextInput(TextInputEventArgs e)
     {
-        foreach (char c in e.Text ?? "") View.TextInput(c);
-        e.Handled = true; Refresh();
+        try
+        {
+            foreach (char c in e.Text ?? "") View.TextInput(c);
+            e.Handled = true; Refresh();
+        }
+        catch (Exception error) { boundary.Report(error); e.Handled = true; }
     }
-    protected override void OnGotFocus(GotFocusEventArgs e) { base.OnGotFocus(e); View.SetTextInputFocus(true); Refresh(); }
-    protected override void OnLostFocus(Avalonia.Interactivity.RoutedEventArgs e) { base.OnLostFocus(e); View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); Refresh(); }
-    public void Dispose() { View.CompleteLibraryCacheWrites(); View.StopFileMonitoring(); View.StopDiscussions(); images.Dispose(); }
+    protected override void OnGotFocus(GotFocusEventArgs e)
+    {
+        try { base.OnGotFocus(e); View.SetTextInputFocus(true); Refresh(); }
+        catch (Exception error) { boundary.Report(error); e.Handled = true; }
+    }
+    protected override void OnLostFocus(Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        try
+        {
+            recoveryHeldKeys.Clear(); base.OnLostFocus(e); View.SetTextInputFocus(false);
+            if (!View.RecoveryActive) View.CancelInteraction(preserveTestplay: true);
+            Refresh();
+        }
+        catch (Exception error) { boundary.Report(error); e.Handled = true; }
+    }
+    public void Dispose() { _ = View.CompleteLibraryCacheWritesAsync(); View.StopFileMonitoring(); View.StopDiscussions(); images.Dispose(); }
 }

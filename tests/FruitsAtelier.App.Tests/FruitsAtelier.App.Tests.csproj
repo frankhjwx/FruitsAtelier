@@ -5,6 +5,9 @@
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/FruitsAtelier.Mac/MacUiBoundary.cs" Link="MacUiBoundary.cs" />
+    <Compile Include="../../src/FruitsAtelier.Mac/MacRecoveryClose.cs" Link="MacRecoveryClose.cs" />
+    <Compile Include="../../src/FruitsAtelier.Mac/MacRenderRecovery.cs" Link="MacRenderRecovery.cs" />
     <None Update="Fixtures/discussions.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures/video-with-audio.flv" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../FruitsAtelier.Audio.Tests/Fixtures/quiet-tone.ogg" Link="Fixtures/quiet-tone.ogg" CopyToOutputDirectory="PreserveNewest" />

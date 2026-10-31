@@ -23,6 +23,17 @@ internal static class AimodRenderCheck
                 view.KeyDown(46, false, false); view.KeyDown(116, false, false); Paint();
                 if (!view.AimodVisible || view.AimodErrors.Count != 59 || view.IsTestplaying || !view.Document.ContentEquals(map))
                     throw new InvalidOperationException("Native AiMod check or input isolation failed.");
+                var first = view.AimodRowBounds(0); var time = view.AimodHeaderBounds(0);
+                Click(time.X + 12, first.Y + 10); Paint();
+                if (view.SelectedObjectIds.Count != 2) throw new InvalidOperationException("Native AiMod timestamp did not select its objects.");
+                view.KeyDown(46, false, false); Paint();
+                Click(time.X + 12, first.Y + 10); Paint();
+                Click(first.Right - 10, first.Y + 10); view.KeyDown(13, false, false); Paint();
+                if (view.SelectedObjectIds.Count != 0 || view.PlayheadMs != 1003 || view.ErrorVisible)
+                    throw new InvalidOperationException("Native retained AiMod row selected deleted objects or trapped input.");
+                view.KeyDown('Z', true, false); Paint();
+                if (!view.Document.ContentEquals(map) || view.IsDirty) throw new InvalidOperationException("Native AiMod navigation changed deletion undo.");
+                view.ShowAimod(); Paint();
                 var panel = view.AimodPanelBounds;
                 var track = view.AimodVerticalTrack;
                 view.Wheel(track.X - 15, track.Y + 15, -120, false); Paint();

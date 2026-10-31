@@ -1,11 +1,87 @@
 using FruitsAtelier.Core;
 using FruitsAtelier.App.Editor;
+using System.Reflection;
 using L = FruitsAtelier.Localization.Strings;
 
 internal static class AimodTests
 {
+    public static void StaleNavigation()
+    {
+        string previous = L.Language;
+        try
+        {
+            foreach (string language in new[] { "en", "zh-CN" })
+            foreach (bool osu in new[] { false, true })
+            for (int kind = 0; kind < 4; kind++)
+            {
+                L.SetLanguage(language);
+                var map = new MapDocument { DurationMs = 10000 };
+                Guid target = Guid.NewGuid();
+                if (kind == 0) map.Fruits.Add(new() { Id = target, TimeMs = 1003, X = 100 });
+                if (kind == 1)
+                {
+                    var track = new CurveTrack { Id = target };
+                    track.Nodes.AddRange([new() { TimeMs = 1003, X = 100 }, new() { TimeMs = 1503, X = 400 }]);
+                    map.Tracks.Add(track);
+                }
+                if (kind == 2)
+                {
+                    var slider = new ImportedSlider { Id = target, TimeMs = 1003, X = 100, Y = 192, PathType = 'L', PixelLength = 300 };
+                    slider.ControlPoints.AddRange([new(100, 192), new(400, 192)]); map.ImportedSliders.Add(slider);
+                }
+                if (kind == 3) map.BananaShowers.Add(new() { Id = target, TimeMs = 1003, EndTimeMs = 1503 });
+                var remaining = new Fruit { TimeMs = 1008, X = 400 }; map.Fruits.Add(remaining);
+                var ui = new Ui(); ui.LoadDocument(map);
+                if (osu) { ui.View.ToggleOsuCanvas(); ui.Paint(); }
+                ui.View.ShowAimod(); ui.Paint();
+                var issue = ui.View.AimodIssues.First(i => i.Code == "overlap");
+                int rowIndex = ui.View.AimodIssues.ToList().IndexOf(issue);
+                Navigate(false, [target, remaining.Id]);
+                typeof(EditorView).GetMethod("SelectObjects", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(ui.View, [new[] { target }, target]);
+                ui.Key(46);
+                Navigate(true, [remaining.Id]);
+                ui.Key('Z', ctrl: true); Navigate(true, [target, remaining.Id]);
+                ui.Key(46);
+                Navigate(false, []); Navigate(true, []);
+                ui.Key('Z', ctrl: true);
+                Check(map.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Retained report navigation preserves deletion undo.");
+                foreach (var finding in ui.View.AimodIssues.Where(i => i.ObjectIds is not { Length: > 0 }).ToArray())
+                {
+                    double time = ui.View.PlayheadMs;
+                    typeof(EditorView).GetMethod("LocateAimodIssue", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(ui.View, [finding]);
+                    ui.Paint();
+                    Check(ui.View.PlayheadMs == (finding.TimeMs ?? time) && map.ContentEquals(ui.View.Document),
+                        "Timing, metadata and resource findings navigate without changing content.");
+                }
+                if (kind == 0 && !osu)
+                {
+                    ui.Key('B'); ui.ClickMap(3000, 200);
+                    Navigate(false, [target, remaining.Id]);
+                    ui.View.CancelInteraction(); ui.Paint();
+                    Check(map.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Navigation during a slider draft preserves cancellation.");
+                }
+                ui.View.NewProject();
+
+                void Navigate(bool keyboard, Guid[] selected)
+                {
+                    var before = ui.View.Document.DeepClone(); bool dirty = ui.View.IsDirty;
+                    var row = ui.View.AimodRowBounds(rowIndex); var header = ui.View.AimodHeaderBounds(0);
+                    float x = keyboard ? row.Right - 10 : header.X + 12, y = row.Y + 10;
+                    ui.View.PointerDown(x, y, 0, false, false); ui.View.PointerUp(x, y, 0);
+                    if (keyboard) ui.Key(13); else ui.Paint();
+                    Check(ui.View.SelectedObjectIds.ToHashSet().SetEquals(selected) && ui.View.PlayheadMs == issue.TimeMs,
+                        $"AiMod navigation selected missing targets: kind={kind}, osu={osu}, keyboard={keyboard}.");
+                    Check(before.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty && !ui.View.ErrorVisible,
+                        "AiMod navigation changes only selection and viewport.");
+                }
+            }
+        }
+        finally { L.SetLanguage(previous); }
+        Console.WriteLine("PASS AiMod retained reports across object types, canvases, languages, mouse, Enter and undo");
+    }
     public static void Run()
     {
+        StaleNavigation();
         string previous = L.Language;
         try
         {

@@ -3,6 +3,9 @@
 AiMod inspects the current difficulty's exported Catch representation. Generated
 objects are mapped back to their editable parents for navigation. A report is a
 snapshot: Refresh updates it, and checking or navigating never creates an edit.
+Clicking a timestamp or pressing Enter on a selected finding seeks to its reported
+time and selects its objects that still exist. Findings retained after object deletion
+remain navigable until Refresh updates the report.
 
 ## Checks
 

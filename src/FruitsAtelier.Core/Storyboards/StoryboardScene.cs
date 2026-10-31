@@ -331,6 +331,39 @@ internal sealed class StoryboardSprite
 /// <summary>Legacy osu! storyboard grammar. Source: ppy/osu 48c4800e (MIT; THIRD_PARTY_NOTICES.md).</summary>
 public static class StoryboardReader
 {
+    public static string ReadSharedFile(string path, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var input = File.OpenRead(path);
+        return ReadSharedText(input, cancellationToken);
+    }
+
+    internal static string ReadSharedText(Stream input, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        long length = input.CanSeek ? input.Length : 0;
+        if (length > OsuBeatmapReader.MaximumFileBytes)
+            throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("core.storyboard.fileLimit"));
+        using var bytes = new MemoryStream((int)length);
+        byte[] buffer = new byte[81920];
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int count = input.Read(buffer);
+            if (count == 0) break;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (count > OsuBeatmapReader.MaximumFileBytes - bytes.Length)
+                throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("core.storyboard.fileLimit"));
+            bytes.Write(buffer, 0, count);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        bytes.Position = 0;
+        using var reader = new StreamReader(bytes, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        string text = reader.ReadToEnd();
+        cancellationToken.ThrowIfCancellationRequested();
+        return text;
+    }
+
     public static StoryboardScene Read(string beatmapText, string? sharedText, string directory, CancellationToken cancellationToken = default, bool samplesOnly = false)
     {
         List<StoryboardSprite> sprites = []; List<StoryboardVideoInfo> videos = []; List<StoryboardSample> samples = []; List<string> diagnostics = [];

@@ -25,6 +25,7 @@ public interface ICanvas
     }
     void PrepareSliderBodies(int denseBodyCount, bool deferred = false) { }
     void ReleaseDifficultyResources() { }
+    void ReleaseDifficultyResources(bool preserveMedia) => ReleaseDifficultyResources();
     void SliderBody(IReadOnlyList<System.Numerics.Vector2> points, float x, float y, float scale,
         float diameter, uint border, uint accent, float opacity)
     {
@@ -59,7 +60,10 @@ public interface ICanvas
         uint tint, float opacity, float rotationRadians, bool additive, bool flipX, bool flipY,
         float originX, float originY) { }
     bool VideoImage(string path, Rect destination, double positionMs, bool playing, double rate) => false;
+    bool PrepareVideoImage(string path, double positionMs, bool playing, double rate) => true;
+    bool RetainedVideoImage(Rect destination) => false;
     void StopVideo() { }
+    void RetainVideo(string? path, bool preparing = false) => StopVideo();
     void ReleaseStoryboardResources() => StopVideo();
     string? MediaError => null;
     long MediaGeneration => 0;

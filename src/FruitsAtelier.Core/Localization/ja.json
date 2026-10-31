@@ -1941,6 +1941,9 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "SV 表示を切り替える前にタイミング編集を適用またはキャンセルしてください。",
   "timing.sourceChanged": "エディターのタイミングが変更されました。適用前にこのウィンドウを開き直してください。",
+  "core.storyboard.fileLimit": "ストーリーボードファイルが 32 MiB の上限を超えています。",
+  "core.storyboard.sceneExpansionLimit": "展開後のストーリーボードテキストがシーン全体の上限 268,435,456 文字を超えています。",
+  "core.storyboard.expansionLimit": "ストーリーボード変数の展開が 33,554,432 文字の上限を超えています。",
   "media.storyboardDiagnostics": "ストーリーボード：無効なコマンドまたはリソースを {0} 件スキップしました。",
   "media.storyboardFailed": "ストーリーボードを読み込めませんでした：{0}",
   "media.loading": "譜面のリソースを準備しています…",
@@ -1951,5 +1954,12 @@
   "settings.theme.midnight": "ミッドナイト",
   "settings.theme.forest": "フォレスト",
   "settings.theme.rose": "ローズ",
-  "settings.theme.slate": "スレート"
+  "settings.theme.slate": "スレート",
+  "recovery.title": "エディターの復旧",
+  "recovery.help": "描画を停止しました。プロジェクトはメモリに保持されています。再試行の前に復旧用コピーを保存してください。",
+  "recovery.save": "復旧用コピーを保存",
+  "recovery.saved": "復旧用コピーを保存しました: {0}",
+  "recovery.failed": "復旧用コピーを保存できませんでした: {0}",
+  "recovery.nativeHelp": "描画機能を使用できません。Ctrl+S で復旧用コピーを保存するか、Enter で描画を再試行してください。プロジェクトはメモリに保持されています。",
+  "recovery.closeHelp": "閉じる前に復旧用コピーを保存しますか？保存せずに閉じるには「いいえ」を選択してください。"
 }

@@ -35,13 +35,18 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        // Full-screen pages can return before laying out docks; never reuse their previous native viewport.
+        browserRenderedViewport = browserToolbar = default;
+        discussionMarkerHits.Clear(); discussionQuoteBounds.Clear(); discussionQuoteActions.Clear(); discussionQuoteViews.Clear();
+        if (ErrorVisible)
+        {
+            this.width = width; this.height = height;
+            c.StopVideo(); DrawError(c); return;
+        }
         if (storyboardResourcesReleasePending) { c.ReleaseStoryboardResources(); storyboardResourcesReleasePending = false; }
         storyboardRenderFrame++;
         PumpStoryboardGameplay();
         PumpBrowserClear();
-        // Full-screen pages can return before laying out docks; never reuse their previous native viewport.
-        browserRenderedViewport = browserToolbar = default;
-        discussionMarkerHits.Clear(); discussionQuoteBounds.Clear(); discussionQuoteActions.Clear(); discussionQuoteViews.Clear();
         videoRequestedThisFrame = false;
         try
         {
@@ -53,13 +58,16 @@ public sealed partial class EditorView
         finally
         {
             // Mapping and Preview share one decoder, so retirement follows all viewport requests.
-            if (!videoRequestedThisFrame) c.StopVideo();
+            if (!videoRequestedThisFrame)
+                c.RetainVideo(!LibraryVisible && LibrarySettings.EnableVideoStoryboard ? storyboardScene?.Videos.FirstOrDefault().Path : null,
+                    !LibraryVisible && mediaOpening && LibrarySettings.EnableVideoStoryboard);
         }
     }
 
     private void RenderContent(ICanvas c, float width, float height)
     {
-        if (difficultyGraphicsReleasePending) { c.ReleaseDifficultyResources(); difficultyGraphicsReleasePending = false; }
+        PumpDifficultyPause();
+        if (difficultyGraphicsReleasePending) { c.ReleaseDifficultyResources(difficultyMediaReusePending); difficultyGraphicsReleasePending = difficultyMediaReusePending = false; }
         ReclaimProjectMemory();
         if (AcknowledgementsVisible)
         {
@@ -96,7 +104,7 @@ public sealed partial class EditorView
         LegacyConversionBounds = StreamConversionBounds = default;
         distanceLabelBounds.Clear(); PreviousDistanceFieldBounds = NextDistanceFieldBounds = XCoordinateFieldBounds = null;
         AdvanceCanvasBackgroundDim();
-        if (difficultyGraphicsReleasePending) { c.ReleaseDifficultyResources(); difficultyGraphicsReleasePending = false; }
+        if (difficultyGraphicsReleasePending) { c.ReleaseDifficultyResources(difficultyMediaReusePending); difficultyGraphicsReleasePending = difficultyMediaReusePending = false; }
         if (IsTestplaying)
         {
             AdvanceTestplay();

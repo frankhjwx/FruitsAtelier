@@ -183,7 +183,9 @@ public sealed class HitsoundResourcePlan
         foreach (string storyboard in Directory.EnumerateFiles(root,"*.osb"))
         {
             var context = new MapDocument { SourcePath = current.SourcePath ?? current.AudioPath };
-            var section = new OsuSection { Name = "Events" }; section.Lines.AddRange(File.ReadAllLines(storyboard));
+            var section = new OsuSection { Name = "Events" };
+            using var reader = new StringReader(StoryboardReader.ReadSharedFile(storyboard));
+            while (reader.ReadLine() is { } line) section.Lines.Add(line);
             context.OriginalSections.Add(section); protectedFiles.UnionWith(StoryboardSamples(context));
         }
         foreach (var path in Referenced(current).Where(p => Inside(root, p)).Distinct(StringComparer.OrdinalIgnoreCase))

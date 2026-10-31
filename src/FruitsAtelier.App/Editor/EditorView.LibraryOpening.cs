@@ -11,7 +11,7 @@ public sealed partial class EditorView
     private Action? libraryOpenCompleted;
     private string? libraryOpenDifficultyPath;
     private string? pendingLibraryDifficultyPath;
-    public bool LibraryOpening => libraryOpenTask is not null || mediaOpening && !mediaExitPending && !ErrorVisible;
+    public bool LibraryOpening => difficultyPauseTask is not null || libraryOpenTask is not null || mediaOpening && !mediaExitPending && !ErrorVisible;
 
     public void BeginLibraryOpen(LibraryMap map, Action? completed = null, bool selectDifficulty = false)
     {

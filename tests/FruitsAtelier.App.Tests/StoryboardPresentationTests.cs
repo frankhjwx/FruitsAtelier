@@ -11,6 +11,9 @@ internal static class StoryboardPresentationTests
         string directory = Path.GetFullPath("artifacts/tests/video-storyboard/presentation-fixtures");
         Directory.CreateDirectory(directory);
         OpeningCancellation(directory);
+        DifficultySwitchPreparation(directory);
+        DifficultyPresentationContinuity(directory);
+        DifficultyPauseOrdering(directory);
         foreach (bool widescreen in new[] { false, true })
         {
             var map = new MapDocument { SourcePath = Path.Combine(directory, "map.osu"), DurationMs = 10000 };
@@ -154,6 +157,235 @@ internal static class StoryboardPresentationTests
         Console.WriteLine("PASS loading retains save/discard/cancel input, Cancel resumes loading and Discard returns to Library");
     }
 
+    private static void DifficultySwitchPreparation(string directory)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        object? Field(EditorView view, string name) => typeof(EditorView).GetField(name, flags)!.GetValue(view);
+        var first = new MapDocument { Name = "First difficulty", SourcePath = Path.Combine(directory, "first.osu"), DurationMs = 10000 };
+        first.Fruits.Add(new() { TimeMs = 5000, X = 256 });
+        first.OriginalSections.Add(new() { Name = "Events", Lines = { "Sprite,Foreground,Centre,\"sprite.png\",320,240", " F,0,0,10000,1,1" } });
+        var second = first.DeepClone(); second.Name = "Second difficulty";
+        var view = new EditorView(false); var canvas = new MediaCanvas { RequiredReady = false };
+        view.LoadProject(BeatmapProject.FromDocuments([first, second])); view.CloseLibrary();
+        void Paint() { canvas.Clear(); view.Render(canvas, 1440, 900); }
+        void SettleSource()
+        {
+            var watch = Stopwatch.StartNew();
+            do { Paint(); Thread.Sleep(5); } while (SourcePending(view) && watch.Elapsed.TotalSeconds < 5);
+            if (SourcePending(view)) throw new TimeoutException("Difficulty storyboard source did not settle.");
+        }
+        void Check(bool value, string message) { if (!value) throw new Exception(message); }
+        SettleSource();
+        Check(view.LibraryOpening && canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.opening")),
+            "Initial project preparation lost its opening feedback.");
+        canvas.RequiredReady = true; Paint();
+        Check(!view.LibraryOpening && view.PrepareFileOperation(), "Initial preparation did not unlock input.");
+        Check(!view.SwitchDifficulty(-1) && view.SwitchDifficulty(0), "Invalid or unchanged difficulty request failed.");
+        canvas.RequiredReady = false;
+        Check(view.SwitchDifficulty(1), "Ready editor rejected a difficulty switch.");
+        Check(view.SwitchDifficulty(0) && view.SwitchDifficulty(1), "Consecutive switches before rendering were rejected.");
+        SettleSource();
+        Check(view.LibraryOpening && canvas.Texts.Any(t => t.Value.Contains("Second difficulty", StringComparison.Ordinal))
+            && !canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.opening")
+                || t.Value == FruitsAtelier.Localization.Strings.Get("media.loading")),
+            "Difficulty preparation did not retain the visible editor without an opening overlay.");
+        Check(!canvas.Fills.Any(f => f.Bounds == new Rect(0, 0, 1440, 900) && f.Opacity < 1),
+            "Difficulty preparation dimmed the entire editor.");
+        Check(!view.PrepareFileOperation() && !view.SwitchDifficulty(0) && !view.AddDifficulty(),
+            "Difficulty preparation admitted competing file operations.");
+        Check(!(bool)typeof(EditorView).GetProperty("DockContentInputAvailable", flags)!.GetValue(view)!,
+            "Difficulty preparation left native dock content interactive.");
+        var baseline = view.Document.DeepClone();
+        var position = view.PlayheadMs;
+        var viewStart = Field(view, "viewStart"); var zoom = Field(view, "canvasZoom");
+        int actions = 0;
+        view.RequestSave = view.RequestOpen = view.RequestNewProject = view.RequestExport = view.RequestTogglePlayback = () => actions++;
+        view.RequestSeek = _ => actions++;
+        foreach (int key in new[] { 83, 79, 78, 69, 90, 89, 9 })
+        { view.KeyDown(key, true, false); view.KeyUp(key); }
+        foreach (int key in new[] { 32, 112, 46, 81, 86, 35 })
+        { view.KeyDown(key, false, false); view.KeyUp(key); }
+        view.TextInput('x');
+        view.PointerDown(650, 500, 0, false, false); view.PointerMove(720, 550, false, false); view.PointerUp(720, 550, 0);
+        view.PointerDoubleClick(650, 500, false, false);
+        view.PointerDown(300, 850, 0, false, false); view.PointerUp(300, 850, 0);
+        foreach (bool ctrl in new[] { false, true }) view.Wheel(650, 500, 120, ctrl);
+        Paint();
+        Check(actions == 0 && baseline.ContentEquals(view.Document) && view.PlayheadMs == position
+            && Equals(viewStart, Field(view, "viewStart")) && Equals(zoom, Field(view, "canvasZoom"))
+            && view.ActiveDifficultyIndex == 1 && !view.IsTestplaying,
+            "Difficulty preparation accepted keyboard, pointer, wheel or transport actions.");
+        canvas.RequiredReady = true; Paint();
+        Check(!view.LibraryOpening && view.PrepareFileOperation() && !view.IsTestplaying,
+            "Completed preparation did not unlock the editor or queued blocked testplay input.");
+        view.KeyDown(83, true, false); view.KeyUp(83);
+        Check(actions == 1, "Save shortcut did not resume after preparation.");
+        foreach (bool cancel in new[] { false, true })
+        {
+            Check(view.SwitchDifficulty(1 - view.ActiveDifficultyIndex), "Worker outcome switch failed.");
+            _ = view.Conversion;
+            var source = typeof(EditorView).GetField("storyboardLoad", flags)!;
+            var worker = (Task<StoryboardScene>)source.GetValue(view)!;
+            Check(worker.Wait(TimeSpan.FromSeconds(5)), "Source worker did not finish.");
+            var publication = new TaskCompletionSource<StoryboardScene>();
+            source.SetValue(view, publication.Task);
+            Paint();
+            Check(view.LibraryOpening && !view.PrepareFileOperation()
+                && !canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.opening")),
+                "Pending source publication obscured the editor or admitted input.");
+            if (cancel) publication.SetCanceled(); else publication.SetException(new IOException("controlled source failure"));
+            Paint();
+            Check(!view.LibraryOpening && view.PrepareFileOperation() && !view.ErrorVisible,
+                "Failed or canceled source preparation retained its input lock.");
+        }
+        canvas.RequiredReady = false; Check(view.SwitchDifficulty(0), "Second switch failed."); SettleSource();
+        view.ChangeAudioPath("unsaved.ogg");
+        view.ShowLibrary(); Paint();
+        Check(view.DiscardConfirmationVisible && canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("mac.cancel")),
+            "Difficulty preparation swallowed the save/discard/cancel dialog.");
+        view.KeyDown(27, false, false); view.KeyUp(27); Paint();
+        Check(!view.LibraryVisible && view.LibraryOpening && view.IsDirty
+            && !canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.opening")),
+            "Canceling Library exit did not resume preparation in the visible editor.");
+        view.ShowLibrary(); Paint();
+        var discard = canvas.Texts.Single(t => t.Value == FruitsAtelier.Localization.Strings.Get("mac.discard"));
+        view.PointerDown(discard.X + 3, discard.Y + 3, 0, false, false); view.PointerUp(discard.X + 3, discard.Y + 3, 0); Paint();
+        Check(view.LibraryVisible && !view.LibraryOpening, "Discard did not retire difficulty preparation.");
+        view.LoadProject(BeatmapProject.FromDocuments([first, second])); view.CloseLibrary();
+        canvas.RequiredReady = true; SettleSource(); Paint();
+        canvas.RequiredReady = false; Check(view.SwitchDifficulty(1), "Escape fixture switch failed."); SettleSource();
+        view.KeyDown(27, false, false); view.KeyUp(27); Paint();
+        Check(view.LibraryVisible && !view.LibraryOpening, "Escape did not retire preparation and return to Library.");
+        view.LoadDocument(first); view.CloseLibrary(); SettleSource();
+        Check(view.LibraryOpening && canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.opening")),
+            "Retired difficulty preparation suppressed the next project's opening feedback.");
+        canvas.RequiredReady = true; Paint();
+        view.StopFileMonitoring(); view.CompleteLibraryCacheWrites();
+        Console.WriteLine("PASS difficulty preparation retains editor, blocks input until ready and retires on Library exit");
+    }
+
+    private static void DifficultyPresentationContinuity(string directory)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        object? Field(EditorView view, string name) => typeof(EditorView).GetField(name, flags)!.GetValue(view);
+        MapDocument Map(string name, int offset)
+        {
+            var map = new MapDocument { Name = name, SourcePath = Path.Combine(directory, name + ".osu"), AudioPath = Path.Combine(directory, "song.wav"), DurationMs = 10000 };
+            map.Fruits.Add(new() { X = 256, TimeMs = 9000 });
+            map.OriginalSections.Add(new() { Name = "Events", Lines = { $"0,0,\"{name}-bg.png\",0,0", $"Video,{offset},\"video.mp4\"",
+                $"Sprite,Foreground,Centre,\"{name}.png\",320,240", " F,0,0,10000,1" } });
+            return map;
+        }
+        var view = new EditorView(false); var canvas = new MediaCanvas();
+        view.LibrarySettings.EnableVideoStoryboard = true;
+        view.LoadProject(BeatmapProject.FromDocuments([Map("before", 0), Map("after", 400),
+            new MapDocument { SourcePath = Path.Combine(directory, "empty.osu"), DurationMs = 10000 }])); view.CloseLibrary();
+        void Paint() { canvas.Clear(); view.Render(canvas, 1440, 900); }
+        var timer = Stopwatch.StartNew();
+        do { Paint(); Thread.Sleep(1); } while (Pending(view) && timer.Elapsed.TotalSeconds < 5);
+        view.UpdateTransport(0, 10000, true, false, false, null, view.Document.AudioPath);
+        view.UpdateTransport(1000, 10000, true, false, false, null, view.Document.AudioPath); Paint();
+        var sprites = canvas.Sprites.ToArray(); var backgrounds = canvas.Backgrounds.ToArray(); var videos = canvas.Videos.ToArray();
+        if (sprites.Length == 0 || backgrounds.Length == 0 || videos.Length == 0) throw new Exception("Continuity fixture did not present complete media.");
+        string notice = view.AudioNotice;
+        view.CanReuseDifficultyAudio = _ => true;
+        int reusedCallbacks = 0;
+        view.RequestDifficultyChanged = () =>
+        {
+            if (!view.ReusingDifficultyAudio || !view.AudioReady || view.AudioLoading || view.AudioDurationMs != 10000 || view.AudioNotice != notice)
+                throw new Exception("Unchanged difficulty audio exposed transient loading metadata before the host callback.");
+            reusedCallbacks++;
+        };
+        if (!view.SwitchDifficulty(1)) throw new Exception("Continuity difficulty switch was rejected.");
+        typeof(EditorView).GetMethod("RefreshStoryboard", flags)!.Invoke(view, null);
+        var load = (Task<StoryboardScene>)Field(view, "storyboardLoad")!;
+        if (!load.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Continuity source worker did not finish.");
+        var delayed = new TaskCompletionSource<StoryboardScene>();
+        typeof(EditorView).GetField("storyboardLoad", flags)!.SetValue(view, delayed.Task);
+        void OldFrame()
+        {
+            Paint();
+            if (!canvas.Sprites.SequenceEqual(sprites) || !canvas.Backgrounds.SequenceEqual(backgrounds) || !canvas.Videos.SequenceEqual(videos)
+                || !view.LibraryOpening || !view.AudioReady || view.AudioLoading || view.AudioDurationMs != 10000)
+                throw new Exception($"A delayed difficulty frame blanked or mixed presented sprites/background/video or audio metadata: sprites={canvas.Sprites.SequenceEqual(sprites)}, backgrounds={canvas.Backgrounds.SequenceEqual(backgrounds)}, videos={canvas.Videos.SequenceEqual(videos)}, opening={view.LibraryOpening}, ready={view.AudioReady}, loading={view.AudioLoading}, duration={view.AudioDurationMs}, transition={Field(view, "storyboardTransition")}, targetReady={Field(view, "storyboardTargetReady")}, videoReady={canvas.VideoReady}, required={canvas.RequiredReady}, videoTimes={string.Join(',', canvas.Videos.Select(v => v.TimeMs))}.");
+        }
+        for (int i = 0; i < 4; i++) OldFrame();
+        if (Field(view, "storyboardScene") is not null || Field(view, "storyboardTemplate") is not null
+            || ((List<StoryboardTrigger>)Field(view, "storyboardTriggers")!).Count != 0)
+            throw new Exception("Retained presentation carried previous difficulty runtime state.");
+        canvas.RequiredReady = false; delayed.SetResult(load.Result);
+        for (int i = 0; i < 4; i++) OldFrame();
+        canvas.VideoReady = false; canvas.RequiredReady = true;
+        for (int i = 0; i < 4; i++) OldFrame();
+        canvas.VideoReady = true; Paint();
+        if (view.LibraryOpening || reusedCallbacks != 1 || canvas.Sprites.Any(s => !s.Path.EndsWith("after.png", StringComparison.Ordinal))
+            || canvas.Backgrounds.Any(b => !b.Path.EndsWith("after-bg.png", StringComparison.Ordinal)) || canvas.Videos.Any(v => v.TimeMs != 600))
+            throw new Exception("Ready target media did not publish as one complete difficulty frame.");
+        view.RequestDifficultyChanged = null;
+        if (!view.SwitchDifficulty(2)) throw new Exception("Empty difficulty switch failed.");
+        timer.Restart(); do { Paint(); Thread.Sleep(1); } while (Pending(view) && timer.Elapsed.TotalSeconds < 5);
+        if (Pending(view) || canvas.Sprites.Count != 0 || canvas.Backgrounds.Count != 0 || canvas.Videos.Count != 0 || canvas.VideoActive)
+            throw new Exception("A legitimately empty difficulty retained the previous composed media.");
+        view.StopFileMonitoring(); view.CompleteLibraryCacheWrites();
+        Console.WriteLine("PASS delayed source/images/video retain complete previous presentation and stable audio metadata until atomic publication, including empty targets");
+    }
+
+    private static void DifficultyPauseOrdering(string directory)
+    {
+        foreach (string outcome in new[] { "same", "different", "cancel", "fault", "replace" })
+        {
+            var first = new MapDocument { SourcePath = Path.Combine(directory, "pause-before.osu"), AudioPath = Path.Combine(directory, "pause.wav"), DurationMs = 10000 };
+            first.Fruits.Add(new() { X = 256, TimeMs = 9000 });
+            var second = first.DeepClone(); second.SourcePath = Path.Combine(directory, "pause-after.osu");
+            if (outcome == "different") second.AudioPath = Path.Combine(directory, "different.wav");
+            var view = new EditorView(false); var canvas = new MediaCanvas();
+            view.LoadProject(BeatmapProject.FromDocuments([first, second])); view.CloseLibrary();
+            void Paint() { canvas.Clear(); view.Render(canvas, 1440, 900); }
+            var timer = Stopwatch.StartNew(); do { Paint(); Thread.Sleep(1); } while (Pending(view) && timer.Elapsed.TotalSeconds < 5);
+            view.UpdateTransport(0, 10000, true, false, false, null, first.AudioPath);
+            view.UpdateTransport(1000, 10000, true, true, false, null, first.AudioPath);
+            var oldDocument = view.Document;
+            var pause = new TaskCompletionSource<double>(); bool confirmed = false;
+            int stops = 0, reloads = 0;
+            view.RequestPauseForDifficultyChange = () => pause.Task;
+            view.CanReuseDifficultyAudio = _ => outcome != "different";
+            view.RequestStopHitsounds = () => { if (!confirmed) throw new Exception("Difficulty reset hitsounds before pause confirmation."); stops++; };
+            view.RequestDifficultyChanged = () => { if (!confirmed) throw new Exception("Difficulty loaded audio before pause confirmation."); reloads++; };
+            if (!view.SwitchDifficulty(1) || view.ActiveDifficultyIndex != 0 || !ReferenceEquals(oldDocument, view.Document) || view.AudioPlaying || view.PlayheadMs != 1000)
+                throw new Exception("Difficulty mutation preceded its pending audio pause.");
+            for (int i = 0; i < 3; i++)
+            {
+                view.UpdateTransport(2000 + i, 10000, true, true, false, null, first.AudioPath); Paint();
+                if (view.ActiveDifficultyIndex != 0 || view.PlayheadMs != 1000 || view.AudioPlaying || stops != 0 || reloads != 0
+                    || !view.LibraryOpening || view.PrepareFileOperation()
+                    || canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.opening")))
+                    throw new Exception("Pending pause advanced the timeline, retired content or obscured the editor.");
+            }
+            confirmed = true;
+            if (outcome == "replace")
+            {
+                view.LoadDocument(new MapDocument { SourcePath = Path.Combine(directory, "replacement.osu") });
+                pause.SetResult(1100); Paint();
+                if (view.DifficultyCount != 1 || view.ActiveDifficultyIndex != 0 || reloads != 0) throw new Exception("Retired pause published into a replacement project.");
+            }
+            else
+            {
+                if (outcome == "cancel") pause.SetCanceled();
+                else if (outcome == "fault") pause.SetException(new IOException("Controlled pause failure"));
+                else pause.SetResult(1100);
+                Paint();
+                if (outcome is "cancel" or "fault")
+                {
+                    if (view.ActiveDifficultyIndex != 0 || stops != 0 || reloads != 0) throw new Exception("Failed pause changed the difficulty.");
+                }
+                else if (view.ActiveDifficultyIndex != 1 || view.PlayheadMs != 1100 || reloads != 1 || stops == 0 || view.AudioPlaying)
+                    throw new Exception("Confirmed pause did not switch from its frozen clock position.");
+            }
+            view.RequestStopHitsounds = null; view.StopFileMonitoring(); view.CompleteLibraryCacheWrites();
+        }
+        Console.WriteLine("PASS pause confirmation precedes same/different audio mutation, rejects stale clock snapshots, retains editor/input lock and retires failed/canceled/replaced requests");
+    }
+
     private static bool Pending(EditorView view) => view.LibraryOpening || typeof(EditorView).GetField("storyboardLoad", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(view) is Task;
     private static bool SourcePending(EditorView view) => typeof(EditorView).GetField("storyboardLoad", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(view) is Task;
     private static bool Near(Rect a, Rect b) => Math.Abs(a.X - b.X) < .02 && Math.Abs(a.Y - b.Y) < .02 && Math.Abs(a.Width - b.Width) < .02 && Math.Abs(a.Height - b.Height) < .02;
@@ -162,6 +394,7 @@ internal static class StoryboardPresentationTests
         private readonly RecordingCanvas inner = new(); private readonly Stack<Rect> clips = new();
         internal bool RequiredReady = true, VideoReady = true, VideoActive;
         internal int VideoStops;
+        private (string Path, Rect Bounds, double TimeMs)? lastVideo;
         public bool StoryboardImagesReady(IReadOnlyList<string> paths) => RequiredReady;
         internal readonly List<(Rect Bounds, float Opacity)> Dims = [];
         internal readonly List<(string Path, Rect Bounds, double TimeMs)> Videos = [];
@@ -177,7 +410,13 @@ internal static class StoryboardPresentationTests
         public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false) => inner.Text(text, x, y, size, color, maxWidth, bold);
         public bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null, float opacity = 1) => inner.Image(filePath, destination, tint, source, opacity);
         public bool BackgroundImage(string filePath, Rect destination) { Backgrounds.Add((filePath, destination)); return true; }
-        public bool VideoImage(string path, Rect destination, double positionMs, bool playing, double rate) { Videos.Add((path, destination, positionMs)); VideoActive = true; return VideoReady; }
+        public bool VideoImage(string path, Rect destination, double positionMs, bool playing, double rate) { lastVideo = (path, destination, positionMs); Videos.Add(lastVideo.Value); VideoActive = true; return VideoReady; }
+        public bool PrepareVideoImage(string path, double positionMs, bool playing, double rate) => VideoReady;
+        public bool RetainedVideoImage(Rect destination)
+        {
+            if (lastVideo is not { } video) return false;
+            Videos.Add((video.Path, destination, video.TimeMs)); return true;
+        }
         public void StopVideo() { VideoStops++; VideoActive = false; }
         public void DimBackground(Rect bounds, uint color, float opacity) => Dims.Add((bounds, opacity));
         public void StoryboardSprite(string path, float x, float y, float scaleX, float scaleY, uint tint, float opacity, float rotationRadians, bool additive, bool flipX, bool flipY, float originX, float originY)

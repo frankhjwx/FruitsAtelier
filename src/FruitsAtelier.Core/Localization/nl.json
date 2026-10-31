@@ -1941,6 +1941,9 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Pas timingwijzigingen toe of annuleer ze voordat je de SV-weergave wisselt.",
   "timing.sourceChanged": "De timing in de editor is gewijzigd. Open dit venster opnieuw voordat je de wijzigingen toepast.",
+  "core.storyboard.fileLimit": "Het storyboardbestand overschrijdt de limiet van 32 MiB.",
+  "core.storyboard.sceneExpansionLimit": "De uitgewerkte storyboardtekst overschrijdt de scènelimiet van 268.435.456 tekens.",
+  "core.storyboard.expansionLimit": "Het uitwerken van storyboardvariabelen overschrijdt de limiet van 33.554.432 tekens.",
   "media.storyboardDiagnostics": "Storyboard: {0} ongeldige opdrachten of bronnen overgeslagen.",
   "media.storyboardFailed": "Storyboard kon niet worden geladen: {0}",
   "media.loading": "Beatmapbronnen voorbereiden…",
@@ -1951,5 +1954,12 @@
   "settings.theme.midnight": "Middernacht",
   "settings.theme.forest": "Bos",
   "settings.theme.rose": "Roos",
-  "settings.theme.slate": "Leisteen"
+  "settings.theme.slate": "Leisteen",
+  "recovery.title": "Editor herstellen",
+  "recovery.help": "De weergave is gestopt. Je project blijft in het geheugen. Sla een herstelkopie op voordat je het opnieuw probeert.",
+  "recovery.save": "Herstelkopie opslaan",
+  "recovery.saved": "Herstelkopie opgeslagen: {0}",
+  "recovery.failed": "Herstelkopie kon niet worden opgeslagen: {0}",
+  "recovery.nativeHelp": "De grafische renderer is niet beschikbaar. Druk op Ctrl+S om een herstelkopie op te slaan, of op Enter om opnieuw te proberen. Je project blijft in het geheugen.",
+  "recovery.closeHelp": "Een herstelkopie opslaan voordat je afsluit? Kies Nee om af te sluiten zonder op te slaan."
 }

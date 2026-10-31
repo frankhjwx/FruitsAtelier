@@ -3,7 +3,19 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--imported-curve-range-check")) { ImportedCurveRangeTests.Run(false); return 0; }
+if (args.Contains("--imported-curve-range-performance")) { ImportedCurveRangeTests.Run(true); return 0; }
+if (args.Contains("--background-task-recovery-check")) { BackgroundTaskRecoveryTests.Run(); return 0; }
+if (args.Contains("--resource-error-layout-check")) { ResourceErrorLayoutTests.Run(); return 0; }
+if (args.Contains("--recovery-state-matrix-check")) { RecoveryStateMatrixTests.Run(); return 0; }
+if (args.Contains("--render-recovery-check")) { OperationErrorTests.Recovery(); return 0; }
+if (args.Contains("--discussion-navigation-check")) { DiscussionTests.RetainedReferences(); return 0; }
+if (args.Contains("--verifier-navigation-check")) { MapsetVerifierTests.RetainedNavigation(); return 0; }
+if (args.Contains("--aimod-navigation-check")) { AimodTests.StaleNavigation(); OperationErrorTests.StaleSelection(); return 0; }
+if (args.Contains("--discussion-bounds-check")) { DiscussionTests.FractionalAnnotationBounds(); return 0; }
 if (args.Contains("--storyboard-image-cache-check")) return StoryboardImageCacheTests.Run();
+if (args.Length == 2 && args[0] == "--difficulty-media-reuse-native-check") return DifficultyMediaReuseNativeTests.Run(args[1]);
+if (args.Length == 2 && args[0] == "--difficulty-media-continuity-native-check") return DifficultyMediaReuseNativeTests.RunMap(args[1]);
 if (args.Length == 4 && args[0] == "--storyboard-first-playback") return StoryboardFirstPlaybackTests.Run(args[1], args[2], int.Parse(args[3]));
 if (args.Contains("--media-toggle-check")) return MediaToggleTests.Run();
 if (args.Length == 2 && args[0] == "--media-toggle-native-check") return MediaToggleNativeTests.Run(args[1]);
@@ -553,6 +565,10 @@ var tests = new (string Name, Action Run)[]
     ("Testplay speed settings are independent of editor speed", TestplayStartupDelayTests.IndependentSpeed),
     ("Grid Level opens a checked View submenu", GridLevelMenuTests.Run),
     ("Playback reuses timing data and edits invalidate it", ObjectTimelineTests.TimingCacheInvalidation),
+    ("Background failures retire their completed work before reporting", BackgroundTaskRecoveryTests.Run),
+    ("Resource diagnostic layouts stay bounded and reuse unchanged wrapping", ResourceErrorLayoutTests.Run),
+    ("Recovery state matrix preserves committed content and modal ownership", RecoveryStateMatrixTests.Run),
+    ("Render recovery preserves unsaved project copies and requires explicit retry", OperationErrorTests.Recovery),
     ("Operation errors remain visible and isolate input on editor and library pages", OperationErrorTests.Run),
     ("Text inputs blink, highlight selection and menus fit their rows", TextInputFeedbackTests.Run),
     ("Legacy clipboard and horizontal grid preserve pattern scope", LegacyAlignmentTests.ClipboardAndGrid),

@@ -1941,6 +1941,9 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "ใช้หรือยกเลิกการแก้ไข Timing ก่อนสลับการแสดง SV",
   "timing.sourceChanged": "Timing ในตัวแก้ไขเปลี่ยนไปแล้ว โปรดเปิดหน้าต่างนี้ใหม่ก่อนนำไปใช้",
+  "core.storyboard.fileLimit": "ไฟล์สตอรีบอร์ดเกินขีดจำกัด 32 MiB",
+  "core.storyboard.sceneExpansionLimit": "ข้อความสตอรีบอร์ดที่ขยายแล้วเกินขีดจำกัด 268,435,456 อักขระต่อฉาก",
+  "core.storyboard.expansionLimit": "การขยายตัวแปรสตอรีบอร์ดเกินขีดจำกัด 33,554,432 อักขระ",
   "media.storyboardDiagnostics": "สตอรีบอร์ด: ข้ามคำสั่งหรือทรัพยากรที่ไม่ถูกต้อง {0} รายการ",
   "media.storyboardFailed": "ไม่สามารถโหลดสตอรีบอร์ดได้: {0}",
   "media.loading": "กำลังเตรียมทรัพยากรบีตแมป…",
@@ -1951,5 +1954,12 @@
   "settings.theme.midnight": "เที่ยงคืน",
   "settings.theme.forest": "ป่า",
   "settings.theme.rose": "กุหลาบ",
-  "settings.theme.slate": "หินชนวน"
+  "settings.theme.slate": "หินชนวน",
+  "recovery.title": "การกู้คืนตัวแก้ไข",
+  "recovery.help": "หยุดการเรนเดอร์แล้ว โปรเจกต์ยังอยู่ในหน่วยความจำ บันทึกสำเนากู้คืนก่อนลองอีกครั้ง",
+  "recovery.save": "บันทึกสำเนากู้คืน",
+  "recovery.saved": "บันทึกสำเนากู้คืนแล้ว: {0}",
+  "recovery.failed": "ไม่สามารถบันทึกสำเนากู้คืน: {0}",
+  "recovery.nativeHelp": "ตัวเรนเดอร์กราฟิกไม่พร้อมใช้งาน กด Ctrl+S เพื่อบันทึกสำเนากู้คืน หรือ Enter เพื่อลองเรนเดอร์อีกครั้ง โปรเจกต์ยังอยู่ในหน่วยความจำ",
+  "recovery.closeHelp": "บันทึกสำเนากู้คืนก่อนปิดหรือไม่? เลือก ไม่ เพื่อปิดโดยไม่บันทึก"
 }

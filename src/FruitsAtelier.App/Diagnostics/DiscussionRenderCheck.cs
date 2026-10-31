@@ -86,6 +86,20 @@ internal static class DiscussionRenderCheck
                 editor.Wheel(plot.X + 12, plot.Y + 10, 2400, false); Paint("preroll");
                 if (editor.ViewStartMs >= 0 || editor.PlayheadMs != 0 || editor.Document.Fruits.Any(f => f.TimeMs < 0))
                     throw new InvalidOperationException("Native pre-zero viewing changed authored time.");
+                var crowded = new OsuDiscussionSnapshot(777, 20,
+                    Enumerable.Range(0, 3).Select(i => zeroThread with { Id = 910 + i }).ToArray(), snapshot.Users, snapshot.Owners);
+                editor.DiscussionLoader = (_, _) => Task.FromResult(crowded);
+                editor.LoadDocument(map); editor.ShowDiscussionPanel(); watch.Restart();
+                do { Paint(); Thread.Sleep(1); } while (editor.DiscussionSnapshot is null && watch.Elapsed.TotalSeconds < 5);
+                for (int i = 0; i < 12; i++)
+                {
+                    plot = editor.CanvasPlotBounds;
+                    editor.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, i % 2 == 0 ? -120 : 120, false);
+                    Paint();
+                }
+                if (editor.DiscussionQuoteBounds.Count != 3 || editor.IsDirty)
+                    throw new InvalidOperationException("Crowded annotation scrolling lost cards or changed content.");
+                Paint("crowded-quotes");
                 if (dpi == 96 && size.Item1 == 1440)
                 {
                     string[] types = ["hype", "praise", "mapper_note", "problem", "suggestion", "review"];

@@ -51,6 +51,10 @@ the winning offset; pointer updates do not rebuild DS references from moved cont
 
 ## Full-map work and cache ownership
 
+Autoplay preparation shares one hyperdash calculation between movement decisions
+and hyperdash intervals. Playback queries binary-search the retained frame,
+interval and tint arrays without allocating delegates per query.
+
 Discussion annotations reuse the timeline's committed parent durations and combo
 event numbers. Associations rebuild only when the committed conversion or online
 snapshot changes. Viewport movement queries time-sorted regions with prefix end
@@ -64,7 +68,18 @@ refresh once per minute when the panel is visible.
 
 Replacing a difficulty releases its conversion, export/read-back and presentation
 caches, including when returning to the library. The next frame releases its
-renderer geometry and background resources before drawing the new content.
+renderer geometry before drawing the new content. Within the active project,
+switching difficulties in the same resource directory retains unchanged decoded
+storyboard images, native textures, the resident background and video decoder.
+The transition validates file size, modification time and creation time once at
+the resource transition rather than on cached per-frame accesses and cancels
+previous speculative image queues. The previous complete media composition and
+image pins remain until scene, gameplay, required images and video are ready to
+publish together. Its runtime triggers and samples retire immediately. Unchanged
+ready audio retains its transport session and UI metadata while playback pauses;
+the waveform is invalidated only when that audio is replaced. Image caches keep their existing byte and entry budgets; they do
+not retain difficulty scenes or gameplay state. Project replacement, another
+resource directory and returning to the library release these media resources.
 Distance labels, projected breaks, movement guides, standard-canvas snapping,
 timing-axis and collaboration-selection caches retire with the same difficulty.
 Project replacement also clears the project-local clipboard. Retired rating,
@@ -87,6 +102,11 @@ Catch path drawing caches the original source path for ordinary imported Legacy
 Sliders, keyed by the committed conversion snapshot. Drawing and hit testing share
 its cumulative distances; processed event positions remain separate. Source paths
 are sampled lazily and retired with the difficulty caches.
+Imported body drawing lazily builds a conversion-owned maximum-end range index
+and searches the first visible repeat before drawing. Visible parents retain their
+original conversion paint order, including tied starts and overlaps. Conversion
+replacement or difficulty retirement releases the index. Its cold setup and retained
+arrays scale with slider count; hit testing alone does not build it.
 
 Catch path drawing retains cumulative distances per conversion and binary-searches
 the visible span interval. Screen polylines are reused while the viewport is

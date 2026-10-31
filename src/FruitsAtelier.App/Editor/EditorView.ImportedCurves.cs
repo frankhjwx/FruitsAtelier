@@ -11,8 +11,13 @@ public sealed partial class EditorView
     private readonly Dictionary<GeneratedSlider, IReadOnlyList<SliderPathPoint>> importedCurvePaths = [];
     private (float Left, float Width, float Bottom, double Origin, double Scale, double Start, double End) importedCurveView;
     private readonly Dictionary<(GeneratedSlider Slider, int Span), System.Numerics.Vector2[]> importedCurveScreens = [];
+    private GeneratedSlider[] importedCurveSliders = [];
+    private int[] importedCurveOrder = [];
+    private readonly TimelineVisibleRange importedCurveRange = new();
+    private readonly List<int> importedCurveVisible = [];
+    private bool importedCurveRangeReady;
 
-    private IReadOnlyList<SliderPathPoint> ImportedCurvePath(GeneratedSlider slider)
+    private void EnsureImportedCurveSnapshot()
     {
         if (!ReferenceEquals(importedCurveSnapshot, conversion))
         {
@@ -21,11 +26,20 @@ public sealed partial class EditorView
             importedCurveScreens.Clear();
             importedCurveSources.Clear();
             importedCurvePaths.Clear();
+            importedCurveSliders = []; importedCurveOrder = [];
+            importedCurveRange.Rebuild([], []);
+            importedCurveRangeReady = false;
+            importedCurveVisible.Clear();
             var snapshot = convertedSnapshot ?? Document;
             if (snapshot.SliderImportState == SliderImportState.Native)
                 foreach (var source in snapshot.ImportedSliders)
                     if (source.RandomizationSource is { } original) importedCurveSources[source.Id] = original;
         }
+    }
+
+    private IReadOnlyList<SliderPathPoint> ImportedCurvePath(GeneratedSlider slider)
+    {
+        EnsureImportedCurveSnapshot();
         if (!importedCurvePaths.TryGetValue(slider, out var path))
             importedCurvePaths[slider] = path = importedCurveSources.TryGetValue(slider.SourceId, out var source)
                 ? ImportedSliderConverter.Path(source) : slider.Path;
@@ -50,9 +64,24 @@ public sealed partial class EditorView
         double pixelsPerTime, double visibleStart, double visibleEnd)
     {
         var view = (left, fieldWidth, bottom, originTime, pixelsPerTime, visibleStart, visibleEnd);
-        if (view != importedCurveView) { importedCurveView = view; importedCurveScreens.Clear(); }
-        foreach (var slider in conversion!.Sliders.Where(s => s.IsImported))
+        EnsureImportedCurveSnapshot();
+        if (!importedCurveRangeReady)
         {
+            importedCurveSliders = conversion!.Sliders.Where(slider => slider.IsImported).ToArray();
+            importedCurveOrder = Enumerable.Range(0, importedCurveSliders.Length)
+                .OrderBy(index => importedCurveSliders[index].StartTimeMs).ToArray();
+            importedCurveRange.Rebuild(importedCurveOrder.Select(index => importedCurveSliders[index].StartTimeMs).ToArray(),
+                importedCurveOrder.Select(index => importedCurveSliders[index].StartTimeMs + importedCurveSliders[index].DurationMs).ToArray());
+            importedCurveRangeReady = true;
+        }
+        if (view != importedCurveView) { importedCurveView = view; importedCurveScreens.Clear(); }
+        importedCurveRange.Fill(visibleStart, visibleEnd, importedCurveVisible);
+        for (int i = 0; i < importedCurveVisible.Count; i++) importedCurveVisible[i] = importedCurveOrder[importedCurveVisible[i]];
+        // The range index is chronological; overlapping bodies retain conversion paint order.
+        importedCurveVisible.Sort();
+        foreach (int sliderIndex in importedCurveVisible)
+        {
+            var slider = importedCurveSliders[sliderIndex];
             if (slider.StartTimeMs > visibleEnd || slider.StartTimeMs + slider.DurationMs < visibleStart || slider.Path.Count < 2) continue;
             double spanDuration = slider.DurationMs / slider.SpanCount;
             var path = ImportedCurvePath(slider);
@@ -60,10 +89,18 @@ public sealed partial class EditorView
             float opacity = selected ? 1 : .5f;
             var distances = ImportedCurveDistances(slider);
             if (distances[^1] <= 0 || spanDuration <= 0) continue;
-            for (int span = 0; span < slider.SpanCount; span++)
+            int firstSpan = 0, afterSpan = slider.SpanCount;
+            while (firstSpan < afterSpan)
+            {
+                int middle = firstSpan + (afterSpan - firstSpan) / 2;
+                double start = slider.StartTimeMs + middle * spanDuration;
+                if (start + spanDuration < visibleStart) firstSpan = middle + 1;
+                else afterSpan = middle;
+            }
+            for (int span = firstSpan; span < slider.SpanCount; span++)
             {
                 double start = slider.StartTimeMs + span * spanDuration;
-                if (start > visibleEnd || start + spanDuration < visibleStart) continue;
+                if (start > visibleEnd) break;
                 if (importedCurveScreens.TryGetValue((slider, span), out var cached))
                 {
                     c.Polyline(cached, 0, 0, 1, Purple, selected ? 2.6f : 2, opacity);
