@@ -56,7 +56,7 @@ public sealed partial class EditorView
         if (FazVisible) { DrawFaz(c); return; }
         if (LibraryOpening)
         {
-            if (mediaPreparationInEditor) { hits.Clear(); fields.Clear(); }
+            if (mediaPreparationInEditor || difficultyPauseTask is not null) { hits.Clear(); fields.Clear(); }
             else DrawSynchronizationWait(c);
             return;
         }

@@ -135,13 +135,33 @@ internal sealed partial class MacWindow : Window
         });
         View.RequestSyncFile = answer => RunFile(async () => answer(await Pick(L.Get("sync.chooseFile"), ["*.osu"])));
         View.RequestSyncAudio = answer => RunFile(async () => answer(await Pick(L.Get("sync.chooseAudio"), ["*.mp3", "*.ogg", "*.wav"])));
-        View.RequestDifficultyChanged = () => RunFile(async () =>
+        View.CanReuseDifficultyAudio = path => audio.CanReuse(path);
+        View.RequestPauseForDifficultyChange = () =>
         {
-            await audio.LoadAsync(null);
-            await audio.LoadAsync(View.Document.AudioPath);
-            audio.Seek(View.PlayheadMs);
-            PollAudio();
-        });
+            playbackRequest++; setupPlayRequested = false;
+            audio.Pause();
+            return Task.FromResult(audio.State.PositionMs);
+        };
+        int difficultyAudioRequest = 0;
+        View.RequestDifficultyChanged = () =>
+        {
+            int request = ++difficultyAudioRequest;
+            if (View.ReusingDifficultyAudio && audio.CanReuse(View.Document.AudioPath))
+            { View.ResetHitsounds(); PollAudio(); return; }
+            View.ResetDifficultyAudioState();
+            string? path = View.Document.AudioPath;
+            double position = View.PlayheadMs;
+            RunFile(async () =>
+            {
+                await audio.LoadAsync(null);
+                if (request != difficultyAudioRequest) return;
+                var loading = audio.LoadAsync(path);
+                long generation = audio.LoadGeneration;
+                await loading;
+                if (request != difficultyAudioRequest || generation != audio.LoadGeneration || !FruitsAtelier.App.Media.MediaFileVersion.SamePath(path, View.Document.AudioPath)) return;
+                audio.Seek(position); PollAudio();
+            });
+        };
         View.RequestSave = () =>
         {
             RunFile(() => { View.SaveCurrentDifficulty(); return Task.CompletedTask; });

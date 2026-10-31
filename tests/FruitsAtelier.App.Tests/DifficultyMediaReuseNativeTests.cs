@@ -13,6 +13,91 @@ using FruitsAtelier.Core;
 
 internal static class DifficultyMediaReuseNativeTests
 {
+    internal static int RunMap(string mapPath)
+    {
+        Exception? failure = null;
+        var thread = new Thread(() => { try { CheckMap(mapPath); } catch (Exception error) { failure = error; } });
+        thread.SetApartmentState(ApartmentState.STA); thread.Start(); thread.Join();
+        if (failure is not null) throw new InvalidOperationException("Native difficulty media continuity failed", failure);
+        return 0;
+    }
+
+    private static void CheckMap(string mapPath)
+    {
+        string directory = Path.GetFullPath("artifacts/diff-media-continuity-20261031/real-map"); Directory.CreateDirectory(directory);
+        var map = OsuBeatmapReader.ReadFile(mapPath); var second = map.DeepClone(); second.Name += " (switch)";
+        Native.WindowProc procedure = Native.DefWindowProc;
+        string className = "FruitsAtelier.MediaContinuity." + Environment.ProcessId;
+        nint instance = Native.GetModuleHandle(null);
+        var wc = new Native.WindowClass { Size = (uint)Marshal.SizeOf<Native.WindowClass>(), Procedure = procedure, Instance = instance, ClassName = className };
+        if (Native.RegisterClassEx(ref wc) == 0) throw new System.ComponentModel.Win32Exception();
+        nint hwnd = Native.CreateWindowEx(0, className, "Media continuity", Native.WindowStyle, -32000, -32000, 1000, 680, 0, 0, instance, 0);
+        if (hwnd == 0) throw new System.ComponentModel.Win32Exception();
+        var view = new EditorView(false);
+        try
+        {
+            using var canvas = new D2DCanvas(hwnd, 980, 620, 96);
+            view.LibrarySettings.Workspace = Path.Combine(directory, "workspace");
+            view.LibrarySettings.FirstRunSetupCompleted = true; view.LibrarySettings.MappingCanvasBackgroundDim = 0;
+            view.LoadProject(BeatmapProject.FromDocuments([map, second])); view.CloseLibrary();
+            view.UpdateTransport(0, 180000, true, false, false, null, map.AudioPath);
+            view.UpdateTransport(72324, 180000, true, false, false, null, map.AudioPath);
+            (int Width, int Height, byte[] Pixels) captured = (0, 0, []);
+            void Draw(bool capture = false) { canvas.Begin(); view.Render(canvas, 980, 620); canvas.End(capture: capture ? () => captured = canvas.CapturePixels() : null); }
+            void Settle()
+            {
+                var timer = Stopwatch.StartNew();
+                do { Draw(); Thread.Sleep(1); } while ((view.LibraryOpening || canvas.MediaNeedsRedraw) && timer.Elapsed.TotalSeconds < 20);
+                Assert(!view.LibraryOpening, "Real-map media did not settle.");
+            }
+            Settle();
+            Draw(capture: true); var before = captured; SavePixels(Path.Combine(directory, "before.bmp"), before.Width, before.Height, before.Pixels);
+            var bounds = view.CanvasRenderBounds;
+            string Hash(byte[] pixels, int width, int height)
+            {
+                int left = Math.Clamp((int)bounds.X + 16, 0, width), right = Math.Clamp((int)bounds.Right - 16, 0, width);
+                int top = Math.Clamp((int)bounds.Y + 16, 0, height), bottom = Math.Clamp((int)bounds.Bottom - 16, 0, height);
+                Assert(right > left && bottom > top, "Real-map comparison region is empty.");
+                using var bytes = new MemoryStream();
+                for (int y = top; y < bottom; y++) bytes.Write(pixels, (y * width + left) * 4, (right - left) * 4);
+                return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes.ToArray()));
+            }
+            string expected = Hash(before.Pixels, before.Width, before.Height);
+            int decodes = canvas.StoryboardDecodeCount, uploads = canvas.StoryboardUploadCount;
+            view.CanReuseDifficultyAudio = _ => true;
+            Assert(view.SwitchDifficulty(1), "Real-map switch was rejected.");
+            typeof(EditorView).GetMethod("RefreshStoryboard", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, null);
+            var task = (Task<StoryboardScene>)Field(view, "storyboardLoad")!;
+            Assert(task.Wait(TimeSpan.FromSeconds(20)), "Real-map source parse did not finish.");
+            var delayed = new TaskCompletionSource<StoryboardScene>();
+            typeof(EditorView).GetField("storyboardLoad", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(view, delayed.Task);
+            for (int i = 0; i < 6; i++)
+            {
+                Draw(capture: true); var frame = captured;
+                if (i == 0) SavePixels(Path.Combine(directory, "pending.bmp"), frame.Width, frame.Height, frame.Pixels);
+                Assert(Hash(frame.Pixels, frame.Width, frame.Height) == expected && canvas.StoryboardSprites > 0
+                    && view.AudioReady && !view.AudioLoading && view.AudioDurationMs == 180000 && Math.Abs(view.PlayheadMs - 72324) < .01,
+                    $"A pending real-map switch changed media pixels or flashed audio loading metadata: pixels={Hash(frame.Pixels, frame.Width, frame.Height) == expected}, sprites={canvas.StoryboardSprites}, audioReady={view.AudioReady}, loading={view.AudioLoading}, duration={view.AudioDurationMs}, playhead={view.PlayheadMs}, transition={Field(view, "storyboardTransition")}, presented={Field(view, "storyboardPresented")}.");
+            }
+            delayed.SetResult(task.Result); Settle();
+            Draw(capture: true); var after = captured; SavePixels(Path.Combine(directory, "after.bmp"), after.Width, after.Height, after.Pixels);
+            Assert(Hash(after.Pixels, after.Width, after.Height) == expected && canvas.StoryboardDecodeCount == decodes && canvas.StoryboardUploadCount == uploads,
+                $"Identical real-map target changed presented media or decoded/uploaded unchanged images: pixels={Hash(after.Pixels, after.Width, after.Height) == expected}, decodes={decodes}->{canvas.StoryboardDecodeCount}, uploads={uploads}->{canvas.StoryboardUploadCount}.");
+            File.WriteAllText(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = true, mapPath, positionMs = 72324, frozenFrames = 6, region = bounds,
+                pixelHash = expected, decodes, uploads, sameAfterPixels = true, nativeAudioCoveredSeparately = true }, new JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine("PASS real-map difficulty continuity at72.324s: six delayed frames and final target preserve exact media-region pixels, audio metadata and decode/upload counts");
+        }
+        finally { view.StopFileMonitoring(); view.CompleteLibraryCacheWrites(); Native.DestroyWindow(hwnd); GC.KeepAlive(procedure); }
+    }
+
+    private static void SavePixels(string path, int width, int height, byte[] pixels)
+    {
+        using var output = new BinaryWriter(File.Create(path));
+        output.Write((ushort)0x4D42); output.Write(54 + pixels.Length); output.Write(0); output.Write(54);
+        output.Write(40); output.Write(width); output.Write(-height); output.Write((ushort)1); output.Write((ushort)32);
+        output.Write(0); output.Write(pixels.Length); output.Write(2835); output.Write(2835); output.Write(0); output.Write(0); output.Write(pixels);
+    }
+
     internal static int Run(string videoPath)
     {
         Exception? failure = null;
@@ -29,7 +114,7 @@ internal static class DifficultyMediaReuseNativeTests
             if (!SpinWait.SpinUntil(() => probe.DurationMs > 0 || probe.Completion.IsCompleted, TimeSpan.FromSeconds(5)) || probe.DurationMs < 2000)
                 throw new ArgumentException($"Native media reuse needs a video at least two seconds long; observed {probe.DurationMs:F1} ms. {probe.Error}", nameof(videoPath));
         }
-        string directory = Path.GetFullPath("artifacts/diff-media-reuse-20261031/native"); Directory.CreateDirectory(directory);
+        string directory = Path.GetFullPath("artifacts/diff-media-continuity-20261031/native"); Directory.CreateDirectory(directory);
         string common = Path.Combine(directory, "common.bmp"), background = Path.Combine(directory, "background.bmp");
         Save(common, 2048, 2048, 40); Save(background, 1024, 768, 80);
         Save(Path.Combine(directory, "first.bmp"), 64, 64, 120); Save(Path.Combine(directory, "second.bmp"), 64, 64, 200);
@@ -139,7 +224,9 @@ internal static class DifficultyMediaReuseNativeTests
                     typeof(EditorView).GetField("storyboardLoad", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(view, delayed.Task);
                     var before = Field(canvas, "video"); Draw();
                     Assert(ReferenceEquals(before, Field(canvas, "video")), "An in-editor preparation frame retired the reusable video.");
-                    Assert((Field(view, "storyboardDisplayFrame") as List<StoryboardSpriteState>)?.Count == 0, "Preparation exposed the previous difficulty sprites.");
+                    Assert((Field(view, "storyboardDisplayFrame") as List<StoryboardSpriteState>)?.Count > 0 && canvas.StoryboardSprites > 0
+                        && Field(canvas, "videoBitmap") is not null && Field(canvas, "beatmapBackground") is not null,
+                        "Preparation blanked the complete previous storyboard/video/background presentation.");
                     delayed.SetResult(load.Result);
                 }
                 Settle();
@@ -184,5 +271,6 @@ internal static class DifficultyMediaReuseNativeTests
 internal static class DifficultyMediaReuseNativeTests
 {
     internal static int Run(string videoPath) => throw new PlatformNotSupportedException("Native Direct2D check requires Windows.");
+    internal static int RunMap(string mapPath) => throw new PlatformNotSupportedException("Native Direct2D check requires Windows.");
 }
 #endif

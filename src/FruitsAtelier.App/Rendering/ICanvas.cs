@@ -60,6 +60,8 @@ public interface ICanvas
         uint tint, float opacity, float rotationRadians, bool additive, bool flipX, bool flipY,
         float originX, float originY) { }
     bool VideoImage(string path, Rect destination, double positionMs, bool playing, double rate) => false;
+    bool PrepareVideoImage(string path, double positionMs, bool playing, double rate) => true;
+    bool RetainedVideoImage(Rect destination) => false;
     void StopVideo() { }
     void RetainVideo(string? path, bool preparing = false) => StopVideo();
     void ReleaseStoryboardResources() => StopVideo();

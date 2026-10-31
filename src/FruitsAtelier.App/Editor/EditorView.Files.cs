@@ -10,6 +10,11 @@ public sealed partial class EditorView
     public Action? RequestNewProject { get; set; }
     public Action? RequestImportDifficulty { get; set; }
     public Action? RequestDifficultyChanged { get; set; }
+    public Func<string?, bool>? CanReuseDifficultyAudio { get; set; }
+    public bool ReusingDifficultyAudio { get; private set; }
+    public Func<Task<double>>? RequestPauseForDifficultyChange { get; set; }
+    private Task<double>? difficultyPauseTask;
+    private int difficultyPauseTarget;
     public Action? RequestSave { get; set; }
     public Action? RequestExport { get; set; }
     public Action? RequestTogglePlayback { get; set; }
@@ -39,6 +44,8 @@ public sealed partial class EditorView
     {
         if (PatternEditingActive) throw new InvalidOperationException(L.Get("gallery.finishEditing"));
         project.Validate();
+        if (difficultyPauseTask is { } retiredPause) _ = retiredPause.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        difficultyPauseTask = null;
         if (SliderCanvasChoiceVisible) AnswerDiscard(2);
         timingAlignmentChecksEnabled = false; timingAlignmentChecked.Clear();
         timingAlignmentPlan = null; timingAlignmentSource = null;
@@ -121,7 +128,7 @@ public sealed partial class EditorView
         PreloadProjectHitsounds();
     }
 
-    private void ResetDifficultyView(bool prepareMediaInEditor = false, bool preserveMedia = false)
+    private void ResetDifficultyView(bool prepareMediaInEditor = false, bool preserveMedia = false, bool preserveAudio = false)
     {
         timingAlignmentPlan = null; timingAlignmentSource = null;
         RestoreTemporarySnap();
@@ -141,10 +148,8 @@ public sealed partial class EditorView
         ResetView();
         playhead = viewStart = 0;
         ResetLazerPresentation();
-        AudioReady = AudioPlaying = false;
-        initializeTransport = AudioLoading = !string.IsNullOrWhiteSpace(document.AudioPath);
-        AudioDurationMs = 0;
-        AudioNotice = L.Get(AudioLoading ? "editor.audio.loading" : "editor.audio.notLoaded");
+        if (!preserveAudio)
+            ResetDifficultyAudioState();
         pinPlayhead = true;
         StatusMessage = L.Get("editor.status.documentOpened", document.Name, document.TimingPoints.Count);
         RefreshLoadedAimod();
@@ -156,6 +161,15 @@ public sealed partial class EditorView
         Name = ProjectName, Notes = projectNotes,
         Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, FaOnly = d.FaOnly, Document = d.History.Document.DeepClone() }).ToList()
     };
+
+    public void ResetDifficultyAudioState()
+    {
+        ReleaseWaveform();
+        AudioReady = AudioPlaying = false;
+        initializeTransport = AudioLoading = !string.IsNullOrWhiteSpace(Document.AudioPath);
+        AudioDurationMs = 0;
+        AudioNotice = L.Get(AudioLoading ? "editor.audio.loading" : "editor.audio.notLoaded");
+    }
 
     private MapDocument NewAuthoringDocument()
     {
@@ -194,6 +208,7 @@ public sealed partial class EditorView
 
     private bool SwitchDifficultyCore(int index, bool reloadAudio)
     {
+        if (difficultyPauseTask is not null) return false;
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (index < 0 || index >= difficulties.Count) return false;
         if (!syncBypass && WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[index].Id) is { } linked
@@ -204,6 +219,18 @@ public sealed partial class EditorView
         }
         if (!syncBypass && WorkspaceSession is not null && ShowSyncProblem(index)) return false;
         if (index == activeDifficulty) return true;
+        if (reloadAudio && AudioPlaying)
+        {
+            AudioPlaying = false;
+            if (RequestPauseForDifficultyChange is { } pause)
+            {
+                difficultyPauseTarget = index;
+                difficultyPauseTask = pause();
+                PumpDifficultyPause();
+                return true;
+            }
+            RequestPausePlayback?.Invoke();
+        }
         if (!CommitCollaborationField()) return false;
         if (!PrepareFileOperation(allowDifficultySave: true)) return false;
         double currentPlayhead = playhead;
@@ -213,14 +240,37 @@ public sealed partial class EditorView
         bool preserveMedia = !LibraryVisible && mediaDirectory is not null
             && string.Equals(mediaDirectory, StoryboardMediaDirectory(difficulties[index].History.Document),
                 OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+        bool preserveAudio = reloadAudio && AudioReady && !AudioLoading
+            && FruitsAtelier.App.Media.MediaFileVersion.SamePath(Document.AudioPath, difficulties[index].History.Document.AudioPath)
+            && CanReuseDifficultyAudio?.Invoke(difficulties[index].History.Document.AudioPath) == true;
+        ResetHitsounds();
         activeDifficulty = index;
         collaborationField = collaborationError = ""; collaborationPanelScroll = 0;
         RevealDifficultyTab();
-        ResetDifficultyView(prepareMediaInEditor, preserveMedia);
+        ResetDifficultyView(prepareMediaInEditor, preserveMedia, preserveAudio);
         playhead = currentPlayhead;
         viewStart = currentViewStart;
-        if (reloadAudio) RequestDifficultyChanged?.Invoke();
+        if (reloadAudio)
+        {
+            ReusingDifficultyAudio = preserveAudio;
+            try { RequestDifficultyChanged?.Invoke(); }
+            finally { ReusingDifficultyAudio = false; }
+        }
         return true;
+    }
+
+    private void PumpDifficultyPause()
+    {
+        if (difficultyPauseTask is not { IsCompleted: true } task) return;
+        difficultyPauseTask = null;
+        if (!task.IsCompletedSuccessfully)
+        {
+            if (task.Exception is { } error) SetNotice(error.GetBaseException().Message);
+            return;
+        }
+        if (!double.IsFinite(task.Result)) return;
+        playhead = Math.Clamp(task.Result, 0, TimelineDurationMs);
+        SwitchDifficultyCore(difficultyPauseTarget, reloadAudio: true);
     }
 
     public bool AddDifficulty(MapDocument? imported = null, bool faOnly = false,
@@ -325,6 +375,7 @@ public sealed partial class EditorView
     public void UpdateTransport(double positionMs, double durationMs, bool ready, bool playing, bool loading,
         string? error, string? filename, double? sampledAtMs = null, double outputBufferAheadMs = 0)
     {
+        if (difficultyPauseTask is not null) return;
         if (PatternEditingActive && !string.Equals(filename, Document.AudioPath, StringComparison.OrdinalIgnoreCase)) return;
         PumpLegacyDropletRefresh();
         if (initializeTransport)

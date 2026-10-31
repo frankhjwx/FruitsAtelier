@@ -122,9 +122,15 @@ public sealed partial class EditorView
         if (!mappingCanvas && LibrarySettings.ForceBackgroundDim) { c.Fill(bounds, 0); return; }
         PrepareStoryboardFrame(c);
         bool drawn = false;
-        if ((!storyboardPresented || storyboardDisplayScene?.ReplacesBackground != true) && (beatmapBackground ?? storyboardScene?.BackgroundPath) is { } backgroundPath)
+        string? background = storyboardTransition ? storyboardDisplayBackground : beatmapBackground ?? storyboardScene?.BackgroundPath;
+        if ((!storyboardPresented || storyboardDisplayScene?.ReplacesBackground != true) && background is { } backgroundPath)
             drawn = c.BackgroundImage(backgroundPath, bounds);
-        if (LibrarySettings.EnableVideoStoryboard && storyboardScene is { Videos.Count: > 0 } scene)
+        if (LibrarySettings.EnableVideoStoryboard && storyboardTransition)
+        {
+            videoRequestedThisFrame = true;
+            drawn |= c.RetainedVideoImage(bounds);
+        }
+        else if (LibrarySettings.EnableVideoStoryboard && storyboardScene is { Videos.Count: > 0 } scene)
         {
             var video = scene.Videos[0];
             if (playhead >= video.OffsetMs)

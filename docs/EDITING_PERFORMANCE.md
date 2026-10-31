@@ -72,8 +72,12 @@ renderer geometry before drawing the new content. Within the active project,
 switching difficulties in the same resource directory retains unchanged decoded
 storyboard images, native textures, the resident background and video decoder.
 The transition validates file size, modification time and creation time once at
-the resource transition rather than on cached per-frame accesses, cancels previous speculative image queues and unpins the
-previous scene. Image caches keep their existing byte and entry budgets; they do
+the resource transition rather than on cached per-frame accesses and cancels
+previous speculative image queues. The previous complete media composition and
+image pins remain until scene, gameplay, required images and video are ready to
+publish together. Its runtime triggers and samples retire immediately. Unchanged
+ready audio retains its transport session and UI metadata while playback pauses;
+the waveform is invalidated only when that audio is replaced. Image caches keep their existing byte and entry budgets; they do
 not retain difficulty scenes or gameplay state. Project replacement, another
 resource directory and returning to the library release these media resources.
 Distance labels, projected breaks, movement guides, standard-canvas snapping,

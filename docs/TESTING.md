@@ -86,6 +86,22 @@ file-version invalidation and full retirement on project or directory replacemen
 and Library exit. Supply a video at least two seconds long. Its hidden-window
 resource checks do not measure physical presentation latency.
 
+`App.Tests --difficulty-media-continuity-native-check <map.osu>` compares the native
+Mapping media region at 72.324 seconds before a same-project switch, through six
+deliberately delayed source-publication frames and after completion. Exact pixel
+hashes, decode/upload counts and audio metadata must remain unchanged for the
+identical target. It writes before/pending/after BMPs and a JSON result under
+`artifacts/diff-media-continuity-20261031/real-map`. Supply a map with visible media
+at that time; the check reads its resources without modifying the mapset.
+
+`FruitsAtelier.App --render-check --difficulty-audio-continuity-render-check`
+exercises the actual Windows host callback with controlled silent audio output.
+Paused and playing switches retain transport/load identity and metadata while
+pausing playback; an already paused cached switch must not rebuild native output.
+Changed file versions reject reuse. Forced replacement also
+checks reentrant timer/paint messages and position initialization. macOS compile
+checks cover shared and host source; native macOS audio remains a separate check.
+
 `App.Tests --storyboard-source-cache-check` checks scene reuse for ordinary General
 value edits, including pending preparation. Widescreen, Events, Variables, source
 directories, retirement, line positions and embedded section boundaries still
@@ -93,7 +109,11 @@ invalidate the scene; cached output is compared with a full source parse.
 
 `App.Tests --storyboard-presentation-check` verifies that Mapping retains video
 while Force background dim suppresses Preview, including pending video frames.
-It also checks visible-editor difficulty preparation, source and image readiness,
+It also delays source publication, image readiness and video readiness independently,
+checking complete prior media and stable audio metadata until atomic publication,
+including empty target difficulties. It checks visible-editor difficulty preparation,
+and delayed pause confirmation before same/different-audio source mutation,
+frozen stale-clock snapshots, and canceled, failed or retired pause requests,
 blocked editing/navigation/playback/file actions, failure and cancellation, and
 Library exit with unsaved changes. Initial project preparation retains its loading
 feedback. `FruitsAtelier.App --render-check --library-opening-render-check` captures

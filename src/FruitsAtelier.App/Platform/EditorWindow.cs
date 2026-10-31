@@ -248,6 +248,11 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--difficulty-audio-continuity-render-check"))
+            {
+                CheckDifficultyAudioReset();
+                Native.DestroyWindow(hwnd); return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--faz-render-check"))
             {
                 Diagnostics.FazRenderCheck.Run(canvas);

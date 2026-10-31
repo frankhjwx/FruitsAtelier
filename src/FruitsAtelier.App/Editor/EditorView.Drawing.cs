@@ -66,6 +66,7 @@ public sealed partial class EditorView
 
     private void RenderContent(ICanvas c, float width, float height)
     {
+        PumpDifficultyPause();
         if (difficultyGraphicsReleasePending) { c.ReleaseDifficultyResources(difficultyMediaReusePending); difficultyGraphicsReleasePending = difficultyMediaReusePending = false; }
         ReclaimProjectMemory();
         if (AcknowledgementsVisible)

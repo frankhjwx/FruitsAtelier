@@ -93,20 +93,20 @@ internal sealed partial class ImageCache
     internal void StopVideo() { Video?.Dispose(); Video = null; VideoBitmap?.Dispose(); VideoBitmap = null; VideoSerial = 0; VideoLastOpacity = 0; VideoPresentationPending = false; }
     internal void ReuseMediaResources()
     {
-        MediaGeneration = MediaResourceIdentity.Next(); StoryboardCapacityWarning = null;
+        StoryboardCapacityWarning = null;
         StoryboardPixels.ReuseResources();
         foreach (var key in storyboardTextures.Keys.ToArray())
         {
             if (storyboardTextureVersions[key] == MediaFileVersion.Read(key.Path)) continue;
             var texture = storyboardTextures[key];
+            if (storyboardPins.Remove(key)) storyboardPinnedBytes -= (long)texture.Bitmap.PixelSize.Width * texture.Bitmap.PixelSize.Height * 4;
+            storyboardRetainedPaths.Remove(key.Path);
             storyboardBytes -= (long)texture.Bitmap.PixelSize.Width * texture.Bitmap.PixelSize.Height * 4;
             texture.Bitmap.Dispose(); storyboardTextures.Remove(key); storyboardTextureVersions.Remove(key);
         }
-        storyboardRetainedPaths.Clear(); storyboardPins.Clear(); storyboardPinnedBytes = 0;
         while (storyboardBytes > StoryboardImageCache.Limit && EvictStoryboardTexture()) { }
         if (Video is not null && Video.Version != MediaFileVersion.Read(Video.Path)) StopVideo();
         else Video?.Suspend();
-        VideoPresentationPending = Video is not null;
         if (beatmapBackground is { } background)
         {
             var version = MediaFileVersion.Read(background.Key.Item1);
@@ -158,9 +158,18 @@ internal sealed partial class MacCanvas
         using var blend = context.PushRenderOptions(new RenderOptions { BitmapBlendingMode = additive ? BitmapBlendingMode.Plus : BitmapBlendingMode.SourceOver });
         context.DrawImage(bitmap, new Avalonia.Rect(bitmap.Size), new Avalonia.Rect(0, 0, bitmap.PixelSize.Width, bitmap.PixelSize.Height));
     }
-    public bool VideoImage(string path, R destination, double positionMs, bool playing, double rate)
+    public bool PrepareVideoImage(string path, double positionMs, bool playing, double rate)
+        => PrepareVideoFrame(path, positionMs, playing, rate, retainBitmap: true)
+            || images.Video?.ContainsTime(positionMs) == false || images.Video?.Error is not null;
+
+    private bool PrepareVideoFrame(string path, double positionMs, bool playing, double rate, bool retainBitmap)
     {
-        if (images.Video?.Path != path) { images.StopVideo(); images.Video = new(path); videoFrameRequested = false; }
+        if (images.Video?.Path != path)
+        {
+            if (retainBitmap) { images.Video?.Dispose(); images.Video = null; images.VideoSerial = 0; }
+            else images.StopVideo();
+            images.Video = new(path); videoFrameRequested = false; images.VideoPresentationPending = true;
+        }
         if (!images.Video.ContainsTime(positionMs)) return false;
         bool ready = false;
         if (!videoFrameRequested) ready = images.Video.WithFrame(positionMs, playing, rate, frame =>
@@ -180,13 +189,22 @@ internal sealed partial class MacCanvas
             images.VideoPresentationPending = false;
         });
         videoFrameRequested = true;
-        if (images.VideoPresentationPending || images.VideoBitmap is not { } bitmap || !images.Video.ContainsTime(positionMs)) return false;
+        return ready;
+    }
+    public bool VideoImage(string path, R destination, double positionMs, bool playing, double rate)
+    {
+        PrepareVideoFrame(path, positionMs, playing, rate, retainBitmap: false);
+        return !images.VideoPresentationPending && images.Video?.ContainsTime(positionMs) == true && RetainedVideoImage(destination);
+    }
+    public bool RetainedVideoImage(R destination)
+    {
+        if (images.VideoBitmap is not { } bitmap) return false;
         int width = bitmap.PixelSize.Width, height = bitmap.PixelSize.Height;
         float scale = Math.Max(destination.Width / width, destination.Height / height);
         float w = destination.Width / scale, h = destination.Height / scale;
         using var opacity = context.PushOpacity(images.VideoLastOpacity);
         context.DrawImage(bitmap, new Avalonia.Rect((width - w) / 2, (height - h) / 2, w, h), Convert(destination));
-        return ready || images.VideoSerial != 0;
+        return true;
     }
     public void StopVideo() => images.StopVideo();
     public void RetainVideo(string? path, bool preparing = false)

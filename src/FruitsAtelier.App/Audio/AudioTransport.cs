@@ -185,12 +185,22 @@ public sealed class AudioTransport : IDisposable
 
     public void Load(string path) => _ = LoadAsync(path);
 
+    private FruitsAtelier.App.Media.MediaFileVersion sourceVersion;
+    internal long LoadGeneration => Volatile.Read(ref loadVersion);
+    internal bool CanReuse(string? path)
+    {
+        lock (stateLock) return state.CanPlay && !state.IsLoading
+            && FruitsAtelier.App.Media.MediaFileVersion.SamePath(state.FilePath, path)
+            && sourceVersion == FruitsAtelier.App.Media.MediaFileVersion.Read(path!);
+    }
+
     public Task<bool> LoadAsync(string path)
     {
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (stateLock)
         {
             if (disposed != 0) { completion.SetResult(false); return completion.Task; }
+            sourceVersion = FruitsAtelier.App.Media.MediaFileVersion.Read(path);
             long version = ++loadVersion;
             appliedSeekVersion = ++seekVersion;
             appliedIntentVersion = ++intentVersion;

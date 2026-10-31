@@ -100,14 +100,23 @@ releases renderer geometry through `ICanvas.ReleaseDifficultyResources`. An acti
 project's difficulty switch within the same resource directory preserves unchanged
 decoded storyboard images, native textures and the single resident background and
 video decoder. Resource versions include file size, modification time and creation
-time, checked at this transition. Previous image requests and pins retire while
-the existing bounded caches remain available to the next scene. Failed image
+time, checked at this transition. Previous image requests retire while the last
+presented image set stays pinned until the replacement is ready. The existing
+bounded caches remain available to the next scene. Failed image
 decodes remain cached until the file changes; only the new scene's requested
 failures supply its diagnostic. New scene parsing merges its own Events, Variables
 and General with the shared `.osb` again, preserving variable scope and source
 order. Gameplay, triggers and sample cursors remain specific to the difficulty.
 Project replacement, switching resource directories and Library exit perform full
 renderer retirement.
+During same-directory difficulty preparation, the displayed storyboard frame,
+background selection and video bitmap remain one visual snapshot. The new scene,
+gameplay and required images prepare independently. Video preparation begins after
+the sprite set is ready and preserves its previous bitmap until a frame covering
+the target time is available. Publication switches the complete composition at
+once, including a legitimately empty target. Previous gameplay, triggers and sample
+cursors are retired immediately. The editor remains visible with content input
+gated during this preparation.
 Map opening includes storyboard parsing, gameplay preparation and the current
 visible images reaching the renderer. The existing opening overlay remains visible
 until the prepared editor frame can be published together. Known missing images
@@ -143,9 +152,22 @@ video in the current frame and stops it when none does, including full-screen
 pages and force-dim testplay. A requested frame still being decoded counts as
 video demand. During same-directory difficulty preparation an idle decoder is
 suspended rather than closed. Identical files and offsets reuse the current frame;
-another offset seeks the same decoder and suppresses the previous difficulty's
-frame until the requested timestamp is available. Ordinary frames with no visible
+another offset seeks the same decoder while retaining the previous complete
+composition until the requested timestamp is available. Ordinary frames with no visible
 video demand still stop the decoder, including positions before the video offset.
+
+Difficulty audio reuse is confirmed by the native transport before the editor
+resets difficulty state. A ready transport with the same normalized file path and
+captured file version retains its clock session, duration, readiness, notice and
+waveform. A playing switch first freezes the timeline and pauses audio. Windows
+waits for the worker's pause command to finish without blocking the UI; macOS
+confirms its native pause synchronously. Difficulty mutation, scheduled-hitsound
+retirement and any replacement load follow this confirmation. The editor remains
+visible with input gated while waiting; stale transport snapshots cannot advance
+the frozen timeline. An unchanged paused song is reused without another pause or
+output rebuild. Another file or version uses the ordinary loading path. Native
+hosts recheck ownership before reuse; replacement restores position initialization,
+and asynchronous macOS load continuations may seek only their own load generation.
 
 `LibrarySettings.EnableVideoStoryboard` controls visuals across every viewport.
 Changing it retires scene and gameplay workers, clears displayed sprite buffers,

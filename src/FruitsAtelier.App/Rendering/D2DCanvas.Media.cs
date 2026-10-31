@@ -176,9 +176,18 @@ public sealed partial class D2DCanvas
         }
         finally { batchCount = 0; batchTexture = null; context.PrimitiveBlend = blend; context.AntialiasMode = antialias; }
     }
-    public unsafe bool VideoImage(string path, Rect destination, double positionMs, bool playing, double rate)
+    public bool PrepareVideoImage(string path, double positionMs, bool playing, double rate)
+        => PrepareVideoFrame(path, positionMs, playing, rate, retainBitmap: true)
+            || video?.ContainsTime(positionMs) == false || video?.Error is not null;
+
+    private unsafe bool PrepareVideoFrame(string path, double positionMs, bool playing, double rate, bool retainBitmap)
     {
-        if (video is null || !string.Equals(video.Path, path, StringComparison.OrdinalIgnoreCase)) { StopVideo(); video = new(path); }
+        if (video is null || !string.Equals(video.Path, path, StringComparison.OrdinalIgnoreCase))
+        {
+            if (retainBitmap) { video?.Dispose(); video = null; videoSerial = 0; videoFrameRequested = false; }
+            else StopVideo();
+            video = new(path); videoPresentationPending = true;
+        }
         if (!video.ContainsTime(positionMs)) return false;
         bool ready = false;
         if (!videoFrameRequested) ready = video.WithFrame(positionMs, playing, rate, frame =>
@@ -198,12 +207,21 @@ public sealed partial class D2DCanvas
             videoPresentationPending = false;
         });
         videoFrameRequested = true;
-        if (videoPresentationPending || videoBitmap is null || !video.ContainsTime(positionMs)) return false;
+        return ready;
+    }
+    public bool VideoImage(string path, Rect destination, double positionMs, bool playing, double rate)
+    {
+        PrepareVideoFrame(path, positionMs, playing, rate, retainBitmap: false);
+        return !videoPresentationPending && video?.ContainsTime(positionMs) == true && RetainedVideoImage(destination);
+    }
+    public bool RetainedVideoImage(Rect destination)
+    {
+        if (videoBitmap is null) return false;
         float scale = Math.Max(destination.Width / videoWidth, destination.Height / videoHeight);
         float w = destination.Width / scale, h = destination.Height / scale;
         context!.DrawBitmap(videoBitmap, Convert(destination), videoLastOpacity, BitmapInterpolationMode.Linear,
             new Vortice.Mathematics.Rect((videoWidth - w) / 2, (videoHeight - h) / 2, w, h));
-        return ready || videoSerial != 0;
+        return true;
     }
     public void StopVideo() { video?.Dispose(); video = null; videoBitmap?.Dispose(); videoBitmap = null; videoSerial = 0; videoLastOpacity = 0; videoFrameRequested = videoPresentationPending = false; }
     public void RetainVideo(string? path, bool preparing = false)
@@ -213,22 +231,22 @@ public sealed partial class D2DCanvas
     }
     private void ReuseMediaResources()
     {
-        mediaGeneration = MediaResourceIdentity.Next(); storyboardCapacityWarning = null;
+        storyboardCapacityWarning = null;
         FlushStoryboard();
         storyboardPixels?.ReuseResources();
         foreach (string path in storyboardTextures.Keys.ToArray())
         {
             if (storyboardTextureVersions[path] == MediaFileVersion.Read(path)) continue;
             var texture = storyboardTextures[path]; texture.Bitmap.Dispose();
+            if (storyboardPins.Remove(path)) storyboardPinnedBytes -= (long)texture.Width * texture.Height * 4;
+            storyboardRetainedPaths.Remove(path);
             storyboardTextureBytes -= (long)texture.Width * texture.Height * 4;
             storyboardTextures.Remove(path); storyboardTextureVersions.Remove(path);
         }
-        storyboardPins.Clear(); storyboardRetainedPaths.Clear(); storyboardPinnedBytes = 0;
         storyboardPreparedPaths = Array.Empty<string>(); storyboardPendingUpload = false;
         while (storyboardTextureBytes > StoryboardImageCache.Limit && EvictStoryboardTexture()) { }
         if (video is not null && video.Version != MediaFileVersion.Read(video.Path)) StopVideo();
         else video?.Suspend();
-        videoPresentationPending = video is not null;
         if (beatmapBackground is { } background)
         {
             var version = MediaFileVersion.Read(background.Key.Path);

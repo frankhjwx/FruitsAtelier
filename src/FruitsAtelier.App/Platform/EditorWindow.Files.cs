@@ -105,10 +105,29 @@ internal sealed partial class EditorWindow
                 view.AddDifficulty(document);
             }
         });
+        view.CanReuseDifficultyAudio = path => audio.CanReuse(path);
+        view.RequestPauseForDifficultyChange = async () =>
+        {
+            var transport = audio;
+            difficultyAudioPausing = true;
+            try
+            {
+                transport.Pause();
+                await transport.WaitForCommandsAsync().ConfigureAwait(false);
+                return transport.PositionMs;
+            }
+            finally { difficultyAudioPausing = false; }
+        };
         view.RequestDifficultyChanged = () =>
         {
+            if (view.ReusingDifficultyAudio && audio.CanReuse(view.Document.AudioPath))
+            {
+                view.ResetHitsounds(); PollAudio(); return;
+            }
+            view.ResetDifficultyAudioState();
             ResetAudio();
             if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) { audio.Load(view.Document.AudioPath); audio.Seek(view.PlayheadMs); }
+            PollAudio();
         };
         view.RequestSave = () => FileOperation(view.SaveCurrentDifficulty);
         view.RequestExport = view.ShowWorkspaceExport;
@@ -178,6 +197,7 @@ internal sealed partial class EditorWindow
     }
 
     private bool resettingAudio;
+    private volatile bool difficultyAudioPausing;
 
     private void ResetAudio()
     {
@@ -199,7 +219,7 @@ internal sealed partial class EditorWindow
     private void PollAudio()
     {
         // Disposing audio can pump STA window messages; the retiring clock must not initialize the new difficulty.
-        if (resettingAudio) return;
+        if (resettingAudio || difficultyAudioPausing) return;
         PollSetupAudio();
         if (view.LibraryVisible || view.WorkspaceSession is not null || view.AudioProjectCreating || view.SliderConversionBusy || view.SliderMultiplierValidationBusy || view.StarRatingsRefreshing) Invalidate();
         if (!string.Equals(audio.FilePath, view.Document.AudioPath, StringComparison.OrdinalIgnoreCase))

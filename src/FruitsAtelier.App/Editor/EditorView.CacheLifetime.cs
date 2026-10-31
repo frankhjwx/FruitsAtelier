@@ -24,7 +24,7 @@ public sealed partial class EditorView
 
     private void ReleaseDifficultyCaches(bool preserveMedia = false)
     {
-        RetireStoryboard();
+        RetireDifficultyStoryboard(preserveMedia);
         ClearDiscussionRegions();
         difficultyMediaReusePending = preserveMedia && (!difficultyGraphicsReleasePending || difficultyMediaReusePending);
         difficultyGraphicsReleasePending = true;

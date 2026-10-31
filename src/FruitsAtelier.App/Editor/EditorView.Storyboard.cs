@@ -9,6 +9,8 @@ public sealed partial class EditorView
 {
     private StoryboardScene? storyboardScene;
     private StoryboardScene? storyboardDisplayScene;
+    private string? storyboardDisplayBackground;
+    private bool storyboardTransition;
     private Task<StoryboardScene>? storyboardLoad;
     private CancellationTokenSource? storyboardCancellation;
     private readonly List<(string Name, object Identity, string[]? General)> storyboardSource = [];
@@ -48,10 +50,27 @@ public sealed partial class EditorView
     private long storyboardTriggerVersion = -1;
     private bool mediaPlayPending, mediaTestplayPending;
     private string? mediaReportedError;
-    public bool MediaNeedsRedraw => storyboardResourcesReleasePending || mediaOpening || mediaPlayPending || mediaTestplayPending
+    public bool MediaNeedsRedraw => difficultyPauseTask is not null || storyboardResourcesReleasePending || mediaOpening || mediaPlayPending || mediaTestplayPending
         || storyboardLoad is { IsCompleted: true } || storyboardGameplayLoad is { IsCompleted: true };
 
     private bool storyboardResourcesReleasePending;
+
+    private void RetireDifficultyStoryboard(bool preservePresentation)
+    {
+        bool retain = preservePresentation && storyboardPresented && LibrarySettings.EnableVideoStoryboard;
+        var scene = storyboardDisplayScene;
+        var frame = retain ? storyboardDisplayFrame.ToArray() : [];
+        var paths = retain ? storyboardRetainedImages.ToArray() : [];
+        string? background = storyboardDisplayBackground;
+        long generation = storyboardCanvasGeneration;
+        RetireStoryboard();
+        if (!retain) return;
+        storyboardDisplayScene = scene; storyboardDisplayBackground = background;
+        storyboardDisplayFrame.AddRange(frame); storyboardRetainedImages.AddRange(paths);
+        storyboardPresented = storyboardTransition = true;
+        storyboardRendererObserved = true; storyboardCanvasGeneration = generation;
+        storyboardPinnedGeneration = generation;
+    }
 
     private void ApplyMediaPreference()
     {
@@ -92,6 +111,7 @@ public sealed partial class EditorView
         storyboardGameplayRevision = -1;
         if (preserveDisplay) return;
         storyboardScene = storyboardDisplayScene = null;
+        storyboardDisplayBackground = null; storyboardTransition = false;
         storyboardFrame.Clear(); storyboardPreload.Clear(); storyboardPreloadSeen.Clear();
         storyboardDisplayFrame.Clear(); storyboardRetainedImages.Clear(); storyboardTargetReady = false;
         storyboardRequiredImages.Clear(); storyboardRequiredSeen.Clear(); storyboardPresented = false;
@@ -137,7 +157,8 @@ public sealed partial class EditorView
         bool opening = !mediaInitialPreparationComplete;
         bool exiting = mediaExitPending;
         bool prepareInEditor = mediaPreparationInEditor;
-        RetireStoryboard(preserveDisplay: !opening, preserveHistory: true); storyboardDirectory = directory; mediaOpening = opening; mediaExitPending = exiting;
+        bool transition = storyboardTransition;
+        RetireStoryboard(preserveDisplay: !opening || transition, preserveHistory: true); storyboardDirectory = directory; mediaOpening = opening; mediaExitPending = exiting;
         mediaPreparationInEditor = prepareInEditor;
         var sections = new List<(string Name, string[] Lines)>();
         foreach (var section in Document.OriginalSections)
@@ -283,18 +304,26 @@ public sealed partial class EditorView
         if (storyboardPinnedGeneration != canvas.MediaGeneration)
         { canvas.RetainStoryboardImages(storyboardRetainedImages); storyboardPinnedGeneration = canvas.MediaGeneration; }
         bool wasReady = storyboardTargetReady;
-        storyboardTargetReady = storyboardRequiredImages.Count == 0 || canvas.StoryboardImagesReady(storyboardRequiredImages);
-        if (storyboardTargetReady && (frameChanged || !wasReady || !storyboardPresented))
+        storyboardTargetReady = (storyboardRequiredImages.Count == 0 || canvas.StoryboardImagesReady(storyboardRequiredImages))
+            && (!storyboardTransition || storyboardGameplayLoad is null);
+        if (storyboardTransition && storyboardTargetReady && storyboardScene.Videos.FirstOrDefault() is var video && video.Path is not null && playhead >= video.OffsetMs)
+        {
+            videoRequestedThisFrame = true;
+            storyboardTargetReady = canvas.PrepareVideoImage(video.Path, playhead - video.OffsetMs, AudioPlaying, PlaybackSpeed);
+        }
+        if (storyboardTargetReady && (storyboardTransition || frameChanged || !wasReady || !storyboardPresented))
         {
             storyboardDisplayFrame.Clear(); storyboardDisplayFrame.AddRange(storyboardFrame);
             storyboardDisplayScene = storyboardScene;
+            storyboardDisplayBackground = beatmapBackground ?? storyboardScene.BackgroundPath;
+            storyboardTransition = false;
             bool same = storyboardRetainedImages.Count == storyboardRequiredImages.Count;
             for (int i = 0; same && i < storyboardRetainedImages.Count; i++) same = storyboardRetainedImages[i] == storyboardRequiredImages[i];
             if (!same)
             {
                 storyboardRetainedImages.Clear(); storyboardRetainedImages.AddRange(storyboardRequiredImages);
-                canvas.RetainStoryboardImages(storyboardRetainedImages);
             }
+            canvas.RetainStoryboardImages(storyboardRetainedImages);
             storyboardPresented = true;
         }
     }
@@ -392,6 +421,12 @@ public sealed partial class EditorView
     {
         PumpStoryboardGameplay();
         if (storyboardScene is not null) PrepareStoryboardFrame(canvas);
+        else if (storyboardTransition && storyboardLoad is null && storyboardGameplayLoad is null)
+        {
+            storyboardDisplayScene = null; storyboardDisplayBackground = null;
+            storyboardDisplayFrame.Clear(); storyboardRetainedImages.Clear(); canvas.RetainStoryboardImages(storyboardRetainedImages);
+            storyboardPresented = storyboardTransition = false;
+        }
         if (mediaOpening && storyboardLoad is null && storyboardGameplayLoad is null
             && (!LibrarySettings.EnableVideoStoryboard || storyboardScene is null || storyboardTargetReady)) mediaOpening = false;
         if (!mediaOpening && storyboardLoad is null && storyboardGameplayLoad is null)

@@ -51,6 +51,8 @@ public sealed class MacAudio : IDisposable
         lock (gate)
         {
             ObjectDisposedException.ThrowIf(disposed, this);
+            loadGeneration++;
+            sourceVersion = FruitsAtelier.App.Media.MediaFileVersion.Read(filename ?? "");
             load?.Cancel(); load?.Dispose(); load = new(); token = load.Token;
             Release(); path = filename; error = null; loading = !string.IsNullOrWhiteSpace(filename);
         }
@@ -87,6 +89,15 @@ public sealed class MacAudio : IDisposable
             MacPaths.Log(ex.ToString());
         }
         finally { if (candidate != 0) Close(candidate); DeleteCache(temporary); }
+    }
+    private FruitsAtelier.App.Media.MediaFileVersion sourceVersion;
+    private long loadGeneration;
+    internal long LoadGeneration { get { lock (gate) return loadGeneration; } }
+    internal bool CanReuse(string? filename)
+    {
+        lock (gate) return player != 0 && !loading
+            && FruitsAtelier.App.Media.MediaFileVersion.SamePath(path, filename)
+            && sourceVersion == FruitsAtelier.App.Media.MediaFileVersion.Read(filename!);
     }
     public void Play()
     {
