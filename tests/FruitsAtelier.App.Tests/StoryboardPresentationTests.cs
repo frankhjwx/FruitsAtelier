@@ -10,6 +10,7 @@ internal static class StoryboardPresentationTests
     {
         string directory = Path.GetFullPath("artifacts/tests/video-storyboard/presentation-fixtures");
         Directory.CreateDirectory(directory);
+        SeekPreload(directory);
         OpeningCancellation(directory);
         DifficultySwitchPreparation(directory);
         DifficultyPresentationContinuity(directory);
@@ -389,10 +390,37 @@ internal static class StoryboardPresentationTests
     private static bool Pending(EditorView view) => view.LibraryOpening || typeof(EditorView).GetField("storyboardLoad", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(view) is Task;
     private static bool SourcePending(EditorView view) => typeof(EditorView).GetField("storyboardLoad", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(view) is Task;
     private static bool Near(Rect a, Rect b) => Math.Abs(a.X - b.X) < .02 && Math.Abs(a.Y - b.Y) < .02 && Math.Abs(a.Width - b.Width) < .02 && Math.Abs(a.Height - b.Height) < .02;
+    private static void SeekPreload(string directory)
+    {
+        var map = new MapDocument { SourcePath = Path.Combine(directory, "seek.osu"), DurationMs = 10000 };
+        map.Fruits.Add(new() { TimeMs = 9000, X = 256 });
+        map.OriginalSections.Add(new() { Name = "Events", Lines = {
+            "Animation,Foreground,Centre,\"frame.png\",320,240,100,100,LoopForever", " F,0,0,10000,1" } });
+        var view = new EditorView(false); var canvas = new MediaCanvas();
+        view.LoadDocument(map); view.CloseLibrary();
+        var warm = Stopwatch.StartNew();
+        do { view.Render(canvas, 1440, 900); Thread.Sleep(1); } while (Pending(view) && warm.Elapsed.TotalSeconds < 5);
+        foreach (double time in new[] { 3855d, 8000, 2000, 2100 })
+        {
+            view.UpdateTransport(time, 10000, true, false, false, null, null);
+            view.Render(canvas, 1440, 900);
+            if (canvas.Prepared.Length != 1 || Path.GetFileName(canvas.Prepared[0]) != $"frame{(int)(time / 100)}.png")
+                throw new Exception("Paused seek prefetched other animation frames or retained the previous target.");
+        }
+        view.UpdateTransport(8000, 10000, true, true, false, null, null); view.Render(canvas, 1440, 900);
+        if (canvas.Prepared.Length != 1) throw new Exception("Playback seek prefetched a whole animation.");
+        for (int i = 1; i <= 6; i++) { view.UpdateTransport(8000 + i * 100, 10000, true, true, false, null, null); view.Render(canvas, 1440, 900); }
+        if (canvas.Prepared.Length != 100) throw new Exception("Continuous playback did not resume lookahead.");
+        view.StopFileMonitoring(); view.CompleteLibraryCacheWrites();
+        Console.WriteLine("PASS paused and playing seeks prepare only target images; continuous playback resumes lookahead");
+    }
+
     private sealed class MediaCanvas : ICanvas
     {
         private readonly RecordingCanvas inner = new(); private readonly Stack<Rect> clips = new();
         internal bool RequiredReady = true, VideoReady = true, VideoActive;
+        internal string[] Prepared = [];
+        public void PrepareStoryboardImages(IReadOnlyList<string> paths) => Prepared = paths.ToArray();
         internal int VideoStops;
         private (string Path, Rect Bounds, double TimeMs)? lastVideo;
         public bool StoryboardImagesReady(IReadOnlyList<string> paths) => RequiredReady;

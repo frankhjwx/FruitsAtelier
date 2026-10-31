@@ -80,6 +80,12 @@ ready audio retains its transport session and UI metadata while playback pauses;
 the waveform is invalidated only when that audio is replaced. Image caches keep their existing byte and entry budgets; they do
 not retain difficulty scenes or gameplay state. Project replacement, another
 resource directory and returning to the library release these media resources.
+Paused or discontinuous storyboard seeks prepare only the target frame's images;
+continuous playback resumes the two-second decoded-image lookahead. Native textures
+are uploaded on demand within the frame budget, and deferred uploads request another
+frame. Windows does not upload speculative lookahead during painting: a lookahead
+larger than the texture cache must not cause repeated eviction and upload of an
+unchanged frame. Both renderers omit resident native images from decode prefetch.
 Distance labels, projected breaks, movement guides, standard-canvas snapping,
 timing-axis and collaboration-selection caches retire with the same difficulty.
 Project replacement also clears the project-local clipboard. Retired rating,

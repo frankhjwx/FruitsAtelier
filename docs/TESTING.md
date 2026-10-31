@@ -159,6 +159,17 @@ identity, bounded reuse, changed/deleted/restored files, unavailable-image diagn
 and an in-flight common image while retiring speculative loads. It uses a controlled decoder to verify
 that current-frame requests take priority over queued prefetch, including multiple
 required images and repeated preparation without duplicate decoding.
+`App.Tests --storyboard-texture-pressure-check` checks a 320 MiB speculative image
+set against the native texture budget: only required images upload, deferred
+uploads retain redraw requests, and resident textures do not decode again after
+CPU-cache eviction. The presentation check covers target-frame-only preparation
+for paused/playing seeks and restoration of lookahead during continuous playback.
+`FruitsAtelier.App --render-check --storyboard-seek-render-check <map.osu>` opens
+the real Windows host with silent audio output and exercises progress-bar click
+and drag messages. Supply a map with complete media resources and visible
+storyboard images. Reports under `artifacts/tests/storyboard-seek-native` include
+input/paint times, decode/upload counts and memory. Each target must publish its
+complete storyboard frame.
 `App.Tests --storyboard-first-playback <Platter.osu> <output-directory> <seed>`
 checks the Wings of Courage storyboard's first s15/4–7 transitions after randomized
 forward/backward seeks in a fresh hidden native renderer. Odd seeds add bounded

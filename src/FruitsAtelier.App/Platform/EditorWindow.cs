@@ -152,6 +152,10 @@ internal sealed partial class EditorWindow : IDisposable
             Native.DestroyWindow(hwnd);
             return 0;
         }
+        if (renderCheck && Environment.GetCommandLineArgs().Contains("--storyboard-seek-render-check"))
+        {
+            CheckStoryboardSeek(initialPath!); Native.DestroyWindow(hwnd); return 0;
+        }
         if (renderCheck && initialPath is not null) FileOperation(() => OpenPath(initialPath));
         if (hitsoundCopierCheck)
         {
