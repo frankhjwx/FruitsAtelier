@@ -113,6 +113,7 @@ internal sealed partial class EditorWindow
 
     private void CheckMessageBoundaryRecovery(string directory)
     {
+        CheckThumbnailDecoderRecovery();
         var requestSeek = view.RequestSeek;
         int seeks = 0, closePrompts = 0, savePrompts = 0;
         try
@@ -195,6 +196,46 @@ internal sealed partial class EditorWindow
             diagnosticFrameWait = null; diagnosticGetMessageResult = null; messageQueueFallback = false;
             diagnosticControl = false; diagnosticRecoveryClose = null; diagnosticRecoveryPath = null;
         }
+    }
+
+    private static void CheckThumbnailDecoderRecovery()
+    {
+        int failedDecodes = 0;
+        using var decoded = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        using var disposed = new ManualResetEventSlim();
+        using var cache = new Rendering.ThumbnailCache<ThumbnailRecoveryProbe>(path =>
+        {
+            if (path == "bad")
+            {
+                Interlocked.Increment(ref failedDecodes);
+                throw new IOException("Thumbnail decoder fault");
+            }
+            if (path == "retiring")
+            {
+                decoded.Set();
+                if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Thumbnail fixture was not released.");
+            }
+            return new(path == "retiring" ? disposed : null);
+        });
+        cache.Get("bad"); cache.Get("good");
+        if (!SpinWait.SpinUntil(() => Volatile.Read(ref failedDecodes) == 1 && cache.Get("good") is not null, TimeSpan.FromSeconds(5)))
+            throw new InvalidOperationException("Failed thumbnail decoder blocked a healthy thumbnail.");
+        for (int i = 0; i < 20; i++) cache.Get("bad");
+        if (failedDecodes != 1) throw new InvalidOperationException("Failed thumbnail decoder retried on every paint.");
+        cache.Get("next");
+        if (!SpinWait.SpinUntil(() => cache.Get("next") is not null, TimeSpan.FromSeconds(5)))
+            throw new InvalidOperationException("Failed thumbnail decoder retained its worker slot.");
+        cache.Get("retiring");
+        if (!decoded.Wait(TimeSpan.FromSeconds(5))) throw new InvalidOperationException("Thumbnail retirement fixture did not start.");
+        cache.Dispose(); release.Set();
+        if (!disposed.Wait(TimeSpan.FromSeconds(5))) throw new InvalidOperationException("Retired thumbnail result was not disposed.");
+        AppLog.Write("Thumbnail decoder recovery passed: failed decode cached, healthy worker progress and late result disposal.");
+    }
+
+    private sealed class ThumbnailRecoveryProbe(ManualResetEventSlim? disposed) : IDisposable
+    {
+        public void Dispose() => disposed?.Set();
     }
 }
 

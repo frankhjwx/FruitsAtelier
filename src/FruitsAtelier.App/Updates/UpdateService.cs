@@ -63,9 +63,9 @@ internal sealed class UpdateService : IDisposable
     {
         if (!backend.IsInstalled || Interlocked.CompareExchange(ref busy, 1, 0) != 0) return;
         var previous = Status;
-        PublishStatus(new(UpdatePhase.Checking));
         try
         {
+            PublishStatus(new(UpdatePhase.Checking));
             Preferences.LastCheck = now;
             try { SavePreferences(); }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { log(e.ToString()); }
@@ -82,9 +82,9 @@ internal sealed class UpdateService : IDisposable
     {
         if (Status.Phase != UpdatePhase.Available || Interlocked.CompareExchange(ref busy, 1, 0) != 0) return;
         string version = Status.Version;
-        PublishStatus(new(UpdatePhase.Downloading, version));
         try
         {
+            PublishStatus(new(UpdatePhase.Downloading, version));
             await backend.Download(p => PublishStatus(new(UpdatePhase.Downloading, version, Math.Clamp(p, 0, 100))), cancellation.Token).ConfigureAwait(false);
             cancellation.Token.ThrowIfCancellationRequested();
             PublishStatus(new(UpdatePhase.Ready, version, 100));

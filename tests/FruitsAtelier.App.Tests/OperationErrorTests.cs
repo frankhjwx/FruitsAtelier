@@ -4,8 +4,12 @@ internal static class OperationErrorTests
 {
     public static void Recovery()
     {
+        ErrorModalPriority();
+        ErrorCleanupFailure();
         BoundedErrorLayout();
         MacCallbackRecovery();
+        MacRecoveryClose();
+        RetainedPatternRecovery();
         foreach (string language in new[] { "en", "zh-CN" })
         {
             L.SetLanguage(language);
@@ -68,6 +72,125 @@ internal static class OperationErrorTests
         Console.WriteLine("PASS bounded render recovery and retained unsaved project copies");
     }
 
+    private static void ErrorCleanupFailure()
+    {
+        var ui = new Ui(false);
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var drag = ui.View.GetType().GetField("drag", flags)!;
+        drag.SetValue(ui.View, Enum.Parse(drag.FieldType, "SnapDivisor"));
+        ui.View.RequestViewPreference = () => throw new IOException("Injected preference failure during cancellation");
+        ui.View.ShowError("Original file operation failure");
+        string message = (string)ui.View.GetType().GetField("operationError", flags)!.GetValue(ui.View)!;
+        if (!ui.View.RecoveryActive || !message.Contains("Original file operation failure")
+            || !message.Contains("Injected preference failure"))
+            throw new Exception("Failed error cleanup hid the original operation or left recovery unavailable.");
+        string path = Path.GetFullPath("artifacts/tests/render-recovery/cleanup-" + Guid.NewGuid() + ".catchproj");
+        ui.View.RequestRecoverySave = () => ui.View.SaveRecoveryCopy(path);
+        ui.View.KeyDown('S', true, false);
+        if (!File.Exists(path)) throw new Exception("Failed interaction cleanup blocked authored-state recovery saving.");
+        ui.View.RequestViewPreference = null; drag.SetValue(ui.View, Enum.Parse(drag.FieldType, "None"));
+    }
+
+    private static void RetainedPatternRecovery()
+    {
+        foreach (bool navigation in new[] { false, true })
+        {
+            var ui = new Ui(false);
+            var map = new FruitsAtelier.Core.MapDocument { Name = "Original unsaved project" };
+            map.Fruits.Add(new() { TimeMs = 1000, X = 321 });
+            ui.LoadDocument(map);
+            ui.View.Document.Fruits.Add(new() { TimeMs = 2000, X = 123 });
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            ui.View.GetType().GetField("projectNotes", flags)!.SetValue(ui.View, "Unsaved original project notes");
+            var original = ui.View.CaptureProject();
+            var pattern = FruitsAtelier.Core.Patterns.PatternSnapshot.Capture(map, [map.Fruits[0].Id], "Recovery pattern");
+            if (!ui.View.BeginPatternEditing(pattern)) throw new Exception("Could not prepare the retained-pattern recovery fixture.");
+            ui.View.Document.Fruits[0].X = 444;
+            if (navigation)
+            {
+                ui.View.RequestExitPatternEditing(() => ui.View.LoadDocument(new FruitsAtelier.Core.MapDocument { Name = "Source project" }),
+                    retainOriginalForNavigation: true);
+                ui.Paint(); ui.ClickText(L.Get("mac.discard"));
+                ui.View.Document.Fruits.Add(new() { TimeMs = 3333, X = 333 });
+            }
+            var active = ui.View.CaptureProject();
+            string folder = Path.GetFullPath("artifacts/tests/render-recovery/pattern-" + Guid.NewGuid());
+            Directory.CreateDirectory(folder);
+            string path = Path.Combine(folder, "draft.catchproj"), companion = Path.Combine(folder, "draft.retained.catchproj");
+            ui.View.ShowRenderError("Injected failure while retaining another project");
+            File.WriteAllText(companion, "existing companion");
+            try { ui.View.SaveRecoveryCopy(path); throw new Exception("An existing companion was not rejected."); }
+            catch (IOException) { }
+            if (File.Exists(path) || File.ReadAllText(companion) != "existing companion")
+                throw new Exception("Rejected paired recovery changed either destination.");
+            File.Delete(companion);
+            ui.View.SaveRecoveryCopy(path);
+            var savedActive = FruitsAtelier.Core.ProjectSerializer.ReadProjectFile(path);
+            var savedOriginal = FruitsAtelier.Core.ProjectSerializer.ReadProjectFile(companion);
+            if (savedActive.Name != active.Name || savedActive.Notes != active.Notes
+                || !savedActive.Difficulties[0].Document.ContentEquals(active.Difficulties[0].Document)
+                || savedOriginal.Name != original.Name || savedOriginal.Notes != original.Notes
+                || !savedOriginal.Difficulties[0].Document.ContentEquals(original.Difficulties[0].Document)
+                || !ui.View.RecoveryActive || !active.Difficulties[0].Document.ContentEquals(ui.View.Document))
+                throw new Exception("Recovery did not preserve both independent project scopes without switching context.");
+        }
+    }
+
+    private static void ErrorModalPriority()
+    {
+        foreach (bool recovery in new[] { false, true })
+        foreach (bool acknowledgements in new[] { false, true })
+        {
+            var ui = new Ui(false);
+            var viewType = ui.View.GetType();
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            if (acknowledgements) viewType.GetProperty("AcknowledgementsVisible")!.SetValue(ui.View, true);
+            else
+            {
+                viewType.GetField("workspaceSaveTask", flags)!.SetValue(ui.View,
+                    new TaskCompletionSource<FruitsAtelier.Core.WorkspaceSession>().Task);
+                viewType.GetField("workspaceSaveBlocksInput", flags)!.SetValue(ui.View, true);
+            }
+            string message = string.Join('\n', Enumerable.Range(0, 30).Select(i => "Modal error line " + i));
+            if (recovery) ui.View.ShowRenderError(message); else ui.View.ShowError(message);
+            ui.Paint();
+            int saves = 0;
+            ui.View.RequestRecoverySave = () => saves++;
+            ui.View.Wheel(400, 300, -120, false);
+            if ((int)viewType.GetField("errorScroll", flags)!.GetValue(ui.View)! <= 0)
+                throw new Exception("Visible diagnostic scrolling was intercepted by an underlying modal.");
+            if (recovery)
+            {
+                ui.ClickText(L.Get("recovery.save"));
+                if (saves != 1) throw new Exception("Visible recovery save was intercepted by an underlying modal.");
+            }
+            else
+            {
+                ui.View.KeyDown(13, false, false);
+                if (ui.View.ErrorVisible) throw new Exception("Visible error dismissal was intercepted by an underlying modal.");
+            }
+            viewType.GetProperty("AcknowledgementsVisible")!.SetValue(ui.View, false);
+            viewType.GetField("workspaceSaveTask", flags)!.SetValue(ui.View, null);
+        }
+    }
+
+    private static void MacRecoveryClose()
+    {
+        int closes = 0, errors = 0, confirmations = 0;
+        var recoveryClose = new FruitsAtelier.Mac.MacRecoveryClose(_ => errors++);
+        var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = recoveryClose.Request(() => { confirmations++; return pending.Task; }, () => closes++);
+        recoveryClose.Request(() => { confirmations++; return Task.FromResult(true); }, () => closes++).GetAwaiter().GetResult();
+        if (!recoveryClose.Pending || confirmations != 1 || closes != 0)
+            throw new Exception("Repeated native recovery close opened concurrent confirmations.");
+        pending.SetResult(false); first.GetAwaiter().GetResult();
+        recoveryClose.Request(() => Task.FromException<bool>(new IOException("Injected failed close prompt")), () => closes++).GetAwaiter().GetResult();
+        if (recoveryClose.Pending || errors != 1 || closes != 0)
+            throw new Exception("A failed native recovery close left closing permanently blocked.");
+        recoveryClose.Request(() => Task.FromResult(true), () => closes++).GetAwaiter().GetResult();
+        if (closes != 1 || recoveryClose.Pending) throw new Exception("A later confirmed recovery close could not complete.");
+    }
+
     private static void MacCallbackRecovery()
     {
         var ui = new Ui(false);
@@ -75,12 +198,13 @@ internal static class OperationErrorTests
         var retained = ui.View.Document.DeepClone();
         int cleanups = 0;
         ui.View.RequestPausePlayback = () => cleanups++;
+        int refreshes = 0;
         var boundary = new FruitsAtelier.Mac.MacUiBoundary(ui.View,
             _ => throw new UnauthorizedAccessException("Injected unwritable log"),
-            () => throw new IOException("Injected failed invalidation"));
+            () => { refreshes++; throw new IOException("Injected failed invalidation"); });
         boundary.Run(() => throw new InvalidOperationException("Injected native input callback"));
         for (int i = 0; i < 20; i++) boundary.Run(() => throw new InvalidOperationException("Repeated callback"));
-        if (!ui.View.RecoveryActive || cleanups != 1 || !retained.ContentEquals(ui.View.Document))
+        if (!ui.View.RecoveryActive || cleanups != 1 || refreshes != 1 || !retained.ContentEquals(ui.View.Document))
             throw new Exception("Native callback/logging failures did not retain one usable recovery state.");
         string path = Path.GetFullPath("artifacts/tests/render-recovery/mac-boundary-" + Guid.NewGuid() + ".catchproj");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

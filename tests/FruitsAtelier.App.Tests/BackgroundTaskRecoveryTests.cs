@@ -19,6 +19,7 @@ internal static class BackgroundTaskRecoveryTests
         }
         foreach (bool fault in new[] { false, true })
             try { PendingPreviewClosure(fault); } catch (Exception error) { failures.Add(error); }
+        try { StoryboardExpansionFailure(); } catch (Exception error) { failures.Add(error); }
         if (failures.Count > 0) throw new AggregateException(failures);
         Console.WriteLine("PASS background task faults, cancellations, validation recovery and pending preview shutdown");
     }
@@ -132,6 +133,35 @@ internal static class BackgroundTaskRecoveryTests
         Check(close.Wait(TimeSpan.FromSeconds(5)), "Preview shutdown probe did not retire");
         Check(returned, "Pending derived preview write blocked the shutdown caller");
         Check(awaitedPendingWrite && flushing!.Wait(TimeSpan.FromSeconds(5)), "Preview shutdown abandoned pending work or failed to observe its completion");
+    }
+
+    private static void StoryboardExpansionFailure()
+    {
+        string directory = Path.GetFullPath(Path.Combine("artifacts", "tests", "background-task-recovery", "storyboard"));
+        Directory.CreateDirectory(directory);
+        string language = L.Language;
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            {
+                L.SetLanguage(locale);
+                var ui = new Ui(false);
+                ui.View.LibrarySettings.EnableVideoStoryboard = true;
+                var map = Map(); map.SourcePath = Path.Combine(directory, "map.osu");
+                map.OriginalSections.Add(new() { Name = "Variables", Lines = { "$a=" + new string('x', 128 * 1024) } });
+                map.OriginalSections.Add(new() { Name = "Events", Lines = { string.Concat(Enumerable.Repeat("$a", 257)) } });
+                ui.View.LoadDocument(map); ui.PaintUntilReady();
+                string expected = L.Get("media.storyboardFailed", L.Get("core.storyboard.expansionLimit"));
+                Check(ui.View.StatusMessage == expected && !ui.View.ErrorVisible,
+                    "Oversized storyboard did not finish media preparation with its localized nonmodal diagnostic");
+                for (int i = 0; i < 20; i++) ui.Paint();
+                Check(Field("storyboardLoad").GetValue(ui.View) is null && !ui.View.LibraryOpening
+                    && ui.View.Document.ContentEquals(map) && ui.View.PrepareFileOperation(),
+                    "Oversized storyboard retried, changed content or prevented saving");
+                SaveAndReopen(ui.View);
+            }
+        }
+        finally { L.SetLanguage(language); }
     }
 
     private static object FailedTask(Type resultType, bool cancelled, Exception? fault = null)

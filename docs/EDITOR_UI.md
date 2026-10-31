@@ -9,9 +9,15 @@ project's saved state. Choose an unused filename. The copy references existing
 media; it does not package audio or images. Save failures remain visible so another
 location can be selected.
 
+When Pattern editing or source navigation retains another project, recovery also
+writes `<name>.retained.catchproj` beside the chosen file. This companion preserves
+the original project's difficulties and independent notes. Both files must use
+unused names; the save reports success only after both snapshots are written.
+
 Long error messages use a bounded, scrollable preview with an ellipsis when
 truncated. Repainting an unchanged message reuses its text layout. Native dialogs
 isolate editor input until they close, including repeated save and close requests.
+Error controls take priority over underlying synchronization and startup screens.
 
 **Retry** explicitly resumes processing. A persistent failure returns to recovery
 instead of automatically retrying every frame. If Windows cannot draw the recovery

@@ -1941,6 +1941,7 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Zastosuj lub anuluj zmiany timingu przed przełączeniem widoku SV.",
   "timing.sourceChanged": "Timing w edytorze uległ zmianie. Przed zastosowaniem otwórz to okno ponownie.",
+  "core.storyboard.expansionLimit": "Rozwinięcie zmiennych storyboardu przekracza limit 33 554 432 znaków.",
   "media.storyboardDiagnostics": "Storyboard: pominięto {0} nieprawidłowych poleceń lub zasobów.",
   "media.storyboardFailed": "Nie udało się wczytać storyboardu: {0}",
   "media.loading": "Przygotowywanie zasobów mapy…",

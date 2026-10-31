@@ -195,8 +195,8 @@ internal sealed class EditorControl : Control, IDisposable
             }
             return;
         }
-        UpdatePointerCursor();
         if (View.ErrorVisible) return;
+        UpdatePointerCursor();
         if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)
             TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => boundary.Run(() => { if (!View.ErrorVisible && (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)) InvalidateVisual(); }));
     }

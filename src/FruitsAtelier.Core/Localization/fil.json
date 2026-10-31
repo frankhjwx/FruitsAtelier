@@ -1941,6 +1941,7 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Ilapat o kanselahin ang mga timing edit bago palitan ang SV display.",
   "timing.sourceChanged": "Nagbago ang timing sa editor. Buksan muli ang window na ito bago ilapat.",
+  "core.storyboard.expansionLimit": "Lumampas ang pagpapalawak ng mga variable ng storyboard sa limitasyong 33,554,432 character.",
   "media.storyboardDiagnostics": "Storyboard: nilaktawan ang {0} di-wastong command o resource.",
   "media.storyboardFailed": "Hindi ma-load ang storyboard: {0}",
   "media.loading": "Inihahanda ang mga resource ng beatmap…",

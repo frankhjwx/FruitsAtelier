@@ -287,6 +287,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation(bool allowDifficultySave = false)
     {
+        if (ErrorVisible) return false;
         if (MapTemplatesVisible || addDifficultyConfirmation) return false;
         if (CollaborationBusy) return false;
         if (!CommitCollaborationField()) return false;

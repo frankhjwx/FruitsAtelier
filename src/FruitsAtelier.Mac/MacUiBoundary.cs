@@ -26,7 +26,8 @@ internal sealed class MacUiBoundary(EditorView view, Action<Exception> log, Acti
         try
         {
             Log(error);
-            if (!view.RecoveryActive) view.ShowRenderError(error.Message);
+            if (view.RecoveryActive) return;
+            view.ShowRenderError(error.Message);
             try { refresh(); }
             catch (Exception refreshError) { Log(refreshError); }
         }

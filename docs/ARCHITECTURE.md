@@ -71,7 +71,10 @@ All image paths resolve within the mapset; source event text remains unchanged.
 Variable keys and values retain their whitespace, including command indentation.
 Independent single-character macros use a lookup pass; overlapping, recursive or
 other definitions retain insertion-ordered substitution. Parsing splits only on LF
-and checks cancellation during substitution and sprite compilation. Compilation
+and checks cancellation during substitution and sprite compilation. Macro-bearing
+lines and each substitution result are limited to 33,554,432 UTF-16 code units;
+growth is checked before allocating expanded output. Oversized expansion reports
+a media loading failure without modifying authored Events or Variables. Compilation
 distributes commands into property tracks without repeated per-property filtering
 and computes initial values without materializing sorted intermediate sequences.
 

@@ -1,4 +1,5 @@
 using System.Text;
+using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.Core;
 
@@ -6,6 +7,7 @@ internal sealed class StoryboardVariables
 {
     private readonly Dictionary<string, string> values = new(StringComparer.Ordinal);
     private Dictionary<char, string>? singleCharacterValues;
+    private int maximumSingleValueLength;
     private bool lookupCurrent;
 
     internal void Set(string key, string value)
@@ -18,15 +20,18 @@ internal sealed class StoryboardVariables
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (values.Count == 0) return line;
+        CheckLength(line.Length);
         if (!lookupCurrent)
         {
             singleCharacterValues = new();
+            maximumSingleValueLength = 0;
             foreach (var pair in values)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (pair.Key.Length != 2 || pair.Key[0] != '$' || pair.Key[1] == '$' || pair.Value.Contains('$'))
                 { singleCharacterValues = null; break; }
                 singleCharacterValues.Add(pair.Key[1], pair.Value);
+                maximumSingleValueLength = Math.Max(maximumSingleValueLength, pair.Value.Length);
             }
             lookupCurrent = true;
         }
@@ -41,7 +46,20 @@ internal sealed class StoryboardVariables
                 && line.IndexOf('$', first + 1) < 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                CheckLength((long)line.Length - 2 + single.Length);
                 return string.Concat(line.AsSpan(0, first), single.AsSpan(), line.AsSpan(first + 2));
+            }
+            if (MayExceedLimit(line.Length, 2, maximumSingleValueLength))
+            {
+                long length = line.Length;
+                for (int i = first; i + 1 < line.Length; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (line[i] != '$' || !singleCharacterValues.TryGetValue(line[i + 1], out string? value)) continue;
+                    length += value.Length - 2;
+                    CheckLength(length);
+                    i++;
+                }
             }
             StringBuilder? expanded = null;
             int copied = 0;
@@ -63,11 +81,32 @@ internal sealed class StoryboardVariables
         foreach (var pair in values)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (MayExceedLimit(line.Length, pair.Key.Length, pair.Value.Length))
+            {
+                long length = line.Length;
+                for (int offset = 0; offset < line.Length;)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    int match = line.IndexOf(pair.Key, offset, StringComparison.Ordinal);
+                    if (match < 0) break;
+                    length += pair.Value.Length - pair.Key.Length;
+                    CheckLength(length);
+                    offset = match + pair.Key.Length;
+                }
+            }
             line = line.Length < 65536 ? line.Replace(pair.Key, pair.Value, StringComparison.Ordinal)
                 : ReplaceLargeLine(line, pair.Key, pair.Value, cancellationToken);
         }
         cancellationToken.ThrowIfCancellationRequested();
         return line;
+    }
+
+    private static bool MayExceedLimit(int length, int keyLength, int valueLength)
+        => valueLength > keyLength && (long)length + (long)(length / keyLength) * (valueLength - keyLength) > OsuBeatmapReader.MaximumFileBytes;
+
+    private static void CheckLength(long length)
+    {
+        if (length > OsuBeatmapReader.MaximumFileBytes) throw new InvalidDataException(L.Get("core.storyboard.expansionLimit"));
     }
 
     private static string ReplaceLargeLine(string line, string key, string value, CancellationToken cancellationToken)

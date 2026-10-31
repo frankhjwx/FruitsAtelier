@@ -136,9 +136,9 @@ internal sealed partial class EditorWindow
             string? path = diagnosticRecoveryPath is { } choose ? choose() : MapFileDialog.Select(hwnd, true,
                 L.Get("recovery.save"), MapFileDialog.ProjectFilter, SafeName(view.ProjectName) + "-recovery.catchproj", "catchproj");
             if (path is null) return false;
-            view.SaveRecoveryCopy(path);
+            string[] paths = view.SaveRecoveryCopy(path);
             if (nativeRecovery && diagnosticNativeError is null)
-                Native.ShowError(hwnd, L.Get("recovery.saved", path), L.Get("app.name"));
+                Native.ShowError(hwnd, L.Get("recovery.saved", string.Join("\n", paths)), L.Get("app.name"));
             if (!nativeRecovery) Invalidate();
             return true;
         }

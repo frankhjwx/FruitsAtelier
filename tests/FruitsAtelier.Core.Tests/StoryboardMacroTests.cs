@@ -8,6 +8,7 @@ internal static class StoryboardMacroTests
         OrderedSubstitution();
         RandomizedSubstitution();
         LineBoundaries();
+        ExpansionLimit();
         Cancellation();
     }
 
@@ -106,6 +107,38 @@ internal static class StoryboardMacroTests
         cancellation.Cancel();
         try { work.GetAwaiter().GetResult(); throw new Exception("Large-line expansion ignored cancellation."); }
         catch (OperationCanceledException) { }
+    }
+
+    private static void ExpansionLimit()
+    {
+        var chained = new StoryboardVariables();
+        int definitionCharacters = 0;
+        for (int i = 0; i < 20; i++)
+        {
+            string key = "$v" + i.ToString("D2"), next = "$v" + (i + 1).ToString("D2");
+            chained.Set(key, next + next);
+            definitionCharacters += key.Length + next.Length * 2 + 2;
+        }
+        chained.Set("$v20", "x");
+        Check(chained.Expand("$v00").Length == 1 << 20, "Bounded chained macro substitution changed semantics");
+        Console.WriteLine($"Macro amplification: {definitionCharacters + 7} definition characters -> {1 << 20} expanded characters.");
+        string limitMessage = FruitsAtelier.Localization.Strings.Get("core.storyboard.expansionLimit");
+
+        foreach (string key in new[] { "$a", "$long" })
+        {
+            var variables = new StoryboardVariables();
+            variables.Set(key, new string('x', 128 * 1024));
+            string line = string.Concat(Enumerable.Repeat(key, 257));
+            long allocated = GC.GetAllocatedBytesForCurrentThread();
+            try { variables.Expand(line); throw new Exception("Oversized macro expansion was accepted"); }
+            catch (InvalidDataException error)
+            {
+                Check(error.Message == limitMessage,
+                    "Macro expansion limit did not report the localized loading failure");
+            }
+            Check(GC.GetAllocatedBytesForCurrentThread() - allocated < 1_000_000,
+                "Oversized macro expansion allocated its expanded output before rejecting it");
+        }
     }
 
     private static void Compare(IEnumerable<(string Key, string Value)> definitions, string line)

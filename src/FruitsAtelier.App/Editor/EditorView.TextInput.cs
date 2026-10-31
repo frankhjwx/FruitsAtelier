@@ -228,6 +228,7 @@ public sealed partial class EditorView
     }
     public void PasteFieldText(string text, string? expectedField = null)
     {
+        if (ErrorVisible) return;
         var document = Document;
         try { PasteFieldTextCore(text, expectedField); }
         finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }

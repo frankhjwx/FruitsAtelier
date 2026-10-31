@@ -1941,6 +1941,7 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Apply or cancel timing edits before switching the SV display.",
   "timing.sourceChanged": "Timing changed in the editor. Reopen this window before applying.",
+  "core.storyboard.expansionLimit": "Storyboard variable expansion exceeds the limit of 33,554,432 characters.",
   "media.storyboardDiagnostics": "Storyboard: {0} invalid commands or resources were skipped.",
   "media.storyboardFailed": "Storyboard could not be loaded: {0}",
   "media.loading": "Preparing map resources…",

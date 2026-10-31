@@ -1941,6 +1941,7 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "SV 表示を切り替える前にタイミング編集を適用またはキャンセルしてください。",
   "timing.sourceChanged": "エディターのタイミングが変更されました。適用前にこのウィンドウを開き直してください。",
+  "core.storyboard.expansionLimit": "ストーリーボード変数の展開が 33,554,432 文字の上限を超えています。",
   "media.storyboardDiagnostics": "ストーリーボード：無効なコマンドまたはリソースを {0} 件スキップしました。",
   "media.storyboardFailed": "ストーリーボードを読み込めませんでした：{0}",
   "media.loading": "譜面のリソースを準備しています…",

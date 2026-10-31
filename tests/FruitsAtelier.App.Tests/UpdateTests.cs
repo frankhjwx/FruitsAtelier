@@ -68,8 +68,37 @@ internal static class UpdateTests
             Check(ready.Status.Phase == UpdatePhase.Ready, "Rechecking the same downloaded version retains the restart action");
             using var development = new UpdateService(new Backend { IsInstalled = false }, path, _ => { });
             Check(development.Status.Phase == UpdatePhase.Unsupported && !development.ShouldCheckOnStartup, "Source checkout does not self-update");
+            await StatusCallbackFailures(path, now);
         }
         finally { Directory.Delete(root, true); }
+    }
+
+    private static async Task StatusCallbackFailures(string path, DateTimeOffset now)
+    {
+        bool fail = true;
+        var checkBackend = new Backend(); checkBackend.Result.SetResult("0.8.2");
+        using var checkService = new UpdateService(checkBackend, path, _ => { }, Notify);
+        try { await checkService.Check(now); } catch (IOException) { }
+        await checkService.Check(now);
+        Check(checkBackend.Checks == 1 && checkService.Status.Phase == UpdatePhase.Available,
+            "Failed initial check notification stranded the update service busy gate");
+
+        var downloadBackend = new Backend(); downloadBackend.Result.SetResult("0.8.2"); downloadBackend.DownloadResult.SetResult();
+        using var downloadService = new UpdateService(downloadBackend, path, _ => { }, Notify);
+        await downloadService.Check(now);
+        fail = true;
+        try { await downloadService.Download(); } catch (IOException) { }
+        await downloadService.Check(now);
+        await downloadService.Download();
+        Check(downloadBackend.Checks == 2 && downloadBackend.Downloads == 1 && downloadService.Status.Phase == UpdatePhase.Ready,
+            "Failed initial download notification prevented a new check and download");
+
+        void Notify()
+        {
+            if (!fail) return;
+            fail = false;
+            throw new IOException("Injected update status notification failure");
+        }
     }
 
     public static void Interface()

@@ -7,6 +7,9 @@ checks that recovery rendering bypasses it, and verifies explicit retry and
 roundtripping unsaved project copies without replacing existing files. It also
 checks bounded, cached layout of million-character diagnostics and managed macOS
 callback recovery when logging or refreshing fails.
+It checks error input priority over synchronization and startup screens, retained
+Pattern-project recovery copies, destination collisions, and macOS recovery close
+requests while another file operation is busy.
 `App.Tests --background-task-recovery-check` injects faulted and canceled collection
 and Legacy refresh tasks to check result retirement, transaction rollback, retained
 content, saving and undo. Multiplier-validation faults must retire their draft
@@ -21,6 +24,12 @@ shortcut callback failures, modal message reentry, frame-wait failures and the
 message-reader fallback;
 copies are stored under `artifacts/tests/paint-recovery`. These injected failures
 test recovery boundaries independently of any particular malformed input file.
+The native check also verifies that a throwing thumbnail decoder is negatively
+cached, releases worker capacity and disposes a late result after cache retirement.
+The update lifecycle tests inject notification callback failures and verify that
+subsequent checks and downloads can run.
+`Core.Tests --storyboard-check` verifies bounded macro amplification, rejection
+before oversized output allocation, cancellation and unchanged substitution order.
 
 ## Slider event timing
 

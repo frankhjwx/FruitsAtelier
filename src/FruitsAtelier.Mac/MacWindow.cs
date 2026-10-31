@@ -20,7 +20,8 @@ internal sealed partial class MacWindow : Window
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(16) };
     private string? projectPath;
     private string? pendingStartupPath;
-    private bool busy, allowClose;
+    private bool busy, allowClose, errorUiPrepared;
+    private readonly MacRecoveryClose recoveryClose;
     private int playbackRequest;
     private WindowState windowedState;
     private bool fullscreenInitialized;
@@ -28,6 +29,7 @@ internal sealed partial class MacWindow : Window
     public MacWindow(string? initialPath, bool smokeCheck)
     {
         pendingStartupPath = initialPath;
+        recoveryClose = new(editor.ReportUiFailure);
         audio = new(smokeCheck);
         hitsounds = new(smokeCheck);
         View.RequestAudioVolume = (song, hit) => { audio.SetVolume(song); setupAudio?.SetVolume(song); hitsounds.SetVolume(hit); };
@@ -115,7 +117,9 @@ internal sealed partial class MacWindow : Window
         View.RequestNewProject = () => RunFile(async () =>
         {
             if (!await ConfirmDiscard()) return;
-            await audio.LoadAsync(null); projectPath = null; View.NewProject(); View.CloseLibrary();
+            await audio.LoadAsync(null);
+            if (View.ErrorVisible) return;
+            projectPath = null; View.NewProject(); View.CloseLibrary();
         });
         View.RequestImportDifficulty = () => RunFile(async () =>
         {
@@ -157,8 +161,22 @@ internal sealed partial class MacWindow : Window
         View.RequestSeek = time => { audio.Seek(time); PollAudio(); };
         timer.Tick += (_, _) =>
         {
-            if (View.ErrorVisible) return;
-            try { PollAudio(); UpdateBrowserViewport(); }
+            try
+            {
+                if (View.ErrorVisible)
+                {
+                    if (!errorUiPrepared)
+                    {
+                        errorUiPrepared = true;
+                        editor.IsEnabled = true;
+                        if (osuBrowser is { IsVisible: true }) osuBrowser.IsVisible = false;
+                    }
+                    return;
+                }
+                if (errorUiPrepared && busy) editor.IsEnabled = false;
+                errorUiPrepared = false;
+                PollAudio(); UpdateBrowserViewport();
+            }
             catch (Exception error) { editor.ReportUiFailure(error); }
         };
         Opened += async (_, _) =>
@@ -193,9 +211,18 @@ internal sealed partial class MacWindow : Window
             e.Cancel = !allowClose;
             editor.RunUi(() =>
             {
-                if (View.AcknowledgementsVisible) { allowClose = true; e.Cancel = false; return; }
                 if (allowClose) { if (!smokeCheck) SaveWindowPreferences(); return; }
                 if (recoverySaveBusy) return;
+                if (View.RecoveryActive)
+                {
+                    _ = recoveryClose.Request(async () =>
+                    {
+                        int answer = await Message(L.Get("recovery.title"), L.Get("recovery.closeHelp"), true);
+                        return answer == 2 || answer == 1 && await SaveRecoveryCopy();
+                    }, () => { allowClose = true; Close(); });
+                    return;
+                }
+                if (View.AcknowledgementsVisible) { allowClose = true; e.Cancel = false; return; }
                 if (!View.RecoveryActive) View.CancelFirstRunSetup();
                 RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
             });
@@ -223,7 +250,11 @@ internal sealed partial class MacWindow : Window
             editor.Refresh();
         });
     }
-    private void UpdateTitle() => Title = View.WindowTitle;
+    private void UpdateTitle()
+    {
+        Title = View.WindowTitle;
+        if (!View.ErrorVisible && busy) editor.IsEnabled = false;
+    }
     private void CompleteStartupFile()
     {
         if (View.AcknowledgementsVisible || View.FirstRunSetupVisible || pendingStartupPath is null) return;
@@ -245,8 +276,9 @@ internal sealed partial class MacWindow : Window
         {
             osuBrowser = new MacOsuBrowser { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
             View.RequestBrowserCommand = command => osuBrowser.Execute(command, View.BrowserUrl);
-            osuBrowser.EditorLink = (link, page) =>
+            osuBrowser.EditorLink = (link, page) => editor.RunUi(() =>
             {
+                if (View.ErrorVisible) return;
                 if (View.HandleBrowserEditorLink(link, page))
                 {
                     Activate();
@@ -254,7 +286,7 @@ internal sealed partial class MacWindow : Window
                     editor.Focus();
                 }
                 editor.Refresh();
-            };
+            });
             editorRoot.Children.Add(osuBrowser);
         }
         float scale = View.UiScaleFactor;
@@ -307,6 +339,7 @@ internal sealed partial class MacWindow : Window
                 await hitsounds.Preparation;
                 if (request == playbackRequest && ReferenceEquals(document, View.Document)) audio.Play();
             }
+            if (View.ErrorVisible) return;
             PollAudio(); editor.Refresh();
         }
         catch (Exception error)
@@ -344,9 +377,10 @@ internal sealed partial class MacWindow : Window
             editor.Refresh();
             if (!await ready.Task) return false;
         }
-        if (!View.PrepareFileOperation()) return false;
+        if (View.ErrorVisible || !View.PrepareFileOperation()) return false;
         if (!View.IsDirty) return true;
         int answer = await Message(L.Get("app.name"), L.Get("window.confirmDiscard"), true);
+        if (View.ErrorVisible) return false;
         return answer == 2 || answer == 1 && await Save();
     }
     private async Task<int> Message(string title, string text, bool confirm = false)
@@ -363,7 +397,7 @@ internal sealed partial class MacWindow : Window
     {
         var folder = directory is null ? null : await StorageProvider.TryGetFolderFromPathAsync(directory);
         var files = await StorageProvider.OpenFilePickerAsync(new() { Title = title, AllowMultiple = false, SuggestedStartLocation = folder, FileTypeFilter = [new FilePickerFileType(title) { Patterns = patterns }] });
-        return files.FirstOrDefault()?.TryGetLocalPath();
+        return View.ErrorVisible ? null : files.FirstOrDefault()?.TryGetLocalPath();
     }
     private async Task<string?> SavePicker(string title, string extension, string filename)
     {
@@ -373,6 +407,7 @@ internal sealed partial class MacWindow : Window
     }
     private async Task OpenPath(string path)
     {
+        if (View.ErrorVisible) return;
         if (FadArchive.IsPackage(path)) { View.BeginFadImport(path); return; }
         if (FazArchive.IsPackage(path))
         {
@@ -390,6 +425,7 @@ internal sealed partial class MacWindow : Window
             await audio.LoadAsync(View.Document.AudioPath); PollAudio(); return;
         }
         var session = await Task.Run(() => LibraryOperations.ImportPath(path, View.LibrarySettings));
+        if (View.ErrorVisible) return;
         View.LoadWorkspace(session);
         View.RefreshLibrary();
         projectPath = Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase) ? path : null;
@@ -407,8 +443,8 @@ internal sealed partial class MacWindow : Window
         {
             var path = await SavePicker(L.Get("recovery.save"), "catchproj", "recovery.catchproj");
             if (path is null) return false;
-            View.SaveRecoveryCopy(path);
-            editor.RunUi(() => { if (nativeRecoveryNotice is not null) nativeRecoveryNotice.Text = L.Get("recovery.saved", path); });
+            string[] paths = View.SaveRecoveryCopy(path);
+            editor.RunUi(() => { if (nativeRecoveryNotice is not null) nativeRecoveryNotice.Text = L.Get("recovery.saved", string.Join("\n", paths)); });
             return true;
         }
         catch (Exception error)

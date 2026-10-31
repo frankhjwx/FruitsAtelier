@@ -1941,6 +1941,7 @@
   "timing.sv": "SV（×）",
   "timing.finishDraft": "请先应用或取消 Timing 编辑，再切换 SV 显示。",
   "timing.sourceChanged": "编辑器中的 Timing 已更改。请重新打开此窗口后再应用。",
+  "core.storyboard.expansionLimit": "故事板变量展开超过了 33,554,432 个字符的限制。",
   "media.storyboardDiagnostics": "故事板：已跳过 {0} 条无效指令或资源。",
   "media.storyboardFailed": "无法载入故事板：{0}",
   "media.loading": "正在准备谱面资源…",

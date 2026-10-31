@@ -31,7 +31,7 @@ public sealed partial class EditorView
     {
         if (altHeld && !alt) volumeShortcutKeys.Clear();
         altHeld = alt; shiftHeld = shift;
-        if (dsSliderDrag >= 0) UpdateDistanceSnapSlider(dsDragX, shift);
+        if (!ErrorVisible && dsSliderDrag >= 0) UpdateDistanceSnapSlider(dsDragX, shift);
     }
 
     private void EnsureDistanceReferences()
