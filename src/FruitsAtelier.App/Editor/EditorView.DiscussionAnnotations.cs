@@ -175,7 +175,8 @@ public sealed partial class EditorView
             }
             float h = Math.Min(layout.ContentHeight + 8, Math.Min(420, slot));
             float slotTop = plot.Y + 2 + groupIndex++ * (slot + 6);
-            float top = Math.Clamp(anchorY - 18, slotTop, slotTop + slot - h);
+            // Subtract heights before adding the origin so a full slot cannot reverse the float bounds.
+            float top = Math.Clamp(anchorY - 18, slotTop, slotTop + (slot - h));
             var card = new Rect(left, top, quoteWidth, h);
             var viewport = new Rect(left + 6, top + 4, Math.Max(1, quoteWidth - 16), Math.Max(1, h - 8));
             float maximum = Math.Max(0, layout.ContentHeight - viewport.Height);

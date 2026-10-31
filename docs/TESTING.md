@@ -192,6 +192,12 @@ difficulty selection, image preview zoom/pan and input isolation, profile links,
 hand/text cursor feedback, whole-link hover underlines across wrapped segments,
 permalink clipboard hints and expiring confirmation, and body
 text selection/copy across formatted text, Unicode, replies and canvas annotations.
+
+`App.Tests --discussion-bounds-check` isolates crowded slider annotations at fractional
+canvas heights, including repeated wheel scrolling, nonoverlapping card bounds,
+unchanged content and conversion reuse. The native discussion check also scrolls
+three long annotations together at each supported test size and DPI.
+
 On Windows, `FruitsAtelier.App.exe --render-check --discussions-render-check`
 captures compact and wide discussions, replies, type icons, offline states and
 canvas quotes in English and
