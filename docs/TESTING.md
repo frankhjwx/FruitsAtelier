@@ -1,5 +1,19 @@
 # Building and Testing
 
+## Artifact lifetime
+
+Keep task-generated outputs under ignored `artifacts/`. After a feature is
+implemented, validated and committed, delete its temporary builds, fixture
+workspaces, logs, profiles, screenshots and copied media. Record concise validation
+results in the conversation or review. Remove task-owned release staging and
+packages after successful publication or task completion unless explicitly retained.
+
+Keep the caches required by `Run-Editor.cmd`: `artifacts/dotnet-home`,
+`artifacts/packages` and the Windows runtime at
+`artifacts/mapset-verifier/win-x64`. Preserve active outputs, explicitly requested
+deliverables and user source or resources. Check temporary Git worktrees for changes
+and remove clean ones through Git.
+
 ## Error recovery
 
 `App.Tests --render-recovery-check` injects a persistent resource-release failure,

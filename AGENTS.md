@@ -26,7 +26,7 @@
 - Commit and push intermediate bug fixes to `dev` unless the user explicitly requests another destination.
 - Run the affected checks described in [Building and Testing](docs/TESTING.md). Follow its [macOS resource fixture path rules](docs/TESTING.md#macos-resource-fixture-paths) when adding resource or workspace tests. Launch the application to check window and input changes.
 - Automated audio tests output silent PCM while retaining the device clock and sample comparisons before muting. Do not change the system volume.
-- Store build artifacts, test logs, and screenshots in `artifacts/`; do not commit them to Git.
+- Store build artifacts, test logs, and screenshots in `artifacts/`; do not commit them to Git. Follow [Artifact lifetime](docs/TESTING.md#artifact-lifetime) after validation and commit.
 - Write documentation for project readers: describe current behavior, usage, and design details needed for maintenance. Keep conversational prompt responses, progress reports, temporary acceptance-build paths, and one-off test counts in tasks or PRs.
 - Maintain each rule in its relevant document and link to it elsewhere. Update documentation when behavior changes and remove obsolete conclusions.
 - Use English as the baseline for project documentation and AI-facing instructions. Maintain technical and AI documentation in English; preserve README.zh-CN.md as the translated user entry point, alongside localization resources and translation-specific examples.
