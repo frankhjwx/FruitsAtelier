@@ -1951,5 +1951,12 @@
   "settings.theme.midnight": "Minuit",
   "settings.theme.forest": "Forêt",
   "settings.theme.rose": "Rose",
-  "settings.theme.slate": "Ardoise"
+  "settings.theme.slate": "Ardoise",
+  "recovery.title": "Récupération de l’éditeur",
+  "recovery.help": "Le rendu est arrêté. Votre projet reste en mémoire. Enregistrez une copie de récupération avant de réessayer.",
+  "recovery.save": "Enregistrer une copie de récupération",
+  "recovery.saved": "Copie de récupération enregistrée : {0}",
+  "recovery.failed": "Impossible d’enregistrer la copie de récupération : {0}",
+  "recovery.nativeHelp": "Le moteur graphique est indisponible. Appuyez sur Ctrl+S pour enregistrer une copie de récupération, ou sur Entrée pour réessayer. Votre projet reste en mémoire.",
+  "recovery.closeHelp": "Enregistrer une copie de récupération avant de fermer ? Choisissez Non pour fermer sans enregistrer."
 }

@@ -38,6 +38,7 @@ internal sealed partial class EditorWindow : IDisposable
         view.Performance.Enabled = true;
         AppLog.Performance = view.Performance;
         ConfigureFiles();
+        view.RequestRecoverySave = () => SaveRecoveryCopy();
         ConfigureOsuLinks();
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
         view.RequestPasteObjects = () => view.PasteClipboardText(Native.ReadClipboardText(hwnd));
@@ -316,7 +317,7 @@ internal sealed partial class EditorWindow : IDisposable
             Native.Message msg;
             bool activeWait = (view.IsTestplaying || audio.IsPlaying) && !Native.IsIconic(hwnd) && !NativeModalScope.Active;
             long messageWait = view.Performance.Start();
-            if (ImmediatePresentation && (framePending || view.IsTestplaying || audio.IsPlaying) && !Native.IsIconic(hwnd))
+            if (!nativeRecovery && ImmediatePresentation && (framePending || view.IsTestplaying || audio.IsPlaying) && !Native.IsIconic(hwnd))
             {
                 if (!Native.PeekMessage(out msg, 0, 0, 0, 1))
                 {
@@ -383,56 +384,17 @@ internal sealed partial class EditorWindow : IDisposable
         try { return HandleMessage(window, message, wParam, lParam); }
         catch (Exception exception)
         {
-            AppLog.Write(exception.ToString());
-            view.CancelInteraction();
-            if (Native.GetCapture() == window) Native.ReleaseCapture();
-            if (!failed)
-            {
-                failed = true;
-                if (message == 0x000F)
-                {
-                    audio.Pause();
-                    view.StopTestplay();
-                    if (recoveringRenderer)
-                    {
-                        Native.ShowError(window, L.Get("window.operationFailed", exception.Message), L.Get("app.name"));
-                        return 0;
-                    }
-                    recoveringRenderer = true;
-                    try
-                    {
-                        canvas?.Dispose(); canvas = null;
-                        Native.GetClientRect(window, out var size);
-                        canvas = new D2DCanvas(window, Math.Max(1, size.Right), Math.Max(1, size.Bottom), uiDpi) { Performance = view.Performance };
-                        view.ShowError(L.Get("window.operationFailed", L.Localized(exception.Message)));
-                        AppLog.Write("Renderer recreated after paint failure; document retained.");
-                        failed = false;
-                        Invalidate();
-                    }
-                    catch (Exception recoveryError)
-                    {
-                        AppLog.Write(recoveryError.ToString());
-                        Native.ShowError(window, L.Get("window.operationFailed", recoveryError.Message), L.Get("app.name"));
-                    }
-                }
-                else if (message == 0x0001)
-                    Native.ShowError(window, L.Get("window.operationFailed", exception.Message), L.Get("app.name"));
-                else
-                {
-                    if (Native.GetCapture() == window) Native.ReleaseCapture();
-                    view.ShowError(L.Get("window.operationFailed", L.Localized(exception.Message)));
-                    failed = false;
-                    Invalidate();
-                }
-            }
+            HandleWindowFailure(window, message, exception);
             return 0;
         }
     }
 
     private nint HandleMessage(nint window, uint message, nuint wParam, nint lParam)
     {
+        if (IgnoreRecoveryKeyRepeat(message, wParam, lParam)) return 0;
         float x = (short)((long)lParam & 0xFFFF) * 96f / uiDpi;
         float y = (short)(((long)lParam >> 16) & 0xFFFF) * 96f / uiDpi;
+        if ((nativeRecovery || message == 0x0010 && view.RecoveryActive) && HandleNativeRecoveryMessage(window, message, wParam, lParam)) return 0;
         switch (message)
         {
             case 0x0084 when view.StartupDialogVisible: // WM_NCHITTEST
@@ -444,7 +406,7 @@ internal sealed partial class EditorWindow : IDisposable
                 return 0;
             case 0x0233: // WM_DROPFILES
                 var dropped = Native.TakeDroppedFiles((nint)wParam);
-                if (!NativeModalScope.Active) FileOperation(() => view.DropLibraryFiles(dropped));
+                if (!NativeModalScope.Active && !view.RecoveryActive) FileOperation(() => view.DropLibraryFiles(dropped));
                 return 0;
             case OsuBrowserWindow.ViewportChangedMessage:
                 Invalidate(); return 0;
@@ -453,8 +415,9 @@ internal sealed partial class EditorWindow : IDisposable
                 bool ownsPaint = false;
                 try
                 {
-                    if (painting || failed || NativeModalScope.Active) return 0;
+                    if (painting || failed || nativeRecovery || NativeModalScope.Active) return 0;
                     painting = ownsPaint = true;
+                    if (!view.RecoveryActive) recoveringRenderer = false;
                     Native.GetClientRect(window, out var rect);
                     if (canvas is not null && rect.Right > 0 && rect.Bottom > 0 && !Native.IsIconic(window))
                     {
@@ -464,7 +427,7 @@ internal sealed partial class EditorWindow : IDisposable
                         // Continuous repainting can starve WM_TIMER, including update status polling.
                         renderTimer.Restart();
                         long phase = view.Performance.Start();
-                        PollUpdates(); PollAudio(); PollOsuLinks();
+                        PollWindowUpdates();
                         view.Performance.End(EditorPerformanceStage.Poll, phase);
                         phase = view.Performance.Start();
                         canvas.Resize(rect.Right, rect.Bottom, uiDpi);
@@ -476,6 +439,7 @@ internal sealed partial class EditorWindow : IDisposable
                         canvas.Begin();
                         view.Performance.End(EditorPerformanceStage.PrepareFrame, phase);
                         phase = view.Performance.Start();
+                        diagnosticPaintFailure?.Invoke();
                         view.Render(canvas, rect.Right * 96 / uiDpi, rect.Bottom * 96 / uiDpi);
                         if (testplayCursorMode != view.TestplayUsesCursor)
                         {
@@ -491,7 +455,7 @@ internal sealed partial class EditorWindow : IDisposable
                         view.Performance.End(EditorPerformanceStage.Submit, phase);
                         view.Performance.Record(EditorPerformanceStage.Frame, renderTimer.Elapsed.TotalMilliseconds);
                         if (!framePending) RecordInputSubmission();
-                        recoveringRenderer = false;
+                        if (!view.RecoveryActive) recoveringRenderer = false;
                         RecordPlaybackRate(immediatePresentation);
                         renderTimer.Stop();
                         if (++frames == 1) AppLog.Write($"First frame: {renderTimer.Elapsed.TotalMilliseconds:F2}ms");
@@ -512,10 +476,10 @@ internal sealed partial class EditorWindow : IDisposable
                 return 0;
             case 0x0014: return 1; // WM_ERASEBKGND
             case 0x0113: // WM_TIMER
-                if (painting || failed || NativeModalScope.Active) return 0;
+                if (painting || failed || nativeRecovery || NativeModalScope.Active) return 0;
                 long pollStart = view.Performance.Start();
-                PollUpdates(); PollAudio();
-                PollOsuLinks();
+                if (view.ErrorVisible) return 0;
+                PollWindowUpdates();
                 if (view.CanDropAudio && !view.StartupDialogVisible && FazFileAssociation.Pending.TryDequeue(out var openedFaz))
                 {
                     Native.ShowWindow(window, Native.IsIconic(window) ? 9 : 5);
@@ -637,7 +601,7 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0106: // WM_SYSCHAR
                 if ((int)wParam == 13) return 0;
                 break;
-            case 0x0007: view.SetTextInputFocus(true); view.CheckFilesOnActivation(); view.RefreshOsuLinkSettings(refreshApplications: true); Invalidate(); return 0; // WM_SETFOCUS
+            case 0x0007: view.SetTextInputFocus(true); if (!view.ErrorVisible) { view.CheckFilesOnActivation(); view.RefreshOsuLinkSettings(refreshApplications: true); } Invalidate(); return 0; // WM_SETFOCUS
             case 0x0008: // WM_KILLFOCUS
                 view.SetTextInputFocus(false);
                 view.CancelInteraction(preserveTestplay: true);

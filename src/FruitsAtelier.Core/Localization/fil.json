@@ -1951,5 +1951,12 @@
   "settings.theme.midnight": "Hatinggabi",
   "settings.theme.forest": "Gubat",
   "settings.theme.rose": "Rosas",
-  "settings.theme.slate": "Slate"
+  "settings.theme.slate": "Slate",
+  "recovery.title": "Pagbawi ng editor",
+  "recovery.help": "Huminto ang pag-render. Nananatili sa memory ang proyekto. Mag-save ng kopya para sa pagbawi bago subukang muli.",
+  "recovery.save": "I-save ang kopya para sa pagbawi",
+  "recovery.saved": "Na-save ang kopya para sa pagbawi: {0}",
+  "recovery.failed": "Hindi ma-save ang kopya para sa pagbawi: {0}",
+  "recovery.nativeHelp": "Hindi magamit ang graphics renderer. Pindutin ang Ctrl+S para mag-save ng kopya para sa pagbawi, o Enter para subukan muli. Nananatili sa memory ang proyekto.",
+  "recovery.closeHelp": "Mag-save ng kopya para sa pagbawi bago isara? Piliin ang Hindi para isara nang hindi nagse-save."
 }

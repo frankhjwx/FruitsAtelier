@@ -1951,5 +1951,12 @@
   "settings.theme.midnight": "午夜",
   "settings.theme.forest": "森林",
   "settings.theme.rose": "玫瑰",
-  "settings.theme.slate": "岩灰"
+  "settings.theme.slate": "岩灰",
+  "recovery.title": "编辑器恢复",
+  "recovery.help": "绘制已停止。项目仍保留在内存中。请先保存恢复副本，再重试。",
+  "recovery.save": "保存恢复副本",
+  "recovery.saved": "恢复副本已保存：{0}",
+  "recovery.failed": "无法保存恢复副本：{0}",
+  "recovery.nativeHelp": "图形渲染器不可用。按 Ctrl+S 保存恢复副本，或按 Enter 重试绘制。项目仍保留在内存中。",
+  "recovery.closeHelp": "关闭前保存恢复副本？选择“否”将不保存并关闭。"
 }

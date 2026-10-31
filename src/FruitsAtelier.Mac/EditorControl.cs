@@ -35,6 +35,7 @@ internal sealed class EditorControl : Control, IDisposable
     private readonly ImageCache images = new();
     internal bool MediaNeedsRedraw => images.MediaNeedsRedraw;
     internal Action? Changed;
+    internal Action<Exception>? RecoveryRendererFailed;
     private float uiScale = 1;
     private Point EditorPoint(PointerEventArgs e) => e.GetPosition(this) / uiScale;
     public EditorControl()
@@ -142,10 +143,25 @@ internal sealed class EditorControl : Control, IDisposable
     {
         base.Render(context);
         uiScale = View.UiScaleFactor;
-        using var transform = context.PushTransform(Matrix.CreateScale(uiScale, uiScale));
-        using var canvas = new MacCanvas(context, images, (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * uiScale);
-        View.Render(canvas, (float)Bounds.Width / uiScale, (float)Bounds.Height / uiScale);
+        try
+        {
+            using var transform = context.PushTransform(Matrix.CreateScale(uiScale, uiScale));
+            using var canvas = new MacCanvas(context, images, (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * uiScale);
+            View.Render(canvas, (float)Bounds.Width / uiScale, (float)Bounds.Height / uiScale);
+        }
+        catch (Exception error)
+        {
+            MacPaths.Log(error.ToString());
+            if (View.RecoveryActive) Avalonia.Threading.Dispatcher.UIThread.Post(() => RecoveryRendererFailed?.Invoke(error));
+            else
+            {
+                View.ShowRenderError(error.Message);
+                Avalonia.Threading.Dispatcher.UIThread.Post(InvalidateVisual);
+            }
+            return;
+        }
         UpdatePointerCursor();
+        if (View.ErrorVisible) return;
         if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)
             TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw) InvalidateVisual(); });
     }
@@ -208,8 +224,10 @@ internal sealed class EditorControl : Control, IDisposable
             MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift), e.KeyModifiers.HasFlag(KeyModifiers.Alt));
         e.Handled = true; Refresh();
     }
+    private readonly HashSet<Key> recoveryHeldKeys = [];
     protected override void OnKeyDown(KeyEventArgs e)
     {
+        if (View.RecoveryActive && !recoveryHeldKeys.Add(e.Key)) { e.Handled = true; return; }
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         View.KeyDown(MacInput.VirtualKey(e.Key, View.IsEditingText || View.CapturingTestplayKey || View.IsTestplaying), MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         e.Handled = View.IsTestplaying || View.CapturingTestplayKey || e.Key is Key.Tab or Key.Space or Key.Back or Key.Delete or Key.Enter or Key.Escape
@@ -218,6 +236,7 @@ internal sealed class EditorControl : Control, IDisposable
     }
     protected override void OnKeyUp(KeyEventArgs e)
     {
+        recoveryHeldKeys.Remove(e.Key);
         base.OnKeyUp(e);
         View.KeyUp(MacInput.VirtualKey(e.Key, View.IsEditingText || View.CapturingTestplayKey || View.IsTestplaying));
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
@@ -229,6 +248,6 @@ internal sealed class EditorControl : Control, IDisposable
         e.Handled = true; Refresh();
     }
     protected override void OnGotFocus(GotFocusEventArgs e) { base.OnGotFocus(e); View.SetTextInputFocus(true); Refresh(); }
-    protected override void OnLostFocus(Avalonia.Interactivity.RoutedEventArgs e) { base.OnLostFocus(e); View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); Refresh(); }
+    protected override void OnLostFocus(Avalonia.Interactivity.RoutedEventArgs e) { recoveryHeldKeys.Clear(); base.OnLostFocus(e); View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); Refresh(); }
     public void Dispose() { View.CompleteLibraryCacheWrites(); View.StopFileMonitoring(); View.StopDiscussions(); images.Dispose(); }
 }

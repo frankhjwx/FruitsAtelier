@@ -81,7 +81,14 @@ public sealed partial class EditorView
         { CancelLegacyDropletRefresh(); return; }
         if (!job.Task.IsCompleted) return;
         legacyDropletJob = null;
-        var result = job.Task.GetAwaiter().GetResult();
+        LegacyDropletPrepared result;
+        try { result = job.Task.GetAwaiter().GetResult(); }
+        catch (Exception error)
+        {
+            RollbackLegacyDropletRefresh(job);
+            StatusMessage = fieldError = L.Reformat(error.Message);
+            return;
+        }
         if (job.Compensation != compensateTinyDroplets || job.Language != L.Language
             || !job.Expected.ContentEquals(Document))
         {

@@ -179,6 +179,12 @@ internal static partial class Native
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern nint LoadCursor(nint instance, nint name);
     [DllImport("user32.dll")] internal static extern bool SetForegroundWindow(nint hwnd);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int MessageBox(nint hwnd, string text, string title, uint flags);
+    internal static int ConfirmRecoveryClose(nint owner)
+    {
+        using var modal = new NativeModalScope(owner);
+        return MessageBox(owner, FruitsAtelier.Localization.Strings.Get("recovery.closeHelp"),
+            FruitsAtelier.Localization.Strings.Get("app.name"), 0x00050023);
+    }
     internal static void ShowError(nint owner, string text, string title)
     {
         using var modal = new NativeModalScope(owner);

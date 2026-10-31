@@ -4,6 +4,9 @@ internal sealed partial class EditorWindow
 {
     private bool DispatchShortcutBeforeTranslation(Native.Message message)
     {
+        if (message.Window == hwnd && IgnoreRecoveryKeyRepeat(message.Id, message.WParam, message.LParam)) return true;
+        if (nativeRecovery && message.Window == hwnd && message.Id == 0x0100)
+            return HandleNativeRecoveryMessage(hwnd, message.Id, message.WParam, message.LParam);
         // TranslateMessage can let the IME consume shortcuts before WM_KEYDOWN reaches the window.
         if (message.Window != hwnd || message.Id != 0x0100 || view.IsEditingText || view.CapturingTestplayKey) return false;
         uint key = ResolveVirtualKey(message.WParam, message.LParam, down: true);

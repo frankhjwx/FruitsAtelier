@@ -2,6 +2,85 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class OperationErrorTests
 {
+    public static void Recovery()
+    {
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            L.SetLanguage(language);
+            var ui = new Ui(false);
+            var map = new FruitsAtelier.Core.MapDocument();
+            map.Fruits.Add(new() { TimeMs = 1000 });
+            var other = map.DeepClone(); other.Name = "Retained inactive difficulty";
+            other.Fruits[0].X = 456;
+            ui.View.LoadProject(new FruitsAtelier.Core.BeatmapProject
+            {
+                Name = "Recovery fixture", Notes = "Unsaved project notes",
+                Difficulties = [new() { Name = "Active", Document = map }, new() { Name = "Inactive", Document = other }]
+            });
+            ui.PaintUntilReady();
+            ui.View.Document.Fruits.Add(new() { TimeMs = 2000, X = 123 });
+            var retained = ui.View.CaptureProject();
+            bool dirty = ui.View.IsDirty;
+            if (!dirty) throw new Exception("The recovery fixture must contain unsaved authoring edits.");
+            string folder = Path.GetFullPath("artifacts/tests/render-recovery/" + Guid.NewGuid());
+            Directory.CreateDirectory(folder);
+            string path = Path.Combine(folder, "unsaved.catchproj");
+            var pending = typeof(FruitsAtelier.App.Editor.EditorView).GetField("difficultyGraphicsReleasePending",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            pending.SetValue(ui.View, true);
+            var canvas = new FailingReleaseCanvas();
+            ui.View.RequestPausePlayback = () => throw new InvalidOperationException("Injected playback cleanup failure");
+            FailOnce();
+            ui.View.RequestPausePlayback = null;
+            for (int i = 0; i < 20; i++) ui.View.Render(canvas, 980, 620);
+            if (canvas.Failures != 1 || !ui.View.RecoveryActive) throw new Exception("Recovery re-entered failed drawing without a retry.");
+            ui.Key(27);
+            if (!ui.View.RecoveryActive) throw new Exception("Escape resumed a failed renderer.");
+            ui.View.RequestRecoverySave = () => ui.View.SaveRecoveryCopy(path);
+            ui.Key('S', ctrl: true);
+            var restored = FruitsAtelier.Core.ProjectSerializer.ReadProjectFile(path);
+            if (restored.Difficulties.Count != retained.Difficulties.Count || restored.Notes != retained.Notes
+                || retained.Difficulties.Where((difficulty, index) => !difficulty.Document.ContentEquals(restored.Difficulties[index].Document)).Any()
+                || !ui.View.RecoveryActive || ui.View.IsDirty != dirty)
+                throw new Exception("Recovery save changed the dirty baseline or lost unsaved content.");
+            string savedText = File.ReadAllText(path);
+            ui.Key('S', ctrl: true);
+            if (!ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("recovery.failed", "").TrimEnd())))
+                throw new Exception("Recovery copy failure was not visible.");
+            if (File.ReadAllText(path) != savedText || Directory.GetFiles(folder, "*.tmp").Length != 0)
+                throw new Exception("An existing recovery copy was overwritten or a failed write left temporary output.");
+            ui.View.RetryRender();
+            FailOnce();
+            if (canvas.Failures != 2) throw new Exception("Explicit retry did not attempt rendering exactly once.");
+            pending.SetValue(ui.View, false);
+            ui.View.RetryRender(); ui.Paint();
+            if (ui.View.ErrorVisible || !retained.Difficulties[0].Document.ContentEquals(ui.View.Document))
+                throw new Exception("A repaired renderer did not resume with the retained content.");
+
+            void FailOnce()
+            {
+                try { ui.View.Render(canvas, 980, 620); throw new Exception("Injected renderer did not fail."); }
+                catch (InvalidOperationException error) { ui.View.ShowRenderError(error.Message); }
+            }
+        }
+        Console.WriteLine("PASS bounded render recovery and retained unsaved project copies");
+    }
+
+    private sealed class FailingReleaseCanvas : FruitsAtelier.App.Rendering.ICanvas
+    {
+        public int Failures;
+        public void ReleaseDifficultyResources() { Failures++; throw new InvalidOperationException("Injected difficulty resource failure"); }
+        public void Fill(FruitsAtelier.App.Rendering.Rect r, uint color, float radius = 0, float opacity = 1) { }
+        public void Stroke(FruitsAtelier.App.Rendering.Rect r, uint color, float width = 1, float radius = 0) { }
+        public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1) { }
+        public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1, float opacity = 1) { }
+        public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false) { }
+        public bool Image(string path, FruitsAtelier.App.Rendering.Rect destination, uint tint = 0xFFFFFF,
+            FruitsAtelier.App.Rendering.Rect? source = null, float opacity = 1) => false;
+        public void Clip(FruitsAtelier.App.Rendering.Rect r) { }
+        public void Unclip() { }
+    }
+
     public static void Run()
     {
         StaleSelection();

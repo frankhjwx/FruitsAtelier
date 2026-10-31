@@ -1,5 +1,19 @@
 # Editing Controls
 
+## Error recovery
+
+An unexpected rendering or window polling failure pauses the editor on a recovery
+screen. **Save recovery copy** writes all retained difficulties and project notes to
+a new `.catchproj` without running beatmap conversion or changing the original
+project's saved state. Choose an unused filename. The copy references existing
+media; it does not package audio or images. Save failures remain visible so another
+location can be selected.
+
+**Retry** explicitly resumes processing. A persistent failure returns to recovery
+instead of automatically retrying every frame. If Windows cannot draw the recovery
+screen, a native message explains the keyboard controls: **Ctrl+S** saves a copy
+and **Enter** retries. Keep the original media alongside a recovered project.
+
 ## Editor themes
 
 **Settings → Appearance → Editor theme** offers seven dark themes: Graphite, Studio, Black Pearl,

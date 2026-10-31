@@ -1951,5 +1951,12 @@
   "settings.theme.midnight": "ミッドナイト",
   "settings.theme.forest": "フォレスト",
   "settings.theme.rose": "ローズ",
-  "settings.theme.slate": "スレート"
+  "settings.theme.slate": "スレート",
+  "recovery.title": "エディターの復旧",
+  "recovery.help": "描画を停止しました。プロジェクトはメモリに保持されています。再試行の前に復旧用コピーを保存してください。",
+  "recovery.save": "復旧用コピーを保存",
+  "recovery.saved": "復旧用コピーを保存しました: {0}",
+  "recovery.failed": "復旧用コピーを保存できませんでした: {0}",
+  "recovery.nativeHelp": "描画機能を使用できません。Ctrl+S で復旧用コピーを保存するか、Enter で描画を再試行してください。プロジェクトはメモリに保持されています。",
+  "recovery.closeHelp": "閉じる前に復旧用コピーを保存しますか？保存せずに閉じるには「いいえ」を選択してください。"
 }

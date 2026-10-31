@@ -3,6 +3,8 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--background-task-recovery-check")) { BackgroundTaskRecoveryTests.Run(); return 0; }
+if (args.Contains("--render-recovery-check")) { OperationErrorTests.Recovery(); return 0; }
 if (args.Contains("--discussion-navigation-check")) { DiscussionTests.RetainedReferences(); return 0; }
 if (args.Contains("--verifier-navigation-check")) { MapsetVerifierTests.RetainedNavigation(); return 0; }
 if (args.Contains("--aimod-navigation-check")) { AimodTests.StaleNavigation(); OperationErrorTests.StaleSelection(); return 0; }
@@ -557,6 +559,8 @@ var tests = new (string Name, Action Run)[]
     ("Testplay speed settings are independent of editor speed", TestplayStartupDelayTests.IndependentSpeed),
     ("Grid Level opens a checked View submenu", GridLevelMenuTests.Run),
     ("Playback reuses timing data and edits invalidate it", ObjectTimelineTests.TimingCacheInvalidation),
+    ("Background failures retire their completed work before reporting", BackgroundTaskRecoveryTests.Run),
+    ("Render recovery preserves unsaved project copies and requires explicit retry", OperationErrorTests.Recovery),
     ("Operation errors remain visible and isolate input on editor and library pages", OperationErrorTests.Run),
     ("Text inputs blink, highlight selection and menus fit their rows", TextInputFeedbackTests.Run),
     ("Legacy clipboard and horizontal grid preserve pattern scope", LegacyAlignmentTests.ClipboardAndGrid),

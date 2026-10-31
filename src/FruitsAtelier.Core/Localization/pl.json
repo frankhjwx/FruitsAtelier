@@ -1951,5 +1951,12 @@
   "settings.theme.midnight": "Północ",
   "settings.theme.forest": "Las",
   "settings.theme.rose": "Róża",
-  "settings.theme.slate": "Łupek"
+  "settings.theme.slate": "Łupek",
+  "recovery.title": "Odzyskiwanie edytora",
+  "recovery.help": "Renderowanie zostało zatrzymane. Projekt pozostaje w pamięci. Przed ponowieniem zapisz kopię odzyskiwania.",
+  "recovery.save": "Zapisz kopię odzyskiwania",
+  "recovery.saved": "Zapisano kopię odzyskiwania: {0}",
+  "recovery.failed": "Nie udało się zapisać kopii odzyskiwania: {0}",
+  "recovery.nativeHelp": "Renderer graficzny jest niedostępny. Naciśnij Ctrl+S, aby zapisać kopię odzyskiwania, lub Enter, aby ponowić renderowanie. Projekt pozostaje w pamięci.",
+  "recovery.closeHelp": "Zapisać kopię odzyskiwania przed zamknięciem? Wybierz Nie, aby zamknąć bez zapisywania."
 }

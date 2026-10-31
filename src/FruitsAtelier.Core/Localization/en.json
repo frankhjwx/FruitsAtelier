@@ -1951,5 +1951,12 @@
   "settings.theme.midnight": "Midnight",
   "settings.theme.forest": "Forest",
   "settings.theme.rose": "Rose",
-  "settings.theme.slate": "Slate"
+  "settings.theme.slate": "Slate",
+  "recovery.title": "Editor recovery",
+  "recovery.help": "Rendering stopped. Your project remains in memory. Save a recovery copy before retrying.",
+  "recovery.save": "Save recovery copy",
+  "recovery.saved": "Recovery copy saved: {0}",
+  "recovery.failed": "Recovery copy could not be saved: {0}",
+  "recovery.nativeHelp": "The graphics renderer is unavailable. Press Ctrl+S to save a recovery copy, or Enter to retry rendering. Your project remains in memory.",
+  "recovery.closeHelp": "Save a recovery copy before closing? Choose No to close without saving."
 }

@@ -255,7 +255,7 @@ internal sealed partial class EditorWindow
             throw new InvalidOperationException("Paint failure did not rebuild the renderer and expose its error.");
         WndProc(hwnd, 0x000F, 0, 0);
         CompletePendingCheckPaint();
-        if (recoveringRenderer || failed) throw new InvalidOperationException("Recovered renderer could not draw its error.");
+        if (!recoveringRenderer || failed) throw new InvalidOperationException("Recovered renderer could not draw its error.");
         view.KeyDown(13, false, false); view.KeyUp(13);
         WndProc(hwnd, 0x000F, 0, 0);
         CompletePendingCheckPaint();
@@ -271,6 +271,7 @@ internal sealed partial class EditorWindow
         WndProc(hwnd, 0x000F, 0, 0); CompletePendingCheckPaint();
         if (view.ErrorVisible || failed || recoveringRenderer || !view.PrepareFileOperation() || !document.ContentEquals(view.Document))
             throw new InvalidOperationException("Missing selection trapped repaint, file operations or error dismissal.");
+        CheckRepeatedRecovery();
         AppLog.Write("Paint lifecycle check passed: nested paint, modal owner, abandoned frame, Direct2D recovery.");
     }
 }

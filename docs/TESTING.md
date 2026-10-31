@@ -1,5 +1,20 @@
 # Building and Testing
 
+## Error recovery
+
+`App.Tests --render-recovery-check` injects a persistent resource-release failure,
+checks that recovery rendering bypasses it, and verifies explicit retry and
+roundtripping unsaved project copies without replacing existing files.
+`App.Tests --background-task-recovery-check` injects faulted and canceled collection
+and Legacy refresh tasks to check result retirement, transaction rollback, retained
+content, saving and undo.
+
+On Windows, `FruitsAtelier.App --render-check --paint-recovery-check` exercises native
+paint, repeated polling and rendering failures, and an unavailable renderer. It
+verifies bounded error reporting, recovery-copy reopening and explicit retry;
+copies are stored under `artifacts/tests/paint-recovery`. These injected failures
+test recovery boundaries independently of any particular malformed input file.
+
 ## Slider event timing
 
 `Core.Tests --slider-event-timing-check` exercises isolated event edits that need

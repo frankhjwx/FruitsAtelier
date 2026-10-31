@@ -13,17 +13,21 @@ public sealed partial class EditorView
 
     private void PumpOsuCollections()
     {
-        if (osuCollectionsTask is { IsCompleted: true })
+        if (osuCollectionsTask is { IsCompleted: true } completed)
         {
-            var result = osuCollectionsTask.GetAwaiter().GetResult();
             osuCollectionsTask = null;
-            if (result.Root == LibrarySettings.OsuRoot && result != osuCollections)
+            try
             {
-                bool changed = result.Root != osuCollections?.Root || result.Fingerprint != osuCollections?.Fingerprint;
-                osuCollections = result;
-                if (IsOsuCollection && !result.Collections.Any(c => c.Id == libraryCollection)) SwitchLibraryCategory(false);
-                if (changed) InvalidateLibraryOrganization();
+                var result = completed.GetAwaiter().GetResult();
+                if (result.Root == LibrarySettings.OsuRoot && result != osuCollections)
+                {
+                    bool changed = result.Root != osuCollections?.Root || result.Fingerprint != osuCollections?.Fingerprint;
+                    osuCollections = result;
+                    if (IsOsuCollection && !result.Collections.Any(c => c.Id == libraryCollection)) SwitchLibraryCategory(false);
+                    if (changed) InvalidateLibraryOrganization();
+                }
             }
+            catch (Exception error) { libraryError = error.Message; }
         }
         if (!LibraryVisible || osuCollectionsTask is not null || DateTime.UtcNow < nextOsuCollectionCheck) return;
         string root = LibrarySettings.OsuRoot;

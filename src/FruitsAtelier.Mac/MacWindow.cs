@@ -142,6 +142,8 @@ internal sealed partial class MacWindow : Window
         {
             RunFile(() => { View.SaveCurrentDifficulty(); return Task.CompletedTask; });
         };
+        View.RequestRecoverySave = () => _ = SaveRecoveryCopy();
+        editor.RecoveryRendererFailed = ShowNativeRecovery;
         View.RequestExport = View.ShowWorkspaceExport;
         ConfigureLibrary(initialPath is null && !smokeCheck, smokeCheck);
         View.RequestLoadSkin = () => RunFile(async () =>
@@ -153,7 +155,19 @@ internal sealed partial class MacWindow : Window
         View.RequestTogglePlayback = TogglePlayback;
         View.RequestPlaybackSpeed = speed => { View.ResetHitsounds(); audio.SetPlaybackSpeed(speed); View.StartHitsounds(audio.State.PositionMs); PollAudio(); };
         View.RequestSeek = time => { audio.Seek(time); PollAudio(); };
-        timer.Tick += (_, _) => { PollAudio(); UpdateBrowserViewport(); };
+        timer.Tick += (_, _) =>
+        {
+            if (View.ErrorVisible)
+            {
+                if (osuBrowser is { IsVisible: true }) osuBrowser.IsVisible = false;
+                return;
+            }
+            try { PollAudio(); UpdateBrowserViewport(); }
+            catch (Exception error)
+            {
+                MacPaths.Log(error.ToString()); View.ShowRenderError(error.Message); editor.Refresh();
+            }
+        };
         Opened += async (_, _) =>
         {
             if (View.StartupDialogVisible) ResizeForSetup(true);
@@ -300,6 +314,11 @@ internal sealed partial class MacWindow : Window
     }
     private async Task<bool> ConfirmDiscard()
     {
+        if (View.RecoveryActive)
+        {
+            int recoveryAnswer = await Message(L.Get("recovery.title"), L.Get("recovery.closeHelp"), true);
+            return recoveryAnswer == 2 || recoveryAnswer == 1 && await SaveRecoveryCopy();
+        }
         if (View.PatternEditingActive || View.HasRetainedPatternProject)
         {
             if (!await View.ResolvePatternSessionsBeforeLeavingAsync()) return false;
@@ -362,6 +381,51 @@ internal sealed partial class MacWindow : Window
         projectPath = Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase) ? path : null;
         await audio.LoadAsync(View.Document.AudioPath);
         PollAudio();
+    }
+
+    private bool recoverySaveBusy;
+    private TextBlock? nativeRecoveryNotice;
+    private async Task<bool> SaveRecoveryCopy()
+    {
+        if (recoverySaveBusy) return false;
+        recoverySaveBusy = true;
+        try
+        {
+            var path = await SavePicker(L.Get("recovery.save"), "catchproj", "recovery.catchproj");
+            if (path is null) return false;
+            View.SaveRecoveryCopy(path);
+            if (nativeRecoveryNotice is not null) nativeRecoveryNotice.Text = L.Get("recovery.saved", path);
+            return true;
+        }
+        catch (Exception error)
+        {
+            MacPaths.Log(error.ToString()); View.RecoverySaveFailed(error.Message);
+            if (nativeRecoveryNotice is not null) nativeRecoveryNotice.Text = L.Get("recovery.failed", error.Message);
+            return false;
+        }
+        finally { recoverySaveBusy = false; editor.Refresh(); }
+    }
+
+    private StackPanel? nativeRecovery;
+    private void ShowNativeRecovery(Exception error)
+    {
+        if (nativeRecovery is not null) return;
+        nativeRecovery = new StackPanel { Margin = new Thickness(32), Spacing = 16,
+            Background = Avalonia.Media.Brushes.DarkSlateGray };
+        nativeRecovery.Children.Add(new TextBlock { Text = L.Get("recovery.title"), FontSize = 22 });
+        nativeRecovery.Children.Add(new TextBlock { Text = L.Get("recovery.help") + "\n" + error.Message,
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        var save = new Button { Content = L.Get("recovery.save") };
+        save.Click += (_, _) => _ = SaveRecoveryCopy();
+        var retry = new Button { Content = L.Get("testplay.retry") };
+        retry.Click += (_, _) =>
+        {
+            editorRoot.Children.Remove(nativeRecovery); nativeRecovery = null; nativeRecoveryNotice = null;
+            editor.IsVisible = true; View.RetryRender(); editor.Refresh(); editor.Focus();
+        };
+        nativeRecoveryNotice = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+        nativeRecovery.Children.Add(save); nativeRecovery.Children.Add(retry); nativeRecovery.Children.Add(nativeRecoveryNotice);
+        editor.IsVisible = false; editorRoot.Children.Add(nativeRecovery);
     }
 
     private Task<bool> Save()

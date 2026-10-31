@@ -1951,5 +1951,12 @@
   "settings.theme.midnight": "午夜",
   "settings.theme.forest": "森林",
   "settings.theme.rose": "玫瑰",
-  "settings.theme.slate": "岩灰"
+  "settings.theme.slate": "岩灰",
+  "recovery.title": "編輯器復原",
+  "recovery.help": "繪製已停止。專案仍保留在記憶體中。請先儲存復原副本，再重試。",
+  "recovery.save": "儲存復原副本",
+  "recovery.saved": "復原副本已儲存：{0}",
+  "recovery.failed": "無法儲存復原副本：{0}",
+  "recovery.nativeHelp": "圖形繪製器無法使用。按 Ctrl+S 儲存復原副本，或按 Enter 重試繪製。專案仍保留在記憶體中。",
+  "recovery.closeHelp": "關閉前儲存復原副本？選擇「否」將不儲存並關閉。"
 }

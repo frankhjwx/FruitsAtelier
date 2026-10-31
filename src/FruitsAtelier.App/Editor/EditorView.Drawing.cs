@@ -35,13 +35,18 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        // Full-screen pages can return before laying out docks; never reuse their previous native viewport.
+        browserRenderedViewport = browserToolbar = default;
+        discussionMarkerHits.Clear(); discussionQuoteBounds.Clear(); discussionQuoteActions.Clear(); discussionQuoteViews.Clear();
+        if (ErrorVisible)
+        {
+            this.width = width; this.height = height;
+            c.StopVideo(); DrawError(c); return;
+        }
         if (storyboardResourcesReleasePending) { c.ReleaseStoryboardResources(); storyboardResourcesReleasePending = false; }
         storyboardRenderFrame++;
         PumpStoryboardGameplay();
         PumpBrowserClear();
-        // Full-screen pages can return before laying out docks; never reuse their previous native viewport.
-        browserRenderedViewport = browserToolbar = default;
-        discussionMarkerHits.Clear(); discussionQuoteBounds.Clear(); discussionQuoteActions.Clear(); discussionQuoteViews.Clear();
         videoRequestedThisFrame = false;
         try
         {

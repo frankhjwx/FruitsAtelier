@@ -1951,5 +1951,12 @@
   "settings.theme.midnight": "Middernacht",
   "settings.theme.forest": "Bos",
   "settings.theme.rose": "Roos",
-  "settings.theme.slate": "Leisteen"
+  "settings.theme.slate": "Leisteen",
+  "recovery.title": "Editor herstellen",
+  "recovery.help": "De weergave is gestopt. Je project blijft in het geheugen. Sla een herstelkopie op voordat je het opnieuw probeert.",
+  "recovery.save": "Herstelkopie opslaan",
+  "recovery.saved": "Herstelkopie opgeslagen: {0}",
+  "recovery.failed": "Herstelkopie kon niet worden opgeslagen: {0}",
+  "recovery.nativeHelp": "De grafische renderer is niet beschikbaar. Druk op Ctrl+S om een herstelkopie op te slaan, of op Enter om opnieuw te proberen. Je project blijft in het geheugen.",
+  "recovery.closeHelp": "Een herstelkopie opslaan voordat je afsluit? Kies Nee om af te sluiten zonder op te slaan."
 }

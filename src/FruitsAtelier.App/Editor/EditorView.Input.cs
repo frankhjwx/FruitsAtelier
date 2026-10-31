@@ -1394,7 +1394,9 @@ public sealed partial class EditorView
         ResetTextCaret();
         if (ErrorVisible)
         {
-            if (virtualKey is 27 or 13) DismissError();
+            if (RecoveryActive && ctrl && virtualKey == 'S') SaveRecovery();
+            else if (RecoveryActive && virtualKey == 13) RetryRender();
+            else if (!RecoveryActive && virtualKey is (27 or 13)) DismissError();
             return;
         }
         if (DiscardConfirmationVisible)
@@ -2021,6 +2023,12 @@ public sealed partial class EditorView
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (RecoveryActive)
+        {
+            if (ctrl && virtualKey == 'S') SaveRecovery();
+            else if (virtualKey == 13) RetryRender();
+            return;
+        }
         if (OsuLinkPickerVisible && !ErrorVisible) { KeyDownCore(virtualKey, ctrl, shift); return; }
         bool shortcut = ctrl && !altHeld && (virtualKey is 38 or 40 || virtualKey == 82 && !shift)
             || altHeld && virtualKey is 13 or 37 or 38 or 39 or 40;

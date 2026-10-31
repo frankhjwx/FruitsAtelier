@@ -1951,5 +1951,12 @@
   "settings.theme.midnight": "Tengah malam",
   "settings.theme.forest": "Hutan",
   "settings.theme.rose": "Mawar",
-  "settings.theme.slate": "Batu sabak"
+  "settings.theme.slate": "Batu sabak",
+  "recovery.title": "Pemulihan editor",
+  "recovery.help": "Rendering dihentikan. Proyek tetap tersimpan di memori. Simpan salinan pemulihan sebelum mencoba lagi.",
+  "recovery.save": "Simpan salinan pemulihan",
+  "recovery.saved": "Salinan pemulihan disimpan: {0}",
+  "recovery.failed": "Salinan pemulihan tidak dapat disimpan: {0}",
+  "recovery.nativeHelp": "Perender grafis tidak tersedia. Tekan Ctrl+S untuk menyimpan salinan pemulihan, atau Enter untuk mencoba lagi. Proyek tetap tersimpan di memori.",
+  "recovery.closeHelp": "Simpan salinan pemulihan sebelum menutup? Pilih Tidak untuk menutup tanpa menyimpan."
 }
