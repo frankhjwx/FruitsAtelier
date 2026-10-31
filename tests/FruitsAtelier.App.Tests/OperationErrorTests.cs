@@ -85,6 +85,7 @@ internal static class OperationErrorTests
             || !message.Contains("Injected preference failure"))
             throw new Exception("Failed error cleanup hid the original operation or left recovery unavailable.");
         string path = Path.GetFullPath("artifacts/tests/render-recovery/cleanup-" + Guid.NewGuid() + ".catchproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         ui.View.RequestRecoverySave = () => ui.View.SaveRecoveryCopy(path);
         ui.View.KeyDown('S', true, false);
         if (!File.Exists(path)) throw new Exception("Failed interaction cleanup blocked authored-state recovery saving.");
