@@ -9,6 +9,10 @@ project's saved state. Choose an unused filename. The copy references existing
 media; it does not package audio or images. Save failures remain visible so another
 location can be selected.
 
+If an interrupted edit could not be rolled back, recovery copies use the state
+before that unfinished gesture. Earlier committed edits remain in the copy even
+when they have not been saved to the original project.
+
 When Pattern editing or source navigation retains another project, recovery also
 writes `<name>.retained.catchproj` beside the chosen file. This companion preserves
 the original project's difficulties and independent notes. Both files must use
@@ -18,6 +22,10 @@ Long error messages use a bounded, scrollable preview with an ellipsis when
 truncated. Repainting an unchanged message reuses its text layout. Native dialogs
 isolate editor input until they close, including repeated save and close requests.
 Error controls take priority over underlying synchronization and startup screens.
+Input cannot dismiss or retry an error while its cleanup callbacks are running.
+Slider conversion and missing-resource reports also show bounded diagnostic
+previews. Resource reports lay out only visible entries; unchanged reports reuse
+their layout when repainted.
 
 **Retry** explicitly resumes processing. A persistent failure returns to recovery
 instead of automatically retrying every frame. If Windows cannot draw the recovery

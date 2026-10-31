@@ -155,7 +155,12 @@ internal sealed partial class MacWindow : Window
             View.CancelInteraction(); var path = await Pick(L.Get("files.skin"), ["*.osk"]);
             if (path is not null) View.ImportSkin(path);
         });
-        View.RequestPausePlayback = () => { playbackRequest++; audio.Pause(); };
+        View.RequestPausePlayback = () =>
+        {
+            playbackRequest++; setupPlayRequested = false;
+            try { audio.Pause(); }
+            finally { setupAudio?.Pause(); }
+        };
         View.RequestTogglePlayback = TogglePlayback;
         View.RequestPlaybackSpeed = speed => { View.ResetHitsounds(); audio.SetPlaybackSpeed(speed); View.StartHitsounds(audio.State.PositionMs); PollAudio(); };
         View.RequestSeek = time => { audio.Seek(time); PollAudio(); };

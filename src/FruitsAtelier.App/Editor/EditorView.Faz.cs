@@ -106,7 +106,7 @@ public sealed partial class EditorView
             catch (OperationCanceledException) { }
             catch (Exception error) { ShowError(L.Reformat(error.Message)); }
         }
-        if (fazTask is not { IsCompleted: true } task) return;
+        if (ErrorVisible || fazTask is not { IsCompleted: true } task) return;
         fazTask = null; var completed = fazCompletion; fazCompletion = null;
         var failed = fazFailure; fazFailure = null;
         try { task.GetAwaiter().GetResult(); completed?.Invoke(); }

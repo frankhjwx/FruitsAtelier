@@ -10,6 +10,15 @@ callback recovery when logging or refreshing fails.
 It checks error input priority over synchronization and startup screens, retained
 Pattern-project recovery copies, destination collisions, and macOS recovery close
 requests while another file operation is busy.
+`App.Tests --recovery-state-matrix-check` combines cleanup failures with reentrant
+input, unfinished transactions, retained Pattern projects and simultaneous FAZ
+completion. It checks that recovery copies preserve committed edits and that
+error transitions keep ownership of the original project. Tiny viewports and
+underlying modal controls are covered by the same check.
+`App.Tests --resource-error-layout-check` checks million-character resource errors,
+viewport-only traversal of large reports, cached repaint, scrolling and resize.
+The recovery state matrix also checks bounded slider conversion diagnostics and
+cached repaint without splitting Unicode characters.
 `App.Tests --background-task-recovery-check` injects faulted and canceled collection
 and Legacy refresh tasks to check result retirement, transaction rollback, retained
 content, saving and undo. Multiplier-validation faults must retire their draft
@@ -21,7 +30,7 @@ On Windows, `FruitsAtelier.App --render-check --paint-recovery-check` exercises 
 paint, repeated polling and rendering failures, and an unavailable renderer. It
 verifies bounded error reporting, recovery-copy reopening and explicit retry,
 shortcut callback failures, modal message reentry, frame-wait failures and the
-message-reader fallback;
+message-reader fallback, including input reentry during playback cleanup;
 copies are stored under `artifacts/tests/paint-recovery`. These injected failures
 test recovery boundaries independently of any particular malformed input file.
 The native check also verifies that a throwing thumbnail decoder is negatively
@@ -29,7 +38,12 @@ cached, releases worker capacity and disposes a late result after cache retireme
 The update lifecycle tests inject notification callback failures and verify that
 subsequent checks and downloads can run.
 `Core.Tests --storyboard-check` verifies bounded macro amplification, rejection
-before oversized output allocation, cancellation and unchanged substitution order.
+before oversized output allocation, per-reader output budgets, cancellation and
+unchanged substitution order, including shrinking substitutions near each limit.
+It also checks oversized and growing shared storyboard files, cancellation and
+BOM-aware decoding of normal files.
+The same suite checks AiMod and hitsound-cleanup admission, supported shared
+samples, and shared expansion budgets with independent variable scopes.
 
 ## Slider event timing
 

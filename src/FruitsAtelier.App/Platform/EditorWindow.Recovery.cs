@@ -12,8 +12,9 @@ internal sealed partial class EditorWindow
     private bool diagnosticControl;
     private bool recoveryDialogActive;
 
+    // Native cleanup can pump owner input before the recovery screen is ready.
     private bool OwnerInputBlocked(uint message)
-        => (NativeModalScope.Active || recoveryDialogActive)
+        => (failed || NativeModalScope.Active || recoveryDialogActive)
             && (message == 0x0010 || message is >= 0x0100 and <= 0x0109 || message is >= 0x0200 and <= 0x020E);
 
     private static string NativeErrorPreview(string message)
@@ -44,9 +45,11 @@ internal sealed partial class EditorWindow
         failed = true;
         try
         {
+            setupPlayRequested = false;
             TryRecoveryStep(() => view.CancelInteraction());
             TryRecoveryStep(() => { if (Native.GetCapture() == window) Native.ReleaseCapture(); });
             TryRecoveryStep(() => audio.Pause());
+            TryRecoveryStep(() => setupAudio?.Pause());
             TryRecoveryStep(() => view.StopTestplay());
             view.ShowRenderError(L.Get("window.operationFailed", L.Localized(exception.Message)));
             if (message == 0x000F)

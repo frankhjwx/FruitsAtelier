@@ -501,20 +501,7 @@ public sealed partial class EditorView
         if (resourcePage)
         {
             c.Text(L.Get("library.referenceHelp"), 32, 96, 14, Muted, width - 64);
-            float y = 144;
-            c.Clip(new(24, 140, width - 48, height - 160));
-            foreach (string error in resourceErrors.Skip((int)libraryScroll))
-            {
-                string remaining = error;
-                while (remaining.Length > 0)
-                {
-                    int length = remaining.Length;
-                    while (length > 1 && c.MeasureText(remaining[..length], 13) > width - 80) length--;
-                    c.Text(remaining[..length], 32, y, 13, Error, width - 64); y += 22; remaining = remaining[length..];
-                }
-                y += 18;
-            }
-            c.Unclip(); return;
+            DrawResourceErrors(c); return;
         }
         c.Fill(new(0, HeaderHeight, 190, height - HeaderHeight), Panel);
         Button(c, new(16, 88, 158, 36), L.Get("library.all"), () => SwitchLibraryCategory(false), !LibraryUsesProjects && libraryCollection is null);

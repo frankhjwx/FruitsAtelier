@@ -1941,6 +1941,8 @@
   "timing.sv": "SV（×）",
   "timing.finishDraft": "請先套用或取消 Timing 編輯，再切換 SV 顯示。",
   "timing.sourceChanged": "編輯器中的 Timing 已變更。請重新開啟此視窗後再套用。",
+  "core.storyboard.fileLimit": "故事板檔案超過了 32 MiB 的限制。",
+  "core.storyboard.sceneExpansionLimit": "故事板展開文字超過了整個場景 268,435,456 個字元的限制。",
   "core.storyboard.expansionLimit": "故事板變數展開超過了 33,554,432 個字元的限制。",
   "media.storyboardDiagnostics": "故事板：已略過 {0} 條無效指令或資源。",
   "media.storyboardFailed": "無法載入故事板：{0}",

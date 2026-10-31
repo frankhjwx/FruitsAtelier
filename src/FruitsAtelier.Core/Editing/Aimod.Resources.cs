@@ -18,7 +18,7 @@ public static partial class Aimod
         string? background = OsuTimeline.BackgroundFilename(document) is string bg ? ResourceName(bg) : null;
         string audio = ResourceName(SongSetup.Get(document, "General", "AudioFilename"));
         AddReference(audio);
-        var events = StoryboardResourceEvents(document, root);
+        var events = StoryboardResourceEvents(document, root, cancellation);
         foreach (var line in events) { cancellation.ThrowIfCancellationRequested(); ReadEvent(line); }
         if (SongSetup.Get(document, "General", "EpilepsyWarning", "0") != "1" && ShortStoryboardEvents(events) > 5)
             issues.Add(new(AimodCategory.Design, AimodSeverity.Warning, "epilepsy"));
@@ -132,35 +132,36 @@ public static partial class Aimod
         return names.ToArray();
     }
 
-    private static List<string> StoryboardResourceEvents(MapDocument document, string root)
+    private static List<string> StoryboardResourceEvents(MapDocument document, string root, CancellationToken cancellation = default)
     {
+        var budget = new StoryboardExpansionBudget();
         var events = Expand(document.OriginalSections.Where(s => s.Name == "Events").SelectMany(s => s.Lines),
-            document.OriginalSections.Where(s => s.Name == "Variables").SelectMany(s => s.Lines));
+            document.OriginalSections.Where(s => s.Name == "Variables").SelectMany(s => s.Lines), budget, cancellation);
         if (Directory.Exists(root))
             foreach (string storyboard in Directory.EnumerateFiles(root, "*.osb").Order(StringComparer.OrdinalIgnoreCase))
             {
                 var sharedEvents = new List<string>();
                 var variables = new List<string>();
                 string section = "";
-                foreach (string line in File.ReadLines(storyboard))
+                using var reader = new StringReader(StoryboardReader.ReadSharedFile(storyboard, cancellation));
+                while (reader.ReadLine() is { } line)
                 {
+                    cancellation.ThrowIfCancellationRequested();
                     if (line.TrimStart().StartsWith('[')) { section = line.Trim(); continue; }
                     if (section == "[Events]") sharedEvents.Add(line);
                     else if (section == "[Variables]") variables.Add(line);
                 }
-                events.AddRange(Expand(sharedEvents, variables));
+                events.AddRange(Expand(sharedEvents, variables, budget, cancellation));
             }
         return events;
 
-        static List<string> Expand(IEnumerable<string> lines, IEnumerable<string> variables)
+        static List<string> Expand(IEnumerable<string> lines, IEnumerable<string> variables, StoryboardExpansionBudget budget, CancellationToken cancellation)
         {
             var substitutions = variables.Select(v => v.Trim().Split('=', 2)).Where(v => v.Length == 2 && v[0].StartsWith('$'))
                 .GroupBy(v => v[0].Trim()).ToDictionary(g => g.Key, g => g.Last()[1].Trim());
-            return lines.Select(line =>
-            {
-                foreach (var pair in substitutions.OrderByDescending(p => p.Key.Length)) line = line.Replace(pair.Key, pair.Value, StringComparison.Ordinal);
-                return line;
-            }).ToList();
+            var scope = new StoryboardVariables(budget);
+            foreach (var pair in substitutions.OrderByDescending(p => p.Key.Length)) scope.Set(pair.Key, pair.Value);
+            return lines.Select(line => scope.Expand(line, cancellation)).ToList();
         }
     }
 

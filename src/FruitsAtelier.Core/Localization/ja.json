@@ -1941,6 +1941,8 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "SV 表示を切り替える前にタイミング編集を適用またはキャンセルしてください。",
   "timing.sourceChanged": "エディターのタイミングが変更されました。適用前にこのウィンドウを開き直してください。",
+  "core.storyboard.fileLimit": "ストーリーボードファイルが 32 MiB の上限を超えています。",
+  "core.storyboard.sceneExpansionLimit": "展開後のストーリーボードテキストがシーン全体の上限 268,435,456 文字を超えています。",
   "core.storyboard.expansionLimit": "ストーリーボード変数の展開が 33,554,432 文字の上限を超えています。",
   "media.storyboardDiagnostics": "ストーリーボード：無効なコマンドまたはリソースを {0} 件スキップしました。",
   "media.storyboardFailed": "ストーリーボードを読み込めませんでした：{0}",

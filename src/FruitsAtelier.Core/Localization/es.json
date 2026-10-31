@@ -1941,6 +1941,8 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Aplica o cancela los cambios de timing antes de cambiar la vista SV.",
   "timing.sourceChanged": "El timing ha cambiado en el editor. Vuelve a abrir esta ventana antes de aplicar.",
+  "core.storyboard.fileLimit": "El archivo de storyboard supera el límite de 32 MiB.",
+  "core.storyboard.sceneExpansionLimit": "El texto expandido del storyboard supera el límite de 268.435.456 caracteres por escena.",
   "core.storyboard.expansionLimit": "La expansión de variables del storyboard supera el límite de 33.554.432 caracteres.",
   "media.storyboardDiagnostics": "Storyboard: se omitieron {0} comandos o recursos no válidos.",
   "media.storyboardFailed": "No se pudo cargar el storyboard: {0}",

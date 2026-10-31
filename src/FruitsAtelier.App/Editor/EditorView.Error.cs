@@ -12,11 +12,20 @@ public sealed partial class EditorView
     public bool RecoveryActive { get; private set; }
     public Action? RequestRecoverySave { get; set; }
     private string? recoveryNotice;
+    private bool preparingError;
     private (string Message, string Language, bool Recovery, float Width, Type Canvas)? errorLayoutKey;
-    private readonly List<string> errorLines = [];
-    private void ClearErrorLayout() { errorLayoutKey = null; errorLines.Clear(); }
+    private IReadOnlyList<string> errorLines = [];
+    private void ClearErrorLayout() { errorLayoutKey = null; errorLines = []; }
 
     public void ShowRenderError(string message)
+    {
+        if (preparingError) return;
+        preparingError = true;
+        try { PrepareRecovery(message); }
+        finally { preparingError = false; }
+    }
+
+    private void PrepareRecovery(string message)
     {
         ClearErrorLayout();
         RecoveryActive = true;
@@ -37,6 +46,7 @@ public sealed partial class EditorView
 
     public void RetryRender()
     {
+        if (preparingError) return;
         ClearErrorLayout();
         RecoveryActive = false;
         operationError = null;
@@ -46,21 +56,15 @@ public sealed partial class EditorView
 
     public string[] SaveRecoveryCopy(string path)
     {
+        if (preparingError) throw new InvalidOperationException(L.Get("core.history.saveDuringEdit"));
         // Pattern editing can retain another unsaved project with independent project notes.
-        var copies = new List<(string Path, BeatmapProject Project)> { (path, CaptureProject()) };
+        var copies = new List<(string Path, BeatmapProject Project)> { (path, CaptureRecoveryProject(difficulties, ProjectName, projectNotes)) };
         var retained = patternReturnSession ?? retainedPatternProject;
         if (retained is not null && !retained.Difficulties.All(difficulties.Contains))
         {
             string companion = Path.Combine(Path.GetDirectoryName(path) ?? "",
                 Path.GetFileNameWithoutExtension(path) + ".retained.catchproj");
-            copies.Add((companion, new BeatmapProject
-            {
-                Name = retained.Name, Notes = retained.Notes,
-                Difficulties = retained.Difficulties.Select(d => new ProjectDifficulty
-                {
-                    Id = d.Id, Name = d.Name, FaOnly = d.FaOnly, Document = d.History.Document.DeepClone()
-                }).ToList()
-            }));
+            copies.Add((companion, CaptureRecoveryProject(retained.Difficulties, retained.Name, retained.Notes)));
         }
         // Serialization validates both authored snapshots before any destination is created.
         var output = copies.Select(copy => (copy.Path, Text: ProjectSerializer.Serialize(copy.Project, copy.Path),
@@ -87,6 +91,16 @@ public sealed partial class EditorView
         return paths;
     }
 
+    private static BeatmapProject CaptureRecoveryProject(IEnumerable<DifficultySession> sessions, string name, string notes) => new()
+    {
+        Name = name, Notes = notes,
+        Difficulties = sessions.Select(d => new ProjectDifficulty
+        {
+            Id = d.Id, Name = d.Name, FaOnly = d.FaOnly,
+            Document = d.History.HasActiveTransaction ? d.History.CaptureTransactionStart() : d.History.Document.DeepClone()
+        }).ToList()
+    };
+
     private static void RemoveRecoveryOutput(string path)
     {
         // A cleanup failure must not replace the destination failure that needs the user's attention.
@@ -104,16 +118,21 @@ public sealed partial class EditorView
 
     public void ShowError(string message)
     {
-        if (ErrorVisible) return;
-        ClearErrorLayout();
-        operationError = message; errorScroll = 0;
-        hits.Clear(); fields.Clear(); menu = -1; contextItems.Clear();
+        if (ErrorVisible || preparingError) return;
+        preparingError = true;
         try
         {
-            CancelInteraction();
-            if (objectSelection.Any(id => !ObjectExists(id))) SelectObjects(objectSelection.Where(ObjectExists), selection);
+            ClearErrorLayout();
+            operationError = message; errorScroll = 0;
+            hits.Clear(); fields.Clear(); menu = -1; contextItems.Clear();
+            try
+            {
+                CancelInteraction();
+                if (objectSelection.Any(id => !ObjectExists(id))) SelectObjects(objectSelection.Where(ObjectExists), selection);
+            }
+            catch (Exception cleanup) { PrepareRecovery(message + "\n" + cleanup.Message); }
         }
-        catch (Exception cleanup) { ShowRenderError(message + "\n" + cleanup.Message); }
+        finally { preparingError = false; }
     }
 
     private void DismissError()
@@ -126,7 +145,7 @@ public sealed partial class EditorView
     private void DrawError(ICanvas c)
     {
         hits.Clear(); fields.Clear();
-        float w = Math.Min(720, width - 40), h = Math.Min(400, height - 40);
+        float w = Math.Max(240, Math.Min(720, width - 40)), h = Math.Max(180, Math.Min(400, height - 40));
         float x = (width - w) / 2, y = (height - h) / 2;
         c.Fill(new(0, 0, width, height), Background);
         c.Fill(new(x, y, w, h), Panel, 8);
@@ -135,34 +154,7 @@ public sealed partial class EditorView
         var layoutKey = (operationError!, L.Language, RecoveryActive, w, c.GetType());
         if (errorLayoutKey != layoutKey)
         {
-            errorLines.Clear();
-            const int maximumCharacters = 8192, maximumLines = 256;
-            string message = L.Reformat(operationError!);
-            bool truncated = message.Length > maximumCharacters;
-            if (truncated)
-            {
-                int length = maximumCharacters;
-                if (char.IsHighSurrogate(message[length - 1])) length--;
-                message = message[..length];
-            }
-            if (RecoveryActive) message = L.Get("recovery.help") + "\n" + message;
-            foreach (string paragraph in message.Replace("\r", "").Split('\n'))
-            {
-                string line = "";
-                foreach (var rune in paragraph.EnumerateRunes())
-                {
-                    string next = line + rune;
-                    if (line.Length > 0 && (line.Length >= 256 || c.MeasureText(next, 14) > w - 48))
-                    {
-                        errorLines.Add(line); line = "";
-                        if (errorLines.Count >= maximumLines) { truncated = true; break; }
-                    }
-                    line += rune;
-                }
-                if (errorLines.Count >= maximumLines) { truncated = true; break; }
-                errorLines.Add(line);
-            }
-            if (truncated) errorLines.Add("…");
+            errorLines = WrapDiagnosticPreview(c, RecoveryActive ? [L.Get("recovery.help"), operationError!] : [operationError!], 14, w - 48);
             errorLayoutKey = layoutKey;
         }
         var lines = errorLines;

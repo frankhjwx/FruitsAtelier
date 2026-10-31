@@ -20,6 +20,8 @@ internal static class BackgroundTaskRecoveryTests
         foreach (bool fault in new[] { false, true })
             try { PendingPreviewClosure(fault); } catch (Exception error) { failures.Add(error); }
         try { StoryboardExpansionFailure(); } catch (Exception error) { failures.Add(error); }
+        try { StoryboardWorkerRetirement(); } catch (Exception error) { failures.Add(error); }
+        try { SharedStoryboardAdmission(); } catch (Exception error) { failures.Add(error); }
         if (failures.Count > 0) throw new AggregateException(failures);
         Console.WriteLine("PASS background task faults, cancellations, validation recovery and pending preview shutdown");
     }
@@ -162,6 +164,62 @@ internal static class BackgroundTaskRecoveryTests
             }
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void StoryboardWorkerRetirement()
+    {
+        string directory = Path.GetFullPath(Path.Combine("artifacts", "tests", "background-task-recovery", "retired-storyboard"));
+        Directory.CreateDirectory(directory);
+        foreach (bool disable in new[] { true, false })
+        {
+            var ui = new Ui(false);
+            ui.View.LibrarySettings.EnableVideoStoryboard = true;
+            var map = Map(); map.SourcePath = Path.Combine(directory, "map.osu");
+            map.OriginalSections.Add(new() { Name = "Variables", Lines = { "$a= " + new string('x', 65536) } });
+            var events = new OsuSection { Name = "Events" };
+            events.Lines.AddRange(Enumerable.Repeat("$a", 2048));
+            map.OriginalSections.Add(events);
+            ui.View.LoadDocument(map);
+            typeof(EditorView).GetMethod("RefreshStoryboard", Private)!.Invoke(ui.View, null);
+            var worker = (Task)Field("storyboardLoad").GetValue(ui.View)!;
+            var token = ((CancellationTokenSource)Field("storyboardCancellation").GetValue(ui.View)!).Token;
+            Check(!worker.IsCompleted, "Storyboard retirement fixture finished before cancellation");
+            var expected = map;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            if (disable) typeof(EditorView).GetMethod("ToggleVideoStoryboard", Private)!.Invoke(ui.View, null);
+            else { expected = Map(); ui.View.LoadDocument(expected); }
+            Check(watch.Elapsed < TimeSpan.FromSeconds(1) && token.IsCancellationRequested
+                && !ReferenceEquals(worker, Field("storyboardLoad").GetValue(ui.View)),
+                "Retiring storyboard parsing blocked the UI or retained its worker");
+            try { worker.Wait(TimeSpan.FromSeconds(5)); } catch (AggregateException) when (worker.IsCanceled) { }
+            Check(worker.IsCanceled, "Retired storyboard parsing did not observe cancellation");
+            ui.PaintUntilReady();
+            Check(ui.View.Document.ContentEquals(expected) && !ui.View.ErrorVisible && ui.View.PrepareFileOperation(),
+                "Retired storyboard work published an error or prevented saving current content");
+            SaveAndReopen(ui.View);
+        }
+    }
+
+    private static void SharedStoryboardAdmission()
+    {
+        string directory = Path.GetFullPath(Path.Combine("artifacts", "tests", "background-task-recovery", "shared-file"));
+        Directory.CreateDirectory(directory);
+        string path = Path.Combine(directory, "shared.osb");
+        using (var file = File.Create(path)) file.SetLength(OsuBeatmapReader.MaximumFileBytes + 1L);
+        var ui = new Ui(false);
+        ui.View.LibrarySettings.EnableVideoStoryboard = true;
+        var map = Map(); map.SourcePath = Path.Combine(directory, "map.osu");
+        ui.View.LoadDocument(map); ui.PaintUntilReady();
+        Check(ui.View.StatusMessage == L.Get("media.storyboardFailed", L.Get("core.storyboard.fileLimit")) && !ui.View.ErrorVisible,
+            "Oversized shared storyboard was not rejected at file admission with a nonmodal size diagnostic");
+        for (int i = 0; i < 20; i++) ui.Paint();
+        Check(Field("storyboardLoad").GetValue(ui.View) is null && ui.View.Document.ContentEquals(map) && ui.View.PrepareFileOperation(),
+            "Oversized shared storyboard retried or prevented saving authored content");
+        SaveAndReopen(ui.View);
+        File.WriteAllText(path, "[General]\nWidescreenStoryboard:1\n");
+        ui.View.LoadDocument(map); ui.PaintUntilReady();
+        Check(Field("storyboardScene").GetValue(ui.View) is StoryboardScene { Widescreen: true },
+            "A supported shared storyboard could not load after an oversized file was replaced");
     }
 
     private static object FailedTask(Type resultType, bool cancelled, Exception? fault = null)

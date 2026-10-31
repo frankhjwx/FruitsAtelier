@@ -114,6 +114,7 @@ internal sealed partial class EditorWindow
     private void CheckMessageBoundaryRecovery(string directory)
     {
         CheckThumbnailDecoderRecovery();
+        CheckRecoveryTransitionStates(directory);
         var requestSeek = view.RequestSeek;
         int seeks = 0, closePrompts = 0, savePrompts = 0;
         try
@@ -195,6 +196,42 @@ internal sealed partial class EditorWindow
             view.RequestSeek = requestSeek;
             diagnosticFrameWait = null; diagnosticGetMessageResult = null; messageQueueFallback = false;
             diagnosticControl = false; diagnosticRecoveryClose = null; diagnosticRecoveryPath = null;
+        }
+    }
+
+    private void CheckRecoveryTransitionStates(string directory)
+    {
+        var pause = view.RequestPausePlayback;
+        var close = diagnosticRecoveryClose;
+        var recoveryPath = diagnosticRecoveryPath;
+        var document = view.Document.DeepClone();
+        int closePrompts = 0, cleanupCalls = 0;
+        try
+        {
+            setupPlayRequested = true;
+            diagnosticRecoveryClose = () => { closePrompts++; return 2; };
+            view.RequestPausePlayback = () =>
+            {
+                cleanupCalls++;
+                WndProc(hwnd, 0x0010, 0, 0);
+                DispatchShortcutBeforeTranslation(new Native.Message { Window = hwnd, Id = 0x0100, WParam = 13 });
+                throw new InvalidOperationException("Pause cleanup fault");
+            };
+            HandleWindowFailure(hwnd, 0x0113, new InvalidOperationException("Recovery transition fault"));
+            if (setupPlayRequested || !view.RecoveryActive || closePrompts != 0 || cleanupCalls != 1 || failed)
+                throw new InvalidOperationException("Recovery cleanup accepted owner input or retained startup playback intent.");
+            view.RequestPausePlayback = pause;
+            string path = Path.Combine(directory, "cleanup.catchproj");
+            diagnosticRecoveryPath = () => path;
+            if (!SaveRecoveryCopy() || !document.ContentEquals(ProjectSerializer.ReadProjectFile(path).Difficulties[view.ActiveDifficultyIndex].Document))
+                throw new InvalidOperationException("Cleanup callback failure prevented an intact recovery copy.");
+            AppLog.Write("Recovery transition passed: cleanup reentry blocked, startup playback request cancelled and authored copy reopened unchanged.");
+        }
+        finally
+        {
+            view.RequestPausePlayback = pause; diagnosticRecoveryClose = close;
+            diagnosticRecoveryPath = recoveryPath;
+            setupPlayRequested = false; view.RetryRender();
         }
     }
 

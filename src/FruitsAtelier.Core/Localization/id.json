@@ -1941,6 +1941,8 @@
   "timing.sv": "SV (×)",
   "timing.finishDraft": "Terapkan atau batalkan perubahan timing sebelum mengganti tampilan SV.",
   "timing.sourceChanged": "Timing di editor telah berubah. Buka kembali jendela ini sebelum menerapkan.",
+  "core.storyboard.fileLimit": "File storyboard melebihi batas 32 MiB.",
+  "core.storyboard.sceneExpansionLimit": "Teks storyboard yang diperluas melebihi batas adegan sebesar 268.435.456 karakter.",
   "core.storyboard.expansionLimit": "Perluasan variabel storyboard melebihi batas 33.554.432 karakter.",
   "media.storyboardDiagnostics": "Storyboard: {0} perintah atau sumber daya tidak valid dilewati.",
   "media.storyboardFailed": "Storyboard tidak dapat dimuat: {0}",

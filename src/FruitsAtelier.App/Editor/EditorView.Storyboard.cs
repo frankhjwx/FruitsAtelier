@@ -147,7 +147,7 @@ public sealed partial class EditorView
             string? sharedPath = Directory.EnumerateFiles(directory, "*", SearchOption.TopDirectoryOnly)
                 .Where(p => string.Equals(Path.GetExtension(p), ".osb", StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase).FirstOrDefault();
             token.ThrowIfCancellationRequested();
-            return StoryboardReader.Read(source.ToString(), sharedPath is null ? null : File.ReadAllText(sharedPath), directory, token, samplesOnly: samplesOnly);
+            return StoryboardReader.Read(source.ToString(), sharedPath is null ? null : StoryboardReader.ReadSharedFile(sharedPath, token), directory, token, samplesOnly: samplesOnly);
         }, token);
     }
 

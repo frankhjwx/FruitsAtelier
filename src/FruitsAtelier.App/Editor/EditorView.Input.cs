@@ -2004,6 +2004,7 @@ public sealed partial class EditorView
     }
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
+        if (preparingError) return;
         if (ErrorVisible)
         {
             mouseX = x; mouseY = y;
@@ -2034,6 +2035,7 @@ public sealed partial class EditorView
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (preparingError) return;
         if (ErrorVisible)
         {
             if (ScreenshotKeyDown(virtualKey, ctrl, shift)) return;

@@ -15,6 +15,7 @@ internal sealed class MacUiBoundary(EditorView view, Action<Exception> log, Acti
 
     internal void Run(Action operation)
     {
+        if (reporting) return;
         try { operation(); }
         catch (Exception error) { Report(error); }
     }

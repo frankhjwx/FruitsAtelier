@@ -68,13 +68,22 @@ by layer and source order without boxing enum values.
 Evaluation has no forward playback cursor and supports alternating distant seeks.
 Uniform and vector scale remain separate, multiplicative properties, matching osu!.
 All image paths resolve within the mapset; source event text remains unchanged.
+Shared `.osb` files are limited to 32 MiB before decoding, with a byte-count check
+during reading to reject files that grow past the limit.
+Playback, AiMod resource analysis and hitsound cleanup use this same admission
+limit. AiMod also shares its expanded-output budget across all analyzed storyboard
+files while keeping each file's variable definitions separate.
 Variable keys and values retain their whitespace, including command indentation.
 Independent single-character macros use a lookup pass; overlapping, recursive or
 other definitions retain insertion-ordered substitution. Parsing splits only on LF
-and checks cancellation during substitution and sprite compilation. Macro-bearing
-lines and each substitution result are limited to 33,554,432 UTF-16 code units;
-growth is checked before allocating expanded output. Oversized expansion reports
-a media loading failure without modifying authored Events or Variables. Compilation
+and checks cancellation during substitution and sprite compilation. Event lines
+and each substitution result are limited to 33,554,432 UTF-16 code units;
+growth is checked before allocating expanded output. A reader also limits the sum
+of final expanded lines to 268,435,456 UTF-16 code units across its source files;
+intermediate substitutions count only against the per-line limit. These bounds
+limit expansion size, while cancellation remains responsible for retiring work.
+Oversized expansion reports a loading or analysis failure without modifying
+authored Events or Variables. Compilation
 distributes commands into property tracks without repeated per-property filtering
 and computes initial values without materializing sorted intermediate sequences.
 

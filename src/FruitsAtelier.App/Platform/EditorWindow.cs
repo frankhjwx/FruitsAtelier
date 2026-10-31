@@ -407,7 +407,7 @@ internal sealed partial class EditorWindow : IDisposable
                 return 0;
             case 0x0233: // WM_DROPFILES
                 var dropped = Native.TakeDroppedFiles((nint)wParam);
-                if (!NativeModalScope.Active && !view.RecoveryActive) FileOperation(() => view.DropLibraryFiles(dropped));
+                if (!failed && !NativeModalScope.Active && !recoveryDialogActive && !view.RecoveryActive) FileOperation(() => view.DropLibraryFiles(dropped));
                 return 0;
             case OsuBrowserWindow.ViewportChangedMessage:
                 Invalidate(); return 0;
@@ -602,7 +602,7 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0106: // WM_SYSCHAR
                 if ((int)wParam == 13) return 0;
                 break;
-            case 0x0007: view.SetTextInputFocus(true); if (!view.ErrorVisible && !NativeModalScope.Active) { view.CheckFilesOnActivation(); view.RefreshOsuLinkSettings(refreshApplications: true); } Invalidate(); return 0; // WM_SETFOCUS
+            case 0x0007: view.SetTextInputFocus(true); if (!failed && !view.ErrorVisible && !NativeModalScope.Active && !recoveryDialogActive) { view.CheckFilesOnActivation(); view.RefreshOsuLinkSettings(refreshApplications: true); } Invalidate(); return 0; // WM_SETFOCUS
             case 0x0008: // WM_KILLFOCUS
                 view.SetTextInputFocus(false);
                 view.CancelInteraction(preserveTestplay: true);

@@ -40,11 +40,16 @@ internal sealed class EditorControl : Control, IDisposable
     internal Action? Changed;
     internal Action<Exception>? RecoveryRendererFailed;
     private float uiScale = 1;
-    private bool nativeFallbackRequested;
+    private readonly MacRenderRecovery renderRecovery;
     private Point EditorPoint(PointerEventArgs e) => e.GetPosition(this) / uiScale;
     public EditorControl()
     {
         boundary = new(View, error => MacPaths.Log(error.ToString()), InvalidateVisual);
+        renderRecovery = new(boundary.Report, error =>
+        {
+            MacPaths.Log(error.ToString());
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => boundary.Run(() => RecoveryRendererFailed?.Invoke(error)));
+        });
         Focusable = true; ClipToBounds = true;
         DragDrop.SetAllowDrop(this, true);
         DragDrop.AddDragOverHandler(this, (_, e) => boundary.Run(() =>
@@ -164,37 +169,17 @@ internal sealed class EditorControl : Control, IDisposable
     }
     public override void Render(DrawingContext context)
     {
+        renderRecovery.BeginFrame(View.RecoveryActive);
         try { RenderEditor(context); }
-        catch (Exception error) { boundary.Report(error); }
+        catch (Exception error) { renderRecovery.Fail(error, View.RecoveryActive); }
     }
     private void RenderEditor(DrawingContext context)
     {
         base.Render(context);
-        if (!View.RecoveryActive) nativeFallbackRequested = false;
         uiScale = View.UiScaleFactor;
-        try
-        {
-            using var transform = context.PushTransform(Matrix.CreateScale(uiScale, uiScale));
-            using var canvas = new MacCanvas(context, images, (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * uiScale);
+        using (context.PushTransform(Matrix.CreateScale(uiScale, uiScale)))
+        using (var canvas = new MacCanvas(context, images, (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * uiScale))
             View.Render(canvas, (float)Bounds.Width / uiScale, (float)Bounds.Height / uiScale);
-        }
-        catch (Exception error)
-        {
-            if (View.RecoveryActive)
-            {
-                if (!nativeFallbackRequested)
-                {
-                    nativeFallbackRequested = true;
-                    MacPaths.Log(error.ToString());
-                    Avalonia.Threading.Dispatcher.UIThread.Post(() => boundary.Run(() => RecoveryRendererFailed?.Invoke(error)));
-                }
-            }
-            else
-            {
-                boundary.Report(error);
-            }
-            return;
-        }
         if (View.ErrorVisible) return;
         UpdatePointerCursor();
         if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)
@@ -312,7 +297,8 @@ internal sealed class EditorControl : Control, IDisposable
     {
         try
         {
-            if (View.RecoveryActive && !recoveryHeldKeys.Add(e.Key)) { e.Handled = true; return; }
+            bool alreadyHeld = !recoveryHeldKeys.Add(e.Key);
+            if (View.RecoveryActive && alreadyHeld) { e.Handled = true; return; }
             View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
             View.KeyDown(MacInput.VirtualKey(e.Key, View.IsEditingText || View.CapturingTestplayKey || View.IsTestplaying), MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
             e.Handled = View.IsTestplaying || View.CapturingTestplayKey || e.Key is Key.Tab or Key.Space or Key.Back or Key.Delete or Key.Enter or Key.Escape
