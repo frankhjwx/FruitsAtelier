@@ -1962,5 +1962,12 @@
   "recovery.saved": "復原副本已儲存：{0}",
   "recovery.failed": "無法儲存復原副本：{0}",
   "recovery.nativeHelp": "圖形繪製器無法使用。按 Ctrl+S 儲存復原副本，或按 Enter 重試繪製。專案仍保留在記憶體中。",
-  "recovery.closeHelp": "關閉前儲存復原副本？選擇「否」將不儲存並關閉。"
+  "recovery.closeHelp": "關閉前儲存復原副本？選擇「否」將不儲存並關閉。",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

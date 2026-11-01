@@ -33,6 +33,7 @@ public sealed partial class EditorView
         editorWriteCache = new(); editorConversionCache = new(); draftConversionCache = new();
         conversion = null; playableExport = null; playableObjects = [];
         displayedTiming = []; svOnlyTiming.Clear();
+        customBpmTarget = null; customDefaultBpm = false; BpmMultiplierBounds = default;
         CloseTimingSetup();
         timingEntries.Clear(); timingUndo.Clear(); timingRedo.Clear(); timingDisplayOriginals.Clear();
         renderedTiming = snapTiming = null;

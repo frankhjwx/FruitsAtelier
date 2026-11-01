@@ -2159,3 +2159,29 @@ through Layout reveals its active tab.
 The independent Mapset Verifier dock displays General and current-difficulty
 issues with grouped check titles and clickable timestamps. See
 [Mapset Verifier](MAPSET_VERIFIER.md) for refresh, upstream updates and engine setup.
+
+
+## Aspire slider BPM multipliers
+
+Enable **Song Setup → FA Settings → Aspire Features → Enable BPM multiplier to
+modify slider behaviours** for the active difficulty. The upper-right **BPM
+Multiplier** control sets the multiplier for newly drawn FSliders and native
+sliders. Changing it leaves existing sliders unchanged. Select a single slider
+in Slider Inspector to change its own multiplier. Both controls offer 0.125,
+0.25, 0.5, 1, 2, 4 and 8, followed by **Custom**, which reveals a numeric input.
+Custom values must be finite and greater than zero.
+
+Multipliers change slider timing and nested-event density. FSlider anchors,
+handles and their position-versus-time curve remain authored as before; a lower
+multiplier that cannot realize that curve reports a conversion failure. Native
+sliders retain their geometric path and change duration with their BPM.
+The editing beat grid continues using authored timing.
+
+Export inserts a red timing point when a slider needs another BPM, together
+with a green point at the same timestamp. Their meter, sample bank, sample index,
+volume and effects match, including hitsound overrides. Subsequent sliders use
+their own starting BPM; matching effective BPMs can share a red point. The final
+slider restores authored BPM at its end. Generated red points are visible even
+with **Show SV** disabled. Their BPM/offset are derived from the slider and are
+read-only in Timing setup. Disabling the feature retains saved multipliers but
+uses the original BPM for conversion and export.

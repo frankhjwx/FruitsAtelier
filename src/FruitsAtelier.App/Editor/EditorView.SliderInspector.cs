@@ -181,6 +181,15 @@ public sealed partial class EditorView
         if (inspectorTargets.Length == 1 && (Document.Tracks.Any(t => t.Id == inspectorTargets[0] && t.StreamSnapDivisor is null)
             || Document.ImportedSliders.Any(t => t.Id == inspectorTargets[0]))) Section(1, "inspector.section.timing");
         AddEndpointSnapActions(actions, enabled);
+        if (Document.EnableSliderBpmMultiplier && inspectorOnlySliders && inspectorTargets.Length == 1
+            && (Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0])
+                || Document.Tracks.Any(t => t.Id == inspectorTargets[0] && t.StreamSnapDivisor is null)))
+        {
+            actions.Add((L.Get("aspire.multiplier"), () => { }, !notesLocked && drag == DragKind.None
+                && draftTrack == Guid.Empty && draftBanana == Guid.Empty && !LegacyDropletRefreshBusy, 8));
+            if (customBpmTarget == inspectorTargets[0] || !SliderBpm.Presets.Contains(BpmValue(inspectorTargets[0]))) actions.Add((L.Get("aspire.custom"), () => { }, !notesLocked && drag == DragKind.None
+                && draftTrack == Guid.Empty && draftBanana == Guid.Empty && !LegacyDropletRefreshBusy, 9));
+        }
         if (inspectorTargets.Length == 1 && Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0]))
             actions.Add((L.Get("legacySv.label"), () => { }, !notesLocked && drag == DragKind.None
                 && draftTrack == Guid.Empty && draftBanana == Guid.Empty && !LegacyDropletRefreshBusy, 3));
@@ -341,7 +350,16 @@ public sealed partial class EditorView
                 if (action.Kind == 6) SliderEndpointEndBounds = box;
                 if (action.Kind == 7) SliderDropletModeBounds = box;
             }
-            if (action.Kind == 3 && action.Enabled)
+            if (action.Kind == 8)
+                DrawBpmControl(c, box, inspectorTargets[0], action.Enabled);
+            else if (action.Kind == 9 && action.Enabled)
+            {
+                float fieldY = box.Y;
+                Guid target = inspectorTargets[0];
+                Field(c, box.X, ref fieldY, box.Width, L.Get("aspire.custom"), BpmValue(target),
+                    v => ApplyBpm(target, v), Math.Min(80, box.Width * .45f));
+            }
+            else if (action.Kind == 3 && action.Enabled)
             {
                 var slider = Document.ImportedSliders.Single(s => s.Id == inspectorTargets[0]);
                 double value = slider.SliderVelocityMultiplier ?? ImportedSliderConverter.SliderVelocityAt(Document, slider);
@@ -361,7 +379,7 @@ public sealed partial class EditorView
             var box = hits[i].Bounds;
             if (box.Y < viewport.Y || box.Bottom > viewport.Bottom || box.Right <= viewport.X || box.X >= viewport.Right) hits.RemoveAt(i);
         }
-        fields.RemoveAll(f => f.Label == L.Get("legacySv.label")
+        fields.RemoveAll(f => (f.Label == L.Get("legacySv.label") || f.Label == L.Get("aspire.custom"))
             && (f.Bounds.Y < viewport.Y || f.Bounds.Bottom > viewport.Bottom));
         if (inspectorContentHeight > viewport.Height)
         {

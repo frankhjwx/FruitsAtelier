@@ -51,7 +51,8 @@ public sealed class OsuWriteCache
         if (emittedTiming is not null && timingInput!.MatchesTiming(document)
             && timingSliders.Length == sliders.Count
             && timingSliders.Where((slider, i) => slider.StartTimeMs != sliders[i].StartTimeMs
-                || slider.SliderVelocityMultiplier != sliders[i].SliderVelocityMultiplier).Any() == false
+                || slider.SliderVelocityMultiplier != sliders[i].SliderVelocityMultiplier
+                || slider.BeatLengthMs != sliders[i].BeatLengthMs || slider.DurationMs != sliders[i].DurationMs).Any() == false
             && importedTimes.SequenceEqual(document.ImportedSliders.Select(s => s.TimeMs))) return emittedTiming;
         var result = build(document, sliders);
         timingSliders = sliders.ToArray();
@@ -150,6 +151,7 @@ public static class OsuBeatmapWriter
                 original.ImportedSliders[0].RandomizationBaseVelocity = slider.RandomizationBaseVelocity;
                 original.ImportedSliders[0].PreserveNativeGeometry = slider.PreserveNativeGeometry;
                 original.ImportedSliders[0].EndpointSnap = slider.EndpointSnap;
+                original.ImportedSliders[0].BpmMultiplier = slider.BpmMultiplier;
                 original.ImportedSliders[0].SliderVelocityMultiplier = slider.SliderVelocityMultiplier;
                 original.ImportedSliders[0].ProcessedSliderVelocityMultiplier = slider.ProcessedSliderVelocityMultiplier;
                 if (!slider.ContentEquals(original.ImportedSliders[0])) throw new InvalidDataException(L.Get("core.writer.importedChanged"));
@@ -219,10 +221,10 @@ public static class OsuBeatmapWriter
             }
             lines.Add((slider.StartTimeMs, track.SourceOrder, slider.SourceId, string.Join(',', values)));
         }
-        var timingDocument = document;
+        var timingDocument = SliderBpmTiming.Prepare(document, converted.Sliders);
         if (document.EffectiveSliderMultiplier != document.SliderMultiplier)
         {
-            timingDocument = document.DeepClone();
+            timingDocument = timingDocument.DeepClone();
             if (timingDocument.TimingPoints.Count == 0)
                 timingDocument.TimingPoints.Add(new() { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs });
             double firstSlider = generated.Select(s => QuantizeTime(s.StartTimeMs))
@@ -230,7 +232,7 @@ public static class OsuBeatmapWriter
             SliderMultiplierEditing.RebaseTiming(timingDocument, document.EffectiveSliderMultiplier, firstSlider);
         }
         var sourceTiming = new TimingMap.Lookup(document);
-        var independent = document.ImportedSliders.Where(s => (s.SliderVelocityMultiplier is not null || s.PreserveNativeGeometry)
+        var independent = document.ImportedSliders.Where(s => document.EnableSliderBpmMultiplier || (s.SliderVelocityMultiplier is not null || s.PreserveNativeGeometry)
             && Math.Abs(ImportedSliderConverter.SliderVelocityAt(document, s, sourceTiming)
                 - sourceTiming.At(s.PreserveNativeGeometry ? QuantizeTime(s.TimeMs) : s.TimeMs).SliderVelocityMultiplier) > 1e-9).Select(s => s.Id).ToHashSet();
         var timingSliders = generated;
@@ -246,6 +248,7 @@ public static class OsuBeatmapWriter
             timing = timing.Select(p => p.DeepClone()).ToList();
             HitsoundCopier.ApplyToExport(document, converted.Objects, lines, timing);
         }
+        if (document.EnableSliderBpmMultiplier) timing = SliderBpmTiming.AlignPairs(timing);
         if (timingSliders.Length > 0) timing = RemoveUnusedInheritedTiming(timing, converted, document);
         var output = document.DeepClone();
         SetNumber(output, "Editor", "DistanceSpacing", document.DistanceSpacing);

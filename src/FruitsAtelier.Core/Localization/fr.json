@@ -1962,5 +1962,12 @@
   "recovery.saved": "Copie de récupération enregistrée : {0}",
   "recovery.failed": "Impossible d’enregistrer la copie de récupération : {0}",
   "recovery.nativeHelp": "Le moteur graphique est indisponible. Appuyez sur Ctrl+S pour enregistrer une copie de récupération, ou sur Entrée pour réessayer. Votre projet reste en mémoire.",
-  "recovery.closeHelp": "Enregistrer une copie de récupération avant de fermer ? Choisissez Non pour fermer sans enregistrer."
+  "recovery.closeHelp": "Enregistrer une copie de récupération avant de fermer ? Choisissez Non pour fermer sans enregistrer.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

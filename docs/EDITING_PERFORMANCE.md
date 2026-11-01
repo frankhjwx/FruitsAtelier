@@ -413,3 +413,10 @@ or a display-mode switch rebuilds the array and pure-SV classification; painting
 selection and lock toggles reuse them. Difficulty cache retirement clears both.
 Timing presentation never starts an export or conversion from painting or pointer
 movement.
+
+
+Aspire BPM multipliers participate in each parent's conversion-cache identity.
+Timing export includes effective beat length and duration in its cache key;
+red-point restoration depends on the final slider end. Creation defaults do not
+change existing parent geometry. The authoring timing lookup and beat grid
+remain independent of generated Aspire red points.

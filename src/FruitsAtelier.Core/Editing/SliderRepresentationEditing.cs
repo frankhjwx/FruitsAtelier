@@ -15,7 +15,8 @@ public static class SliderRepresentationEditing
         bool settingsChanged = before.DerandomizeFSliderDroplets != after.DerandomizeFSliderDroplets
             || before.DerandomizeDropletsForHardRock != after.DerandomizeDropletsForHardRock
             || before.RandomizeDropletStrength != after.RandomizeDropletStrength
-            || before.RandomizeDropletSeed != after.RandomizeDropletSeed;
+            || before.RandomizeDropletSeed != after.RandomizeDropletSeed
+            || before.EnableSliderBpmMultiplier != after.EnableSliderBpmMultiplier;
         bool managed = after.DerandomizeFSliderDroplets || after.DerandomizeDropletsForHardRock
             || after.RandomizeDropletStrength != 20 || after.RandomizeDropletSeed != 1337
             || after.ImportedSliders.Any(s => s.RandomizationSource is not null || s.DropletMode is not null);
@@ -23,7 +24,7 @@ public static class SliderRepresentationEditing
         if (after.ImportedSliders.Any(s => s.DropletMode != (oldSliders.TryGetValue(s.Id, out var old) ? old.DropletMode : null))) return true;
         if (after.ImportedSliders.Any(s => s.SliderVelocityMultiplier is not null
             && (!oldSliders.TryGetValue(s.Id, out var old) || s.SliderVelocityMultiplier != old.SliderVelocityMultiplier
-                || s.TimeMs != old.TimeMs || s.X != old.X || s.Y != old.Y || s.PixelLength != old.PixelLength
+                || s.BpmMultiplier != old.BpmMultiplier || s.TimeMs != old.TimeMs || s.X != old.X || s.Y != old.Y || s.PixelLength != old.PixelLength
                 || s.PathType != old.PathType || s.SpanCount != old.SpanCount || !s.ControlPoints.ContentEquals(old.ControlPoints)))) return true;
         var oldTracks = before.Tracks.ToDictionary(t => t.Id);
         var fixedHeads = after.ImportedSliders.Where(s => s.SliderVelocityMultiplier is not null).Select(s => s.TimeMs).ToHashSet();
@@ -89,8 +90,8 @@ public static class SliderRepresentationEditing
             foreach (var slider in sources.Where(s => s.RandomizationTrack is not null))
             {
                 if (previousLookup is null || previousSliders is null || !previousSliders.TryGetValue(slider.Id, out var oldSlider)) continue;
-                var oldTiming = previousLookup.At(oldSlider.TimeMs);
-                var nextTiming = timingLookup.At(slider.TimeMs);
+                var oldTiming = SliderBpm.Apply(previous!, previousLookup.At(oldSlider.TimeMs), oldSlider.BpmMultiplier);
+                var nextTiming = SliderBpm.Apply(document, timingLookup.At(slider.TimeMs), slider.BpmMultiplier);
                 double oldSv = oldSlider.SliderVelocityMultiplier is { } oldOwn ? oldOwn * previous!.SliderMultiplier / previous.EffectiveSliderMultiplier : oldTiming.SliderVelocityMultiplier;
                 double nextSv = slider.SliderVelocityMultiplier is { } nextOwn ? nextOwn * document.SliderMultiplier / document.EffectiveSliderMultiplier : nextTiming.SliderVelocityMultiplier;
                 double velocityRatio = nextSv / oldSv;
@@ -133,6 +134,7 @@ public static class SliderRepresentationEditing
                 TimingEditing.TransformTrack(baseline, baseline.Nodes[0].TimeMs, slider.TimeMs, timeScales.GetValueOrDefault(slider.Id, 1));
                 baseline.OriginalLine = slider.OriginalLine;
                 baseline.SourceOrder = slider.SourceOrder;
+                baseline.BpmMultiplier = slider.BpmMultiplier;
                 baseline.EndpointSnap = slider.EndpointSnap;
                 candidate.Tracks.Add(baseline);
             }
@@ -184,6 +186,7 @@ public static class SliderRepresentationEditing
             foreach (var source in sources)
             {
                 var slider = materialized[source.Id].DeepClone();
+                slider.BpmMultiplier = source.BpmMultiplier;
                 slider.SourceOrder = source.SourceOrder;
                 slider.EndpointSnap = source.EndpointSnap;
                 slider.PreserveNativeGeometry = source.PreserveNativeGeometry;
@@ -249,6 +252,7 @@ public static class SliderRepresentationEditing
             var before = OsuBeatmapWriter.Serialize(document, compensateTinyDroplets);
             var candidate = document.DeepClone();
             var slider = before.ReadBack.ImportedSliders.Single(s => s.Id == id).DeepClone();
+            slider.BpmMultiplier = track.BpmMultiplier;
             slider.SourceOrder = track.SourceOrder;
             slider.EndpointSnap = track.EndpointSnap;
             slider.RandomizationSource = slider.DeepClone();

@@ -1962,5 +1962,12 @@
   "recovery.saved": "Herstelkopie opgeslagen: {0}",
   "recovery.failed": "Herstelkopie kon niet worden opgeslagen: {0}",
   "recovery.nativeHelp": "De grafische renderer is niet beschikbaar. Druk op Ctrl+S om een herstelkopie op te slaan, of op Enter om opnieuw te proberen. Je project blijft in het geheugen.",
-  "recovery.closeHelp": "Een herstelkopie opslaan voordat je afsluit? Kies Nee om af te sluiten zonder op te slaan."
+  "recovery.closeHelp": "Een herstelkopie opslaan voordat je afsluit? Kies Nee om af te sluiten zonder op te slaan.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

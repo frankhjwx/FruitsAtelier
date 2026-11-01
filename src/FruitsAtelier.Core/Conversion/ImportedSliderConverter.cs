@@ -29,7 +29,7 @@ public static class ImportedSliderConverter
     public static double VelocityAt(MapDocument document, ImportedSlider slider, TimingMap.Lookup? lookup = null)
     {
         lookup ??= new TimingMap.Lookup(document);
-        var state = lookup.At(slider.TimeMs);
+        var state = SliderBpm.Apply(document, lookup.At(slider.TimeMs), slider.BpmMultiplier);
         return LegacyCatchRules.Velocity(state.BeatLengthMs, document.EffectiveSliderMultiplier, SliderVelocityAt(document, slider, lookup));
     }
 
@@ -45,7 +45,7 @@ public static class ImportedSliderConverter
     {
         var path = slider.GetGeometry();
         var lookup = new TimingMap.Lookup(document);
-        var timing = lookup.At(slider.TimeMs);
+        var timing = SliderBpm.Apply(document, lookup.At(slider.TimeMs), slider.BpmMultiplier);
         double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, SliderVelocityAt(document, slider, lookup));
         double spanDuration = path.Distance / velocity;
         if (spanDuration <= 0) return Math.Clamp((float)slider.X, 0, 512);
@@ -65,7 +65,7 @@ public static class ImportedSliderConverter
             || slider.ControlPoints.Any(p => !double.IsFinite(p.X) || !double.IsFinite(p.GeometryY)))
             throw new CatchConversionException(L.Get("core.importConverter.parameters"));
         var path = slider.GetGeometry();
-        var timing = lookup.At(slider.TimeMs);
+        var timing = SliderBpm.Apply(document, lookup.At(slider.TimeMs), slider.BpmMultiplier);
         double sv = SliderVelocityAt(document, slider, lookup);
         double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, sv);
         double duration = path.Distance / velocity;
@@ -88,7 +88,7 @@ public static class ImportedSliderConverter
         {
             ImportedGeometry = path, ImportedOffsets = nested.Select(item => item.RawOffset).ToArray(),
             SourceId = slider.Id, IsImported = true, SpanCount = slider.SpanCount, StartTimeMs = slider.TimeMs,
-            DurationMs = duration * slider.SpanCount, Velocity = velocity, SliderVelocityMultiplier = sv,
+            BeatLengthMs = timing.BeatLengthMs, DurationMs = duration * slider.SpanCount, Velocity = velocity, SliderVelocityMultiplier = sv,
             TickDistance = tickDistance, Length = path.Distance, Path = path.AbsolutePoints(), TinyCompensationApplied = false
         }, objects);
     }

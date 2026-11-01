@@ -1962,5 +1962,12 @@
   "recovery.saved": "บันทึกสำเนากู้คืนแล้ว: {0}",
   "recovery.failed": "ไม่สามารถบันทึกสำเนากู้คืน: {0}",
   "recovery.nativeHelp": "ตัวเรนเดอร์กราฟิกไม่พร้อมใช้งาน กด Ctrl+S เพื่อบันทึกสำเนากู้คืน หรือ Enter เพื่อลองเรนเดอร์อีกครั้ง โปรเจกต์ยังอยู่ในหน่วยความจำ",
-  "recovery.closeHelp": "บันทึกสำเนากู้คืนก่อนปิดหรือไม่? เลือก ไม่ เพื่อปิดโดยไม่บันทึก"
+  "recovery.closeHelp": "บันทึกสำเนากู้คืนก่อนปิดหรือไม่? เลือก ไม่ เพื่อปิดโดยไม่บันทึก",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

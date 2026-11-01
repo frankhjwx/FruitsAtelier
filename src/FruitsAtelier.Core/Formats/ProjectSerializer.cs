@@ -24,6 +24,8 @@ public static partial class ProjectSerializer
         MaxDepth = 64,
         TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { info =>
         {
+            foreach (var property in info.Properties.Where(p => p.Name is "BpmMultiplier" or "DefaultSliderBpmMultiplier"))
+                property.ShouldSerialize = (_, value) => (double)value! != 1;
             if (info.Type == typeof(Fruit))
                 info.Properties.First(p => p.Name == nameof(Fruit.Y)).ShouldSerialize = (owner, _) => HasFruitY((Fruit)owner);
             if (info.Type == typeof(BeatmapProject))
@@ -60,7 +62,7 @@ public static partial class ProjectSerializer
             if (copy.AudioPath is not null && Path.IsPathFullyQualified(copy.AudioPath)) copy.AudioPath = Path.GetRelativePath(directory, copy.AudioPath);
             if (copy.SourcePath is not null && Path.IsPathFullyQualified(copy.SourcePath)) copy.SourcePath = Path.GetRelativePath(directory, copy.SourcePath);
         }
-        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasMinimumSliderSv(copy) ? 45 : HasLegacyDropletModes(copy) ? 43 : HasFSliderSv(copy) ? 41 : copy.CollaborationEditableRanges is not null ? 39 : copy.SliderImportState != SliderImportState.None ? 37 : HasUnassignedSections(copy) ? 35 : copy.CollaborationReferences is { Count: > 0 } ? 33 : HasEndpointSnap(copy) ? 31 : HasIndependentSv(copy) ? 29 : HasOsuCanvasData(copy) ? 27 : HasDropletModes(copy) ? 25 : HasBananaPatterns(copy) ? 21 : copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, WriteOptions([copy]));
+        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasSliderBpm(copy) ? 47 : HasMinimumSliderSv(copy) ? 45 : HasLegacyDropletModes(copy) ? 43 : HasFSliderSv(copy) ? 41 : copy.CollaborationEditableRanges is not null ? 39 : copy.SliderImportState != SliderImportState.None ? 37 : HasUnassignedSections(copy) ? 35 : copy.CollaborationReferences is { Count: > 0 } ? 33 : HasEndpointSnap(copy) ? 31 : HasIndependentSv(copy) ? 29 : HasOsuCanvasData(copy) ? 27 : HasDropletModes(copy) ? 25 : HasBananaPatterns(copy) ? 21 : copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, WriteOptions([copy]));
         if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.writeLimit"));
         return text;
@@ -72,7 +74,7 @@ public static partial class ProjectSerializer
         ProjectFile? file;
         try { file = JsonSerializer.Deserialize<ProjectFile>(text, options); }
         catch (JsonException error) { throw new InvalidDataException(L.Get("core.project.invalidJson"), error); }
-        if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17 or 19 or 21 or 25 or 27 or 29 or 31 or 33 or 35 or 37 or 39 or 41 or 43 or 45) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
+        if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17 or 19 or 21 or 25 or 27 or 29 or 31 or 33 or 35 or 37 or 39 or 41 or 43 or 45 or 47) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
         var document = file.Document;
         NormalizeRandomizationStrength(document);
         NormalizeBaseDistance(document);
@@ -119,6 +121,8 @@ public static partial class ProjectSerializer
     private static bool HasUnassignedSections(MapDocument document) => document.CollaborationReferences?.Any(r => r.DifficultyId == Guid.Empty) == true;
     private static bool HasEndpointSnap(MapDocument document) => document.Tracks.Any(t => t.EndpointSnap is not null)
         || document.ImportedSliders.Any(s => s.EndpointSnap is not null);
+    private static bool HasSliderBpm(MapDocument document) => document.EnableSliderBpmMultiplier || document.DefaultSliderBpmMultiplier != 1
+        || document.Tracks.Any(t => t.BpmMultiplier != 1) || document.ImportedSliders.Any(s => s.BpmMultiplier != 1);
     private static bool HasMinimumSliderSv(MapDocument document) => document.Tracks.Any(t => t.MinimumSliderVelocityMultiplier is not null)
         || document.ImportedSliders.Any(s => s.RandomizationTrack?.MinimumSliderVelocityMultiplier is not null);
     private static bool HasFSliderSv(MapDocument document) => document.Tracks.Any(t => t.SliderVelocityMultiplier is not null);

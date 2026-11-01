@@ -1962,5 +1962,12 @@
   "recovery.saved": "복구 사본 저장됨: {0}",
   "recovery.failed": "복구 사본을 저장할 수 없습니다: {0}",
   "recovery.nativeHelp": "그래픽 렌더러를 사용할 수 없습니다. Ctrl+S로 복구 사본을 저장하거나 Enter로 렌더링을 다시 시도하세요. 프로젝트는 메모리에 유지됩니다.",
-  "recovery.closeHelp": "닫기 전에 복구 사본을 저장하시겠습니까? 저장하지 않고 닫으려면 아니요를 선택하세요."
+  "recovery.closeHelp": "닫기 전에 복구 사본을 저장하시겠습니까? 저장하지 않고 닫으려면 아니요를 선택하세요.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

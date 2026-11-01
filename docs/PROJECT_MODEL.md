@@ -449,3 +449,15 @@ Project notes are UTF-8 text stored in the workspace manifest and project contai
 Missing notes default to an empty string. The editor supports up to 65,536 UTF-16
 code units. Notes have a separate saved baseline and text undo history; they do not
 modify map documents, invalidate conversion, or enter exported beatmap data.
+
+
+## Aspire slider BPM settings
+
+Schema 47 (single difficulty) and 48 (multi-difficulty) add
+`EnableSliderBpmMultiplier`, `DefaultSliderBpmMultiplier`, and per-slider
+`BpmMultiplier` on CurveTrack and ImportedSlider. The enable flag defaults to
+false and all multipliers default to one. Default values are omitted so projects
+that do not use this feature keep their previous schema. Cloning, content
+comparison, history and representation conversion retain these values.
+The setting and creation default belong to each difficulty. Older schemas
+remain readable. See [Aspire controls](EDITOR_UI.md#aspire-slider-bpm-multipliers).

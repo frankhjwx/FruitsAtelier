@@ -143,3 +143,15 @@ events. Their times are then mapped back to the precise authored origin for curv
 sampling and editing. This keeps tiny counts and NM/HR random consumption consistent
 with export at integer interval thresholds while retaining saved anchor times and
 span durations. Imported Legacy Sliders continue to use their retained source times.
+
+
+## Aspire slider timing export
+
+Enabled per-slider BPM multipliers divide the effective head beat length by the
+saved multiplier while keeping inherited SV within 0.1–10. Generated red and green
+points share a timestamp and all common meter, sample and effect properties;
+hitsound overrides are resolved before these properties are aligned. Each slider
+locks its own head timing. Matching BPMs reuse the current red point, later slider
+heads establish their own BPM, and the final slider end restores authored BPM.
+Multipliers are project authoring data; `.osu` output represents them using
+ordinary timing points. See [Aspire controls](EDITOR_UI.md#aspire-slider-bpm-multipliers).

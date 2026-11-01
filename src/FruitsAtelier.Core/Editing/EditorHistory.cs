@@ -66,6 +66,7 @@ public sealed class EditorHistory
             if (track.ContentEquals(current)) continue;
             var shape = current.DeepClone();
             shape.OriginalLine = track.OriginalLine;
+            shape.BpmMultiplier = track.BpmMultiplier;
             if (ignoreSliderVelocity) shape.SliderVelocityMultiplier = track.SliderVelocityMultiplier;
             if (ignoreDropletMode) shape.DropletMode = track.DropletMode;
             shape.StreamNewComboOffsets.Clear(); shape.StreamNewComboOffsets.AddRange(track.StreamNewComboOffsets);
@@ -76,6 +77,7 @@ public sealed class EditorHistory
             if (!sliders.TryGetValue(slider.Id, out var current)) return true;
             if (slider.ContentEquals(current)) continue;
             var shape = current.DeepClone(); shape.OriginalLine = slider.OriginalLine;
+            shape.BpmMultiplier = slider.BpmMultiplier;
             if (ignoreSliderVelocity) shape.SliderVelocityMultiplier = slider.SliderVelocityMultiplier;
             if (ignoreDropletMode) shape.DropletMode = slider.DropletMode;
             if (!slider.ContentEquals(shape)) return true;

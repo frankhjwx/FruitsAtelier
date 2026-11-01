@@ -18,7 +18,10 @@ public sealed partial class EditorView
 
     private void RefreshDisplayedTiming()
     {
-        displayedTiming = (showTimingSv ? playableExport?.ReadBack.TimingPoints ?? [] : Document.TimingPoints)
+        displayedTiming = (showTimingSv ? playableExport?.ReadBack.TimingPoints ?? []
+            : Document.EnableSliderBpmMultiplier && playableExport is not null
+                ? Document.TimingPoints.Where(p => !p.Uninherited).Concat(playableExport.ReadBack.TimingPoints.Where(p => p.Uninherited))
+                : Document.TimingPoints)
             .OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
         svOnlyTiming.Clear();
         TimingPoint? previous = null;
@@ -55,9 +58,11 @@ public sealed partial class EditorView
     private TimingEntry CreateTimingEntry(TimingPoint point, int sourceIndex)
     {
         var original = sourceIndex < 0 ? null : Document.TimingPoints[sourceIndex];
+        bool derivedBpm = point.Uninherited && original is not null && point.BeatLengthMs != original.BeatLengthMs;
+        if (derivedBpm) sourceIndex = -1;
         return new(timingNextId++, original is null ? null : TimingEditing.Copy(original), TimingEditing.Copy(point))
         {
-            SourceIndex = sourceIndex, Baseline = TimingEditing.Copy(point), Derived = showTimingSv && original is null,
+            SourceIndex = sourceIndex, Baseline = TimingEditing.Copy(point), Derived = original is null || derivedBpm,
             SvOnly = svOnlyTiming.Contains(point)
         };
     }
@@ -69,6 +74,7 @@ public sealed partial class EditorView
         var replacements = new Dictionary<int, TimingPoint>();
         foreach (var entry in timingEntries)
         {
+            if (entry.Derived && entry.Point.Uninherited) continue;
             var p = entry.Point;
             var baseline = entry.Baseline;
             if (entry.Original is null && baseline is not null && TimingEditing.Serialize([p]) == TimingEditing.Serialize([baseline])) continue;

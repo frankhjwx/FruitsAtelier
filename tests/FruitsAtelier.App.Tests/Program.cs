@@ -3,6 +3,8 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--slider-bpm-performance")) { SliderBpmTests.Performance(); return 0; }
+if (args.Contains("--slider-bpm-check")) { SliderBpmTests.Run(); Console.WriteLine("PASS slider BPM controls"); return 0; }
 if (args.Contains("--imported-curve-range-check")) { ImportedCurveRangeTests.Run(false); return 0; }
 if (args.Contains("--imported-curve-range-performance")) { ImportedCurveRangeTests.Run(true); return 0; }
 if (args.Contains("--background-task-recovery-check")) { BackgroundTaskRecoveryTests.Run(); return 0; }
@@ -339,6 +341,7 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Slider BPM presets, custom input, placement, history and red visibility", SliderBpmTests.Run),
     ("Storyboard sources retain scenes across unrelated General edits", StoryboardSourceCacheTests.Run),
     ("Opening a map offers undoable object and timing alignment", TimingAlignmentUiTests.Run),
     ("Pattern Gallery preserves previews, placement and editing sessions", () => { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); }),

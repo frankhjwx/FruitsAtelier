@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 using L = FruitsAtelier.Localization.Strings;
@@ -98,7 +98,7 @@ public sealed partial class EditorView
         var sourceRows = Document.TimingPoints.Select((p, i) => (Point: p, Index: i))
             .GroupBy(item => (Time: item.Point.TimeMs, item.Point.Uninherited))
             .ToDictionary(g => g.Key, g => new Queue<int>(g.Select(item => item.Index)));
-        foreach (var point in showTimingSv ? displayedTiming.AsEnumerable() : Document.TimingPoints)
+        foreach (var point in displayedTiming)
         {
             int sourceIndex = sourceRows.TryGetValue((point.TimeMs, point.Uninherited), out var rows) && rows.Count > 0 ? rows.Dequeue() : -1;
             timingEntries.Add(CreateTimingEntry(point, sourceIndex));
@@ -239,7 +239,7 @@ public sealed partial class EditorView
         var pairs = timingEntries.Where(e => e.Original is not null).Select(e => (e.Original!, e.Point)).ToArray();
         if (!Edit(L.Get("timing.edit"), () =>
         {
-            if (showTimingSv) ApplyDisplayedTiming();
+            if (showTimingSv || Document.EnableSliderBpmMultiplier) ApplyDisplayedTiming();
             else
             {
                 foreach (var e in timingEntries.Where(e => !e.Point.Uninherited && e.Baseline is not null && e.Point.BeatLengthMs != e.Baseline.BeatLengthMs))

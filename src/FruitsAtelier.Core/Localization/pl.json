@@ -1962,5 +1962,12 @@
   "recovery.saved": "Zapisano kopię odzyskiwania: {0}",
   "recovery.failed": "Nie udało się zapisać kopii odzyskiwania: {0}",
   "recovery.nativeHelp": "Renderer graficzny jest niedostępny. Naciśnij Ctrl+S, aby zapisać kopię odzyskiwania, lub Enter, aby ponowić renderowanie. Projekt pozostaje w pamięci.",
-  "recovery.closeHelp": "Zapisać kopię odzyskiwania przed zamknięciem? Wybierz Nie, aby zamknąć bez zapisywania."
+  "recovery.closeHelp": "Zapisać kopię odzyskiwania przed zamknięciem? Wybierz Nie, aby zamknąć bez zapisywania.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

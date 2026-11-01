@@ -123,6 +123,7 @@ public static class SliderImportEditing
             TimingEditing.TransformTrack(track, track.Nodes[0].TimeMs, slider.TimeMs, 1);
             track.OriginalLine = slider.OriginalLine;
             track.SourceOrder = slider.SourceOrder;
+            track.BpmMultiplier = slider.BpmMultiplier;
             track.EndpointSnap = slider.EndpointSnap;
             track.DropletMode = slider.DropletMode ?? track.DropletMode ?? SliderDropletMode.FollowMap;
             tracks.Add(track);

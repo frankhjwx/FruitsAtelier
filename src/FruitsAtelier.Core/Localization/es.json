@@ -1962,5 +1962,12 @@
   "recovery.saved": "Copia de recuperación guardada: {0}",
   "recovery.failed": "No se pudo guardar la copia de recuperación: {0}",
   "recovery.nativeHelp": "El motor gráfico no está disponible. Pulsa Ctrl+S para guardar una copia de recuperación o Intro para reintentar. El proyecto permanece en memoria.",
-  "recovery.closeHelp": "¿Guardar una copia de recuperación antes de cerrar? Elige No para cerrar sin guardar."
+  "recovery.closeHelp": "¿Guardar una copia de recuperación antes de cerrar? Elige No para cerrar sin guardar.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

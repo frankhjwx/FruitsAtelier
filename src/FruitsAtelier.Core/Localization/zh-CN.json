@@ -1962,5 +1962,12 @@
   "recovery.saved": "恢复副本已保存：{0}",
   "recovery.failed": "无法保存恢复副本：{0}",
   "recovery.nativeHelp": "图形渲染器不可用。按 Ctrl+S 保存恢复副本，或按 Enter 重试绘制。项目仍保留在内存中。",
-  "recovery.closeHelp": "关闭前保存恢复副本？选择“否”将不保存并关闭。"
+  "recovery.closeHelp": "关闭前保存恢复副本？选择“否”将不保存并关闭。",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "启用 BPM 倍率以修改 slider 行为",
+  "aspire.multiplier": "BPM 倍率",
+  "aspire.value": "BPM 倍率 {0:0.###}×",
+  "aspire.custom": "自定义",
+  "aspire.invalidMultiplier": "BPM 倍率必须是大于零的有限数值。",
+  "aspire.bpmCollision": "导出时间相同的 slider 必须使用相同的 BPM。"
 }

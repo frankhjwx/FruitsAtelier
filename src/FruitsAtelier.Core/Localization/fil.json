@@ -1962,5 +1962,12 @@
   "recovery.saved": "Na-save ang kopya para sa pagbawi: {0}",
   "recovery.failed": "Hindi ma-save ang kopya para sa pagbawi: {0}",
   "recovery.nativeHelp": "Hindi magamit ang graphics renderer. Pindutin ang Ctrl+S para mag-save ng kopya para sa pagbawi, o Enter para subukan muli. Nananatili sa memory ang proyekto.",
-  "recovery.closeHelp": "Mag-save ng kopya para sa pagbawi bago isara? Piliin ang Hindi para isara nang hindi nagse-save."
+  "recovery.closeHelp": "Mag-save ng kopya para sa pagbawi bago isara? Piliin ang Hindi para isara nang hindi nagse-save.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

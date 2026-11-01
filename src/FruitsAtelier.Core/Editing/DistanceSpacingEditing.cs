@@ -172,7 +172,8 @@ public static class DistanceSpacingEditing
         CatchConversionResult CheckedResult()
         {
             if (result.Success || track.StreamSnapDivisor is not null) return result;
-            double velocity = LegacyCatchRules.Velocity(new TimingMap.Lookup(document).At(track.Nodes[0].TimeMs).BeatLengthMs,
+            double velocity = LegacyCatchRules.Velocity(SliderBpm.Apply(document,
+                new TimingMap.Lookup(document).At(track.Nodes[0].TimeMs), track.BpmMultiplier).BeatLengthMs,
                 document.EffectiveSliderMultiplier, LegacyCatchRules.MaximumSliderVelocityMultiplier);
             ConvertedCatchObject? previous = null;
             double previousX = 0;

@@ -39,11 +39,11 @@ public sealed partial class EditorView
         SongSetupVisible = true; hits.Clear(); fields.Clear();
     }
 
-    private bool songFaOnly;
+    private bool songFaOnly, songEnableSliderBpm;
 
     private void InitializeSongSetup()
     {
-        songFaOnly = CurrentDifficultyFaOnly;
+        songFaOnly = CurrentDifficultyFaOnly; songEnableSliderBpm = Document.EnableSliderBpmMultiplier;
         songValues.Clear(); songInitial.Clear(); songField = songError = "";
         songDerandomizeDroplets = Document.DerandomizeFSliderDroplets;
         songDerandomizeHardRock = Document.DerandomizeDropletsForHardRock;
@@ -268,6 +268,7 @@ public sealed partial class EditorView
             foreach (string key in SongMetadata.Where(k => songValues[k] != songInitial[k])) SongSetup.Set(Document, "Metadata", key, songValues[key]);
             if (songValues["TitleUnicode"] != songInitial["TitleUnicode"]) Document.Name = songValues["TitleUnicode"];
             foreach (string key in SongDifficulty.Where(k => songValues[k] != songInitial[k])) SongSetup.Set(Document, "Difficulty", key, songValues[key]);
+            Document.EnableSliderBpmMultiplier = songEnableSliderBpm;
             Document.CircleSize = double.Parse(songValues["CircleSize"], CultureInfo.InvariantCulture);
             Document.ApproachRate = double.Parse(songValues["ApproachRate"], CultureInfo.InvariantCulture);
             if (Document.DerandomizeFSliderDroplets != songDerandomizeDroplets) Document.RandomizeNewSliders = !songDerandomizeDroplets;

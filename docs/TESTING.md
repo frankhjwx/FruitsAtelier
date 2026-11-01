@@ -1654,3 +1654,22 @@ cancellation and undo in both canvases and languages. `--osu-canvas-check` also
 checks silent selection and the optional canvas selection lock. Windows
 `FruitsAtelier.App --render-check --osu-canvas-render-check` captures the choice
 window and exercises cancellation at its supported sizes and DPI scales.
+
+
+## Aspire BPM multiplier checks
+
+`Core.Tests --slider-bpm-check` checks presets and custom multipliers, unchanged
+FSlider targets and native geometry, independent neighbour timing, equal-BPM
+coalescing, red/green public properties including hitsound overrides, export
+read-back, cache invalidation, conflicting heads, schema 47/48 persistence,
+representation conversion, undo and invalid or unreachable multipliers.
+`App.Tests --slider-bpm-check` covers English/Chinese preset and Custom input,
+creation defaults, inspector changes, undo/redo and red-line visibility with SV
+hidden. Both checks also run in their full suites.
+`App.Tests --slider-bpm-performance` compares small and 1,000-slider documents
+with the feature disabled/enabled, reporting cold preparation and warm pointer
+plus recording-canvas frame CPU time and allocation. Native presentation is excluded.
+`FruitsAtelier.App --render-check --slider-bpm-render-check` launches the native
+Windows renderer, operates the default multiplier input and captures settings,
+menus and inspector at narrow and ordinary window sizes under
+`artifacts/tests/slider-bpm/native`.

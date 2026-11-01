@@ -12,8 +12,8 @@ public sealed partial class EditorView
     private (double TimeMs, bool Active)[] kiaiTransitions = [];
     private TimingPoint[] overviewTiming = [];
     internal Rect WorkspaceSelectorBounds => new(8, 88, 132, 30);
-    internal Rect CanvasToolbarBounds => new(148, 84, Math.Max(0, width - 356), 38);
-    internal Rect WorkspaceStatsBounds => new(width - 208, 84, 208, 38);
+    internal Rect CanvasToolbarBounds => new(148, 84, Math.Max(0, width - (Document.EnableSliderBpmMultiplier ? 546 : 356)), 38);
+    internal Rect WorkspaceStatsBounds => new(width - (Document.EnableSliderBpmMultiplier ? 398 : 208), 84, Document.EnableSliderBpmMultiplier ? 398 : 208, 38);
     internal Rect CanvasRenderBounds => new(leftPanel.Right, plot.Y,
         Math.Max(0, canvas.Right - leftPanel.Right), plot.Height);
 
@@ -578,7 +578,13 @@ public sealed partial class EditorView
         c.Line(0, 122, width, 122, Grid);
         float rowY = 95;
         Button(c, WorkspaceSelectorBounds, L.Get(TimingPageVisible ? "timing.panel" : "timing.detailsPanel") + " ▾", () => panelMenuOpen = !panelMenuOpen);
+        BpmMultiplierBounds = default;
         float statX = WorkspaceStatsBounds.X + 12;
+        if (Document.EnableSliderBpmMultiplier)
+        {
+            DrawBpmControl(c, new(statX - 6, 87, 184, 30), null);
+            statX += 190;
+        }
         c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}", statX, rowY, 12, Muted, 48);
         c.Text($"{L.Get("ui.cs")} {Number(Document.CircleSize)}", statX + 50, rowY, 12, Muted, 48);
         c.Text($"{L.Get("ui.dpb")} {Number(Document.DistancePerBeat)}px", statX + 100, rowY, 12, Muted,
@@ -1043,7 +1049,7 @@ public sealed partial class EditorView
 
     private void Field(ICanvas c, float x, ref float y, float w, string label, double value, Action<double> apply, float labelWidth = 75)
     {
-        c.Text(label, x, y + 8, 11, Muted, labelWidth - 6);
+        if (labelWidth > 0) c.Text(label, x, y + 8, 11, Muted, labelWidth - 6);
         var r = new Rect(x + labelWidth, y, w - labelWidth, 30);
         int index = fields.Count;
         bool focused = editField == index;

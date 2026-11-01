@@ -24,6 +24,7 @@ public sealed class GeneratedSlider
     public required Guid SourceId { get; init; }
     public required double StartTimeMs { get; init; }
     public required double DurationMs { get; init; }
+    public double BeatLengthMs { get; init; }
     public required double Velocity { get; init; }
     public required double SliderVelocityMultiplier { get; init; }
     public required double TickDistance { get; init; }

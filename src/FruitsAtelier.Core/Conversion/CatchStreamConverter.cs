@@ -152,6 +152,7 @@ public static class CatchStreamConverter
     private static TrackConversion ConvertTrack(MapDocument document, CurveTrack track, bool requestCompensation,
         ref CatchLegacyRandom globalRng, TimingState timing, CatchLegacyRandom effectRng, Func<double, double>? positionAtTime = null, CatchLegacyRandom? hardRockBefore = null, double? fixedSv = null)
     {
+        timing = SliderBpm.Apply(document, timing, track.BpmMultiplier);
         positionAtTime ??= time => CurveMath.PositionAtTime(track, time);
         double start = track.Nodes[0].TimeMs;
         double duration = track.Nodes[^1].TimeMs - start;
@@ -247,7 +248,7 @@ public static class CatchStreamConverter
             return new(new GeneratedSlider
             {
                 SourceId = track.Id, StartTimeMs = start, DurationMs = duration * track.SpanCount, SpanCount = track.SpanCount, Velocity = velocity,
-                SliderVelocityMultiplier = sv, TickDistance = tickDistance, Length = length,
+                BeatLengthMs = timing.BeatLengthMs, SliderVelocityMultiplier = sv, TickDistance = tickDistance, Length = length,
                 Path = geometry.Points.ToArray(), TinyCompensationApplied = compensate,
                 TinyCompensationSucceeded = compensate && tinyError <= AlignmentTolerance,
                 MaxTickError = tickError, MaxTinyError = tinyError
