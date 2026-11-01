@@ -31,7 +31,8 @@ public sealed partial class EditorView
         AdoptLiveDock(ref songDockSnapshot, ref liveSongSnapshot);
         if (!ReferenceEquals(songDockSnapshot, convertedSnapshot))
         {
-            InitializeSongSetup(); songDockSnapshot = convertedSnapshot; songDockScroll = 0;
+            int currentTab = songTab;
+            InitializeSongSetup(); songTab = currentTab; songDockSnapshot = convertedSnapshot;
         }
         songDockBounds = bounds; drawingSongDock = true;
         songFieldBounds.Clear(); songSliders.Clear();

@@ -40,6 +40,20 @@ internal static class SliderBpmRenderCheck
                     throw new InvalidOperationException("Aspire red lines are hidden.");
                 editor.ShowSongDock(); Paint();
                 typeof(EditorView).GetField("songTab", hidden)!.SetValue(editor, 4); Paint("settings");
+                var dock = editor.SongDockViewport;
+                var scroll = typeof(EditorView).GetField("songDockScroll", hidden)!;
+                scroll.SetValue(editor, 20f); Paint();
+                float position = (float)scroll.GetValue(editor)!;
+                float toggleY = dock.Y + 44 + 90 + 22 + 47 - position;
+                foreach (bool expected in new[] { false, true })
+                {
+                    Click(dock.Right - 20, toggleY);
+                    if (editor.Document.EnableSliderBpmMultiplier != expected
+                        || (int)typeof(EditorView).GetField("songTab", hidden)!.GetValue(editor)! != 4
+                        || (float)scroll.GetValue(editor)! != position)
+                        throw new InvalidOperationException("Aspire toggle must retain the FA Settings tab and scroll position.");
+                }
+                Paint("settings-toggled");
                 editor.ShowSliderInspector();
                 typeof(EditorView).GetMethod("SelectObjects", hidden)!.Invoke(editor, [new[] { track.Id }, track.Id]);
                 Paint("inspector");

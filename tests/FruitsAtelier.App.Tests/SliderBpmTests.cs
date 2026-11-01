@@ -45,6 +45,13 @@ internal static class SliderBpmTests
                 var category = ui.Canvas.Texts.Single(t => t.Value == L.Get("aspire.category"));
                 ui.Click(ui.View.SongDockViewport.Right - 20, category.Y + 47);
                 Check(ui.View.Document.EnableSliderBpmMultiplier, "FA Settings did not enable Aspire BPM");
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("aspire.category")), "Enabling Aspire left FA Settings");
+                category = ui.Canvas.Texts.Single(t => t.Value == L.Get("aspire.category"));
+                ui.Click(ui.View.SongDockViewport.Right - 20, category.Y + 47);
+                Check(!ui.View.Document.EnableSliderBpmMultiplier
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("aspire.category")), "Disabling Aspire left FA Settings");
+                category = ui.Canvas.Texts.Single(t => t.Value == L.Get("aspire.category"));
+                ui.Click(ui.View.SongDockViewport.Right - 20, category.Y + 47);
                 var box = ui.View.BpmMultiplierBounds;
                 ui.Click(box.X + 8, box.Y + 8);
                 foreach (double preset in SliderBpm.Presets)
