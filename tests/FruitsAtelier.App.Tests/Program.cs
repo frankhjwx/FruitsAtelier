@@ -3,7 +3,7 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
-if (args.Contains("--difficulty-import-check")) { DifficultyImportTests.Run(); Console.WriteLine("PASS difficulty import metadata and project resources"); return 0; }
+if (args.Contains("--difficulty-import-check")) { DifficultyImportTests.Run(); Console.WriteLine("PASS difficulty imports use project resources and preserve metadata"); return 0; }
 if (args.Contains("--slider-bpm-performance")) { SliderBpmTests.Performance(); return 0; }
 if (args.Contains("--slider-bpm-check")) { SliderBpmTests.Run(); Console.WriteLine("PASS slider BPM controls"); return 0; }
 if (args.Contains("--imported-curve-range-check")) { ImportedCurveRangeTests.Run(false); return 0; }
@@ -675,7 +675,7 @@ var tests = new (string Name, Action Run)[]
     ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),
     ("Overflow difficulty tabs scroll, switch and add without losing content", DifficultyTabTests.Overflow),
     ("Multi-difficulty projects preserve content, history and compatibility", ProjectTests.Run),
-    ("Difficulty imports require matching metadata and use project resources", DifficultyImportTests.Run),
+    ("Difficulty imports use project resources and preserve independent metadata", DifficultyImportTests.Run),
     ("Select blank-canvas clicks preserve time across beat divisors", CanvasSeekSnapTests.BeatGrid),
     ("Canvas and timeline navigation do not edit content", CanvasSeekSnapTests.FreeMode),
     ("Timeline grabs retain the exact original time after round trips", TimelineDragTests.ReturnToStart),

@@ -761,7 +761,6 @@
   "project.new": "Proyek baru",
   "project.add": "Tambahkan kesulitan baru",
   "project.import": "Impor tingkat kesulitan .osu…",
-  "project.importMetadataMismatch": "Artist dan Title tingkat kesulitan yang diimpor harus diisi dan sama persis dengan proyek saat ini (peka huruf besar/kecil).",
   "project.importResourcesRequired": "Buka proyek dengan direktori sumber daya sebelum mengimpor tingkat kesulitan .osu.",
   "project.defaultDifficulty": "Kesulitan {0}",
   "project.selector": "{0}/{1} · {2}{3}",

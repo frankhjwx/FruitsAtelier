@@ -16,8 +16,8 @@ and remove clean ones through Git.
 
 ## Difficulty import
 
-`App.Tests --difficulty-import-check` checks strict Artist/Title matching, rejection
-before project or file changes, conflicting media filenames in Downloads, retained
+`App.Tests --difficulty-import-check` checks imports with different or empty
+metadata, conflicting media filenames in Downloads, retained
 project resource paths after save/reopen, missing-resource isolation, source-file
 collisions and same-directory difficulty selection.
 

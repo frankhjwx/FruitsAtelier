@@ -761,7 +761,6 @@
   "project.new": "Nieuw project",
   "project.add": "Nieuwe moeilijkheidsgraad toevoegen",
   "project.import": ".osu-moeilijkheidsgraad importeren...",
-  "project.importMetadataMismatch": "Artist en Title van de geïmporteerde moeilijkheidsgraad moeten ingevuld zijn en exact overeenkomen met het huidige project (hoofdlettergevoelig).",
   "project.importResourcesRequired": "Open een project met een bronnenmap voordat je een .osu-moeilijkheidsgraad importeert.",
   "project.defaultDifficulty": "Moeilijkheidsgraad {0}",
   "project.selector": "{0}/{1} · {2}{3}",

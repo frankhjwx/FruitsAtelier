@@ -277,18 +277,6 @@ public sealed partial class EditorView
     {
         if (RejectPatternProjectOperation() || !PrepareFileOperation()) return false;
         var imported = OsuBeatmapReader.ReadFile(path);
-        void ValidateMetadata(MapDocument candidate)
-        {
-            foreach (string key in new[] { "Artist", "Title" })
-            {
-                string? expected = OsuBeatmapReader.Setting(Document, "Metadata", key);
-                string? actual = OsuBeatmapReader.Setting(candidate, "Metadata", key);
-                if (string.IsNullOrWhiteSpace(expected) || string.IsNullOrWhiteSpace(actual)
-                    || !string.Equals(expected, actual, StringComparison.Ordinal))
-                    throw new InvalidDataException(L.Get("project.importMetadataMismatch"));
-            }
-        }
-        ValidateMetadata(imported);
         string? origin = Document.SourcePath ?? Document.AudioPath;
         if (origin is null) throw new InvalidDataException(L.Get("project.importResourcesRequired"));
         string directory = Path.GetDirectoryName(Path.GetFullPath(origin))!;
@@ -315,7 +303,6 @@ public sealed partial class EditorView
         try
         {
             imported = OsuBeatmapReader.ReadFile(target);
-            ValidateMetadata(imported);
             return AddDifficulty(imported);
         }
         finally

@@ -26,17 +26,9 @@ internal static class DifficultyImportTests
             var view = new EditorView();
             view.LibrarySettings.Workspace = Path.Combine(root, "Workspace");
             view.LoadDocument(OsuBeatmapReader.ReadFile(original));
-            foreach (var mismatch in new[] { ("Other", "Song"), ("Artist", "Other"), ("artist", "Song"),
-                ("Artist", "song"), ("", "Song"), ("Artist", "") })
-            {
-                File.WriteAllText(incoming, Map(mismatch.Item1, mismatch.Item2));
-                Reject(() => view.ImportDifficultyFile(incoming));
-                Check(view.DifficultyCount == 1 && !view.IsDirty && Directory.GetFiles(resources, "*.osu").Length == 1,
-                    "Metadata rejection must precede file copies and project changes, even when Unicode fields match.");
-            }
             File.WriteAllText(incoming, Map());
             File.WriteAllText(Path.Combine(resources, "incoming.osu"), "existing file");
-            Check(view.ImportDifficultyFile(incoming), "Import matching difficulty.");
+            Check(view.ImportDifficultyFile(incoming), "Import difficulty.");
             Check(File.ReadAllText(Path.Combine(resources, "incoming.osu")) == "existing file", "Never overwrite an existing file.");
             Check(File.ReadAllText(incoming) == Map(), "Keep the downloaded source unchanged.");
             Check(view.DifficultyCount == 2 && view.Document.Fruits.Single().X == 100, "Import the difficulty content.");
@@ -60,10 +52,20 @@ internal static class DifficultyImportTests
             Check(view.ImportDifficultyFile(local) && view.Document.SourcePath == local, "A same-directory import keeps its source.");
             Check(view.ImportDifficultyFile(local) && view.DifficultyCount == 3, "Reimporting a local difficulty selects the existing tab.");
 
-            view.LoadDocument(OsuBeatmapReader.Read(Map("", "Song"), original));
-            Reject(() => view.ImportDifficultyFile(incoming));
-            view.LoadDocument(OsuBeatmapReader.Read(Map("Artist", ""), original));
-            Reject(() => view.ImportDifficultyFile(incoming));
+            foreach (var metadata in new[] { ("Other", "Song"), ("Artist", "Other"), ("artist", "song"),
+                ("", "Song"), ("Artist", ""), ("", "") })
+            {
+                view.LoadDocument(OsuBeatmapReader.ReadFile(original));
+                File.WriteAllText(incoming, Map(metadata.Item1, metadata.Item2));
+                Check(view.ImportDifficultyFile(incoming) && view.DifficultyCount == 2,
+                    "Different or empty metadata can be imported.");
+                Check(OsuBeatmapReader.Setting(view.Document, "Metadata", "Artist") == metadata.Item1
+                    && OsuBeatmapReader.Setting(view.Document, "Metadata", "Title") == metadata.Item2,
+                    "Import preserves the difficulty's metadata.");
+                CheckResources(view.Document);
+            }
+            view.LoadDocument(OsuBeatmapReader.Read(Map("", ""), original));
+            Check(view.ImportDifficultyFile(incoming), "Current project metadata may also be empty.");
             var withoutResources = OsuBeatmapReader.Read(Map());
             withoutResources.AudioPath = null;
             view.LoadDocument(withoutResources);
@@ -85,7 +87,7 @@ internal static class DifficultyImportTests
     {
         try { action(); }
         catch (InvalidDataException) { return; }
-        throw new Exception("An incompatible difficulty import was accepted.");
+        throw new Exception("An import without project resources was accepted.");
     }
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
 }

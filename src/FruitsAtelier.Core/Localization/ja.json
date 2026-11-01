@@ -761,7 +761,6 @@
   "project.new": "新しいプロジェクト",
   "project.add": "新しい難易度を追加",
   "project.import": ".osu の難易度をインポートします…",
-  "project.importMetadataMismatch": "インポートする難易度の Artist と Title は空欄にできず、現在のプロジェクトと完全に一致する必要があります（大文字と小文字を区別）。",
   "project.importResourcesRequired": "リソースディレクトリのあるプロジェクトを開いてから .osu 難易度をインポートしてください。",
   "project.defaultDifficulty": "難易度{0}",
   "project.selector": "{0}/{1} · {2}{3}",

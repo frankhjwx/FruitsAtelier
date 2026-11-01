@@ -82,7 +82,7 @@ Only Catch difficulties are indexed. Importing a set does not export it to Songs
 
 Click a difficulty tab to switch. **Ctrl+Tab** moves to the next tab; **Ctrl+Shift+Tab** moves to the previous one. The **+** button adds a blank difficulty or imports an `.osu`. A blank difficulty inherits the active difficulty's audio, timing and settings.
 
-Importing an `.osu` difficulty requires its non-empty `Artist` and `Title` to exactly match the active difficulty's fields, including case. Unicode display fields do not substitute for these fields. A file from another directory is copied into the active difficulty's resource directory without overwriting existing files. Its relative audio, background, storyboard and sample references resolve there, including after saving and reopening. The imported file's original directory is not used as a fallback; missing project resources remain missing.
+Importing an `.osu` difficulty preserves its metadata, including different or empty artist and title fields. A file from another directory is copied into the active difficulty's resource directory without overwriting existing files. Its relative audio, background, storyboard and sample references resolve there, including after saving and reopening. The imported file's original directory is not used as a fallback; missing project resources remain missing.
 
 Right-click a tab to locate its saved file, workspace folder or associated osu! folder. Tabs show the difficulty's No Mod star rating and an unsaved-change indicator.
 

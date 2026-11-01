@@ -761,7 +761,6 @@
   "project.new": "Nuevo proyecto",
   "project.add": "Agregar nueva dificultad",
   "project.import": "Importar dificultad .osu…",
-  "project.importMetadataMismatch": "Artist y Title de la dificultad importada no pueden estar vacíos y deben coincidir exactamente con el proyecto actual (distinguiendo mayúsculas y minúsculas).",
   "project.importResourcesRequired": "Abre un proyecto con un directorio de recursos antes de importar una dificultad .osu.",
   "project.defaultDifficulty": "Dificultad {0}",
   "project.selector": "{0}/{1} · {2}{3}",
