@@ -188,7 +188,8 @@ public sealed partial class EditorView
         }
         if (Math.Abs(wantedX - sliderObjectDragX) < .00001) return;
         double acceptedX = sliderObjectDragX;
-        if (!TrySliderObjectPosition(target, wantedX))
+        bool limited = !TrySliderObjectPosition(target, wantedX);
+        if (limited)
         {
             double blockedX = wantedX;
             for (int i = 0; i < 12 && Math.Abs(blockedX - acceptedX) > .001; i++)
@@ -202,7 +203,8 @@ public sealed partial class EditorView
         }
         else acceptedX = wantedX;
         sliderObjectDragX = acceptedX;
-        StatusMessage = L.Get("editor.status.sliderObjectPosition", Time(target.TimeMs), Number(acceptedX));
+        StatusMessage = limited ? L.Get("coordinate.unreachable")
+            : L.Get("editor.status.sliderObjectPosition", Time(target.TimeMs), Number(acceptedX));
         EnsureConversion();
         if (conversion!.Objects.FirstOrDefault(item => item.SourceId == target.SourceId
             && item.EventIndex == target.EventIndex) is { } updated)

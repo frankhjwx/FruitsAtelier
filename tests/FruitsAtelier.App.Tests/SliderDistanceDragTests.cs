@@ -144,6 +144,7 @@ internal static class SliderDistanceDragTests
 
     public static void FractionalFoldedTail()
     {
+        LastTickVelocityLimit();
         foreach (bool ds in new[] { false, true })
         {
             var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 458.015267175573,
@@ -169,6 +170,37 @@ internal static class SliderDistanceDragTests
             Check(map.ContentEquals(ui.View.Document), "Fractional tail undo did not restore the authored geometry.");
         }
     }
+
+    private static void LastTickVelocityLimit()
+    {
+        var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 60000d / 185,
+            SliderMultiplier = 1.2, SliderTickRate = 2 };
+        double start = 1000 + map.BeatLengthMs / 12;
+        var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = false };
+        track.Nodes.AddRange([new() { TimeMs = start, X = 470 },
+            new() { TimeMs = start + map.BeatLengthMs, X = 300 },
+            new() { TimeMs = start + map.BeatLengthMs * 1.25, X = 27 }]);
+        map.Tracks.Add(track);
+        var ui = new Ui(); ui.LoadDocument(map); ui.SelectTrack(track.Id);
+        var displayed = OsuBeatmapWriter.Serialize(map).PlayableObjects.Last(o => o.Kind == CatchObjectKind.Droplet);
+        SliderEventTestDriver.Down(ui, displayed.TimeMs, displayed.X);
+        ui.MoveMap(displayed.TimeMs, 450);
+        Check(ui.View.StatusMessage == FruitsAtelier.Localization.Strings.Get("coordinate.unreachable"),
+            $"A blocked last tick drag must explain its limit: {ui.View.StatusMessage}");
+        var result = CatchStreamConverter.Convert(ui.View.Document);
+        var moved = result.Objects.Single(o => o.EventIndex == displayed.EventIndex);
+        var tail = result.Objects.Last();
+        double maximum = 10 * 100 * map.SliderMultiplier / map.BeatLengthMs * (tail.TimeMs - moved.TimeMs);
+        Check(result.Success && moved.X > displayed.X && moved.X <= tail.X + maximum + .001,
+            $"Last tick must stop within the tail's maximum slider speed: {moved.X}, bound={tail.X + maximum}.");
+        ui.MoveMap(displayed.TimeMs, 310);
+        Check(ui.View.StatusMessage != FruitsAtelier.Localization.Strings.Get("coordinate.unreachable"),
+            "Returning to a reachable position must clear the limit message.");
+        ui.UpMap(displayed.TimeMs, 310);
+        ui.Key('Z', ctrl: true);
+        Check(map.ContentEquals(ui.View.Document), "Limited last tick drag must undo in one step.");
+    }
+
     public static void SelectedTail()
     {
         foreach (var mode in Enum.GetValues<SliderEditingMode>())

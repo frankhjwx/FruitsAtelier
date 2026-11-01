@@ -22,6 +22,12 @@ It preserves stable's rounded event times across reloads without fixing the user
 SV: later edits can still require a higher automatic value. Explicit SV takes
 precedence. Older documents omit the floor and keep their original fitting behavior.
 
+Horizontal slider-event edits retain event times and the supported 10x SV ceiling.
+The remaining time to the next event therefore limits horizontal movement, including
+the last droplet's distance to the tail. A fractional head snap can change that
+remaining interval; it does not impose a separate editing limit. A drag that cannot
+reach its requested X retains the reachable position and reports the timing constraint.
+
 Independent Legacy slider SV uses schema 29 (single difficulty) or 30 (multiple
 difficulties). Each Legacy slider stores its authored `SliderVelocityMultiplier`
 and an optional `ProcessedSliderVelocityMultiplier` for materialized droplet
