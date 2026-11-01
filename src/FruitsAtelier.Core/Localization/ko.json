@@ -1961,5 +1961,8 @@
   "recovery.saved": "복구 사본 저장됨: {0}",
   "recovery.failed": "복구 사본을 저장할 수 없습니다: {0}",
   "recovery.nativeHelp": "그래픽 렌더러를 사용할 수 없습니다. Ctrl+S로 복구 사본을 저장하거나 Enter로 렌더링을 다시 시도하세요. 프로젝트는 메모리에 유지됩니다.",
-  "recovery.closeHelp": "닫기 전에 복구 사본을 저장하시겠습니까? 저장하지 않고 닫으려면 아니요를 선택하세요."
+  "recovery.closeHelp": "닫기 전에 복구 사본을 저장하시겠습니까? 저장하지 않고 닫으려면 아니요를 선택하세요.",
+  "settings.experimentalExportStyle": "실험적 내보내기 스타일: x-time 그룹을 osu! 캔버스에 투영합니다. 슬라이더는 모양을 유지하며 위아래로 이동합니다.",
+  "settings.exportStylePreview": "내보내기 배치 미리보기입니다. 위치는 x-time 캔버스에서 편집하세요.",
+  "core.exportStyle.changedPlayback": "실험적 배치가 Catch 플레이를 변경하여 내보내기를 중단했습니다."
 }

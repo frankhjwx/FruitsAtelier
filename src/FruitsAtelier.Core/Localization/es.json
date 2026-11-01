@@ -1961,5 +1961,8 @@
   "recovery.saved": "Copia de recuperación guardada: {0}",
   "recovery.failed": "No se pudo guardar la copia de recuperación: {0}",
   "recovery.nativeHelp": "El motor gráfico no está disponible. Pulsa Ctrl+S para guardar una copia de recuperación o Intro para reintentar. El proyecto permanece en memoria.",
-  "recovery.closeHelp": "¿Guardar una copia de recuperación antes de cerrar? Elige No para cerrar sin guardar."
+  "recovery.closeHelp": "¿Guardar una copia de recuperación antes de cerrar? Elige No para cerrar sin guardar.",
+  "settings.experimentalExportStyle": "Estilo experimental: proyecta grupos x-time en el lienzo de osu!. Los sliders se desplazan verticalmente sin cambiar su forma.",
+  "settings.exportStylePreview": "Vista previa de la distribución exportada. Edita las posiciones en el lienzo x-time.",
+  "core.exportStyle.changedPlayback": "La distribución experimental cambió la jugabilidad de Catch; se detuvo la exportación."
 }

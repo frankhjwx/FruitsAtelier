@@ -91,17 +91,18 @@ public static class OsuBeatmapWriter
         ["Difficulty"] = ["HPDrainRate", "CircleSize", "OverallDifficulty", "ApproachRate", "SliderMultiplier", "SliderTickRate"],
         ["Colours"] = ["SliderTrackOverride", "SliderBorder"]
     };
-    public static OsuWriteResult WriteFile(MapDocument document, string destination, bool compensateTinyDroplets = true)
+    public static OsuWriteResult WriteFile(MapDocument document, string destination, bool compensateTinyDroplets = true, bool experimentalExportStyle = false)
     {
         if (document.SourcePath is not null && string.Equals(Path.GetFullPath(destination), Path.GetFullPath(document.SourcePath), StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException(L.Get("core.writer.sourceOverwrite"));
-        var result = Serialize(document, compensateTinyDroplets);
+        var result = Serialize(document, compensateTinyDroplets, experimentalExportStyle: experimentalExportStyle);
         AtomicFile.Write(destination, result.Text);
         return result;
     }
 
-    public static OsuWriteResult Serialize(MapDocument document, bool compensateTinyDroplets = true, OsuWriteCache? cache = null)
+    public static OsuWriteResult Serialize(MapDocument document, bool compensateTinyDroplets = true, OsuWriteCache? cache = null, bool experimentalExportStyle = false)
     {
+        if (experimentalExportStyle) return ExperimentalExportLayout.Apply(Serialize(document, compensateTinyDroplets, cache));
         OsuBeatmapReader.Validate(document);
         if (cache?.Multiplier(document, compensateTinyDroplets) is { } cached) return cached;
         var authoring = document;

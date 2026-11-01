@@ -1961,5 +1961,8 @@
   "recovery.saved": "Salinan pemulihan disimpan: {0}",
   "recovery.failed": "Salinan pemulihan tidak dapat disimpan: {0}",
   "recovery.nativeHelp": "Perender grafis tidak tersedia. Tekan Ctrl+S untuk menyimpan salinan pemulihan, atau Enter untuk mencoba lagi. Proyek tetap tersimpan di memori.",
-  "recovery.closeHelp": "Simpan salinan pemulihan sebelum menutup? Pilih Tidak untuk menutup tanpa menyimpan."
+  "recovery.closeHelp": "Simpan salinan pemulihan sebelum menutup? Pilih Tidak untuk menutup tanpa menyimpan.",
+  "settings.experimentalExportStyle": "Gaya ekspor eksperimental: proyeksikan grup x-time ke kanvas osu!. Slider bergeser vertikal tanpa mengubah bentuk.",
+  "settings.exportStylePreview": "Pratinjau tata letak ekspor. Edit posisi di kanvas x-time.",
+  "core.exportStyle.changedPlayback": "Tata letak eksperimental mengubah permainan Catch; ekspor dihentikan."
 }

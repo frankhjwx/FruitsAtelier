@@ -73,7 +73,7 @@ public sealed partial class EditorView
         string stamp = ManifestStamp(manifest);
         var frozen = session with { Manifest = manifest, Project = snapshot };
         writeCaches ??= [];
-        string songs = LibrarySettings.Songs; bool compensate = compensateTinyDroplets;
+        string songs = LibrarySettings.Songs; bool compensate = compensateTinyDroplets, exportStyle = LibrarySettings.ExperimentalExportStyle;
         afterSynchronization = continuation;
         syncCancellation = new();
         var cancellation = syncCancellation.Token;
@@ -100,7 +100,7 @@ public sealed partial class EditorView
                     try
                     {
                         if (!writeCaches.TryGetValue(entry.Id, out var cache)) writeCaches[entry.Id] = cache = new();
-                        localExports[entry.Id] = WorkspaceSynchronization.PlanLocalChanges(frozen, entry, merges[entry.Id], cache);
+                        localExports[entry.Id] = WorkspaceSynchronization.PlanLocalChanges(frozen, entry, merges[entry.Id], cache, exportStyle);
                     }
                     catch (Exception e) { localExportErrors[entry.Id] = e.Message; }
                 }
@@ -455,7 +455,7 @@ public sealed partial class EditorView
             string? receipt = null;
             if (entry.ExportConfirmed)
             {
-                var plan = WorkspaceSynchronization.PlanResolvedChanges(session, entry, diff.Document, external, compensateTinyDroplets);
+                var plan = WorkspaceSynchronization.PlanResolvedChanges(session, entry, diff.Document, external, compensateTinyDroplets, experimentalExportStyle: LibrarySettings.ExperimentalExportStyle);
                 BeatmapResources.Copy(plan.Document, Path.GetDirectoryName(plan.Target)!, plan.Output.ReadBack);
                 receipt = WorkspaceExportRecovery.Prepare(session, project, plan, entry.Id);
                 WorkspaceExport.Commit(session, plan);

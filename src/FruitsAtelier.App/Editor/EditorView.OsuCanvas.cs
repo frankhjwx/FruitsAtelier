@@ -72,6 +72,7 @@ public sealed partial class EditorView
 
     private void EnsureOsuCanvasObjects()
     {
+        var playableExport = styledPlayableExport ?? this.playableExport;
         object? source = (object?)playableExport ?? conversion;
         if (ReferenceEquals(source, osuCanvasSource) && osuCanvasAr == Document.ApproachRate && osuCanvasCs == Document.CircleSize) return;
         osuCanvasSource = source; osuCanvasAr = Document.ApproachRate; osuCanvasCs = Document.CircleSize;
@@ -91,7 +92,7 @@ public sealed partial class EditorView
             sliders.TryGetValue(id, out var converted);
             if (converted is not { IsImported: true } || playableExport is not null
                 && (!importedSources.TryGetValue(id, out var original) || s.OriginalLine != original.OriginalLine)) converted = null;
-            var drawn = !osuShowProcessedSliders && importedSources.TryGetValue(id, out var authored)
+            var drawn = !LibrarySettings.ExperimentalExportStyle && !osuShowProcessedSliders && importedSources.TryGetValue(id, out var authored)
                 ? authored.RandomizationSource : null;
             var path = drawn is not null ? ImportedSliderConverter.Path(drawn)
                 : converted?.Path ?? ImportedSliderConverter.Path(s);
@@ -345,7 +346,7 @@ public sealed partial class EditorView
             }
             float FadeAfter(double eventTime, double duration) => (float)Math.Clamp(1 - (now - eventTime) / duration, 0, 1);
         }
-        DrawOsuCanvasControls(c);
+        if (!LibrarySettings.ExperimentalExportStyle) DrawOsuCanvasControls(c);
         c.Unclip();
         DrawOsuDistanceSpacing(c);
     }

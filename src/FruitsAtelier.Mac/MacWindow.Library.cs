@@ -147,7 +147,7 @@ internal sealed partial class MacWindow
             string filename = WorkspaceProject.SafeName(map.Artist + " - " + map.Title) + ".osz";
             var path = await SavePicker(L.Get("library.exportOsz"), "osz", filename);
             if (path is null) return;
-            await Task.Run(() => LibraryOperations.ExportOsz(LibraryOperations.ExportProject(map), path, View.CompensateTinyDroplets));
+            await Task.Run(() => LibraryOperations.ExportOsz(LibraryOperations.ExportProject(map), path, View.CompensateTinyDroplets, View.LibrarySettings.ExperimentalExportStyle));
             View.SetNotice(L.Get("library.exported", path));
         });
         View.RequestOszExport = () => RunFile(async () =>
@@ -155,7 +155,7 @@ internal sealed partial class MacWindow
             var project = View.CaptureProject();
             var path = await SavePicker(L.Get("library.exportOsz"), "osz", WorkspaceProject.SafeName(project.Name) + ".osz");
             if (path is null) return;
-            await Task.Run(() => LibraryOperations.ExportOsz(project, path, View.CompensateTinyDroplets));
+            await Task.Run(() => LibraryOperations.ExportOsz(project, path, View.CompensateTinyDroplets, View.LibrarySettings.ExperimentalExportStyle));
             View.SetNotice(L.Get("library.exported", path));
         });
         View.RequestOsuExport = name => RunFile(async () =>
@@ -165,7 +165,7 @@ internal sealed partial class MacWindow
             string filename = WorkspaceProject.DifficultyFileName(document, name, ".osu");
             var path = await SavePicker(L.Get("library.exportFile"), "osu", filename);
             if (path is null) return;
-            await Task.Run(() => OsuBeatmapWriter.WriteFile(document, path, View.CompensateTinyDroplets));
+            await Task.Run(() => OsuBeatmapWriter.WriteFile(document, path, View.CompensateTinyDroplets, View.LibrarySettings.ExperimentalExportStyle));
             View.CloseLibrary(); View.SetNotice(L.Get("library.exported", path));
         });
         View.RequestWorkspaceExport = (overwrite, name) => RunFile(async () =>
@@ -174,7 +174,7 @@ internal sealed partial class MacWindow
             if ((overwrite || View.WorkspaceSession is null) && !await Save()) return;
             if (View.WorkspaceSession is null) return;
             var project = View.CaptureProject();
-            var plan = WorkspaceExport.Plan(View.WorkspaceSession, project.Difficulties[View.ActiveDifficultyIndex], View.LibrarySettings.Songs, overwrite, name, View.CompensateTinyDroplets);
+            var plan = WorkspaceExport.Plan(View.WorkspaceSession, project.Difficulties[View.ActiveDifficultyIndex], View.LibrarySettings.Songs, overwrite, name, View.CompensateTinyDroplets, View.LibrarySettings.ExperimentalExportStyle);
             await Task.Run(() => LibraryOperations.Export(View.WorkspaceSession, project, plan));
             View.LibraryExportFinished(plan); View.SetNotice(L.Get("library.exported", plan.Target));
         });

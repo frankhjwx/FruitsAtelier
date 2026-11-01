@@ -1961,5 +1961,8 @@
   "recovery.saved": "Zapisano kopię odzyskiwania: {0}",
   "recovery.failed": "Nie udało się zapisać kopii odzyskiwania: {0}",
   "recovery.nativeHelp": "Renderer graficzny jest niedostępny. Naciśnij Ctrl+S, aby zapisać kopię odzyskiwania, lub Enter, aby ponowić renderowanie. Projekt pozostaje w pamięci.",
-  "recovery.closeHelp": "Zapisać kopię odzyskiwania przed zamknięciem? Wybierz Nie, aby zamknąć bez zapisywania."
+  "recovery.closeHelp": "Zapisać kopię odzyskiwania przed zamknięciem? Wybierz Nie, aby zamknąć bez zapisywania.",
+  "settings.experimentalExportStyle": "Eksperymentalny eksport: rzutuj grupy x-time na płótno osu!. Slidery przesuwają się pionowo bez zmiany kształtu.",
+  "settings.exportStylePreview": "Podgląd eksportowanego układu. Edytuj pozycje na płótnie x-time.",
+  "core.exportStyle.changedPlayback": "Eksperymentalny układ zmienił rozgrywkę Catch; eksport zatrzymano."
 }

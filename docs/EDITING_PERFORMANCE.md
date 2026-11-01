@@ -174,6 +174,10 @@ reconverts the quantized map and computes playable NM/HR events and diagnostics.
 It is not a cheap accessor. Explicit export needs this validation. The committed
 editor snapshot also uses exported events for gameplay accuracy, but must reuse
 unchanged work through its caller-owned `OsuWriteCache`.
+The experimental export layout is prepared when that committed output changes or
+its preference is applied. A weak cache keyed by the ordinary export result reuses
+the layout; osu! canvas hover, zoom and repaint never rerun its projection or
+NM/HR validation.
 
 `CatchConversionCache` reuses parent results only when input geometry, timing at the parent head,
 conversion settings and incoming RNG state permit it. Authoring and read-back

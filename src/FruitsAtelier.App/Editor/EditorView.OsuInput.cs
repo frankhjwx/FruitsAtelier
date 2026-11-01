@@ -70,7 +70,7 @@ public sealed partial class EditorView
         CancelInteraction();
         IsOsuCanvas = !IsOsuCanvas;
         Select(Guid.Empty);
-        StatusMessage = L.Get(IsOsuCanvas ? "osu.canvasActive" : "osu.catchCanvasActive");
+        StatusMessage = L.Get(IsOsuCanvas ? LibrarySettings.ExperimentalExportStyle ? "settings.exportStylePreview" : "osu.canvasActive" : "osu.catchCanvasActive");
     }
 
     private bool OsuToggleKey(int key, bool ctrl, bool shift)
@@ -157,6 +157,12 @@ public sealed partial class EditorView
         {
             osuPanning = true; osuPanPointer = (x, y); osuPanOrigin = (osuCanvasPanX, osuCanvasPanY);
             drag = DragKind.Pan; return true;
+        }
+        if (LibrarySettings.ExperimentalExportStyle)
+        {
+            if (button == 0 && OsuCanvasHit(x, y) is { } selected) SelectObjects([selected], selected);
+            SetNotice(L.Get("settings.exportStylePreview"));
+            return true;
         }
         var point = OsuInputPoint(x, y, tool == Tool.Fruit || tool == Tool.Slider && osuDraftSlider is null, shift, useObjects: tool is Tool.Fruit or Tool.Slider || ctrl);
         if (tool is Tool.Fruit or Tool.Slider or Tool.Banana && Document.CollaborationEditableRanges is { } allowedSections
@@ -687,6 +693,7 @@ public sealed partial class EditorView
 
     private void OsuDoubleClick(float x, float y, bool shift)
     {
+        if (LibrarySettings.ExperimentalExportStyle) return;
         if (notesLocked) return;
         var point = OsuInputPoint(x, y, shift: shift);
         if (osuDraftSlider is { } draft)

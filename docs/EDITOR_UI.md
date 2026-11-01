@@ -611,6 +611,35 @@ regardless of X coordinate, unless the preference is enabled. Drafting and
 cancelling the slider leave those fruits unchanged; replacement commits with the slider.
 Adjusting an existing slider's head or moving the slider does not replace fruits.
 
+## Experimental export style
+
+**Settings → Experimental → Experimental export style** is off by default. Apply
+makes the osu! canvas preview and playable exports use the same derived layout.
+Cancel discards the settings draft. The preference does not modify project content
+or create undo history. It applies to standalone OSU/OSZ, linked Songs exports and
+the playable OSZ inside complete FAZ packages.
+
+Within each local group, X stays fixed and relative time projects upwards into Y
+at the default x-time canvas scale (60% of the AR-dependent scroll scale). Viewport
+zoom and panning do not change exports. Cup, Salad, Platter, Easy and Normal names
+use NC as a primary boundary. Other names additionally use actual Catch hyperdash
+arrivals when their horizontal speed separates tighter neighbouring runs; uniform
+hyperdash chains can remain together. Gaps, spinner boundaries and available vertical space
+split long groups. Every group retains one time scale; the pass does not fit
+invented arcs or change NC flags.
+
+Sliders only translate vertically: the head and every control point receive the
+same integer offset. Their path type, X coordinates, length, repeats and samples
+remain unchanged. Translation is constrained by the evaluated path's vertical
+extent; paths taller than the field keep their original position. Consequently,
+slider heads may not follow the group's exact time projection when space is limited.
+NM and HR event sequences are checked before accepting the styled output.
+
+The styled osu! canvas supports selection, playback and navigation. Use the x-time
+canvas for pointer placement and dragging; slider control handles are hidden in
+this derived preview. Disable the preference to restore ordinary osu! editing and
+the existing export layout. Already exported files change only on a later export.
+
 ## Experimental lazer editing
 
 **Settings → Experimental → lazer editing** enables the alternative Compose

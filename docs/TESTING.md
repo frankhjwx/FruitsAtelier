@@ -1650,3 +1650,19 @@ cancellation and undo in both canvases and languages. `--osu-canvas-check` also
 checks silent selection and the optional canvas selection lock. Windows
 `FruitsAtelier.App --render-check --osu-canvas-render-check` captures the choice
 window and exercises cancellation at its supported sizes and DPI scales.
+
+## Experimental export style
+
+`Core.Tests --export-style-check` checks deterministic group projection, NC
+boundaries, unchanged source documents, uniform slider translation, full-height
+slider constraints, generated FSliders/streams and identical NM/HR events. An
+optional `.osu` path runs the preservation checks against a local map without
+writing it. `App.Tests --export-style-check` checks default-off behavior, settings
+cancel/apply/persistence, narrow English/Chinese layouts, preview/export parity,
+pointer isolation, cached hover/zoom/repaint and restoring the original layout when
+disabled. `Formats.Tests --export-style-check` covers linked saves and preserving
+FSlider/Stream authoring across styled exports and external sound/metadata edits.
+
+`FruitsAtelier.App --render-check --export-style-render-check` exercises the native
+settings input and captures the toggle and derived preview at compact and full
+window sizes in English and Chinese under `artifacts/tests/export-style-native`.

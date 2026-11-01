@@ -8,7 +8,7 @@ public sealed record WorkspaceExportPlan(Guid DifficultyId, MapDocument Document
 
 public static class WorkspaceExport
 {
-    public static WorkspaceExportPlan Plan(WorkspaceSession session, ProjectDifficulty difficulty, string songs, bool overwrite, string newName, bool compensate)
+    public static WorkspaceExportPlan Plan(WorkspaceSession session, ProjectDifficulty difficulty, string songs, bool overwrite, string newName, bool compensate, bool experimentalExportStyle = false)
     {
         if (string.IsNullOrWhiteSpace(songs)) throw new InvalidOperationException(L.Get("library.bindForExport"));
         WorkspaceProject.ValidateRoots(Path.GetDirectoryName(session.Directory)!, songs);
@@ -45,7 +45,7 @@ public static class WorkspaceExport
             if (File.Exists(target)) throw new IOException(L.Get("library.exportExists", target));
         }
         WorkspaceProject.RejectLinks(target!);
-        var plan = new WorkspaceExportPlan(difficulty.Id, document, target!, expected, OsuBeatmapWriter.Serialize(document, compensate));
+        var plan = new WorkspaceExportPlan(difficulty.Id, document, target!, expected, OsuBeatmapWriter.Serialize(document, compensate, experimentalExportStyle: experimentalExportStyle));
         return overwrite ? WithMetadataFileName(plan, OsuBeatmapReader.ReadFile(target!)) : plan;
     }
 

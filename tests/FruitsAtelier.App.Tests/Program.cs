@@ -195,6 +195,7 @@ if (args.Contains("--object-snap-check")) { ObjectSnapTests.Run(); Console.Write
 
 if (args.Contains("--same-time-placement-check")) { ToolPaletteTests.SameTimePlacement(); SliderHeadReplacementTests.OnCompletion(); OsuCanvasInputTests.SameTimePlacement(); ExperimentalSnapTests.Run(); Console.WriteLine("PASS same-time placement and experimental settings"); return 0; }
 
+if (args.Contains("--export-style-check")) { ExportStyleSettingsTests.Run(); return 0; }
 if (args.Contains("--experimental-snap-check")) { ExperimentalSnapTests.Run(); Console.WriteLine("PASS Experimental snap settings, wheel and Stream/Stack"); return 0; }
 
 if (args.Contains("--independent-scale-check")) { IndependentCanvasScaleTests.Run(); Console.WriteLine("PASS Independent canvas scales, pan, persistence and timeline limits"); return 0; }
@@ -478,6 +479,7 @@ var tests = new (string Name, Action Run)[]
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
     ("Experimental snap settings, wheel and Stream/Stack", ExperimentalSnapTests.Run),
+    ("Experimental export style settings and canvas parity", ExportStyleSettingsTests.Run),
     ("Settings layout preserves labels and aligns controls in narrow windows", SettingsTests.Layout),
     ("Canvas background dim control fades, captures dragging and remains independent of zoom", CanvasBackgroundDimControlTests.Run),
     ("Mapping canvas X-axis grid colours and opacity preserve horizontal lines and content", CanvasGridSettingsTests.Run),
