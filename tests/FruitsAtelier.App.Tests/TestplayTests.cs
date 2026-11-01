@@ -151,7 +151,7 @@ internal static class TestplayTests
             ui.View.StartTestplay(); ui.Key(9); ui.View.KeyUp(9);
             if (entry >= 2) { ui.Key(27); ui.View.KeyUp(27); }
             if (entry == 0) { ui.Key(82, ctrl: true); ui.View.KeyUp(82); }
-            if (entry == 1) { ui.Key(192); clock.Advance(300); ui.Paint(); ui.View.KeyUp(192); }
+            if (entry == 1) { ui.Key(192); ui.View.KeyUp(192); clock.Advance(300); ui.Paint(); }
             if (entry == 2) { ui.Key(40); ui.View.KeyUp(40); ui.Key(13); ui.View.KeyUp(13); }
             if (entry == 3)
             {

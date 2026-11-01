@@ -1320,10 +1320,10 @@ public sealed partial class EditorView
             }
             else if (virtualKey == 192 && !ctrl && !altHeld)
             {
-                if (!testplayQuickRetryHeld)
+                if (!testplayQuickRetryHeld && testplayQuickRetryAt is null)
                 {
                     testplayQuickRetryHeld = true;
-                    testplayQuickRetryAt = TestplayRealtime + TestplayQuickRetryHoldMs;
+                    testplayQuickRetryAt = TestplayRealtime + TestplayQuickRetryDelayMs;
                     if (!TestplayPauseMenuVisible) SetTestplayPauseLoop(true);
                 }
             }

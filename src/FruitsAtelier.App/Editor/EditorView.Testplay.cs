@@ -16,7 +16,7 @@ public sealed partial class EditorView
     private bool testplayPauseHeld;
     private bool testplayQuickPaused;
     private bool testplayRetryHeld;
-    private const double TestplayQuickRetryHoldMs = 300;
+    private const double TestplayQuickRetryDelayMs = 300;
     private double? testplayQuickRetryAt;
     private bool testplayQuickRetryHeld;
     private bool testplayRestarting;
@@ -254,7 +254,8 @@ public sealed partial class EditorView
             comboPrevious = comboCurrent; comboCurrent = change.Combo; comboChangedAt = item.TimeMs;
             comboColour = ObjectColour(item);
         }
-        if (testplayFrame.Ended)
+        // A committed quick retry owns the transition even if gameplay ends during its fade.
+        if (testplayFrame.Ended && (testplayQuickRetryAt is null || testplayFrame.Error is not null))
         {
             var error = testplayFrame.Error;
             StopTestplay();
@@ -277,7 +278,7 @@ public sealed partial class EditorView
         if (virtualKey == 114) testplaySpeedHeld = false;
         if (virtualKey == 80) testplayPauseHeld = false;
         if (virtualKey == 82) testplayRetryHeld = false;
-        if (virtualKey == 192) CancelTestplayQuickRetry();
+        if (virtualKey == 192) testplayQuickRetryHeld = false;
         if (virtualKey == 66) testplayBookmarkHeld = false;
         if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
         if (IsTestplaying && testplayDriver is null) AdvanceTestplay();
@@ -336,7 +337,7 @@ public sealed partial class EditorView
         DrawTestplayCursor(c);
         if (testplayQuickRetryAt is double retryAt)
             c.Fill(new(0, 0, width, height), 0,
-                opacity: (float)Math.Clamp(1 - (retryAt - TestplayRealtime) / TestplayQuickRetryHoldMs, 0, 1));
+                opacity: (float)Math.Clamp(1 - (retryAt - TestplayRealtime) / TestplayQuickRetryDelayMs, 0, 1));
     }
 
     private void DrawTestplayInformation(ICanvas c, CatchTestplayFrame frame)
