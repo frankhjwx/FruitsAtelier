@@ -775,6 +775,7 @@
   "library.noExportTarget": "No hay ninguna dificultad estable vinculada disponible para sobrescribir. Exporta una nueva dificultad.",
   "library.exportConflict": "El archivo osu! cambió fuera de este proyecto: {0}. Vuelve a importarlo o exporta una nueva dificultad.",
   "library.exportExists": "Ya existe una dificultad en {0}. Elige otro nombre de dificultad.",
+  "library.exportPathTooLong": "La ruta de exportación es demasiado larga para osu! stable: {0}. Acorta la ruta de Songs o de la carpeta del mapa antes de exportar.",
   "library.scanning": "Escaneando canciones…",
   "library.scanProgress": "Escaneado: archivos {0}\nMapas capturados: {1}\nErrores omitidos: {2}",
   "library.indexed": "Dificultades {0} indexadas",

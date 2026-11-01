@@ -775,6 +775,7 @@
   "library.noExportTarget": "Er is geen gekoppelde stabiele moeilijkheidsgraad beschikbaar om te overschrijven. Exporteer een nieuwe moeilijkheidsgraad.",
   "library.exportConflict": "Het osu!-bestand is buiten dit project gewijzigd: {0}. Importeer het opnieuw of exporteer een nieuwe moeilijkheidsgraad.",
   "library.exportExists": "Er bestaat al een probleem bij {0}. Kies een andere moeilijkheidsnaam.",
+  "library.exportPathTooLong": "Het exportpad is te lang voor osu! stable: {0}. Verkort het pad naar Songs of de beatmapmap voordat je exporteert.",
   "library.scanning": "Nummers scannen…",
   "library.scanProgress": "Gescand: {0}-bestanden\nCatch-kaarten: {1}\nOvergeslagen fouten: {2}",
   "library.indexed": "{0}-problemen geïndexeerd",

@@ -775,6 +775,7 @@
   "library.noExportTarget": "Tidak ada tingkat kesulitan stabil tertaut yang tersedia untuk ditimpa. Ekspor kesulitan baru.",
   "library.exportConflict": "File osu! diubah di luar proyek ini: {0}. Impor ulang atau ekspor tingkat kesulitan baru.",
   "library.exportExists": "Kesulitan sudah ada di {0}. Pilih nama kesulitan lain.",
+  "library.exportPathTooLong": "Jalur ekspor terlalu panjang untuk osu! stable: {0}. Perpendek jalur folder Songs atau beatmap sebelum mengekspor.",
   "library.scanning": "Memindai Lagu…",
   "library.scanProgress": "Dipindai: file {0}\nTangkap peta: {1}\nKesalahan yang dilewati: {2}",
   "library.indexed": "Kesulitan {0} diindeks",

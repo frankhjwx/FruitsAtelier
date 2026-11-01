@@ -775,6 +775,7 @@
   "library.noExportTarget": "Aucune difficulté stable liée n’est disponible pour écraser. Exportez une nouvelle difficulté.",
   "library.exportConflict": "Le fichier osu! a été modifié en dehors de ce projet : {0}. Réimportez-le ou exportez une nouvelle difficulté.",
   "library.exportExists": "Une difficulté existe déjà au niveau {0}. Choisissez un autre nom de difficulté.",
+  "library.exportPathTooLong": "Le chemin d’exportation est trop long pour osu! stable : {0}. Raccourcissez le chemin de Songs ou du dossier de la beatmap avant d’exporter.",
   "library.scanning": "Balayage des chansons…",
   "library.scanProgress": "Numérisé : fichiers {0}\nCartes de capture : {1}\nErreurs ignorées : {2}",
   "library.indexed": "Difficultés {0} indexées",

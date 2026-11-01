@@ -804,6 +804,7 @@
   "library.noExportTarget": "No linked stable difficulty is available to overwrite. Export a new difficulty.",
   "library.exportConflict": "The osu! file changed outside this project: {0}. Reimport it or export a new difficulty.",
   "library.exportExists": "A difficulty already exists at {0}. Choose another difficulty name.",
+  "library.exportPathTooLong": "The export path is too long for osu! stable: {0}. Shorten the Songs or beatmap folder path before exporting.",
   "library.scanning": "Scanning Songs…",
   "library.scanProgress": "Scanned: {0} files\nCatch maps: {1}\nSkipped errors: {2}",
   "library.indexed": "{0} difficulties indexed",

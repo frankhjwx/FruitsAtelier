@@ -775,6 +775,7 @@
   "library.noExportTarget": "Walang naka-link na stable na kahirapan na magagamit upang ma-overwrite. Mag-export ng bagong kahirapan.",
   "library.exportConflict": "Ang osu! file ay nagbago sa labas ng proyektong ito: {0}. Muling i-import ito o i-export ang isang bagong kahirapan.",
   "library.exportExists": "Mayroon nang kahirapan sa {0}. Pumili ng isa pang pangalan ng kahirapan.",
+  "library.exportPathTooLong": "Masyadong mahaba ang export path para sa osu! stable: {0}. Paikliin ang path ng Songs o ng beatmap folder bago mag-export.",
   "library.scanning": "Ini-scan ang mga Kanta...",
   "library.scanProgress": "Na-scan: {0} file\nMahuli ang mga mapa: {1}\nMga nilaktawan na error: {2}",
   "library.indexed": "{0} mga paghihirap na na-index",

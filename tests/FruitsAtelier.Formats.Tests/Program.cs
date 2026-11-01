@@ -3,6 +3,7 @@ using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 try
 {
+if (args.Contains("--export-path-check")) { ExportPathTests.Run(); return 0; }
 if (args.Contains("--stable-droplets-check")) { StableDropletTests.Run(); Console.WriteLine("PASS stable droplet counts, timing and NM/HR derandomization"); return 0; }
 if (args.Contains("--timing-retiming-check")) { TimingRetimingTests.Run(); return 0; }
 if (args.Contains("--export-snap-check")) { ExportSnapTests.Run(); Console.WriteLine("PASS export offset preservation and stream grid"); return 0; }
@@ -287,7 +288,7 @@ SliderBorder : 255,255,255
 }
 
 int failed = 0, skipped = 0;
-tests = tests.Concat(SynchronizationTests.Cases()).ToArray();
+tests = tests.Concat(SynchronizationTests.Cases()).Append(("Export path compatibility", (Action)ExportPathTests.Run)).ToArray();
 foreach (var (name, run) in tests)
 {
     if (args.Contains("--skip-external-fixtures") && (run == (Action)RealMaps || run == (Action)RealEditableWrites))

@@ -775,6 +775,7 @@
   "library.noExportTarget": "上書きできるリンクされた安定した難易度はありません。新しい難易度をエクスポートします。",
   "library.exportConflict": "osu! ファイルは、このプロジェクトの外部で変更されました: {0}。再インポートするか、新しい難易度をエクスポートします。",
   "library.exportExists": "{0} にはすでに困難が存在します。別の難易度名を選択してください。",
+  "library.exportPathTooLong": "エクスポート先のパスが osu! stable には長すぎます：{0}。Songs またはビートマップのフォルダーパスを短くしてからエクスポートしてください。",
   "library.scanning": "曲をスキャン中…",
   "library.scanProgress": "スキャンされた: {0} ファイル\nキャッチ マップ: {1}\nスキップされたエラー: {2}",
   "library.indexed": "{0} の難易度がインデックス化されました",

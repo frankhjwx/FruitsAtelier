@@ -14,6 +14,14 @@ Keep the caches required by `Run-Editor.cmd`: `artifacts/dotnet-home`,
 deliverables and user source or resources. Check temporary Git worktrees for changes
 and remove clean ones through Git.
 
+## Export path compatibility
+
+`Formats.Tests --export-path-check` checks actual file-watcher events during new
+Songs exports, updates, automatic metadata renames and failed-rename rollback.
+It covers full-path limits, deterministic shortened names, Unicode boundaries,
+generated mapset folders and rejection before writes when the destination cannot
+leave room for safe temporary files.
+
 ## Difficulty import
 
 `App.Tests --difficulty-import-check` checks imports with different or empty

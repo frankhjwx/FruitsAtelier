@@ -804,6 +804,7 @@
   "library.noExportTarget": "没有可覆盖的 stable 难度，请导出为新难度。",
   "library.exportConflict": "osu! 文件已被外部修改：{0}。请重新导入或导出为新难度。",
   "library.exportExists": "目标难度已存在：{0}。请使用其他难度名称。",
+  "library.exportPathTooLong": "导出路径过长，osu! stable 无法安全处理：{0}。请缩短 Songs 或谱面文件夹路径后再导出。",
   "library.scanning": "正在扫描 Songs…",
   "library.scanProgress": "已扫描：{0} 个文件\nCatch 谱面：{1}\n异常跳过：{2}",
   "library.indexed": "已索引 {0} 个难度",

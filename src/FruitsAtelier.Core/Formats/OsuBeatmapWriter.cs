@@ -94,10 +94,11 @@ public static class OsuBeatmapWriter
     };
     public static OsuWriteResult WriteFile(MapDocument document, string destination, bool compensateTinyDroplets = true)
     {
+        OsuExportFile.ValidatePath(destination);
         if (document.SourcePath is not null && string.Equals(Path.GetFullPath(destination), Path.GetFullPath(document.SourcePath), StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException(L.Get("core.writer.sourceOverwrite"));
         var result = Serialize(document, compensateTinyDroplets);
-        AtomicFile.Write(destination, result.Text);
+        OsuExportFile.Write(destination, Encoding.UTF8.GetBytes(result.Text), overwrite: true);
         return result;
     }
 

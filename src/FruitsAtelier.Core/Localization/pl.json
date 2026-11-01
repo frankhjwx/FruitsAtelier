@@ -775,6 +775,7 @@
   "library.noExportTarget": "Nie ma dostępnego połączonego stabilnego poziomu trudności do nadpisania. Eksportuj nowy poziom trudności.",
   "library.exportConflict": "Plik osu! został zmieniony poza tym projektem: {0}. Zaimportuj go ponownie lub wyeksportuj nowy poziom trudności.",
   "library.exportExists": "Problem już istnieje w {0}. Wybierz inną nazwę trudności.",
+  "library.exportPathTooLong": "Ścieżka eksportu jest zbyt długa dla osu! stable: {0}. Skróć ścieżkę folderu Songs lub beatmapy przed eksportem.",
   "library.scanning": "Skanowanie utworów…",
   "library.scanProgress": "Zeskanowane: pliki {0}\nMapy połowowe: {1}\nPominięte błędy: {2}",
   "library.indexed": "Indeksowane trudności {0}",

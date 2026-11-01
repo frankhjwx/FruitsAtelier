@@ -775,6 +775,7 @@
   "library.noExportTarget": "沒有可覆蓋的連結穩定難度。匯出新難度。",
   "library.exportConflict": "osu! 檔案在該專案之外更改：{0}。重新匯入或匯出新的難度。",
   "library.exportExists": "{0} 已經有困難。選擇另一個難度名稱。",
+  "library.exportPathTooLong": "匯出路徑過長，osu! stable 無法安全處理：{0}。請縮短 Songs 或圖譜資料夾路徑後再匯出。",
   "library.scanning": "掃描歌曲...",
   "library.scanProgress": "已掃描：{0} 檔案\n擷取圖：{1}\n跳過的錯誤：{2}",
   "library.indexed": "{0} 困難指數",
