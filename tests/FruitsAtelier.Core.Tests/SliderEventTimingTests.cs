@@ -4,6 +4,7 @@ internal static class SliderEventTimingTests
 {
     public static void Run()
     {
+        VelocityLimitDiagnostic();
         var map = new MapDocument { DurationMs = 5000 };
         var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = false };
         track.Nodes.AddRange([new() { TimeMs = 1000, X = 120 }, new() { TimeMs = 3000, X = 360 }]);
@@ -59,6 +60,25 @@ internal static class SliderEventTimingTests
             catch (InvalidDataException) { rejected = true; }
             Check(rejected, "Invalid automatic SV floor was accepted.");
             Check(!CatchStreamConverter.Convert(bad).Success, "Conversion accepted an invalid floor.");
+        }
+    }
+
+    private static void VelocityLimitDiagnostic()
+    {
+        foreach (double? fixedSv in new double?[] { null, 1 })
+        {
+            var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 500, SliderMultiplier = 1.2 };
+            var track = new CurveTrack { Kind = CurveKind.Linear, SliderVelocityMultiplier = fixedSv,
+                CompensateTinyDroplets = false };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1100, X = 110 }]);
+            map.Tracks.Add(track);
+            var target = CatchStreamConverter.Convert(map).Objects.Last();
+            string? error = null;
+            try { DistanceSpacingEditing.ApplyX(map, target, fixedSv is null ? 400 : 200, false); }
+            catch (ArgumentException exception) { error = exception.Message; }
+            Check(error == FruitsAtelier.Localization.Strings.Get(fixedSv is null
+                ? "coordinate.sliderVelocityLimit" : "coordinate.unreachable"),
+                "Only movement requiring more than 10x SV should report the maximum SV limit.");
         }
     }
 

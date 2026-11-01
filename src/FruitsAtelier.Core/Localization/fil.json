@@ -940,6 +940,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Hindi maabot ng Slider ang X coordinate na ito nang sabay.",
+  "coordinate.sliderVelocityLimit": "Hindi mailipat: lampas sa 10× SV na limitasyon ang kailangang bilis. Dagdagan ang oras sa pagitan ng magkatabing object o bawasan ang pahalang na distansya.",
   "distance.nextField": "Susunod na DS",
   "distance.nonnegative": "Ang DS ay dapat na zero o positibo.",
   "distance.interval": "Ang DS ay nangangailangan ng isang positibong agwat ng oras.",

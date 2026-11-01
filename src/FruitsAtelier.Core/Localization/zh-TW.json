@@ -940,6 +940,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "滑條 不能同時到達該X 座標。",
+  "coordinate.sliderVelocityLimit": "無法拖動：所需速度超過 10× SV 上限。請增加相鄰物件的時間間隔或減小水平距離。",
   "distance.nextField": "下一個 DS",
   "distance.nonnegative": "DS 必須為零或正數。",
   "distance.interval": "DS 需要正時間間隔。",

@@ -940,6 +940,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "สไลเดอร์ ไม่สามารถเข้าถึงพิกัด X นี้ในเวลาเดียวกัน",
+  "coordinate.sliderVelocityLimit": "ย้ายไม่ได้: ความเร็วที่ต้องการเกินขีดจำกัด SV 10× เพิ่มช่วงเวลาระหว่างวัตถุที่อยู่ติดกันหรือลดระยะห่างแนวนอน",
   "distance.nextField": "ถัดไป DS",
   "distance.nonnegative": "DS ต้องเป็นศูนย์หรือบวก",
   "distance.interval": "DS ต้องมีช่วงเวลาที่เป็นบวก",

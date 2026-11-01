@@ -940,6 +940,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Slider tidak dapat mencapai koordinat X ini secara bersamaan.",
+  "coordinate.sliderVelocityLimit": "Tidak dapat dipindahkan: kecepatan yang diperlukan melebihi batas SV 10×. Tambah jeda waktu antara objek berdekatan atau kurangi jarak horizontalnya.",
   "distance.nextField": "DS berikutnya",
   "distance.nonnegative": "DS harus nol atau positif.",
   "distance.interval": "DS memerlukan interval waktu positif.",

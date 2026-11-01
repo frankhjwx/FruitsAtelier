@@ -969,6 +969,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "此 slider 无法在保持时间的情况下达到该 X 坐标。",
+  "coordinate.sliderVelocityLimit": "无法拖动：所需速度超过 10× SV 上限。请增大相邻物件的时间间隔或减小水平距离。",
   "distance.nextField": "后一对象 DS",
   "distance.nonnegative": "DS 必须为零或正数。",
   "distance.interval": "DS 需要大于零的时间间隔。",

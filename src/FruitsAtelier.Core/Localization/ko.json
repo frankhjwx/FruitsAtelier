@@ -940,6 +940,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "슬라이더는 동시에 이 X 좌표에 도달할 수 없습니다.",
+  "coordinate.sliderVelocityLimit": "이동할 수 없습니다: 필요한 속도가 SV 상한 10×를 초과합니다. 인접 오브젝트의 시간 간격을 늘리거나 수평 거리를 줄이세요.",
   "distance.nextField": "다음 DS",
   "distance.nonnegative": "DS는 0이거나 양수여야 합니다.",
   "distance.interval": "DS에는 양의 시간 간격이 필요합니다.",

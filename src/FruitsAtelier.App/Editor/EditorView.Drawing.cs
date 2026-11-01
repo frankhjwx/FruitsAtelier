@@ -782,7 +782,9 @@ public sealed partial class EditorView
             Button(c, new(noticeRight, height - 25, 210, 22), L.Get("sync.restoreFullBackup"),
                 () => ShowVersionHistory(backup.Version.Path, backup.DifficultyId), enabled: !SynchronizationBusy && !DiscardConfirmationVisible);
         }
-        c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(0, noticeRight - 33));
+        bool operationError = statusIsError && notice == StatusMessage;
+        c.Text(notice, 25, height - 21, 11, operationError || !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted,
+            Math.Max(0, noticeRight - 33), bold: operationError);
         DrawVolumeButton(c);
     }
 

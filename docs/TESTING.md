@@ -68,6 +68,10 @@ floors, schema 45/46 persistence and identical export after reload.
 The editor integration suite covers DS numeric fields, preceding-event snapping,
 selection-box priority, undo/cancel, and both shared and distinct rounded repeat
 samples. DS expectations use actual converted event times, not ideal beat fractions.
+The fractional last-tick regression checks the 10x SV diagnostic, red bold status
+rendering, recovery to a reachable position and atomic undo. The Core suite
+distinguishes the maximum SV limit from a lower explicit SV constraint. Native
+`--slider-endpoint-snap-render-check` captures the warning in English and Chinese.
 
 ## Movement Analysis labels
 

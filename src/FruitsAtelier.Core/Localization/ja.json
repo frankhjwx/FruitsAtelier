@@ -940,6 +940,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "スライダー は同時にこの X 座標に到達することはできません。",
+  "coordinate.sliderVelocityLimit": "移動できません：必要な速度が SV の上限 10× を超えています。隣接オブジェクトの時間間隔を広げるか、水平距離を短くしてください。",
   "distance.nextField": "次期DS",
   "distance.nonnegative": "DS はゼロまたは正でなければなりません。",
   "distance.interval": "DS には正の時間間隔が必要です。",

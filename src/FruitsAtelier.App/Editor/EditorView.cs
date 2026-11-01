@@ -157,7 +157,13 @@ public sealed partial class EditorView
     public Rect SnapSliderBounds => snapSlider;
     public Rect ZoomSliderBounds => zoomSlider;
     public string ActiveTool => tool.ToString();
-    public string StatusMessage { get; private set; } = L.Get("editor.status.demoLoaded");
+    private string statusMessage = L.Get("editor.status.demoLoaded");
+    private bool statusIsError;
+    public string StatusMessage
+    {
+        get => statusMessage;
+        private set { statusMessage = value; statusIsError = false; }
+    }
     public void SetNotice(string notice)
     {
         StatusMessage = notice;

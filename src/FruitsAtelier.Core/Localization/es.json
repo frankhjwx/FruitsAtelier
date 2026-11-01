@@ -940,6 +940,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "El Slider no puede alcanzar esta coordenada X al mismo tiempo.",
+  "coordinate.sliderVelocityLimit": "No se puede mover: la velocidad requerida supera el límite de SV de 10×. Aumenta el tiempo entre objetos adyacentes o reduce su distancia horizontal.",
   "distance.nextField": "Siguiente DS",
   "distance.nonnegative": "DS debe ser cero o positivo.",
   "distance.interval": "DS requiere un intervalo de tiempo positivo.",

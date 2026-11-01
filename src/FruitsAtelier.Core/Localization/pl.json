@@ -940,6 +940,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Slider nie może jednocześnie osiągnąć tej współrzędnej X.",
+  "coordinate.sliderVelocityLimit": "Nie można przesunąć: wymagana prędkość przekracza limit SV 10×. Zwiększ odstęp czasu między sąsiednimi obiektami lub zmniejsz ich odległość poziomą.",
   "distance.nextField": "Następny DS",
   "distance.nonnegative": "DS musi wynosić zero lub być dodatnie.",
   "distance.interval": "DS wymaga dodatniego przedziału czasu.",

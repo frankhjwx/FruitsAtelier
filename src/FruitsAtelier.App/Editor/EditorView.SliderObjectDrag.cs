@@ -155,8 +155,8 @@ public sealed partial class EditorView
                 RestoreSliderObjectSource(sliderObjectDragSource!);
                 sliderObjectDragX = target.X;
                 EnsureConversion();
-                StatusMessage = L.Get("editor.status.sliderObjectPosition", Time(target.TimeMs), Number(target.X));
             }
+            StatusMessage = L.Get("editor.status.sliderObjectPosition", Time(target.TimeMs), Number(target.X));
             return;
         }
         double rawX = Math.Clamp(sliderObjectPointerOriginX + (x - dragStartX) / Playfield.Width * 512, 0, 512);
@@ -165,6 +165,7 @@ public sealed partial class EditorView
         if (UsesSpeedDistanceSnap && TryLazerGestureDistanceSnap(new(target.TimeMs, wantedX), out var lazerPoint, objectSelection)) wantedX = lazerPoint.X;
         if (strict)
         {
+            string? strictFailure = null;
             var acceptedSource = new MapDocument();
             acceptedSource.Tracks.AddRange(Document.Tracks.Where(track => track.Id == target.SourceId));
             acceptedSource.ImportedSliders.AddRange(Document.ImportedSliders.Where(slider => slider.Id == target.SourceId));
@@ -173,7 +174,11 @@ public sealed partial class EditorView
                 PrepareSliderObjectShape(target);
                 foreach (double position in SliderObjectDistanceCandidates(target, wantedX))
                 {
-                    if (!TrySliderObjectPosition(target, position)) continue;
+                    if (!TrySliderObjectPosition(target, position, out string candidateFailure))
+                    {
+                        strictFailure ??= candidateFailure;
+                        continue;
+                    }
                     sliderObjectDragX = position;
                     EnsureConversion();
                     StatusMessage = L.Get("editor.status.sliderObjectPosition", Time(target.TimeMs), Number(position));
@@ -181,14 +186,19 @@ public sealed partial class EditorView
                     return;
                 }
             }
-            catch (Exception error) when (error is ArgumentException or InvalidOperationException or InvalidDataException) { }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException or InvalidDataException) { strictFailure = error.Message; }
             RestoreSliderObjectSource(acceptedSource);
-            StatusMessage = L.Get("editor.error.sliderDistanceSnap");
+            StatusMessage = strictFailure ?? L.Get("editor.error.sliderDistanceSnap");
+            statusIsError = true;
             return;
         }
-        if (Math.Abs(wantedX - sliderObjectDragX) < .00001) return;
+        if (Math.Abs(wantedX - sliderObjectDragX) < .00001)
+        {
+            StatusMessage = L.Get("editor.status.sliderObjectPosition", Time(target.TimeMs), Number(sliderObjectDragX));
+            return;
+        }
         double acceptedX = sliderObjectDragX;
-        bool limited = !TrySliderObjectPosition(target, wantedX);
+        bool limited = !TrySliderObjectPosition(target, wantedX, out string failure);
         if (limited)
         {
             double blockedX = wantedX;
@@ -203,8 +213,9 @@ public sealed partial class EditorView
         }
         else acceptedX = wantedX;
         sliderObjectDragX = acceptedX;
-        StatusMessage = limited ? L.Get("coordinate.unreachable")
+        StatusMessage = limited ? failure
             : L.Get("editor.status.sliderObjectPosition", Time(target.TimeMs), Number(acceptedX));
+        statusIsError = limited;
         EnsureConversion();
         if (conversion!.Objects.FirstOrDefault(item => item.SourceId == target.SourceId
             && item.EventIndex == target.EventIndex) is { } updated)
@@ -212,7 +223,11 @@ public sealed partial class EditorView
     }
 
     private bool TrySliderObjectPosition(ConvertedCatchObject target, double x)
+        => TrySliderObjectPosition(target, x, out _);
+
+    private bool TrySliderObjectPosition(ConvertedCatchObject target, double x, out string failure)
     {
+        failure = "";
         try
         {
             if (Math.Abs(x - target.X) < .00001)
@@ -240,6 +255,7 @@ public sealed partial class EditorView
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or InvalidDataException)
         {
+            failure = error.Message;
             RestoreSliderObjectSource(sliderObjectDragSource!);
             return false;
         }

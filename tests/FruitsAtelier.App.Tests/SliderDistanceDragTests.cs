@@ -185,8 +185,13 @@ internal static class SliderDistanceDragTests
         var displayed = OsuBeatmapWriter.Serialize(map).PlayableObjects.Last(o => o.Kind == CatchObjectKind.Droplet);
         SliderEventTestDriver.Down(ui, displayed.TimeMs, displayed.X);
         ui.MoveMap(displayed.TimeMs, 450);
-        Check(ui.View.StatusMessage == FruitsAtelier.Localization.Strings.Get("coordinate.unreachable"),
+        Check(ui.View.StatusMessage == FruitsAtelier.Localization.Strings.Get("coordinate.sliderVelocityLimit"),
             $"A blocked last tick drag must explain its limit: {ui.View.StatusMessage}");
+        ui.Paint();
+        var warning = ui.Canvas.Texts.Single(t => t.Value == ui.View.StatusMessage);
+        Check(warning.Bold && warning.X == 25
+            && warning.Color == EditorThemePalette.For(ui.View.LibrarySettings.EditorTheme).Error,
+            "The limit must be red and bold in the lower-left status bar.");
         var result = CatchStreamConverter.Convert(ui.View.Document);
         var moved = result.Objects.Single(o => o.EventIndex == displayed.EventIndex);
         var tail = result.Objects.Last();
@@ -194,8 +199,11 @@ internal static class SliderDistanceDragTests
         Check(result.Success && moved.X > displayed.X && moved.X <= tail.X + maximum + .001,
             $"Last tick must stop within the tail's maximum slider speed: {moved.X}, bound={tail.X + maximum}.");
         ui.MoveMap(displayed.TimeMs, 310);
-        Check(ui.View.StatusMessage != FruitsAtelier.Localization.Strings.Get("coordinate.unreachable"),
+        Check(ui.View.StatusMessage != FruitsAtelier.Localization.Strings.Get("coordinate.sliderVelocityLimit"),
             "Returning to a reachable position must clear the limit message.");
+        ui.Paint();
+        var normal = ui.Canvas.Texts.Single(t => t.Value == ui.View.StatusMessage);
+        Check(!normal.Bold && normal.Color != warning.Color, "Reachable movement must clear the error styling.");
         ui.UpMap(displayed.TimeMs, 310);
         ui.Key('Z', ctrl: true);
         Check(map.ContentEquals(ui.View.Document), "Limited last tick drag must undo in one step.");
