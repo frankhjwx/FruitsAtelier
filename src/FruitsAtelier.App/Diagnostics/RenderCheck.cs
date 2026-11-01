@@ -1103,8 +1103,6 @@ internal static class RenderCheck
             CanvasScaleRenderCheck.Run(canvas);
             return;
         }
-        if (Environment.GetCommandLineArgs().Contains("--export-style-render-check"))
-        { ExportStyleRenderCheck.Run(canvas); return; }
         if (Environment.GetCommandLineArgs().Contains("--experimental-snap-render-check"))
         {
             string language = FruitsAtelier.Localization.Strings.Language;

@@ -77,8 +77,7 @@ public sealed partial class EditorView
         if (!PrepareFileOperation() || FazVisible) return;
         var snapshot = map is null ? CaptureProject() : null;
         bool compensate = CompensateTinyDroplets; string workspace = LibrarySettings.Workspace;
-        bool exportStyle = LibrarySettings.ExperimentalExportStyle;
-        StartFazTask(Task.Run(() => FazArchive.Export(snapshot ?? LibraryOperations.ExportProject(map!), path, complete, compensate, workspace, exportStyle)),
+        StartFazTask(Task.Run(() => FazArchive.Export(snapshot ?? LibraryOperations.ExportProject(map!), path, complete, compensate, workspace)),
             () => SetNotice(L.Get("library.exported", path)));
     }
     private void StartFazTask(Task task, Action completion, Action? failure = null)

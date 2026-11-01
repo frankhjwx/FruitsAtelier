@@ -4,49 +4,6 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
-        yield return ("Sync: experimental export style keeps FSliders after external sound edits", () => Run(f =>
-        {
-            var curve = new CurveTrack { Kind = CurveKind.Linear };
-            curve.Nodes.AddRange([new Anchor { TimeMs = 3000, X = 100 }, new Anchor { TimeMs = 3200, X = 180 }]);
-            f.Diff.Document.Tracks.Add(curve);
-            f.Diff.Document.Fruits[1].OriginalLine = f.Diff.Document.Fruits[1].OriginalLine!.Replace(",1,0,", ",5,0,");
-            var plan = WorkspaceExport.Plan(f.Session, f.Diff, f.Songs, true, "", true, true);
-            WorkspaceExport.Commit(f.Session, plan);
-            var slider = plan.Output.ReadBack.ImportedSliders.Single();
-            Check(slider.Y != OsuBeatmapWriter.Serialize(f.Diff.Document).ReadBack.ImportedSliders.Single().Y, "fixture must translate slider");
-            string line = slider.OriginalLine!; var fields = line.Split(','); fields[4] = "8";
-            File.WriteAllText(f.Source, plan.Output.Text.Replace(line, string.Join(',', fields)));
-            var merge = f.Merge();
-            var resolved = WorkspaceSynchronization.ResolveExternal(merge);
-            Check(resolved.Tracks.Any(t => t.Id == curve.Id), "external sound edits must preserve authored FSlider");
-        }));
-        yield return ("Sync: experimental export style keeps managed streams after metadata edits", () => Run(f =>
-        {
-            var curve = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 4 };
-            curve.Nodes.AddRange([new Anchor { TimeMs = 3000, X = 100 }, new Anchor { TimeMs = 3500, X = 180 }]);
-            f.Diff.Document.Tracks.Add(curve);
-            var plan = WorkspaceExport.Plan(f.Session, f.Diff, f.Songs, true, "", true, true);
-            WorkspaceExport.Commit(f.Session, plan);
-            File.WriteAllText(f.Source, plan.Output.Text.Replace("Title:Title", "Title:Changed"));
-            var resolved = WorkspaceSynchronization.ResolveExternal(f.Merge());
-            Check(resolved.Tracks.Any(t => t.Id == curve.Id && t.StreamSnapDivisor == 4), "styled stream retains editable parent");
-        }));
-        yield return ("Sync: experimental export style retains authoring and linked save output", () => Run(f =>
-        {
-            var original = f.Diff.Document.DeepClone();
-            var plan = WorkspaceExport.Plan(f.Session, f.Diff, f.Songs, true, "", true, true);
-            WorkspaceExport.Commit(f.Session, plan);
-            Check(original.ContentEquals(f.Diff.Document), "styled export preserves authoring");
-            Check(!f.Merge().RequiresResolution, "styled output must not conflict with its authoring baseline");
-            f.Diff.Document.Fruits[0].X += 10;
-            var merge = f.Merge();
-            Check(merge.CanExportLocalChanges, "local edit after styled export remains saveable");
-            var next = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], merge, experimentalExportStyle: true);
-            Check(next.Output.Text == OsuBeatmapWriter.Serialize(next.Document, experimentalExportStyle: true).Text,
-                "linked save must retain enabled style");
-            WorkspaceExport.Commit(f.Session, next);
-            Check(!f.Merge().RequiresResolution, "saved style must not cause repeated synchronization conflicts");
-        }));
         yield return ("Sync: independent break choices preserve mixed events across restart", () => Run(f =>
         {
             string original = Fixture().Replace("[HitObjects]", "[Events]\n// Background\n0,0,\"bg.png\",0,0\n// Breaks\n2,5000,6000\n2,9000,10000\n2,13000,14000\n// Storyboard\nSprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\n[HitObjects]");

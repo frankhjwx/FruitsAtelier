@@ -1961,8 +1961,5 @@
   "recovery.saved": "恢复副本已保存：{0}",
   "recovery.failed": "无法保存恢复副本：{0}",
   "recovery.nativeHelp": "图形渲染器不可用。按 Ctrl+S 保存恢复副本，或按 Enter 重试绘制。项目仍保留在内存中。",
-  "recovery.closeHelp": "关闭前保存恢复副本？选择“否”将不保存并关闭。",
-  "settings.experimentalExportStyle": "实验性导出样式：将局部 x-time 分组投影到 osu! 画布。滑条仅上下平移，形状保持不变。",
-  "settings.exportStylePreview": "导出排布预览。请在 x-time 画布中编辑位置。",
-  "core.exportStyle.changedPlayback": "实验性导出排布改变了 Catch 轨迹，已停止导出。"
+  "recovery.closeHelp": "关闭前保存恢复副本？选择“否”将不保存并关闭。"
 }

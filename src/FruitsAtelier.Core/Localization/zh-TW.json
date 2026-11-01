@@ -1961,8 +1961,5 @@
   "recovery.saved": "復原副本已儲存：{0}",
   "recovery.failed": "無法儲存復原副本：{0}",
   "recovery.nativeHelp": "圖形繪製器無法使用。按 Ctrl+S 儲存復原副本，或按 Enter 重試繪製。專案仍保留在記憶體中。",
-  "recovery.closeHelp": "關閉前儲存復原副本？選擇「否」將不儲存並關閉。",
-  "settings.experimentalExportStyle": "實驗性匯出樣式：將局部 x-time 分組投影至 osu! 畫布。滑條僅上下平移，形狀保持不變。",
-  "settings.exportStylePreview": "匯出排列預覽。請在 x-time 畫布中編輯位置。",
-  "core.exportStyle.changedPlayback": "實驗性匯出排列改變了 Catch 軌跡，已停止匯出。"
+  "recovery.closeHelp": "關閉前儲存復原副本？選擇「否」將不儲存並關閉。"
 }

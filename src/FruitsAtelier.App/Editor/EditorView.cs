@@ -89,23 +89,7 @@ public sealed partial class EditorView
     private MapDocument? convertedSnapshot;
     private CatchConversionCache editorConversionCache = new();
     private CatchConversionResult? conversion;
-    private OsuWriteResult? rawPlayableExport, styledPlayableExport;
-    private OsuWriteResult? playableExport
-    {
-        get => rawPlayableExport;
-        set
-        {
-            rawPlayableExport = value;
-            RefreshExportStyle();
-        }
-    }
-    private void RefreshExportStyle()
-    {
-        styledPlayableExport = null;
-        styledPlayableExport = LibrarySettings.ExperimentalExportStyle && rawPlayableExport is { } output
-            ? ExperimentalExportLayout.Apply(output) : null;
-        osuCanvasSource = null;
-    }
+    private OsuWriteResult? playableExport;
     private IReadOnlyList<ConvertedCatchObject> playableObjects = [];
     private bool convertedWithCompensation;
     private bool contentDragPreview;

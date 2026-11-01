@@ -25,7 +25,7 @@ public sealed partial class EditorView
         savingDifficultyId = id;
         string name = current.Name, songs = LibrarySettings.Songs;
         var document = current.History.Document.DeepClone();
-        bool compensate = compensateTinyDroplets, exportStyle = LibrarySettings.ExperimentalExportStyle;
+        bool compensate = compensateTinyDroplets;
         difficultySaveTask = Task.Factory.StartNew(() =>
         {
             if (OperatingSystem.IsWindows()) Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
@@ -49,8 +49,8 @@ public sealed partial class EditorView
                 if (merge.CanExportLocalChanges || target.Sync.LocalOverrides.Count > 0 || target.Sync.RetainedObjects.Count > 0)
                 {
                     var plan = merge.CanExportLocalChanges
-                        ? WorkspaceSynchronization.PlanLocalChanges(session, target, merge, new OsuWriteCache(), exportStyle)
-                        : WorkspaceSynchronization.PlanResolvedChanges(session, target, document, status.Candidate!, compensate, new OsuWriteCache(), exportStyle);
+                        ? WorkspaceSynchronization.PlanLocalChanges(session, target, merge, new OsuWriteCache())
+                        : WorkspaceSynchronization.PlanResolvedChanges(session, target, document, status.Candidate!, compensate, new OsuWriteCache());
                     if (WorkspaceSynchronization.AudioHash(merge.External.Document.AudioPath) != target.Sync.AudioHash)
                         throw new DifficultySaveReviewRequired();
                     WorkspaceVersionHistory.ArchiveCurrentDifficulty(session, project, id);

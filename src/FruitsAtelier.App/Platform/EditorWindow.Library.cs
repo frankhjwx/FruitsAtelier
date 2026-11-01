@@ -98,7 +98,7 @@ internal sealed partial class EditorWindow
             string filename = WorkspaceProject.SafeName(map.Artist + " - " + map.Title) + ".osz";
             var path = MapFileDialog.Select(hwnd, true, L.Get("library.exportOsz"), MapFileDialog.OszFilter, filename, "osz");
             if (path is null) return;
-            LibraryOperations.ExportOsz(LibraryOperations.ExportProject(map), path, view.CompensateTinyDroplets, view.LibrarySettings.ExperimentalExportStyle);
+            LibraryOperations.ExportOsz(LibraryOperations.ExportProject(map), path, view.CompensateTinyDroplets);
             view.SetNotice(L.Get("library.exported", path));
         });
         view.RequestOszExport = () => FileOperation(() =>
@@ -107,7 +107,7 @@ internal sealed partial class EditorWindow
             string filename = WorkspaceProject.SafeName(project.Name) + ".osz";
             var path = MapFileDialog.Select(hwnd, true, L.Get("library.exportOsz"), MapFileDialog.OszFilter, filename, "osz");
             if (path is null) return;
-            LibraryOperations.ExportOsz(project, path, view.CompensateTinyDroplets, view.LibrarySettings.ExperimentalExportStyle);
+            LibraryOperations.ExportOsz(project, path, view.CompensateTinyDroplets);
             view.SetNotice(L.Get("library.exported", path));
         });
         view.RequestOsuExport = name => FileOperation(() =>
@@ -117,7 +117,7 @@ internal sealed partial class EditorWindow
             string filename = WorkspaceProject.DifficultyFileName(document, name, ".osu");
             var path = MapFileDialog.Select(hwnd, true, L.Get("library.exportFile"), MapFileDialog.OsuFilter, filename, "osu");
             if (path is null) return;
-            OsuBeatmapWriter.WriteFile(document, path, view.CompensateTinyDroplets, view.LibrarySettings.ExperimentalExportStyle);
+            OsuBeatmapWriter.WriteFile(document, path, view.CompensateTinyDroplets);
             view.CloseLibrary(); view.SetNotice(L.Get("library.exported", path));
         });
         view.RequestWorkspaceExport = (overwrite, name) => FileOperation(() =>
@@ -131,7 +131,7 @@ internal sealed partial class EditorWindow
                 var project = view.CaptureProject();
                 long started = view.Performance.Start();
                 WorkspaceExportPlan plan;
-                try { plan = WorkspaceExport.Plan(view.WorkspaceSession, project.Difficulties[view.ActiveDifficultyIndex], view.LibrarySettings.Songs, overwrite, name, view.CompensateTinyDroplets, view.LibrarySettings.ExperimentalExportStyle); }
+                try { plan = WorkspaceExport.Plan(view.WorkspaceSession, project.Difficulties[view.ActiveDifficultyIndex], view.LibrarySettings.Songs, overwrite, name, view.CompensateTinyDroplets); }
                 finally { view.Performance.End(Editor.EditorPerformanceStage.WorkspaceExportPlan, started); }
                 started = view.Performance.Start();
                 try { LibraryOperations.Export(view.WorkspaceSession, project, plan); }

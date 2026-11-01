@@ -42,10 +42,10 @@ public static class FazArchive
     private static string Temporary(string workspace) => FazStaging.Create(workspace);
     public static void CleanupTemporaryFiles(string workspace) => FazStaging.Cleanup(workspace);
 
-    public static void Export(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace, bool experimentalExportStyle = false)
-        => ExportPackage(snapshot, destination, complete, compensate, workspace, "FruitsAtelier", experimentalExportStyle);
+    public static void Export(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace)
+        => ExportPackage(snapshot, destination, complete, compensate, workspace, "FruitsAtelier");
 
-    internal static void ExportPackage(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace, string format, bool experimentalExportStyle = false)
+    internal static void ExportPackage(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace, string format)
     {
         string staging = Temporary(workspace);
         string temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -54,7 +54,7 @@ public static class FazArchive
             var project = ProjectSerializer.ReadProject(ProjectSerializer.Serialize(snapshot));
             var manifest = new FazManifest { Complete = complete, Format = format };
             var resourceGroups = new Dictionary<string, string>(StringComparer.Ordinal);
-            if (complete) LibraryOperations.ExportOsz(snapshot, Path.Combine(staging, "beatmap.osz"), compensate, experimentalExportStyle);
+            if (complete) LibraryOperations.ExportOsz(snapshot, Path.Combine(staging, "beatmap.osz"), compensate);
             foreach (var difficulty in project.Difficulties)
             {
                 var d = difficulty.Document;

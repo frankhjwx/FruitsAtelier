@@ -1961,8 +1961,5 @@
   "recovery.saved": "Recovery copy saved: {0}",
   "recovery.failed": "Recovery copy could not be saved: {0}",
   "recovery.nativeHelp": "The graphics renderer is unavailable. Press Ctrl+S to save a recovery copy, or Enter to retry rendering. Your project remains in memory.",
-  "recovery.closeHelp": "Save a recovery copy before closing? Choose No to close without saving.",
-  "settings.experimentalExportStyle": "Experimental export style: project local x-time groups into osu! canvas. Sliders move vertically without changing shape.",
-  "settings.exportStylePreview": "Export layout preview. Edit positions in the x-time canvas.",
-  "core.exportStyle.changedPlayback": "Experimental export layout changed Catch playback; export was stopped."
+  "recovery.closeHelp": "Save a recovery copy before closing? Choose No to close without saving."
 }

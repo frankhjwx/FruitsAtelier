@@ -1,7 +1,6 @@
 using FruitsAtelier.Core;
 try
 {
-if (args.Contains("--export-style-check")) { ExportStyleTests.Run(args.Length > 1 ? args[1] : null); return 0; }
 if (args.Contains("--autoplay-check")) { AutoPreviewPerformanceTests.Run(); return 0; }
 if (args.Contains("--autoplay-performance")) { AutoPreviewPerformanceTests.Run(); AutoPreviewPerformanceTests.Benchmark(); return 0; }
 if (args.Length == 2 && args[0] == "--autoplay-map-check") { AutoPreviewPerformanceTests.Map(args[1]); return 0; }
@@ -55,7 +54,6 @@ if (args.Length == 2 && args[0] == "--benchmark-history")
 
 var tests = new (string Name, Action Run)[]
 {
-    ("Experimental export layout preserves Catch playback and time-space groups", () => ExportStyleTests.Run()),
     ("Autoplay matches independent frames and movement intervals", AutoPreviewPerformanceTests.Run),
     ("Slider event edits preserve rounded timing, automatic SV, persistence and export", SliderEventTimingTests.Run),
     ("Batch timing edits preserve slider extents and length calculations", TimingBatchEditingTests.Run),

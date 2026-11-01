@@ -61,7 +61,7 @@ public static class LibraryOperations
         }
     }
 
-    public static void ExportOsz(BeatmapProject project, string destination, bool compensate, bool experimentalExportStyle = false)
+    public static void ExportOsz(BeatmapProject project, string destination, bool compensate)
     {
         // macOS's default /var temp path traverses a symlink rejected by resource copying.
         string temporaryRoot = OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath();
@@ -73,7 +73,7 @@ public static class LibraryOperations
             foreach (var difficulty in project.Difficulties)
             {
                 var document = StandaloneExportDocument(difficulty, difficulty.Name);
-                var output = OsuBeatmapWriter.Serialize(document, compensate, experimentalExportStyle: experimentalExportStyle);
+                var output = OsuBeatmapWriter.Serialize(document, compensate);
                 string name = WorkspaceProject.DifficultyFileName(document, difficulty.Name, ".osu");
                 if (!names.Add(name)) throw new IOException(FruitsAtelier.Localization.Strings.Get("library.exportExists", name));
                 BeatmapResources.Copy(document, staging, output.ReadBack);

@@ -35,8 +35,7 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
   Applying a pure shift moves authored timing; generated SV stays derived.
 - Accepting external slider sound, sample or combo edits retains the exact FSlider
   anchors and handles when its single exported slider has unambiguous matching
-  geometry, start time, repeats and playback velocity. Geometry matching allows
-  a uniform Y translation, including experimental export placement. Changed shapes or ambiguous
+  geometry, start time, repeats and playback velocity. Changed paths or ambiguous
   matches are imported as external sliders. This also applies to the entire osu!
   version choice.
 - Save authored anchors, Bezier handles, and editing constraints in the editor project, rather than custom `.osu` object fields.
@@ -114,10 +113,6 @@ their slots and relative source order. Timing points always sort chronologically
 including exports without generated sliders; same-time points retain source order.
 
 Output defaults to a new file. It validates all objects before writing a temporary file and safely replacing the destination. Failure preserves the original file. Hosts copy available associated resources and manage relative paths for exports across directories; missing song audio and same-name content conflicts are errors. Optional video, storyboard, background, and custom sample files may be absent; their original references are preserved.
-
-The optional [experimental export style](EDITOR_UI.md#experimental-export-style)
-applies a deterministic Y-only layout after ordinary export. It preserves all
-non-geometric fields and checks NM/HR playback before returning the styled output.
 
 Unedited sliders are not resampled. SV changes are checked against parameters affecting simultaneous and later objects; required restoration points are written and verified. `.osu` export and project saving maintain separate success states and dirty-state handling.
 

@@ -616,9 +616,9 @@ public static partial class WorkspaceSynchronization
         var lines = ObjectLines(output.Text);
         var emitted = lines.Select((line, i) => (Line: line, Id: output.ObjectSources[i]))
             .GroupBy(p => p.Id).Where(g => g.Count() == 1).Select(g => g.Single())
-            .GroupBy(p => SliderShape(p.Line, ignoreVerticalTranslation: true)).Where(g => g.Key is not null && g.Count() == 1)
+            .GroupBy(p => SliderShape(p.Line)).Where(g => g.Key is not null && g.Count() == 1)
             .ToDictionary(g => g.Key!, g => g.Single().Id);
-        var incoming = target.ImportedSliders.GroupBy(s => SliderShape(s.OriginalLine ?? "", ignoreVerticalTranslation: true))
+        var incoming = target.ImportedSliders.GroupBy(s => SliderShape(s.OriginalLine ?? ""))
             .Where(g => g.Key is not null && g.Count() == 1).ToArray();
         var localTiming = new TimingMap.Lookup(output.ReadBack);
         var externalTiming = new TimingMap.Lookup(merge.External.Document);
@@ -645,9 +645,9 @@ public static partial class WorkspaceSynchronization
         var streams = merge.Local.Tracks.Where(t => t.StreamSnapDivisor is not null).ToArray();
         if (streams.Length == 0) return;
         var output = OsuBeatmapWriter.Serialize(merge.Local, merge.Compensate);
-        var lines = ObjectLines(output.Text).Select(StreamLine).ToArray();
+        var lines = ObjectLines(output.Text);
         var localCounts = lines.GroupBy(l => l).ToDictionary(g => g.Key, g => g.Count());
-        var externalLines = ObjectLines(merge.External.Text).Select(StreamLine).ToArray();
+        var externalLines = ObjectLines(merge.External.Text);
         var incoming = target.Fruits.Where(f => f.SourceOrder >= 0 && f.SourceOrder < externalLines.Length)
             .GroupBy(f => externalLines[f.SourceOrder]).Where(g => g.Count() == 1)
             .ToDictionary(g => g.Key, g => g.Single());
@@ -674,7 +674,7 @@ public static partial class WorkspaceSynchronization
         try
         {
             var candidate = OsuBeatmapWriter.Serialize(target, merge.Compensate);
-            verified = ObjectLines(candidate.Text).Select((line, i) => (Line: StreamLine(line), Id: candidate.ObjectSources[i]))
+            verified = ObjectLines(candidate.Text).Select((line, i) => (Line: line, Id: candidate.ObjectSources[i]))
                 .GroupBy(p => p.Id).ToDictionary(g => g.Key, g => g.Select(p => p.Line).ToArray());
         }
         catch (InvalidDataException) { }
@@ -686,44 +686,24 @@ public static partial class WorkspaceSynchronization
             }
     }
 
-    private static string StreamLine(string line)
-    {
-        var fields = line.Split(',');
-        if (fields.Length > 3 && (int.Parse(fields[3], CultureInfo.InvariantCulture) & 11) == 1) fields[1] = "0";
-        return string.Join(',', fields);
-    }
-
-    private static string? SliderShape(string line, bool ignoreVerticalTranslation = false)
+    private static string? SliderShape(string line)
     {
         var parts = NormalizeObject(line).Split(',');
         if (parts.Length < 8 || (int.Parse(parts[3], CultureInfo.InvariantCulture) & 11) != 2) return null;
-        // Export styling can translate a slider without changing its authored Catch curve.
-        if (ignoreVerticalTranslation)
-        {
-            double y = double.Parse(parts[1], CultureInfo.InvariantCulture);
-            var points = parts[5].Split('|');
-            for (int i = 1; i < points.Length; i++)
-            {
-                var xy = points[i].Split(':');
-                xy[1] = (double.Parse(xy[1], CultureInfo.InvariantCulture) - y).ToString("G15", CultureInfo.InvariantCulture);
-                points[i] = string.Join(':', xy);
-            }
-            parts[1] = "0"; parts[5] = string.Join('|', points);
-        }
         return string.Join(',', parts[0], parts[1], parts[2], parts[5], parts[6], parts[7]);
     }
 
-    public static WorkspaceExportPlan PlanLocalChanges(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceMerge merge, OsuWriteCache? cache = null, bool experimentalExportStyle = false)
+    public static WorkspaceExportPlan PlanLocalChanges(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceMerge merge, OsuWriteCache? cache = null)
     {
         if (!entry.ExportConfirmed || !merge.CanExportLocalChanges || entry.Sync is not { } baseline || merge.External.Text != baseline.Text)
             throw new InvalidOperationException(L.Get("sync.baseline"));
         if (AudioHash(merge.External.Document.AudioPath) != baseline.AudioHash)
             throw new IOException(L.Get("library.exportConflict", merge.External.Path));
-        return PlanResolvedChanges(session, entry, merge.Local, merge.External, merge.Compensate, cache, experimentalExportStyle);
+        return PlanResolvedChanges(session, entry, merge.Local, merge.External, merge.Compensate, cache);
     }
 
     public static WorkspaceExportPlan PlanResolvedChanges(WorkspaceSession session, WorkspaceDifficulty entry, MapDocument resolved,
-        WorkspaceSyncCandidate external, bool compensate, OsuWriteCache? cache = null, bool experimentalExportStyle = false)
+        WorkspaceSyncCandidate external, bool compensate, OsuWriteCache? cache = null)
     {
         if (entry.FaOnly || !entry.ExportConfirmed || !Paths.Equals(Target(entry), external.Path))
             throw new InvalidOperationException(L.Get("sync.baseline"));
@@ -732,7 +712,7 @@ public static partial class WorkspaceSynchronization
         var missing = WorkspaceProject.MissingResources(BeatmapProject.FromDocuments([resolved]));
         if (missing.Count > 0) throw new IOException(L.Get("library.missingResources", string.Join("\n", missing)));
         return WorkspaceExport.WithMetadataFileName(new(entry.Id, resolved, external.Path, external.Hash,
-            OsuBeatmapWriter.Serialize(resolved, compensate, cache, experimentalExportStyle)), external.Document);
+            OsuBeatmapWriter.Serialize(resolved, compensate, cache)), external.Document);
     }
 
     public static void Accept(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceSyncCandidate external, MapDocument resolved, bool compensate, bool retainLocalFields = false,

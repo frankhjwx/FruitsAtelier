@@ -3,7 +3,6 @@ using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 try
 {
-if (args.Contains("--export-style-check")) { foreach (var (name, run) in SynchronizationTests.Cases().Where(c => c.Item1.Contains("experimental export style"))) { run(); Console.WriteLine("PASS " + name); } return 0; }
 if (args.Contains("--stable-droplets-check")) { StableDropletTests.Run(); Console.WriteLine("PASS stable droplet counts, timing and NM/HR derandomization"); return 0; }
 if (args.Contains("--timing-retiming-check")) { TimingRetimingTests.Run(); return 0; }
 if (args.Contains("--export-snap-check")) { ExportSnapTests.Run(); Console.WriteLine("PASS export offset preservation and stream grid"); return 0; }

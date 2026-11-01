@@ -70,7 +70,6 @@ public sealed class LibrarySettings
         set => defaultDropletMode = Enum.IsDefined(value) ? value : SliderDropletMode.FollowMap;
     }
     public bool ExperimentalSnapDivisions { get; set; }
-    public bool ExperimentalExportStyle { get; set; }
     public bool PreserveSameTimeObjects { get; set; }
     public bool LazerEditing { get; set; }
     public bool MappingSpeedDistanceSnap { get; set; }

@@ -37,9 +37,6 @@ public sealed partial class EditorView
     public Action<bool>? RequestFullscreen { get; set; }
     private bool draftFullscreen, fullscreenShortcutHeld;
     private bool draftExperimentalSnapDivisions;
-    private bool draftExperimentalExportStyle;
-    internal Rect ExportStyleToggleBounds { get; private set; }
-    private float experimentalContentHeight = 500;
     private bool draftPreserveSameTimeObjects;
     public Rect PreserveSameTimeObjectsToggleBounds { get; private set; }
     private bool draftLazerEditing;
@@ -141,7 +138,6 @@ public sealed partial class EditorView
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
         draftDerandomizeNewProjects = LibrarySettings.DerandomizeNewProjects;
         draftExperimentalSnapDivisions = LibrarySettings.ExperimentalSnapDivisions;
-        draftExperimentalExportStyle = LibrarySettings.ExperimentalExportStyle;
         draftPreserveSameTimeObjects = LibrarySettings.PreserveSameTimeObjects;
         draftLazerEditing = LibrarySettings.LazerEditing;
         draftCatchHitLighting = LibrarySettings.CatchHitLighting;
@@ -195,7 +191,6 @@ public sealed partial class EditorView
         draftSettingsColours[6] != LibrarySettings.SelectionHighlightColour ||
         draftFullscreen != LibrarySettings.Fullscreen ||
         draftExperimentalSnapDivisions != LibrarySettings.ExperimentalSnapDivisions ||
-        draftExperimentalExportStyle != LibrarySettings.ExperimentalExportStyle ||
         draftPreserveSameTimeObjects != LibrarySettings.PreserveSameTimeObjects ||
         draftLazerEditing != LibrarySettings.LazerEditing ||
         draftCatchHitLighting != LibrarySettings.CatchHitLighting ||
@@ -344,11 +339,7 @@ public sealed partial class EditorView
                     () => OpenHitLightingMenu(HitLightingSettingsBounds));
                 break;
             case SettingsCategory.Experimental:
-                workspaceScrollBounds = new(SettingsContentX, SettingsTop + 116, SettingsContentWidth + 12, SettingsBounds.Height - 208);
-                workspaceScroll = Math.Clamp(workspaceScroll, 0, Math.Max(0, experimentalContentHeight - workspaceScrollBounds.Height));
-                int experimentalFirstHit = hits.Count;
-                c.Clip(workspaceScrollBounds);
-                float snapToggleTop = SettingsParagraph(c, L.Get("settings.experimentalSnapDivisions"), SettingsTop + 128 - workspaceScroll, SettingsTextSize);
+                float snapToggleTop = SettingsParagraph(c, L.Get("settings.experimentalSnapDivisions"), SettingsTop + 128, SettingsTextSize);
                 SettingsButton(c, new(SettingsContentX, snapToggleTop + 12, SettingsContentWidth, SettingsControlHeight),
                     L.Get(draftExperimentalSnapDivisions ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftExperimentalSnapDivisions = !draftExperimentalSnapDivisions, draftExperimentalSnapDivisions);
@@ -361,15 +352,6 @@ public sealed partial class EditorView
                 SettingsButton(c, PreserveSameTimeObjectsToggleBounds,
                     L.Get(draftPreserveSameTimeObjects ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftPreserveSameTimeObjects = !draftPreserveSameTimeObjects, draftPreserveSameTimeObjects);
-                float styleTop = SettingsParagraph(c, L.Get("settings.experimentalExportStyle"), preserveToggleTop + 76, SettingsTextSize);
-                ExportStyleToggleBounds = new(SettingsContentX, styleTop + 12, SettingsContentWidth, SettingsControlHeight);
-                SettingsButton(c, ExportStyleToggleBounds,
-                    L.Get(draftExperimentalExportStyle ? "settings.romanisedOn" : "settings.romanisedOff"),
-                    () => draftExperimentalExportStyle = !draftExperimentalExportStyle, draftExperimentalExportStyle);
-                experimentalContentHeight = ExportStyleToggleBounds.Bottom + 12 - SettingsTop + workspaceScroll - 116;
-                c.Unclip();
-                ClipSettingsHits(experimentalFirstHit);
-                DrawSettingsScrollbar(c, experimentalContentHeight);
                 break;
             case SettingsCategory.MappingCanvas:
                 DrawMappingCanvasSettings(c);
@@ -500,7 +482,6 @@ public sealed partial class EditorView
             settings.SelectionHighlightColour = draftSettingsColours[6];
             settings.Fullscreen = draftFullscreen;
             settings.ExperimentalSnapDivisions = draftExperimentalSnapDivisions;
-            settings.ExperimentalExportStyle = draftExperimentalExportStyle;
             settings.PreserveSameTimeObjects = draftPreserveSameTimeObjects;
             settings.LazerEditing = draftLazerEditing;
             settings.MappingSpeedDistanceSnap = LibrarySettings.MappingSpeedDistanceSnap;
@@ -550,13 +531,10 @@ public sealed partial class EditorView
                 InitializeSkin(); return;
             }
             bool fullscreenChanged = settings.Fullscreen != LibrarySettings.Fullscreen;
-            bool exportStyleChanged = settings.ExperimentalExportStyle != LibrarySettings.ExperimentalExportStyle;
-            if (exportStyleChanged) CancelInteraction();
             bool lazerEditingChanged = settings.LazerEditing != LibrarySettings.LazerEditing;
             if (lazerEditingChanged) CancelInteraction();
             bool mediaChanged = settings.EnableVideoStoryboard != LibrarySettings.EnableVideoStoryboard;
             SaveLibraryMemory(); LibrarySettings = settings;
-            if (exportStyleChanged) RefreshExportStyle();
             if (mediaChanged) ApplyMediaPreference();
             if (workspaceChanged) ConfigurePatternGallery(Path.Combine(settings.Workspace, "Patterns"));
             if (lazerEditingChanged) ResetLazerPresentation();
