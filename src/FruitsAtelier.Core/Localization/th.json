@@ -761,6 +761,8 @@
   "project.new": "โครงการใหม่",
   "project.add": "เพิ่มระดับความยากใหม่",
   "project.import": "นำเข้าความยากของ .osu...",
+  "project.importMetadataMismatch": "Artist และ Title ของความยากที่นำเข้าต้องไม่ว่างและต้องตรงกับโปรเจกต์ปัจจุบันทุกตัวอักษร (แยกตัวพิมพ์ใหญ่และเล็ก)",
+  "project.importResourcesRequired": "เปิดโปรเจกต์ที่มีโฟลเดอร์ทรัพยากรก่อนนำเข้าความยาก .osu",
   "project.defaultDifficulty": "ความยาก {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "หน้าก่อนหน้า",

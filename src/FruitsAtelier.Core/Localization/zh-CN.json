@@ -790,6 +790,8 @@
   "project.new": "新建工程",
   "project.add": "添加新难度",
   "project.import": "导入 .osu 难度…",
+  "project.importMetadataMismatch": "导入难度的 Artist 和 Title 必须与当前项目完全一致（区分大小写），且均不能为空。",
+  "project.importResourcesRequired": "请先打开具有资源目录的项目，再导入 .osu 难度。",
   "project.defaultDifficulty": "Difficulty {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "上一页",

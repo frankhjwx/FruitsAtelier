@@ -761,6 +761,8 @@
   "project.new": "Bagong proyekto",
   "project.add": "Magdagdag ng bagong difficulty",
   "project.import": "Hirap sa pag-import ng .osu...",
+  "project.importMetadataMismatch": "Dapat hindi blangko ang Artist at Title ng ini-import na difficulty at eksaktong tumugma sa kasalukuyang proyekto (sensitibo sa malaki at maliit na titik).",
+  "project.importResourcesRequired": "Magbukas muna ng proyektong may resource directory bago mag-import ng .osu difficulty.",
   "project.defaultDifficulty": "Hirap {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "Nakaraang pahina",

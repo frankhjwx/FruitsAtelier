@@ -790,6 +790,8 @@
   "project.new": "New project",
   "project.add": "Add new difficulty",
   "project.import": "Import .osu difficulty…",
+  "project.importMetadataMismatch": "The imported difficulty must have the same non-empty Artist and Title as the current project (case-sensitive).",
+  "project.importResourcesRequired": "Open a project with a resource directory before importing an .osu difficulty.",
   "project.defaultDifficulty": "Difficulty {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "Previous page",

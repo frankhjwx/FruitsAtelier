@@ -761,6 +761,8 @@
   "project.new": "Nowy projekt",
   "project.add": "Dodaj nowy poziom trudności",
   "project.import": "Trudność importu .osu…",
+  "project.importMetadataMismatch": "Pola Artist i Title importowanej trudności muszą być niepuste i identyczne z bieżącym projektem (z uwzględnieniem wielkości liter).",
+  "project.importResourcesRequired": "Przed importem trudności .osu otwórz projekt z katalogiem zasobów.",
   "project.defaultDifficulty": "Trudność {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "Poprzednia strona",

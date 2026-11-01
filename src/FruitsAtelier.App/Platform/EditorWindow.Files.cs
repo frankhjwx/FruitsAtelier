@@ -100,9 +100,7 @@ internal sealed partial class EditorWindow
             string? path = MapFileDialog.Select(hwnd, false, L.Get("project.import"), MapFileDialog.OsuFilter);
             if (path is not null)
             {
-                var document = OsuBeatmapReader.ReadFile(path);
-                LibraryOperations.ImportFolder(Path.GetDirectoryName(path)!, view.LibrarySettings);
-                view.AddDifficulty(document);
+                view.ImportDifficultyFile(path);
             }
         });
         view.CanReuseDifficultyAudio = path => audio.CanReuse(path);

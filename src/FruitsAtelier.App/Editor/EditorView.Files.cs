@@ -273,6 +273,58 @@ public sealed partial class EditorView
         SwitchDifficultyCore(difficultyPauseTarget, reloadAudio: true);
     }
 
+    public bool ImportDifficultyFile(string path)
+    {
+        if (RejectPatternProjectOperation() || !PrepareFileOperation()) return false;
+        var imported = OsuBeatmapReader.ReadFile(path);
+        void ValidateMetadata(MapDocument candidate)
+        {
+            foreach (string key in new[] { "Artist", "Title" })
+            {
+                string? expected = OsuBeatmapReader.Setting(Document, "Metadata", key);
+                string? actual = OsuBeatmapReader.Setting(candidate, "Metadata", key);
+                if (string.IsNullOrWhiteSpace(expected) || string.IsNullOrWhiteSpace(actual)
+                    || !string.Equals(expected, actual, StringComparison.Ordinal))
+                    throw new InvalidDataException(L.Get("project.importMetadataMismatch"));
+            }
+        }
+        ValidateMetadata(imported);
+        string? origin = Document.SourcePath ?? Document.AudioPath;
+        if (origin is null) throw new InvalidDataException(L.Get("project.importResourcesRequired"));
+        string directory = Path.GetDirectoryName(Path.GetFullPath(origin))!;
+        WorkspaceProject.RejectLinks(directory);
+        if (!Directory.Exists(directory)) throw new DirectoryNotFoundException(directory);
+        string source = Path.GetFullPath(path);
+        if (WorkspaceSynchronization.Paths.Equals(Path.GetDirectoryName(source), directory))
+            return AddDifficulty(imported);
+        string hash = WorkspaceProject.Hash(source);
+        int existing = difficulties.FindIndex(d => d.Name == OsuBeatmapReader.Setting(imported, "Metadata", "Version")
+            && d.History.Document.SourcePath is { } retained
+            && WorkspaceSynchronization.Paths.Equals(Path.GetDirectoryName(retained), directory)
+            && File.Exists(retained) && new FileInfo(retained).Length <= OsuBeatmapReader.MaximumFileBytes
+            && WorkspaceProject.Hash(retained) == hash);
+        if (existing >= 0) return SwitchDifficulty(existing);
+        if (difficulties.Count >= 256) { SetNotice(L.Get("project.invalid")); return false; }
+
+        // The retained .osu owns all relative media, storyboard and sample references after reopening.
+        string target = Path.Combine(directory, Path.GetFileName(source));
+        for (int suffix = 2; File.Exists(target) || Directory.Exists(target); suffix++)
+            target = Path.Combine(directory, Path.GetFileNameWithoutExtension(source) + " (" + suffix + ").osu");
+        WorkspaceProject.RejectLinks(source);
+        File.Copy(source, target, overwrite: false);
+        try
+        {
+            imported = OsuBeatmapReader.ReadFile(target);
+            ValidateMetadata(imported);
+            return AddDifficulty(imported);
+        }
+        finally
+        {
+            if (!difficulties.Any(d => WorkspaceSynchronization.Paths.Equals(d.History.Document.SourcePath, target)))
+                File.Delete(target);
+        }
+    }
+
     public bool AddDifficulty(MapDocument? imported = null, bool faOnly = false,
         int? copyFrom = null, MapTemplate? template = null, string? difficultyName = null)
     {

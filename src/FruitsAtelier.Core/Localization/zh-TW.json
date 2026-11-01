@@ -761,6 +761,8 @@
   "project.new": "新專案",
   "project.add": "新增難度",
   "project.import": "導入.osu難度...",
+  "project.importMetadataMismatch": "匯入難度的 Artist 和 Title 必須與目前專案完全一致（區分大小寫），且均不能為空。",
+  "project.importResourcesRequired": "請先開啟具有資源目錄的專案，再匯入 .osu 難度。",
   "project.defaultDifficulty": "難度{0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "上一頁",

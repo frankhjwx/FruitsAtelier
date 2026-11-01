@@ -127,9 +127,7 @@ internal sealed partial class MacWindow : Window
             var path = await Pick(L.Get("project.import"), ["*.osu"]);
             if (path is not null)
             {
-                var document = OsuBeatmapReader.ReadFile(path);
-                LibraryOperations.ImportFolder(Path.GetDirectoryName(path)!, View.LibrarySettings);
-                if (View.AddDifficulty(document))
+                if (View.ImportDifficultyFile(path))
                 { await audio.LoadAsync(null); await audio.LoadAsync(View.Document.AudioPath); audio.Seek(View.PlayheadMs); PollAudio(); }
             }
         });

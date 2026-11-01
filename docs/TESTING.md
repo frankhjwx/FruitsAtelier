@@ -14,6 +14,13 @@ Keep the caches required by `Run-Editor.cmd`: `artifacts/dotnet-home`,
 deliverables and user source or resources. Check temporary Git worktrees for changes
 and remove clean ones through Git.
 
+## Difficulty import
+
+`App.Tests --difficulty-import-check` checks strict Artist/Title matching, rejection
+before project or file changes, conflicting media filenames in Downloads, retained
+project resource paths after save/reopen, missing-resource isolation, source-file
+collisions and same-directory difficulty selection.
+
 ## Error recovery
 
 `App.Tests --render-recovery-check` injects a persistent resource-release failure,

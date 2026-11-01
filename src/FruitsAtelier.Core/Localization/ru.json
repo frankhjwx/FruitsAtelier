@@ -761,6 +761,8 @@
   "project.new": "Новый проект",
   "project.add": "Добавить новую сложность",
   "project.import": "Импортировать сложность .osu…",
+  "project.importMetadataMismatch": "Поля Artist и Title импортируемой сложности должны быть непустыми и точно совпадать с текущим проектом (с учётом регистра).",
+  "project.importResourcesRequired": "Перед импортом сложности .osu откройте проект с папкой ресурсов.",
   "project.defaultDifficulty": "Сложность {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "Предыдущая страница",
