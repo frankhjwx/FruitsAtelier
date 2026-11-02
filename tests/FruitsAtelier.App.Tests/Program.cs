@@ -287,6 +287,7 @@ if (args.Contains("--slider-draft-check"))
     }
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
+if (args.Contains("--catch-stars-check")) { DifficultyTabTests.Editing(); DifficultyTabTests.PreviewRatings(); DifficultyTabTests.AsyncRatings(); Console.WriteLine("PASS Catch stars editing, undo, CS, preview mods and async cache"); return 0; }
 if (args.Contains("--difficulty-tabs-check")) { DifficultyTabTests.SortAscending(); DifficultyTabTests.ReorderAndPin(); DifficultyTabTests.Layout(); DifficultyTabTests.Overflow(); ProjectTests.Run(); Console.WriteLine("PASS Difficulty tab sorting, dragging, pins and overflow"); return 0; }
 
 if (args.Contains("--difficulty-sort-check")) { DifficultyTabTests.SortAscending(); Console.WriteLine("PASS Ascending difficulty sorting"); return 0; }

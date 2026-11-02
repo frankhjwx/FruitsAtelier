@@ -15,6 +15,36 @@ internal static class CatchDifficultyTests
         CheckPattern(100, i => 256, i => i * 100, [0, 0, 0]);
     }
 
+    public static void FractionalSliderTicks()
+    {
+        // Official Catch ruleset 2026.702.1, including fractional ticks on reversed spans.
+        var document = OsuBeatmapReader.Read("""
+osu file format v14
+[General]
+Mode:2
+[Difficulty]
+CircleSize:4.2
+SliderMultiplier:1.4
+SliderTickRate:2
+[TimingPoints]
+0,392.156862745098,4,2,1,70,1,0
+[HitObjects]
+64,192,1000,2,0,L|448:192,3,380
+448,192,4500,2,0,L|64:192,2,380
+64,192,7000,1,0,0:0:0:0:
+""");
+        var stable = CatchStreamConverter.Convert(document).Objects;
+        var objects = CatchDifficultyObjects.Create(document);
+        Near(CatchDifficultyCalculator.Calculate(objects, document.CircleSize).StarRating, 1.0466304687896684);
+        if (stable.SequenceEqual(objects) || !stable.SequenceEqual(CatchStreamConverter.Convert(document).Objects))
+            throw new Exception("Difficulty tick preparation must preserve stable gameplay conversion");
+        var ticks = objects.Where(o => o.Kind == CatchObjectKind.Droplet).ToArray();
+        Near(ticks[0].TimeMs, 1196.078431372549);
+        Near(ticks[0].X, 134);
+        Near(ticks[5].TimeMs, 2148.4593837535012);
+        Near(ticks[5].X, 414);
+    }
+
     public static void Participation()
     {
         var objects = Pattern(50, i => i % 2 == 0 ? 50 : 450, i => i * 100);

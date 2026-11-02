@@ -24,7 +24,7 @@ public sealed partial class EditorView
     private bool libraryStartupScan;
     private readonly HashSet<string> libraryRatingsToRefresh = [];
     // Bump when conversion or difficulty calculation changes the rating semantics.
-    private static readonly LibraryFileCache ratingCache = new("stars", "catch-stars-1");
+    private static readonly LibraryFileCache ratingCache = new("stars", "catch-stars-2");
     private bool libraryRescanRequested;
     private readonly HashSet<string> libraryPendingDirectories = new(WorkspaceSynchronization.Paths);
     private string indexedWorkspace = "", indexedSongs = "";
@@ -657,7 +657,7 @@ public sealed partial class EditorView
                             var d = project ? ProjectSerializer.ReadFile(entry.Path) : OsuBeatmapReader.ReadFile(entry.Path);
                             var converted = CatchStreamConverter.Convert(d);
                             var exported = project && converted.Success ? OsuBeatmapWriter.Serialize(d) : null;
-                            var objects = exported is { ObjectSequenceMatches: true } ? exported.PlayableObjects : converted.Objects;
+                            var objects = converted.Success ? CatchDifficultyObjects.Create(exported?.ReadBack ?? d) : converted.Objects;
                             result[entry.Path] = converted.Success ? CatchDifficultyCalculator.Calculate(objects, d.CircleSize).StarRating : null;
                             if (ratingCache.Fingerprint(entry.Path) != fingerprint) { result.Remove(entry.Path); continue; }
                             if (result[entry.Path] is { } stars) ratingCache.Write(entry.Path, fingerprint, BitConverter.GetBytes(stars));
