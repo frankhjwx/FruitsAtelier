@@ -13,7 +13,8 @@ public sealed partial class EditorView
 
     private IReadOnlyList<BreakPeriod> MovementBreakPeriods()
     {
-        if (placementMovementObjects is null || placementGhost is null || cachedPlacementPoint is not { } point) return breakPeriods;
+        if (placementMovementObjects is null || placementGhost is null || cachedPlacementPoint is not { } point
+            || breakPeriods.Length == 0) return breakPeriods;
         if (ReferenceEquals(placementBreakObjects, placementMovementObjects)
             && ReferenceEquals(placementBreakSource, breakPeriods) && placementBreakApproach == Document.ApproachRate)
             return placementBreakPreview;

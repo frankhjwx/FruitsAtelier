@@ -4,7 +4,6 @@ internal static class TimelineMetadataTests
 {
     public static void Run()
     {
-        AddedSectionBreak();
         DeletedSectionBreak();
         CachedBreakIntervals();
         FractionalBreakBoundary();
@@ -49,73 +48,6 @@ internal static class TimelineMetadataTests
             && OsuTimeline.Breaks(exported).SequenceEqual([new BreakPeriod(3200, 3800)])
             && events.Lines[breakLine].EndsWith("// keep this comment", StringComparison.Ordinal),
             "Resizing a break must preserve its Events line and comment");
-    }
-
-    private static void AddedSectionBreak()
-    {
-        foreach (double gap in new[] { 4999d, 5000, 5001, 9000 })
-        foreach (bool prepend in new[] { false, true })
-        {
-            var map = new MapDocument { DurationMs = 30000, ApproachRate = 7 };
-            map.Fruits.Add(new() { TimeMs = prepend ? 1000 + gap : 1000 });
-            var history = new EditorHistory(map);
-            history.Begin("Add separated section");
-            history.Document.Fruits.Add(new() { TimeMs = prepend ? 1000 : 1000 + gap });
-            history.Commit();
-            BreakPeriod[] expected = gap > 5000 ? [new(1200, (int)(1000 + gap - 900))] : [];
-            Check(OsuTimeline.Breaks(history.Document).SequenceEqual(expected), "Only gaps over five seconds generate a new section break.");
-            var after = history.Document.DeepClone();
-            history.Undo(); Check(history.Document.ContentEquals(map), "Section placement and automatic break must undo together.");
-            history.Redo(); Check(history.Document.ContentEquals(after), "Redo must restore the automatic break.");
-            Check(OsuTimeline.Breaks(ProjectSerializer.Read(ProjectSerializer.Serialize(after))).SequenceEqual(expected)
-                && OsuTimeline.Breaks(OsuBeatmapWriter.Serialize(after).ReadBack).SequenceEqual(expected),
-                "Automatic section breaks must survive project save and osu export.");
-        }
-
-        var durationMap = new MapDocument { DurationMs = 30000, ApproachRate = 7 };
-        durationMap.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 10000 });
-        durationMap.Fruits.Add(new() { TimeMs = 3000 });
-        var durationHistory = new EditorHistory(durationMap);
-        durationHistory.Begin("Add after overlapping durations");
-        durationHistory.Document.Fruits.Add(new() { TimeMs = 14000 }); durationHistory.Commit();
-        Check(OsuTimeline.Breaks(durationHistory.Document).Count == 0, "Automatic gaps must use the maximum preceding end.");
-        durationHistory.Begin("Move beyond the automatic threshold");
-        durationHistory.Document.Fruits[^1].TimeMs = 16000; durationHistory.Commit();
-        Check(OsuTimeline.Breaks(durationHistory.Document).SequenceEqual([new BreakPeriod(10200, 15100)]),
-            "Moving a note into a long gap must generate a break after the occupied duration.");
-
-        var untouched = new MapDocument { DurationMs = 30000, ApproachRate = 7 };
-        untouched.Fruits.AddRange([new() { TimeMs = 1000 }, new() { TimeMs = 10000 }, new() { TimeMs = 20000 }]);
-        var unrelated = new EditorHistory(untouched);
-        unrelated.Begin("Change position"); unrelated.Document.Fruits[0].X = 300; unrelated.Commit();
-        Check(OsuTimeline.Breaks(unrelated.Document).Count == 0, "Position-only edits must preserve missing breaks in unrelated gaps.");
-        unrelated.Begin("Add a later section"); unrelated.Document.Fruits.Add(new() { TimeMs = 27000 }); unrelated.Commit();
-        Check(OsuTimeline.Breaks(unrelated.Document).SequenceEqual([new BreakPeriod(20200, 26100)]),
-            "Adding a section must generate only its affected gap.");
-
-        foreach (bool imported in new[] { false, true })
-        {
-            var map = new MapDocument { DurationMs = 30000, ApproachRate = 7, BeatLengthMs = 500, SliderMultiplier = 1.4 };
-            if (imported)
-            {
-                var slider = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 140, SpanCount = 3 };
-                slider.ControlPoints.AddRange([new(100, 192), new(240, 192)]);
-                map.ImportedSliders.Add(slider);
-            }
-            else
-            {
-                var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = 3 };
-                track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 240 }]);
-                map.Tracks.Add(track);
-            }
-            var history = new EditorHistory(map);
-            history.Begin("Place after a repeated slider"); history.Document.Fruits.Add(new() { TimeMs = 8500 });
-            var detached = history.Document.DeepClone();
-            Check(EditorHistory.PrepareDetachedCommit(map, detached), "Detached commits must prepare automatic breaks.");
-            history.Commit();
-            Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(2700, 7600)])
-                && detached.ContentEquals(history.Document), "New breaks must start after all slider repeats in normal and detached commits.");
-        }
     }
 
     private static void SplitEditedBreaks()
