@@ -1,4 +1,5 @@
 using L = FruitsAtelier.Localization.Strings;
+using static FruitsAtelier.Core.OsuExportFile;
 namespace FruitsAtelier.Core;
 
 public sealed record WorkspaceExportPlan(Guid DifficultyId, MapDocument Document, string Target, string? ExpectedHash, OsuWriteResult Output, string? PreviousTarget = null)
@@ -38,10 +39,9 @@ public static class WorkspaceExport
         {
             if (string.IsNullOrWhiteSpace(newName)) throw new InvalidDataException(L.Get("project.invalid"));
             SetMetadata(document, "Version", newName); SetMetadata(document, "BeatmapID", "0");
-            string directory = session.Manifest.SourceDirectory is { } relative ? Path.GetFullPath(Path.Combine(songs, relative))
-                : Path.Combine(songs, "FruitsAtelier " + WorkspaceProject.SafeName(session.Manifest.Name) + " " + session.Manifest.Id.ToString("N")[..8]);
+            target = NewTarget(session, document, songs, newName);
+            string directory = Path.GetDirectoryName(target)!;
             if (!WorkspaceProject.Within(songs, directory) || directory == Path.GetFullPath(songs)) throw new IOException(L.Get("library.noExportTarget"));
-            target = Path.Combine(directory, WorkspaceProject.DifficultyFileName(document, newName, ".osu"));
             if (File.Exists(target)) throw new IOException(L.Get("library.exportExists", target));
         }
         WorkspaceProject.RejectLinks(target!);
@@ -51,11 +51,12 @@ public static class WorkspaceExport
 
     internal static WorkspaceExportPlan WithMetadataFileName(WorkspaceExportPlan plan, MapDocument previous)
     {
+        ValidatePath(plan.Target);
         string[] keys = ["Artist", "Title", "Creator", "Version"];
         if (!keys.Any(key => OsuBeatmapReader.Setting(previous, "Metadata", key)
             != OsuBeatmapReader.Setting(plan.Document, "Metadata", key))) return plan;
         string version = OsuBeatmapReader.Setting(plan.Document, "Metadata", "Version") ?? plan.Document.Name;
-        string target = Path.Combine(Path.GetDirectoryName(plan.Target)!, WorkspaceProject.DifficultyFileName(plan.Document, version, ".osu"));
+        string target = DifficultyTarget(Path.GetDirectoryName(plan.Target)!, plan.Document, version);
         if (string.Equals(target, plan.Target, StringComparison.Ordinal)) return plan;
         if (!WorkspaceSynchronization.Paths.Equals(target, plan.Target) && File.Exists(target))
             throw new IOException(L.Get("library.exportExists", target));
@@ -64,6 +65,8 @@ public static class WorkspaceExport
 
     public static void Commit(WorkspaceSession session, WorkspaceExportPlan plan, bool updateAssociation = true)
     {
+        ValidatePath(plan.Target);
+        ValidatePath(plan.ExistingTarget);
         if (session.Manifest.Difficulties.Any(d => d.Id == plan.DifficultyId && d.FaOnly))
             throw new InvalidOperationException(L.Get("song.faOnlyExportHelp"));
         WorkspaceProject.RejectLinks(plan.Target);
@@ -77,10 +80,7 @@ public static class WorkspaceExport
         WorkspaceAssociations.EnsureOwner(session, plan.DifficultyId, plan.Target);
         if (plan.ExpectedHash is null)
         {
-            // CreateNew prevents a race from turning a new-difficulty export into an overwrite.
-            string temporary = plan.Target + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            try { File.WriteAllText(temporary, plan.Output.Text, new System.Text.UTF8Encoding(false)); File.Move(temporary, plan.Target, overwrite: false); }
-            finally { if (File.Exists(temporary)) File.Delete(temporary); }
+            Write(plan.Target, System.Text.Encoding.UTF8.GetBytes(plan.Output.Text), overwrite: false);
         }
         else
         {
@@ -95,7 +95,7 @@ public static class WorkspaceExport
                 backup.Parameters.AddWithValue("$b", original); backup.Parameters.AddWithValue("$t", DateTime.UtcNow.ToString("O"));
                 backup.ExecuteNonQuery();
             }
-            AtomicFile.Write(plan.ExistingTarget, plan.Output.Text);
+            Write(plan.ExistingTarget, System.Text.Encoding.UTF8.GetBytes(plan.Output.Text), overwrite: true);
             if (plan.PreviousTarget is not null)
             {
                 try { File.Move(plan.ExistingTarget, plan.Target); }
@@ -103,9 +103,7 @@ public static class WorkspaceExport
                 {
                     if (File.Exists(plan.ExistingTarget) && WorkspaceProject.Hash(plan.ExistingTarget) == WorkspaceSynchronization.Digest(plan.Output.Text))
                     {
-                        string rollback = plan.ExistingTarget + "." + Guid.NewGuid().ToString("N") + ".tmp";
-                        try { File.WriteAllBytes(rollback, original); File.Move(rollback, plan.ExistingTarget, overwrite: true); }
-                        finally { if (File.Exists(rollback)) File.Delete(rollback); }
+                        Write(plan.ExistingTarget, original, overwrite: true);
                     }
                     throw;
                 }
@@ -123,6 +121,38 @@ public static class WorkspaceExport
             entry.Sync = WorkspaceSynchronization.Capture(plan.Target, plan.Document, session.Directory, plan.Output.Text, plan.Output.ObjectSources, entry.Sync);
         }
     }
+    public static string NewTarget(WorkspaceSession session, MapDocument document, string songs, string difficulty)
+    {
+        songs = Path.GetFullPath(songs);
+        string directory;
+        if (session.Manifest.SourceDirectory is { } relative) directory = Path.GetFullPath(Path.Combine(songs, relative));
+        else
+        {
+            string name = "FruitsAtelier " + WorkspaceProject.SafeName(session.Manifest.Name) + " " + session.Manifest.Id.ToString("N")[..8];
+            directory = Path.Combine(songs, Shorten(name, MaximumDirectoryLength - songs.Length - 1, session.Manifest.Id.ToString("N"), songs));
+        }
+        return DifficultyTarget(directory, document, difficulty);
+    }
+
+    private static string DifficultyTarget(string directory, MapDocument document, string difficulty)
+    {
+        directory = Path.GetFullPath(directory);
+        string name = WorkspaceProject.DifficultyFileName(document, difficulty, ".osu");
+        string identity = string.Join('\n', new[] { "Artist", "Title", "Creator" }.Select(k => OsuBeatmapReader.Setting(document, "Metadata", k))) + "\n" + difficulty;
+        string target = Path.Combine(directory, Shorten(Path.GetFileNameWithoutExtension(name), MaximumPathLength - directory.Length - 1 - 4, identity, directory) + ".osu");
+        ValidatePath(target);
+        return target;
+    }
+
+    private static string Shorten(string name, int budget, string identity, string path)
+    {
+        if (budget < 14) throw new IOException(L.Get("library.exportPathTooLong", path));
+        if (name.Length <= budget) return name;
+        string suffix = "-" + WorkspaceSynchronization.Digest(identity)[..12];
+        int length = System.Globalization.StringInfo.ParseCombiningCharacters(name).TakeWhile(i => i <= budget - suffix.Length).Last();
+        return name[..length] + suffix;
+    }
+
     private static void SetMetadata(MapDocument document, string key, string value)
     {
         var metadata = document.OriginalSections.FirstOrDefault(s => s.Name == "Metadata");

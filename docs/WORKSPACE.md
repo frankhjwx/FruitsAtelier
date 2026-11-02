@@ -221,6 +221,17 @@ Opening a project and refreshing the editor check source `.osu` files and song a
 
 ## Explicit export
 
+Songs `.osu` exports keep beatmap paths below osu! stable's 260-character limit,
+including the short temporary files used for creation, updates and rollback.
+Long generated filenames and mapset folder names are shortened with a deterministic
+hash suffix; metadata inside the `.osu` remains unchanged. Existing destination
+folders must leave room for temporary files (at most 221 characters in their
+absolute path). An incompatible existing folder or linked filename is rejected
+before publication; shorten its path before exporting. The export preview shows
+the generated destination or the path-length diagnostic.
+Exporting `.osu` to a manually chosen location uses the same short temporary
+filenames and rejects incompatible destination paths before writing.
+
 Portable native projects use `.faz`, with complete-project and FA-only modes.
 See [Portable FA projects](PROJECT_ARCHIVES.md) for import, local Songs association,
 resource handling and desktop file registration.

@@ -1295,6 +1295,8 @@ During a kiai interval, a small badge appears at the upper-left of the editing p
 
 Adding, pasting, moving, extending or removing notes around an existing break recalculates the affected interval when the edit commits. Breaks leave the next object's AR preempt time clear and resume at least 200 ms after the preceding object ends, including all slider repeats and banana-shower duration. An occupied break is shortened, split, or removed; generated pieces shorter than 650 ms are removed. Removing the notes that split a break merges its remaining pieces, including fragments whose start or end was manually resized. Fragments are associated by their surrounding object gap; merging retains the outer fragment boundaries, and remaining objects continue to separate gaps. Deleting the last objects in a bounded section also creates a break for a newly vacated gap with at least 650 ms after the preceding object's recovery and before the next object's approach, even when no existing break remains. Overlapping occupied intervals prevent a break. After object-time or duration edits, breaks before the first object or after the maximum object end are removed, including manually resized intervals. Approach-rate edits reconcile breaks against the new approach time. Extensions use the maximum preceding object end so overlapping long objects remain clear. Unaffected valid break boundaries and other Events data are preserved. The note change and break adjustment share one undo step, and saving or exporting retains the updated intervals.
 
+Placing, pasting or retiming objects generates a break in an affected gap when the gap is at least 1,300 ms and leaves at least 650 ms after subtracting 200 ms recovery and the next object's AR preempt time. For example, the minimum object gap is 2,650 ms at AR 0, 2,050 ms at AR 5, 1,750 ms at AR 7, and 1,300 ms at AR 10. Generation follows the Catch branch of [osu!'s editor processor](https://github.com/ppy/osu/blob/28b6db67db8de82d28c03aa0f7cefdff912f7b33/osu.Game/Screens/Edit/EditorBeatmapProcessor.cs), including the maximum preceding object end for overlapping durations. FA reconciles existing break fragments at the edit boundary, retaining their outer manual boundaries and leaving unrelated gaps unchanged. Placement movement previews use the same generation rules without changing the document.
+
 When placement only shortens a break at one end, deleting the note restores that end toward the next remaining object while retaining the opposite manually edited boundary. The recovered range still leaves AR preempt time before the following object and 200 ms after the preceding object's end.
 
 In the object timeline and canvas left time axis, each break has a grey core and lighter white and green transition regions extending to the adjacent source objects, without changing the stored break timestamps. Hovering a core edge in the object timeline shows a horizontal resize cursor. Dragging that edge snaps to the current beat subdivision when Snap is on and previews the new range; releasing commits one undoable edit, releasing with less than 400 ms remaining removes the break, and Esc cancels the preview. Adding or resizing a break merges overlapping intervals into their combined range, including contained, duplicate and chained overlaps already in the document. Touching boundaries remain separate. Edge drags preview the merged range and can cross another break within the surrounding object gap. The merge shares the addition or resize's undo step; unrelated Events data is preserved.
@@ -1786,7 +1788,7 @@ Below the Catch Preview title, one line shows `AR … · CS … · NM`. It omits
 
 A new project's blank difficulty starts unmodified, so directly opening or importing an external beatmap does not trigger an unsaved prompt. Content edits, audio binding, and added/imported difficulties do prompt. Undoing to the initial blank state clears the dirty marker.
 
-The bottom status bar shows current action feedback, such as save results or operation limits. During background synchronization checks or application of changes, synchronization status takes priority; otherwise conversion errors take priority. It is not a log viewer. Platform details, internal zoom percentages, and duplicate dirty indicators are omitted.
+The bottom status bar shows current action feedback, such as save results or operation limits. Blocked slider-event drags show their reason in bold red text; movement requiring more than 10x SV explicitly identifies that limit and suggests increasing the time interval or reducing horizontal distance. Returning to a reachable position restores ordinary feedback. During background synchronization checks or application of changes, synchronization status takes priority; otherwise conversion errors take priority. It is not a log viewer. Platform details, internal zoom percentages, and duplicate dirty indicators are omitted.
 
 For FSliders, 0 reverses plays the path once, 1 returns once, and higher counts continue alternating. Drag the slider tail in the object timeline to add or remove reverses. With a completed FSlider selected, move the pointer to empty canvas at a time after its final end and press **Ctrl+J**. A new anchor is placed at the pointer position using the placement snap setting, with a straight segment from the base path endpoint. Existing segments remain unchanged. Extending a repeated slider lengthens its base path for every span; it does not append after the repeats. Each operation is undoable.
 
@@ -2159,3 +2161,29 @@ through Layout reveals its active tab.
 The independent Mapset Verifier dock displays General and current-difficulty
 issues with grouped check titles and clickable timestamps. See
 [Mapset Verifier](MAPSET_VERIFIER.md) for refresh, upstream updates and engine setup.
+
+
+## Aspire slider BPM multipliers
+
+Enable **Song Setup → FA Settings → Aspire Features → Enable BPM multiplier to
+modify slider behaviours** for the active difficulty. The upper-right **BPM
+Multiplier** control sets the multiplier for newly drawn FSliders and native
+sliders. Changing it leaves existing sliders unchanged. Select a single slider
+in Slider Inspector to change its own multiplier. Both controls offer 0.125,
+0.25, 0.5, 1, 2, 4 and 8, followed by **Custom**, which reveals a numeric input.
+Custom values must be finite and greater than zero.
+
+Multipliers change slider timing and nested-event density. FSlider anchors,
+handles and their position-versus-time curve remain authored as before; a lower
+multiplier that cannot realize that curve reports a conversion failure. Native
+sliders retain their geometric path and change duration with their BPM.
+The editing beat grid continues using authored timing.
+
+Export inserts a red timing point when a slider needs another BPM, together
+with a green point at the same timestamp. Their meter, sample bank, sample index,
+volume and effects match, including hitsound overrides. Subsequent sliders use
+their own starting BPM; matching effective BPMs can share a red point. The final
+slider restores authored BPM at its end. Generated red points are visible even
+with **Show SV** disabled. Their BPM/offset are derived from the slider and are
+read-only in Timing setup. Disabling the feature retains saved multipliers but
+uses the original BPM for conversion and export.

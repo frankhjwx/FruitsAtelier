@@ -761,6 +761,7 @@
   "project.new": "Новый проект",
   "project.add": "Добавить новую сложность",
   "project.import": "Импортировать сложность .osu…",
+  "project.importResourcesRequired": "Перед импортом сложности .osu откройте проект с папкой ресурсов.",
   "project.defaultDifficulty": "Сложность {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "Предыдущая страница",
@@ -774,6 +775,7 @@
   "library.noExportTarget": "Нет связанной стабильной сложности, которую можно было бы перезаписать. Экспортируйте новую сложность.",
   "library.exportConflict": "Файл osu! был изменен за пределами этого проекта: {0}. Повторно импортируйте его или экспортируйте новую сложность.",
   "library.exportExists": "Трудность уже существует в {0}. Выберите другое название сложности.",
+  "library.exportPathTooLong": "Путь экспорта слишком длинный для osu! stable: {0}. Сократите путь к папке Songs или карте перед экспортом.",
   "library.scanning": "Сканирование песен…",
   "library.scanProgress": "Сканировано: файлы {0}\nКарты захвата: {1}\nПропущенные ошибки: {2}",
   "library.indexed": "{0} трудности проиндексированы",
@@ -940,6 +942,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Слайдер не может одновременно достичь этой координаты X.",
+  "coordinate.sliderVelocityLimit": "Перемещение невозможно: требуемая скорость превышает предел SV 10×. Увеличьте интервал времени между соседними объектами или уменьшите расстояние по горизонтали.",
   "distance.nextField": "Следующий ДС",
   "distance.nonnegative": "DS должно быть нулевым или положительным.",
   "distance.interval": "ДС требует положительного временного интервала.",
@@ -1961,5 +1964,12 @@
   "recovery.saved": "Копия для восстановления сохранена: {0}",
   "recovery.failed": "Не удалось сохранить копию для восстановления: {0}",
   "recovery.nativeHelp": "Графический движок недоступен. Нажмите Ctrl+S для сохранения копии или Enter для повторной отрисовки. Проект остаётся в памяти.",
-  "recovery.closeHelp": "Сохранить копию для восстановления перед закрытием? Выберите «Нет», чтобы закрыть без сохранения."
+  "recovery.closeHelp": "Сохранить копию для восстановления перед закрытием? Выберите «Нет», чтобы закрыть без сохранения.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

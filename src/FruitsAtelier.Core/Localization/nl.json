@@ -761,6 +761,7 @@
   "project.new": "Nieuw project",
   "project.add": "Nieuwe moeilijkheidsgraad toevoegen",
   "project.import": ".osu-moeilijkheidsgraad importeren...",
+  "project.importResourcesRequired": "Open een project met een bronnenmap voordat je een .osu-moeilijkheidsgraad importeert.",
   "project.defaultDifficulty": "Moeilijkheidsgraad {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "Vorige pagina",
@@ -774,6 +775,7 @@
   "library.noExportTarget": "Er is geen gekoppelde stabiele moeilijkheidsgraad beschikbaar om te overschrijven. Exporteer een nieuwe moeilijkheidsgraad.",
   "library.exportConflict": "Het osu!-bestand is buiten dit project gewijzigd: {0}. Importeer het opnieuw of exporteer een nieuwe moeilijkheidsgraad.",
   "library.exportExists": "Er bestaat al een probleem bij {0}. Kies een andere moeilijkheidsnaam.",
+  "library.exportPathTooLong": "Het exportpad is te lang voor osu! stable: {0}. Verkort het pad naar Songs of de beatmapmap voordat je exporteert.",
   "library.scanning": "Nummers scannen…",
   "library.scanProgress": "Gescand: {0}-bestanden\nCatch-kaarten: {1}\nOvergeslagen fouten: {2}",
   "library.indexed": "{0}-problemen geïndexeerd",
@@ -940,6 +942,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "De Slider kan deze X-coördinaat niet tegelijkertijd bereiken.",
+  "coordinate.sliderVelocityLimit": "Verplaatsen niet mogelijk: de vereiste snelheid overschrijdt de SV-limiet van 10×. Vergroot de tijd tussen aangrenzende objecten of verklein hun horizontale afstand.",
   "distance.nextField": "Volgende DS",
   "distance.nonnegative": "DS moet nul of positief zijn.",
   "distance.interval": "DS vereist een positief tijdsinterval.",
@@ -1961,5 +1964,12 @@
   "recovery.saved": "Herstelkopie opgeslagen: {0}",
   "recovery.failed": "Herstelkopie kon niet worden opgeslagen: {0}",
   "recovery.nativeHelp": "De grafische renderer is niet beschikbaar. Druk op Ctrl+S om een herstelkopie op te slaan, of op Enter om opnieuw te proberen. Je project blijft in het geheugen.",
-  "recovery.closeHelp": "Een herstelkopie opslaan voordat je afsluit? Kies Nee om af te sluiten zonder op te slaan."
+  "recovery.closeHelp": "Een herstelkopie opslaan voordat je afsluit? Kies Nee om af te sluiten zonder op te slaan.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

@@ -19,7 +19,7 @@ public sealed partial class D2DCanvas
     private readonly HashSet<string> storyboardRetainedPaths = new(StringComparer.OrdinalIgnoreCase);
     private long storyboardPinnedBytes;
     private int storyboardUploadBytes;
-    private IReadOnlyList<string> storyboardPreparedPaths = Array.Empty<string>();
+    private readonly List<string> storyboardDecodePaths = [];
     private long storyboardRevision;
     private bool storyboardPendingUpload;
     private long mediaGeneration = MediaResourceIdentity.Next();
@@ -53,8 +53,12 @@ public sealed partial class D2DCanvas
     public void PrepareStoryboardImages(IReadOnlyList<string> paths)
     {
         storyboardPixels ??= new(DecodeStoryboardImage);
-        storyboardPreparedPaths = paths;
-        storyboardPixels.Prepare(paths);
+        // Keep lookahead in decoded pixels: speculative uploads can repeatedly
+        // evict each other when the lookahead exceeds the texture budget.
+        storyboardDecodePaths.Clear();
+        foreach (string path in paths)
+            if (!storyboardTextures.ContainsKey(path)) storyboardDecodePaths.Add(path);
+        storyboardPixels.Prepare(storyboardDecodePaths);
     }
     public bool StoryboardImagesReady(IReadOnlyList<string> paths)
     {
@@ -110,17 +114,11 @@ public sealed partial class D2DCanvas
     }
     public void BeginStoryboard()
     {
-        storyboardPendingUpload = false; storyboardRevision = storyboardPixels?.Revision ?? 0;
         spriteContext ??= context!.QueryInterface<ID2D1DeviceContext3>();
         spriteBatch ??= spriteContext.CreateSpriteBatch();
-        foreach (string path in storyboardPreparedPaths)
-        {
-            if (storyboardUploadBytes >= 8 * 1024 * 1024) { storyboardPendingUpload = true; break; }
-            StoryboardTexture(path, out _, out _, demand: false);
-        }
     }
     public void EndStoryboard() => FlushStoryboard();
-    private unsafe ID2D1Bitmap1? StoryboardTexture(string path, out int width, out int height, bool demand = true)
+    private unsafe ID2D1Bitmap1? StoryboardTexture(string path, out int width, out int height)
     {
         if (storyboardTextures.TryGetValue(path, out var entry))
         {
@@ -128,7 +126,7 @@ public sealed partial class D2DCanvas
             width = entry.Width; height = entry.Height; return entry.Bitmap;
         }
         width = height = 0;
-        if (storyboardPixels?.Get(path, demand) is not { } pixels) return null;
+        if (storyboardPixels?.Get(path) is not { } pixels) return null;
         if (storyboardUploadBytes > 0 && storyboardUploadBytes + pixels.Data.Length > 8 * 1024 * 1024) { storyboardPendingUpload = true; return null; }
         while (storyboardTextureBytes + pixels.Data.Length > StoryboardImageCache.Limit + storyboardPinnedBytes)
         {
@@ -243,7 +241,7 @@ public sealed partial class D2DCanvas
             storyboardTextureBytes -= (long)texture.Width * texture.Height * 4;
             storyboardTextures.Remove(path); storyboardTextureVersions.Remove(path);
         }
-        storyboardPreparedPaths = Array.Empty<string>(); storyboardPendingUpload = false;
+        storyboardDecodePaths.Clear(); storyboardPendingUpload = false;
         while (storyboardTextureBytes > StoryboardImageCache.Limit && EvictStoryboardTexture()) { }
         if (video is not null && video.Version != MediaFileVersion.Read(video.Path)) StopVideo();
         else video?.Suspend();
@@ -264,7 +262,7 @@ public sealed partial class D2DCanvas
         storyboardTextures.Clear(); storyboardTextureBytes = 0;
         storyboardTextureVersions.Clear();
         storyboardPins.Clear(); storyboardRetainedPaths.Clear(); storyboardPinnedBytes = 0;
-        storyboardPreparedPaths = Array.Empty<string>(); storyboardPendingUpload = false; storyboardRevision = 0;
+        storyboardDecodePaths.Clear(); storyboardPendingUpload = false; storyboardRevision = 0;
         spriteBatch?.Dispose(); spriteBatch = null; spriteContext?.Dispose(); spriteContext = null;
     }
 }

@@ -148,6 +148,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     public void Begin()
     {
         storyboardUploadBytes = 0; StoryboardDrawCalls = 0; StoryboardSprites = 0;
+        storyboardPendingUpload = false; storyboardRevision = storyboardPixels?.Revision ?? 0;
         videoFrameRequested = false;
         if (displayDiagnostics is not null)
         {

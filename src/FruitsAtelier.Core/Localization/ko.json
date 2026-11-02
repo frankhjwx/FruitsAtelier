@@ -761,6 +761,7 @@
   "project.new": "새 프로젝트",
   "project.add": "새 난이도 추가",
   "project.import": ".osu 난이도 가져오기…",
+  "project.importResourcesRequired": "리소스 디렉터리가 있는 프로젝트를 연 후 .osu 난이도를 가져오세요.",
   "project.defaultDifficulty": "난이도 {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "이전 페이지",
@@ -774,6 +775,7 @@
   "library.noExportTarget": "덮어쓸 수 있는 연결된 안정적인 난이도가 없습니다. 새로운 난이도를 내보냅니다.",
   "library.exportConflict": "osu! 파일이 이 프로젝트 외부에서 변경되었습니다: {0}. 다시 가져오거나 새로운 난이도를 내보냅니다.",
   "library.exportExists": "{0}에는 이미 난이도가 있습니다. 다른 난이도 이름을 선택하세요.",
+  "library.exportPathTooLong": "내보내기 경로가 osu! stable에서 처리하기에 너무 깁니다: {0}. Songs 또는 비트맵 폴더 경로를 줄인 후 내보내세요.",
   "library.scanning": "노래 스캔 중…",
   "library.scanProgress": "스캔됨: {0} 파일\n캐치 맵: {1}\n건너뛴 오류: {2}",
   "library.indexed": "{0} 난이도 색인화됨",
@@ -940,6 +942,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "슬라이더는 동시에 이 X 좌표에 도달할 수 없습니다.",
+  "coordinate.sliderVelocityLimit": "이동할 수 없습니다: 필요한 속도가 SV 상한 10×를 초과합니다. 인접 오브젝트의 시간 간격을 늘리거나 수평 거리를 줄이세요.",
   "distance.nextField": "다음 DS",
   "distance.nonnegative": "DS는 0이거나 양수여야 합니다.",
   "distance.interval": "DS에는 양의 시간 간격이 필요합니다.",
@@ -1961,5 +1964,12 @@
   "recovery.saved": "복구 사본 저장됨: {0}",
   "recovery.failed": "복구 사본을 저장할 수 없습니다: {0}",
   "recovery.nativeHelp": "그래픽 렌더러를 사용할 수 없습니다. Ctrl+S로 복구 사본을 저장하거나 Enter로 렌더링을 다시 시도하세요. 프로젝트는 메모리에 유지됩니다.",
-  "recovery.closeHelp": "닫기 전에 복구 사본을 저장하시겠습니까? 저장하지 않고 닫으려면 아니요를 선택하세요."
+  "recovery.closeHelp": "닫기 전에 복구 사본을 저장하시겠습니까? 저장하지 않고 닫으려면 아니요를 선택하세요.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

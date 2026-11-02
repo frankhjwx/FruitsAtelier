@@ -761,6 +761,7 @@
   "project.new": "โครงการใหม่",
   "project.add": "เพิ่มระดับความยากใหม่",
   "project.import": "นำเข้าความยากของ .osu...",
+  "project.importResourcesRequired": "เปิดโปรเจกต์ที่มีโฟลเดอร์ทรัพยากรก่อนนำเข้าความยาก .osu",
   "project.defaultDifficulty": "ความยาก {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "หน้าก่อนหน้า",
@@ -774,6 +775,7 @@
   "library.noExportTarget": "ไม่มีความยากคงที่ที่เชื่อมโยงไว้เพื่อเขียนทับ ส่งออกความยากลำบากใหม่",
   "library.exportConflict": "ไฟล์ osu! มีการเปลี่ยนแปลงนอกโปรเจ็กต์นี้: {0} นำเข้าใหม่หรือส่งออกความยากลำบากใหม่",
   "library.exportExists": "มีปัญหาอยู่แล้วที่ {0} เลือกชื่อความยากลำบากอื่น",
+  "library.exportPathTooLong": "เส้นทางส่งออกยาวเกินไปสำหรับ osu! stable: {0} โปรดทำให้เส้นทางโฟลเดอร์ Songs หรือบีตแมปสั้นลงก่อนส่งออก",
   "library.scanning": "กำลังสแกนเพลง...",
   "library.scanProgress": "สแกนแล้ว: ไฟล์ {0}\nCatch map: {1}\nSkipped error: {2}",
   "library.indexed": "ดัชนีความยากลำบากของ {0}",
@@ -940,6 +942,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "สไลเดอร์ ไม่สามารถเข้าถึงพิกัด X นี้ในเวลาเดียวกัน",
+  "coordinate.sliderVelocityLimit": "ย้ายไม่ได้: ความเร็วที่ต้องการเกินขีดจำกัด SV 10× เพิ่มช่วงเวลาระหว่างวัตถุที่อยู่ติดกันหรือลดระยะห่างแนวนอน",
   "distance.nextField": "ถัดไป DS",
   "distance.nonnegative": "DS ต้องเป็นศูนย์หรือบวก",
   "distance.interval": "DS ต้องมีช่วงเวลาที่เป็นบวก",
@@ -1961,5 +1964,12 @@
   "recovery.saved": "บันทึกสำเนากู้คืนแล้ว: {0}",
   "recovery.failed": "ไม่สามารถบันทึกสำเนากู้คืน: {0}",
   "recovery.nativeHelp": "ตัวเรนเดอร์กราฟิกไม่พร้อมใช้งาน กด Ctrl+S เพื่อบันทึกสำเนากู้คืน หรือ Enter เพื่อลองเรนเดอร์อีกครั้ง โปรเจกต์ยังอยู่ในหน่วยความจำ",
-  "recovery.closeHelp": "บันทึกสำเนากู้คืนก่อนปิดหรือไม่? เลือก ไม่ เพื่อปิดโดยไม่บันทึก"
+  "recovery.closeHelp": "บันทึกสำเนากู้คืนก่อนปิดหรือไม่? เลือก ไม่ เพื่อปิดโดยไม่บันทึก",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

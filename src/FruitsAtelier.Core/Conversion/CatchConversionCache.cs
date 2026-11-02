@@ -11,6 +11,7 @@ public sealed class CatchConversionCache
     private readonly HashSet<Guid> seen = new();
     private (double, double, double, double, double, double, bool, double, int, bool, bool, double, bool) settings;
     private TimingMap.Lookup? timing;
+    private bool enableSliderBpmMultiplier;
     private double authoredSvScale = 1;
     private Dictionary<double, double> fixedHeads = [];
     internal void Begin(MapDocument document, bool compensation)
@@ -18,9 +19,9 @@ public sealed class CatchConversionCache
         var current = (document.DurationMs, document.BeatLengthMs, document.TimingOffsetMs, document.ApproachRate,
             document.SliderMultiplier, document.SliderTickRate, compensation, document.RandomizeDropletStrength, document.RandomizeDropletSeed, document.DerandomizeFSliderDroplets, document.DerandomizeDropletsForHardRock,
             document.EffectiveSliderMultiplier, document.LegacySliderTicks);
-        if (current != settings)
+        if (current != settings || enableSliderBpmMultiplier != document.EnableSliderBpmMultiplier)
         {
-            entries.Clear(); trackPositions.Clear(); settings = current;
+            entries.Clear(); trackPositions.Clear(); settings = current; enableSliderBpmMultiplier = document.EnableSliderBpmMultiplier;
         }
         if (timing is null || !timing.MatchesTiming(document)) timing = new(document);
         authoredSvScale = document.SliderMultiplier / document.EffectiveSliderMultiplier;
@@ -95,7 +96,7 @@ public sealed class CatchConversionCache
     {
         if (a.Id != b.Id || a.Kind != b.Kind || a.Name != b.Name || a.SourceOrder != b.SourceOrder || a.SpanCount != b.SpanCount
             || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets || a.Nodes.Count != b.Nodes.Count
-            || a.SliderVelocityMultiplier != b.SliderVelocityMultiplier || a.MinimumSliderVelocityMultiplier != b.MinimumSliderVelocityMultiplier || a.SliderVelocitySeed != b.SliderVelocitySeed || a.FixedSliderVelocityMultiplier != b.FixedSliderVelocityMultiplier
+            || a.BpmMultiplier != b.BpmMultiplier || a.SliderVelocityMultiplier != b.SliderVelocityMultiplier || a.MinimumSliderVelocityMultiplier != b.MinimumSliderVelocityMultiplier || a.SliderVelocitySeed != b.SliderVelocitySeed || a.FixedSliderVelocityMultiplier != b.FixedSliderVelocityMultiplier
             || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
             || !a.StreamNewComboOffsets.SequenceEqual(b.StreamNewComboOffsets)
             || includeRandomization && (a.DropletMode != b.DropletMode || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization))) return false;
@@ -111,6 +112,6 @@ public sealed class CatchConversionCache
     private static bool Equal(ImportedSlider a, ImportedSlider b) => a.Id == b.Id && a.OriginalLine == b.OriginalLine
         && a.X == b.X && a.Y == b.Y && a.TimeMs == b.TimeMs && a.PathType == b.PathType
         && a.ProcessedSliderVelocityMultiplier == b.ProcessedSliderVelocityMultiplier
-        && a.SliderVelocityMultiplier == b.SliderVelocityMultiplier
+        && a.BpmMultiplier == b.BpmMultiplier && a.SliderVelocityMultiplier == b.SliderVelocityMultiplier
         && a.SpanCount == b.SpanCount && a.PixelLength == b.PixelLength && a.ControlPoints.ContentEquals(b.ControlPoints);
 }

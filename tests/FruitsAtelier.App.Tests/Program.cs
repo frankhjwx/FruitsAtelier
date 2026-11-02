@@ -3,6 +3,9 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--difficulty-import-check")) { DifficultyImportTests.Run(); Console.WriteLine("PASS difficulty imports use project resources and preserve metadata"); return 0; }
+if (args.Contains("--slider-bpm-performance")) { SliderBpmTests.Performance(); return 0; }
+if (args.Contains("--slider-bpm-check")) { SliderBpmTests.Run(); Console.WriteLine("PASS slider BPM controls"); return 0; }
 if (args.Contains("--imported-curve-range-check")) { ImportedCurveRangeTests.Run(false); return 0; }
 if (args.Contains("--imported-curve-range-performance")) { ImportedCurveRangeTests.Run(true); return 0; }
 if (args.Contains("--background-task-recovery-check")) { BackgroundTaskRecoveryTests.Run(); return 0; }
@@ -14,6 +17,7 @@ if (args.Contains("--verifier-navigation-check")) { MapsetVerifierTests.Retained
 if (args.Contains("--aimod-navigation-check")) { AimodTests.StaleNavigation(); OperationErrorTests.StaleSelection(); return 0; }
 if (args.Contains("--discussion-bounds-check")) { DiscussionTests.FractionalAnnotationBounds(); return 0; }
 if (args.Contains("--storyboard-image-cache-check")) return StoryboardImageCacheTests.Run();
+if (args.Contains("--storyboard-texture-pressure-check")) return StoryboardTexturePressureTests.Run();
 if (args.Length == 2 && args[0] == "--difficulty-media-reuse-native-check") return DifficultyMediaReuseNativeTests.Run(args[1]);
 if (args.Length == 2 && args[0] == "--difficulty-media-continuity-native-check") return DifficultyMediaReuseNativeTests.RunMap(args[1]);
 if (args.Length == 4 && args[0] == "--storyboard-first-playback") return StoryboardFirstPlaybackTests.Run(args[1], args[2], int.Parse(args[3]));
@@ -283,6 +287,7 @@ if (args.Contains("--slider-draft-check"))
     }
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
+if (args.Contains("--catch-stars-check")) { DifficultyTabTests.Editing(); DifficultyTabTests.PreviewRatings(); DifficultyTabTests.AsyncRatings(); Console.WriteLine("PASS Catch stars editing, undo, CS, preview mods and async cache"); return 0; }
 if (args.Contains("--difficulty-tabs-check")) { DifficultyTabTests.SortAscending(); DifficultyTabTests.ReorderAndPin(); DifficultyTabTests.Layout(); DifficultyTabTests.Overflow(); ProjectTests.Run(); Console.WriteLine("PASS Difficulty tab sorting, dragging, pins and overflow"); return 0; }
 
 if (args.Contains("--difficulty-sort-check")) { DifficultyTabTests.SortAscending(); Console.WriteLine("PASS Ascending difficulty sorting"); return 0; }
@@ -338,6 +343,7 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Slider BPM presets, custom input, placement, history and red visibility", SliderBpmTests.Run),
     ("Storyboard sources retain scenes across unrelated General edits", StoryboardSourceCacheTests.Run),
     ("Opening a map offers undoable object and timing alignment", TimingAlignmentUiTests.Run),
     ("Pattern Gallery preserves previews, placement and editing sessions", () => { PatternGalleryUiTests.Run(); PatternEditingTests.Run(); PatternSourceTests.Run(); }),
@@ -670,6 +676,7 @@ var tests = new (string Name, Action Run)[]
     ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),
     ("Overflow difficulty tabs scroll, switch and add without losing content", DifficultyTabTests.Overflow),
     ("Multi-difficulty projects preserve content, history and compatibility", ProjectTests.Run),
+    ("Difficulty imports use project resources and preserve independent metadata", DifficultyImportTests.Run),
     ("Select blank-canvas clicks preserve time across beat divisors", CanvasSeekSnapTests.BeatGrid),
     ("Canvas and timeline navigation do not edit content", CanvasSeekSnapTests.FreeMode),
     ("Timeline grabs retain the exact original time after round trips", TimelineDragTests.ReturnToStart),

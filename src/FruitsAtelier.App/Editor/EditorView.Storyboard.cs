@@ -286,6 +286,8 @@ public sealed partial class EditorView
         }
         long previousVersion = storyboardTriggerVersion;
         bool passing = StoryboardPassingAt(playhead);
+        bool seeking = !AudioPlaying || !double.IsNaN(storyboardFrameTime)
+            && (playhead < storyboardFrameTime || playhead - storyboardFrameTime > 250);
         bool frameChanged = storyboardFrameTime != playhead || storyboardFramePassing != passing || previousVersion != storyboardTriggerVersion;
         if (frameChanged)
         {
@@ -295,9 +297,12 @@ public sealed partial class EditorView
             foreach (var sprite in storyboardFrame)
                 if (storyboardRequiredSeen.Add(sprite.Path)) storyboardRequiredImages.Add(sprite.Path);
         }
-        if (double.IsNaN(storyboardPreloadTime) || Math.Abs(playhead - storyboardPreloadTime) > 500)
+        if (double.IsNaN(storyboardPreloadTime) || Math.Abs(playhead - storyboardPreloadTime) > 500 || seeking && frameChanged)
         {
-            storyboardScene.Preload(playhead, 2000, storyboardPreload, storyboardPreloadSeen);
+            // A scrub target needs one complete frame, not every animation image
+            // in its lookahead. Superseded seeks must retire that speculative queue.
+            if (seeking) { storyboardPreload.Clear(); storyboardPreload.AddRange(storyboardRequiredImages); }
+            else storyboardScene.Preload(playhead, 2000, storyboardPreload, storyboardPreloadSeen);
             canvas.PrepareStoryboardImages(storyboardPreload);
             storyboardPreloadTime = playhead;
         }

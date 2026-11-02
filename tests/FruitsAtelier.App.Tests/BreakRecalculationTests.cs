@@ -109,6 +109,7 @@ internal static class BreakRecalculationTests
 
     public static void MovementPreview()
     {
+        NewSectionPreview();
         foreach (bool lazer in new[] { false, true })
         {
             var map = new MapDocument { DurationMs = 8000, IsDemo = false, ApproachRate = 5, BeatLengthMs = 500 };
@@ -136,6 +137,31 @@ internal static class BreakRecalculationTests
             ui.Key('1'); ui.Paint();
             Check(((IReadOnlyList<BreakPeriod>)method.Invoke(ui.View, null)!).SequenceEqual(OsuTimeline.Breaks(map)),
                 "Ending placement must restore committed break filtering.");
+        }
+    }
+
+    private static void NewSectionPreview()
+    {
+        foreach (bool lazer in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 8000, IsDemo = false, ApproachRate = 7, BeatLengthMs = 500 };
+            map.Fruits.Add(new() { TimeMs = 1000, X = 100 });
+            var ui = new Ui(false); ui.View.LibrarySettings.LazerEditing = lazer; ui.LoadDocument(map);
+            ui.View.UpdateTransport(3000, 8000, true, false, false, null, null);
+            ui.ClickText(FruitsAtelier.Localization.Strings.Get("movement.analysis"));
+            ui.Key('2'); ui.MoveMap(3000, 250);
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var method = typeof(FruitsAtelier.App.Editor.EditorView).GetMethod("MovementBreakPeriods", flags)!;
+            var projected = (IReadOnlyList<BreakPeriod>)method.Invoke(ui.View, null)!;
+            Check(projected.SequenceEqual([new BreakPeriod(1200, 2100)]), "A two-second section gap at AR 7 must project its automatic break.");
+            Check(ReferenceEquals(projected, method.Invoke(ui.View, null)), "Unchanged placement must reuse projected breaks.");
+            Check(map.ContentEquals(ui.View.Document), "Automatic break projection must not edit content.");
+            ui.Key('1'); ui.Paint();
+            Check(((IReadOnlyList<BreakPeriod>)method.Invoke(ui.View, null)!).Count == 0, "Canceling placement must clear projected breaks.");
+            ui.Key('2'); ui.ClickMap(3000, 250);
+            Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual(projected), "Placement must commit its projected automatic break.");
+            ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Automatic break and section must undo together.");
+            ui.Key('Y', ctrl: true); Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual(projected), "Redo must restore the automatic break.");
         }
     }
 

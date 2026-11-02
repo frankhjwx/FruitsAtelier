@@ -41,6 +41,17 @@ public sealed partial class EditorView
         var lines = WrapSyncText(c, L.Get(faOnly ? "song.faOnlyHelp" : "song.syncHelp"), bounds.Width);
         for (int i = 0; i < lines.Length; i++)
             c.Text(lines[i].Text, bounds.X, bounds.Y + 52 + i * 22, 13, Muted, bounds.Width);
+        float y = bounds.Y + 90 + lines.Length * 22;
+        c.Text(L.Get("aspire.category"), bounds.X, y, 14, Accent, bounds.Width, true);
+        var help = WrapSyncText(c, L.Get("aspire.enable"), Math.Max(40, bounds.Width - 64));
+        for (int i = 0; i < help.Length; i++)
+            c.Text(help[i].Text, bounds.X, y + 34 + i * 22, 12, Foreground, Math.Max(40, bounds.Width - 64));
+        ToggleSwitch(c, new(bounds.Right - 58, y + 28, 58, 38), "",
+            live ? Document.EnableSliderBpmMultiplier : songEnableSliderBpm, () =>
+            {
+                if (live) Edit(L.Get("aspire.enable"), () => Document.EnableSliderBpmMultiplier = !Document.EnableSliderBpmMultiplier);
+                else songEnableSliderBpm = !songEnableSliderBpm;
+            });
     }
 
     private void RequestDifficultyFaOnly(bool faOnly)

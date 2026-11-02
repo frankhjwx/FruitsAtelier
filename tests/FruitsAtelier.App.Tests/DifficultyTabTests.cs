@@ -187,13 +187,13 @@ internal static class DifficultyTabTests
         double initial = Rating(ui.View);
         ui.Key('F'); ui.ClickMap(1250, 480);
         var exported = OsuBeatmapWriter.Serialize(ui.View.Document);
-        double expected = CatchDifficultyCalculator.Calculate(exported.ObjectSequenceMatches ? exported.PlayableObjects : ui.View.Conversion.Objects,
+        double expected = CatchDifficultyCalculator.Calculate(CatchDifficultyObjects.Create(exported.ReadBack),
             ui.View.Document.CircleSize).StarRating;
         double displayed = ui.View.CurrentStarRating ?? 0;
         Check(displayed == initial || Math.Abs(displayed - expected) < 1e-12,
             "Edits show the cached rating while pending or the correct completed result");
         double changed = Rating(ui.View);
-        Check(Math.Abs(changed - expected) < 1e-12, "Completed stars match independently exported gameplay events");
+        Check(Math.Abs(changed - expected) < 1e-12, "Completed stars match exported lazer difficulty events");
         Check(initial != changed, "Object edits must recalculate difficulty");
         ui.Key('Z', ctrl: true);
         Check(Math.Abs(Rating(ui.View) - initial) < 1e-12, "Undo restores rating");
@@ -231,7 +231,7 @@ internal static class DifficultyTabTests
                 view.PointerUp(button.X + 2, button.Y + 2, 0);
                 canvas.Clear(); view.Render(canvas, 1440, 900);
                 var exported = OsuBeatmapWriter.Serialize(view.Document);
-                var objects = mod == 2 ? exported.PlayableHardRockObjects : exported.PlayableObjects;
+                var objects = CatchDifficultyObjects.Create(exported.ReadBack, hardRock: mod == 2);
                 double expected = CatchDifficultyCalculator.Calculate(objects, view.PreviewCircleSize).StarRating;
                 Check(Math.Abs(view.PreviewStarRating - expected) < 1e-12, "Preview SR follows mod CS and HR positions");
                 Check(!view.CurrentStarRatingRefreshing, "Switching preview mode reuses background results");

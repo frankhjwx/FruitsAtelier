@@ -761,6 +761,7 @@
   "project.new": "Nowy projekt",
   "project.add": "Dodaj nowy poziom trudności",
   "project.import": "Trudność importu .osu…",
+  "project.importResourcesRequired": "Przed importem trudności .osu otwórz projekt z katalogiem zasobów.",
   "project.defaultDifficulty": "Trudność {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "Poprzednia strona",
@@ -774,6 +775,7 @@
   "library.noExportTarget": "Nie ma dostępnego połączonego stabilnego poziomu trudności do nadpisania. Eksportuj nowy poziom trudności.",
   "library.exportConflict": "Plik osu! został zmieniony poza tym projektem: {0}. Zaimportuj go ponownie lub wyeksportuj nowy poziom trudności.",
   "library.exportExists": "Problem już istnieje w {0}. Wybierz inną nazwę trudności.",
+  "library.exportPathTooLong": "Ścieżka eksportu jest zbyt długa dla osu! stable: {0}. Skróć ścieżkę folderu Songs lub beatmapy przed eksportem.",
   "library.scanning": "Skanowanie utworów…",
   "library.scanProgress": "Zeskanowane: pliki {0}\nMapy połowowe: {1}\nPominięte błędy: {2}",
   "library.indexed": "Indeksowane trudności {0}",
@@ -940,6 +942,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Slider nie może jednocześnie osiągnąć tej współrzędnej X.",
+  "coordinate.sliderVelocityLimit": "Nie można przesunąć: wymagana prędkość przekracza limit SV 10×. Zwiększ odstęp czasu między sąsiednimi obiektami lub zmniejsz ich odległość poziomą.",
   "distance.nextField": "Następny DS",
   "distance.nonnegative": "DS musi wynosić zero lub być dodatnie.",
   "distance.interval": "DS wymaga dodatniego przedziału czasu.",
@@ -1961,5 +1964,12 @@
   "recovery.saved": "Zapisano kopię odzyskiwania: {0}",
   "recovery.failed": "Nie udało się zapisać kopii odzyskiwania: {0}",
   "recovery.nativeHelp": "Renderer graficzny jest niedostępny. Naciśnij Ctrl+S, aby zapisać kopię odzyskiwania, lub Enter, aby ponowić renderowanie. Projekt pozostaje w pamięci.",
-  "recovery.closeHelp": "Zapisać kopię odzyskiwania przed zamknięciem? Wybierz Nie, aby zamknąć bez zapisywania."
+  "recovery.closeHelp": "Zapisać kopię odzyskiwania przed zamknięciem? Wybierz Nie, aby zamknąć bez zapisywania.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

@@ -14,6 +14,14 @@ internal sealed partial class ImageCache
     private readonly Dictionary<(string Path, uint Tint), (WriteableBitmap Bitmap, long Used)> storyboardTextures = [];
     private readonly Dictionary<(string Path, uint Tint), MediaFileVersion> storyboardTextureVersions = [];
     private long storyboardBytes, storyboardClock;
+    private readonly List<string> storyboardDecodePaths = [];
+    internal void PrepareStoryboardImages(IReadOnlyList<string> paths)
+    {
+        storyboardDecodePaths.Clear();
+        foreach (string path in paths)
+            if (!storyboardTextures.ContainsKey((path, 0xFFFFFF))) storyboardDecodePaths.Add(path);
+        StoryboardPixels.Prepare(storyboardDecodePaths);
+    }
     private readonly HashSet<string> storyboardRetainedPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<(string Path, uint Tint)> storyboardPins = [];
     private long storyboardPinnedBytes;
@@ -130,7 +138,7 @@ internal sealed partial class MacCanvas
     private bool videoFrameRequested;
     public long MediaGeneration => images.MediaGeneration;
     public string? MediaError => images.Video?.ReadError() is { } error ? $"{System.IO.Path.GetFileName(images.Video.Path)}: {error}" : images.StoryboardCapacityWarning ?? images.StoryboardPixels.Error;
-    public void PrepareStoryboardImages(IReadOnlyList<string> paths) => images.StoryboardPixels.Prepare(paths);
+    public void PrepareStoryboardImages(IReadOnlyList<string> paths) => images.PrepareStoryboardImages(paths);
     public void RetainStoryboardImages(IReadOnlyList<string> paths) => images.RetainStoryboardImages(paths);
     public bool StoryboardImagesReady(IReadOnlyList<string> paths)
     {

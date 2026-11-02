@@ -15,7 +15,7 @@ internal sealed class ImportedSliderLengthCache
             entry = (slider.DeepClone(), slider.GetGeometry().Distance);
             entries[slider.Id] = entry;
         }
-        var timing = timingLookup.At(slider.TimeMs);
+        var timing = SliderBpm.Apply(document, timingLookup.At(slider.TimeMs), slider.BpmMultiplier);
         return slider.TimeMs + entry.Length / LegacyCatchRules.Velocity(timing.BeatLengthMs,
             document.EffectiveSliderMultiplier, ImportedSliderConverter.SliderVelocityAt(document, slider, timingLookup)) * slider.SpanCount;
     }

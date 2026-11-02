@@ -106,10 +106,8 @@ public sealed partial class EditorView
         if (string.IsNullOrWhiteSpace(LibrarySettings.Songs)) return L.Get("library.noTarget");
         string filename = WorkspaceProject.DifficultyFileName(Document, exportName, ".osu");
         if (WorkspaceSession is not { } session) return filename;
-        string directory = session.Manifest.SourceDirectory is { } relative
-            ? Path.GetFullPath(Path.Combine(LibrarySettings.Songs, relative))
-            : Path.Combine(LibrarySettings.Songs, "FruitsAtelier " + WorkspaceProject.SafeName(session.Manifest.Name) + " " + session.Manifest.Id.ToString("N")[..8]);
-        return Path.Combine(directory, filename);
+        try { return WorkspaceExport.NewTarget(session, Document, LibrarySettings.Songs, exportName); }
+        catch (IOException error) { return error.Message; }
     }
 
     private void DrawExportPath(ICanvas c, string path, float x, float y, float available)

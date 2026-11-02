@@ -2,6 +2,7 @@ using FruitsAtelier.Core;
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Lazer fractional slider ticks match official stars without changing gameplay", CatchDifficultyTests.FractionalSliderTicks),
     ("Catch stars match 21 official algorithm fixtures", CatchDifficultyTests.OfficialValues),
     ("Catch star calculation respects object participation and input boundaries", CatchDifficultyTests.Participation),
     ("Catch curve samples retain chronological contributions and decay", CatchDifficultyTests.CurveSamples),

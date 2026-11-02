@@ -156,7 +156,7 @@ public static class DistanceSpacingEditing
         }
         if (SameTiming(result) || track.SliderVelocityMultiplier is not null
             || track.FixedSliderVelocityMultiplier is not null
-            || before.Sliders.FirstOrDefault(s => s.SourceId == track.Id) is not { } slider) return result;
+            || before.Sliders.FirstOrDefault(s => s.SourceId == track.Id) is not { } slider) return CheckedResult();
         var minimum = track.MinimumSliderVelocityMultiplier;
         // Stable truncates float path distances into event times. Binary SV multiples
         // retain those rounding boundaries while providing more room for edited geometry.
@@ -167,7 +167,28 @@ public static class DistanceSpacingEditing
             if (SameTiming(candidate)) return candidate;
         }
         track.MinimumSliderVelocityMultiplier = minimum;
-        return result;
+        return CheckedResult();
+
+        CatchConversionResult CheckedResult()
+        {
+            if (result.Success || track.StreamSnapDivisor is not null) return result;
+            double velocity = LegacyCatchRules.Velocity(SliderBpm.Apply(document,
+                new TimingMap.Lookup(document).At(track.Nodes[0].TimeMs), track.BpmMultiplier).BeatLengthMs,
+                document.EffectiveSliderMultiplier, LegacyCatchRules.MaximumSliderVelocityMultiplier);
+            ConvertedCatchObject? previous = null;
+            double previousX = 0;
+            // Large events are fixed targets even when tiny-droplet compensation is approximate.
+            foreach (var item in original)
+            {
+                if (item.Kind is not (CatchObjectKind.Fruit or CatchObjectKind.Droplet)) continue;
+                double x = Math.Clamp(CurveMath.PositionAtTime(track, item.TimeMs), 0, 512);
+                if (previous is not null && Math.Abs(x - previousX) > velocity * (item.TimeMs - previous.TimeMs) + 1e-6)
+                    throw new ArgumentException(L.Get("coordinate.sliderVelocityLimit"));
+                previous = item;
+                previousX = x;
+            }
+            return result;
+        }
     }
 
     private static bool TryRandomizedTiny(MapDocument document, ConvertedCatchObject target, double x,

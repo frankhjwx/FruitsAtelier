@@ -1,5 +1,34 @@
 # Building and Testing
 
+## Artifact lifetime
+
+Keep task-generated outputs under ignored `artifacts/`. After a feature is
+implemented, validated and committed, delete its temporary builds, fixture
+workspaces, logs, profiles, screenshots and copied media. Record concise validation
+results in the conversation or review. Remove task-owned release staging and
+packages after successful publication or task completion unless explicitly retained.
+
+Keep the caches required by `Run-Editor.cmd`: `artifacts/dotnet-home`,
+`artifacts/packages` and the Windows runtime at
+`artifacts/mapset-verifier/win-x64`. Preserve active outputs, explicitly requested
+deliverables and user source or resources. Check temporary Git worktrees for changes
+and remove clean ones through Git.
+
+## Export path compatibility
+
+`Formats.Tests --export-path-check` checks actual file-watcher events during new
+Songs exports, updates, automatic metadata renames and failed-rename rollback.
+It covers full-path limits, deterministic shortened names, Unicode boundaries,
+generated mapset folders and rejection before writes when the destination cannot
+leave room for safe temporary files.
+
+## Difficulty import
+
+`App.Tests --difficulty-import-check` checks imports with different or empty
+metadata, conflicting media filenames in Downloads, retained
+project resource paths after save/reopen, missing-resource isolation, source-file
+collisions and same-directory difficulty selection.
+
 ## Error recovery
 
 `App.Tests --render-recovery-check` injects a persistent resource-release failure,
@@ -54,6 +83,10 @@ floors, schema 45/46 persistence and identical export after reload.
 The editor integration suite covers DS numeric fields, preceding-event snapping,
 selection-box priority, undo/cancel, and both shared and distinct rounded repeat
 samples. DS expectations use actual converted event times, not ideal beat fractions.
+The fractional last-tick regression checks the 10x SV diagnostic, red bold status
+rendering, recovery to a reachable position and atomic undo. The Core suite
+distinguishes the maximum SV limit from a lower explicit SV constraint. Native
+`--slider-endpoint-snap-render-check` captures the warning in English and Chinese.
 
 ## Movement Analysis labels
 
@@ -145,6 +178,17 @@ identity, bounded reuse, changed/deleted/restored files, unavailable-image diagn
 and an in-flight common image while retiring speculative loads. It uses a controlled decoder to verify
 that current-frame requests take priority over queued prefetch, including multiple
 required images and repeated preparation without duplicate decoding.
+`App.Tests --storyboard-texture-pressure-check` checks a 320 MiB speculative image
+set against the native texture budget: only required images upload, deferred
+uploads retain redraw requests, and resident textures do not decode again after
+CPU-cache eviction. The presentation check covers target-frame-only preparation
+for paused/playing seeks and restoration of lookahead during continuous playback.
+`FruitsAtelier.App --render-check --storyboard-seek-render-check <map.osu>` opens
+the real Windows host with silent audio output and exercises progress-bar click
+and drag messages. Supply a map with complete media resources and visible
+storyboard images. Reports under `artifacts/tests/storyboard-seek-native` include
+input/paint times, decode/upload counts and memory. Each target must publish its
+complete storyboard frame.
 `App.Tests --storyboard-first-playback <Platter.osu> <output-directory> <seed>`
 checks the Wings of Courage storyboard's first s15/4–7 transitions after randomized
 forward/backward seeks in a fresh hidden native renderer. Odd seeds add bounded
@@ -1447,6 +1491,11 @@ version-history work remains outside the pointer and paint paths.
 
 `App.Tests --break-preview-check` compares placement movement overlays with
 committed Break reconciliation and checks cancellation and undo in both modes.
+It includes generating the first break in a section gap. `Core.Tests
+--break-overlap-check` checks the source-derived Catch minimum gaps at AR 0, 5,
+7 and 10, just below/at/above each boundary, placement before and after sections,
+repeated slider tails, overlapping durations, retiming, detached commits,
+unaffected gaps and project/export persistence.
 `App.Tests --movement-placement-performance <path.osu>` runs the placement
 benchmark with Movement Analysis enabled, including projected Break filtering.
 
@@ -1625,3 +1674,22 @@ cancellation and undo in both canvases and languages. `--osu-canvas-check` also
 checks silent selection and the optional canvas selection lock. Windows
 `FruitsAtelier.App --render-check --osu-canvas-render-check` captures the choice
 window and exercises cancellation at its supported sizes and DPI scales.
+
+
+## Aspire BPM multiplier checks
+
+`Core.Tests --slider-bpm-check` checks presets and custom multipliers, unchanged
+FSlider targets and native geometry, independent neighbour timing, equal-BPM
+coalescing, red/green public properties including hitsound overrides, export
+read-back, cache invalidation, conflicting heads, schema 47/48 persistence,
+representation conversion, undo and invalid or unreachable multipliers.
+`App.Tests --slider-bpm-check` covers English/Chinese preset and Custom input,
+creation defaults, inspector changes, undo/redo and red-line visibility with SV
+hidden. Both checks also run in their full suites.
+`App.Tests --slider-bpm-performance` compares small and 1,000-slider documents
+with the feature disabled/enabled, reporting cold preparation and warm pointer
+plus recording-canvas frame CPU time and allocation. Native presentation is excluded.
+`FruitsAtelier.App --render-check --slider-bpm-render-check` launches the native
+Windows renderer, operates the default multiplier input and captures settings,
+menus and inspector at narrow and ordinary window sizes under
+`artifacts/tests/slider-bpm/native`.

@@ -177,7 +177,7 @@ public sealed partial class EditorView
             c.Text(L.Get("timing.shiftSelected"), r.X + 12, y, 12, Foreground, r.Width - 24); y += 20;
             TimingNumber(c, "shift", new(r.X + 12, y, r.Width - 112, 30), TimingN(timingShiftMs), v => timingShiftMs = v);
             TimingButton(c, new(r.Right - 94, y, 82, 30), L.Get("timing.shiftApply"), () => ShiftSelectedTiming(timingShiftMs), enabled: structure); y += 38;
-            if (points.All(p => p.Uninherited)) { Number("bpm", p => 60000 / TimingMap.EffectiveBeatLength(p.BeatLengthMs)); Number("meter", p => p.Meter); }
+            if (points.All(p => p.Uninherited)) { Number("bpm", p => 60000 / TimingMap.EffectiveBeatLength(p.BeatLengthMs), structure); Number("meter", p => p.Meter, structure); }
             else if (showTimingSv && points.All(p => !p.Uninherited)) Number("sv", p => -100 / p.BeatLengthMs, !timingSvLocked);
             else if (points.Any(p => p.Uninherited)) c.Text(L.Get("timing.mixedTypes"), r.X + 12, y, 12, Muted, r.Width - 24);
         }

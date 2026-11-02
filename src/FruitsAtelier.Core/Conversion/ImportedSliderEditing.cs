@@ -50,7 +50,7 @@ public static class ImportedSliderEditing
                     throw new InvalidOperationException(L.Get("core.importEditing.invalidPath"));
                 var track = new CurveTrack
                 {
-                    Id = source.Id, EndpointSnap = source.EndpointSnap, SourceOrder = source.SourceOrder, OriginalLine = source.OriginalLine,
+                    BpmMultiplier = source.BpmMultiplier, Id = source.Id, EndpointSnap = source.EndpointSnap, SourceOrder = source.SourceOrder, OriginalLine = source.OriginalLine,
                     Name = L.Get("core.names.importedSlider", source.PathType, source.TimeMs),
                     SpanCount = source.SpanCount, Kind = CurveKind.Linear, CompensateTinyDroplets = true,
                     SliderVelocitySeed = ImportedSliderConverter.SliderVelocityAt(document, source)
@@ -143,14 +143,14 @@ public static class ImportedSliderEditing
             try
             {
                 var path = slider.GetGeometry();
-                var timing = TimingMap.At(document, slider.TimeMs);
+                var timing = SliderBpm.Apply(document, TimingMap.At(document, slider.TimeMs), slider.BpmMultiplier);
                 double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, ImportedSliderConverter.SliderVelocityAt(document, slider));
                 if (!double.IsFinite(velocity) || velocity <= 0 || path.Distance <= 0)
                     throw new InvalidOperationException(L.Get("core.importEditing.invalidPath"));
                 if (path.Distance / velocity < .001) throw new InvalidOperationException(L.Get("core.importEditing.zeroDuration"));
                 var track = new CurveTrack
                 {
-                    Id = slider.Id, EndpointSnap = slider.EndpointSnap, SourceOrder = slider.SourceOrder, OriginalLine = slider.OriginalLine,
+                    BpmMultiplier = slider.BpmMultiplier, Id = slider.Id, EndpointSnap = slider.EndpointSnap, SourceOrder = slider.SourceOrder, OriginalLine = slider.OriginalLine,
                     Name = L.Get("core.names.importedSlider", slider.PathType, slider.TimeMs),
                     SpanCount = slider.SpanCount, CompensateTinyDroplets = true,
                     SliderVelocitySeed = ImportedSliderConverter.SliderVelocityAt(document, slider)

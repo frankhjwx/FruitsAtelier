@@ -761,6 +761,7 @@
   "project.new": "Bagong proyekto",
   "project.add": "Magdagdag ng bagong difficulty",
   "project.import": "Hirap sa pag-import ng .osu...",
+  "project.importResourcesRequired": "Magbukas muna ng proyektong may resource directory bago mag-import ng .osu difficulty.",
   "project.defaultDifficulty": "Hirap {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "Nakaraang pahina",
@@ -774,6 +775,7 @@
   "library.noExportTarget": "Walang naka-link na stable na kahirapan na magagamit upang ma-overwrite. Mag-export ng bagong kahirapan.",
   "library.exportConflict": "Ang osu! file ay nagbago sa labas ng proyektong ito: {0}. Muling i-import ito o i-export ang isang bagong kahirapan.",
   "library.exportExists": "Mayroon nang kahirapan sa {0}. Pumili ng isa pang pangalan ng kahirapan.",
+  "library.exportPathTooLong": "Masyadong mahaba ang export path para sa osu! stable: {0}. Paikliin ang path ng Songs o ng beatmap folder bago mag-export.",
   "library.scanning": "Ini-scan ang mga Kanta...",
   "library.scanProgress": "Na-scan: {0} file\nMahuli ang mga mapa: {1}\nMga nilaktawan na error: {2}",
   "library.indexed": "{0} mga paghihirap na na-index",
@@ -940,6 +942,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Hindi maabot ng Slider ang X coordinate na ito nang sabay.",
+  "coordinate.sliderVelocityLimit": "Hindi mailipat: lampas sa 10× SV na limitasyon ang kailangang bilis. Dagdagan ang oras sa pagitan ng magkatabing object o bawasan ang pahalang na distansya.",
   "distance.nextField": "Susunod na DS",
   "distance.nonnegative": "Ang DS ay dapat na zero o positibo.",
   "distance.interval": "Ang DS ay nangangailangan ng isang positibong agwat ng oras.",
@@ -1961,5 +1964,12 @@
   "recovery.saved": "Na-save ang kopya para sa pagbawi: {0}",
   "recovery.failed": "Hindi ma-save ang kopya para sa pagbawi: {0}",
   "recovery.nativeHelp": "Hindi magamit ang graphics renderer. Pindutin ang Ctrl+S para mag-save ng kopya para sa pagbawi, o Enter para subukan muli. Nananatili sa memory ang proyekto.",
-  "recovery.closeHelp": "Mag-save ng kopya para sa pagbawi bago isara? Piliin ang Hindi para isara nang hindi nagse-save."
+  "recovery.closeHelp": "Mag-save ng kopya para sa pagbawi bago isara? Piliin ang Hindi para isara nang hindi nagse-save.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

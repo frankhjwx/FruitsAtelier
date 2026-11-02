@@ -204,7 +204,7 @@ public sealed partial class EditorView
         }
         if (tool == Tool.Slider)
         {
-            osuDraftSlider ??= new ImportedSlider { TimeMs = OsuPlacementTime, X = point.X, Y = point.Y, PreserveNativeGeometry = true, SliderVelocityMultiplier = LibrarySettings.OsuSliderDefaultSv };
+            osuDraftSlider ??= new ImportedSlider { TimeMs = OsuPlacementTime, X = point.X, Y = point.Y, PreserveNativeGeometry = true, BpmMultiplier = Document.EnableSliderBpmMultiplier ? Document.DefaultSliderBpmMultiplier : 1, SliderVelocityMultiplier = LibrarySettings.OsuSliderDefaultSv };
             osuDraftSlider.ControlPoints.Add(new(point.X, point.Y));
             osuDraftPointer = point;
             StatusMessage = L.Get("osu.sliderDraft"); return true;
@@ -541,7 +541,7 @@ public sealed partial class EditorView
 
     private static ImportedSlider OsuSliderGeometrySnapshot(ImportedSlider slider)
     {
-        var copy = new ImportedSlider { Id = slider.Id, EndpointSnap = slider.EndpointSnap, X = slider.X, Y = slider.Y, TimeMs = slider.TimeMs,
+        var copy = new ImportedSlider { BpmMultiplier = slider.BpmMultiplier, Id = slider.Id, EndpointSnap = slider.EndpointSnap, X = slider.X, Y = slider.Y, TimeMs = slider.TimeMs,
             PathType = slider.PathType, PixelLength = slider.PixelLength, SpanCount = slider.SpanCount,
             SourceOrder = slider.SourceOrder, OriginalLine = slider.OriginalLine, RandomizationSource = slider.RandomizationSource,
             RandomizationTrack = slider.RandomizationTrack, RandomizationBaseVelocity = slider.RandomizationBaseVelocity,

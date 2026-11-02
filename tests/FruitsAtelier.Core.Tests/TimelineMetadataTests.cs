@@ -4,6 +4,7 @@ internal static class TimelineMetadataTests
 {
     public static void Run()
     {
+        AutomaticSectionBreaks();
         DeletedSectionBreak();
         CachedBreakIntervals();
         FractionalBreakBoundary();
@@ -48,6 +49,70 @@ internal static class TimelineMetadataTests
             && OsuTimeline.Breaks(exported).SequenceEqual([new BreakPeriod(3200, 3800)])
             && events.Lines[breakLine].EndsWith("// keep this comment", StringComparison.Ordinal),
             "Resizing a break must preserve its Events line and comment");
+    }
+
+    private static void AutomaticSectionBreaks()
+    {
+        // Pinned osu! Catch source cases: recovery 200 ms, usable break 650 ms, AR preempt 1800/1200/900/450 ms.
+        foreach (var (ar, minimumGap) in new[] { (0d, 2650), (5d, 2050), (7d, 1750), (10d, 1300) })
+        foreach (int delta in new[] { -1, 0, 1, 4000 })
+        foreach (bool prepend in new[] { false, true })
+        {
+            double gap = minimumGap + delta;
+            var map = new MapDocument { DurationMs = 20000, ApproachRate = ar };
+            map.Fruits.Add(new() { TimeMs = prepend ? 1000 + gap : 1000 });
+            var history = new EditorHistory(map);
+            history.Begin("Place next section");
+            history.Document.Fruits.Add(new() { TimeMs = prepend ? 1000 : 1000 + gap });
+            var current = history.Document.Fruits.ToDictionary(fruit => fruit.Id, fruit => (Start: fruit.TimeMs, End: fruit.TimeMs));
+            var projected = OsuTimeline.ReconcileBreaks([], map.Fruits.ToDictionary(fruit => fruit.Id,
+                fruit => (Start: fruit.TimeMs, End: fruit.TimeMs)), current, CatchScrollTiming.PreemptMs(ar));
+            var detached = history.Document.DeepClone(); EditorHistory.PrepareDetachedCommit(map, detached);
+            history.Commit();
+            BreakPeriod[] expected = delta < 0 ? [] : [new(1200, 1850 + delta)];
+            Check(OsuTimeline.Breaks(history.Document).SequenceEqual(expected)
+                && projected.SequenceEqual(expected) && detached.ContentEquals(history.Document),
+                $"Automatic Catch break mismatch at AR {ar}, gap {gap}, prepend {prepend}.");
+            var after = history.Document.DeepClone();
+            history.Undo(); Check(history.Document.ContentEquals(map), "Section placement and its break must undo together.");
+            history.Redo(); Check(history.Document.ContentEquals(after), "Redo must restore the section and break.");
+            Check(OsuTimeline.Breaks(ProjectSerializer.Read(ProjectSerializer.Serialize(after))).SequenceEqual(expected)
+                && OsuTimeline.Breaks(OsuBeatmapWriter.Serialize(after).ReadBack).SequenceEqual(expected),
+                "Automatic breaks must survive project save and osu export.");
+        }
+
+        foreach (int kind in new[] { 0, 1, 2 })
+        {
+            var map = new MapDocument { DurationMs = 15000, ApproachRate = 7, BeatLengthMs = 500, SliderMultiplier = 1.4 };
+            if (kind == 0)
+            {
+                var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = 3 };
+                track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 240 }]);
+                map.Tracks.Add(track);
+            }
+            else if (kind == 1)
+            {
+                var slider = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 140, SpanCount = 3 };
+                slider.ControlPoints.AddRange([new(100, 192), new(240, 192)]); map.ImportedSliders.Add(slider);
+            }
+            else map.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 2500 });
+            map.Fruits.Add(new() { TimeMs = 2000 });
+            var history = new EditorHistory(map);
+            history.Begin("Place after overlapping duration"); history.Document.Fruits.Add(new() { TimeMs = 4000 }); history.Commit();
+            Check(OsuTimeline.Breaks(history.Document).Count == 0, "A break must clear the maximum preceding end, including repeats.");
+            history.Begin("Move to the minimum clear gap"); history.Document.Fruits[^1].TimeMs = 4250; history.Commit();
+            Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(2700, 3350)]),
+                "Retiming must generate a break after the complete duration.");
+        }
+
+        var untouched = new MapDocument { DurationMs = 16000, ApproachRate = 7 };
+        untouched.Fruits.AddRange([new() { TimeMs = 1000 }, new() { TimeMs = 8000 }]);
+        var unrelated = new EditorHistory(untouched);
+        unrelated.Begin("Edit position"); unrelated.Document.Fruits[0].X = 300; unrelated.Commit();
+        Check(OsuTimeline.Breaks(unrelated.Document).Count == 0, "Position-only edits must leave break content unchanged.");
+        unrelated.Begin("Append a section"); unrelated.Document.Fruits.Add(new() { TimeMs = 10000 }); unrelated.Commit();
+        Check(OsuTimeline.Breaks(unrelated.Document).SequenceEqual([new BreakPeriod(8200, 9100)]),
+            "A new section must generate its break without rewriting unrelated gaps.");
     }
 
     private static void SplitEditedBreaks()

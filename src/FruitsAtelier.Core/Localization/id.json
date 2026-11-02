@@ -761,6 +761,7 @@
   "project.new": "Proyek baru",
   "project.add": "Tambahkan kesulitan baru",
   "project.import": "Impor tingkat kesulitan .osu…",
+  "project.importResourcesRequired": "Buka proyek dengan direktori sumber daya sebelum mengimpor tingkat kesulitan .osu.",
   "project.defaultDifficulty": "Kesulitan {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "Halaman sebelumnya",
@@ -774,6 +775,7 @@
   "library.noExportTarget": "Tidak ada tingkat kesulitan stabil tertaut yang tersedia untuk ditimpa. Ekspor kesulitan baru.",
   "library.exportConflict": "File osu! diubah di luar proyek ini: {0}. Impor ulang atau ekspor tingkat kesulitan baru.",
   "library.exportExists": "Kesulitan sudah ada di {0}. Pilih nama kesulitan lain.",
+  "library.exportPathTooLong": "Jalur ekspor terlalu panjang untuk osu! stable: {0}. Perpendek jalur folder Songs atau beatmap sebelum mengekspor.",
   "library.scanning": "Memindai Lagu…",
   "library.scanProgress": "Dipindai: file {0}\nTangkap peta: {1}\nKesalahan yang dilewati: {2}",
   "library.indexed": "Kesulitan {0} diindeks",
@@ -940,6 +942,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "Slider tidak dapat mencapai koordinat X ini secara bersamaan.",
+  "coordinate.sliderVelocityLimit": "Tidak dapat dipindahkan: kecepatan yang diperlukan melebihi batas SV 10×. Tambah jeda waktu antara objek berdekatan atau kurangi jarak horizontalnya.",
   "distance.nextField": "DS berikutnya",
   "distance.nonnegative": "DS harus nol atau positif.",
   "distance.interval": "DS memerlukan interval waktu positif.",
@@ -1961,5 +1964,12 @@
   "recovery.saved": "Salinan pemulihan disimpan: {0}",
   "recovery.failed": "Salinan pemulihan tidak dapat disimpan: {0}",
   "recovery.nativeHelp": "Perender grafis tidak tersedia. Tekan Ctrl+S untuk menyimpan salinan pemulihan, atau Enter untuk mencoba lagi. Proyek tetap tersimpan di memori.",
-  "recovery.closeHelp": "Simpan salinan pemulihan sebelum menutup? Pilih Tidak untuk menutup tanpa menyimpan."
+  "recovery.closeHelp": "Simpan salinan pemulihan sebelum menutup? Pilih Tidak untuk menutup tanpa menyimpan.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

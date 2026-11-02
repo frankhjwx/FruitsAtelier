@@ -761,6 +761,7 @@
   "project.new": "新專案",
   "project.add": "新增難度",
   "project.import": "導入.osu難度...",
+  "project.importResourcesRequired": "請先開啟具有資源目錄的專案，再匯入 .osu 難度。",
   "project.defaultDifficulty": "難度{0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "上一頁",
@@ -774,6 +775,7 @@
   "library.noExportTarget": "沒有可覆蓋的連結穩定難度。匯出新難度。",
   "library.exportConflict": "osu! 檔案在該專案之外更改：{0}。重新匯入或匯出新的難度。",
   "library.exportExists": "{0} 已經有困難。選擇另一個難度名稱。",
+  "library.exportPathTooLong": "匯出路徑過長，osu! stable 無法安全處理：{0}。請縮短 Songs 或圖譜資料夾路徑後再匯出。",
   "library.scanning": "掃描歌曲...",
   "library.scanProgress": "已掃描：{0} 檔案\n擷取圖：{1}\n跳過的錯誤：{2}",
   "library.indexed": "{0} 困難指數",
@@ -940,6 +942,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "滑條 不能同時到達該X 座標。",
+  "coordinate.sliderVelocityLimit": "無法拖動：所需速度超過 10× SV 上限。請增加相鄰物件的時間間隔或減小水平距離。",
   "distance.nextField": "下一個 DS",
   "distance.nonnegative": "DS 必須為零或正數。",
   "distance.interval": "DS 需要正時間間隔。",
@@ -1961,5 +1964,12 @@
   "recovery.saved": "復原副本已儲存：{0}",
   "recovery.failed": "無法儲存復原副本：{0}",
   "recovery.nativeHelp": "圖形繪製器無法使用。按 Ctrl+S 儲存復原副本，或按 Enter 重試繪製。專案仍保留在記憶體中。",
-  "recovery.closeHelp": "關閉前儲存復原副本？選擇「否」將不儲存並關閉。"
+  "recovery.closeHelp": "關閉前儲存復原副本？選擇「否」將不儲存並關閉。",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }

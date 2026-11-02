@@ -790,6 +790,7 @@
   "project.new": "新建工程",
   "project.add": "添加新难度",
   "project.import": "导入 .osu 难度…",
+  "project.importResourcesRequired": "请先打开具有资源目录的项目，再导入 .osu 难度。",
   "project.defaultDifficulty": "Difficulty {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "上一页",
@@ -803,6 +804,7 @@
   "library.noExportTarget": "没有可覆盖的 stable 难度，请导出为新难度。",
   "library.exportConflict": "osu! 文件已被外部修改：{0}。请重新导入或导出为新难度。",
   "library.exportExists": "目标难度已存在：{0}。请使用其他难度名称。",
+  "library.exportPathTooLong": "导出路径过长，osu! stable 无法安全处理：{0}。请缩短 Songs 或谱面文件夹路径后再导出。",
   "library.scanning": "正在扫描 Songs…",
   "library.scanProgress": "已扫描：{0} 个文件\nCatch 谱面：{1}\n异常跳过：{2}",
   "library.indexed": "已索引 {0} 个难度",
@@ -969,6 +971,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "此 slider 无法在保持时间的情况下达到该 X 坐标。",
+  "coordinate.sliderVelocityLimit": "无法拖动：所需速度超过 10× SV 上限。请增大相邻物件的时间间隔或减小水平距离。",
   "distance.nextField": "后一对象 DS",
   "distance.nonnegative": "DS 必须为零或正数。",
   "distance.interval": "DS 需要大于零的时间间隔。",
@@ -1961,5 +1964,12 @@
   "recovery.saved": "恢复副本已保存：{0}",
   "recovery.failed": "无法保存恢复副本：{0}",
   "recovery.nativeHelp": "图形渲染器不可用。按 Ctrl+S 保存恢复副本，或按 Enter 重试绘制。项目仍保留在内存中。",
-  "recovery.closeHelp": "关闭前保存恢复副本？选择“否”将不保存并关闭。"
+  "recovery.closeHelp": "关闭前保存恢复副本？选择“否”将不保存并关闭。",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "启用 BPM 倍率以修改 slider 行为",
+  "aspire.multiplier": "BPM 倍率",
+  "aspire.value": "BPM 倍率 {0:0.###}×",
+  "aspire.custom": "自定义",
+  "aspire.invalidMultiplier": "BPM 倍率必须是大于零的有限数值。",
+  "aspire.bpmCollision": "导出时间相同的 slider 必须使用相同的 BPM。"
 }

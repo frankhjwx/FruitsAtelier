@@ -54,6 +54,25 @@ internal static class SliderEndpointSnapRenderCheck
                 typeof(EditorView).GetMethod("SelectObjects", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
                     .Invoke(editor, [new[] { track.Id }, track.Id]);
                 editor.ShowSliderInspector(); Paint("catch-positions-nc");
+                var limitMap = new MapDocument { DurationMs = 5000, BeatLengthMs = 60000d / 185,
+                    SliderMultiplier = 1.2, SliderTickRate = 2 };
+                double start = 1000 + limitMap.BeatLengthMs / 12;
+                var limitTrack = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = false };
+                limitTrack.Nodes.AddRange([new() { TimeMs = start, X = 470 },
+                    new() { TimeMs = start + limitMap.BeatLengthMs, X = 300 },
+                    new() { TimeMs = start + limitMap.BeatLengthMs * 1.25, X = 27 }]);
+                limitMap.Tracks.Add(limitTrack);
+                editor.LoadDocument(limitMap); Paint();
+                var target = editor.Conversion.Objects.Last(o => o.Kind == CatchObjectKind.Droplet);
+                const System.Reflection.BindingFlags hidden = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                var point = ((float X, float Y))typeof(EditorView).GetMethod("Screen", hidden)!
+                    .Invoke(editor, [new MapPoint(target.TimeMs, target.X)])!;
+                typeof(EditorView).GetMethod("BeginSliderObjectDrag", hidden)!.Invoke(editor, [target, point.X, point.Y]);
+                editor.PointerMove(point.X + (float)(450 - target.X) / 512 * editor.PlayfieldBounds.Width, point.Y, false, false);
+                if (editor.StatusMessage != L.Get("coordinate.sliderVelocityLimit"))
+                    throw new InvalidOperationException("Native drag did not report the 10x SV limit: " + editor.StatusMessage);
+                Paint("sv-limit-warning");
+                editor.CancelInteraction();
                 Console.WriteLine($"PASS endpoint snap native {locale} {size.Item1}x{size.Item2} {dpi} DPI");
 
                 void Reach(Func<Rect> bounds)

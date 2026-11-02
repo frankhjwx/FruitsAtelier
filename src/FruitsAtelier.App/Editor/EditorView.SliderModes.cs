@@ -88,7 +88,7 @@ public sealed partial class EditorView
         {
             BeginDraftConversion();
             history.Begin(L.Get("editor.command.drawTrack"));
-            var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = true,
+            var track = new CurveTrack { BpmMultiplier = Document.EnableSliderBpmMultiplier ? Document.DefaultSliderBpmMultiplier : 1, Kind = CurveKind.Linear, CompensateTinyDroplets = true,
                 DropletMode = NewSliderDropletMode,
                 Name = L.Get("editor.track.defaultName", Document.Tracks.Count + 1) };
             var node = new Anchor { TimeMs = point.TimeMs, X = point.X };

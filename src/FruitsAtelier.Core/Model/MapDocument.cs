@@ -60,7 +60,7 @@ public sealed class CurveTrack
         var a = this; var b = other;
         if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
             || a.DropletMode != b.DropletMode || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
-            || a.SliderVelocityMultiplier != b.SliderVelocityMultiplier || a.MinimumSliderVelocityMultiplier != b.MinimumSliderVelocityMultiplier
+            || a.BpmMultiplier != b.BpmMultiplier || a.SliderVelocityMultiplier != b.SliderVelocityMultiplier || a.MinimumSliderVelocityMultiplier != b.MinimumSliderVelocityMultiplier
             || a.EndpointSnap != b.EndpointSnap || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
             || a.StreamNewComboOffsets.Count != b.StreamNewComboOffsets.Count
             || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization)) return false;
@@ -106,6 +106,7 @@ public sealed class CurveTrack
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? SliderVelocityMultiplier { get; set; }
+    public double BpmMultiplier { get; set; } = 1;
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? MinimumSliderVelocityMultiplier { get; set; }
@@ -191,6 +192,7 @@ public sealed class ImportedSlider
     public char PathType { get; set; } = 'B';
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? SliderVelocityMultiplier { get; set; }
+    public double BpmMultiplier { get; set; } = 1;
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? ProcessedSliderVelocityMultiplier { get; set; }
     public SliderControlPoints ControlPoints { get; private set; } = new();
@@ -205,7 +207,7 @@ public sealed class ImportedSlider
             TimeMs = TimeMs, PathType = PathType, SpanCount = SpanCount, PixelLength = PixelLength,
             RandomizationSource = RandomizationSource?.DeepClone(), RandomizationTrack = RandomizationTrack?.DeepClone(),
             RandomizationBaseVelocity = RandomizationBaseVelocity, PreserveNativeGeometry = PreserveNativeGeometry,
-            SliderVelocityMultiplier = SliderVelocityMultiplier, ProcessedSliderVelocityMultiplier = ProcessedSliderVelocityMultiplier
+            BpmMultiplier = BpmMultiplier, SliderVelocityMultiplier = SliderVelocityMultiplier, ProcessedSliderVelocityMultiplier = ProcessedSliderVelocityMultiplier
         };
         copy.ControlPoints = ControlPoints.Share();
         copy.geometryMemo = geometryMemo;
@@ -215,7 +217,7 @@ public sealed class ImportedSlider
     internal bool ContentEquals(ImportedSlider other) => Id == other.Id && SourceOrder == other.SourceOrder
         && OriginalLine == other.OriginalLine && X == other.X && Y == other.Y && TimeMs == other.TimeMs
         && PathType == other.PathType && SpanCount == other.SpanCount && PixelLength == other.PixelLength
-        && SliderVelocityMultiplier == other.SliderVelocityMultiplier && ProcessedSliderVelocityMultiplier == other.ProcessedSliderVelocityMultiplier
+        && BpmMultiplier == other.BpmMultiplier && SliderVelocityMultiplier == other.SliderVelocityMultiplier && ProcessedSliderVelocityMultiplier == other.ProcessedSliderVelocityMultiplier
         && RandomizationBaseVelocity == other.RandomizationBaseVelocity && DropletMode == other.DropletMode
         && PreserveNativeGeometry == other.PreserveNativeGeometry && EndpointSnap == other.EndpointSnap
         && ControlPoints.ContentEquals(other.ControlPoints)
@@ -260,6 +262,9 @@ public sealed partial class MapDocument
     public double? DistancePerBeatOverride { get; set; }
     [JsonIgnore]
     public double DistancePerBeat => DistancePerBeatOverride ?? 100 * SliderMultiplier;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool EnableSliderBpmMultiplier { get; set; }
+    public double DefaultSliderBpmMultiplier { get; set; } = 1;
     public double SliderTickRate { get; set; } = 1;
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool LegacySliderTicks { get; set; }
@@ -290,6 +295,7 @@ public sealed partial class MapDocument
     {
         var copy = new MapDocument
         {
+            EnableSliderBpmMultiplier = EnableSliderBpmMultiplier, DefaultSliderBpmMultiplier = DefaultSliderBpmMultiplier,
             Name = Name, DurationMs = DurationMs, CollaborationReferences = CollaborationReferences?.ToList(),
             CollaborationEditableRanges = CollaborationEditableRanges?.ToList(),
             BeatLengthMs = BeatLengthMs, TimingOffsetMs = TimingOffsetMs, ApproachRate = ApproachRate,
@@ -339,7 +345,8 @@ public sealed partial class MapDocument
 
     private bool ContentEquals(MapDocument other, bool ignoreMultiplierOverride, bool ignoreOsuDistanceSpacing)
     {
-        if (!CollaborationReferencesEqual(other)
+        if (EnableSliderBpmMultiplier != other.EnableSliderBpmMultiplier || DefaultSliderBpmMultiplier != other.DefaultSliderBpmMultiplier
+            || !CollaborationReferencesEqual(other)
             || Name != other.Name || DurationMs != other.DurationMs || BeatLengthMs != other.BeatLengthMs
             || TimingOffsetMs != other.TimingOffsetMs || ApproachRate != other.ApproachRate
             || CircleSize != other.CircleSize || SliderMultiplier != other.SliderMultiplier

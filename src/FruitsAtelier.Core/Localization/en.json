@@ -790,6 +790,7 @@
   "project.new": "New project",
   "project.add": "Add new difficulty",
   "project.import": "Import .osu difficulty…",
+  "project.importResourcesRequired": "Open a project with a resource directory before importing an .osu difficulty.",
   "project.defaultDifficulty": "Difficulty {0}",
   "project.selector": "{0}/{1} · {2}{3}",
   "project.previous": "Previous page",
@@ -803,6 +804,7 @@
   "library.noExportTarget": "No linked stable difficulty is available to overwrite. Export a new difficulty.",
   "library.exportConflict": "The osu! file changed outside this project: {0}. Reimport it or export a new difficulty.",
   "library.exportExists": "A difficulty already exists at {0}. Choose another difficulty name.",
+  "library.exportPathTooLong": "The export path is too long for osu! stable: {0}. Shorten the Songs or beatmap folder path before exporting.",
   "library.scanning": "Scanning Songs…",
   "library.scanProgress": "Scanned: {0} files\nCatch maps: {1}\nSkipped errors: {2}",
   "library.indexed": "{0} difficulties indexed",
@@ -969,6 +971,7 @@
   "coordinate.readout": "X: {0}",
   "coordinate.readoutXY": "X: {0}  Y: {1}",
   "coordinate.unreachable": "The slider cannot reach this X coordinate at the same time.",
+  "coordinate.sliderVelocityLimit": "Cannot move: required speed exceeds the 10× SV limit. Increase the time between adjacent objects or reduce their horizontal distance.",
   "distance.nextField": "Next DS",
   "distance.nonnegative": "DS must be zero or positive.",
   "distance.interval": "DS requires a positive time interval.",
@@ -1961,5 +1964,12 @@
   "recovery.saved": "Recovery copy saved: {0}",
   "recovery.failed": "Recovery copy could not be saved: {0}",
   "recovery.nativeHelp": "The graphics renderer is unavailable. Press Ctrl+S to save a recovery copy, or Enter to retry rendering. Your project remains in memory.",
-  "recovery.closeHelp": "Save a recovery copy before closing? Choose No to close without saving."
+  "recovery.closeHelp": "Save a recovery copy before closing? Choose No to close without saving.",
+  "aspire.category": "Aspire Features",
+  "aspire.enable": "Enable BPM multiplier to modify slider behaviours",
+  "aspire.multiplier": "BPM Multiplier",
+  "aspire.value": "BPM Multiplier {0:0.###}×",
+  "aspire.custom": "Custom",
+  "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
+  "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM."
 }
