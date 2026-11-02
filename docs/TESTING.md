@@ -1491,6 +1491,10 @@ version-history work remains outside the pointer and paint paths.
 
 `App.Tests --break-preview-check` compares placement movement overlays with
 committed Break reconciliation and checks cancellation and undo in both modes.
+It includes the first automatic break when placing a new section on a map without
+breaks. `Core.Tests --break-overlap-check` covers the five-second threshold,
+placement before or after a section, repeated slider tails, overlapping durations,
+retiming, unaffected gaps, detached commits, undo/redo and project/export persistence.
 `App.Tests --movement-placement-performance <path.osu>` runs the placement
 benchmark with Movement Analysis enabled, including projected Break filtering.
 

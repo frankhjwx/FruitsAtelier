@@ -39,7 +39,6 @@ public static class OsuTimeline
         var periods = Breaks(document);
         bool removedParents = document.Fruits.Count < before.Fruits.Count || document.Tracks.Count < before.Tracks.Count
             || document.ImportedSliders.Count < before.ImportedSliders.Count || document.BananaShowers.Count < before.BananaShowers.Count;
-        if (periods.Count == 0 && !removedParents) return;
         // Reconciliation owns its period list; callbacks must not merge fragments midway through the pass.
         ReconcileBreaksCore(periods, ObjectIntervals(before, sliderLengths), ObjectIntervals(document, sliderLengths),
             CatchScrollTiming.PreemptMs(document.ApproachRate), before.ApproachRate != document.ApproachRate, removedParents,
@@ -61,7 +60,6 @@ public static class OsuTimeline
         Action<BreakPeriod>? remove = null, Action<BreakPeriod, BreakPeriod>? replace = null, Action<BreakPeriod>? add = null)
     {
         var periods = sourcePeriods.ToList();
-        if (periods.Count == 0 && !removedParents) return periods;
         var changed = current.Where(pair => !previous.TryGetValue(pair.Key, out var old) || old != pair.Value)
             .Select(pair => pair.Value).ToArray();
         var vacated = previous.Where(pair => !current.TryGetValue(pair.Key, out var now) || now != pair.Value)
@@ -141,8 +139,13 @@ public static class OsuTimeline
                 foreach (var part in remaining.Skip(1)) Add(part);
             }
         }
-        if (!removedParents || occupied.Length < 2) return OrderedPeriods();
+        if (occupied.Length < 2) return OrderedPeriods();
         var removed = previous.Where(pair => !current.ContainsKey(pair.Key)).Select(pair => pair.Value).ToArray();
+        // Edits intersecting an authored break use its reconciled fragments and retain its outer boundaries.
+        var unbrokenChanges = changed.Where(interval => !sourcePeriods.Any(period =>
+            interval.Start - preempt < period.EndMs && interval.End + 200 > period.StartMs)).ToArray();
+        var changedStarts = unbrokenChanges.Select(interval => interval.Start).ToHashSet();
+        var changedEnds = unbrokenChanges.Select(interval => interval.End).ToHashSet();
         var reconciled = periods.ToList();
         double previousEnd = occupied[0].End;
         for (int i = 1; i < occupied.Length; i++)
@@ -150,8 +153,11 @@ public static class OsuTimeline
             var next = occupied[i];
             int start = BreakStartAfter(previousEnd);
             int end = (int)Math.Clamp(Math.Floor(next.Start - preempt), 0, int.MaxValue);
-            // Removing the last object in a section can leave no existing break to extend.
-            if ((long)end - start >= 650 && removed.Any(interval => interval.Start > previousEnd && interval.End < next.Start)
+            // Only edited gap boundaries generate new breaks; unrelated gaps retain their authored state.
+            bool longGap = next.Start - previousEnd > 5000
+                && (changedEnds.Contains(previousEnd) || changedStarts.Contains(next.Start));
+            bool vacatedGap = removedParents && removed.Any(interval => interval.Start > previousEnd && interval.End < next.Start);
+            if ((long)end - start >= 650 && (longGap || vacatedGap)
                 && !reconciled.Any(period => period.StartMs < end && period.EndMs > start))
             {
                 Add(new(start, end));
