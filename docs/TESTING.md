@@ -1491,6 +1491,11 @@ version-history work remains outside the pointer and paint paths.
 
 `App.Tests --break-preview-check` compares placement movement overlays with
 committed Break reconciliation and checks cancellation and undo in both modes.
+It includes generating the first break in a section gap. `Core.Tests
+--break-overlap-check` checks the source-derived Catch minimum gaps at AR 0, 5,
+7 and 10, just below/at/above each boundary, placement before and after sections,
+repeated slider tails, overlapping durations, retiming, detached commits,
+unaffected gaps and project/export persistence.
 `App.Tests --movement-placement-performance <path.osu>` runs the placement
 benchmark with Movement Analysis enabled, including projected Break filtering.
 

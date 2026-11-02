@@ -6,6 +6,16 @@ licenses. The project license does not replace their notices or grant additional
 rights to those resources. Community-tool acknowledgements are listed in the
 [README credits](README.md#credits).
 
+## Automatic Catch breaks
+
+`OsuTimeline.ReconcileBreaksCore` adapts the Catch gap eligibility, recovery and
+preempt calculation from `EditorBeatmapProcessor.autoGenerateBreaks`,
+`Beatmaps/Timing/BreakPeriod.cs` and `CatchHitObject.cs` in
+[ppy/osu revision 28b6db67db8de82d28c03aa0f7cefdff912f7b33](https://github.com/ppy/osu/tree/28b6db67db8de82d28c03aa0f7cefdff912f7b33).
+FA applies generation at edited gap boundaries while retaining its existing
+manual-boundary reconciliation and integer `.osu` timestamps. The upstream MIT
+notice is retained in `src/FruitsAtelier.Core/Gameplay/LICENSE.osu.txt`.
+
 ## Standard canvas temporal layers
 
 `EditorView.OsuCanvas.cs` uses an independently implemented time-proximity layer
