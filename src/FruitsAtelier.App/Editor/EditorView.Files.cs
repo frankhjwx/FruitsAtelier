@@ -40,7 +40,7 @@ public sealed partial class EditorView
         LoadProject(BeatmapProject.FromDocuments([document]));
     }
 
-    public void LoadProject(BeatmapProject project)
+    public void LoadProject(BeatmapProject project, Guid? initialDifficultyId = null)
     {
         if (PatternEditingActive) throw new InvalidOperationException(L.Get("gallery.finishEditing"));
         project.Validate();
@@ -115,7 +115,8 @@ public sealed partial class EditorView
         }
         difficulties.Clear();
         difficulties.AddRange(project.Difficulties.Select(d => new DifficultySession(d)));
-        activeDifficulty = firstDifficultyTab = 0;
+        activeDifficulty = Math.Max(0, difficulties.FindIndex(d => d.Id == initialDifficultyId));
+        firstDifficultyTab = 0;
         difficultyTabOrder = []; difficultySortPending = true;
         difficultyTabsManuallyOrdered = false; pinnedDifficulties.Clear();
         RestoreMapEditingPreferences();

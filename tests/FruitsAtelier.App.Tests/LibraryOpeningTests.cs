@@ -57,12 +57,23 @@ internal static class LibraryOpeningTests
             Directory.CreateDirectory(songs);
             string sourceText = "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Source\nArtist:Artist\nCreator:Mapper\nVersion:{0}\n[Difficulty]\nCircleSize:5\nOverallDifficulty:5\nApproachRate:5\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,2,1,100,1,0\n[HitObjects]\n123,192,1000,1,0,0:0:0:0:\n";
             foreach (string name in new[] { "First", "Second" })
-                File.WriteAllText(Path.Combine(songs, name + ".osu"), string.Format(sourceText, name));
+                File.WriteAllText(Path.Combine(songs, name + ".osu"), string.Format(sourceText, name)
+                    + "123,192,2000,2,0,L|223:192,1,100\n");
             view = CreateView();
-            view.InitializeLibrary(false, new LibrarySettings { Workspace = Path.Combine(root, "Imported"), Songs = songs });
+            view.InitializeLibrary(false, new LibrarySettings { Workspace = Path.Combine(root, "Imported"), Songs = songs,
+                ImportSliderConversion = ImportSliderConversionMode.KeepLegacy });
             view.BeginLibraryOpen(LibraryDatabase.ReadMetadata(Path.Combine(songs, "Second.osu"))!, selectDifficulty: true);
             Pump(view, canvas);
-            Check(view.CurrentDifficultyName == "Second", "first source import selects the clicked source file");
+            Check(view.CurrentDifficultyName == "Second", "first source import selects the clicked source file before slider preparation");
+            var preparation = Stopwatch.StartNew();
+            while ((view.SliderConversionBusy || view.SynchronizationBusy || view.LibraryOpening) && preparation.Elapsed < TimeSpan.FromSeconds(15))
+            { view.Render(canvas, 980, 620); Thread.Sleep(10); }
+            Check(!view.SliderConversionBusy && !view.SynchronizationBusy && !view.LibraryOpening, "source import preparation completes");
+            Check(view.CurrentDifficultyName == "Second", "slider preparation retains the clicked difficulty");
+            view.BeginLibraryOpen(LibraryDatabase.ReadMetadata(Path.Combine(songs, "First.osu"))! with
+                { ProjectPath = view.WorkspaceSession!.Directory }, selectDifficulty: true);
+            Pump(view, canvas);
+            Check(view.CurrentDifficultyName == "First", "reopening the imported project selects the clicked source file");
             string thirdPath = Path.Combine(songs, "Third.osu");
             File.WriteAllText(thirdPath, string.Format(sourceText, "Third"));
             var thirdMap = LibraryDatabase.ReadMetadata(thirdPath)! with { ProjectPath = view.WorkspaceSession!.Directory };

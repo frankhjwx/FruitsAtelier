@@ -856,7 +856,9 @@ the workspace gate is held leaves rendering responsive, blocks duplicate opens
 and competing operations, publishes once, retains the document on failure, and
 retires results after a project replacement. It also checks direct difficulty-row
 opening, exact difficulty selection for saved projects and source imports, and
-selection after synchronization adds a new source difficulty.
+selection after synchronization adds a new source difficulty. Source imports with
+sliders must activate the clicked difficulty before import preparation starts and
+retain it after preparation completes.
 
 `App.Tests --mapping-canvas-check` verifies zoom-independent background bounds,
 independent dim drafts and persistence, image-drop replacement confirmation,

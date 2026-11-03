@@ -38,12 +38,15 @@ public sealed partial class EditorView
     private int FindLibraryDifficulty()
     {
         if (pendingLibraryDifficultyPath is not { } path || WorkspaceSession is not { } session) return -1;
-        var entry = session.Manifest.Difficulties.FirstOrDefault(d =>
+        var entry = FindLibraryDifficulty(session, path);
+        return entry is null ? -1 : difficulties.FindIndex(d => d.Id == entry.Id);
+    }
+
+    private static WorkspaceDifficulty? FindLibraryDifficulty(WorkspaceSession session, string path)
+        => session.Manifest.Difficulties.FirstOrDefault(d =>
             WorkspaceSynchronization.Paths.Equals(Path.Combine(session.Directory, d.File), path)
             || WorkspaceSynchronization.Paths.Equals(d.Source, path)
             || WorkspaceSynchronization.Paths.Equals(d.ExportTarget, path));
-        return entry is null ? -1 : difficulties.FindIndex(d => d.Id == entry.Id);
-    }
 
     private void PumpLibraryOpen()
     {
@@ -54,7 +57,10 @@ public sealed partial class EditorView
         var completed = libraryOpenCompleted; libraryOpenCompleted = null;
         try
         {
-            LoadWorkspace(task.GetAwaiter().GetResult(), checkAdditionalDifficulties: true);
+            var opened = task.GetAwaiter().GetResult();
+            // Import preparation can block tab switches, so activate the requested difficulty before it starts.
+            var initialDifficulty = path is null ? null : FindLibraryDifficulty(opened, path);
+            LoadWorkspace(opened, checkAdditionalDifficulties: true, initialDifficultyId: initialDifficulty?.Id);
             if (path is not null) SelectLibraryDifficulty(path);
             if (visited is not null && WorkspaceSession is { } session) RecordLibraryVisit(visited, session.Directory);
             completed?.Invoke();
