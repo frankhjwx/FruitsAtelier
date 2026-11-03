@@ -56,8 +56,8 @@ public static class SliderControlEditing
             for (int i = 1; i + 1 < moved.Count; i++)
             {
                 var control = moved[i];
-                if (control.Type is not null || !previous.TryGetValue(control.Id, out var before)
-                    || control.Point.TimeMs == before.Point.TimeMs && before.Type is null) continue;
+                if (!previous.TryGetValue(control.Id, out var before)
+                    || control.Point.TimeMs == before.Point.TimeMs) continue;
                 int end = control.Point.TimeMs < moved[0].Point.TimeMs ? 0
                     : control.Point.TimeMs > moved[^1].Point.TimeMs ? moved.Count - 1 : -1;
                 if (end < 0) continue;
@@ -126,7 +126,7 @@ public static class SliderControlEditing
     {
         var vertices = Vertices(track);
         for (int i = 0; i < vertices.Count; i++) if (ids.Contains(vertices[i].Id)) vertices[i] = vertices[i] with { Point = vertices[i].Point + delta };
-        bool crossing = ids.Count == 1 && vertices.Skip(1).Take(vertices.Count - 2).Any(v => ids.Contains(v.Id) && v.Type is null
+        bool crossing = ids.Count == 1 && vertices.Skip(1).Take(vertices.Count - 2).Any(v => ids.Contains(v.Id)
             && (v.Point.TimeMs < vertices[0].Point.TimeMs || v.Point.TimeMs > vertices[^1].Point.TimeMs));
         try { Apply(track, vertices, allowArcFallback: crossing, exchangeEndpoints: crossing); error = ""; return true; }
         catch (ArgumentException ex) { error = ex.Message; return false; }

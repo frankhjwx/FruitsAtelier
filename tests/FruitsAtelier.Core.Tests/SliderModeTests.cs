@@ -98,9 +98,15 @@ internal static class SliderModeTests
 
     private static void EndpointCrossings()
     {
+        foreach (bool red in new[] { false, true })
         foreach (bool head in new[] { true, false })
         {
             var history = new EditorHistory(ArcMap());
+            if (red)
+            {
+                var initial = SliderControlEditing.Vertices(history.Document.Tracks[0]);
+                SliderControlEditing.ToggleBoundary(history.Document.Tracks[0], initial[1].Id);
+            }
             var before = history.Document.DeepClone();
             var track = history.Document.Tracks[0];
             var vertices = SliderControlEditing.Vertices(track);
