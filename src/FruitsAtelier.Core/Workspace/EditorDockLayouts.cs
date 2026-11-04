@@ -13,6 +13,7 @@ public sealed class DockWorkspaceLayout
     public DockGroupLayout? Left { get; set; }
     public DockGroupLayout? Right { get; set; }
     public bool PreciseHitsounds { get; set; }
+    public bool ShowHitsoundText { get; set; } = true;
     public int PreviewMod { get; set; }
     public int PreviewDisplayMode { get; set; }
     public float? MovementX { get; set; }

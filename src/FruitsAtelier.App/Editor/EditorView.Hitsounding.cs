@@ -134,10 +134,16 @@ public sealed partial class EditorView
         objectTimeline = default; zoomSlider = default;
         c.Fill(CanvasToolbarBounds, Panel);
         float toolsX = CanvasToolbarBounds.X + 8;
-        Button(c, new(toolsX, 88, 70, 28), L.Get("hitsounding.select"), () => hitsoundingDraw = false, !hitsoundingDraw, fontSize: 11);
-        Button(c, new(toolsX + 74, 88, 70, 28), L.Get("hitsounding.draw"), () => hitsoundingDraw = true, hitsoundingDraw, fontSize: 11);
-        Button(c, new(toolsX + 160, 88, 88, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
-        Button(c, new(toolsX + 252, 88, 88, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
+        float toolScale = Math.Min(1, Math.Max(0, CanvasToolbarBounds.Width - 174) / 458);
+        Button(c, new(toolsX, 88, 70 * toolScale, 28), L.Get("hitsounding.select"), () => hitsoundingDraw = false, !hitsoundingDraw, fontSize: 11);
+        Button(c, new(toolsX + 74 * toolScale, 88, 70 * toolScale, 28), L.Get("hitsounding.draw"), () => hitsoundingDraw = true, hitsoundingDraw, fontSize: 11);
+        Button(c, new(toolsX + 160 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
+        Button(c, new(toolsX + 252 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
+        c.Line(toolsX + 152 * toolScale, 92, toolsX + 152 * toolScale, 112, Grid);
+        c.Line(toolsX + 348 * toolScale, 92, toolsX + 348 * toolScale, 112, Grid);
+        Button(c, new(toolsX + 356 * toolScale, 88, 102 * toolScale, 28), L.Get("hitsounding.showText"),
+            () => hitsoundingDockWorkspace.ShowHitsoundText = !hitsoundingDockWorkspace.ShowHitsoundText,
+            hitsoundingDockWorkspace.ShowHitsoundText, fontSize: 11);
         snapSlider = new(CanvasToolbarBounds.Right - 118, 88, 106, 29);
         c.Text(L.Get("ui.snap"), snapSlider.X - 40, 97, 11, Muted, 40);
         float snapStart = snapSlider.X + 7, snapEnd = snapSlider.Right - 31;
@@ -305,7 +311,7 @@ public sealed partial class EditorView
                     && (pending.Sample.Additions & (1 << (tag.Lane - 1))) == 0) continue;
                 float h = Math.Clamp(laneHeight - 2, 24, 36), y = top + tag.Lane * laneHeight + (laneHeight - h) / 2;
                 double neighbourPixels = tag.NeighbourDistance / hitsoundingSpan * g.Width;
-                float preferredWidth = Math.Clamp(Math.Max(c.MeasureText("N", 11, true), c.MeasureText(HitsoundingPrecise ? tag.WidthText : tag.Label, 11, true)) + 8, 18, HitsoundingTagWidth);
+                float preferredWidth = Math.Clamp(Math.Max(c.MeasureText("N", 11, true), c.MeasureText(tag.WidthText, 11, true)) + 8, 18, HitsoundingTagWidth);
                 double clusterWidth = Math.Min(preferredWidth * tag.Columns,
                     neighbourPixels > 4 ? neighbourPixels - 4 : neighbourPixels * .75);
                 float slotWidth = (float)(clusterWidth / tag.Columns);
@@ -348,12 +354,12 @@ public sealed partial class EditorView
                     hitsoundingStoryboardHits.Add((box, sb));
                     if (hitsoundingStoryboardSelection.Contains(sb)) c.Stroke(box, Foreground, 2, 4);
                 }
-                if (HitsoundingPrecise)
+                if (hitsoundingDockWorkspace.ShowHitsoundText && HitsoundingPrecise)
                 {
                     string label = tag.Label + (tag.Index > 0 ? " " + tag.Index : "");
                     if (c.MeasureText(label, 11, true) <= box.Width - 8) c.Text(label, box.X + 4, box.Y + 3, 11, 0xFFFFFF, box.Width - 8, true);
                 }
-                else DrawHitsoundingLabel(c, box, tag.Label, 0);
+                else if (hitsoundingDockWorkspace.ShowHitsoundText) DrawHitsoundingLabel(c, box, tag.Label, tag.Index);
                 if (HitsoundingPrecise && wave is not null && box.Width > 1)
                 {
                     float maximum = Math.Max(.000001f, wave.Peak(0, wave.DurationMs));

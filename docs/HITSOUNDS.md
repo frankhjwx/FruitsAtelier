@@ -146,7 +146,11 @@ Normal, Whistle, Finish, Clap and SliderTick tags use their resolved sample bank
 green, Normal amber, and Drum red. Borders, waveforms and playback glows share that
 colour; these five lane labels have neutral markers. Timing lines retain red/green
 colouring, while SB Hitsound retains purple.
-Note-based bank tags show only a centred S, N or D. Precise HS retains the bank and non-default index beside the waveform. Timing tags show bank and optional index (for example S:2) above volume; both lines
+Note-based bank tags show S, N or D above the sample index; default samples omit the
+index and centre the letter. The toolbar groups Select/Draw, Note based/Precise HS,
+and the HS text toggle with vertical separators. HS text controls sound-tag labels
+in both display modes and is remembered with the Hitsounding layout; it leaves
+Notes numbering, timing labels and waveforms visible. Precise HS retains the bank and non-default index beside the waveform. Timing tags show bank and optional index (for example S:2) above volume; both lines
 are bold, with the bank line three points larger. A short coloured stem marks their timestamp.
 Timing tags fill the interval up to the next timing point. Their left-aligned text stays
 at the visible left edge when the interval begins outside the viewport.

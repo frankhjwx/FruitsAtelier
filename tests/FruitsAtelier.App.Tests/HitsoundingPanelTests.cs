@@ -237,7 +237,16 @@ internal static class HitsoundingPanelTests
         Check(LaneBlocks(ui, 5).Length > 0, "Actual slider ticks have audio blocks");
         var blocks = LaneBlocks(ui, 1);
         var tagTexts = ui.Canvas.Texts.Where(t => t.X >= blocks[0].X && t.X < blocks[0].Right && t.Y >= blocks[0].Y && t.Y < blocks[0].Bottom).ToArray();
-        Check(tagTexts.Length == 1 && tagTexts[0].Value == "S", "Note based displays only the centered bank letter");
+        Check(tagTexts.Select(t => t.Value).SequenceEqual(new[] { "S", "1" }), "Note based displays the bank above its index");
+        ui.ClickText(L.Get("hitsounding.showText"));
+        Check(!ui.Canvas.Texts.Any(t => t.X >= blocks[0].X && t.X < blocks[0].Right && t.Y >= blocks[0].Y && t.Y < blocks[0].Bottom), "HS text toggle hides bank and index in Note based");
+        Check(LaneBlocks(ui, 1).SequenceEqual(blocks) && baseline.ContentEquals(ui.View.Document), "Text visibility preserves tag geometry and map content");
+        var savedTextLayout = ui.View.CaptureDockLayouts();
+        Check(!savedTextLayout.Hitsounding!.ShowHitsoundText, "HS text visibility is captured in the workspace layout");
+        ui.ClickText(L.Get("hitsounding.showText"));
+        ui.View.LibrarySettings.DockLayouts = savedTextLayout; ui.View.RestoreDockLayouts(); ui.Paint();
+        Check(!ui.View.CaptureDockLayouts().Hitsounding!.ShowHitsoundText, "HS text visibility restores from saved layout");
+        ui.ClickText(L.Get("hitsounding.showText"));
         Check(blocks.Length >= 2 && blocks.All(b => b.Width <= EditorView.HitsoundingTagWidth), "Sound tags retain the preferred width or shrink to their neighbours");
         Check(ui.Canvas.Circles.Any(d => Math.Abs(blocks[0].X + blocks[0].Width / 2 - d.X) < .1), "Sound tag centers match their note timestamps");
         Check(ui.Canvas.Texts.Any(t => t.Value == "1" && t.Y > 218), "Notes reuse numbered mapping timeline markers");
@@ -258,6 +267,10 @@ internal static class HitsoundingPanelTests
         Check(Math.Abs(precise[0].Right - precise[1].X) < .1, "Precise HS uses decoded length and the next Normal boundary");
         Check(ui.Canvas.Lines.Any(l => l.Color == 0x65BF8A && l.X1 >= precise[0].X && l.X1 < precise[0].Right
             && l.Y1 > precise[0].Y && l.Y2 < precise[0].Bottom && l.Y2 - l.Y1 > 10), "Quiet waveforms normalize inside narrow precise tags");
+        ui.ClickText(L.Get("hitsounding.showText"));
+        Check(!ui.Canvas.Texts.Any(t => t.X >= precise[0].X && t.X < precise[0].Right && t.Y >= precise[0].Y && t.Y < precise[0].Bottom)
+            && ui.Canvas.Lines.Any(l => l.Color == 0x65BF8A && l.X1 >= precise[0].X && l.X1 < precise[0].Right && l.Y1 > precise[0].Y && l.Y2 < precise[0].Bottom), "Precise HS hides text while retaining its waveform");
+        ui.ClickText(L.Get("hitsounding.showText"));
         Check(ui.View.CaptureDockLayouts().Hitsounding!.PreciseHitsounds, "Display mode is captured in the Hitsounding layout");
         ui.ClickText(L.Get("hitsounding.noteBased"));
         Check(ReferenceEquals(conversion, ui.View.Conversion) && !ui.View.IsDirty, "Display modes reuse conversion without content history");

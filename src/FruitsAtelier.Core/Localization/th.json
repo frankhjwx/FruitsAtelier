@@ -2007,6 +2007,7 @@
   "hitsounding.lane6": "SB Hitsound",
   "hitsounding.importing": "Importing audio…",
   "hitsounding.precise": "Precise HS",
+  "hitsounding.showText": "ข้อความ HS",
   "hitsounding.noteBased": "Note based",
   "hitsounding.selectedTiming": "Selected timing point",
   "hitsounding.effects": "Effects",

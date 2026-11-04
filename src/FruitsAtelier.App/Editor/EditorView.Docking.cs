@@ -26,6 +26,7 @@ public sealed partial class EditorView
         public float MovementScale = 1;
         public int PreviewMod, PreviewDisplayMode;
         public bool PreciseHitsounds;
+        public bool ShowHitsoundText = true;
     }
     // Each workspace owns its layout so switching views cannot overwrite the other view's groups.
     private readonly DockWorkspace mappingDockWorkspace = new(), timingDockWorkspace = new();

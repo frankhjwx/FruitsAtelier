@@ -15,7 +15,7 @@ public sealed partial class EditorView
         Left = Capture(workspace.Left), Right = Capture(workspace.Right),
         PreviewMod = workspace.PreviewMod, PreviewDisplayMode = workspace.PreviewDisplayMode,
         MovementX = workspace.MovementPosition?.X, MovementY = workspace.MovementPosition?.Y,
-        MovementScale = workspace.MovementScale, PreciseHitsounds = workspace.PreciseHitsounds
+        MovementScale = workspace.MovementScale, PreciseHitsounds = workspace.PreciseHitsounds, ShowHitsoundText = workspace.ShowHitsoundText
     };
     private static DockGroupLayout Capture(DockGroup group) => new()
     {
@@ -61,6 +61,7 @@ public sealed partial class EditorView
             RestoreGroup(workspace.Right, layout.Right);
         }
         workspace.PreciseHitsounds = layout.PreciseHitsounds;
+        workspace.ShowHitsoundText = layout.ShowHitsoundText;
         workspace.PreviewMod = Math.Clamp(layout.PreviewMod, 0, 2);
         workspace.PreviewDisplayMode = Math.Clamp(layout.PreviewDisplayMode, 0, 2);
         workspace.MovementPosition = layout.MovementX is { } x && float.IsFinite(x)

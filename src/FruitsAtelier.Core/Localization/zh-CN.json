@@ -2007,6 +2007,7 @@
   "hitsounding.lane6": "SB Hitsound",
   "hitsounding.importing": "正在导入音源…",
   "hitsounding.precise": "精确 HS",
+  "hitsounding.showText": "音效文字",
   "hitsounding.noteBased": "Note based",
   "hitsounding.selectedTiming": "\u9009\u4e2d\u7684\u65f6\u95f4\u7ebf",
   "hitsounding.effects": "\u6548\u679c\u6807\u8bb0",
