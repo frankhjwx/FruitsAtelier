@@ -231,6 +231,12 @@ public sealed class LibrarySettings
 
 public sealed class MapEditingPreferences
 {
+    private string activePanel = "Mapping";
+    public string ActivePanel
+    {
+        get => activePanel;
+        set => activePanel = value is "Timing" or "Hitsounding" ? value : "Mapping";
+    }
     public const int MaximumObjectSnapBeats = 4;
     public bool AnchorSnap { get; set; }
     private int beatSnapDivisor = 4;

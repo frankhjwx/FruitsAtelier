@@ -17,6 +17,7 @@ internal static class WindowPreferenceTests
         {
             L.SetLanguage("en");
             Snaps(root);
+            Panels(root);
             var ui = new Ui();
             ui.View.LibrarySettings.Workspace = root;
             ui.View.RequestViewPreference = () => ui.View.LibrarySettings.Save(path);
@@ -44,6 +45,35 @@ internal static class WindowPreferenceTests
                 && !new EditorWindowPreferences { Width = 1200, Height = -1 }.HasValidSize(), "Invalid window dimensions were accepted.");
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void Panels(string root)
+    {
+        string path = Path.Combine(root, "panels.json");
+        var project = BeatmapProject.FromDocuments([new MapDocument { IsDemo = false }, new MapDocument { IsDemo = false }]);
+        string content = ProjectSerializer.Serialize(project);
+        var ui = new Ui(false); ui.View.LibrarySettings.Workspace = root;
+        ui.View.RequestViewPreference = () => ui.View.LibrarySettings.Save(path);
+        ui.View.LoadProject(project); ui.Paint();
+        ui.View.ShowHitsoundingPage(); ui.Paint();
+        Check(LibrarySettings.Load(path).MapEditingPreferences[project.Difficulties[0].Id].ActivePanel == "Hitsounding", "Panel selection must save immediately in user settings");
+        ui.View.SwitchDifficulty(1); ui.Paint();
+        Check(!ui.View.HitsoundingPageVisible && !ui.View.TimingPageVisible, "A different map uses its own panel preference");
+        ui.ClickText(L.Get("timing.detailsPanel") + " ▾"); ui.ClickText(L.Get("timing.panel"));
+        Check(ui.View.TimingPageVisible, "Second map opens Timing");
+        ui.View.SwitchDifficulty(0); ui.Paint();
+        Check(ui.View.HitsoundingPageVisible, "Switching back restores Hitsounding");
+        Check(!ui.View.IsDirty && ProjectSerializer.Serialize(ui.View.CaptureProject()) == content, "Panel preferences do not modify the project");
+        ui.Key(27); Check(ui.View.LibraryVisible, "Escape returns idle Hitsounding to Library");
+        Check(LibrarySettings.Load(path).MapEditingPreferences[project.Difficulties[0].Id].ActivePanel == "Hitsounding", "Leaving the editor retains its panel preference");
+        var reopened = new Ui(false);
+        reopened.View.InitializeLibrary(false, LibrarySettings.Load(path));
+        reopened.View.LoadProject(ProjectSerializer.ReadProject(content)); reopened.Paint();
+        Check(reopened.View.HitsoundingPageVisible, "Hitsounding panel survives app restart");
+        reopened.View.SwitchDifficulty(1); reopened.Paint();
+        Check(reopened.View.TimingPageVisible, "Timing panel preference survives app restart independently");
+        reopened.Key(27); Check(reopened.View.LibraryVisible, "Escape returns idle Timing to Library");
+        Check(new MapEditingPreferences { ActivePanel = "Unknown" }.ActivePanel == "Mapping", "Unknown panel names safely use Mapping");
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

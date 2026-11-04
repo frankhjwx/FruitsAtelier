@@ -81,7 +81,8 @@ public sealed partial class EditorView
 
     public bool BeginVolumePopoverPointer(float x, float y, int button)
     {
-        if (button != 0 || !CanUseVolumePopover) return false;
+        if (!CanUseVolumePopover) return false;
+        if (button != 0) return VolumePopoverVisible && VolumePopoverBounds.Contains(x, y);
         if (!IsTestplaying && VolumeButtonBounds.Contains(x, y))
         {
             if (volumePopoverOpen) CloseVolumePopover(); else OpenVolumePopover();

@@ -11,14 +11,53 @@ internal static class HitsoundingPanelTests
         foreach (int time in new[] { 1000, 1250, 1500 }) map.Fruits.Add(new() { TimeMs = time, X = 256 });
         var ui = new Ui(overview: false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
         var baseline = ui.View.Document.DeepClone();
+        foreach (bool left in new[] { false, true })
+        {
+            double beforeToggle = ui.View.PlayheadMs;
+            var toggle = ui.View.DockToggleBounds(left); ui.Click(toggle.X + 10, toggle.Y + 10);
+            var workspace = ui.View.CaptureDockLayouts().Hitsounding!;
+            Check((left ? workspace.Left : workspace.Right)!.Collapsed, "Dock collapse has priority over the Hitsounding canvas");
+            toggle = ui.View.DockToggleBounds(left); ui.Click(toggle.X + 10, toggle.Y + 10);
+            workspace = ui.View.CaptureDockLayouts().Hitsounding!;
+            Check(!(left ? workspace.Left : workspace.Right)!.Collapsed && ui.View.PlayheadMs == beforeToggle && baseline.ContentEquals(ui.View.Document), "Dock expand does not seek, select or edit underlying content");
+        }
+        ui.View.UpdateTransport(1000, 10000, true, false, false, null, null); ui.Paint();
         var block = NormalBlocks()[0];
         ui.Click(block.X + block.Width / 2, block.Y + block.Height / 2);
-        Check(ui.View.PlayheadMs == 1000, "Selecting a sound locates its exact note");
+        Check(ui.View.PlayheadMs == 1000, "Selecting a sound preserves transport position");
+        var laneLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane1") && t.X > 340 && t.X < 1100);
+        ui.Click(laneLabel.X + 4, laneLabel.Y + 4);
+        Check(ui.View.PlayheadMs == 1000, "Track label clicks never seek");
+        ui.View.LibrarySettings.SongVolume = ui.View.LibrarySettings.HitsoundVolume = 100;
+        ui.View.OpenVolumePopover(); ui.Paint();
+        var masterBar = ui.View.VolumeBarBounds(0);
+        ui.View.PointerDown(masterBar.X + masterBar.Width / 2, masterBar.Y + masterBar.Height / 2, 0, false, false);
+        ui.View.PointerMove(masterBar.X + masterBar.Width / 2, masterBar.Y + masterBar.Height / 2, false, false);
+        ui.View.PointerUp(masterBar.X + masterBar.Width / 2, masterBar.Y + masterBar.Height / 2, 0); ui.Paint();
+        Check(ui.View.LibrarySettings.MasterVolume == 50, "Hitsounding volume popover receives mouse dragging");
+        ui.View.SetModifiers(true, false); ui.Key(39); ui.View.KeyUp(39); ui.Key(40); ui.View.KeyUp(40);
+        Check(ui.View.LibrarySettings.SongVolume == 95, "Hitsounding volume popover receives keyboard channel and gain shortcuts");
+        ui.Key(39); ui.View.KeyUp(39); ui.Key(40); ui.View.KeyUp(40); ui.View.SetModifiers(false, false);
+        Check(ui.View.LibrarySettings.HitsoundVolume == 95, "Keyboard controls reach Effect in Hitsounding");
+        var effectBar = ui.View.VolumeBarBounds(2);
+        ui.View.Wheel(effectBar.X + 10, effectBar.Y + 10, 120, false, false, false); ui.Paint();
+        Check(ui.View.LibrarySettings.HitsoundVolume == 100 && ui.View.PlayheadMs == 1000, "Volume wheel has priority over timeline seeking");
+        ui.Key(27); Check(!ui.View.VolumePopoverVisible && !ui.View.LibraryVisible, "Escape closes the popover before leaving the editor");
+
         Check(ui.Canvas.Texts.Count(t => t.Value == L.Get("hitsounding.index") && t.X > 1100) == 1, "Timing Helper exposes only the timing sample index");
         ui.View.Wheel(block.X, block.Y, -120, false, false, false); ui.Paint();
         Check(ui.View.PlayheadMs == 1125, "One wheel notch advances one quarter-beat snap");
         ui.View.Wheel(block.X, block.Y, 120, false, false, false); ui.Paint();
         Check(ui.View.PlayheadMs == 1000 && baseline.ContentEquals(ui.View.Document), "Reverse wheel restores time without editing content");
+        ui.View.UpdateTransport(1030, 10000, true, false, false, null, null); ui.Paint();
+        ui.View.Wheel(block.X, block.Y, -120, false, false, false); ui.Paint();
+        Check(ui.View.PlayheadMs == 1125, "Forward wheel first aligns an off-grid timestamp to the next snap");
+        ui.View.Wheel(block.X, block.Y, -120, false, false, false); ui.Paint();
+        Check(ui.View.PlayheadMs == 1250, "Subsequent forward wheel follows the snap grid");
+        ui.View.UpdateTransport(1030, 10000, true, false, false, null, null); ui.Paint();
+        ui.View.Wheel(block.X, block.Y, 120, false, false, false); ui.Paint();
+        Check(ui.View.PlayheadMs == 1000, "Backward wheel first aligns to the preceding snap");
+
         var volumeLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.volume") && t.X > 1100);
         ui.Click(volumeLabel.X + 95, volumeLabel.Y + 5); ui.Key(65, ctrl: true); ui.Type("40"); ui.Key(13);
         Check(baseline.ContentEquals(ui.View.Document), "Timing draft is not automatically applied");
@@ -185,8 +224,8 @@ internal static class HitsoundingPanelTests
         Check(ui.Canvas.Lines.Any(l => l.Color == 0xFF6688 && Math.Abs(l.Y2 - l.Y1 - 9) < .01), "Half beats use medium red ticks");
         Check(ui.Canvas.Fills.Any(f => f.Color == 0x829DC7), "Actual slider ticks have audio blocks");
         var blocks = ui.Canvas.Outlines.Where(f => f.Color == 0x56B9AA).Select(f => f.Bounds).OrderBy(r => r.X).ToArray();
-        Check(ui.Canvas.Texts.Any(t => t.Value == "S" && t.Y >= blocks[0].Y + 3 && t.Y < blocks[0].Y + blocks[0].Height / 2)
-            && ui.Canvas.Texts.Any(t => t.Value == "1" && t.Y >= blocks[0].Y + blocks[0].Height / 2 && t.Y < blocks[0].Bottom - 3), "Bank and index occupy separate padded lines");
+        var tagTexts = ui.Canvas.Texts.Where(t => t.X >= blocks[0].X && t.X < blocks[0].Right && t.Y >= blocks[0].Y && t.Y < blocks[0].Bottom).ToArray();
+        Check(tagTexts.Length == 1 && tagTexts[0].Value == "S", "Note based displays only the centered bank letter");
         Check(blocks.Length >= 2 && blocks.All(b => b.Width <= EditorView.HitsoundingTagWidth), "Sound tags retain the preferred width or shrink to their neighbours");
         Check(ui.Canvas.Circles.Any(d => Math.Abs(blocks[0].X + blocks[0].Width / 2 - d.X) < .1), "Sound tag centers match their note timestamps");
         Check(ui.Canvas.Texts.Any(t => t.Value == "1" && t.Y > 218), "Notes reuse numbered mapping timeline markers");
@@ -274,6 +313,65 @@ internal static class HitsoundingPanelTests
             throw new TimeoutException("Library import did not finish");
         }
         Console.WriteLine("PASS Hitsounding snap ruler, tick audio, centered tags, Alt-wheel zoom, independent split docks, library and resource history");
+    }
+    public static void StoryboardEditing()
+    {
+        string root = Path.GetFullPath("artifacts/tests/hitsounding-storyboard"); Directory.CreateDirectory(root);
+        string samplePath = Path.Combine(root, "sound,one.wav");
+        File.WriteAllBytes(samplePath, HitsoundSamples.CreateWave(CatchObjectKind.Fruit));
+        string shared = Path.Combine(root, "shared.osb");
+        if (File.Exists(shared)) File.Delete(shared);
+        var map = new MapDocument { SourcePath = Path.Combine(root, "map.osu"), DurationMs = 6000, BeatLengthMs = 500 };
+        var events = new OsuSection { Name = "Events" };
+        events.Lines.AddRange(["// Samples", "Sample,500,0,\"sound,one.wav\",65", "Sample,1000,3,\"sound,one.wav\",80"]);
+        map.OriginalSections.Add(events);
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+        ui.ClickText(L.Get("hitsounding.precise")); Wait(2);
+        var baseline = ui.View.Document.DeepClone(); double time = ui.View.PlayheadMs;
+        var first = Blocks()[0]; ui.Click(first.X + 5, first.Y + 10);
+        Check(ui.View.PlayheadMs == time, "Storyboard selection does not seek");
+        ui.Key(67, ctrl: true); ui.View.UpdateTransport(1500, 6000, true, false, false, null, null); ui.Paint(); ui.Key(86, ctrl: true); Wait(3);
+        Check(Samples().Any(s => s.TimeMs == 1500 && s.Volume == 65 && s.Path == samplePath), "Storyboard paste preserves filename, volume and targets the playhead without requiring a note");
+        ui.Key(90, ctrl: true); Wait(2); Check(baseline.ContentEquals(ui.View.Document), "Storyboard paste undo restores source sections");
+        first = Blocks()[0]; ui.Click(first.X + 5, first.Y + 10); ui.Key(88, ctrl: true); Wait(1);
+        Check(Samples().Single().TimeMs == 1000, "Storyboard cut removes only its selected event");
+        ui.Key(90, ctrl: true); Wait(2);
+        first = Blocks()[0]; var second = Blocks()[1]; float dx = second.X - first.X;
+        ui.View.PointerDown(first.X + 5, first.Y + 10, 0, false, false);
+        ui.View.PointerMove(first.X + 5 + dx / 2, first.Y + 10, false, false); ui.Paint();
+        Check(baseline.ContentEquals(ui.View.Document), "Storyboard drag preview leaves content unchanged");
+        ui.View.PointerUp(first.X + 5 + dx / 2, first.Y + 10, 0); Wait(2);
+        Check(Samples().Any(s => s.TimeMs == 750 && s.Volume == 65), "Storyboard dragging snaps to an independent timestamp");
+        ui.Key(90, ctrl: true); Wait(2); Check(baseline.ContentEquals(ui.View.Document), "Storyboard move is undoable");
+        first = Blocks()[0]; second = Blocks()[1];
+        ui.View.PointerDown(first.X - 5, first.Y - 5, 0, false, false);
+        ui.View.PointerMove(second.Right + 5, second.Bottom + 5, false, false);
+        ui.View.PointerUp(second.Right + 5, second.Bottom + 5, 0); ui.Paint(); ui.Key(46); Wait(0);
+        Check(Samples().Count == 0, "Storyboard marquee selects multiple sounds for deletion");
+        ui.Key(90, ctrl: true); Wait(2);
+        File.WriteAllText(shared, "[Events]\nSample,1250,0,\"sound,one.wav\",40\n");
+        ui.LoadDocument(map); ui.View.ShowHitsoundingPage(); Wait(3);
+        var last = Blocks().Last(); ui.Click(last.X + 5, last.Y + 10); ui.Key(46); Wait(2);
+        Check(!File.ReadAllText(shared).Contains("Sample,"), "Shared storyboard deletion edits the source file");
+        ui.Key(90, ctrl: true); Wait(3); Check(File.ReadAllText(shared).Contains("Sample,1250"), "Shared storyboard deletion restores through undo");
+        last = Blocks().Last(); first = Blocks()[0];
+        float pixelsPer500 = Blocks()[1].X - first.X;
+        ui.View.PointerDown(last.X + 5, last.Y + 10, 0, false, false);
+        ui.View.PointerMove(last.X + 5 + pixelsPer500, last.Y + 10, false, false);
+        ui.View.PointerUp(last.X + 5 + pixelsPer500, last.Y + 10, 0); ui.Paint();
+        Check(File.ReadAllText(shared).Contains("Sample,1750") && Samples().Count == 2, "Moving a shared sample retains its shared-file ownership");
+        ui.Key(90, ctrl: true); Wait(3);
+        Check(File.ReadAllText(shared).Contains("Sample,1250"), "Shared sample movement supports undo");
+        ui.Key(89, ctrl: true); ui.Paint(); Check(File.ReadAllText(shared).Contains("Sample,1750"), "Shared sample movement supports redo");
+        Console.WriteLine("PASS Storyboard sound selection, clipboard, marquee deletion, snapping, source files and undo");
+        FruitsAtelier.App.Rendering.Rect[] Blocks() => ui.Canvas.Outlines.Where(o => o.Color == 0xA57CC7).Select(o => o.Bounds).OrderBy(r => r.X).ToArray();
+        IReadOnlyList<StoryboardSample> Samples() => StoryboardReader.Read(string.Join("\n", ui.View.Document.OriginalSections.SelectMany(s => new[] { "[" + s.Name + "]" }.Concat(s.Lines))), null, root).Samples;
+        void Wait(int count)
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            do { ui.Paint(); if (Blocks().Length == count) return; Thread.Sleep(5); } while (watch.Elapsed.TotalSeconds < 10);
+            throw new InvalidOperationException($"Expected {count} storyboard blocks, saw {Blocks().Length}");
+        }
     }
     public static void Performance()
     {

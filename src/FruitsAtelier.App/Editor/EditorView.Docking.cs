@@ -57,6 +57,24 @@ public sealed partial class EditorView
     private float AvailableDockWidth => Math.Max(24, width - 109 - (MinimumPlayfieldWidth + 198));
     private float MaximumDockWidth => Math.Max(MinimumDockWidth, width * .45f);
     internal Rect DockResizeBounds(bool left) => left ? leftDockResizeBounds : rightDockResizeBounds;
+    internal Rect DockToggleBounds(bool left)
+    {
+        var group = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
+        return new(left ? leftPanel.Right - 22 : (group.Collapsed ? width : rightPanel.X) - 22,
+            canvas.Y + canvas.Height / 2 - 22, 22, 44);
+    }
+    private bool DockTogglePointerDown(float x, float y, int button)
+    {
+        if (!DockContentInputAvailable || TimingPageVisible || panelMenuOpen || menu >= 0 || contextItems.Count > 0) return false;
+        foreach (bool left in new[] { false, true })
+        {
+            var group = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
+            if (group.Panels.Count == 0 || !DockToggleBounds(left).Contains(x, y)) continue;
+            if (button == 0 && CommitField()) group.Collapsed = !group.Collapsed;
+            return true;
+        }
+        return false;
+    }
     internal Rect DockCollapseBounds(bool left)
     {
         var group = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
@@ -208,8 +226,7 @@ public sealed partial class EditorView
         {
             if (group.Panels.Count == 0) return;
             var bounds = DockBounds(left);
-            var toggle = new Rect(left ? leftPanel.Right - 22 : (group.Collapsed ? width : rightPanel.X) - 22,
-                canvas.Y + canvas.Height / 2 - 22, 22, 44);
+            var toggle = DockToggleBounds(left);
             foreach (var panel in group.Panels)
                 if (panel == DockPanel.MovementStrain) DifficultyCurveToggleBounds = toggle;
                 else if (panel == DockPanel.Preview) PreviewToggleBounds = toggle;

@@ -85,8 +85,8 @@ public sealed partial class EditorView
             c.Text(L.Get("samples.sampleset"), x, y, 11, Muted, w); y += 18;
             for (int i = 0; i < 3; i++)
             {
-                int bank = new[] { 2, 3, 1 }[i];
-                Button(c, new(x + i * w / 3, y, w / 3 - 3, 28), BankCode(bank), () => { inspectorBank = bank; inspectorTimingDirty = true; }, inspectorBank == bank);
+                int bank = new[] { 2, 1, 3 }[i];
+                Button(c, new(x + i * w / 3, y, w / 3 - 3, 28), L.Get(bank == 2 ? "timing.soft" : bank == 1 ? "timing.normal" : "timing.drum"), () => { inspectorBank = bank; inspectorTimingDirty = true; }, inspectorBank == bank);
             }
             y += 38;
             Field(c, x, ref y, w, L.Get("hitsounding.index"), inspectorIndex, v => { inspectorIndex = ValidHsIndex(v); inspectorTimingDirty = true; }, 80);
@@ -116,8 +116,8 @@ public sealed partial class EditorView
         c.Text(L.Get("samples.sampleset"), x, y, 11, Muted, w); y += 20;
         for (int i = 0; i < 4; i++)
         {
-            int bank = i;
-            Button(c, new(x + i * w / 4, y, w / 4 - 3, 28), i == 0 ? L.Get("samples.auto") : BankCode(bank),
+            int bank = new[] { 0, 2, 1, 3 }[i];
+            Button(c, new(x + i * w / 4, y, w / 4 - 3, 28), L.Get(bank == 0 ? "samples.auto" : bank == 2 ? "timing.soft" : bank == 1 ? "timing.normal" : "timing.drum"),
                 () => { draft.Bank = bank; draft.Dirty = true; }, draft.Bank == bank);
         }
         y += 38;
@@ -206,11 +206,12 @@ public sealed partial class EditorView
             if (pointHit.Point is not null)
             {
                 if (!CommitField()) return true;
-                hitsoundingSelectedTiming = pointHit.Point; hitsoundingSelected = null; hitsoundingMultiSelection.Clear();
+                hitsoundingSelectedTiming = pointHit.Point; hitsoundingSelected = null; hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
                 SelectObjects([]); return true;
             }
         }
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
+        if (BeginHitsoundingStoryboardPointer(x, y, button)) return true;
         var note = HitsoundingNoteAt(x, y);
         int lane = Math.Clamp((int)((y - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7)), 0, 6);
         var pressedSound = hitsoundingSoundHits.LastOrDefault(h => h.Bounds.Contains(x, y));
@@ -220,11 +221,11 @@ public sealed partial class EditorView
             hitsoundingMoveSource = (pressedSound.Note!.SourceId, pressedSound.Note.EventIndex, pressedSound.Lane);
             hitsoundingMoveStart = (x, y); hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
         }
-        if (note is not null) SelectHitsoundingNote(note, seek: !hitsoundingDraw && button == 0 && !canMove);
+        if (note is not null) SelectHitsoundingNote(note, seek: false);
         else if (button == 0 && !hitsoundingDraw) { hitsoundingSelectedTiming = null; hitsoundingSelected = null; SelectObjects([]); }
         if (button == 0 && !hitsoundingDraw)
         {
-            hitsoundingMultiSelection.Clear();
+            hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
             var soundHit = hitsoundingSoundHits.LastOrDefault(h => h.Bounds.Contains(x, y));
             if (soundHit.Note is not null && soundHit.Lane > 0) hitsoundingMultiSelection.Add((soundHit.Note.SourceId, soundHit.Note.EventIndex, soundHit.Lane));
             else if (note is not null)
@@ -265,6 +266,7 @@ public sealed partial class EditorView
     {
         if (hitsoundingHeadDrag)
         { hitsoundingHeadRatio = Math.Clamp((x - hitsoundingGridBounds.X) / Math.Max(1, hitsoundingGridBounds.Width), .05, .95); return true; }
+        if (MoveHitsoundingStoryboard(x, y)) return true;
         if (MoveHitsoundingSound(x, y)) return true;
         if (hitsoundingMarquee)
         {
@@ -283,8 +285,15 @@ public sealed partial class EditorView
     private bool EndHitsoundingCanvasPointer()
     {
         if (hitsoundingHeadDrag) { hitsoundingHeadDrag = false; return true; }
+        if (EndHitsoundingStoryboardMove()) return true;
         if (EndHitsoundingSoundMove()) return true;
-        if (hitsoundingMarquee) { hitsoundingMarquee = false; return true; }
+        if (hitsoundingMarquee)
+        {
+            hitsoundingMarquee = false;
+            if (HitsoundingMarqueeBounds.Width < 3 && HitsoundingMarqueeBounds.Height < 3)
+                SeekTo(Math.Max(0, HitsoundingStart + (hitsoundingMarqueeStart.X - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan));
+            return true;
+        }
         if (!hitsoundingPainting) return false;
         hitsoundingPainting = false;
         var changes = hitsoundingPaint.Values.ToArray(); hitsoundingPaint.Clear();

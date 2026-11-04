@@ -6,7 +6,7 @@ namespace FruitsAtelier.Core;
 
 public enum StoryboardLayer { Background, Fail, Pass, Foreground, Overlay }
 public readonly record struct StoryboardVideoInfo(string Path, double OffsetMs);
-public readonly record struct StoryboardSample(string Path, double TimeMs, int Volume, StoryboardLayer Layer);
+public readonly record struct StoryboardSample(string Path, double TimeMs, int Volume, StoryboardLayer Layer, int SourceLine = 0, bool Shared = false, string? SourceText = null);
 public readonly record struct StoryboardTrigger(string Name, double TimeMs, int Group = 0);
 public readonly record struct StoryboardSpriteState(string Path, double X, double Y, double ScaleX, double ScaleY,
     double Rotation, uint Colour, double Opacity, double OriginX, double OriginY, bool FlipX, bool FlipY,
@@ -370,11 +370,11 @@ public static class StoryboardReader
         bool wide = false; string? background = null; int order = 0;
         var resources = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var variables = new StoryboardVariables();
-        Parse(beatmapText); if (sharedText is not null) Parse(sharedText);
+        Parse(beatmapText, false); if (sharedText is not null) Parse(sharedText, true);
         foreach (var sprite in sprites) { cancellationToken.ThrowIfCancellationRequested(); sprite.Compile(); }
         return new(sprites, videos, samples, diagnostics, wide, background);
 
-        void Parse(string text)
+        void Parse(string text, bool shared)
         {
             string section = "Events"; StoryboardSprite? sprite = null;
             StoryboardCommandGroup? group = null; int lineNumber = 0, offset = 0;
@@ -398,6 +398,7 @@ public static class StoryboardReader
                     string type = (comma < 0 ? line : line[..comma]).Trim();
                     if (type is not ("5" or "Sample") && !type.Contains('$')) continue;
                 }
+                string sourceLine = line;
                 line = variables.Expand(line, cancellationToken);
                 if (samplesOnly)
                 {
@@ -421,7 +422,7 @@ public static class StoryboardReader
                             else if (extension is ".png" or ".jpg" or ".jpeg") background ??= path;
                             continue;
                         }
-                        if (type is "5" or "Sample") { samples.Add(new(Resolve(f[3]), Number(f[1]), f.Count > 4 ? (int)Number(f[4]) : 100, Layer(f[2]))); continue; }
+                        if (type is "5" or "Sample") { samples.Add(new(Resolve(f[3]), Number(f[1]), f.Count > 4 ? (int)Number(f[4]) : 100, Layer(f[2]), lineNumber, shared, sourceLine)); continue; }
                         if (type is not ("4" or "Sprite" or "6" or "Animation")) continue;
                         var origin = Origin(f[2]);
                         sprite = new() { Path = Resolve(f[3]), Layer = Layer(f[1]), OriginX = origin.X, OriginY = origin.Y, X = Number(f[4]), Y = Number(f[5]), Order = order++ };

@@ -291,9 +291,9 @@ public sealed partial class EditorView
             if (row.Path is not null) { hitsoundingDragFile = row.Path; return true; }
             for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return true; }
-            if (hitsoundingBounds.Contains(x, y))
+            if (hitsoundingBounds.Contains(x, y) && x >= hitsoundingGridBounds.X && y < hitsoundingGridBounds.Y)
             {
-                hitsoundingSelectedTiming = null; hitsoundingSelected = null; hitsoundingMultiSelection.Clear();
+                hitsoundingSelectedTiming = null; hitsoundingSelected = null; hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
                 SelectObjects([]);
                 double start = HitsoundingStart;
                 SeekTo(Math.Max(0, start + (x - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan));
@@ -330,7 +330,7 @@ public sealed partial class EditorView
         if (hitsoundingLibraryBounds.Contains(x, y)) { hitsoundingLibraryScroll = Math.Max(0, hitsoundingLibraryScroll - (int)(delta / 120)); return true; }
         if (!hitsoundingBounds.Contains(x, y)) return false;
         if (alt) ZoomHitsounding(Math.Pow(1.25, -delta / 120), x);
-        else SeekTo(Math.Max(0, playhead - delta / 120 * renderedTiming!.At(playhead).BeatLengthMs / divisor));
+        else SeekByWheel(-delta / 120, 1);
         return true;
     }
 }

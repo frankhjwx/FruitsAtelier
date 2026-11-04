@@ -17,7 +17,7 @@ public sealed partial class EditorView
     {
         if (IsLazerEditing) return false;
         if (!MappingPlaybackLineHovered(x, y)) return false;
-        if (AudioPlaying || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return true;
+        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return true;
         playbackLineDragRatio = playbackLineFromBottom;
         playbackLineDragViewStart = viewStart;
         playbackLineDragPinned = pinPlayhead;
@@ -28,7 +28,6 @@ public sealed partial class EditorView
 
     private void MovePlaybackLine(float y)
     {
-        if (AudioPlaying) { CancelPlaybackLineDrag(); return; }
         playbackLineFromBottom = Math.Clamp((plot.Bottom - y + playbackLineGrabOffset) / plot.Height, .05, .95);
         FollowPlayhead();
     }

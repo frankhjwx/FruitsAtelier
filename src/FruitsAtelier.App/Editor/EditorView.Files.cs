@@ -134,6 +134,7 @@ public sealed partial class EditorView
         timingAlignmentPlan = null; timingAlignmentSource = null;
         RestoreTemporarySnap();
         RestoreSnapPreferences();
+        RestoreMapPanel();
         CloseAimod();
         ResetDeferredConversion();
         pauseSnapDivisor = null;
@@ -435,7 +436,6 @@ public sealed partial class EditorView
         transportSamplePosition = positionMs;
         transportSampleLeadMs = outputBufferAheadMs;
         UpdateHitsounds(positionMs, ready && playing && !loading, filename);
-        if (playing && drag == DragKind.PlaybackLine) CancelPlaybackLineDrag();
         bool wasReady = AudioReady;
         if (playing && !AudioPlaying) lazerSeekStarted = double.NegativeInfinity;
         double previousPlayhead = playhead;

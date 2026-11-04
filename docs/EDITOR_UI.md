@@ -2193,3 +2193,14 @@ uses the original BPM for conversion and export.
 The workspace selector opens Hitsounding alongside Mapping and Timing. Its display
 modes, seven lanes, Snap ruler, Alt-wheel navigation and unified sampleset/library
 Config dock are described in [Hitsounding workspace](HITSOUNDS.md#hitsounding-workspace).
+
+The active Mapping, Timing or Hitsounding workspace is remembered per difficulty in
+local user preferences. Reopening the same map, including after restarting the app,
+restores that workspace without changing beatmap content. Escape returns an idle
+editor to Library; active text edits, gestures and menus consume Escape first.
+Unsaved content follows the existing save/discard confirmation.
+
+In Mapping, the playback line highlights near its handle or outside the 0–512
+playfield and can be dragged while paused or playing. Dragging changes
+its viewport height, clamped to 5–95%, without seeking; release saves the height and
+Escape cancels the drag. The lazer playback line remains fixed.

@@ -15,7 +15,7 @@ public sealed partial class EditorView
     private readonly List<(Rect Bounds, float Anchor, uint Color, string Bank, int Index, int Volume, TimingPoint Point)> hitsoundingTimingBoxes = [];
     private CatchConversionResult? hitsoundingConversion;
     private HitsoundResolver? hitsoundingResolver;
-    private sealed record SoundTag(double Time, int Lane, string Label, int Index, double Next, Hitsound[] Sounds, double NeighbourDistance = double.PositiveInfinity, int Column = 0, int Columns = 1, string WidthText = "", ConvertedCatchObject? Note = null);
+    private sealed record SoundTag(double Time, int Lane, string Label, int Index, double Next, Hitsound[] Sounds, double NeighbourDistance = double.PositiveInfinity, int Column = 0, int Columns = 1, string WidthText = "", ConvertedCatchObject? Note = null, StoryboardSample? Storyboard = null);
     private readonly HitsoundingAudioCache hitsoundingAudio = new();
     private bool HitsoundingPrecise => hitsoundingDockWorkspace.PreciseHitsounds;
     private SoundTag[][] hitsoundingTagLanes = [];
@@ -59,7 +59,7 @@ public sealed partial class EditorView
     {
         if (!CommitCollaborationField() || !PrepareFileOperation()) return;
         CancelInteraction(); tool = Tool.Select; TimingPageVisible = false; HitsoundingPageVisible = true; panelMenuOpen = false;
-        ResetHitsounds(); RefreshHitsoundingLibrary();
+        ResetHitsounds(); RefreshHitsoundingLibrary(); SaveMapPanel();
     }
     private void RefreshHitsoundingSnapshot()
     {
@@ -127,7 +127,7 @@ public sealed partial class EditorView
     private void DrawHitsoundingPage(ICanvas c)
     {
         RefreshHitsoundingSnapshot();
-        hitsoundingSoundHits.Clear();
+        hitsoundingSoundHits.Clear(); hitsoundingStoryboardHits.Clear();
         hitsoundingFileRows.Clear(); hitsoundingSlots.Clear();
         hitsoundingSplitBounds = hitsoundingLibraryBounds = hitsoundingDockBounds = hitsoundingSampleBounds = hitsoundingInspectorBounds = default;
         objectTimeline = default; zoomSlider = default;
@@ -239,7 +239,7 @@ public sealed partial class EditorView
             hitsoundingStoryboardSource = storyboardScene;
             hitsoundingStoryboardTags = storyboardScene?.Samples
                 .Where(s => s.Layer is not (StoryboardLayer.Fail or StoryboardLayer.Pass) && s.Volume > 0)
-                .OrderBy(s => s.TimeMs).Select(s => new SoundTag(s.TimeMs, 6, Path.GetFileNameWithoutExtension(s.Path), 0, double.PositiveInfinity, [new(CatchObjectKind.Fruit, s.Path, s.Volume / 100f, "storyboard")])).ToArray() ?? [];
+                .OrderBy(s => s.TimeMs).Select(s => new SoundTag(s.TimeMs, 6, Path.GetFileNameWithoutExtension(s.Path), 0, double.PositiveInfinity, [new(CatchObjectKind.Fruit, s.Path, s.Volume / 100f, "storyboard")], Storyboard: s)).ToArray() ?? [];
             hitsoundingStoryboardTags = ArrangeHitsoundingTags(hitsoundingStoryboardTags);
         }
         for (int i = LowerBound(hitsoundingAdditionTimes, start); i < hitsoundingAdditionLinks.Length && hitsoundingAdditionLinks[i].Time <= end; i++)
@@ -273,6 +273,12 @@ public sealed partial class EditorView
             c.Fill(new(X(target.TimeMs) - 9, y, 18, 32), HitsoundingColors[moving.Lane], 4, .5f);
             c.StrokeOpacity(new(X(target.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
         }
+        if (hitsoundingStoryboardMove is not null && hitsoundingStoryboardMoved)
+        {
+            float y = top + 6.5f * laneHeight - 16;
+            c.Fill(new(X(hitsoundingStoryboardMoveTime), y, 36, 32), HitsoundingColors[6], 4, .5f);
+            c.StrokeOpacity(new(X(hitsoundingStoryboardMoveTime), y, 36, 32), Foreground, 1, 4, .5f);
+        }
         if (hitsoundingMarquee)
         {
             var selectionBox = HitsoundingMarqueeBounds;
@@ -297,7 +303,7 @@ public sealed partial class EditorView
                     && (pending.Sample.Additions & (1 << (tag.Lane - 1))) == 0) continue;
                 float h = Math.Clamp(laneHeight - 2, 24, 36), y = top + tag.Lane * laneHeight + (laneHeight - h) / 2;
                 double neighbourPixels = tag.NeighbourDistance / hitsoundingSpan * g.Width;
-                float preferredWidth = Math.Clamp(Math.Max(c.MeasureText("N", 11, true), c.MeasureText(tag.WidthText, 11, true)) + 8, 18, HitsoundingTagWidth);
+                float preferredWidth = Math.Clamp(Math.Max(c.MeasureText("N", 11, true), c.MeasureText(HitsoundingPrecise ? tag.WidthText : tag.Label, 11, true)) + 8, 18, HitsoundingTagWidth);
                 double clusterWidth = Math.Min(preferredWidth * tag.Columns,
                     neighbourPixels > 4 ? neighbourPixels - 4 : neighbourPixels * .75);
                 float slotWidth = (float)(clusterWidth / tag.Columns);
@@ -334,12 +340,17 @@ public sealed partial class EditorView
                     hitsoundingSoundHits.Add((box, note, tag.Lane));
                     if (hitsoundingMultiSelection.Contains((note.SourceId, note.EventIndex, tag.Lane))) c.Stroke(box, Foreground, 2, 4);
                 }
+                if (tag.Storyboard is { } sb)
+                {
+                    hitsoundingStoryboardHits.Add((box, sb));
+                    if (hitsoundingStoryboardSelection.Contains(sb)) c.Stroke(box, Foreground, 2, 4);
+                }
                 if (HitsoundingPrecise)
                 {
                     string label = tag.Label + (tag.Index > 0 ? " " + tag.Index : "");
                     if (c.MeasureText(label, 11, true) <= box.Width - 8) c.Text(label, box.X + 4, box.Y + 3, 11, 0xFFFFFF, box.Width - 8, true);
                 }
-                else DrawHitsoundingLabel(c, box, tag.Label, tag.Index);
+                else DrawHitsoundingLabel(c, box, tag.Label, 0);
                 if (HitsoundingPrecise && wave is not null && box.Width > 1)
                 {
                     float maximum = Math.Max(.000001f, wave.Peak(0, wave.DurationMs));
@@ -388,7 +399,7 @@ public sealed partial class EditorView
             {
                 double distance = Math.Min(i > 0 ? moments[i].Key - moments[i - 1].Key : double.PositiveInfinity,
                     i + 1 < moments.Length ? moments[i + 1].Key - moments[i].Key : double.PositiveInfinity);
-                var tags = moments[i].GroupBy(t => (t.Label, t.Index, t.Note?.SourceId, t.Note?.EventIndex))
+                var tags = moments[i].GroupBy(t => (t.Label, t.Index, t.Note?.SourceId, t.Note?.EventIndex, t.Storyboard))
                     .Select(g => g.First() with { Sounds = g.SelectMany(t => t.Sounds).Distinct().ToArray() }).ToArray();
                 string widthText = tags.SelectMany(t => new[] { t.Label, t.Index > 0 ? t.Index.ToString() : "" }).MaxBy(t => t.Length) ?? "";
                 for (int column = 0; column < tags.Length; column++)

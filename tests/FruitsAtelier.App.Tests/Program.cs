@@ -4,7 +4,7 @@ using FruitsAtelier.Core;
 try
 {
 if (args.Contains("--hitsounding-performance")) { HitsoundingPanelTests.Performance(); return 0; }
-if (args.Contains("--hitsounding-panel-check")) { HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); HitsoundingPanelTests.SelectionAndTiming(); HitsoundingPanelTests.LengthAndMove(); return 0; }
+if (args.Contains("--hitsounding-panel-check")) { HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); HitsoundingPanelTests.SelectionAndTiming(); HitsoundingPanelTests.LengthAndMove(); HitsoundingPanelTests.StoryboardEditing(); return 0; }
 if (args.Contains("--difficulty-import-check")) { DifficultyImportTests.Run(); Console.WriteLine("PASS difficulty imports use project resources and preserve metadata"); return 0; }
 if (args.Contains("--slider-bpm-performance")) { SliderBpmTests.Performance(); return 0; }
 if (args.Contains("--slider-bpm-check")) { SliderBpmTests.Run(); Console.WriteLine("PASS slider BPM controls"); return 0; }
@@ -91,6 +91,7 @@ if (args.Contains("--independent-sv-check")) { IndependentSliderSvTests.Run(); C
 if (args.Contains("--legacy-droplet-modes-check")) { LegacyDropletModeTests.Run(); Console.WriteLine("PASS Legacy and FSlider droplet modes, history and persistence"); return 0; }
 if (args.Contains("--droplet-defaults-check")) { DropletDefaultsTests.Run(); Console.WriteLine("PASS Global droplet defaults and restart restoration"); return 0; }
 
+if (args.Contains("--volume-popover-check")) { VolumePopoverTests.Run(); Console.WriteLine("PASS Volume popover mouse, keyboard, wheel and fade"); return 0; }
 if (args.Contains("--window-preferences-check")) { WindowPreferenceTests.Run(); Console.WriteLine("PASS Window and canvas preferences"); return 0; }
 
 if (args.Contains("--legacy-droplet-worker-check"))

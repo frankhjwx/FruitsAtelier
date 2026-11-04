@@ -122,7 +122,8 @@ Choose **Hitsounding Panel** from the same workspace selector as Mapping and Tim
 Its dock layout and display mode are remembered independently. The horizontal ruler
 uses the current Snap division and the shared osu-style tick colours and lengths.
 Alt+wheel zooms around the pointer's time without changing playback position;
-ordinary wheel moves one current Snap division per notch. Drag the highlighted yellow line to change its viewport
+ordinary wheel moves one current Snap division per notch. From an off-grid timestamp,
+the first notch lands on the nearest grid point in the chosen direction. Drag the highlighted yellow line to change its viewport
 position without seeking. Both dragging and zoom keep it within 5–95% of the timeline.
 
 The seven lanes are Notes, Normal, Whistle, Finish, Clap, SliderTick and SB Hitsound.
@@ -141,16 +142,17 @@ Object sounds end visually at the next occurrence in the same sound lane when th
 sample extends past it; intervening notes and sounds in other lanes do not truncate them;
 storyboard samples use the next unconditional sample as their visual boundary.
 Decoding is asynchronous and its cache is bounded and retired with the difficulty.
-Note-based bank tags use two lines: S, D or N above the index. Default samples omit the index and centre the bank letter vertically. Timing tags show bank and optional index (for example S:2) above volume; both lines
+Note-based bank tags show only a centred S, N or D. Precise HS retains the bank and non-default index beside the waveform. Timing tags show bank and optional index (for example S:2) above volume; both lines
 are bold, with the bank line three points larger. A short coloured stem marks their timestamp.
 Timing tags fill the interval up to the next timing point. Their left-aligned text stays
 at the visible left edge when the interval begins outside the viewport.
 
 In **Select**, only clicking a Notes object or an existing sound tag selects its event.
-Clicking empty space clears selection; dragging from it draws a selection rectangle
-across Normal, Whistle, Finish and Clap tags. Ctrl+C copies selected sounds, Ctrl+V
+Selecting a sound does not seek. Clicking empty timeline space clears selection and seeks;
+clicking the lane-label column does not seek. Dragging empty grid space draws a selection
+rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Ctrl+C copies selected sounds, Ctrl+V
 pastes their relative times at the playhead onto existing fruit events (within 1 ms),
-and Delete removes selected additions. Normal remains undeletable. Each batch is one
+Ctrl+X cuts deletable selected sounds, and Delete removes selected additions or SB sounds. Normal remains undeletable. Each batch is one
 undo step. When source and target banks or sample indices differ, a dialog offers the
 copied sampleset, the target sampleset, or cancellation. Adjustments affect target event
 overrides, including their shared addition bank/index, without rewriting timing intervals.
@@ -164,6 +166,13 @@ W/E/R toggle the selected event's Whistle/Finish/Clap. Sampleset and Additions s
 edit the selected event or set banks for drawing. The three additions share one bank
 and index; a vertical connector links active additions belonging to the same event.
 Audible events flash with a white edge and a coloured outer glow for 280 ms as playback crosses their timestamps. Both Notes and sound tags show this feedback.
+
+SB Hitsound supports selection, marquee selection, cut/copy/paste, deletion and dragging.
+Pastes preserve relative times, filenames, layers and volumes without requiring a note
+at the destination. Dragging snaps to the beat grid and previews without changing content.
+Edits participate in undo/redo. Moving or deleting a shared `.osb` sample edits that shared
+file, so it affects every difficulty using it; pasted copies belong to the current map.
+External changes to a shared file are checked before edits and undo/redo.
 
 **Timing Helper** follows the playhead when nothing is selected and the event
 time when an object is selected. Clicking a timing interval or its stem selects that

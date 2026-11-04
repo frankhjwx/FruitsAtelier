@@ -131,7 +131,7 @@ public sealed partial class EditorView
         dockPressed = null; dockDragging = false;
         HitsoundingPageVisible = false;
         TimingPageVisible = visible; panelMenuOpen = false; timingField = timingError = ""; timingTaps.Clear();
-        ResetHitsounds(); timingTapHeld = false;
+        ResetHitsounds(); timingTapHeld = false; SaveMapPanel();
     }
 
     private TimingEntry[] TimingSnapshot() => timingEntries.Select(e => e with { Point = TimingEditing.Copy(e.Point) }).ToArray();
@@ -437,7 +437,8 @@ public sealed partial class EditorView
         if (key == 84 && !ctrl && !shift) { if (!timingTapHeld) TapTiming(); timingTapHeld = true; return true; }
         if (key == 27 && panelMenuOpen) { panelMenuOpen = false; return true; }
         if (key == 27 && menu >= 0) { menu = -1; return true; }
-        if (key == 27 || key == 112) { ShowTimingPage(false); return true; }
+        if (key == 27) { ShowLibrary(); return true; }
+        if (key == 112) { ShowTimingPage(false); return true; }
         if (ctrl && altHeld && !shift && key == 69) return false;
         if (ctrl && shift && key is 37 or 39 or 73) return true;
         if (ctrl) return key is not (17 or 80 or 73 or 90 or 89 or 83 or 9 or 79 or 66 or 37 or 39 or 38 or 40 or 77);
