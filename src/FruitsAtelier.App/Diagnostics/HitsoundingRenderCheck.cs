@@ -16,6 +16,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
+            foreach (string scenario in new[] { "", "-timing", "-flash" })
             {
                 L.SetLanguage(locale);
                 var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
@@ -29,6 +30,7 @@ internal static class HitsoundingRenderCheck
                     OriginalLine = $"256,192,{i * 250},1,{(i % 4 == 0 ? 4 : i % 3 == 0 ? 8 : i % 2 == 0 ? 2 : 0)},0:0:0:0:" }));
                 var track = new CurveTrack { Kind = CurveKind.Linear };
                 track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 100 }, new Anchor { TimeMs = 2500, X = 400 }]); map.Tracks.Add(track);
+                if (scenario == "-timing") map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = 1, Volume = 60 });
                 var editor = new EditorView(false); editor.LoadDocument(map);
                 editor.RequestWaveform = (path, token) => Task.FromResult(FruitsAtelier.App.Audio.WaveformDecoder.Load(path, token).GetAwaiter().GetResult());
                 editor.LibrarySettings.Workspace = Path.Combine(folder, "workspace");
@@ -36,7 +38,7 @@ internal static class HitsoundingRenderCheck
                 Directory.CreateDirectory(Path.Combine(library, "Drums", "Percussion"));
                 if (HitsoundDefaults.Find(2, "hitnormal") is { } sample && File.Exists(sample))
                     File.Copy(sample, Path.Combine(library, "soft-tap" + Path.GetExtension(sample)), true);
-                editor.ShowHitsoundingPage(); editor.UpdateTransport(1200, 10000, true, false, false, null, null);
+                editor.ShowHitsoundingPage(); editor.UpdateTransport(scenario == "-timing" ? 0 : scenario == "-flash" ? 1000 : 1200, 10000, true, scenario == "-flash", false, null, null);
                 var layout = editor.CaptureDockLayouts(); layout.Hitsounding!.PreciseHitsounds = precise;
                 editor.LibrarySettings.DockLayouts = layout; editor.RestoreDockLayouts();
                 canvas.Resize(size.Item1, size.Item2, 96);
@@ -44,7 +46,7 @@ internal static class HitsoundingRenderCheck
                 canvas.End(capture: () =>
                 {
                     var frame = canvas.CapturePixels();
-                    using var output = new BinaryWriter(File.Create(Path.Combine(folder, $"{locale}-{size.Item1}{(precise ? "-precise" : "")}.bmp")));
+                    using var output = new BinaryWriter(File.Create(Path.Combine(folder, $"{locale}-{size.Item1}{(precise ? "-precise" : "")}{scenario}.bmp")));
                     output.Write((ushort)0x4D42); output.Write(54 + frame.Pixels.Length); output.Write(0); output.Write(54);
                     output.Write(40); output.Write(frame.Width); output.Write(-frame.Height);
                     output.Write((ushort)1); output.Write((ushort)32); output.Write(0); output.Write(frame.Pixels.Length);

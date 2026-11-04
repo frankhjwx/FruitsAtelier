@@ -146,19 +146,30 @@ Timing tags fill the interval up to the next timing point. Their left-aligned te
 at the visible left edge when the interval begins outside the viewport.
 
 In **Select**, only clicking a Notes object or an existing sound tag selects its event.
-Empty space clears selection. In **Draw**, click or drag across existing fruit event
+Clicking empty space clears selection; dragging from it draws a selection rectangle
+across Normal, Whistle, Finish and Clap tags. Ctrl+C copies selected sounds, Ctrl+V
+pastes their relative times at the playhead onto existing fruit events (within 1 ms),
+and Delete removes selected additions. Normal remains undeletable. Each batch is one
+undo step. When source and target banks or sample indices differ, a dialog offers the
+copied sampleset, the target sampleset, or cancellation. Adjustments affect target event
+overrides, including their shared addition bank/index, without rewriting timing intervals.
+In **Draw**, click or drag across existing fruit event
 times in Whistle, Finish or Clap to add that addition; the half-opacity ghost previews
 the target. A stroke is one undo step. Right-click removes additions, never Normal.
 W/E/R toggle the selected event's Whistle/Finish/Clap. Sampleset and Additions selectors
 edit the selected event or set banks for drawing. The three additions share one bank
 and index; a vertical connector links active additions belonging to the same event.
-Audible events briefly brighten and glow as playback crosses their timestamps.
+Audible events flash with a white edge and a coloured outer glow for 280 ms as playback crosses their timestamps. Both Notes and sound tags show this feedback.
 
 **Timing Helper** follows the playhead when nothing is selected and the event
-time when an object is selected. It shows the effective red/green timing information.
-Bank, sample-index and volume changes remain drafts until **Apply as new inherited
-timing point** inserts a green line at that timestamp, preserving effective SV. Timing changes support undo.
-The Hitsounding dock menu provides Config, Inspector, Song Setup and Preview independently
+time when an object is selected. Clicking a timing interval or its stem selects that
+specific timing point. At an exact timestamp with existing timing points, the helper
+shows each point in a separate section divided by horizontal rules. Offset, BPM/SV,
+meter, bank, sample index, volume and effects can be applied to the existing point.
+Only timestamps without a point show effective timing information and **Apply as new
+inherited timing point**, which inserts a green line while preserving effective SV.
+Changes remain drafts until applied and support undo.
+The Hitsounding dock menu provides Config, Timing Helper, Song Setup and Preview independently
 of Mapping.
 
 **Map Samplesets** selects the map's indexed sample groups and S/D/N bank. Preview

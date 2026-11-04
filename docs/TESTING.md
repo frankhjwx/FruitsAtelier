@@ -1704,7 +1704,9 @@ default bank labels, timing-tag order, the unified Config dock, library search/i
 slot drag/drop, and resource undo/redo. It also checks Inspector drafts and manual
 application, event-specific additions, single-click and continuous painting, complete
 stroke undo, empty-space selection, playback flashes, normalized narrow waveforms,
-visible interval labels and play-line bounds. `--hitsounding-performance` compares cold
+visible interval labels and play-line bounds. It also checks marquee copy/delete/paste,
+sampleset mismatch confirmation and cancellation, separate simultaneous red/green
+sections and editing an existing timing point without inserting duplicates. `--hitsounding-performance` compares cold
 setup and warm pointer/render work with Mapping on the same mixed-object fixture,
 including allocations and committed-conversion reuse.
 

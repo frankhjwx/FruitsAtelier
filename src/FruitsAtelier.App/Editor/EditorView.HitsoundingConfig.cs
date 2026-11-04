@@ -293,6 +293,8 @@ public sealed partial class EditorView
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return true; }
             if (hitsoundingBounds.Contains(x, y))
             {
+                hitsoundingSelectedTiming = null; hitsoundingSelected = null; hitsoundingMultiSelection.Clear();
+                SelectObjects([]);
                 double start = HitsoundingStart;
                 SeekTo(Math.Max(0, start + (x - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan));
             }

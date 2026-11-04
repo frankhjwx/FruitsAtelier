@@ -74,6 +74,51 @@ internal static class HitsoundingPanelTests
         float LaneY(int lane) { var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100); return label.Y + 8; }
 
     }
+    public static void SelectionAndTiming()
+    {
+        var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1, Volume = 80 });
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = 1, Volume = 60 });
+        map.TimingPoints.Add(new() { TimeMs = 1750, BeatLengthMs = -100, Uninherited = false, SampleSet = 3, SampleIndex = 2, Volume = 70 });
+        foreach (int time in new[] { 1000, 1250, 2000, 2250 }) map.Fruits.Add(new() { TimeMs = time, X = 256,
+            OriginalLine = $"256,192,{time},1,{(time < 1750 ? 6 : 0)},0:0:0:0:" });
+        var ui = new Ui(overview: false); ui.LoadDocument(map); ui.Resize(1440, 1300); ui.View.ShowHitsoundingPage(); ui.Paint();
+        Check(ui.Canvas.Texts.Count(t => t.Value == L.Get("hitsounding.applyExisting")) == 2, "Exact red and green points get separate editable sections");
+        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.applyTiming")), "Existing lines never offer inserting a duplicate");
+        var volumes = ui.Canvas.Texts.Where(t => t.Value == L.Get("hitsounding.volume") && t.X > 1100).OrderBy(t => t.Y).ToArray();
+        ui.Click(volumes[1].X + 115, volumes[1].Y + 5); ui.Key(65, ctrl: true); ui.Type("35"); ui.Key(13);
+        var apply = ui.Canvas.Texts.Where(t => t.Value == L.Get("hitsounding.applyExisting")).OrderBy(t => t.Y).Last();
+        ui.Click(apply.X + 8, apply.Y + 8);
+        Check(ui.View.Document.TimingPoints.Count == 3 && ui.View.Document.TimingPoints[0].Volume == 80 && ui.View.Document.TimingPoints[1].Volume == 35,
+            "Applying the second section modifies only the existing green line");
+        ui.Key(90, ctrl: true);
+        var interval = ui.Canvas.Fills.First(f => f.Color == 0x72C686 && f.Bounds.Y < 220).Bounds;
+        ui.Click(interval.X + 15, interval.Y + 10);
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.selectedTiming")) && ui.Canvas.Texts.Count(t => t.Value == L.Get("hitsounding.applyExisting")) == 1,
+            "Clicking a timing interval selects its own point");
+        var whistles = ui.Canvas.Outlines.Where(o => o.Color == 0x51BDD2).Select(o => o.Bounds).OrderBy(b => b.X).ToArray();
+        var finishes = ui.Canvas.Outlines.Where(o => o.Color == 0xE0BD62).Select(o => o.Bounds).OrderBy(b => b.X).ToArray();
+        ui.View.PointerDown(whistles[0].X - 4, whistles[0].Y - 4, 0, false, false);
+        ui.View.PointerMove(whistles[1].Right + 4, finishes[1].Bottom + 4, false, false);
+        ui.View.PointerUp(whistles[1].Right + 4, finishes[1].Bottom + 4, 0); ui.Paint();
+        ui.Key(67, ctrl: true);
+        var baseline = ui.View.Document.DeepClone();
+        ui.Key(46);
+        Check(ui.View.Document.HitsoundOverrides.Count == 2 && ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 0), "Marquee delete removes all selected additions");
+        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Batch delete is one undo step");
+        ui.View.UpdateTransport(2000, 6000, true, false, false, null, null); ui.Paint();
+        ui.Key(86, ctrl: true);
+        Check(ui.View.DiscardConfirmationVisible && baseline.ContentEquals(ui.View.Document), "Mismatched paste waits for a decision");
+        ui.ClickText(L.Get("mac.cancel")); Check(baseline.ContentEquals(ui.View.Document), "Cancel paste leaves the map unchanged");
+        ui.Key(86, ctrl: true); ui.ClickText(L.Get("hitsounding.pasteKeep"));
+        Check(ui.View.Document.HitsoundOverrides.Count == 2 && ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 6 && h.Sample.Index == 2 && h.Sample.AdditionSet == 3),
+            "Paste preserves relative times and can retain target samplesets");
+        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Paste is one undo step");
+        ui.Key(86, ctrl: true); ui.ClickText(L.Get("hitsounding.pasteAdjust"));
+        Check(ui.View.Document.HitsoundOverrides.All(h => h.Sample.Index == 1 && h.Sample.AdditionSet == 2), "Paste can adopt source bank and index");
+        Check(ui.View.Document.TimingPoints.Count == 3, "Paste adjustments do not rewrite unrelated timing intervals");
+        Console.WriteLine("PASS Hitsounding marquee clipboard, sampleset confirmation and existing timing-line editing");
+    }
     public static void Run()
     {
         string root = Path.GetFullPath("artifacts/tests/hitsounding"); Directory.CreateDirectory(root);

@@ -1533,6 +1533,9 @@ public sealed partial class EditorView
             else if (ctrl && virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (ctrl && virtualKey == 89) Redo();
             else if (ctrl && virtualKey == 9) SwitchDifficulty(AdjacentDifficulty(shift));
+            else if (!hitsoundingDraw && ctrl && virtualKey == 67) CopyHitsoundingSelection();
+            else if (!hitsoundingDraw && ctrl && virtualKey == 86) PasteHitsoundingSelection();
+            else if (!hitsoundingDraw && !ctrl && virtualKey == 46) DeleteHitsoundingSelection();
             else if (!ctrl && virtualKey == 32) TogglePlayback();
             else if (!ctrl && virtualKey is 37 or 39) SeekByWheel(virtualKey == 37 ? -1 : 1, 1);
             else if (!ctrl && virtualKey is 87 or 69 or 82) ToggleHitsoundingAddition(virtualKey == 87 ? 2 : virtualKey == 69 ? 4 : 8);
@@ -1749,7 +1752,7 @@ public sealed partial class EditorView
         songDrag = -1;
         randomDragging = false; dockHorizontalDrag = null;
         if (hitsoundingHeadDrag) hitsoundingHeadRatio = hitsoundingHeadBefore;
-        hitsoundingHeadDrag = hitsoundingPainting = false; hitsoundingPaint.Clear();
+        hitsoundingHeadDrag = hitsoundingPainting = hitsoundingMarquee = false; hitsoundingPaint.Clear();
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);

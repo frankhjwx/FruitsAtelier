@@ -25,6 +25,7 @@ public sealed partial class EditorView
     private void ReleaseDifficultyCaches(bool preserveMedia = false)
     {
         hitsoundingAudio.Clear();
+        hitsoundingMultiSelection.Clear(); hitsoundingClipboard = []; hitsoundingMarquee = false; hitsoundingSelectedTiming = null; timingHelperDrafts = [];
         hitsoundingSelected = null; hitsoundingPaint.Clear(); hitsoundingPainting = hitsoundingHeadDrag = false; hitsoundingStoryboardSource = null; hitsoundingStoryboardTags = [];
         hitsoundingConversion = null; hitsoundingTags = []; hitsoundingNotes = []; hitsoundingMapFiles.Clear();
         hitsoundingResolver = null; inspectorConversion = null; hitsoundingNoteLookup.Clear(); hitsoundingAudibleNotes.Clear();

@@ -12,7 +12,7 @@ public sealed partial class EditorView
     internal const float HitsoundingTagWidth = 36;
     private double HitsoundingStart => playhead - hitsoundingSpan * hitsoundingHeadRatio;
     private readonly List<BeatGridLine> hitsoundingGrid = [];
-    private readonly List<(Rect Bounds, float Anchor, uint Color, string Bank, int Index, int Volume)> hitsoundingTimingBoxes = [];
+    private readonly List<(Rect Bounds, float Anchor, uint Color, string Bank, int Index, int Volume, TimingPoint Point)> hitsoundingTimingBoxes = [];
     private CatchConversionResult? hitsoundingConversion;
     private HitsoundResolver? hitsoundingResolver;
     private sealed record SoundTag(double Time, int Lane, string Label, int Index, double Next, Hitsound[] Sounds, double NeighbourDistance = double.PositiveInfinity, int Column = 0, int Columns = 1, string WidthText = "", ConvertedCatchObject? Note = null);
@@ -20,7 +20,7 @@ public sealed partial class EditorView
     private bool HitsoundingPrecise => hitsoundingDockWorkspace.PreciseHitsounds;
     private SoundTag[] hitsoundingTags = [], hitsoundingStoryboardTags = [];
     private StoryboardScene? hitsoundingStoryboardSource;
-    private (double Time, bool Red, string Bank, int Index, int Volume)[] hitsoundingTimingLabels = [];
+    private (double Time, bool Red, string Bank, int Index, int Volume, TimingPoint Point)[] hitsoundingTimingLabels = [];
     private ConvertedCatchObject[] hitsoundingNotes = [];
     private Dictionary<(Guid, int), ConvertedCatchObject> hitsoundingNoteLookup = [];
     private HashSet<(Guid, int)> hitsoundingAudibleNotes = [];
@@ -97,7 +97,7 @@ public sealed partial class EditorView
         hitsoundingTimingLabels = overviewTiming.Select(point =>
         {
             var sample = resolver.Describe(new ConvertedCatchObject(Guid.Empty, 0, CatchObjectKind.Fruit, point.TimeMs - 5, 0, 0, 0, 0, true));
-            return (point.TimeMs, point.Uninherited, BankCode(sample.NormalSet), sample.Index, sample.Volume);
+            return (point.TimeMs, point.Uninherited, BankCode(point.SampleSet > 0 ? point.SampleSet : sample.NormalSet), point.SampleIndex, point.Volume, point);
         }).ToArray();
         hitsoundingFallbackFiles.Clear();
         foreach (string folder in HitsoundSkinFolders)
@@ -163,7 +163,7 @@ public sealed partial class EditorView
             if (until <= start || until <= point.Time) continue;
             float anchor = X(point.Time), left = Math.Max(gridX, anchor), rightEdge = Math.Min(gridX + gridWidth, X(until));
             hitsoundingTimingBoxes.Add((new(left, r.Y + 53, Math.Max(0, rightEdge - left), 36), anchor,
-                point.Red ? 0xE77785u : 0x72C686u, point.Bank, point.Index, point.Volume));
+                point.Red ? 0xE77785u : 0x72C686u, point.Bank, point.Index, point.Volume, point.Point));
         }
         float top = r.Y + 122;
         hitsoundingGridBounds = new(gridX, top, gridWidth, Math.Max(7, r.Bottom - top));
@@ -195,7 +195,7 @@ public sealed partial class EditorView
             c.Line(tag.Anchor, tag.Bounds.Bottom + 5, tag.Anchor, g.Y - 1, tag.Color, 3, .95f);
             c.Fill(tag.Bounds, Panel, 6);
             c.Fill(tag.Bounds, tag.Color, 6, .35f);
-            c.StrokeOpacity(tag.Bounds, tag.Color, 1, 6, .9f);
+            c.StrokeOpacity(tag.Bounds, tag.Color, hitsoundingSelectedTiming == tag.Point ? 2.5f : 1, 6, 1);
             string bankLabel = tag.Index > 0 ? $"{tag.Bank}:{tag.Index}" : tag.Bank;
             string volumeLabel = $"{tag.Volume}%";
             float bankWidth = c.MeasureText(bankLabel, 13, true), volumeWidth = c.MeasureText(volumeLabel, 10, true);
@@ -232,8 +232,8 @@ public sealed partial class EditorView
             float flash = hitsoundingAudibleNotes.Contains((item.SourceId, item.EventIndex)) ? HitsoundingFlash(item.TimeMs) : 0;
             if (flash > 0)
             {
-                c.Circle(x, y, radius + 7, Foreground, false, 6, flash * .16f);
-                c.Circle(x, y, radius + 2, Foreground, false, 2, flash);
+                c.Circle(x, y, radius + 2 * notesHeight / 64, Foreground, false, 3 * notesHeight / 64, flash * .4f);
+                c.Circle(x, y, radius, Foreground, false, 2 * notesHeight / 64, flash);
             }
         }
         c.Unclip();
@@ -276,8 +276,14 @@ public sealed partial class EditorView
                 c.StrokeOpacity(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), Foreground, 1, 4, .5f);
             }
         }
+        if (hitsoundingMarquee)
+        {
+            var selectionBox = HitsoundingMarqueeBounds;
+            c.Fill(selectionBox, Accent, opacity: .15f); c.Stroke(selectionBox, Accent, 1);
+        }
+        c.Unclip();
         float head = X(playhead); c.Line(head, r.Y, head, g.Bottom, HitsoundingHeadHovered(mouseX, mouseY) || hitsoundingHeadDrag ? 0xFFF0A6u : 0xE9CA64u, 2);
-        c.Unclip(); c.Unclip();
+        c.Unclip();
         void DrawTags(SoundTag[] tags)
         {
             double margin = HitsoundingTagWidth / 2 / g.Width * hitsoundingSpan;
@@ -318,17 +324,18 @@ public sealed partial class EditorView
                 float flash = HitsoundingFlash(tag.Time);
                 if (flash > 0)
                 {
-                    c.Fill(new(box.X - 5, box.Y - 5, box.Width + 10, box.Height + 10), HitsoundingColors[tag.Lane], 8, flash * .15f);
-                    c.Fill(new(box.X - 2, box.Y - 2, box.Width + 4, box.Height + 4), HitsoundingColors[tag.Lane], 6, flash * .3f);
+                    c.Fill(new(box.X - 5, box.Y - 5, box.Width + 10, box.Height + 10), HitsoundingColors[tag.Lane], 8, flash * .35f);
+                    c.Fill(new(box.X - 2, box.Y - 2, box.Width + 4, box.Height + 4), HitsoundingColors[tag.Lane], 6, flash * .6f);
                 }
                 c.Fill(box, Panel, 4);
                 c.Fill(box, HitsoundingColors[tag.Lane], 4, HitsoundingPrecise ? .4f : .6f);
-                if (flash > 0) c.Fill(box, 0xFFFFFF, 4, flash * .32f);
+                if (flash > 0) c.Fill(box, 0xFFFFFF, 4, flash * .65f);
                 c.Stroke(box, HitsoundingColors[tag.Lane], radius: Math.Min(4, box.Width / 3));
+                if (flash > 0) c.StrokeOpacity(box, 0xFFFFFF, 2, Math.Min(4, box.Width / 3), flash);
                 if (tag.Note is { } note)
                 {
                     hitsoundingSoundHits.Add((box, note, tag.Lane));
-                    if (hitsoundingSelected == (note.SourceId, note.EventIndex)) c.Stroke(box, Foreground, 2, 4);
+                    if (hitsoundingMultiSelection.Contains((note.SourceId, note.EventIndex, tag.Lane))) c.Stroke(box, Foreground, 2, 4);
                 }
                 if (HitsoundingPrecise)
                 {
@@ -352,8 +359,8 @@ public sealed partial class EditorView
             }
         }
     }
-    private float HitsoundingFlash(double time) => AudioPlaying && playhead >= time && playhead < time + 160
-        ? (float)Math.Pow(1 - (playhead - time) / 160, 2) : 0;
+    private float HitsoundingFlash(double time) => AudioPlaying && playhead >= time && playhead < time + 280
+        ? (float)Math.Pow(1 - Math.Max(0, playhead - time - 45) / 235, 1.4) : 0;
     private void DrawHitsoundingLabel(ICanvas c, Rect box, string bank, int index)
     {
         if (box.Width < 5) return;

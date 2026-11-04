@@ -2007,5 +2007,14 @@
   "hitsounding.lane6": "SB Hitsound",
   "hitsounding.importing": "Importing audio…",
   "hitsounding.precise": "Precise HS",
-  "hitsounding.noteBased": "Note based"
+  "hitsounding.noteBased": "Note based",
+  "hitsounding.selectedTiming": "Selected timing point",
+  "hitsounding.effects": "Effects",
+  "hitsounding.applyExisting": "Apply to this timing point",
+  "hitsounding.paste": "Paste hitsounds",
+  "hitsounding.noPasteTargets": "No notes at the paste target times.",
+  "hitsounding.pasteMismatch": "The target sampleset differs",
+  "hitsounding.pasteMismatchHelp": "Choose the source or target banks and index. Shared additions change together.",
+  "hitsounding.pasteAdjust": "Use copied sampleset",
+  "hitsounding.pasteKeep": "Keep target sampleset"
 }

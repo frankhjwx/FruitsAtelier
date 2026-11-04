@@ -39,7 +39,7 @@ public sealed partial class EditorView
         if (VersionHistoryVisible) { if (versionRestoreTask is null) CloseVersionHistory(); return; }
         if (SynchronizationVisible) { CancelSynchronization(); return; }
         var callback = discardConfirmation;
-        discardConfirmation = null;
+        discardConfirmation = null; hitsoundingPasteConfirmation = false;
         addDifficultyConfirmation = faOnlyConfirmation = false;
         deleteProjectConfirmation = false;
         replaceBackgroundConfirmation = false;
@@ -77,6 +77,7 @@ public sealed partial class EditorView
         if (SynchronizationVisible) { DrawSynchronization(c); return; }
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();
+        if (hitsoundingPasteConfirmation) { DrawHitsoundingPasteConfirmation(c); return; }
         if (SliderCanvasChoiceVisible) { DrawSliderCanvasChoice(c); return; }
         if (galleryDeletingFolder is not null) { DrawGalleryFolderDeletion(c); return; }
         if (pendingLanguage is not null) { DrawLanguageNotice(c); return; }
