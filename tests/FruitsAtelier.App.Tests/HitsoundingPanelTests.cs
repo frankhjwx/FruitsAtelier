@@ -170,6 +170,47 @@ internal static class HitsoundingPanelTests
         Check(ui.View.Document.TimingPoints.Count == 3, "Paste adjustments do not rewrite unrelated timing intervals");
         Console.WriteLine("PASS Hitsounding marquee clipboard, sampleset confirmation and existing timing-line editing");
     }
+    public static void PlayingSelectionAndSettings()
+    {
+        var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1 });
+        foreach (int time in new[] { 1000, 1250, 1500, 1750 })
+            map.Fruits.Add(new() { TimeMs = time, X = 256, OriginalLine = $"256,192,{time},1,2,0:0:0:0:" });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage();
+        ui.View.UpdateTransport(1000, 6000, true, true, false, null, null); ui.Paint();
+        var baseline = ui.View.Document.DeepClone();
+        var first = LaneBlocks(ui, 2)[0];
+        float x = first.Right + 4, y = first.Bottom + 4;
+        ui.View.PointerDown(first.X - 4, first.Y - 4, 0, false, false);
+        ui.View.PointerMove(x, y, false, false); ui.Paint();
+        var before = ui.Canvas.PaintCalls.Single(p => p.FillBounds is not null && p.Opacity == .15f).FillBounds!.Value;
+        ui.View.UpdateTransport(1500, 6000, true, true, false, null, null); ui.Paint();
+        var after = ui.Canvas.PaintCalls.Single(p => p.FillBounds is not null && p.Opacity == .15f).FillBounds!.Value;
+        Check(after.X < before.X && Math.Abs(after.Right - before.Right) < .01, "Playing marquee keeps its time anchor while its pointer edge stays fixed");
+        ui.View.UpdateTransport(3500, 6000, true, true, false, null, null); ui.Paint();
+        Check(baseline.ContentEquals(ui.View.Document), "Playing marquee does not modify content");
+        ui.View.PointerUp(x, y, 0); ui.Paint(); ui.Key(46);
+        Check(ui.View.Document.HitsoundOverrides.Count == 4 && ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 0), "Stationary-pointer playback updates selection and retains sounds that scrolled offscreen");
+        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Playing marquee delete is one undo step");
+        ui.View.UpdateTransport(1000, 6000, true, false, false, null, null); ui.Paint();
+        var blocks = LaneBlocks(ui, 1); var layout = System.Text.Json.JsonSerializer.Serialize(ui.View.CaptureDockLayouts());
+        ui.View.OpenVolumePopover(); ui.Paint();
+        int volume = ui.View.LibrarySettings.MasterVolume;
+        ui.View.OpenSettings(); ui.Paint();
+        Check(!ui.View.VolumePopoverVisible, "Settings takes ownership from the volume popover");
+        foreach (float wheelX in new[] { blocks[0].X, 20f })
+        {
+            ui.View.Wheel(wheelX, first.Y, -120, false, false, false);
+            ui.View.Wheel(wheelX, first.Y, 120, false, false, true);
+        }
+        ui.Key(37); ui.Key(46);
+        ui.View.SetModifiers(true, false); ui.Key(38); ui.View.KeyUp(38); ui.View.SetModifiers(false, false);
+        Check(ui.View.PlayheadMs == 1000 && ui.View.LibrarySettings.MasterVolume == volume && baseline.ContentEquals(ui.View.Document), "Settings blocks underlying seek, edit and volume shortcuts");
+        ui.Key(27); ui.Paint();
+        Check(LaneBlocks(ui, 1).SequenceEqual(blocks) && System.Text.Json.JsonSerializer.Serialize(ui.View.CaptureDockLayouts()) == layout,
+            "Settings wheel input cannot zoom or scroll the underlying Hitsounding canvas or docks");
+        Console.WriteLine("PASS Playback-anchored Hitsounding marquee and exclusive Settings input");
+    }
     public static void LengthAndMove()
     {
         var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
@@ -420,12 +461,17 @@ internal static class HitsoundingPanelTests
         Measure("Note based");
         ui.View.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.5f, 200).ToArray(), 1));
         ui.ClickText(L.Get("hitsounding.precise")); Measure("Precise HS");
+        ui.View.PointerDown(700, 400, 0, false, false);
+        ui.View.PointerMove(900, 600, false, false); ui.Paint();
+        Measure("Playing marquee", playback: true);
+        ui.View.PointerUp(900, 600, 0);
         Check(ReferenceEquals(conversion, ui.View.Conversion) && baseline.ContentEquals(ui.View.Document), "Views and pointer motion reuse committed conversion");
-        void Measure(string mode)
+        void Measure(string mode, bool playback = false)
         {
             var input = new List<double>(); var render = new List<double>(); var memory = new List<long>();
             for (int i = 0; i < 120; i++)
             {
+                if (playback) ui.View.UpdateTransport(30500 + i * 10, 90000, true, true, false, null, null);
                 long bytes = GC.GetAllocatedBytesForCurrentThread(), stamp = System.Diagnostics.Stopwatch.GetTimestamp();
                 ui.View.PointerMove(800 + i % 100, 400 + i % 80, false, false);
                 double dispatch = System.Diagnostics.Stopwatch.GetElapsedTime(stamp).TotalMilliseconds;

@@ -1852,6 +1852,9 @@ While dragging one or more objects, ordinary wheel navigation, Ctrl+wheel Snap a
 
 ## Settings
 
+Settings owns editor input while open: wheel input scrolls settings rather than the
+underlying canvas or docks, and underlying volume popover controls are inactive.
+
 Categories are ordered General, Workspace, Appearance, Audio, Testplay, Mapping Canvas, and
 Application updates (where supported). Appearance groups the active skin selector
 with the default skin archive. Mapping Canvas groups background dim, reverse

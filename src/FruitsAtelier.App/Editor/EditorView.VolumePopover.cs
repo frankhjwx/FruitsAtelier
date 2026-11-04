@@ -10,7 +10,7 @@ public sealed partial class EditorView
     private int volumePopoverDrag = -1;
     private readonly HashSet<int> volumeShortcutKeys = [];
     private int volumeChannel;
-    private bool CanUseVolumePopover => !LibraryVisible && !ExportVisible && !updatesPage
+    private bool CanUseVolumePopover => !librarySettingsOpen && !LibraryVisible && !ExportVisible && !updatesPage
         && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible
         && !SongSetupVisible && !DistanceSnapDialogVisible && !VolumeDialogVisible
         && !(RotationVisible || TimeJumpVisible) && !BananaEditVisible && !StreamDialogVisible && !MergeDialogVisible && !IsEditingText && drag == DragKind.None;

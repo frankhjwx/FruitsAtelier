@@ -838,7 +838,7 @@ public sealed partial class EditorView
         if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
         if (TogglePaneSeparator(x, y)) return;
-        if (HitsoundingPageVisible && !LibraryVisible && y >= 122 && y < TransportTop) return;
+        if (HitsoundingPageVisible && DockContentInputAvailable && y >= 122 && y < TransportTop) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
             var row = aimodRowBounds.FirstOrDefault(r => r.Bounds.Contains(x, y));

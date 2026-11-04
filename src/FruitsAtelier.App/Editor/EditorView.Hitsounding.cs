@@ -287,8 +287,13 @@ public sealed partial class EditorView
             c.Fill(new(X(hitsoundingStoryboardMoveTime), y, 36, 32), HitsoundingColors[6], 4, .5f);
             c.StrokeOpacity(new(X(hitsoundingStoryboardMoveTime), y, 36, 32), Foreground, 1, 4, .5f);
         }
-        if (hitsoundingMarquee)
+        if (hitsoundingMarquee && hitsoundingMarqueeMoved)
         {
+            UpdateHitsoundingMarquee();
+            foreach (var hit in hitsoundingSoundHits)
+                if (hitsoundingMultiSelection.Contains((hit.Note.SourceId, hit.Note.EventIndex, hit.Lane))) c.Stroke(hit.Bounds, Foreground, 2, 4);
+            foreach (var hit in hitsoundingStoryboardHits)
+                if (hitsoundingStoryboardSelection.Contains(hit.Sample)) c.Stroke(hit.Bounds, Foreground, 2, 4);
             var selectionBox = HitsoundingMarqueeBounds;
             c.Fill(selectionBox, Accent, opacity: .15f); c.Stroke(selectionBox, Accent, 1);
         }
@@ -347,12 +352,12 @@ public sealed partial class EditorView
                 if (tag.Note is { } note)
                 {
                     hitsoundingSoundHits.Add((box, note, tag.Lane));
-                    if (hitsoundingMultiSelection.Contains((note.SourceId, note.EventIndex, tag.Lane))) c.Stroke(box, Foreground, 2, 4);
+                    if (!hitsoundingMarquee && hitsoundingMultiSelection.Contains((note.SourceId, note.EventIndex, tag.Lane))) c.Stroke(box, Foreground, 2, 4);
                 }
                 if (tag.Storyboard is { } sb)
                 {
                     hitsoundingStoryboardHits.Add((box, sb));
-                    if (hitsoundingStoryboardSelection.Contains(sb)) c.Stroke(box, Foreground, 2, 4);
+                    if (!hitsoundingMarquee && hitsoundingStoryboardSelection.Contains(sb)) c.Stroke(box, Foreground, 2, 4);
                 }
                 if (hitsoundingDockWorkspace.ShowHitsoundText && HitsoundingPrecise)
                 {

@@ -231,7 +231,12 @@ public sealed partial class EditorView
             else if (note is not null)
                 foreach (var hit in hitsoundingSoundHits.Where(h => h.Note.SourceId == note.SourceId && h.Note.EventIndex == note.EventIndex && h.Lane > 0))
                     hitsoundingMultiSelection.Add((hit.Note.SourceId, hit.Note.EventIndex, hit.Lane));
-            if (note is null) { hitsoundingMarquee = true; hitsoundingMarqueeStart = (x, y); hitsoundingMarqueeEnd = (x, y); }
+            if (note is null)
+            {
+                hitsoundingMarquee = true; hitsoundingMarqueeMoved = false;
+                hitsoundingMarqueeStartTime = HitsoundingStart + (x - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan;
+                hitsoundingMarqueeStart = hitsoundingMarqueeEnd = (x, y);
+            }
         }
         if (lane is >= 2 and <= 4 && (button == 2 || hitsoundingDraw && button == 0))
         {
@@ -271,6 +276,7 @@ public sealed partial class EditorView
         if (hitsoundingMarquee)
         {
             hitsoundingMarqueeEnd = (Math.Clamp(x, hitsoundingGridBounds.X, hitsoundingGridBounds.Right), Math.Clamp(y, hitsoundingGridBounds.Y, hitsoundingGridBounds.Bottom));
+            hitsoundingMarqueeMoved |= Math.Abs(x - hitsoundingMarqueeStart.X) >= ContentDragThreshold || Math.Abs(y - hitsoundingMarqueeStart.Y) >= ContentDragThreshold;
             UpdateHitsoundingMarquee(); return true;
         }
         if (!hitsoundingPainting) return false;
@@ -290,8 +296,8 @@ public sealed partial class EditorView
         if (hitsoundingMarquee)
         {
             hitsoundingMarquee = false;
-            if (!AudioPlaying && HitsoundingMarqueeBounds.Width < 3 && HitsoundingMarqueeBounds.Height < 3)
-                SeekTo(Math.Max(0, HitsoundingStart + (hitsoundingMarqueeStart.X - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan));
+            if (!AudioPlaying && !hitsoundingMarqueeMoved)
+                SeekTo(Math.Max(0, hitsoundingMarqueeStartTime));
             return true;
         }
         if (!hitsoundingPainting) return false;

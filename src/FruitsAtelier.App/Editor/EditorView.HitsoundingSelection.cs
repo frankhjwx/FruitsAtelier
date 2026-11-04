@@ -15,20 +15,50 @@ public sealed partial class EditorView
     private (float X, float Y) hitsoundingMarqueeStart, hitsoundingMarqueeEnd;
     private sealed record HitsoundingCopy(double Offset, int Lane, HitSampleSettings Sample);
     private HitsoundingCopy[] hitsoundingClipboard = [];
-    private Rect HitsoundingMarqueeBounds => new(Math.Min(hitsoundingMarqueeStart.X, hitsoundingMarqueeEnd.X),
-        Math.Min(hitsoundingMarqueeStart.Y, hitsoundingMarqueeEnd.Y), Math.Abs(hitsoundingMarqueeEnd.X - hitsoundingMarqueeStart.X),
+    private double hitsoundingMarqueeStartTime;
+    private bool hitsoundingMarqueeMoved;
+    private float HitsoundingMarqueeStartX => hitsoundingGridBounds.X
+        + (float)((hitsoundingMarqueeStartTime - HitsoundingStart) / hitsoundingSpan * hitsoundingGridBounds.Width);
+    private Rect HitsoundingMarqueeBounds => new(Math.Min(HitsoundingMarqueeStartX, hitsoundingMarqueeEnd.X),
+        Math.Min(hitsoundingMarqueeStart.Y, hitsoundingMarqueeEnd.Y), Math.Abs(hitsoundingMarqueeEnd.X - HitsoundingMarqueeStartX),
         Math.Abs(hitsoundingMarqueeEnd.Y - hitsoundingMarqueeStart.Y));
     private void UpdateHitsoundingMarquee()
     {
+        if (!hitsoundingMarqueeMoved) return;
         var r = HitsoundingMarqueeBounds;
         hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
-        if (r.Width < 3 && r.Height < 3) return;
+        double end = HitsoundingStart + (hitsoundingMarqueeEnd.X - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan;
+        double from = Math.Min(hitsoundingMarqueeStartTime, end), to = Math.Max(hitsoundingMarqueeStartTime, end);
+        float laneHeight = hitsoundingGridBounds.Height / 7;
+        float tagHeight = Math.Clamp(laneHeight - 2, 24, 36);
+        // Time-range candidates retain selected sounds after playback carries them offscreen.
+        foreach (var tags in hitsoundingTagLanes.Append(hitsoundingStoryboardTags))
+        {
+            if (tags.Length == 0) continue;
+            int lane = tags[0].Lane;
+            float y = hitsoundingGridBounds.Y + (lane + .5f) * laneHeight - tagHeight / 2;
+            if (y >= r.Bottom || y + tagHeight <= r.Y) continue;
+            for (int i = LowerTag(tags, from); i < tags.Length && tags[i].Time <= to; i++)
+            {
+                var tag = tags[i];
+                if (tag.Storyboard is { } sample) hitsoundingStoryboardSelection.Add(sample);
+                else if (lane is >= 1 and <= 4 && tag.Note is { Kind: CatchObjectKind.Fruit } note)
+                    hitsoundingMultiSelection.Add((note.SourceId, note.EventIndex, lane));
+            }
+        }
+        // Visible rectangles preserve partial-tag selection in both display modes.
         foreach (var hit in hitsoundingStoryboardHits)
-            if (hit.Bounds.Right > r.X && hit.Bounds.X < r.Right && hit.Bounds.Bottom > r.Y && hit.Bounds.Y < r.Bottom) hitsoundingStoryboardSelection.Add(hit.Sample);
+        {
+            if (Intersects(hit.Bounds, r)) hitsoundingStoryboardSelection.Add(hit.Sample);
+            else hitsoundingStoryboardSelection.Remove(hit.Sample);
+        }
         foreach (var hit in hitsoundingSoundHits)
-            if (hit.Lane is >= 1 and <= 4 && hit.Note.Kind == CatchObjectKind.Fruit
-                && hit.Bounds.Right > r.X && hit.Bounds.X < r.Right && hit.Bounds.Bottom > r.Y && hit.Bounds.Y < r.Bottom)
-                hitsoundingMultiSelection.Add((hit.Note.SourceId, hit.Note.EventIndex, hit.Lane));
+            if (hit.Lane is >= 1 and <= 4 && hit.Note.Kind == CatchObjectKind.Fruit)
+            {
+                var key = (hit.Note.SourceId, hit.Note.EventIndex, hit.Lane);
+                if (Intersects(hit.Bounds, r)) hitsoundingMultiSelection.Add(key);
+                else hitsoundingMultiSelection.Remove(key);
+            }
     }
     private void CopyHitsoundingSelection()
     {

@@ -159,7 +159,10 @@ In **Select**, only clicking a Notes object or an existing sound tag selects its
 Selecting a sound does not seek. Clicking empty timeline space clears selection and seeks
 only while paused; during playback, empty grid and ruler clicks preserve the playing position;
 clicking the lane-label column does not seek. Dragging empty grid space draws a selection
-rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Ctrl+C copies selected sounds, Ctrl+V
+rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Its starting
+time follows the scrolling timeline during playback while the opposite edge stays
+under the pointer. Selection refreshes each frame, including sounds that have scrolled
+offscreen. Ctrl+C copies selected sounds, Ctrl+V
 pastes their relative times at the playhead onto existing fruit events (within 1 ms),
 Ctrl+X cuts deletable selected sounds, and Delete removes selected additions or SB sounds. Normal remains undeletable. Each batch is one
 undo step. When source and target banks or sample indices differ, a dialog offers the
