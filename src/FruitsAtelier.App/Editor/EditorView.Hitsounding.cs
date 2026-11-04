@@ -42,6 +42,7 @@ public sealed partial class EditorView
     private int hitsoundingLibraryScroll, hitsoundingSetScroll;
     private static readonly string[] HitsoundingNames = ["hitnormal", "hitwhistle", "hitfinish", "hitclap", "slidertick"];
     private static readonly uint[] HitsoundingColors = [0xB5A7CD, 0x56B9AA, 0x51BDD2, 0xE0BD62, 0xD56EAB, 0x829DC7, 0xA57CC7];
+    private static uint HitsoundingBankColor(int bank) => bank == 2 ? 0x65BF8Au : bank == 3 ? 0xDC747Bu : 0xE0B55Fu;
     private static string BankCode(int bank) => bank == 2 ? "S" : bank == 3 ? "D" : "N";
     private static DockWorkspace CreateHitsoundingWorkspace()
     {
@@ -206,7 +207,7 @@ public sealed partial class EditorView
         {
             float y = top + lane * laneHeight;
             c.Fill(new(r.X, y, labelWidth, laneHeight), Panel);
-            c.Fill(new(r.X + 9, y + (laneHeight - 20) / 2, 3, 20), HitsoundingColors[lane], 1.5f);
+            c.Fill(new(r.X + 9, y + (laneHeight - 20) / 2, 3, 20), lane is >= 1 and <= 4 ? Muted : HitsoundingColors[lane], 1.5f);
             c.Text(L.Get("hitsounding.lane" + lane), r.X + 20, y + (laneHeight - 16) / 2 - (lane == 6 ? 6 : 0), 12, Foreground, labelWidth - 24, true);
             if (lane == 6) c.Text(L.Get("hitsounding.untriggered"), r.X + 20, y + laneHeight / 2 + 7, 8, Muted, labelWidth - 24);
             c.Line(r.X, y, r.Right, y, Grid, opacity: .55f);
@@ -254,7 +255,7 @@ public sealed partial class EditorView
                 if (hitsoundingNoteLookup.TryGetValue((pending.SourceId, pending.EventIndex), out var note))
                 {
                     float y = top + (hitsoundingPaintLane + .5f) * laneHeight - 16;
-                    c.Fill(new(X(note.TimeMs) - 9, y, 18, 32), HitsoundingColors[hitsoundingPaintLane], 4, .5f);
+                    c.Fill(new(X(note.TimeMs) - 9, y, 18, 32), HitsoundingBankColor(pending.Sample.AdditionSet), 4, .5f);
                     c.StrokeOpacity(new(X(note.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
                 }
         if (hitsoundingDraw && !hitsoundingHeadDrag && hitsoundingGridBounds.Contains(mouseX, mouseY))
@@ -263,14 +264,15 @@ public sealed partial class EditorView
             if (lane is >= 2 and <= 4 && HitsoundingPlacementNoteAt(mouseX, mouseY) is { Kind: CatchObjectKind.Fruit } candidate)
             {
                 float ghostY = top + (lane + .5f) * laneHeight - 16;
-                c.Fill(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), HitsoundingColors[lane], 4, .5f);
+                c.Fill(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), HitsoundingBankColor(nextAdditionBank > 0 ? nextAdditionBank : hitsoundingResolver!.Describe(candidate).AdditionSet), 4, .5f);
                 c.StrokeOpacity(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), Foreground, 1, 4, .5f);
             }
         }
         if (hitsoundingMoveActive && hitsoundingMoveSource is { } moving && hitsoundingMoveTarget is { } target)
         {
             float y = top + (moving.Lane + .5f) * laneHeight - 16;
-            c.Fill(new(X(target.TimeMs) - 9, y, 18, 32), HitsoundingColors[moving.Lane], 4, .5f);
+            var source = hitsoundingNoteLookup[(moving.Id, moving.Event)];
+            c.Fill(new(X(target.TimeMs) - 9, y, 18, 32), HitsoundingBankColor(hitsoundingResolver!.Describe(source).AdditionSet), 4, .5f);
             c.StrokeOpacity(new(X(target.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
         }
         if (hitsoundingStoryboardMove is not null && hitsoundingStoryboardMoved)
@@ -324,16 +326,17 @@ public sealed partial class EditorView
                     if (duration > 0 && to < start) continue;
                     box = new(x, y, duration > 0 ? Math.Max(1, X(to) - x) : HitsoundingTagWidth, h);
                 }
+                uint color = tag.Lane is >= 1 and <= 4 ? HitsoundingBankColor(tag.Sounds[0].SampleSet) : HitsoundingColors[tag.Lane];
                 float flash = HitsoundingFlash(tag.Time);
                 if (flash > 0)
                 {
-                    c.Fill(new(box.X - 5, box.Y - 5, box.Width + 10, box.Height + 10), HitsoundingColors[tag.Lane], 8, flash * .35f);
-                    c.Fill(new(box.X - 2, box.Y - 2, box.Width + 4, box.Height + 4), HitsoundingColors[tag.Lane], 6, flash * .6f);
+                    c.Fill(new(box.X - 5, box.Y - 5, box.Width + 10, box.Height + 10), color, 8, flash * .35f);
+                    c.Fill(new(box.X - 2, box.Y - 2, box.Width + 4, box.Height + 4), color, 6, flash * .6f);
                 }
                 c.Fill(box, Panel, 4);
-                c.Fill(box, HitsoundingColors[tag.Lane], 4, HitsoundingPrecise ? .4f : .6f);
+                c.Fill(box, color, 4, HitsoundingPrecise ? .4f : .6f);
                 if (flash > 0) c.Fill(box, 0xFFFFFF, 4, flash * .65f);
-                c.Stroke(box, HitsoundingColors[tag.Lane], radius: Math.Min(4, box.Width / 3));
+                c.Stroke(box, color, radius: Math.Min(4, box.Width / 3));
                 if (flash > 0) c.StrokeOpacity(box, 0xFFFFFF, 2, Math.Min(4, box.Width / 3), flash);
                 if (tag.Note is { } note)
                 {
@@ -360,10 +363,10 @@ public sealed partial class EditorView
                     {
                         double t = (px - x) / g.Width * hitsoundingSpan;
                         float peak = Math.Clamp(wave.Peak(t, t + step / g.Width * hitsoundingSpan) / maximum, 0, 1) * 7;
-                        c.Line(px, box.Bottom - 9 - peak, px, box.Bottom - 9 + peak, HitsoundingColors[tag.Lane], opacity: .9f);
+                        c.Line(px, box.Bottom - 9 - peak, px, box.Bottom - 9 + peak, color, opacity: .9f);
                     }
                 }
-                c.Line(x, box.Bottom, x, box.Bottom + 4, HitsoundingColors[tag.Lane], tag.Lane == 5 ? 2 : 1);
+                c.Line(x, box.Bottom, x, box.Bottom + 4, color, tag.Lane == 5 ? 2 : 1);
             }
         }
     }

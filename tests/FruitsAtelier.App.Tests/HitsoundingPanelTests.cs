@@ -87,12 +87,12 @@ internal static class HitsoundingPanelTests
         ui.View.PointerDown(startX, whistleY, 0, false, false);
         ui.View.PointerMove(finishX, whistleY, false, false); ui.Paint();
         Check(baseline.ContentEquals(ui.View.Document), "A paint stroke previews without rebuilding committed content");
-        Check(ui.Canvas.PaintCalls.Any(p => p.Color == 0x51BDD2 && p.FillBounds is not null && p.Opacity == .5f), "Draw previews use half opacity");
+        Check(ui.Canvas.PaintCalls.Any(p => p.Color == 0x65BF8A && p.FillBounds is not null && p.Opacity == .5f), "Draw previews use half opacity");
         ui.View.PointerUp(finishX, whistleY, 0); ui.Paint();
         Check(ui.View.Document.HitsoundOverrides.Count == 2, "A paint stroke covers crossed notes");
         ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "One undo reverses the complete paint stroke");
         ui.Click(startX, whistleY); ui.Paint();
-        var whistle = ui.Canvas.Outlines.First(o => o.Color == 0x51BDD2).Bounds;
+        var whistle = LaneBlocks(ui, 2).First();
         ui.View.PointerDown(whistle.X + whistle.Width / 2, whistle.Y + 10, 2, false, false);
         ui.View.PointerUp(whistle.X + whistle.Width / 2, whistle.Y + 10, 2); ui.Paint();
         Check(ui.View.Document.HitsoundOverrides.All(s => (s.Sample.Additions & 2) == 0), "Right click deletes only the clicked addition");
@@ -121,7 +121,7 @@ internal static class HitsoundingPanelTests
         PlaybackLineTests.Run();
         Console.WriteLine("PASS Timing Helper drafts, event editing, paint undo, exact selection, playback feedback and play-line clamps");
 
-        FruitsAtelier.App.Rendering.Rect[] NormalBlocks() => ui.Canvas.Outlines.Where(o => o.Color == 0x56B9AA).Select(o => o.Bounds).OrderBy(b => b.X).ToArray();
+        FruitsAtelier.App.Rendering.Rect[] NormalBlocks() => LaneBlocks(ui, 1);
         float LaneY(int lane) { var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100); return label.Y + 8; }
 
     }
@@ -147,8 +147,8 @@ internal static class HitsoundingPanelTests
         ui.Click(interval.X + 15, interval.Y + 10);
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.selectedTiming")) && ui.Canvas.Texts.Count(t => t.Value == L.Get("hitsounding.applyExisting")) == 1,
             "Clicking a timing interval selects its own point");
-        var whistles = ui.Canvas.Outlines.Where(o => o.Color == 0x51BDD2).Select(o => o.Bounds).OrderBy(b => b.X).ToArray();
-        var finishes = ui.Canvas.Outlines.Where(o => o.Color == 0xE0BD62).Select(o => o.Bounds).OrderBy(b => b.X).ToArray();
+        var whistles = LaneBlocks(ui, 2);
+        var finishes = LaneBlocks(ui, 3);
         ui.View.PointerDown(whistles[0].X - 4, whistles[0].Y - 4, 0, false, false);
         ui.View.PointerMove(whistles[1].Right + 4, finishes[1].Bottom + 4, false, false);
         ui.View.PointerUp(whistles[1].Right + 4, finishes[1].Bottom + 4, 0); ui.Paint();
@@ -179,11 +179,11 @@ internal static class HitsoundingPanelTests
         var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
         ui.View.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.5f, 1000).ToArray(), 1));
         ui.ClickText(L.Get("hitsounding.precise")); ui.Paint();
-        var whistles = ui.Canvas.Outlines.Where(o => o.Color == 0x51BDD2).Select(o => o.Bounds).OrderBy(r => r.X).ToArray();
+        var whistles = LaneBlocks(ui, 2);
         Check(whistles.Length == 3 && Math.Abs(whistles[0].Width - whistles[1].Width * 4) < .1, "1000 ms whistle ignores intervening notes, while a whistle 250 ms later clamps its predecessor");
         Check(Math.Abs(whistles[1].Right - whistles[2].X) < .1, "Precise length clamps to the next occurrence on the same lane");
         ui.View.UpdateTransport(1500, 6000, true, false, false, null, null); ui.Paint();
-        Check(ui.Canvas.Outlines.Count(o => o.Color == 0x51BDD2) == 3, "An offscreen-start whistle remains visible across intervening Normal events");
+        Check(LaneBlocks(ui, 2).Length == 3, "An offscreen-start whistle remains visible across intervening Normal events");
 
         var movingMap = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
         movingMap.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1 });
@@ -198,15 +198,15 @@ internal static class HitsoundingPanelTests
         var changes = ui.View.Document.HitsoundOverrides;
         Check(changes.Single(h => h.SourceId == movingMap.Fruits[0].Id).Sample.Additions == 4 && changes.Single(h => h.SourceId == movingMap.Fruits[1].Id).Sample is { Additions: 2, Index: 2, AdditionSet: 3 }, "Move transfers only the chosen addition and can keep target samplesets");
         ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Move has one undo step");
-        var normal = ui.Canvas.Outlines.Where(o => o.Color == 0x56B9AA).Select(o => o.Bounds).OrderBy(r => r.X).ToArray();
+        var normal = LaneBlocks(ui, 1);
         ui.View.PointerDown(normal[0].X + normal[0].Width / 2, normal[0].Y + 10, 0, false, false);
         ui.View.PointerMove(normal[1].X, normal[0].Y + 10, false, false); ui.View.PointerUp(normal[1].X, normal[0].Y + 10, 0); ui.Paint();
         Check(baseline.ContentEquals(ui.View.Document), "Normal cannot be moved by dragging");
         Console.WriteLine("PASS Per-lane Precise HS length, offscreen tails and undoable sound dragging");
         void Drag()
         {
-            var source = ui.Canvas.Outlines.First(o => o.Color == 0x51BDD2).Bounds;
-            var destination = ui.Canvas.Outlines.Where(o => o.Color == 0x56B9AA).Select(o => o.Bounds).OrderBy(r => r.X).Last();
+            var source = LaneBlocks(ui, 2).First();
+            var destination = LaneBlocks(ui, 1).Last();
             float x = source.X + source.Width / 2, y = source.Y + source.Height / 2, targetX = destination.X + destination.Width / 2;
             ui.View.PointerDown(x, y, 0, false, false); ui.View.PointerMove(targetX, y, false, false); ui.Paint();
             Check(baseline.ContentEquals(ui.View.Document), "Drag preview does not modify content");
@@ -235,7 +235,7 @@ internal static class HitsoundingPanelTests
         Check(ui.Canvas.Lines.Any(l => l.Color == 0x66AAFF && Math.Abs(l.Y2 - l.Y1 - 5) < .01), "Quarter subdivisions use short blue ticks");
         Check(ui.Canvas.Lines.Any(l => l.Color == 0xFF6688 && Math.Abs(l.Y2 - l.Y1 - 9) < .01), "Half beats use medium red ticks");
         Check(ui.Canvas.Fills.Any(f => f.Color == 0x829DC7), "Actual slider ticks have audio blocks");
-        var blocks = ui.Canvas.Outlines.Where(f => f.Color == 0x56B9AA).Select(f => f.Bounds).OrderBy(r => r.X).ToArray();
+        var blocks = LaneBlocks(ui, 1);
         var tagTexts = ui.Canvas.Texts.Where(t => t.X >= blocks[0].X && t.X < blocks[0].Right && t.Y >= blocks[0].Y && t.Y < blocks[0].Bottom).ToArray();
         Check(tagTexts.Length == 1 && tagTexts[0].Value == "S", "Note based displays only the centered bank letter");
         Check(blocks.Length >= 2 && blocks.All(b => b.Width <= EditorView.HitsoundingTagWidth), "Sound tags retain the preferred width or shrink to their neighbours");
@@ -243,7 +243,7 @@ internal static class HitsoundingPanelTests
         Check(ui.Canvas.Texts.Any(t => t.Value == "1" && t.Y > 218), "Notes reuse numbered mapping timeline markers");
         float anchorX = blocks[0].X + blocks[0].Width / 2, anchorY = blocks[0].Y + 5;
         ui.View.Wheel(anchorX, anchorY, 120, false, false, true); ui.Paint();
-        var zoomed = ui.Canvas.Outlines.Where(f => f.Color == 0x56B9AA).Select(f => f.Bounds).OrderBy(r => r.X).ToArray();
+        var zoomed = LaneBlocks(ui, 1);
         Check(Math.Abs(zoomed[0].X + zoomed[0].Width / 2 - blocks[0].X - blocks[0].Width / 2) < .1 && zoomed.All(b => b.Width <= EditorView.HitsoundingTagWidth), "Alt-wheel keeps the hovered time and fixed tag width");
         Check(zoomed[1].X - zoomed[0].X > blocks[1].X - blocks[0].X, "Alt-wheel expands temporal spacing");
         Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Zoom leaves content and history intact");
@@ -254,15 +254,15 @@ internal static class HitsoundingPanelTests
         var conversion = ui.View.Conversion;
         ui.View.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.001f, 400).ToArray(), 1));
         ui.ClickText(L.Get("hitsounding.precise"));
-        var precise = ui.Canvas.Outlines.Where(f => f.Color == 0x56B9AA).Select(f => f.Bounds).OrderBy(r => r.X).ToArray();
+        var precise = LaneBlocks(ui, 1);
         Check(Math.Abs(precise[0].Right - precise[1].X) < .1, "Precise HS uses decoded length and the next Normal boundary");
-        Check(ui.Canvas.Lines.Any(l => l.Color == 0x56B9AA && l.X1 >= precise[0].X && l.X1 < precise[0].Right
+        Check(ui.Canvas.Lines.Any(l => l.Color == 0x65BF8A && l.X1 >= precise[0].X && l.X1 < precise[0].Right
             && l.Y1 > precise[0].Y && l.Y2 < precise[0].Bottom && l.Y2 - l.Y1 > 10), "Quiet waveforms normalize inside narrow precise tags");
         Check(ui.View.CaptureDockLayouts().Hitsounding!.PreciseHitsounds, "Display mode is captured in the Hitsounding layout");
         ui.ClickText(L.Get("hitsounding.noteBased"));
         Check(ReferenceEquals(conversion, ui.View.Conversion) && !ui.View.IsDirty, "Display modes reuse conversion without content history");
         ui.View.Wheel(anchorX, anchorY, -600, false, false, true); ui.Paint();
-        var dense = ui.Canvas.Outlines.Where(f => f.Color == 0x56B9AA).Select(f => f.Bounds).OrderBy(r => r.X).ToArray();
+        var dense = LaneBlocks(ui, 1);
         Check(dense.Any(b => b.Width < EditorView.HitsoundingTagWidth), "Dense tags shrink");
         Check(dense.Zip(dense.Skip(1)).All(pair => pair.First.Right <= pair.Second.X + .01f), "Dense note-based tags never overlap");
         ui.View.Wheel(anchorX, anchorY, 600, false, false, true); ui.Paint();
@@ -423,6 +423,13 @@ internal static class HitsoundingPanelTests
             input.Sort(); render.Sort(); memory.Sort();
             Console.WriteLine($"{mode}: pointer p95={input[94]:F4}ms; render p50={render[49]:F3}ms p95={render[94]:F3}ms; allocation p50={memory[49]}B (recording canvas, native GPU excluded)");
         }
+    }
+    private static FruitsAtelier.App.Rendering.Rect[] LaneBlocks(Ui ui, int lane)
+    {
+        var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100);
+        return ui.Canvas.Outlines.Where(o => o.Color is 0x65BF8A or 0xE0B55F or 0xDC747B
+            && o.Bounds.Y <= label.Y + 8 && o.Bounds.Bottom > label.Y + 8)
+            .Select(o => o.Bounds).OrderBy(b => b.X).ToArray();
     }
     private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }
