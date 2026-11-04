@@ -142,10 +142,10 @@ Object sounds end visually at the next occurrence in the same sound lane when th
 sample extends past it; intervening notes and sounds in other lanes do not truncate them;
 storyboard samples use the next unconditional sample as their visual boundary.
 Decoding is asynchronous and its cache is bounded and retired with the difficulty.
-Normal, Whistle, Finish and Clap tags use their resolved sample bank for colour: Soft
+Normal, Whistle, Finish, Clap and SliderTick tags use their resolved sample bank for colour: Soft
 green, Normal amber, and Drum red. Borders, waveforms and playback glows share that
-colour; these four lane labels have neutral markers. Timing lines retain red/green
-colouring, while SliderTick and SB Hitsound retain their lane colours.
+colour; these five lane labels have neutral markers. Timing lines retain red/green
+colouring, while SB Hitsound retains purple.
 Note-based bank tags show only a centred S, N or D. Precise HS retains the bank and non-default index beside the waveform. Timing tags show bank and optional index (for example S:2) above volume; both lines
 are bold, with the bank line three points larger. A short coloured stem marks their timestamp.
 Timing tags fill the interval up to the next timing point. Their left-aligned text stays

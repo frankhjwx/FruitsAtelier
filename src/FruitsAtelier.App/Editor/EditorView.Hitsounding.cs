@@ -207,7 +207,7 @@ public sealed partial class EditorView
         {
             float y = top + lane * laneHeight;
             c.Fill(new(r.X, y, labelWidth, laneHeight), Panel);
-            c.Fill(new(r.X + 9, y + (laneHeight - 20) / 2, 3, 20), lane is >= 1 and <= 4 ? Muted : HitsoundingColors[lane], 1.5f);
+            c.Fill(new(r.X + 9, y + (laneHeight - 20) / 2, 3, 20), lane is >= 1 and <= 5 ? Muted : HitsoundingColors[lane], 1.5f);
             c.Text(L.Get("hitsounding.lane" + lane), r.X + 20, y + (laneHeight - 16) / 2 - (lane == 6 ? 6 : 0), 12, Foreground, labelWidth - 24, true);
             if (lane == 6) c.Text(L.Get("hitsounding.untriggered"), r.X + 20, y + laneHeight / 2 + 7, 8, Muted, labelWidth - 24);
             c.Line(r.X, y, r.Right, y, Grid, opacity: .55f);
@@ -326,7 +326,7 @@ public sealed partial class EditorView
                     if (duration > 0 && to < start) continue;
                     box = new(x, y, duration > 0 ? Math.Max(1, X(to) - x) : HitsoundingTagWidth, h);
                 }
-                uint color = tag.Lane is >= 1 and <= 4 ? HitsoundingBankColor(tag.Sounds[0].SampleSet) : HitsoundingColors[tag.Lane];
+                uint color = tag.Lane is >= 1 and <= 5 ? HitsoundingBankColor(tag.Sounds[0].SampleSet) : HitsoundingColors[tag.Lane];
                 float flash = HitsoundingFlash(tag.Time);
                 if (flash > 0)
                 {

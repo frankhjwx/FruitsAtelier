@@ -234,7 +234,7 @@ internal static class HitsoundingPanelTests
         for (int i = 0; i < 7; i++) Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.lane" + i)), "Seven lane labels");
         Check(ui.Canvas.Lines.Any(l => l.Color == 0x66AAFF && Math.Abs(l.Y2 - l.Y1 - 5) < .01), "Quarter subdivisions use short blue ticks");
         Check(ui.Canvas.Lines.Any(l => l.Color == 0xFF6688 && Math.Abs(l.Y2 - l.Y1 - 9) < .01), "Half beats use medium red ticks");
-        Check(ui.Canvas.Fills.Any(f => f.Color == 0x829DC7), "Actual slider ticks have audio blocks");
+        Check(LaneBlocks(ui, 5).Length > 0, "Actual slider ticks have audio blocks");
         var blocks = LaneBlocks(ui, 1);
         var tagTexts = ui.Canvas.Texts.Where(t => t.X >= blocks[0].X && t.X < blocks[0].Right && t.Y >= blocks[0].Y && t.Y < blocks[0].Bottom).ToArray();
         Check(tagTexts.Length == 1 && tagTexts[0].Value == "S", "Note based displays only the centered bank letter");
