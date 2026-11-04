@@ -34,6 +34,8 @@ public sealed partial class EditorView
     public void DropLibraryFiles(IEnumerable<string> paths)
     {
         var files = paths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (HitsoundingPageVisible && !LibraryVisible && CanDropAudio && files.Any(IsHitsoundingAudio))
+        { ImportHitsoundingLibrary(files); return; }
         if (CanDropPatterns && files.Any(IsPatternArchive))
         {
             if (files.Length != 1) { ShowError(FruitsAtelier.Localization.Strings.Get("gallery.oneFile")); return; }

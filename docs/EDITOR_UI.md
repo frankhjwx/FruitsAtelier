@@ -2187,3 +2187,9 @@ slider restores authored BPM at its end. Generated red points are visible even
 with **Show SV** disabled. Their BPM/offset are derived from the slider and are
 read-only in Timing setup. Disabling the feature retains saved multipliers but
 uses the original BPM for conversion and export.
+
+## Hitsounding Panel
+
+The workspace selector opens Hitsounding alongside Mapping and Timing. Its display
+modes, seven lanes, Snap ruler, Alt-wheel navigation and unified sampleset/library
+Config dock are described in [Hitsounding workspace](HITSOUNDS.md#hitsounding-workspace).

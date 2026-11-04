@@ -5,12 +5,14 @@ public sealed class EditorDockLayouts
     public int Version { get; set; } = 1;
     public DockWorkspaceLayout? Mapping { get; set; }
     public DockWorkspaceLayout? Timing { get; set; }
+    public DockWorkspaceLayout? Hitsounding { get; set; }
 }
 
 public sealed class DockWorkspaceLayout
 {
     public DockGroupLayout? Left { get; set; }
     public DockGroupLayout? Right { get; set; }
+    public bool PreciseHitsounds { get; set; }
     public int PreviewMod { get; set; }
     public int PreviewDisplayMode { get; set; }
     public float? MovementX { get; set; }
@@ -24,4 +26,5 @@ public sealed class DockGroupLayout
     public string? Active { get; set; }
     public bool Collapsed { get; set; }
     public float Width { get; set; }
+    public float Split { get; set; } = .58f;
 }

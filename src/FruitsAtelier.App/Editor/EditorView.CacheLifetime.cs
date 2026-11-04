@@ -24,6 +24,12 @@ public sealed partial class EditorView
 
     private void ReleaseDifficultyCaches(bool preserveMedia = false)
     {
+        hitsoundingAudio.Clear();
+        hitsoundingSelected = null; hitsoundingPaint.Clear(); hitsoundingPainting = hitsoundingHeadDrag = false; hitsoundingStoryboardSource = null; hitsoundingStoryboardTags = [];
+        hitsoundingConversion = null; hitsoundingTags = []; hitsoundingNotes = []; hitsoundingMapFiles.Clear();
+        hitsoundingResolver = null; inspectorConversion = null; hitsoundingNoteLookup.Clear(); hitsoundingAudibleNotes.Clear();
+        hitsoundingMapPaths.Clear(); hitsoundingFallbackFiles.Clear();
+        hitsoundingAdditionLinks = []; hitsoundingAdditionTimes = []; hitsoundingRedPoints = []; hitsoundingGreenPoints = [];
         RetireDifficultyStoryboard(preserveMedia);
         ClearDiscussionRegions();
         difficultyMediaReusePending = preserveMedia && (!difficultyGraphicsReleasePending || difficultyMediaReusePending);

@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping, PatternGallery, Discussion, MapsetVerifier }
+    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping, PatternGallery, Discussion, MapsetVerifier, HitsoundingConfig, HitsoundingInspector }
     private sealed class DockGroup(DockPanel panel, float width)
     {
         public readonly List<DockPanel> Panels = [panel];
@@ -14,6 +14,7 @@ public sealed partial class EditorView
         public float Width = width;
         public float TabScroll, TabViewportWidth, TabScrollMaximum;
         public DockPanel? Revealed;
+        public float Split = .58f;
     }
     private sealed class DockWorkspace
     {
@@ -24,10 +25,12 @@ public sealed partial class EditorView
         public (float X, float Y)? MovementPosition;
         public float MovementScale = 1;
         public int PreviewMod, PreviewDisplayMode;
+        public bool PreciseHitsounds;
     }
     // Each workspace owns its layout so switching views cannot overwrite the other view's groups.
     private readonly DockWorkspace mappingDockWorkspace = new(), timingDockWorkspace = new();
-    private DockWorkspace DockWorkspaceState => TimingPageVisible ? timingDockWorkspace : mappingDockWorkspace;
+    private readonly DockWorkspace hitsoundingDockWorkspace = CreateHitsoundingWorkspace();
+    private DockWorkspace DockWorkspaceState => HitsoundingPageVisible ? hitsoundingDockWorkspace : TimingPageVisible ? timingDockWorkspace : mappingDockWorkspace;
     private DockGroup PanelGroup(DockPanel panel) => DockWorkspaceState.Left.Panels.Contains(panel)
         ? DockWorkspaceState.Left : DockWorkspaceState.Right;
     private bool DockContentInputAvailable => !DiscussionImageVisible && !GalleryTagsVisible && !PatternNameVisible && !ErrorVisible && !DiscardConfirmationVisible && !LibraryVisible
@@ -88,13 +91,19 @@ public sealed partial class EditorView
     }
     private static string DockTitle(DockPanel panel) => L.Get(panel switch
     {
-        DockPanel.MapsetVerifier => "mv.title", DockPanel.Discussion => "discussion.title", DockPanel.PatternGallery => "dock.gallery", DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
+        DockPanel.HitsoundingConfig => "hitsounding.config", DockPanel.HitsoundingInspector => "hitsounding.inspector", DockPanel.MapsetVerifier => "mv.title", DockPanel.Discussion => "discussion.title", DockPanel.PatternGallery => "dock.gallery", DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
         DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title", DockPanel.CollaborationMapping => "collab.title",
         DockPanel.RandomizeDroplets => "randomize.title", DockPanel.SliderInspector => "inspector.title", _ => "difficulty.curve.title"
     });
 
     private bool DockPanelExists(DockPanel panel) => DockWorkspaceState.Left.Panels.Contains(panel)
         || DockWorkspaceState.Right.Panels.Contains(panel);
+    private static bool DockPanelAllowed(DockPanel panel, bool hitsounding) => hitsounding
+        ? panel is DockPanel.HitsoundingConfig or DockPanel.HitsoundingInspector or DockPanel.SongSetup or DockPanel.Preview
+        : panel is not (DockPanel.HitsoundingConfig or DockPanel.HitsoundingInspector);
+    private IEnumerable<DockPanel> AvailableDockPanels => HitsoundingPageVisible
+        ? [DockPanel.HitsoundingConfig, DockPanel.HitsoundingInspector, DockPanel.SongSetup, DockPanel.Preview]
+        : Enum.GetValues<DockPanel>().Where(p => DockPanelAllowed(p, false));
     private void RemoveDockPanel(DockPanel panel)
     {
         if (!DockPanelExists(panel)) return;
@@ -104,7 +113,7 @@ public sealed partial class EditorView
     }
     private void AddDockPanel(DockPanel panel, bool left)
     {
-        if (TimingPageVisible || DockPanelExists(panel)) return;
+        if (TimingPageVisible || !DockPanelAllowed(panel, HitsoundingPageVisible) || DockPanelExists(panel)) return;
         var group = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
         group.Panels.Add(panel); group.Active = panel; group.Collapsed = false;
         if (panel == DockPanel.MapsetVerifier) EnsureMapsetVerifierReport();
@@ -115,6 +124,7 @@ public sealed partial class EditorView
     {
         if (TimingPageVisible) return;
         var state = DockWorkspaceState;
+        if (HitsoundingPageVisible) { ResetHitsoundingWorkspace(state); return; }
         state.Left.Panels.Clear(); state.Right.Panels.Clear();
         state.Left.Width = DifficultyCurveWidth; state.Right.Width = 360;
         AddDockPanel(DockPanel.MovementStrain, true); AddDockPanel(DockPanel.Preview, false);
@@ -143,7 +153,7 @@ public sealed partial class EditorView
         contextItems.Add(new(L.Get("dock.closeTab"), () => RemoveDockPanel(tab.Panel)));
         AddContextSeparator();
         contextItems.Add(new(L.Get("dock.panels"), () => { }, Enabled: false, Heading: true));
-        foreach (var panel in Enum.GetValues<DockPanel>())
+        foreach (var panel in AvailableDockPanels)
         {
             bool exists = DockPanelExists(panel);
             contextItems.Add(new((exists ? "✓ " : "") + DockTitle(panel), () =>
@@ -253,7 +263,11 @@ public sealed partial class EditorView
                 drawingDockContent = true;
                 try
                 {
-                    if (group.Active == DockPanel.MovementStrain)
+                    if (group.Active == DockPanel.HitsoundingConfig)
+                        DrawHitsoundingDock(c, group, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)));
+                    else if (group.Active == DockPanel.HitsoundingInspector)
+                        DrawHitsoundingInspector(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)));
+                    else if (group.Active == DockPanel.MovementStrain)
                     {
                         DifficultyCurveGraphBounds = new(bounds.X + 18, bounds.Y + 58,
                             Math.Max(0, bounds.Width - 40), Math.Max(0, bounds.Height - 78));
@@ -357,7 +371,8 @@ public sealed partial class EditorView
                     ? destination.Panels.IndexOf(before.Panel)
                     : -1;
                 if (index >= 0) destination.Panels.Insert(index, panel); else destination.Panels.Add(panel);
-                destination.Active = panel; destination.Collapsed = false;
+                destination.Active = panel;
+                destination.Collapsed = false;
             }
         }
         dockPressed = null; dockDragging = false;

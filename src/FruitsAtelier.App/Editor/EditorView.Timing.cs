@@ -129,6 +129,7 @@ public sealed partial class EditorView
         if (!CommitCollaborationField()) return;
         if (!PrepareFileOperation()) return;
         dockPressed = null; dockDragging = false;
+        HitsoundingPageVisible = false;
         TimingPageVisible = visible; panelMenuOpen = false; timingField = timingError = ""; timingTaps.Clear();
         ResetHitsounds(); timingTapHeld = false;
     }

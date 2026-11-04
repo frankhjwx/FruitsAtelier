@@ -1,0 +1,402 @@
+using FruitsAtelier.App.Rendering;
+using FruitsAtelier.Core;
+using L = FruitsAtelier.Localization.Strings;
+
+namespace FruitsAtelier.App.Editor;
+
+public sealed partial class EditorView
+{
+    public bool HitsoundingPageVisible { get; private set; }
+    private double hitsoundingSpan = 4000;
+    private double hitsoundingHeadRatio = .3;
+    internal const float HitsoundingTagWidth = 36;
+    private double HitsoundingStart => playhead - hitsoundingSpan * hitsoundingHeadRatio;
+    private readonly List<BeatGridLine> hitsoundingGrid = [];
+    private readonly List<(Rect Bounds, float Anchor, uint Color, string Bank, int Index, int Volume)> hitsoundingTimingBoxes = [];
+    private CatchConversionResult? hitsoundingConversion;
+    private HitsoundResolver? hitsoundingResolver;
+    private sealed record SoundTag(double Time, int Lane, string Label, int Index, double Next, Hitsound[] Sounds, double NeighbourDistance = double.PositiveInfinity, int Column = 0, int Columns = 1, string WidthText = "", ConvertedCatchObject? Note = null);
+    private readonly HitsoundingAudioCache hitsoundingAudio = new();
+    private bool HitsoundingPrecise => hitsoundingDockWorkspace.PreciseHitsounds;
+    private SoundTag[] hitsoundingTags = [], hitsoundingStoryboardTags = [];
+    private StoryboardScene? hitsoundingStoryboardSource;
+    private (double Time, bool Red, string Bank, int Index, int Volume)[] hitsoundingTimingLabels = [];
+    private ConvertedCatchObject[] hitsoundingNotes = [];
+    private Dictionary<(Guid, int), ConvertedCatchObject> hitsoundingNoteLookup = [];
+    private HashSet<(Guid, int)> hitsoundingAudibleNotes = [];
+    private (double Time, int First, int Last)[] hitsoundingAdditionLinks = [];
+    private double[] hitsoundingAdditionTimes = [];
+    private TimingPoint[] hitsoundingRedPoints = [], hitsoundingGreenPoints = [];
+    private Rect hitsoundingBounds, hitsoundingGridBounds;
+    private int hitsoundingBank = 2, hitsoundingIndex = 1;
+    private bool hitsoundingAllSets = true;
+    private int[] hitsoundingSets = [1];
+    private string[] hitsoundingLibraryFiles = [];
+    private string? hitsoundingLibraryRoot;
+    private string? hitsoundingDragFile;
+    private DockGroup? hitsoundingSplitDrag, hitsoundingSplitOwner;
+    private Rect hitsoundingSplitBounds, hitsoundingDockBounds, hitsoundingLibraryBounds;
+    private readonly List<(Rect Bounds, string Path)> hitsoundingFileRows = [];
+    private readonly List<(Rect Bounds, string Name)> hitsoundingSlots = [];
+    private int hitsoundingLibraryScroll, hitsoundingSetScroll;
+    private static readonly string[] HitsoundingNames = ["hitnormal", "hitwhistle", "hitfinish", "hitclap", "slidertick"];
+    private static readonly uint[] HitsoundingColors = [0xB5A7CD, 0x56B9AA, 0x51BDD2, 0xE0BD62, 0xD56EAB, 0x829DC7, 0xA57CC7];
+    private static string BankCode(int bank) => bank == 2 ? "S" : bank == 3 ? "D" : "N";
+    private static DockWorkspace CreateHitsoundingWorkspace()
+    {
+        var state = new DockWorkspace(); ResetHitsoundingWorkspace(state); return state;
+    }
+    private static void ResetHitsoundingWorkspace(DockWorkspace state)
+    {
+        state.Left.Panels.Clear(); state.Left.Panels.Add(DockPanel.HitsoundingConfig);
+        state.Left.Active = DockPanel.HitsoundingConfig;
+        state.Left.Width = 340; state.Left.Collapsed = false; state.Left.Split = .58f;
+        state.Right.Panels.Clear(); state.Right.Panels.Add(DockPanel.HitsoundingInspector);
+        state.Right.Active = DockPanel.HitsoundingInspector; state.Right.Width = 270; state.Right.Collapsed = false;
+    }
+    internal void ShowHitsoundingPage()
+    {
+        if (!CommitCollaborationField() || !PrepareFileOperation()) return;
+        CancelInteraction(); tool = Tool.Select; TimingPageVisible = false; HitsoundingPageVisible = true; panelMenuOpen = false;
+        ResetHitsounds(); RefreshHitsoundingLibrary();
+    }
+    private void RefreshHitsoundingSnapshot()
+    {
+        var current = GetHitsoundConversion();
+        if (ReferenceEquals(current, hitsoundingConversion)) return;
+        hitsoundingConversion = current;
+        var resolver = hitsoundingResolver = new HitsoundResolver(Document, current.Objects, inspectResources: false);
+        var tags = new List<SoundTag>();
+        hitsoundingNotes = current.Objects.Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.Banana).ToArray();
+        hitsoundingNoteLookup = hitsoundingNotes.ToDictionary(n => (n.SourceId, n.EventIndex));
+        if (hitsoundingSelected is { } selected && !hitsoundingNoteLookup.ContainsKey((selected.Id, selected.Event))) hitsoundingSelected = null;
+        hitsoundingRedPoints = overviewTiming.Where(p => p.Uninherited).ToArray();
+        hitsoundingGreenPoints = overviewTiming.Where(p => !p.Uninherited).ToArray();
+        var noteTimes = hitsoundingNotes.Select(o => o.TimeMs).Distinct().ToArray();
+        int nextIndex = 0;
+        var sets = new SortedSet<int>(Document.TimingPoints.Select(p => Math.Max(0, p.SampleIndex))) { 0, 1 };
+        for (int i = 0; i < current.Objects.Count; i++)
+        {
+            var item = current.Objects[i];
+            while (nextIndex < noteTimes.Length && noteTimes[nextIndex] <= item.TimeMs) nextIndex++;
+            double next = nextIndex < noteTimes.Length ? noteTimes[nextIndex] : double.PositiveInfinity;
+            var settings = resolver.Describe(item); sets.Add(Math.Max(0, settings.Index));
+            foreach (var group in resolvedHitsounds[i].Where(s => s.Volume > 0).GroupBy(sound =>
+                sound.Name switch { "hitwhistle" => 2, "hitfinish" => 3, "hitclap" => 4, "slidertick" => 5, _ => 1 }))
+            {
+                string label = string.Join(" ", group.Select(sound => BankCode(sound.SampleSet)).Distinct());
+                tags.Add(new(item.TimeMs, group.Key, label, settings.Index, next, group.ToArray(), Note: item));
+            }
+        }
+        hitsoundingTags = ArrangeHitsoundingTags(tags);
+        hitsoundingAudibleNotes = tags.Where(t => t.Note is not null).Select(t => (t.Note!.SourceId, t.Note.EventIndex)).ToHashSet();
+        hitsoundingAdditionLinks = tags.Where(t => t.Lane is >= 2 and <= 4 && t.Note is not null)
+            .GroupBy(t => (t.Note!.SourceId, t.Note.EventIndex)).Where(g => g.Count() > 1)
+            .Select(g => (g.First().Time, g.Min(t => t.Lane), g.Max(t => t.Lane))).OrderBy(g => g.Time).ToArray();
+        hitsoundingAdditionTimes = hitsoundingAdditionLinks.Select(l => l.Time).ToArray();
+        hitsoundingTimingLabels = overviewTiming.Select(point =>
+        {
+            var sample = resolver.Describe(new ConvertedCatchObject(Guid.Empty, 0, CatchObjectKind.Fruit, point.TimeMs - 5, 0, 0, 0, 0, true));
+            return (point.TimeMs, point.Uninherited, BankCode(sample.NormalSet), sample.Index, sample.Volume);
+        }).ToArray();
+        hitsoundingFallbackFiles.Clear();
+        foreach (string folder in HitsoundSkinFolders)
+            if (Directory.Exists(folder))
+                foreach (string path in Directory.EnumerateFiles(folder, "*", new EnumerationOptions { AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = true })
+                    .Take(20000).OrderBy(p => Path.GetExtension(p).ToLowerInvariant() switch { ".wav" => 0, ".ogg" => 1, _ => 2 }))
+                    if (HitsoundResolver.IsSkinSample(Path.GetFileName(path))) hitsoundingFallbackFiles.TryAdd(Path.GetFileNameWithoutExtension(path), path);
+        hitsoundingMapFiles.Clear();
+        string? root = Path.GetDirectoryName(Document.SourcePath ?? Document.AudioPath);
+        if (root is not null && Directory.Exists(root))
+            foreach (string path in Directory.EnumerateFiles(root).Take(20000).OrderBy(p => Path.GetExtension(p).ToLowerInvariant() switch { ".wav" => 0, ".ogg" => 1, _ => 2 }))
+            {
+                if (IsHitsoundingAudio(path)) hitsoundingMapFiles.TryAdd(Path.GetFileNameWithoutExtension(path), path);
+                var match = System.Text.RegularExpressions.Regex.Match(Path.GetFileNameWithoutExtension(path),
+                    @"^(normal|soft|drum)-(hitnormal|hitwhistle|hitfinish|hitclap|slidertick)(\d*)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (match.Success && (match.Groups[3].Value.Length == 0 || int.TryParse(match.Groups[3].Value, out _)))
+                    sets.Add(match.Groups[3].Value.Length == 0 ? 1 : int.Parse(match.Groups[3].Value));
+            }
+        hitsoundingSets = sets.ToArray();
+        hitsoundingMapPaths.Clear(); hitsoundingMapPaths.UnionWith(hitsoundingMapFiles.Values);
+    }
+    private void ZoomHitsounding(double factor, float anchorX)
+    {
+        double fraction = Math.Clamp((anchorX - hitsoundingGridBounds.X) / Math.Max(1, hitsoundingGridBounds.Width), 0, 1);
+        double anchorTime = HitsoundingStart + fraction * hitsoundingSpan;
+        hitsoundingSpan = Math.Clamp(hitsoundingSpan * factor, 250, 120000);
+        double start = anchorTime - fraction * hitsoundingSpan;
+        hitsoundingHeadRatio = Math.Clamp((playhead - start) / hitsoundingSpan, .05, .95);
+    }
+    private void DrawHitsoundingPage(ICanvas c)
+    {
+        RefreshHitsoundingSnapshot();
+        hitsoundingSoundHits.Clear();
+        hitsoundingFileRows.Clear(); hitsoundingSlots.Clear();
+        hitsoundingSplitBounds = hitsoundingLibraryBounds = hitsoundingDockBounds = hitsoundingSampleBounds = hitsoundingInspectorBounds = default;
+        objectTimeline = default; zoomSlider = default;
+        c.Fill(CanvasToolbarBounds, Panel);
+        float toolsX = CanvasToolbarBounds.X + 8;
+        Button(c, new(toolsX, 88, 70, 28), L.Get("hitsounding.select"), () => hitsoundingDraw = false, !hitsoundingDraw, fontSize: 11);
+        Button(c, new(toolsX + 74, 88, 70, 28), L.Get("hitsounding.draw"), () => hitsoundingDraw = true, hitsoundingDraw, fontSize: 11);
+        Button(c, new(toolsX + 160, 88, 88, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
+        Button(c, new(toolsX + 252, 88, 88, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
+        snapSlider = new(CanvasToolbarBounds.Right - 118, 88, 106, 29);
+        c.Text(L.Get("ui.snap"), snapSlider.X - 40, 97, 11, Muted, 40);
+        float snapStart = snapSlider.X + 7, snapEnd = snapSlider.Right - 31;
+        c.Line(snapStart, 103, snapEnd, 103, Accent, 2);
+        c.Circle(snapStart + Array.IndexOf(SnapDivisors, divisor) / (float)(SnapDivisors.Length - 1) * (snapEnd - snapStart), 103, 6, Accent);
+        c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, 97, 10, Foreground, 40);
+        float right = DockWorkspaceState.Right.Collapsed || DockWorkspaceState.Right.Panels.Count == 0 ? width : rightPanel.X;
+        hitsoundingBounds = new(leftPanel.Right + 8, 130, Math.Max(40, right - leftPanel.Right - 16), Math.Max(100, TransportTop - 138));
+        var r = hitsoundingBounds;
+        float labelWidth = Math.Min(106, r.Width * .25f);
+        double start = HitsoundingStart, end = start + hitsoundingSpan;
+        float gridX = r.X + labelWidth, gridWidth = Math.Max(10, r.Width - labelWidth);
+        float X(double time) => gridX + (float)((time - start) / hitsoundingSpan * gridWidth);
+        hitsoundingTimingBoxes.Clear();
+        int timingLow = 0, timingHigh = hitsoundingTimingLabels.Length;
+        while (timingLow < timingHigh) { int mid = (timingLow + timingHigh) / 2; if (hitsoundingTimingLabels[mid].Time < start) timingLow = mid + 1; else timingHigh = mid; }
+        for (int i = Math.Max(0, timingLow - 1); i < hitsoundingTimingLabels.Length && hitsoundingTimingLabels[i].Time <= end; i++)
+        {
+            var point = hitsoundingTimingLabels[i];
+            double until = i + 1 < hitsoundingTimingLabels.Length ? hitsoundingTimingLabels[i + 1].Time : Math.Max(end, TimelineDurationMs);
+            if (until <= start || until <= point.Time) continue;
+            float anchor = X(point.Time), left = Math.Max(gridX, anchor), rightEdge = Math.Min(gridX + gridWidth, X(until));
+            hitsoundingTimingBoxes.Add((new(left, r.Y + 53, Math.Max(0, rightEdge - left), 36), anchor,
+                point.Red ? 0xE77785u : 0x72C686u, point.Bank, point.Index, point.Volume));
+        }
+        float top = r.Y + 122;
+        hitsoundingGridBounds = new(gridX, top, gridWidth, Math.Max(7, r.Bottom - top));
+        var g = hitsoundingGridBounds; float laneHeight = g.Height / 7;
+        c.Fill(r, Chrome(0x191E26, Background), 6); c.StrokeOpacity(r, Grid, 1, 6, .65f); c.Clip(r);
+        for (int lane = 0; lane < 7; lane++)
+            c.Fill(new(g.X, top + lane * laneHeight, g.Width, laneHeight), Panel, opacity: lane % 2 == 0 ? .5f : .22f);
+        DrawSampleBankSelectors(c, r.Y + 10);
+        renderedTiming!.FillGrid(start, end, divisor, hitsoundingGrid);
+        float lastNumber = -1000;
+        foreach (var tick in hitsoundingGrid)
+        {
+            float x = X(tick.TimeMs); var style = GridStyle(tick);
+            c.Line(x, r.Y + 46 - style.Height, x, r.Y + 46, style.Color, style.Width);
+            c.Line(x, g.Y, x, g.Bottom, style.Color, 1, tick.IsBeat ? .15f : .045f);
+            if (tick.IsBeat && x > lastNumber + 24)
+            {
+                var timing = renderedTiming.At(tick.TimeMs);
+                int beat = (int)Math.Round((tick.TimeMs - timing.OffsetMs) / timing.BeatLengthMs);
+                c.Text(((beat % timing.Meter + timing.Meter) % timing.Meter + 1).ToString(), x + 3, r.Y + 16, 10, Foreground, 28);
+                lastNumber = x;
+            }
+            if (tick.IsMeasure) c.Text(Time(tick.TimeMs), x + 3, r.Y, 10, Muted, 82);
+        }
+        c.Clip(new(g.X, r.Y, g.Width, r.Height));
+        foreach (var tag in hitsoundingTimingBoxes)
+        {
+            c.Line(tag.Anchor, g.Y, tag.Anchor, g.Bottom, tag.Color, 1, .45f);
+            c.Line(tag.Anchor, tag.Bounds.Bottom + 5, tag.Anchor, g.Y - 1, tag.Color, 3, .95f);
+            c.Fill(tag.Bounds, Panel, 6);
+            c.Fill(tag.Bounds, tag.Color, 6, .35f);
+            c.StrokeOpacity(tag.Bounds, tag.Color, 1, 6, .9f);
+            string bankLabel = tag.Index > 0 ? $"{tag.Bank}:{tag.Index}" : tag.Bank;
+            string volumeLabel = $"{tag.Volume}%";
+            float bankWidth = c.MeasureText(bankLabel, 13, true), volumeWidth = c.MeasureText(volumeLabel, 10, true);
+            c.Clip(tag.Bounds);
+            c.Text(bankLabel, tag.Bounds.X + 6, tag.Bounds.Y + 2, 13, 0xFFFFFF, bankWidth + 1, true);
+            c.Text(volumeLabel, tag.Bounds.X + 6, tag.Bounds.Y + 20, 10, 0xFFFFFF, volumeWidth + 1, true);
+            c.Unclip();
+        }
+        c.Unclip();
+        for (int lane = 0; lane < 7; lane++)
+        {
+            float y = top + lane * laneHeight;
+            c.Fill(new(r.X, y, labelWidth, laneHeight), Panel);
+            c.Fill(new(r.X + 9, y + (laneHeight - 20) / 2, 3, 20), HitsoundingColors[lane], 1.5f);
+            c.Text(L.Get("hitsounding.lane" + lane), r.X + 20, y + (laneHeight - 16) / 2 - (lane == 6 ? 6 : 0), 12, Foreground, labelWidth - 24, true);
+            if (lane == 6) c.Text(L.Get("hitsounding.untriggered"), r.X + 20, y + laneHeight / 2 + 7, 8, Muted, labelWidth - 24);
+            c.Line(r.X, y, r.Right, y, Grid, opacity: .55f);
+        }
+        c.Clip(g);
+        float notesHeight = Math.Min(64, laneHeight);
+        var notesViewport = new Rect(g.X, top + (laneHeight - notesHeight) / 2, g.Width, notesHeight);
+        c.Clip(notesViewport);
+        DrawTimelineObjects(c, notesViewport, start, g.Width / hitsoundingSpan, includePlacement: false);
+        int first = FirstAfter(hitsoundingNotes, start - .001);
+        for (int i = first; i < hitsoundingNotes.Length && hitsoundingNotes[i].TimeMs <= end; i++)
+        {
+            var item = hitsoundingNotes[i];
+            float x = X(item.TimeMs), y = notesViewport.Y + 27 * notesHeight / 64;
+            if (item.Kind == CatchObjectKind.Droplet) c.Circle(x, y, Math.Max(2, 4 * notesHeight / 64), Foreground, false, 1.5f);
+            if (item.Kind == CatchObjectKind.Droplet)
+                hitsoundingSoundHits.Add((new(x - 5, y - 5, 10, 10), item, 0));
+            float radius = (item.Kind == CatchObjectKind.Droplet ? 5 : 19) * notesHeight / 64;
+            if (hitsoundingSelected == (item.SourceId, item.EventIndex)) c.Circle(x, y, radius + 3, Accent, false, 2);
+            float flash = hitsoundingAudibleNotes.Contains((item.SourceId, item.EventIndex)) ? HitsoundingFlash(item.TimeMs) : 0;
+            if (flash > 0)
+            {
+                c.Circle(x, y, radius + 7, Foreground, false, 6, flash * .16f);
+                c.Circle(x, y, radius + 2, Foreground, false, 2, flash);
+            }
+        }
+        c.Unclip();
+        if (!ReferenceEquals(hitsoundingStoryboardSource, storyboardScene))
+        {
+            hitsoundingStoryboardSource = storyboardScene;
+            hitsoundingStoryboardTags = storyboardScene?.Samples
+                .Where(s => s.Layer is not (StoryboardLayer.Fail or StoryboardLayer.Pass) && s.Volume > 0)
+                .OrderBy(s => s.TimeMs).Select(s => new SoundTag(s.TimeMs, 6, Path.GetFileNameWithoutExtension(s.Path), 0, double.PositiveInfinity, [new(CatchObjectKind.Fruit, s.Path, s.Volume / 100f, "storyboard")])).ToArray() ?? [];
+            double next = double.PositiveInfinity;
+            for (int i = hitsoundingStoryboardTags.Length - 1; i >= 0; i--)
+            {
+                if (i + 1 < hitsoundingStoryboardTags.Length && hitsoundingStoryboardTags[i + 1].Time > hitsoundingStoryboardTags[i].Time)
+                    next = hitsoundingStoryboardTags[i + 1].Time;
+                hitsoundingStoryboardTags[i] = hitsoundingStoryboardTags[i] with { Next = next };
+            }
+            hitsoundingStoryboardTags = ArrangeHitsoundingTags(hitsoundingStoryboardTags);
+        }
+        for (int i = LowerBound(hitsoundingAdditionTimes, start); i < hitsoundingAdditionLinks.Length && hitsoundingAdditionLinks[i].Time <= end; i++)
+        {
+            var link = hitsoundingAdditionLinks[i];
+            c.Line(X(link.Time), top + (link.First + .5f) * laneHeight, X(link.Time), top + (link.Last + .5f) * laneHeight, Muted, 1, .6f);
+        }
+        DrawTags(hitsoundingTags); DrawTags(hitsoundingStoryboardTags);
+        if (!hitsoundingErase)
+            foreach (var pending in hitsoundingPaint.Values)
+                if (hitsoundingNoteLookup.TryGetValue((pending.SourceId, pending.EventIndex), out var note))
+                {
+                    float y = top + (hitsoundingPaintLane + .5f) * laneHeight - 16;
+                    c.Fill(new(X(note.TimeMs) - 9, y, 18, 32), HitsoundingColors[hitsoundingPaintLane], 4, .5f);
+                    c.StrokeOpacity(new(X(note.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
+                }
+        if (hitsoundingDraw && !hitsoundingHeadDrag && hitsoundingGridBounds.Contains(mouseX, mouseY))
+        {
+            int lane = (int)((mouseY - top) / laneHeight);
+            if (lane is >= 2 and <= 4 && HitsoundingPlacementNoteAt(mouseX, mouseY) is { Kind: CatchObjectKind.Fruit } candidate)
+            {
+                float ghostY = top + (lane + .5f) * laneHeight - 16;
+                c.Fill(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), HitsoundingColors[lane], 4, .5f);
+                c.StrokeOpacity(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), Foreground, 1, 4, .5f);
+            }
+        }
+        float head = X(playhead); c.Line(head, r.Y, head, g.Bottom, HitsoundingHeadHovered(mouseX, mouseY) || hitsoundingHeadDrag ? 0xFFF0A6u : 0xE9CA64u, 2);
+        c.Unclip(); c.Unclip();
+        void DrawTags(SoundTag[] tags)
+        {
+            double margin = HitsoundingTagWidth / 2 / g.Width * hitsoundingSpan;
+            int firstTag = LowerTag(tags, start - margin);
+            if (HitsoundingPrecise)
+            {
+                while (firstTag > 0 && tags[firstTag - 1].Next >= start) firstTag--;
+            }
+            for (int i = firstTag; i < tags.Length && tags[i].Time <= end + margin; i++)
+            {
+                var tag = tags[i]; float x = X(tag.Time);
+                if (tag.Lane is >= 2 and <= 4 && tag.Note is { } eventNote
+                    && hitsoundingPaint.TryGetValue((eventNote.SourceId, eventNote.EventIndex), out var pending)
+                    && (pending.Sample.Additions & (1 << (tag.Lane - 1))) == 0) continue;
+                float h = Math.Clamp(laneHeight - 2, 24, 36), y = top + tag.Lane * laneHeight + (laneHeight - h) / 2;
+                double neighbourPixels = tag.NeighbourDistance / hitsoundingSpan * g.Width;
+                float preferredWidth = Math.Clamp(Math.Max(c.MeasureText("N", 11, true), c.MeasureText(tag.WidthText, 11, true)) + 8, 18, HitsoundingTagWidth);
+                double clusterWidth = Math.Min(preferredWidth * tag.Columns,
+                    neighbourPixels > 4 ? neighbourPixels - 4 : neighbourPixels * .75);
+                float slotWidth = (float)(clusterWidth / tag.Columns);
+                float tagWidth = Math.Max(0, slotWidth - (tag.Columns > 1 ? Math.Min(2, slotWidth * .1f) : 0));
+                float center = x + (tag.Column + .5f - tag.Columns / 2f) * slotWidth;
+                var box = new Rect(center - tagWidth / 2, y, tagWidth, h);
+                AudioWaveform? wave = null;
+                if (HitsoundingPrecise)
+                {
+                    double duration = 0;
+                    foreach (var sound in tag.Sounds)
+                    {
+                        var candidate = hitsoundingAudio.Get(sound, RequestWaveform);
+                        if (candidate is not null && (wave is null || candidate.DurationMs > wave.DurationMs)) wave = candidate;
+                        duration = Math.Max(duration, hitsoundingAudio.Duration(sound));
+                    }
+                    double to = Math.Min(tag.Time + duration, tag.Next);
+                    if (duration > 0 && to < start) continue;
+                    box = new(x, y, duration > 0 ? Math.Max(1, X(to) - x) : HitsoundingTagWidth, h);
+                }
+                float flash = HitsoundingFlash(tag.Time);
+                if (flash > 0)
+                {
+                    c.Fill(new(box.X - 5, box.Y - 5, box.Width + 10, box.Height + 10), HitsoundingColors[tag.Lane], 8, flash * .15f);
+                    c.Fill(new(box.X - 2, box.Y - 2, box.Width + 4, box.Height + 4), HitsoundingColors[tag.Lane], 6, flash * .3f);
+                }
+                c.Fill(box, Panel, 4);
+                c.Fill(box, HitsoundingColors[tag.Lane], 4, HitsoundingPrecise ? .4f : .6f);
+                if (flash > 0) c.Fill(box, 0xFFFFFF, 4, flash * .32f);
+                c.Stroke(box, HitsoundingColors[tag.Lane], radius: Math.Min(4, box.Width / 3));
+                if (tag.Note is { } note)
+                {
+                    hitsoundingSoundHits.Add((box, note, tag.Lane));
+                    if (hitsoundingSelected == (note.SourceId, note.EventIndex)) c.Stroke(box, Foreground, 2, 4);
+                }
+                if (HitsoundingPrecise)
+                {
+                    string label = tag.Label + (tag.Index > 0 ? " " + tag.Index : "");
+                    if (c.MeasureText(label, 11, true) <= box.Width - 8) c.Text(label, box.X + 4, box.Y + 3, 11, 0xFFFFFF, box.Width - 8, true);
+                }
+                else DrawHitsoundingLabel(c, box, tag.Label, tag.Index);
+                if (HitsoundingPrecise && wave is not null && box.Width > 1)
+                {
+                    float maximum = Math.Max(.000001f, wave.Peak(0, wave.DurationMs));
+                    float step = box.Width < 30 ? 1 : 2;
+                    float padding = Math.Min(2, box.Width * .1f);
+                    for (float px = Math.Max(g.X, box.X + padding); px < Math.Min(g.Right, box.Right - padding); px += step)
+                    {
+                        double t = (px - x) / g.Width * hitsoundingSpan;
+                        float peak = Math.Clamp(wave.Peak(t, t + step / g.Width * hitsoundingSpan) / maximum, 0, 1) * 7;
+                        c.Line(px, box.Bottom - 9 - peak, px, box.Bottom - 9 + peak, HitsoundingColors[tag.Lane], opacity: .9f);
+                    }
+                }
+                c.Line(x, box.Bottom, x, box.Bottom + 4, HitsoundingColors[tag.Lane], tag.Lane == 5 ? 2 : 1);
+            }
+        }
+    }
+    private float HitsoundingFlash(double time) => AudioPlaying && playhead >= time && playhead < time + 160
+        ? (float)Math.Pow(1 - (playhead - time) / 160, 2) : 0;
+    private void DrawHitsoundingLabel(ICanvas c, Rect box, string bank, int index)
+    {
+        if (box.Width < 5) return;
+        float available = Math.Max(0, box.Width - 6);
+        if (available <= 0) return;
+        float rowHeight = (box.Height - 6) / (index > 0 ? 2 : 1);
+        const float fontSize = 11;
+        string indexText = index > 0 ? index.ToString() : "";
+        if (rowHeight < fontSize * 1.3f || c.MeasureText(bank, fontSize, true) > available
+            || c.MeasureText(indexText, fontSize, true) > available) return;
+        DrawLine(bank, box.Y + 3);
+        if (index > 0) DrawLine(indexText, box.Y + 3 + rowHeight);
+
+        void DrawLine(string text, float rowY)
+        {
+            float width = c.MeasureText(text, fontSize, true);
+            c.Text(text, box.X + (box.Width - width) / 2, rowY + (rowHeight - fontSize * 1.3f) / 2,
+                fontSize, 0xFFFFFF, available + .1f, true);
+        }
+    }
+    private static SoundTag[] ArrangeHitsoundingTags(IEnumerable<SoundTag> source)
+    {
+        var result = new List<SoundTag>();
+        foreach (var lane in source.GroupBy(t => t.Lane))
+        {
+            var moments = lane.GroupBy(t => t.Time).OrderBy(t => t.Key).ToArray();
+            for (int i = 0; i < moments.Length; i++)
+            {
+                double distance = Math.Min(i > 0 ? moments[i].Key - moments[i - 1].Key : double.PositiveInfinity,
+                    i + 1 < moments.Length ? moments[i + 1].Key - moments[i].Key : double.PositiveInfinity);
+                var tags = moments[i].GroupBy(t => (t.Label, t.Index, t.Note?.SourceId, t.Note?.EventIndex))
+                    .Select(g => g.First() with { Sounds = g.SelectMany(t => t.Sounds).Distinct().ToArray() }).ToArray();
+                string widthText = tags.SelectMany(t => new[] { t.Label, t.Index > 0 ? t.Index.ToString() : "" }).MaxBy(t => t.Length) ?? "";
+                for (int column = 0; column < tags.Length; column++)
+                    result.Add(tags[column] with { NeighbourDistance = distance, Column = column, Columns = tags.Length, WidthText = widthText });
+            }
+        }
+        return result.OrderBy(t => t.Time).ThenBy(t => t.Lane).ToArray();
+    }
+    private static int LowerTag(SoundTag[] tags, double time)
+    {
+        int lo = 0, hi = tags.Length;
+        while (lo < hi) { int mid = (lo + hi) / 2; if (tags[mid].Time < time) lo = mid + 1; else hi = mid; }
+        return lo;
+    }
+}

@@ -116,6 +116,77 @@ playback and keep the output device running. Timing tests check actual source-no
 timestamps as well as the music/host-clock mapping. These checks do not measure acoustic
 latency from speakers or headphones.
 
+## Hitsounding workspace
+
+Choose **Hitsounding Panel** from the same workspace selector as Mapping and Timing.
+Its dock layout and display mode are remembered independently. The horizontal ruler
+uses the current Snap division and the shared osu-style tick colours and lengths.
+Alt+wheel zooms around the pointer's time without changing playback position;
+ordinary wheel navigates time. Drag the highlighted yellow line to change its viewport
+position without seeking. Both dragging and zoom keep it within 5–95% of the timeline.
+
+The seven lanes are Notes, Normal, Whistle, Finish, Clap, SliderTick and SB Hitsound.
+Notes shares Mapping's object-timeline renderer, including combo colours, numbers,
+slider bodies, repeats and banana intervals, and adds converted slider-tick markers.
+The sound lanes use the same effective banks, indices and volumes as preview audio.
+Tiny droplets are silent. SB Hitsound shows unconditional storyboard samples;
+Pass/Fail-dependent samples are omitted.
+
+The top toolbar offers **Select / Draw** and **Note based / Precise HS**. Note based uses compact tags centred on event times. Tag width fits the bank/index text with horizontal padding
+and shrinks symmetrically to fit neighbouring events at dense zoom levels. Text keeps
+a fixed size and is hidden when the tag cannot contain it. Simultaneous samples share
+columns within their timestamp. Precise HS uses left-aligned horizontal labels and
+peak-normalized waveform envelopes along the bottom, including at narrow zoom levels;
+Object sounds end visually at the next audible note when their sample extends past it;
+storyboard samples use the next unconditional sample as their visual boundary.
+Decoding is asynchronous and its cache is bounded and retired with the difficulty.
+Note-based bank tags use two lines: S, D or N above the index. Default samples omit the index and centre the bank letter vertically. Timing tags show bank and optional index (for example S:2) above volume; both lines
+are bold, with the bank line three points larger. A short coloured stem marks their timestamp.
+Timing tags fill the interval up to the next timing point. Their left-aligned text stays
+at the visible left edge when the interval begins outside the viewport.
+
+In **Select**, only clicking a Notes object or an existing sound tag selects its event.
+Empty space clears selection. In **Draw**, click or drag across existing fruit event
+times in Whistle, Finish or Clap to add that addition; the half-opacity ghost previews
+the target. A stroke is one undo step. Right-click removes additions, never Normal.
+W/E/R toggle the selected event's Whistle/Finish/Clap. Sampleset and Additions selectors
+edit the selected event or set banks for drawing. The three additions share one bank
+and index; a vertical connector links active additions belonging to the same event.
+Audible events briefly brighten and glow as playback crosses their timestamps.
+
+**Hitsounding Inspector** follows the playhead when nothing is selected and the event
+time when an object is selected. It shows the effective red/green timing information.
+Bank, sample-index and volume changes remain drafts until **Apply as new inherited
+timing point** inserts a green line at that timestamp, preserving effective SV. The
+separate note-index field also requires **Apply note index**. Both operations support undo.
+The Hitsounding dock menu provides Config, Inspector, Song Setup and Preview independently
+of Mapping.
+
+**Map Samplesets** selects the map's indexed sample groups and S/D/N bank. Preview
+buttons audition the assigned sample or its skin/default fallback. The Default group
+uses skin/osu! samples and is read-only; numbered groups display actual indexed resource
+filenames. Fallback filenames are grey, while map resources use the accent colour. Drop a library
+file onto a slot to replace that bank/index's audio. This updates the shared map
+resource file, including other difficulties that use it, and is recorded in undo
+history. Replacement also refreshes preview audio; conflicting external file changes
+are rejected during undo/redo.
+
+**Hitsound Library** stores independent copies under `workspace/HitsoundLibrary`.
+Browse nested folders using directory rows, the parent button and the root button.
+Navigation stays inside this root and excludes symbolic links/junctions. Search filters
+files and folders in the current directory; imports are saved into that directory.
+Drop WAV, OGG or MP3 files into the Hitsounding workspace to import them, or drag
+an assigned map sample into the library pane. Imports preserve existing different
+files with a numbered filename and reuse identical copies. Library files can be
+dragged to map slots; their names need not match osu! sample filenames. Samples are
+limited to 16 MiB each and one drop accepts up to 128 files.
+
+**Hitsounding Config** contains Map Samplesets above Hitsound Library in one dock
+panel. Resize their internal divider to allocate space; the two sections keep their
+order. Audio rows provide audition controls and decoded waveform previews. Search
+filters the current folder by name. Long lists scroll within their own section.
+View and library navigation do not edit beatmap objects.
+
 ## Maintenance
 
 Keep sample selection in Core and transport boundary handling in the shared editor.

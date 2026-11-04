@@ -112,6 +112,7 @@ public sealed partial class EditorView
             timingFields.Clear(); timingFields.AddRange(timingBackgroundFields);
         }
         if (!LibraryVisible && !SongSetupVisible && panelMenuOpen) { PanelPointerDown(x, y); return; }
+        if (HitsoundingPointerDown(x, y, button)) return;
         if (TimingPageVisible && !SongSetupVisible && menu < 0 && y >= 122 && rightPanel.Contains(x, y)) { TimingPointerDown(x, y, button); return; }
         if (BeginVolumePopoverPointer(x, y, button)) return;
         if (SongSetupVisible) { SongSetupPointerDown(x, y, button, shift); return; }
@@ -499,6 +500,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (HitsoundingPointerMove(x, y)) return;
         if (MoveOverlayDrag(x, y)) return;
         UpdateBookmarkHover(x, y);
         if (DiscussionImageVisible) { DiscussionImagePointerMove(x, y); return; }
@@ -673,6 +675,7 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (HitsoundingPointerUp(x, y)) return;
         if (overlayDragging != 0 && button == 0) { MoveOverlayDrag(x, y); FinishOverlayDrag(); return; }
         if (DiscussionImageVisible) { DiscussionImagePointerUp(x, y, button); return; }
         if (discussionTextPressed is not null) { EndDiscussionTextSelection(x, y); return; }
@@ -833,6 +836,7 @@ public sealed partial class EditorView
         if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
         if (TogglePaneSeparator(x, y)) return;
+        if (HitsoundingPageVisible && !LibraryVisible && y >= 122 && y < TransportTop) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
             var row = aimodRowBounds.FirstOrDefault(r => r.Bounds.Contains(x, y));
@@ -995,6 +999,7 @@ public sealed partial class EditorView
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
+        if (HitsoundingWheel(x, y, delta, alt || altHeld)) return;
         if (BrowserToolbarContains(x, y)) return;
         if (DiscussionImageVisible) { DiscussionImageWheel(x, y, delta, ctrl); return; }
         if (PatternNameVisible || GalleryTagsVisible) return;
@@ -1260,6 +1265,12 @@ public sealed partial class EditorView
 
     private void KeyDownCore(int virtualKey, bool ctrl, bool shift)
     {
+        if (HitsoundingSearchFocused)
+        {
+            if (virtualKey is 27 or 13) textEditor.Field = "";
+            else if (InputKey("hitsounding:search", ref hitsoundingQuery, virtualKey, ctrl, shift, 256, RequestPasteField)) FilterHitsoundingLibrary();
+            return;
+        }
         if (DiscussionImageVisible && !ErrorVisible && !DiscardConfirmationVisible) { if (virtualKey == 27) CloseDiscussionImage(); return; }
         if (!ErrorVisible && !DiscardConfirmationVisible && DiscussionTextKey(virtualKey, ctrl)) return;
         if (PatternNameVisible && !ErrorVisible) { PatternNameKey(virtualKey, ctrl, shift); return; }
@@ -1515,6 +1526,19 @@ public sealed partial class EditorView
             replaceText = false;
             return;
         }
+        if (HitsoundingPageVisible && DockContentInputAvailable && !IsEditingText)
+        {
+            if (virtualKey == 27) { CancelInteraction(); panelMenuOpen = false; menu = -1; contextItems.Clear(); }
+            else if (altHeld && virtualKey is 81 or 87 or 69 or 82) SetSampleBank(ctrl, virtualKey switch { 81 => 0, 87 => 1, 69 => 2, _ => 3 });
+            else if (ctrl && virtualKey == 90) { if (shift) Redo(); else Undo(); }
+            else if (ctrl && virtualKey == 89) Redo();
+            else if (ctrl && virtualKey == 9) SwitchDifficulty(AdjacentDifficulty(shift));
+            else if (!ctrl && virtualKey == 32) TogglePlayback();
+            else if (!ctrl && virtualKey is 37 or 39) SeekByWheel(virtualKey == 37 ? -1 : 1, 1);
+            else if (!ctrl && virtualKey is 87 or 69 or 82) ToggleHitsoundingAddition(virtualKey == 87 ? 2 : virtualKey == 69 ? 4 : 8);
+            else if (!ctrl && virtualKey is 187 or 189) ZoomHitsounding(virtualKey == 187 ? .8 : 1.25, hitsoundingGridBounds.X + hitsoundingGridBounds.Width * .3f);
+            return;
+        }
         if (UiScaleKey(virtualKey, ctrl)) return;
         if (ctrl && !altHeld && !TimingPageVisible && drag == DragKind.None)
         {
@@ -1630,6 +1654,7 @@ public sealed partial class EditorView
 
     private void TextInputCore(char value)
     {
+        if (HitsoundingSearchFocused) { HitsoundingSearchText(value.ToString()); return; }
         if (PatternNameVisible && !ErrorVisible) { PatternNameText(value.ToString()); return; }
         if (GalleryTagsVisible) { GalleryTagsText(value.ToString()); return; }
         if (GallerySearchFocused) { GallerySearchText(value.ToString()); return; }
@@ -1688,6 +1713,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        hitsoundingDragFile = null; hitsoundingSplitDrag = null;
         discussionPreviewDragging = false;
         ClearDiscussionTextSelection();
         discussionScrollbarDragging = false; discussionQuoteDrag = null;
@@ -1722,6 +1748,8 @@ public sealed partial class EditorView
         movementPanelPointer = false;
         songDrag = -1;
         randomDragging = false; dockHorizontalDrag = null;
+        if (hitsoundingHeadDrag) hitsoundingHeadRatio = hitsoundingHeadBefore;
+        hitsoundingHeadDrag = hitsoundingPainting = false; hitsoundingPaint.Clear();
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);

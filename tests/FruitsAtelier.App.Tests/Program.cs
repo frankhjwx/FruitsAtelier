@@ -3,6 +3,8 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--hitsounding-performance")) { HitsoundingPanelTests.Performance(); return 0; }
+if (args.Contains("--hitsounding-panel-check")) { HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); return 0; }
 if (args.Contains("--difficulty-import-check")) { DifficultyImportTests.Run(); Console.WriteLine("PASS difficulty imports use project resources and preserve metadata"); return 0; }
 if (args.Contains("--slider-bpm-performance")) { SliderBpmTests.Performance(); return 0; }
 if (args.Contains("--slider-bpm-check")) { SliderBpmTests.Run(); Console.WriteLine("PASS slider BPM controls"); return 0; }

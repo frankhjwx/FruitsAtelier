@@ -10,6 +10,46 @@ public sealed class HitsoundResourcePlan
     private readonly List<FileChange> changes = [];
     private string? deletionBackup;
     public static HitsoundResourcePlan Empty => new();
+    public static void ImportLibrarySample(string root, string source)
+    {
+        string extension = Path.GetExtension(source).ToLowerInvariant();
+        if (extension is not (".wav" or ".ogg" or ".mp3") || new FileInfo(source).Length > 16 * 1024 * 1024)
+            throw new InvalidDataException(L.Get("resource.limit"));
+        SafePath(Path.GetDirectoryName(Path.GetFullPath(source))!, Path.GetFileName(source));
+        string stem = Path.GetFileNameWithoutExtension(source);
+        byte[] bytes = File.ReadAllBytes(source);
+        string path = SafePath(root, stem + extension);
+        int suffix = 2;
+        while (File.Exists(path))
+        {
+            if (Equal(File.ReadAllBytes(path), bytes)) return;
+            path = SafePath(root, stem + "-" + suffix++ + extension);
+        }
+        var plan = new HitsoundResourcePlan(); plan.AddCopy(path, bytes); plan.Apply();
+    }
+    public static HitsoundResourcePlan ReplaceSample(string root, int bank, int index, string name, string source)
+    {
+        if (bank is < 1 or > 3 || index < 1 || name is not ("hitnormal" or "hitwhistle" or "hitfinish" or "hitclap" or "slidertick"))
+            throw new ArgumentOutOfRangeException(nameof(bank));
+        string extension = Path.GetExtension(source).ToLowerInvariant();
+        if (extension is not (".wav" or ".ogg" or ".mp3") || new FileInfo(source).Length > 16 * 1024 * 1024)
+            throw new InvalidDataException(L.Get("resource.limit"));
+        string stem = (bank == 2 ? "soft" : bank == 3 ? "drum" : "normal") + "-" + name
+            + (index > 1 ? index.ToString(System.Globalization.CultureInfo.InvariantCulture) : "");
+        var plan = new HitsoundResourcePlan();
+        string destination = SafePath(root, stem + extension);
+        foreach (string existing in Directory.Exists(root) ? Directory.EnumerateFiles(root).Take(20000) : [])
+        {
+            if (!Path.GetFileNameWithoutExtension(existing).Equals(stem, StringComparison.OrdinalIgnoreCase)
+                || Path.GetExtension(existing).ToLowerInvariant() is not (".wav" or ".ogg" or ".mp3")) continue;
+            string path = SafePath(root, Path.GetFileName(existing));
+            if (new FileInfo(path).Length > 16 * 1024 * 1024) throw new IOException(L.Get("resource.limit"));
+            if (!path.Equals(destination, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                plan.changes.Add(new(path, File.ReadAllBytes(path), null));
+        }
+        plan.AddCopy(destination, File.ReadAllBytes(source));
+        return plan;
+    }
     public static HitsoundResourcePlan CopyFiles(string source, string destination, IEnumerable<string> relativePaths)
     {
         var plan = new HitsoundResourcePlan();

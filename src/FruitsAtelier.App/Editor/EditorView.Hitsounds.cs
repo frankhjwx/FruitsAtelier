@@ -16,7 +16,7 @@ public sealed partial class EditorView
     }
     private void RefreshSkinHitsounds()
     {
-        ResetHitsounds(); hitsoundConversion = null;
+        ResetHitsounds(); hitsoundConversion = null; hitsoundingConversion = null;
         PreloadProjectHitsounds();
     }
     public Action<IReadOnlyList<MapDocument>>? RequestPreloadHitsounds { get; set; }

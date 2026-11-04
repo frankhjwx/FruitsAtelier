@@ -1695,3 +1695,20 @@ plus recording-canvas frame CPU time and allocation. Native presentation is excl
 Windows renderer, operates the default multiplier input and captures settings,
 menus and inspector at narrow and ordinary window sizes under
 `artifacts/tests/slider-bpm/native`.
+
+## Hitsounding workspace checks
+
+`App.Tests --hitsounding-panel-check` covers the Snap ruler, actual slider ticks,
+centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,
+default bank labels, timing-tag order, the unified Config dock, library search/imports,
+slot drag/drop, and resource undo/redo. It also checks Inspector drafts and manual
+application, event-specific additions, single-click and continuous painting, complete
+stroke undo, empty-space selection, playback flashes, normalized narrow waveforms,
+visible interval labels and play-line bounds. `--hitsounding-performance` compares cold
+setup and warm pointer/render work with Mapping on the same mixed-object fixture,
+including allocations and committed-conversion reuse.
+
+`FruitsAtelier.App.exe --render-check --hitsounding-render-check` renders English
+and Chinese at 980×620 and 1440×900 under `artifacts/tests/hitsounding-native`.
+Run the object-timeline, docking and hitsound regressions when changing this view,
+because its note rendering, layouts and sample resolution share those boundaries.

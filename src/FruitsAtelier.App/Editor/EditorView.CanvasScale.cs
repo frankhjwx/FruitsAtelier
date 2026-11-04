@@ -84,7 +84,7 @@ public sealed partial class EditorView
     private bool CanvasScalePointerDown(float x, float y, int button)
     {
         if (IsOsuCanvas) return false;
-        if (TimingPageVisible || LibraryVisible || StreamDialogVisible || menu >= 0 || contextItems.Count > 0) return false;
+        if (TimingPageVisible || HitsoundingPageVisible || LibraryVisible || StreamDialogVisible || menu >= 0 || contextItems.Count > 0) return false;
         if (button == 0 && CanvasScaleLockBounds.Contains(x, y)) { ToggleUniformCanvasScale(); return true; }
         if (!UniformCanvasScale && button == 0)
             for (int axis = 0; axis < 2; axis++)
