@@ -122,7 +122,7 @@ Choose **Hitsounding Panel** from the same workspace selector as Mapping and Tim
 Its dock layout and display mode are remembered independently. The horizontal ruler
 uses the current Snap division and the shared osu-style tick colours and lengths.
 Alt+wheel zooms around the pointer's time without changing playback position;
-ordinary wheel navigates time. Drag the highlighted yellow line to change its viewport
+ordinary wheel moves one current Snap division per notch. Drag the highlighted yellow line to change its viewport
 position without seeking. Both dragging and zoom keep it within 5–95% of the timeline.
 
 The seven lanes are Notes, Normal, Whistle, Finish, Clap, SliderTick and SB Hitsound.
@@ -157,8 +157,7 @@ Audible events briefly brighten and glow as playback crosses their timestamps.
 **Timing Helper** follows the playhead when nothing is selected and the event
 time when an object is selected. It shows the effective red/green timing information.
 Bank, sample-index and volume changes remain drafts until **Apply as new inherited
-timing point** inserts a green line at that timestamp, preserving effective SV. The
-separate note-index field also requires **Apply note index**. Both operations support undo.
+timing point** inserts a green line at that timestamp, preserving effective SV. Timing changes support undo.
 The Hitsounding dock menu provides Config, Inspector, Song Setup and Preview independently
 of Mapping.
 

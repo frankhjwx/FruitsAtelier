@@ -328,7 +328,7 @@ public sealed partial class EditorView
         if (hitsoundingLibraryBounds.Contains(x, y)) { hitsoundingLibraryScroll = Math.Max(0, hitsoundingLibraryScroll - (int)(delta / 120)); return true; }
         if (!hitsoundingBounds.Contains(x, y)) return false;
         if (alt) ZoomHitsounding(Math.Pow(1.25, -delta / 120), x);
-        else SeekTo(Math.Max(0, playhead - delta / 120 * renderedTiming!.At(playhead).BeatLengthMs));
+        else SeekTo(Math.Max(0, playhead - delta / 120 * renderedTiming!.At(playhead).BeatLengthMs / divisor));
         return true;
     }
 }

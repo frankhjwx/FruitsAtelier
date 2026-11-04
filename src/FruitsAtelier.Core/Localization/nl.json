@@ -1980,7 +1980,6 @@
   "hitsounding.index": "Sample index",
   "hitsounding.volume": "Volume %",
   "hitsounding.applyTiming": "Apply as new inherited timing point",
-  "hitsounding.applyIndex": "Apply note index",
   "hitsounding.select": "Select",
   "hitsounding.draw": "Draw",
   "hitsounding.default": "Default",

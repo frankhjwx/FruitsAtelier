@@ -16,8 +16,8 @@ public sealed partial class EditorView
     private (Guid Id, int Event)? inspectorSelection;
     private CatchConversionResult? inspectorConversion;
     private double inspectorTime;
-    private int inspectorBank, inspectorIndex, inspectorVolume, inspectorNoteIndex;
-    private bool inspectorTimingDirty, inspectorIndexDirty;
+    private int inspectorBank, inspectorIndex, inspectorVolume;
+    private bool inspectorTimingDirty;
     private Rect hitsoundingInspectorBounds;
     private float hitsoundingInspectorScroll, hitsoundingInspectorScrollMaximum;
     private ConvertedCatchObject? HitsoundingSelectedNote => hitsoundingSelected is { } selected
@@ -30,18 +30,17 @@ public sealed partial class EditorView
         var note = HitsoundingSelectedNote;
         double time = note?.TimeMs ?? playhead;
         bool changed = inspectorSelection != hitsoundingSelected || !ReferenceEquals(inspectorConversion, hitsoundingConversion);
-        if (!changed && (inspectorTimingDirty || inspectorIndexDirty || inspectorTime == time)) return;
+        if (!changed && (inspectorTimingDirty || inspectorTime == time)) return;
         inspectorSelection = hitsoundingSelected; inspectorConversion = hitsoundingConversion;
-        inspectorTime = time; inspectorTimingDirty = inspectorIndexDirty = false;
+        inspectorTime = time; inspectorTimingDirty = false;
         var sample = hitsoundingResolver!.Describe(new(Guid.Empty, 0, CatchObjectKind.Fruit, time - 5, 0, 0, 0, 0, true));
         inspectorBank = sample.NormalSet; inspectorIndex = sample.Index; inspectorVolume = sample.Volume;
-        inspectorNoteIndex = note is null ? 0 : hitsoundingResolver.Describe(note).Index;
     }
     private void DrawHitsoundingInspector(ICanvas c, Rect r)
     {
         RefreshHitsoundingInspector();
         hitsoundingInspectorBounds = r;
-        hitsoundingInspectorScrollMaximum = Math.Max(0, (HitsoundingSelectedNote is { Kind: not CatchObjectKind.Banana } ? 450 : 330) - r.Height);
+        hitsoundingInspectorScrollMaximum = Math.Max(0, 330 - r.Height);
         hitsoundingInspectorScroll = Math.Clamp(hitsoundingInspectorScroll, 0, hitsoundingInspectorScrollMaximum);
         int firstHit = hits.Count, firstField = fields.Count;
         c.Clip(r);
@@ -64,14 +63,6 @@ public sealed partial class EditorView
         Field(c, x, ref y, w, L.Get("hitsounding.index"), inspectorIndex, v => { inspectorIndex = ValidHsIndex(v); inspectorTimingDirty = true; }, 80);
         Field(c, x, ref y, w, L.Get("hitsounding.volume"), inspectorVolume, v => { inspectorVolume = (int)Math.Clamp(Math.Round(v), 0, 100); inspectorTimingDirty = true; }, 80);
         Button(c, new(x, y + 4, w, 48), L.Get("hitsounding.applyTiming"), ApplyHitsoundingTiming, enabled: inspectorTimingDirty || editField >= 0, fontSize: 10);
-        y += 68;
-        if (HitsoundingSelectedNote is { Kind: not CatchObjectKind.Banana })
-        {
-            c.Line(x, y, x + w, y, Grid); y += 14;
-            c.Text(L.Get("hitsounding.selectedNote"), x, y, 12, Foreground, w, true); y += 24;
-            Field(c, x, ref y, w, L.Get("hitsounding.index"), inspectorNoteIndex, v => { inspectorNoteIndex = ValidHsIndex(v); inspectorIndexDirty = true; }, 80);
-            Button(c, new(x, y + 4, w, 30), L.Get("hitsounding.applyIndex"), ApplyHitsoundingIndex, enabled: inspectorIndexDirty || editField >= 0, fontSize: 11);
-        }
         c.Unclip();
         for (int i = firstHit; i < hits.Count; i++)
         {
@@ -104,13 +95,6 @@ public sealed partial class EditorView
             Meter = state.Meter, SampleSet = inspectorBank, SampleIndex = inspectorIndex, Volume = inspectorVolume,
             Effects = active?.Effects ?? 0 };
         if (Edit(L.Get("hitsounding.applyTiming"), () => Document.TimingPoints.Add(point))) inspectorTimingDirty = false;
-    }
-    private void ApplyHitsoundingIndex()
-    {
-        if (!CommitField() || !inspectorIndexDirty || HitsoundingSelectedNote is not { } note) return;
-        var setting = hitsoundingResolver!.EventSettings(note);
-        setting = setting with { Sample = setting.Sample with { Index = inspectorNoteIndex }, InheritedFields = setting.InheritedFields & ~InheritedSampleFields.Index };
-        if (Edit(L.Get("hitsounding.applyIndex"), () => SetHitsoundingEvent(setting))) inspectorIndexDirty = false;
     }
     private void SetHitsoundingEvent(EventHitsound setting)
     {

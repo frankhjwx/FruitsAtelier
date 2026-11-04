@@ -14,11 +14,11 @@ internal static class HitsoundingPanelTests
         var block = NormalBlocks()[0];
         ui.Click(block.X + block.Width / 2, block.Y + block.Height / 2);
         Check(ui.View.PlayheadMs == 1000, "Selecting a sound locates its exact note");
-        SetLastIndex("123");
-        Check(baseline.ContentEquals(ui.View.Document), "Inspector index drafts do not change content");
-        ui.ClickText(L.Get("hitsounding.applyIndex"));
-        Check(ui.View.Document.HitsoundOverrides.Single().Sample.Index == 123, "Apply commits the selected event index");
-        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Index application has one undo step");
+        Check(ui.Canvas.Texts.Count(t => t.Value == L.Get("hitsounding.index") && t.X > 1100) == 1, "Timing Helper exposes only the timing sample index");
+        ui.View.Wheel(block.X, block.Y, -120, false, false, false); ui.Paint();
+        Check(ui.View.PlayheadMs == 1125, "One wheel notch advances one quarter-beat snap");
+        ui.View.Wheel(block.X, block.Y, 120, false, false, false); ui.Paint();
+        Check(ui.View.PlayheadMs == 1000 && baseline.ContentEquals(ui.View.Document), "Reverse wheel restores time without editing content");
         var volumeLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.volume") && t.X > 1100);
         ui.Click(volumeLabel.X + 95, volumeLabel.Y + 5); ui.Key(65, ctrl: true); ui.Type("40"); ui.Key(13);
         Check(baseline.ContentEquals(ui.View.Document), "Timing draft is not automatically applied");
@@ -72,11 +72,7 @@ internal static class HitsoundingPanelTests
 
         FruitsAtelier.App.Rendering.Rect[] NormalBlocks() => ui.Canvas.Outlines.Where(o => o.Color == 0x56B9AA).Select(o => o.Bounds).OrderBy(b => b.X).ToArray();
         float LaneY(int lane) { var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100); return label.Y + 8; }
-        void SetLastIndex(string value)
-        {
-            var label = ui.Canvas.Texts.Last(t => t.Value == L.Get("hitsounding.index") && t.X > 1100);
-            ui.Click(label.X + 95, label.Y + 5); ui.Key(65, ctrl: true); ui.Type(value); ui.Key(13);
-        }
+
     }
     public static void Run()
     {
