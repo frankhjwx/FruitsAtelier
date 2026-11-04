@@ -137,7 +137,8 @@ and shrinks symmetrically to fit neighbouring events at dense zoom levels. Text 
 a fixed size and is hidden when the tag cannot contain it. Simultaneous samples share
 columns within their timestamp. Precise HS uses left-aligned horizontal labels and
 peak-normalized waveform envelopes along the bottom, including at narrow zoom levels;
-Object sounds end visually at the next audible note when their sample extends past it;
+Object sounds end visually at the next occurrence in the same sound lane when their
+sample extends past it; intervening notes and sounds in other lanes do not truncate them;
 storyboard samples use the next unconditional sample as their visual boundary.
 Decoding is asynchronous and its cache is bounded and retired with the difficulty.
 Note-based bank tags use two lines: S, D or N above the index. Default samples omit the index and centre the bank letter vertically. Timing tags show bank and optional index (for example S:2) above volume; both lines
@@ -153,6 +154,9 @@ and Delete removes selected additions. Normal remains undeletable. Each batch is
 undo step. When source and target banks or sample indices differ, a dialog offers the
 copied sampleset, the target sampleset, or cancellation. Adjustments affect target event
 overrides, including their shared addition bank/index, without rewriting timing intervals.
+In **Select**, drag an existing Whistle, Finish or Clap tag onto another fruit event to
+move that addition, with a half-opacity preview and the same sampleset confirmation.
+Normal and SliderTick cannot be moved. A move is one undo step.
 In **Draw**, click or drag across existing fruit event
 times in Whistle, Finish or Clap to add that addition; the half-opacity ghost previews
 the target. A stroke is one undo step. Right-click removes additions, never Normal.

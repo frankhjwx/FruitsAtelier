@@ -1753,6 +1753,7 @@ public sealed partial class EditorView
         randomDragging = false; dockHorizontalDrag = null;
         if (hitsoundingHeadDrag) hitsoundingHeadRatio = hitsoundingHeadBefore;
         hitsoundingHeadDrag = hitsoundingPainting = hitsoundingMarquee = false; hitsoundingPaint.Clear();
+        hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);

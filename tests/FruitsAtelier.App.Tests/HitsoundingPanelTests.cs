@@ -119,6 +119,49 @@ internal static class HitsoundingPanelTests
         Check(ui.View.Document.TimingPoints.Count == 3, "Paste adjustments do not rewrite unrelated timing intervals");
         Console.WriteLine("PASS Hitsounding marquee clipboard, sampleset confirmation and existing timing-line editing");
     }
+    public static void LengthAndMove()
+    {
+        var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1 });
+        foreach (int time in new[] { 0, 250, 1250, 1500 }) map.Fruits.Add(new() { TimeMs = time, X = 256,
+            OriginalLine = $"256,192,{time},1,{(time == 250 ? 0 : 2)},0:0:0:0:" });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+        ui.View.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.5f, 1000).ToArray(), 1));
+        ui.ClickText(L.Get("hitsounding.precise")); ui.Paint();
+        var whistles = ui.Canvas.Outlines.Where(o => o.Color == 0x51BDD2).Select(o => o.Bounds).OrderBy(r => r.X).ToArray();
+        Check(whistles.Length == 3 && Math.Abs(whistles[0].Width - whistles[1].Width * 4) < .1, "1000 ms whistle ignores intervening notes, while a whistle 250 ms later clamps its predecessor");
+        Check(Math.Abs(whistles[1].Right - whistles[2].X) < .1, "Precise length clamps to the next occurrence on the same lane");
+        ui.View.UpdateTransport(1500, 6000, true, false, false, null, null); ui.Paint();
+        Check(ui.Canvas.Outlines.Count(o => o.Color == 0x51BDD2) == 3, "An offscreen-start whistle remains visible across intervening Normal events");
+
+        var movingMap = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+        movingMap.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1 });
+        movingMap.TimingPoints.Add(new() { TimeMs = 1750, BeatLengthMs = -100, Uninherited = false, SampleSet = 3, SampleIndex = 2 });
+        movingMap.Fruits.Add(new() { TimeMs = 1000, X = 256, OriginalLine = "256,192,1000,1,6,0:0:0:0:" });
+        movingMap.Fruits.Add(new() { TimeMs = 2000, X = 256 });
+        ui = new Ui(false); ui.LoadDocument(movingMap); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+        var baseline = ui.View.Document.DeepClone();
+        Drag(); Check(ui.View.DiscardConfirmationVisible && baseline.ContentEquals(ui.View.Document), "Moving a mismatched sound waits for confirmation");
+        ui.ClickText(L.Get("mac.cancel")); Check(baseline.ContentEquals(ui.View.Document), "Cancelling a move preserves the source");
+        Drag(); ui.ClickText(L.Get("hitsounding.pasteKeep"));
+        var changes = ui.View.Document.HitsoundOverrides;
+        Check(changes.Single(h => h.SourceId == movingMap.Fruits[0].Id).Sample.Additions == 4 && changes.Single(h => h.SourceId == movingMap.Fruits[1].Id).Sample is { Additions: 2, Index: 2, AdditionSet: 3 }, "Move transfers only the chosen addition and can keep target samplesets");
+        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Move has one undo step");
+        var normal = ui.Canvas.Outlines.Where(o => o.Color == 0x56B9AA).Select(o => o.Bounds).OrderBy(r => r.X).ToArray();
+        ui.View.PointerDown(normal[0].X + normal[0].Width / 2, normal[0].Y + 10, 0, false, false);
+        ui.View.PointerMove(normal[1].X, normal[0].Y + 10, false, false); ui.View.PointerUp(normal[1].X, normal[0].Y + 10, 0); ui.Paint();
+        Check(baseline.ContentEquals(ui.View.Document), "Normal cannot be moved by dragging");
+        Console.WriteLine("PASS Per-lane Precise HS length, offscreen tails and undoable sound dragging");
+        void Drag()
+        {
+            var source = ui.Canvas.Outlines.First(o => o.Color == 0x51BDD2).Bounds;
+            var destination = ui.Canvas.Outlines.Where(o => o.Color == 0x56B9AA).Select(o => o.Bounds).OrderBy(r => r.X).Last();
+            float x = source.X + source.Width / 2, y = source.Y + source.Height / 2, targetX = destination.X + destination.Width / 2;
+            ui.View.PointerDown(x, y, 0, false, false); ui.View.PointerMove(targetX, y, false, false); ui.Paint();
+            Check(baseline.ContentEquals(ui.View.Document), "Drag preview does not modify content");
+            ui.View.PointerUp(targetX, y, 0); ui.Paint();
+        }
+    }
     public static void Run()
     {
         string root = Path.GetFullPath("artifacts/tests/hitsounding"); Directory.CreateDirectory(root);
@@ -161,7 +204,7 @@ internal static class HitsoundingPanelTests
         ui.View.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.001f, 400).ToArray(), 1));
         ui.ClickText(L.Get("hitsounding.precise"));
         var precise = ui.Canvas.Outlines.Where(f => f.Color == 0x56B9AA).Select(f => f.Bounds).OrderBy(r => r.X).ToArray();
-        Check(Math.Abs(precise[0].Right - precise[1].X) < .1, "Precise HS uses decoded length and the next-note boundary");
+        Check(Math.Abs(precise[0].Right - precise[1].X) < .1, "Precise HS uses decoded length and the next Normal boundary");
         Check(ui.Canvas.Lines.Any(l => l.Color == 0x56B9AA && l.X1 >= precise[0].X && l.X1 < precise[0].Right
             && l.Y1 > precise[0].Y && l.Y2 < precise[0].Bottom && l.Y2 - l.Y1 > 10), "Quiet waveforms normalize inside narrow precise tags");
         Check(ui.View.CaptureDockLayouts().Hitsounding!.PreciseHitsounds, "Display mode is captured in the Hitsounding layout");

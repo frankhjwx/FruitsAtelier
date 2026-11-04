@@ -18,7 +18,8 @@ public sealed partial class EditorView
     private sealed record SoundTag(double Time, int Lane, string Label, int Index, double Next, Hitsound[] Sounds, double NeighbourDistance = double.PositiveInfinity, int Column = 0, int Columns = 1, string WidthText = "", ConvertedCatchObject? Note = null);
     private readonly HitsoundingAudioCache hitsoundingAudio = new();
     private bool HitsoundingPrecise => hitsoundingDockWorkspace.PreciseHitsounds;
-    private SoundTag[] hitsoundingTags = [], hitsoundingStoryboardTags = [];
+    private SoundTag[][] hitsoundingTagLanes = [];
+    private SoundTag[] hitsoundingStoryboardTags = [];
     private StoryboardScene? hitsoundingStoryboardSource;
     private (double Time, bool Red, string Bank, int Index, int Volume, TimingPoint Point)[] hitsoundingTimingLabels = [];
     private ConvertedCatchObject[] hitsoundingNotes = [];
@@ -72,23 +73,19 @@ public sealed partial class EditorView
         if (hitsoundingSelected is { } selected && !hitsoundingNoteLookup.ContainsKey((selected.Id, selected.Event))) hitsoundingSelected = null;
         hitsoundingRedPoints = overviewTiming.Where(p => p.Uninherited).ToArray();
         hitsoundingGreenPoints = overviewTiming.Where(p => !p.Uninherited).ToArray();
-        var noteTimes = hitsoundingNotes.Select(o => o.TimeMs).Distinct().ToArray();
-        int nextIndex = 0;
         var sets = new SortedSet<int>(Document.TimingPoints.Select(p => Math.Max(0, p.SampleIndex))) { 0, 1 };
         for (int i = 0; i < current.Objects.Count; i++)
         {
             var item = current.Objects[i];
-            while (nextIndex < noteTimes.Length && noteTimes[nextIndex] <= item.TimeMs) nextIndex++;
-            double next = nextIndex < noteTimes.Length ? noteTimes[nextIndex] : double.PositiveInfinity;
             var settings = resolver.Describe(item); sets.Add(Math.Max(0, settings.Index));
             foreach (var group in resolvedHitsounds[i].Where(s => s.Volume > 0).GroupBy(sound =>
                 sound.Name switch { "hitwhistle" => 2, "hitfinish" => 3, "hitclap" => 4, "slidertick" => 5, _ => 1 }))
             {
                 string label = string.Join(" ", group.Select(sound => BankCode(sound.SampleSet)).Distinct());
-                tags.Add(new(item.TimeMs, group.Key, label, settings.Index, next, group.ToArray(), Note: item));
+                tags.Add(new(item.TimeMs, group.Key, label, settings.Index, double.PositiveInfinity, group.ToArray(), Note: item));
             }
         }
-        hitsoundingTags = ArrangeHitsoundingTags(tags);
+        hitsoundingTagLanes = ArrangeHitsoundingTags(tags).GroupBy(t => t.Lane).Select(g => g.ToArray()).ToArray();
         hitsoundingAudibleNotes = tags.Where(t => t.Note is not null).Select(t => (t.Note!.SourceId, t.Note.EventIndex)).ToHashSet();
         hitsoundingAdditionLinks = tags.Where(t => t.Lane is >= 2 and <= 4 && t.Note is not null)
             .GroupBy(t => (t.Note!.SourceId, t.Note.EventIndex)).Where(g => g.Count() > 1)
@@ -243,13 +240,6 @@ public sealed partial class EditorView
             hitsoundingStoryboardTags = storyboardScene?.Samples
                 .Where(s => s.Layer is not (StoryboardLayer.Fail or StoryboardLayer.Pass) && s.Volume > 0)
                 .OrderBy(s => s.TimeMs).Select(s => new SoundTag(s.TimeMs, 6, Path.GetFileNameWithoutExtension(s.Path), 0, double.PositiveInfinity, [new(CatchObjectKind.Fruit, s.Path, s.Volume / 100f, "storyboard")])).ToArray() ?? [];
-            double next = double.PositiveInfinity;
-            for (int i = hitsoundingStoryboardTags.Length - 1; i >= 0; i--)
-            {
-                if (i + 1 < hitsoundingStoryboardTags.Length && hitsoundingStoryboardTags[i + 1].Time > hitsoundingStoryboardTags[i].Time)
-                    next = hitsoundingStoryboardTags[i + 1].Time;
-                hitsoundingStoryboardTags[i] = hitsoundingStoryboardTags[i] with { Next = next };
-            }
             hitsoundingStoryboardTags = ArrangeHitsoundingTags(hitsoundingStoryboardTags);
         }
         for (int i = LowerBound(hitsoundingAdditionTimes, start); i < hitsoundingAdditionLinks.Length && hitsoundingAdditionLinks[i].Time <= end; i++)
@@ -257,7 +247,8 @@ public sealed partial class EditorView
             var link = hitsoundingAdditionLinks[i];
             c.Line(X(link.Time), top + (link.First + .5f) * laneHeight, X(link.Time), top + (link.Last + .5f) * laneHeight, Muted, 1, .6f);
         }
-        DrawTags(hitsoundingTags); DrawTags(hitsoundingStoryboardTags);
+        foreach (var laneTags in hitsoundingTagLanes) DrawTags(laneTags);
+        DrawTags(hitsoundingStoryboardTags);
         if (!hitsoundingErase)
             foreach (var pending in hitsoundingPaint.Values)
                 if (hitsoundingNoteLookup.TryGetValue((pending.SourceId, pending.EventIndex), out var note))
@@ -275,6 +266,12 @@ public sealed partial class EditorView
                 c.Fill(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), HitsoundingColors[lane], 4, .5f);
                 c.StrokeOpacity(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), Foreground, 1, 4, .5f);
             }
+        }
+        if (hitsoundingMoveActive && hitsoundingMoveSource is { } moving && hitsoundingMoveTarget is { } target)
+        {
+            float y = top + (moving.Lane + .5f) * laneHeight - 16;
+            c.Fill(new(X(target.TimeMs) - 9, y, 18, 32), HitsoundingColors[moving.Lane], 4, .5f);
+            c.StrokeOpacity(new(X(target.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
         }
         if (hitsoundingMarquee)
         {
@@ -395,7 +392,7 @@ public sealed partial class EditorView
                     .Select(g => g.First() with { Sounds = g.SelectMany(t => t.Sounds).Distinct().ToArray() }).ToArray();
                 string widthText = tags.SelectMany(t => new[] { t.Label, t.Index > 0 ? t.Index.ToString() : "" }).MaxBy(t => t.Length) ?? "";
                 for (int column = 0; column < tags.Length; column++)
-                    result.Add(tags[column] with { NeighbourDistance = distance, Column = column, Columns = tags.Length, WidthText = widthText });
+                    result.Add(tags[column] with { Next = i + 1 < moments.Length ? moments[i + 1].Key : double.PositiveInfinity, NeighbourDistance = distance, Column = column, Columns = tags.Length, WidthText = widthText });
             }
         }
         return result.OrderBy(t => t.Time).ThenBy(t => t.Lane).ToArray();

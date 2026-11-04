@@ -8,6 +8,10 @@ public sealed partial class EditorView
 {
     private readonly HashSet<(Guid Id, int Event, int Lane)> hitsoundingMultiSelection = [];
     private bool hitsoundingMarquee, hitsoundingPasteConfirmation;
+    private (Guid Id, int Event, int Lane)? hitsoundingMoveSource;
+    private ConvertedCatchObject? hitsoundingMoveTarget;
+    private (float X, float Y) hitsoundingMoveStart;
+    private bool hitsoundingMoveActive;
     private (float X, float Y) hitsoundingMarqueeStart, hitsoundingMarqueeEnd;
     private sealed record HitsoundingCopy(double Offset, int Lane, HitSampleSettings Sample);
     private HitsoundingCopy[] hitsoundingClipboard = [];
@@ -49,13 +53,17 @@ public sealed partial class EditorView
     private void PasteHitsoundingSelection()
     {
         if (hitsoundingClipboard.Length == 0 || !CommitField()) return;
+        TransferHitsounding(hitsoundingClipboard, playhead);
+    }
+    private void TransferHitsounding(HitsoundingCopy[] copied, double targetTime, (Guid Id, int Event, int Lane)? moveSource = null, ConvertedCatchObject? moveTarget = null)
+    {
         var targets = new List<(HitsoundingCopy Copy, ConvertedCatchObject Note)>();
-        foreach (var copy in hitsoundingClipboard)
+        foreach (var copy in copied)
         {
-            double time = playhead + copy.Offset;
+            double time = targetTime + copy.Offset;
             int first = FirstAfter(hitsoundingNotes, time - 1.001);
             for (int i = first; i < hitsoundingNotes.Length && hitsoundingNotes[i].TimeMs <= time + 1; i++)
-                if (hitsoundingNotes[i].Kind == CatchObjectKind.Fruit) targets.Add((copy, hitsoundingNotes[i]));
+                if (hitsoundingNotes[i].Kind == CatchObjectKind.Fruit && (moveTarget is null || hitsoundingNotes[i].SourceId == moveTarget.SourceId && hitsoundingNotes[i].EventIndex == moveTarget.EventIndex)) targets.Add((copy, hitsoundingNotes[i]));
         }
         if (targets.Count == 0) { StatusMessage = L.Get("hitsounding.noPasteTargets"); return; }
         bool mismatch = targets.Any(t =>
@@ -68,6 +76,11 @@ public sealed partial class EditorView
         {
             if (!ReferenceEquals(document, Document)) return;
             var changes = new Dictionary<(Guid, int), EventHitsound>();
+            if (moveSource is { } source && hitsoundingNoteLookup.TryGetValue((source.Id, source.Event), out var sourceNote))
+            {
+                var original = hitsoundingResolver!.EventSettings(sourceNote);
+                changes[(source.Id, source.Event)] = original with { Sample = original.Sample with { Additions = original.Sample.Additions & ~(1 << (source.Lane - 1)) } };
+            }
             foreach (var (copy, note) in targets)
             {
                 var key = (note.SourceId, note.EventIndex);
@@ -84,7 +97,7 @@ public sealed partial class EditorView
                 }
                 changes[key] = setting with { Sample = sample, InheritedFields = inherited };
             }
-            if (Edit(L.Get("hitsounding.paste"), () => { foreach (var setting in changes.Values) SetHitsoundingEvent(setting); }))
+            if (Edit(L.Get(moveSource is null ? "hitsounding.paste" : "hitsounding.move"), () => { foreach (var setting in changes.Values) SetHitsoundingEvent(setting); }))
             {
                 hitsoundingMultiSelection.Clear();
                 foreach (var target in targets) hitsoundingMultiSelection.Add((target.Note.SourceId, target.Note.EventIndex, target.Copy.Lane));
@@ -93,6 +106,26 @@ public sealed partial class EditorView
         if (!mismatch) { Apply(false); return; }
         ShowDiscardConfirmation(answer => { if (answer is 6 or 7) Apply(answer == 6); });
         hitsoundingPasteConfirmation = true;
+    }
+    private bool MoveHitsoundingSound(float x, float y)
+    {
+        if (hitsoundingMoveSource is not { } source) return false;
+        if (Math.Abs(x - hitsoundingMoveStart.X) > ContentDragThreshold || Math.Abs(y - hitsoundingMoveStart.Y) > ContentDragThreshold) hitsoundingMoveActive = true;
+        hitsoundingMoveTarget = hitsoundingMoveActive ? HitsoundingPlacementNoteAt(x, y) : null;
+        if (hitsoundingMoveTarget?.Kind != CatchObjectKind.Fruit) hitsoundingMoveTarget = null;
+        return true;
+    }
+    private bool EndHitsoundingSoundMove()
+    {
+        if (hitsoundingMoveSource is not { } source) return false;
+        var target = hitsoundingMoveTarget;
+        bool moved = hitsoundingMoveActive;
+        hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
+        if (!hitsoundingNoteLookup.TryGetValue((source.Id, source.Event), out var note)) return true;
+        if (!moved) { SeekTo(note.TimeMs); return true; }
+        if (target is null || target.SourceId == source.Id && target.EventIndex == source.Event) return true;
+        TransferHitsounding([new(0, source.Lane, hitsoundingResolver!.Describe(note))], target.TimeMs, source, target);
+        return true;
     }
     private void DrawHitsoundingPasteConfirmation(ICanvas c)
     {

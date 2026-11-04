@@ -213,7 +213,14 @@ public sealed partial class EditorView
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
         var note = HitsoundingNoteAt(x, y);
         int lane = Math.Clamp((int)((y - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7)), 0, 6);
-        if (note is not null) SelectHitsoundingNote(note, seek: !hitsoundingDraw && button == 0);
+        var pressedSound = hitsoundingSoundHits.LastOrDefault(h => h.Bounds.Contains(x, y));
+        bool canMove = !hitsoundingDraw && button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
+        if (canMove)
+        {
+            hitsoundingMoveSource = (pressedSound.Note!.SourceId, pressedSound.Note.EventIndex, pressedSound.Lane);
+            hitsoundingMoveStart = (x, y); hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
+        }
+        if (note is not null) SelectHitsoundingNote(note, seek: !hitsoundingDraw && button == 0 && !canMove);
         else if (button == 0 && !hitsoundingDraw) { hitsoundingSelectedTiming = null; hitsoundingSelected = null; SelectObjects([]); }
         if (button == 0 && !hitsoundingDraw)
         {
@@ -258,6 +265,7 @@ public sealed partial class EditorView
     {
         if (hitsoundingHeadDrag)
         { hitsoundingHeadRatio = Math.Clamp((x - hitsoundingGridBounds.X) / Math.Max(1, hitsoundingGridBounds.Width), .05, .95); return true; }
+        if (MoveHitsoundingSound(x, y)) return true;
         if (hitsoundingMarquee)
         {
             hitsoundingMarqueeEnd = (Math.Clamp(x, hitsoundingGridBounds.X, hitsoundingGridBounds.Right), Math.Clamp(y, hitsoundingGridBounds.Y, hitsoundingGridBounds.Bottom));
@@ -275,6 +283,7 @@ public sealed partial class EditorView
     private bool EndHitsoundingCanvasPointer()
     {
         if (hitsoundingHeadDrag) { hitsoundingHeadDrag = false; return true; }
+        if (EndHitsoundingSoundMove()) return true;
         if (hitsoundingMarquee) { hitsoundingMarquee = false; return true; }
         if (!hitsoundingPainting) return false;
         hitsoundingPainting = false;
