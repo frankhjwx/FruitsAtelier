@@ -1973,7 +1973,7 @@
   "aspire.invalidMultiplier": "BPM multiplier must be a finite number greater than zero.",
   "aspire.bpmCollision": "Sliders at the same exported time must use the same BPM.",
   "hitsounding.search": "Search audio…",
-  "hitsounding.inspector": "Hitsounding Inspector",
+  "hitsounding.inspector": "Timing Helper",
   "hitsounding.currentTime": "Current timestamp",
   "hitsounding.selectedNote": "Selected note",
   "hitsounding.timingInfo": "BPM {0:0.##}  \u00b7  SV {1:0.##}x",

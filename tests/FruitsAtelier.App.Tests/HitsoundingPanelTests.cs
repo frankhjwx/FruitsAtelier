@@ -68,7 +68,7 @@ internal static class HitsoundingPanelTests
         var interval = ui.Canvas.Fills.First(f => f.Color == 0xE77785).Bounds;
         Check(ui.Canvas.Texts.Any(t => t.Value == "S:1" && Math.Abs(t.X - interval.X - 6) < .1), "Timing text remains at the visible interval edge after its start leaves the canvas");
         PlaybackLineTests.Run();
-        Console.WriteLine("PASS Hitsounding Inspector drafts, event editing, paint undo, exact selection, playback feedback and play-line clamps");
+        Console.WriteLine("PASS Timing Helper drafts, event editing, paint undo, exact selection, playback feedback and play-line clamps");
 
         FruitsAtelier.App.Rendering.Rect[] NormalBlocks() => ui.Canvas.Outlines.Where(o => o.Color == 0x56B9AA).Select(o => o.Bounds).OrderBy(b => b.X).ToArray();
         float LaneY(int lane) { var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100); return label.Y + 8; }

@@ -1973,7 +1973,7 @@
   "aspire.invalidMultiplier": "BPM 倍率必须是大于零的有限数值。",
   "aspire.bpmCollision": "导出时间相同的 slider 必须使用相同的 BPM。",
   "hitsounding.search": "\u641c\u7d22\u97f3\u9891…",
-  "hitsounding.inspector": "\u97f3\u6548\u68c0\u67e5\u5668",
+  "hitsounding.inspector": "Timing Helper",
   "hitsounding.currentTime": "\u5f53\u524d\u65f6\u95f4\u6233",
   "hitsounding.selectedNote": "\u9009\u4e2d\u7684\u97f3\u7b26",
   "hitsounding.timingInfo": "BPM {0:0.##}  \u00b7  SV {1:0.##}x",

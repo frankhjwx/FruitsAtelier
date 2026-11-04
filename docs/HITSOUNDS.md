@@ -154,7 +154,7 @@ edit the selected event or set banks for drawing. The three additions share one 
 and index; a vertical connector links active additions belonging to the same event.
 Audible events briefly brighten and glow as playback crosses their timestamps.
 
-**Hitsounding Inspector** follows the playhead when nothing is selected and the event
+**Timing Helper** follows the playhead when nothing is selected and the event
 time when an object is selected. It shows the effective red/green timing information.
 Bank, sample-index and volume changes remain drafts until **Apply as new inherited
 timing point** inserts a green line at that timestamp, preserving effective SV. The
