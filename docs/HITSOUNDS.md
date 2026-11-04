@@ -148,7 +148,8 @@ Timing tags fill the interval up to the next timing point. Their left-aligned te
 at the visible left edge when the interval begins outside the viewport.
 
 In **Select**, only clicking a Notes object or an existing sound tag selects its event.
-Selecting a sound does not seek. Clicking empty timeline space clears selection and seeks;
+Selecting a sound does not seek. Clicking empty timeline space clears selection and seeks
+only while paused; during playback, empty grid and ruler clicks preserve the playing position;
 clicking the lane-label column does not seek. Dragging empty grid space draws a selection
 rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Ctrl+C copies selected sounds, Ctrl+V
 pastes their relative times at the playhead onto existing fruit events (within 1 ms),

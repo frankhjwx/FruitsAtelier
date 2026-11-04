@@ -290,7 +290,7 @@ public sealed partial class EditorView
         if (hitsoundingMarquee)
         {
             hitsoundingMarquee = false;
-            if (HitsoundingMarqueeBounds.Width < 3 && HitsoundingMarqueeBounds.Height < 3)
+            if (!AudioPlaying && HitsoundingMarqueeBounds.Width < 3 && HitsoundingMarqueeBounds.Height < 3)
                 SeekTo(Math.Max(0, HitsoundingStart + (hitsoundingMarqueeStart.X - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan));
             return true;
         }

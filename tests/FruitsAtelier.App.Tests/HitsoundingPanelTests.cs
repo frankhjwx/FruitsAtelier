@@ -22,6 +22,18 @@ internal static class HitsoundingPanelTests
             Check(!(left ? workspace.Left : workspace.Right)!.Collapsed && ui.View.PlayheadMs == beforeToggle && baseline.ContentEquals(ui.View.Document), "Dock expand does not seek, select or edit underlying content");
         }
         ui.View.UpdateTransport(1000, 10000, true, false, false, null, null); ui.Paint();
+        float emptyX = NormalBlocks().Last().X + 40, emptyY = LaneY(6);
+        foreach (float y in new[] { emptyY, 145f })
+        {
+            ui.View.UpdateTransport(1000, 10000, true, true, false, null, null); ui.Paint();
+            ui.Click(emptyX, y);
+            Check(ui.View.PlayheadMs == 1000 && ui.View.AudioPlaying, "Playing blank grid and ruler clicks preserve playback position and state");
+            ui.View.UpdateTransport(1000, 10000, true, false, false, null, null); ui.Paint();
+            ui.Click(emptyX, y);
+            Check(ui.View.PlayheadMs > 1000, "Paused blank grid and ruler clicks still seek");
+        }
+        Check(baseline.ContentEquals(ui.View.Document), "Blank clicks do not edit beatmap content");
+        ui.View.UpdateTransport(1000, 10000, true, false, false, null, null); ui.Paint();
         var block = NormalBlocks()[0];
         ui.Click(block.X + block.Width / 2, block.Y + block.Height / 2);
         Check(ui.View.PlayheadMs == 1000, "Selecting a sound preserves transport position");
