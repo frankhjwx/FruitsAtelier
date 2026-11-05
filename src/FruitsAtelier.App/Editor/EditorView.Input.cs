@@ -1502,7 +1502,7 @@ public sealed partial class EditorView
         if (LibraryVisible && !librarySettingsOpen && !resourcePage && libraryField < 0 && UiScaleKey(virtualKey, ctrl)) return;
         if (librarySettingsOpen || LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
         if (editField < 0 && OsuToggleKey(virtualKey, ctrl, shift)) return;
-        if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
+        if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift && !(IsLazerEditing && virtualKey is 37 or 39))) return;
         if (virtualKey == 27 && VolumePopoverVisible) { CloseVolumePopover(); return; }
         if (TimingKey(virtualKey, ctrl, shift)) return;
         if (virtualKey == 117 && !ctrl && !shift && !altHeld) { OpenTimingSetup(); return; }

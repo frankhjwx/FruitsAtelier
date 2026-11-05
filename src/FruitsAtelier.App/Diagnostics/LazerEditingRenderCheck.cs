@@ -42,7 +42,7 @@ internal static class LazerEditingRenderCheck
                 editor.KeyDown(27, false, false); Paint();
                 editor.KeyDown(27, false, false); Paint();
                 editor.OpenSettings(); Paint();
-                Click(settings.X + 40, settings.Y + 96 + 6 * 48);
+                Click(settings.X + 40, settings.Y + 96 + 7 * 48);
                 Paint("settings-off");
                 var toggle = editor.LazerEditingToggleBounds;
                 Click(toggle.X + 10, toggle.Y + toggle.Height / 2); Paint("settings-on");
@@ -112,7 +112,7 @@ internal static class LazerEditingRenderCheck
                     throw new InvalidOperationException("Hidden guides must retain distance snapping.");
                 editor.OpenSettings(); Paint();
                 settings = editor.SettingsBounds;
-                Click(settings.X + 40, settings.Y + 96 + 6 * 48);
+                Click(settings.X + 40, settings.Y + 96 + 7 * 48);
                 toggle = editor.LazerEditingToggleBounds;
                 Click(toggle.X + 10, toggle.Y + toggle.Height / 2);
                 editor.ApplySettings(persist: false);

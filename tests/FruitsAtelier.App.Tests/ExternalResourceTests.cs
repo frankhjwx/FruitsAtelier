@@ -45,7 +45,7 @@ internal static class ExternalResourceTests
                 && ProjectSerializer.ReadProject(File.ReadAllText(legacyPath)).Difficulties[0].Document.Fruits[0].X == 333,
                 "duplicate source import leaves both existing edits and the import file unchanged");
             Directory.Move(external, external + " moved");
-            Check(new LibraryDatabase(settings.Workspace, "").Scan().Errors.Count > 0 && db.Search("").Count == 2, "missing source reported without forgetting index");
+            Check(new LibraryDatabase(settings.Workspace, "").Scan().Errors.Count > 0 && db.Search("").Count == 0, "missing source reported and stale library rows removed");
             Check(WorkspaceProject.MissingResources(WorkspaceProject.Open(session.Directory).Project).Count > 0, "project reports broken external references");
 
             string archive = Path.Combine(root, "Complete.osz");
