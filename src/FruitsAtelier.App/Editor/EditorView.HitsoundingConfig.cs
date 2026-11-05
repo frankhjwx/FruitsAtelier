@@ -470,7 +470,7 @@ public sealed partial class EditorView
         if (!HitsoundingPageVisible || !DockContentInputAvailable || menu >= 0 || contextItems.Count > 0) return false;
         if (hitsoundingInspectorBounds.Contains(x, y))
         {
-            if (TimingHelperNearbyBounds.Contains(x, y)) StepTimingHelperPoint(delta);
+            if (TimingHelperNearbyBounds.Contains(x, y)) ScrollTimingHelperNearby(delta);
             else if (CommitField()) hitsoundingInspectorScroll = Math.Clamp(hitsoundingInspectorScroll - delta / 120 * 32, 0, hitsoundingInspectorScrollMaximum);
             return true;
         }

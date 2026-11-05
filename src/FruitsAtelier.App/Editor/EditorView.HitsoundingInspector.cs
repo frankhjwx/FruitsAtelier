@@ -64,6 +64,7 @@ public sealed partial class EditorView
         double time = hitsoundingSelectedTiming?.TimeMs ?? note?.TimeMs ?? playhead;
         bool changed = inspectorTimingSelection != hitsoundingSelectedTiming || inspectorSelection != hitsoundingSelected || !ReferenceEquals(inspectorConversion, hitsoundingConversion);
         if (!changed && (inspectorTimingDirty || inspectorTime == time)) return;
+        if (inspectorTimingSelection != hitsoundingSelectedTiming || inspectorSelection != hitsoundingSelected) hitsoundingInspectorScroll = 0;
         inspectorSelection = hitsoundingSelected; inspectorConversion = hitsoundingConversion;
         inspectorTimingSelection = hitsoundingSelectedTiming;
         timingHelperPoints = (hitsoundingSelectedTiming is { } selectedPoint ? new[] { selectedPoint }
@@ -83,9 +84,9 @@ public sealed partial class EditorView
         RefreshHitsoundingInspector();
         hitsoundingInspectorBounds = r;
         var nearby = TimingHelperNearbyRange();
-        float contentHeight = timingHelperPoints.Length > 0 ? 46 + timingHelperPoints.Sum(d => d.Source.Uninherited ? 440 : 366) : 388;
+        float contentHeight = timingHelperPoints.Length > 0 ? 92 + timingHelperPoints.Sum(d => d.Source.Uninherited ? 410 : 336) : 388;
         float nearbyHeight = nearby.Count > 0 ? 30 + nearby.Count * 20 : 0;
-        float editorHeight = Math.Min(contentHeight, Math.Max(0, r.Height - nearbyHeight - 8));
+        float editorHeight = Math.Max(0, r.Height - nearbyHeight - 8);
         var nearbyBounds = TimingHelperNearbyBounds = new Rect(r.X + 10, r.Y + editorHeight + 8, Math.Max(0, r.Width - 20), nearbyHeight);
         r = new(r.X, r.Y, r.Width, editorHeight);
         hitsoundingInspectorScrollMaximum = Math.Max(0, contentHeight - r.Height);
@@ -93,24 +94,22 @@ public sealed partial class EditorView
         int firstHit = hits.Count, firstField = fields.Count;
         c.Clip(r);
         float y = r.Y + 8 - hitsoundingInspectorScroll, x = r.X + 10, w = Math.Max(0, r.Width - 20);
-        c.Text(L.Get(hitsoundingSelectedTiming is not null ? "hitsounding.selectedTiming" : hitsoundingSelected is null ? "hitsounding.currentTime" : "hitsounding.selectedNote"), x, y, 12, Muted, w); y += 24;
-        c.Text(Time(inspectorTime), x, y, 16, Foreground, w, true); y += 30;
+        DrawTimingHelperHeader(c, new(x, y, w, 118)); y += 128;
         if (timingHelperPoints.Length > 0)
         {
             foreach (var entry in timingHelperPoints)
             {
+                if (entry != timingHelperPoints[0])
+                {
+                    c.Text(L.Get(entry.Source.Uninherited ? "hitsounding.redPoint" : "hitsounding.greenPoint", Time(entry.Time)), x, y, 12,
+                        entry.Source.Uninherited ? 0xE77785u : 0x72C686u, w, true); y += 28;
+                }
                 DrawTimingHelperPoint(c, x, ref y, w, entry);
                 if (entry != timingHelperPoints[^1]) { c.Line(x, y, x + w, y, Grid); y += 16; }
             }
         }
         else
         {
-            var timing = renderedTiming!.At(inspectorTime);
-            c.Text(L.Get("timing.bpm") + " " + Number(60000 / timing.BeatLengthMs), x, y, 11, Muted, w); y += 28;
-            var red = LatestHitsoundingPoint(hitsoundingRedPoints, inspectorTime);
-            var green = LatestHitsoundingPoint(hitsoundingGreenPoints, inspectorTime);
-            c.Text(L.Get("hitsounding.redPoint", red is null ? "—" : Time(red.TimeMs)), x, y, 10, 0xE77785, w); y += 20;
-            c.Text(L.Get("hitsounding.greenPoint", green is null || green.TimeMs < (red?.TimeMs ?? double.NegativeInfinity) ? "—" : Time(green.TimeMs)), x, y, 10, 0x72C686, w); y += 26;
             c.Text(L.Get("samples.sampleset"), x, y, 11, Muted, w); y += 18;
             for (int i = 0; i < 3; i++)
             {
@@ -134,11 +133,23 @@ public sealed partial class EditorView
             c.Fill(new(r.Right - 3, r.Y + hitsoundingInspectorScroll / hitsoundingInspectorScrollMaximum * (r.Height - 40), 3, 40), Muted, 1.5f);
         DrawTimingHelperNearby(c, nearbyBounds, nearby);
     }
+    private void DrawTimingHelperHeader(ICanvas c, Rect r)
+    {
+        c.Fill(r, Surface, 6);
+        float x = r.X + 10, w = Math.Max(0, r.Width - 20);
+        c.Text(L.Get(hitsoundingSelectedTiming is not null ? "hitsounding.selectedTiming" : hitsoundingSelected is null ? "hitsounding.currentTime" : "hitsounding.selectedNote"), x, r.Y + 8, 11, Muted, w);
+        c.Text(Time(inspectorTime), x, r.Y + 27, 20, Foreground, w, true);
+        var timing = renderedTiming!.At(inspectorTime);
+        c.Text(L.Get("timing.bpm") + " " + Number(60000 / timing.BeatLengthMs), x, r.Y + 54, 10, Muted, w);
+        c.Line(x, r.Y + 73, x + w, r.Y + 73, Grid);
+        var red = LatestHitsoundingPoint(hitsoundingRedPoints, inspectorTime);
+        var green = LatestHitsoundingPoint(hitsoundingGreenPoints, inspectorTime);
+        c.Text(L.Get("hitsounding.redPoint", red is null ? "—" : Time(red.TimeMs)), x, r.Y + 80, 10, 0xE77785, w);
+        c.Text(L.Get("hitsounding.greenPoint", green is null || green.TimeMs < (red?.TimeMs ?? double.NegativeInfinity) ? "—" : Time(green.TimeMs)), x, r.Y + 98, 10, 0x72C686, w);
+    }
     private void DrawTimingHelperPoint(ICanvas c, float x, ref float y, float w, TimingHelperPoint entry)
     {
         bool red = entry.Source.Uninherited;
-        c.Text(L.Get(red ? "hitsounding.redPoint" : "hitsounding.greenPoint", Time(entry.Source.TimeMs)), x, y, 12,
-            red ? 0xE77785u : 0x72C686u, w, true); y += 28;
         Field(c, x, ref y, w, L.Get("timing.offset"), entry.Time, v => { if (!double.IsFinite(v)) throw new ArgumentException(L.Get("timing.range")); entry.Time = v; }, 100);
         if (red) Field(c, x, ref y, w, L.Get("timing.bpm"), 60000 / entry.BeatLength,
             v => { if (!double.IsFinite(v) || v <= 0 || v > 10000) throw new ArgumentException(L.Get("timing.range")); entry.BeatLength = 60000 / v; }, 100);
@@ -166,8 +177,12 @@ public sealed partial class EditorView
             Field(c, choiceX + customLabelWidth, ref customY, choiceWidth - customLabelWidth, L.Get("hitsounding.index"), entry.Index, v => { entry.Index = Math.Max(2, ValidHsIndex(v)); }, 0);
         }
         y += 94;
-        Field(c, x, ref y, w, L.Get("hitsounding.volume"), entry.Volume, v => { entry.Volume = (int)Math.Clamp(Math.Round(v), 0, 100); }, 100);
-        var slider = new Rect(x + 6, y, Math.Max(1, w - 12), 24);
+        float volumeY = y;
+        float labelWidth = Math.Min(64, c.MeasureText(L.Get("volume.title"), 11) + 8);
+        c.Text(L.Get("volume.title"), x, volumeY + 8, 11, Muted, labelWidth);
+        Field(c, x + w - 60, ref y, 46, L.Get("hitsounding.volume"), entry.Volume, v => { entry.Volume = (int)Math.Clamp(Math.Round(v), 0, 100); }, 0);
+        c.Text("%", x + w - 10, volumeY + 8, 11, Muted, 10);
+        var slider = new Rect(x + labelWidth + 4, volumeY + 3, Math.Max(1, w - labelWidth - 74), 24);
         c.Line(slider.X, slider.Y + 12, slider.Right, slider.Y + 12, Grid, 4);
         c.Circle(slider.X + slider.Width * entry.Volume / 100, slider.Y + 12, 6, Accent);
         hits.Add(new(slider, () =>
@@ -177,7 +192,6 @@ public sealed partial class EditorView
             history.Begin(L.Get("timing.edit"));
             timingHelperVolumeDrag = entry; timingHelperVolumeTrack = slider; MoveTimingHelperVolume(mouseX);
         }, true));
-        y += 30;
         string[] sounds = ["hitnormal", "hitfinish", "hitwhistle", "hitclap"];
         for (int i = 0; i < sounds.Length; i++)
         {

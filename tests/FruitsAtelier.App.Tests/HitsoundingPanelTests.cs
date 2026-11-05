@@ -163,8 +163,9 @@ internal static class HitsoundingPanelTests
         Check(ui.Canvas.Texts.Count(t => t.Value == L.Get("timing.offset")) == 2, "Exact red and green points get separate editable sections");
         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.applyExisting")), "Existing timing controls do not need an Apply button");
         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.applyTiming")), "Existing lines never offer inserting a duplicate");
-        var volumes = ui.Canvas.Texts.Where(t => t.Value == L.Get("hitsounding.volume") && t.X > 1100).OrderBy(t => t.Y).ToArray();
-        ui.Click(volumes[1].X + 115, volumes[1].Y + 5); ui.Key(65, ctrl: true); ui.Type("35"); ui.Key(13);
+        var volumes = ui.Canvas.Texts.Where(t => t.Value == L.Get("volume.title") && t.X > 1100).OrderBy(t => t.Y).ToArray();
+        var percent = ui.Canvas.Texts.Single(t => t.X > 1100 && t.Value == "%" && t.Y == volumes[1].Y);
+        ui.Click(percent.X - 30, percent.Y + 5); ui.Key(65, ctrl: true); ui.Type("35"); ui.Key(13);
         Check(ui.View.Document.TimingPoints.Count == 3 && ui.View.Document.TimingPoints[0].Volume == 80 && ui.View.Document.TimingPoints[1].Volume == 35,
             "Editing the second section immediately modifies only the existing green line");
         Check(ui.View.IsDirty, "Live timing edits remain unsaved until the user saves");
@@ -298,15 +299,21 @@ internal static class HitsoundingPanelTests
         CheckRows(10500, 4);
         ui.View.UpdateTransport(5500, 20000, true, false, false, null, null); ui.Paint();
         var list = ui.View.TimingHelperNearbyBounds;
+        float headerTop = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.currentTime")).Y;
+        float parameterTop = ui.Canvas.Texts.Single(t => t.Value == L.Get("samples.sampleset") && t.X > 1100).Y;
+        var navigationBaseline = ui.View.Document.DeepClone();
         ui.View.Wheel(list.X + 8, list.Y + 20, -120, false, false, false); ui.Paint();
-        Check(ui.View.PlayheadMs == 6000, "Nearby timing wheel advances to the next timing point");
+        Check(ui.View.PlayheadMs == 5500 && Rows().First() == "00:03:000", "Nearby timing wheel scrolls rows without seeking");
         for (int i = 0; i < 7; i++) Wheel(-120);
-        Check(ui.View.PlayheadMs == 10000 && Rows().First() == "00:04:000", "Wheel continues beyond the initial seven rows and stops at the final point");
+        Check(ui.View.PlayheadMs == 5500 && Rows().First() == "00:04:000", "Wheel scrolls to the final seven rows without seeking");
         Wheel(2400); Wheel(120);
-        Check(ui.View.PlayheadMs == 0, "Reverse wheel reaches and stops at the first timing point");
+        Check(ui.View.PlayheadMs == 5500 && Rows().First() == "00:00:000", "Reverse wheel stops at the first row without seeking");
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.currentTime")) && navigationBaseline.ContentEquals(ui.View.Document), "List scrolling preserves selection and map content");
         Wheel(-720);
         Jump("00:06:000");
         Check(ui.View.PlayheadMs == 6000 && Rows().SequenceEqual(Enumerable.Range(3, 7).Select(i => $"00:{i:00}:000")), "Clicking a nearby row seeks and centers the selected timing point");
+        Check(ui.View.TimingHelperNearbyBounds.Y == list.Y && ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.selectedTiming")).Y == headerTop
+            && ui.Canvas.Texts.Single(t => t.Value == L.Get("timing.offset")).Y - 8 == parameterTop, "Timestamp header height and nearby list position remain stable after selecting a green point");
         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.meter") || t.Value == L.Get("timing.bpm")), "Green timing points omit BPM and Meter controls");
         var custom = ui.Canvas.Texts.Single(t => t.X > 1100 && t.Value == L.Get("timing.custom"));
         var customIndex = ui.Canvas.Texts.Single(t => t.X > 1100 && t.Value == "6");

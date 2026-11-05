@@ -188,15 +188,17 @@ External changes to a shared file are checked before edits and undo/redo.
 
 **Timing Helper** follows the playhead when nothing is selected and the event
 time when an object is selected. Clicking a timing interval or its stem selects that
-specific timing point. At an exact timestamp with existing timing points, the helper
+specific timing point. A fixed-height information card shows the context, timestamp,
+effective BPM and active red/green timestamps in every selection state. The parameter
+area starts at the same vertical position, and the nearby list stays anchored below it.
+At an exact timestamp with existing timing points, the helper
 shows each point in a separate section divided by horizontal rules. Offset, bank, sample index, volume and the Kiai toggle edit the existing point directly; BPM and meter controls appear only for red points. Numeric inputs take effect on Enter or focus loss. Toggling Kiai preserves the point's other effect flags.
-Sample indices use Default, Custom 1 and Custom choices, with the custom index input on the Custom row. Volume has a numeric input
-and slider; Hit, Finish, Whistle and Clap buttons preview the current sample settings.
+Sample indices use Default, Custom 1 and Custom choices, with the custom index input on the Custom row. Existing-point volume uses one row for its label, slider, numeric input and percent suffix; Hit, Finish, Whistle and Clap buttons preview the current sample settings.
 Volume updates while dragging, with one undo step for the complete gesture. The helper does not display or edit SV; sound edits preserve the green line's beat length.
 Only timestamps without a point show effective timing information and **Apply as new
 inherited timing point**, which inserts a green line while preserving effective SV.
 Settings for a new inherited point remain drafts until insertion. Existing-point edits support undo and mark the map as modified; saving remains explicit.
-A separator and **Nearby Timing Points** title introduce up to seven nearby timing points in chronological order, showing timestamp, timing/sample information and volume. The current point is highlighted, retaining red for red points; others fade with distance. Clicking a row seeks to its timestamp and selects that point in the helper. The wheel over this area selects and seeks to the previous or next timing point, continuing beyond the visible rows and stopping at the first or last point. The list prefers three points on each side, filling from the other side at map boundaries; it has no separate scrollbar.
+A separator and **Nearby Timing Points** title introduce up to seven nearby timing points in chronological order, showing timestamp, timing/sample information and volume. The current point is highlighted, retaining red for red points; others fade with distance. The wheel only scrolls the visible rows, leaving the playhead and selection unchanged. Clicking a row seeks to its timestamp, selects that point in the helper, and recenters the list. The initial view prefers three points on each side, filling from the other side at map boundaries; it has no separate scrollbar.
 The Hitsounding dock menu provides Config, Timing Helper, Song Setup and Preview independently
 of Mapping.
 Restoring Hitsounding as the active panel on editor startup loads its sound library immediately, without requiring pointer input.
