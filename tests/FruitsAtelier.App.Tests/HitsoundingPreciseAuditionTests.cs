@@ -30,6 +30,10 @@ internal static class HitsoundingPreciseAuditionTests
         Select(2); Check(ui.View.HitsoundingPreciseAuditionBounds.Width == 0, "Note-based selection does not show the Precise audition control");
         ui.ClickText(L.Get("hitsounding.precise")); Select(2);
         Check(played.Count == 0 && ui.View.HitsoundingPreciseAuditionBounds.Width > 0, "Selecting a Precise block exposes Play without automatically playing");
+        var selectedBox = Block(2); var playButton = ui.View.HitsoundingPreciseAuditionBounds;
+        Check(playButton.X >= selectedBox.X && playButton.Right < selectedBox.X + selectedBox.Width / 2
+            && playButton.Y > selectedBox.Y + selectedBox.Height / 2 - 1 && playButton.Bottom <= selectedBox.Bottom,
+            "Play sits inside the block's lower-left waveform area");
         Play(); Check(played.Count == 1 && played[0].Name == "hitwhistle", "Play auditions the selected track's resolved sample");
         clock.Now += 500; ui.Paint(); var box = Block(2);
         Check(ui.Canvas.Fills.Any(f => f.Bounds.Y == box.Y && f.Bounds.Height == box.Height && Math.Abs(f.Bounds.Width - box.Width / 2) < .1f), "Precise audition shows elapsed progress inside its outlined block");
@@ -42,12 +46,17 @@ internal static class HitsoundingPreciseAuditionTests
         Play(); Check(stops == 3 && played.Count == 4, "Precise audition stops an active library sound");
         LibraryPlay(); Check(stops == 4 && played.Count == 5, "Library audition stops an active Precise sound");
         clock.Now += 1000; ui.Paint(); Check(stops == 5, "Audition completes and resets its control");
+        var selected = Block(3);
+        ui.View.Wheel(selected.X, selected.Y, -960, false, false, true); ui.Paint();
+        Check(Block(3).Width < 48 && ui.View.HitsoundingPreciseAuditionBounds.Width == 0, "Narrow blocks hide the audition control");
+        ui.View.Wheel(selected.X, selected.Y, 960, false, false, true); ui.Paint();
+        Check(ui.View.HitsoundingPreciseAuditionBounds.Width > 0, "The control returns when the selected block is wide enough");
         ui.ClickText(L.Get("hitsounding.noteBased"));
         Check(ui.View.HitsoundingPreciseAuditionBounds.Width == 0 && baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty && ui.View.PlayheadMs == 1200,
             "Audition and mode changes preserve document history and transport position");
         void Play() { var r = ui.View.HitsoundingPreciseAuditionBounds; Check(r.Width > 0, "Selected sound exposes Play"); ui.Click(r.X + r.Width / 2, r.Y + r.Height / 2); }
         void LibraryPlay() { var label = ui.Canvas.Texts.Single(t => t.Value == "audition.wav"); ui.Click(label.X - 20, label.Y + 8); }
-        void Select(int lane) { var r = Block(lane); ui.Click(r.X + Math.Min(4, r.Width / 2), r.Y + r.Height / 2); }
+        void Select(int lane) { var r = Block(lane); ui.Click(r.X + Math.Min(4, r.Width / 2), r.Y + 6); }
         Rect Block(int lane)
         {
             var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100);

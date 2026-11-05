@@ -233,7 +233,8 @@ one; the active row shows a progress fill, outline and Stop button. Navigation a
 file changes stop audition. Audition uses independent playback from map preview.
 
 In Precise HS, clicking a sound block selects it and reveals an audition button
-above the block. Play/Stop and the progress fill use the same exclusive audition
+inside its lower-left waveform area when the visible block is wide enough.
+Play/Stop and the progress fill use the same exclusive audition
 channel as Hitsound Library, so starting a sound in either view stops the previous
 audition. Selecting a block alone does not start playback or move the playhead.
 Imports preserve existing different

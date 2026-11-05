@@ -32,11 +32,14 @@ public sealed partial class EditorView
 
     private void DrawHitsoundingPreciseAudition(ICanvas c, Rect box, Hitsound sound)
     {
-        var row = new Rect(Math.Clamp(box.Right - 34, hitsoundingGridBounds.X, Math.Max(hitsoundingGridBounds.X, hitsoundingGridBounds.Right - 34)),
-            Math.Max(hitsoundingGridBounds.Y, box.Y - 32), 34, 30);
-        c.Fill(row, Surface, 5);
-        DrawHitsoundingAudition(c, row, sound, library: true);
-        hitsoundingPreciseAuditionButton = (new(row.X + 3, row.Y + 3, 28, row.Height - 6), sound);
+        if (box.X < hitsoundingGridBounds.X || Math.Min(box.Right, hitsoundingGridBounds.Right) - box.X < 48 || box.Height < 34) return;
+        var button = new Rect(box.X + 4, box.Bottom - 18, 16, 16);
+        c.Fill(button, Surface, 3);
+        c.Circle(button.X + 8, button.Y + 8, 7, Muted, false, 1, .6f);
+        if (HitsoundingAuditionKey(sound) == hitsoundingAuditionPath) c.Fill(new(button.X + 4, button.Y + 4, 8, 8), Foreground, 1);
+        else c.Text("▶", button.X + 4, button.Y + 1, 10, Foreground, 12);
+        hitsoundingPreciseAuditionButton = (button, sound);
+        hits.Add(new(button, () => ToggleHitsoundingLibraryAudition(sound), true));
     }
 
     private void StopHitsoundingLibraryAudition()
