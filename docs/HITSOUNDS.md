@@ -198,7 +198,7 @@ Volume updates while dragging, with one undo step for the complete gesture. The 
 Only timestamps without a point show effective timing information and **Apply as new
 inherited timing point**, which inserts a green line while preserving effective SV.
 Settings for a new inherited point remain drafts until insertion. Existing-point edits support undo and mark the map as modified; saving remains explicit.
-A separator and **Nearby Timing Points** title introduce up to seven nearby timing points in chronological order, showing timestamp, timing/sample information and volume. The current point is highlighted, retaining red for red points; others fade with distance. The wheel only scrolls the visible rows, leaving the playhead and selection unchanged. Clicking a row seeks to its timestamp, selects that point in the helper, and recenters the list. The initial view prefers three points on each side, filling from the other side at map boundaries; it has no separate scrollbar.
+A separator and **Nearby Timing Points** title introduce up to seven nearby timing points in chronological order, showing timestamp, timing/sample information and volume. The current point is highlighted, retaining red for red points; others fade with distance. The wheel only scrolls the visible rows, leaving the playhead and selection unchanged. Clicking a row selects that point in the helper and recenters the list without moving the playhead or canvas. The initial view prefers three points on each side, filling from the other side at map boundaries; it has no separate scrollbar.
 The Hitsounding dock menu provides Config, Timing Helper, Song Setup and Preview independently
 of Mapping.
 Restoring Hitsounding as the active panel on editor startup loads its sound library immediately, without requiring pointer input.
@@ -318,7 +318,8 @@ Library settings store All, Song and Hitsound percentages independently of beatm
 
 The Timing Helper header lists **Affecting Timing Lines** using the same timestamp,
 timing information and volume columns as Nearby Timing Points. Click either active
-red or green row to select it and seek to its timestamp. Missing active lines retain
+red or green row to select it without moving the playhead or canvas. The header’s
+**Jump** button seeks to the displayed point when requested. Missing active lines retain
 a placeholder so the header height stays constant.
 
 **Add new inherited timing point here** is available without changing draft values.

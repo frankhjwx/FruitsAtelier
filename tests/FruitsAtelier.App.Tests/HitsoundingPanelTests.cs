@@ -327,7 +327,7 @@ internal static class HitsoundingPanelTests
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.currentTime")) && navigationBaseline.ContentEquals(ui.View.Document), "List scrolling preserves selection and map content");
         Wheel(-720);
         Jump("00:06:000");
-        Check(ui.View.PlayheadMs == 6000 && Rows().SequenceEqual(Enumerable.Range(3, 7).Select(i => $"00:{i:00}:000")), "Clicking a nearby row seeks and centers the selected timing point");
+        Check(ui.View.PlayheadMs == 5500 && Rows().SequenceEqual(Enumerable.Range(3, 7).Select(i => $"00:{i:00}:000")), "Clicking a nearby row selects and centers the list without moving the canvas");
         Check(ui.View.TimingHelperNearbyBounds.Y == list.Y && ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.selectedTiming")).Y == headerTop
             && ui.Canvas.Texts.Single(t => t.Value == L.Get("timing.offset")).Y - 8 == parameterTop, "Timestamp header height and nearby list position remain stable after selecting a green point");
         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.meter") || t.Value == L.Get("timing.bpm")), "Green timing points omit BPM and Meter controls");
@@ -337,10 +337,12 @@ internal static class HitsoundingPanelTests
         var affectingTitle = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.affectingTiming"));
         var affectingGreen = ui.Canvas.Texts.Single(t => t.Value == "00:06:000" && t.Y > affectingTitle.Y && t.Y < affectingTitle.Y + 60);
         ui.Click(affectingGreen.X + 3, affectingGreen.Y + 4);
-        Check(ui.View.PlayheadMs == 6000, "Affecting green row seeks to its timing point");
+        Check(ui.View.PlayheadMs == 5500, "Affecting green row preserves canvas time");
         var affectingRed = ui.Canvas.Texts.Single(t => t.Value == "00:00:000" && t.Y > affectingTitle.Y && t.Y < affectingTitle.Y + 60);
         ui.Click(affectingRed.X + 3, affectingRed.Y + 4);
-        Check(ui.View.PlayheadMs == 0 && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.meter")), "Affecting red row seeks and selects its timing point");
+        Check(ui.View.PlayheadMs == 5500 && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.meter")), "Affecting red row selects its timing point without moving canvas time");
+        ui.ClickText(L.Get("timeJump.go"));
+        Check(ui.View.PlayheadMs == 0, "Jump explicitly seeks to the selected timing point");
         Check(navigationBaseline.ContentEquals(ui.View.Document), "Affecting row navigation preserves map content");
         map.TimingPoints.RemoveRange(3, 8); ui.LoadDocument(map); ui.View.ShowHitsoundingPage(); ui.Paint();
         Check(Rows().Length == 3, "Nearby timing lists all available points when fewer than seven exist");

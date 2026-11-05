@@ -139,7 +139,11 @@ public sealed partial class EditorView
         c.Fill(r, Surface, 6);
         float x = r.X + 10, w = Math.Max(0, r.Width - 20);
         c.Text(L.Get(hitsoundingSelectedTiming is not null ? "hitsounding.selectedTiming" : hitsoundingSelected is null ? "hitsounding.currentTime" : "hitsounding.selectedNote"), x, r.Y + 8, 11, Muted, w);
-        c.Text(Time(inspectorTime), x, r.Y + 27, 20, Foreground, w, true);
+        c.Text(Time(inspectorTime), x, r.Y + 27, 20, Foreground, Math.Max(0, w - 60), true);
+        Button(c, new(r.Right - 64, r.Y + 28, 54, 28), L.Get("timeJump.go"), () =>
+        {
+            if (CommitField()) SeekTo(Math.Max(0, hitsoundingSelectedTiming?.TimeMs ?? inspectorTime));
+        });
         var timing = renderedTiming!.At(inspectorTime);
         c.Text(L.Get("timing.bpm") + " " + Number(60000 / timing.BeatLengthMs), x, r.Y + 54, 10, Muted, w);
         c.Line(x, r.Y + 73, x + w, r.Y + 73, Grid);

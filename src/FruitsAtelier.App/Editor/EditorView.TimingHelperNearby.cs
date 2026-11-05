@@ -17,7 +17,6 @@ public sealed partial class EditorView
         timingHelperNearbyFirst = null;
         SelectHitsoundingTimingPoint(point);
         hitsoundingInspectorScroll = 0;
-        SeekTo(Math.Max(0, point.TimeMs));
     }
     private void ScrollTimingHelperNearby(float delta)
     {
