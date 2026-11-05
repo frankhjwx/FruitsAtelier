@@ -193,6 +193,12 @@ public sealed partial class EditorView
             DrawStatus(c);
             DrawUpdateNotice(c);
             DrawDockDrag(c);
+            if (HitsoundingPageVisible && hitsoundingLibraryDragging && !hitsoundingLibraryBox && hitsoundingLibraryDragPaths.Length > 0)
+            {
+                var ghost = new Rect(Math.Min(mouseX + 12, width - 220), Math.Min(mouseY + 16, height - 32), 210, 28);
+                c.Fill(ghost, Surface, 4); c.Stroke(ghost, Accent, radius: 4);
+                c.Text(L.Get(hitsoundingLibraryCopyDrag ? "hitsounding.copyCount" : "hitsounding.moveCount", hitsoundingLibraryDragPaths.Length), ghost.X + 8, ghost.Y + 7, 11, Foreground, 194);
+            }
             if (HitsoundingPageVisible && hitsoundingDragFile is { } soundPath)
             {
                 var ghost = new Rect(Math.Min(mouseX + 12, width - 220), Math.Min(mouseY + 16, height - 32), 210, 28);
@@ -201,6 +207,7 @@ public sealed partial class EditorView
             }
         }
         finally { mouseX = pointer.X; mouseY = pointer.Y; }
+        if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingMuteTooltip(c);
         DrawPatternGalleryOverlay(c);
         DrawPatternEditingBanner(c);
         DrawTimingSetup(c);

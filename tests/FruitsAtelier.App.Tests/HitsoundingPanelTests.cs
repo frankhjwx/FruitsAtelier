@@ -4,6 +4,32 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class HitsoundingPanelTests
 {
+    private static void StableLabels()
+    {
+        var map = new MapDocument { DurationMs = 20000, BeatLengthMs = 500 };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 79 });
+        foreach (int time in Enumerable.Range(0, 64).Select(i => i * 250).Concat(new[] { 5999, 10001 }))
+            map.Fruits.Add(new() { TimeMs = time, X = 256, OriginalLine = $"256,192,{time},1,0,2:0:{(time % 750 == 0 ? 11 : time % 750 == 250 ? 88 : 79)}:0:" });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage();
+        bool sawVisible = false, sawHidden = false;
+        foreach (int time in new[] { 3000, 5000, 6000, 7000, 9500, 10000, 11000 })
+        {
+            ui.View.UpdateTransport(time, 20000, true, false, false, null, null); ui.Paint();
+            var blocks = LaneBlocks(ui, 1);
+            Check(blocks.Length > 0, "Dense label fixture has visible sound blocks");
+            foreach (var group in blocks.Where(b => b.Width > 0).GroupBy(b => Math.Round(b.Width, 2)))
+            {
+                var states = group.Select(box => ui.Canvas.Texts.Any(t => t.Value is "79" or "11" or "88" && t.Y >= box.Y && t.Y < box.Bottom
+                    && Math.Abs(t.X + ((FruitsAtelier.App.Rendering.ICanvas)ui.Canvas).MeasureText(t.Value, t.Size, true) / 2 - box.X - box.Width / 2) < .1f)).Distinct().ToArray();
+                Check(states.Length == 1, "Equal-width indexed blocks have consistent label visibility");
+                sawVisible |= states[0]; sawHidden |= !states[0];
+                if (group.Key < 12) Check(!states[0], "Crowded blocks hide their labels");
+            }
+            Check(ui.Canvas.Texts.Where(t => t.Value is "79" or "11" or "88" && t.Y >= blocks[0].Y && t.Y < blocks[0].Bottom && t.X < 1100).All(t => t.Size == 11), "Sound labels retain their readable fixed font size");
+        }
+        Check(sawVisible && sawHidden, "Fixture exercises both readable and crowded labels");
+    }
+
     public static void Editing()
     {
         var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
@@ -256,6 +282,7 @@ internal static class HitsoundingPanelTests
     }
     public static void Run()
     {
+        StableLabels();
         string root = Path.GetFullPath("artifacts/tests/hitsounding"); Directory.CreateDirectory(root);
         string wave = Path.Combine(root, "soft-hitnormal.wav");
         File.WriteAllBytes(wave, HitsoundSamples.CreateWave(CatchObjectKind.Fruit));
@@ -375,7 +402,7 @@ internal static class HitsoundingPanelTests
         string libraryRoot = Path.GetDirectoryName(saved)!;
         string nested = Path.Combine(libraryRoot, "Drums", "Tight"); Directory.CreateDirectory(nested);
         ui.View.ShowHitsoundingPage(); ui.Paint();
-        ui.ClickText("Drums"); ui.ClickText("Tight");
+        OpenFolder("Drums"); OpenFolder("Tight");
         ui.View.DropLibraryFiles([source]); WaitImport();
         Check(File.Exists(Path.Combine(nested, "replacement.wav")), "Imports target the browsed subfolder");
         ui.View.NavigateHitsoundingDirectory(Path.GetDirectoryName(libraryRoot)); ui.Paint();
@@ -413,7 +440,7 @@ internal static class HitsoundingPanelTests
         string? opened = null;
         ui.View.RequestOpenExternalPath = path => opened = path;
         var search = ui.Canvas.Texts.First(t => t.Value == L.Get("hitsounding.search"));
-        ui.View.PointerDown(search.X + 5, search.Y + 5, 1, false, false); ui.Paint();
+        ui.View.PointerDown(search.X + 5, search.Y + 5, 2, false, false); ui.Paint();
         ui.ClickText(L.Get("hitsounding.openFolder"));
         Check(opened == libraryRoot, "Library context menu opens the current folder");
         ui.ClickText(L.Get("hitsounding.customSet", 1) + " ▾");
@@ -434,6 +461,11 @@ internal static class HitsoundingPanelTests
             throw new TimeoutException("Library watcher did not refresh");
         }
         ui.Resize(980, 620); Check(ui.Canvas.Fills.All(f => float.IsFinite(f.Bounds.Width) && f.Bounds.Width >= 0), "Narrow layout stays valid");
+        void OpenFolder(string name)
+        {
+            var label = ui.Canvas.Texts.Single(t => t.Value == name);
+            ui.View.PointerDoubleClick(label.X + 3, label.Y + 3, false, false); ui.Paint();
+        }
         void WaitImport()
         {
             var clock = System.Diagnostics.Stopwatch.StartNew();

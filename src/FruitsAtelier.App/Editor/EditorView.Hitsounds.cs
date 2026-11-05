@@ -124,6 +124,7 @@ public sealed partial class EditorView
             bool dispatched = false;
             foreach (var sound in resolvedHitsounds[i])
             {
+                if (HitsoundingLaneMuted(HitsoundingSoundLane(sound))) continue;
                 if (scheduled) RequestScheduleHitsound!(sound, objects[i].TimeMs); else RequestHitsound!(sound);
                 dispatched = true;
             }

@@ -17,6 +17,7 @@ internal sealed partial class MacWindow : Window
     private MacOsuBrowser? osuBrowser;
     private readonly MacAudio audio;
     private readonly MacHitsoundPlayer hitsounds;
+    private readonly MacHitsoundPlayer libraryAudition;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(16) };
     private string? projectPath;
     private string? pendingStartupPath;
@@ -31,8 +32,8 @@ internal sealed partial class MacWindow : Window
         pendingStartupPath = initialPath;
         recoveryClose = new(editor.ReportUiFailure);
         audio = new(smokeCheck);
-        hitsounds = new(smokeCheck);
-        View.RequestAudioVolume = (song, hit) => { audio.SetVolume(song); setupAudio?.SetVolume(song); hitsounds.SetVolume(hit); };
+        hitsounds = new(smokeCheck); libraryAudition = new(smokeCheck);
+        View.RequestAudioVolume = (song, hit) => { audio.SetVolume(song); setupAudio?.SetVolume(song); hitsounds.SetVolume(hit); libraryAudition.SetVolume(hit); };
         View.RequestSetupAudio = ControlSetupAudio;
         View.RequestSetupFinished = () => { ResizeForSetup(false); CompleteStartupFile(); View.RequestFullscreen?.Invoke(View.LibrarySettings.Fullscreen); };
         View.RequestAcknowledgementsAccepted = () =>
@@ -80,6 +81,9 @@ internal sealed partial class MacWindow : Window
         View.RequestPrepareHitsound = hitsounds.Prepare;
         View.RequestHitsound = hitsounds.Play;
         View.RequestAuditionHitsound = hitsounds.Play;
+        View.RequestRecycleHitsoundingFiles = SystemTrash.Recycle;
+        View.RequestStartLibraryAudition = libraryAudition.PlayExclusiveAuditionAsync;
+        View.RequestStopLibraryAudition = libraryAudition.Stop;
         View.RequestTestplayMenuLoop = hitsounds.SetMenuLoop;
         View.RequestWaveform = MacWaveformDecoder.Load;
         View.RequestPreloadHitsounds = documents => hitsounds.PreloadProject(documents, View.HitsoundSkinFolders);
@@ -256,7 +260,7 @@ internal sealed partial class MacWindow : Window
             View.StopTestplay();
             audio.Dispose();
             setupAudio?.Dispose();
-            hitsounds.Dispose();
+            hitsounds.Dispose(); libraryAudition.Dispose();
             if (osuBrowser is not null) { editorRoot.Children.Remove(osuBrowser); MacOsuBrowser.Close(); }
             View.StopMapsetVerifier(); View.CleanupFazOnExit(); View.SaveLibraryMemory(); View.ReleaseWaveform(); editor.Dispose();
         };

@@ -16,7 +16,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets" })
+            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense" })
             {
                 L.SetLanguage(locale);
                 var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
@@ -33,6 +33,13 @@ internal static class HitsoundingRenderCheck
                 if (scenario == "-timing") map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = 1, Volume = 60 });
                 if (scenario == "-sets")
                     for (int index = 3; index <= 12; index++) map.TimingPoints.Add(new() { TimeMs = index * 300, BeatLengthMs = -100, Uninherited = false, SampleIndex = index });
+                if (scenario == "-dense")
+                {
+                    map.Fruits.Clear(); map.Tracks.Clear(); map.TimingPoints.Clear();
+                    map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 79 });
+                    foreach (int time in Enumerable.Range(0, 100).Select(i => i * 75).Concat(new[] { 1499, 3001 }))
+                        map.Fruits.Add(new() { TimeMs = time, X = 256, OriginalLine = $"256,192,{time},1,2,0:0:0:0:" });
+                }
                 var editor = new EditorView(false); editor.LoadDocument(map);
                 editor.RequestWaveform = (path, token) => Task.FromResult(FruitsAtelier.App.Audio.WaveformDecoder.Load(path, token).GetAwaiter().GetResult());
                 editor.LibrarySettings.Workspace = Path.Combine(folder, "workspace");
@@ -45,6 +52,16 @@ internal static class HitsoundingRenderCheck
                 editor.LibrarySettings.DockLayouts = layout; editor.RestoreDockLayouts();
                 canvas.Resize(size.Item1, size.Item2, 96);
                 canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
+                if (scenario == "-muted")
+                {
+                    foreach (int lane in new[] { 1, 3, 6 })
+                    {
+                        var button = editor.HitsoundingMuteBounds(lane);
+                        editor.PointerDown(button.X + 12, button.Y + 12, 0, false, false);
+                        editor.PointerUp(button.X + 12, button.Y + 12, 0);
+                    }
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
                 if (scenario == "-sets")
                 {
                     editor.PointerDown(125, 210, 0, false, false); editor.PointerUp(125, 210, 0);

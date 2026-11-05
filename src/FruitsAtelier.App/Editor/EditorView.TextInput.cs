@@ -73,6 +73,7 @@ public sealed partial class EditorView
         if (expectedField is not null && textEditor.Field != expectedField) return;
         if (PatternNameVisible && !ErrorVisible) { PatternNameText(text); return; }
         if (GalleryTagsVisible) { GalleryTagsText(text); return; }
+        if (HitsoundingNameFocused) { HitsoundingNameText(text); return; }
         if (HitsoundingSearchFocused) { HitsoundingSearchText(text); return; }
         if (GallerySearchFocused) { GallerySearchText(text); return; }
         if (MapTemplatesVisible && !ErrorVisible) { MapTemplatesText(text); return; }

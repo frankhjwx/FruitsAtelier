@@ -69,6 +69,11 @@ public sealed partial class EditorView
         ResetTextCaret();
         mouseX = x; mouseY = y;
         timingPointerShift = shift;
+        if (contextItems.Count == 0 && !hitsoundingLibrarySection.Contains(x, y))
+        {
+            hitsoundingLibraryFocused = false;
+            if (hitsoundingNaming) { hitsoundingNaming = false; textEditor.Field = ""; }
+        }
         if (RotationVisible)
         {
             RotationPointerDown(x, y, button);
@@ -111,10 +116,15 @@ public sealed partial class EditorView
             timingSetupFocused = false;
             timingFields.Clear(); timingFields.AddRange(timingBackgroundFields);
         }
+        if (BookmarkToolbarVisible && BookmarkToolbarBounds.Contains(x, y))
+        {
+            if (!BeginOverlayDrag(x, y, button)) BookmarkToolbarPointerDown(x, y, button);
+            return;
+        }
         if (!LibraryVisible && !SongSetupVisible && panelMenuOpen) { PanelPointerDown(x, y); return; }
         if (BeginVolumePopoverPointer(x, y, button)) return;
         if (DockTogglePointerDown(x, y, button)) return;
-        if (HitsoundingPointerDown(x, y, button)) return;
+        if (HitsoundingPointerDown(x, y, button, ctrl, shift)) return;
         if (TimingPageVisible && !SongSetupVisible && menu < 0 && y >= 122 && rightPanel.Contains(x, y)) { TimingPointerDown(x, y, button); return; }
         if (SongSetupVisible) { SongSetupPointerDown(x, y, button, shift); return; }
         if (VolumeDialogVisible)
@@ -678,7 +688,7 @@ public sealed partial class EditorView
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
         if (EndVolumePopoverPointer(x, y, button)) return;
-        if (HitsoundingPointerUp(x, y)) return;
+        if (HitsoundingPointerUp(x, y, button)) return;
         if (overlayDragging != 0 && button == 0) { MoveOverlayDrag(x, y); FinishOverlayDrag(); return; }
         if (DiscussionImageVisible) { DiscussionImagePointerUp(x, y, button); return; }
         if (discussionTextPressed is not null) { EndDiscussionTextSelection(x, y); return; }
@@ -838,6 +848,7 @@ public sealed partial class EditorView
         if (CollaborationReportVisible) return;
         if (AcknowledgementsVisible) return;
         if (TogglePaneSeparator(x, y)) return;
+        if (HitsoundingLibraryDoubleClick(x, y)) return;
         if (HitsoundingPageVisible && DockContentInputAvailable && y >= 122 && y < TransportTop) return;
         if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
@@ -1267,6 +1278,7 @@ public sealed partial class EditorView
 
     private void KeyDownCore(int virtualKey, bool ctrl, bool shift)
     {
+        if (HitsoundingLibraryKey(virtualKey, ctrl, shift)) return;
         if (HitsoundingSearchFocused)
         {
             if (virtualKey is 27 or 13) textEditor.Field = "";
@@ -1666,6 +1678,7 @@ public sealed partial class EditorView
 
     private void TextInputCore(char value)
     {
+        if (HitsoundingNameFocused) { HitsoundingNameText(value.ToString()); return; }
         if (HitsoundingSearchFocused) { HitsoundingSearchText(value.ToString()); return; }
         if (PatternNameVisible && !ErrorVisible) { PatternNameText(value.ToString()); return; }
         if (GalleryTagsVisible) { GalleryTagsText(value.ToString()); return; }
@@ -1726,6 +1739,8 @@ public sealed partial class EditorView
     public void CancelInteraction(bool preserveTestplay = false)
     {
         hitsoundingDragFile = null; hitsoundingSplitDrag = null;
+        hitsoundingLibraryPressed = hitsoundingLibraryDragging = hitsoundingLibraryBox = false;
+        hitsoundingLibraryFocused = hitsoundingNaming = hitsoundingLibraryScrollbarDragging = false;
         discussionPreviewDragging = false;
         ClearDiscussionTextSelection();
         discussionScrollbarDragging = false; discussionQuoteDrag = null;

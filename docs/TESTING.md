@@ -1711,6 +1711,15 @@ menus and inspector at narrow and ordinary window sizes under
 
 ## Hitsounding workspace checks
 
+`App.Tests --hitsound-library-files-check` covers real right-button context menus,
+relative paths, multi-selection, file operations, one-second drag navigation,
+exclusive audition progress and scrollbar dragging in English and Chinese.
+`App.Tests --hitsounding-mute-check` covers all six lane filters, full-row dimming,
+live transport, and Mapping/Testplay isolation. The panel check exercises label
+visibility while dense neighbours enter and leave the viewport. Audio mixer checks
+verify exclusive audition replacement and stop against silent PCM.
+The timeline-layout check also exercises bookmark toolbar actions in Timing.
+
 `App.Tests --hitsounding-panel-check` covers the Snap ruler, actual slider ticks,
 centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,
 default bank labels, timing-tag order, the unified Config dock, library search/imports,

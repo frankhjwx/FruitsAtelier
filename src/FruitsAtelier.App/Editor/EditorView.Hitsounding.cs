@@ -149,7 +149,7 @@ public sealed partial class EditorView
         float right = DockWorkspaceState.Right.Collapsed || DockWorkspaceState.Right.Panels.Count == 0 ? width : rightPanel.X;
         hitsoundingBounds = new(leftPanel.Right + 8, 130, Math.Max(40, right - leftPanel.Right - 16), Math.Max(100, TransportTop - 138));
         var r = hitsoundingBounds;
-        float labelWidth = Math.Min(106, r.Width * .25f);
+        float labelWidth = Math.Min(146, r.Width * .32f);
         double start = HitsoundingStart, end = start + hitsoundingSpan;
         float gridX = r.X + labelWidth, gridWidth = Math.Max(10, r.Width - labelWidth);
         float X(double time) => gridX + (float)((time - start) / hitsoundingSpan * gridWidth);
@@ -210,8 +210,8 @@ public sealed partial class EditorView
             float y = top + lane * laneHeight;
             c.Fill(new(r.X, y, labelWidth, laneHeight), Panel);
             c.Fill(new(r.X + 9, y + (laneHeight - 20) / 2, 3, 20), lane is >= 1 and <= 5 ? Muted : HitsoundingColors[lane], 1.5f);
-            c.Text(L.Get("hitsounding.lane" + lane), r.X + 20, y + (laneHeight - 16) / 2 - (lane == 6 ? 6 : 0), 12, Foreground, labelWidth - 24, true);
-            if (lane == 6) c.Text(L.Get("hitsounding.untriggered"), r.X + 20, y + laneHeight / 2 + 7, 8, Muted, labelWidth - 24);
+            c.Text(L.Get("hitsounding.lane" + lane), r.X + 20, y + (laneHeight - 16) / 2, 12, hitsoundingMuted[lane] ? Muted : Foreground, labelWidth - (lane > 0 ? 54 : 24), true);
+            if (lane > 0) DrawHitsoundingMute(c, new(r.X + labelWidth - 28, y + (laneHeight - 24) / 2, 24, 24), lane);
             c.Line(r.X, y, r.Right, y, Grid, opacity: .55f);
         }
         c.Clip(g);
@@ -250,6 +250,9 @@ public sealed partial class EditorView
             var link = hitsoundingAdditionLinks[i];
             c.Line(X(link.Time), top + (link.First + .5f) * laneHeight, X(link.Time), top + (link.Last + .5f) * laneHeight, Muted, 1, .6f);
         }
+        float bankLabelWidth = Math.Max(c.MeasureText("N", 11, true), Math.Max(c.MeasureText("S", 11, true), c.MeasureText("D", 11, true)));
+        float digitLabelWidth = 0;
+        foreach (string digit in HitsoundingDigits) digitLabelWidth = Math.Max(digitLabelWidth, c.MeasureText(digit, 11, true));
         foreach (var laneTags in hitsoundingTagLanes) DrawTags(laneTags);
         DrawTags(hitsoundingStoryboardTags);
         if (!hitsoundingErase)
@@ -293,6 +296,9 @@ public sealed partial class EditorView
             var selectionBox = HitsoundingMarqueeBounds;
             c.Fill(selectionBox, Accent, opacity: .15f); c.Stroke(selectionBox, Accent, 1);
         }
+        for (int lane = 1; lane <= 6; lane++)
+            if (hitsoundingMuted[lane])
+                c.Fill(new(g.X, top + lane * laneHeight, g.Width, laneHeight), Panel, opacity: .65f);
         c.Unclip();
         float head = X(playhead); c.Line(head, r.Y, head, g.Bottom, HitsoundingHeadHovered(mouseX, mouseY) || hitsoundingHeadDrag ? 0xFFF0A6u : 0xE9CA64u, 2);
         c.Unclip();
@@ -313,6 +319,7 @@ public sealed partial class EditorView
                 float h = Math.Clamp(laneHeight - 2, 24, 36), y = top + tag.Lane * laneHeight + (laneHeight - h) / 2;
                 double neighbourPixels = tag.NeighbourDistance / hitsoundingSpan * g.Width;
                 float preferredWidth = Math.Clamp(Math.Max(c.MeasureText("N", 11, true), c.MeasureText(tag.WidthText, 11, true)) + 8, 18, HitsoundingTagWidth);
+                if (tag.Lane <= 5) preferredWidth = Math.Clamp(Math.Max(bankLabelWidth, digitLabelWidth * tag.WidthText.Length) + 8, 18, HitsoundingTagWidth);
                 double clusterWidth = Math.Min(preferredWidth * tag.Columns,
                     neighbourPixels > 4 ? neighbourPixels - 4 : neighbourPixels * .75);
                 float slotWidth = (float)(clusterWidth / tag.Columns);
@@ -334,7 +341,8 @@ public sealed partial class EditorView
                     box = new(x, y, duration > 0 ? Math.Max(1, X(to) - x) : HitsoundingTagWidth, h);
                 }
                 uint color = tag.Lane is >= 1 and <= 5 ? HitsoundingBankColor(tag.Sounds[0].SampleSet) : HitsoundingColors[tag.Lane];
-                float flash = HitsoundingFlash(tag.Time);
+                if (hitsoundingMuted[tag.Lane]) color = Muted;
+                float flash = hitsoundingMuted[tag.Lane] ? 0 : HitsoundingFlash(tag.Time);
                 if (flash > 0)
                 {
                     c.Fill(new(box.X - 5, box.Y - 5, box.Width + 10, box.Height + 10), color, 8, flash * .35f);
@@ -360,7 +368,11 @@ public sealed partial class EditorView
                     string label = tag.Label + (tag.Index > 0 ? " " + tag.Index : "");
                     if (c.MeasureText(label, 11, true) <= box.Width - 8) c.Text(label, box.X + 4, box.Y + 3, 11, 0xFFFFFF, box.Width - 8, true);
                 }
-                else if (hitsoundingDockWorkspace.ShowHitsoundText) DrawHitsoundingLabel(c, box, tag.Label, tag.Index);
+                else if (hitsoundingDockWorkspace.ShowHitsoundText)
+                {
+                    DrawHitsoundingLabel(c, box, tag.Label, tag.Index,
+                        tag.Lane <= 5 ? Math.Max(bankLabelWidth, digitLabelWidth * (tag.Index > 0 ? tag.Index.ToString().Length : 0)) : 0);
+                }
                 if (HitsoundingPrecise && wave is not null && box.Width > 1)
                 {
                     float maximum = Math.Max(.000001f, wave.Peak(0, wave.DurationMs));
@@ -379,16 +391,16 @@ public sealed partial class EditorView
     }
     private float HitsoundingFlash(double time) => AudioPlaying && playhead >= time && playhead < time + 280
         ? (float)Math.Pow(1 - Math.Max(0, playhead - time - 45) / 235, 1.4) : 0;
-    private void DrawHitsoundingLabel(ICanvas c, Rect box, string bank, int index)
+    private static readonly string[] HitsoundingDigits = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    private void DrawHitsoundingLabel(ICanvas c, Rect box, string bank, int index, float minimumWidth = 0)
     {
-        if (box.Width < 5) return;
+        const float fontSize = 11;
         float available = Math.Max(0, box.Width - 6);
         if (available <= 0) return;
         float rowHeight = (box.Height - 6) / (index > 0 ? 2 : 1);
-        const float fontSize = 11;
         string indexText = index > 0 ? index.ToString() : "";
-        if (rowHeight < fontSize * 1.3f || c.MeasureText(bank, fontSize, true) > available
-            || c.MeasureText(indexText, fontSize, true) > available) return;
+        float required = minimumWidth > 0 ? minimumWidth : Math.Max(c.MeasureText(bank, fontSize, true), c.MeasureText(indexText, fontSize, true));
+        if (rowHeight < fontSize * 1.3f || required > available + .01f) return;
         DrawLine(bank, box.Y + 3);
         if (index > 0) DrawLine(indexText, box.Y + 3 + rowHeight);
 

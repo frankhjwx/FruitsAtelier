@@ -386,6 +386,7 @@ public sealed partial class EditorView
         for (int i = low; i < samples.Count && samples[i].TimeMs <= end; i++)
         {
             if (samples[i].Layer == StoryboardLayer.Fail && passing || samples[i].Layer == StoryboardLayer.Pass && !passing) continue;
+            if (HitsoundingLaneMuted(6)) continue;
             if (scheduled) RequestScheduleHitsound!(storyboardSampleSounds[i], samples[i].TimeMs);
             else RequestHitsound?.Invoke(storyboardSampleSounds[i]);
         }

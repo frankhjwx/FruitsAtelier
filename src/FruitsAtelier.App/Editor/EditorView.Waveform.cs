@@ -14,7 +14,7 @@ public sealed partial class EditorView
     private bool waveformFailed;
     private double waveformSpanMs = 10000;
     private readonly List<BeatGridLine> waveformGrid = [];
-    public bool WaveformNeedsRedraw => HitsoundingPageVisible && hitsoundingAudio.NeedsRedraw || hitsoundingImportTask is not null || hitsoundingResourcesChanged || TimingPageVisible && waveformTask is { IsCompleted: true };
+    public bool WaveformNeedsRedraw => hitsoundingAuditionPath is not null || HitsoundingLibraryHoverNeedsRedraw || HitsoundingPageVisible && hitsoundingAudio.NeedsRedraw || hitsoundingImportTask is not null || hitsoundingResourcesChanged || TimingPageVisible && waveformTask is { IsCompleted: true };
     internal Rect WaveformBounds => new(16, 150, Math.Max(80, rightPanel.X - 32), Math.Max(100, TransportTop - 160));
 
     internal float WaveformGridTop => WaveformBounds.Y + WaveformBounds.Height * .34f;

@@ -16,7 +16,7 @@ public sealed partial class EditorView
         LibrarySettings.BookmarkToolbarOffsetX, 0, BookmarkToolbarArea);
     internal Rect BookmarkToolbarGrip => new(BookmarkToolbarBounds.X, BookmarkToolbarBounds.Y, 14, 34);
     private bool CanShowBookmarkToolbar => !OverviewTimelineCollapsed && overview.Width >= 276 && CanDropBackground
-        && !TimingPageVisible && !TimeJumpVisible && !IsEditingText && menu < 0 && contextItems.Count == 0;
+        && !TimeJumpVisible && !IsEditingText && menu < 0 && contextItems.Count == 0;
     private bool BookmarkToolbarVisible
     {
         get

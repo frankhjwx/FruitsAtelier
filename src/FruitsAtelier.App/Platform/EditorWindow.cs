@@ -666,7 +666,7 @@ internal sealed partial class EditorWindow : IDisposable
         view.StopTestplay();
         audio.Dispose();
         setupAudio?.Dispose();
-        hitsounds.Dispose();
+        hitsounds.Dispose(); libraryAudition.Dispose();
         osuBrowser?.Dispose();
         _ = view.CompleteLibraryCacheWritesAsync();
         view.StopFileMonitoring();

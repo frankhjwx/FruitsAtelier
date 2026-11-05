@@ -207,14 +207,30 @@ history. Replacement also refreshes preview audio; conflicting external file cha
 are rejected during undo/redo.
 
 **Hitsound Library** stores independent copies under `workspace/HitsoundLibrary`.
-Browse nested folders using directory rows, the parent button and the root button.
+Double-click directory rows to browse nested folders, or use the parent and Home buttons.
 Navigation stays inside this root and excludes symbolic links/junctions. Search filters
 files and folders in the current directory; imports are saved into that directory.
 Drop folders or WAV, OGG or MP3 files into the Hitsounding workspace to import them, or drag
 an assigned map sample into the library pane. Folder imports preserve nested directories
 and copy supported audio files. Right-click the library to open the current folder
-in the system file manager. The navigation bar shows its full path, omitting the
-start when space is limited. External changes refresh the listing, waveforms and audition samples.
+in the system file manager. The navigation bar shows the path relative to
+`HitsoundLibrary`, omitting the start when space is limited and leaving it empty at
+the root. External changes refresh the listing, waveforms and audition samples.
+The footer counts folders and audio files in the current directory; overflowing
+lists have a draggable scrollbar. Drops are accepted throughout the library pane.
+
+The context menu provides new folder, rename, copy, cut, paste and recycle operations.
+The corresponding shortcuts are Ctrl+Shift+N, F2, Ctrl+C, Ctrl+X, Ctrl+V and Delete.
+Click or drag a selection rectangle to select files and folders; Ctrl adds/toggles,
+Alt subtracts, and Shift selects a range. Drag selected items onto a folder to move
+them, or hold Ctrl to copy. Hover over the parent or Home button for one second
+during a drag to navigate while retaining the selected source items. Existing files
+are preserved with numbered destination names. Library file operations are independent
+of beatmap undo history.
+
+Library audition plays one file at a time. Starting another file stops the previous
+one; the active row shows a progress fill, outline and Stop button. Navigation and
+file changes stop audition. Audition uses independent playback from map preview.
 Imports preserve existing different
 files with a numbered filename and reuse identical copies. Library files can be
 dragged to map slots; their names need not match osu! sample filenames. Samples are
@@ -228,6 +244,13 @@ map’s red and green timing points; more than eight choices scroll. The selecto
 does not create or edit sample indices. Audio rows provide audition controls and decoded waveform previews. Search
 filters the current folder by name. Long lists scroll within their own section.
 View and library navigation do not edit beatmap objects.
+
+Each sound track has a mute button. Muting greys its entire row and suppresses that
+track only during Hitsounding playback; Mapping and Testplay ignore these session
+settings. Note-based sound labels use a fixed font size when **HS text** is enabled
+and hide when the block is too narrow. Equal-width blocks with the same number of
+index digits use a shared width threshold, independent of the particular digits
+or sample bank. Other blocks entering the viewport do not affect this decision.
 
 ## Maintenance
 

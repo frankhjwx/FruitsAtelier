@@ -408,6 +408,19 @@ public sealed partial class EditorView
             }
             InputKey("timing:" + timingField, ref timingText, key, ctrl, shift, 30, RequestPasteTiming); return true;
         }
+        if (!TimingModal && timingCommand.Length == 0 && ctrl && !altHeld)
+        {
+            if (key == 66)
+            {
+                int time = (int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue);
+                Edit(L.Get("timeline.bookmark"), () =>
+                {
+                    if (shift) OsuTimeline.RemoveNearestBookmark(Document, time); else OsuTimeline.AddBookmark(Document, time);
+                });
+                return true;
+            }
+            if (!shift && key is 37 or 39) { SeekBookmark(key == 39); return true; }
+        }
         if (TimingSetupVisible && timingSetupFocused && !TimingModal)
         {
             if (altHeld) return true;

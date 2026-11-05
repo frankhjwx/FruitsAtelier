@@ -55,6 +55,7 @@ public sealed partial class EditorView
         c.Line(r.X, split, r.Right, split, Grid, opacity: .7f);
         c.Fill(new(r.X + r.Width / 2 - 16, split - 1.5f, 32, 3),
             hitsoundingSplitDrag is not null || hitsoundingSplitBounds.Contains(mouseX, mouseY) ? Accent : Muted, 1.5f);
+        hitsoundingLibrarySection = lower;
         DrawSection(lower, "hitsounding.library", DrawHitsoundingLibrary);
         void DrawSection(Rect bounds, string title, Action<ICanvas, Rect> draw)
         {
@@ -123,12 +124,13 @@ public sealed partial class EditorView
         hitsoundingSetFirst = Math.Clamp(hitsoundingSetFirst - (int)(delta / 120), 0, Math.Max(0, contextItems.Count - HitsoundingSetRows));
         return true;
     }
-    private void DrawHitsoundingAudition(ICanvas c, Rect row, Hitsound sound)
+    private void DrawHitsoundingAudition(ICanvas c, Rect row, Hitsound sound, bool library = false)
     {
         var hit = new Rect(row.X + 3, row.Y + 3, 28, row.Height - 6);
         c.Circle(row.X + 17, row.Y + row.Height / 2, 11, Muted, false, 1, .6f);
-        c.Text("▶", row.X + 13, row.Y + row.Height / 2 - 8, 12, Foreground, 14);
-        hits.Add(new(hit, () => RequestAuditionHitsound?.Invoke(sound), true));
+        if (library && sound.FilePath == hitsoundingAuditionPath) c.Fill(new(row.X + 13, row.Y + row.Height / 2 - 4, 8, 8), Foreground, 1);
+        else c.Text("▶", row.X + 13, row.Y + row.Height / 2 - 8, 12, Foreground, 14);
+        hits.Add(new(hit, () => { if (library) ToggleHitsoundingLibraryAudition(sound); else RequestAuditionHitsound?.Invoke(sound); }, true));
     }
     private void DrawHitsoundingPreview(ICanvas c, Rect r, Hitsound sound)
     {
@@ -144,11 +146,12 @@ public sealed partial class EditorView
     }
     private void DrawHitsoundingLibrary(ICanvas c, Rect r)
     {
-        hitsoundingLibraryBounds = r;
+        hitsoundingLibraryBounds = r; hitsoundingLibraryRows.Clear();
         bool atRoot = hitsoundingLibraryDirectory == hitsoundingLibraryRoot;
         Button(c, new(r.X, r.Y, 28, 24), "←", () => NavigateHitsoundingDirectory(Path.GetDirectoryName(hitsoundingLibraryDirectory!)), enabled: !atRoot, fontSize: 12);
         Button(c, new(r.X + 32, r.Y, 28, 24), "⌂", () => NavigateHitsoundingDirectory(hitsoundingLibraryRoot), fontSize: 12);
-        string location = hitsoundingLibraryDirectory ?? L.Get("hitsounding.workspaceLibrary");
+        string location = hitsoundingLibraryDirectory is { } currentDirectory && hitsoundingLibraryRoot is { } libraryRoot && !atRoot
+            ? Path.GetRelativePath(libraryRoot, currentDirectory) : "";
         float pathWidth = Math.Max(0, r.Width - 70);
         var pathKey = (location, pathWidth, c.GetType());
         if (hitsoundingPathKey != pathKey)
@@ -171,40 +174,73 @@ public sealed partial class EditorView
         c.Text(hitsoundingPathLabel, r.X + 67, r.Y + 5, 10, Muted, pathWidth);
         hitsoundingSearchBounds = new(r.X, r.Y + 31, r.Width, 26);
         c.Fill(hitsoundingSearchBounds, Surface, 4); c.StrokeOpacity(hitsoundingSearchBounds, HitsoundingSearchFocused ? Accent : Muted, 1, 4, .6f);
-        DrawInputText(c, new(r.X + 8, r.Y + 36, r.Width - 16, 18), hitsoundingQuery, 11, HitsoundingSearchFocused, "hitsounding:search");
-        if (hitsoundingQuery.Length == 0 && !HitsoundingSearchFocused) c.Text(L.Get("hitsounding.search"), r.X + 8, r.Y + 36, 11, Muted, r.Width - 16);
-        hits.Add(new(hitsoundingSearchBounds, () => FocusInput("hitsounding:search", hitsoundingQuery, mouseX), true));
-        int visible = Math.Max(0, (int)(r.Height - 119) / 34);
+        if (hitsoundingNaming)
+        {
+            DrawInputText(c, new(r.X + 8, r.Y + 36, r.Width - 72, 18), hitsoundingName, 11, true, "hitsounding:name");
+            hits.Add(new(new(r.X, r.Y + 31, r.Width - 60, 26), () => FocusInput("hitsounding:name", hitsoundingName, mouseX), true));
+            Button(c, new(r.Right - 56, r.Y + 32, 26, 24), "✓", CommitHitsoundingName, fontSize: 12);
+            Button(c, new(r.Right - 27, r.Y + 32, 26, 24), "×", () => { hitsoundingNaming = false; textEditor.Field = ""; }, fontSize: 12);
+        }
+        else
+        {
+            DrawInputText(c, new(r.X + 8, r.Y + 36, r.Width - 16, 18), hitsoundingQuery, 11, HitsoundingSearchFocused, "hitsounding:search");
+            if (hitsoundingQuery.Length == 0 && !HitsoundingSearchFocused) c.Text(L.Get("hitsounding.search"), r.X + 8, r.Y + 36, 11, Muted, r.Width - 16);
+            hits.Add(new(hitsoundingSearchBounds, () => FocusInput("hitsounding:search", hitsoundingQuery, mouseX), true));
+        }
+        hitsoundingLibraryList = new(r.X, r.Y + 64, r.Width, Math.Max(0, r.Height - 88));
+        int visible = hitsoundingLibraryVisibleRows = Math.Max(0, (int)hitsoundingLibraryList.Height / 34);
+        bool overflow = hitsoundingFilteredFiles.Length > visible;
+        // Leave the dock's overlaid collapse handle clear of the scrollbar.
+        if (overflow) hitsoundingLibraryList = new(hitsoundingLibraryList.X, hitsoundingLibraryList.Y, Math.Max(0, r.Width - 12), hitsoundingLibraryList.Height);
+        c.Clip(hitsoundingLibraryList);
         hitsoundingLibraryScroll = Math.Clamp(hitsoundingLibraryScroll, 0, Math.Max(0, hitsoundingFilteredFiles.Length - visible));
         for (int i = hitsoundingLibraryScroll; i < Math.Min(hitsoundingFilteredFiles.Length, hitsoundingLibraryScroll + visible); i++)
         {
             string path = hitsoundingFilteredFiles[i];
-            var row = new Rect(r.X, r.Y + 64 + (i - hitsoundingLibraryScroll) * 34, r.Width, 30);
-            if (row.Contains(mouseX, mouseY)) c.Fill(row, Surface, 4);
+            var row = new Rect(r.X, r.Y + 64 + (i - hitsoundingLibraryScroll) * 34, Math.Max(0, hitsoundingLibraryList.Width - (overflow ? 14 : 0)), 30);
+            hitsoundingLibraryRows.Add((row, path));
+            bool selected = hitsoundingLibrarySelection.Contains(path);
+            if (selected || row.Contains(mouseX, mouseY)) c.Fill(row, selected ? SelectedSurface : Surface, 4);
+            if (hitsoundingLibraryDragging && !hitsoundingLibraryBox && hitsoundingLibraryDirectories.Contains(path) && row.Contains(mouseX, mouseY))
+                c.Stroke(row, Accent, radius: 4);
             if (hitsoundingLibraryDirectories.Contains(path))
             {
                 c.Fill(new(row.X + 8, row.Y + 8, 10, 4), Accent, 1);
                 c.Stroke(new(row.X + 8, row.Y + 11, 18, 12), Accent, radius: 2);
                 c.Text(Path.GetFileName(path), row.X + 36, row.Y + 7, 11, Foreground, row.Width - 44);
-                hits.Add(new(row, () => NavigateHitsoundingDirectory(path), true));
                 continue;
             }
+            if (path == hitsoundingAuditionPath)
+            {
+                c.Fill(row, Surface, 4);
+                c.Clip(row); c.Fill(new(row.X, row.Y, row.Width * HitsoundingAuditionProgress, row.Height), SelectedSurface, 4); c.Unclip();
+                c.Stroke(row, Accent, radius: 4);
+            }
             var sound = new Hitsound(CatchObjectKind.Fruit, path, 1, "custom");
-            DrawHitsoundingAudition(c, row, sound);
+            DrawHitsoundingAudition(c, row, sound, library: true);
             float waveWidth = row.Width >= 240 ? 65 : 0;
             c.Text(Path.GetFileName(path), row.X + 36, row.Y + 7, 11, Foreground, row.Width - 44 - waveWidth);
             if (waveWidth > 0) DrawHitsoundingPreview(c, new(row.Right - waveWidth - 4, row.Y + 6, waveWidth, 18), sound);
-            hitsoundingFileRows.Add((new(row.X + 32, row.Y, row.Width - 32, row.Height), path));
         }
-        var dropArea = new Rect(r.X, r.Bottom - 46, r.Width, 44);
-        c.StrokeOpacity(dropArea, hitsoundingDragFile is not null ? Accent : Muted, 1, 5, .55f);
-        c.Text("↓", dropArea.X + 10, dropArea.Y + 11, 16, Accent, 18);
-        c.Text(L.Get(hitsoundingImportTask is not null ? "hitsounding.importing" : "hitsounding.libraryHint"), dropArea.X + 34, dropArea.Y + 14, 10, Muted, dropArea.Width - 42);
+        c.Unclip();
+        DrawHitsoundingLibraryScrollbar(c);
+        if (hitsoundingLibraryPressed && hitsoundingLibraryBox && hitsoundingLibraryDragging)
+        {
+            float startY = hitsoundingLibraryList.Y + hitsoundingLibraryStartContentY - hitsoundingLibraryScroll * 34;
+            var box = new Rect(Math.Min(hitsoundingLibraryStart.X, mouseX), Math.Min(startY, mouseY), Math.Abs(mouseX - hitsoundingLibraryStart.X), Math.Abs(mouseY - startY));
+            c.Clip(hitsoundingLibraryList); c.Fill(box, Accent, opacity: .15f); c.Stroke(box, Accent); c.Unclip();
+        }
+        c.Text(L.Get("hitsounding.folderCounts", hitsoundingLibraryDirectories.Count, hitsoundingLibraryFiles.Length), r.X + 3, r.Bottom - 16, 10, Muted, r.Width - 6);
+
     }
     private void RefreshHitsoundingLibrary()
     {
         string? root = string.IsNullOrWhiteSpace(LibrarySettings.Workspace) ? null : Path.GetFullPath(Path.Combine(LibrarySettings.Workspace, "HitsoundLibrary"));
-        if (root != hitsoundingLibraryRoot) hitsoundingLibraryDirectory = root;
+        if (root != hitsoundingLibraryRoot)
+        {
+            hitsoundingLibraryDirectory = root; hitsoundingLibrarySelection.Clear(); hitsoundingFileClipboard = [];
+            hitsoundingNaming = false; hitsoundingLibraryPressed = hitsoundingLibraryDragging = hitsoundingLibraryBox = false;
+        }
         hitsoundingLibraryRoot = root;
         hitsoundingLibraryFiles = []; hitsoundingLibraryDirectories.Clear();
         if (!HitsoundingDirectoryInsideRoot(hitsoundingLibraryDirectory) || !Directory.Exists(hitsoundingLibraryDirectory)) hitsoundingLibraryDirectory = root;
@@ -219,6 +255,7 @@ public sealed partial class EditorView
             }
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { ShowError(error.Message); }
+        hitsoundingLibrarySelection.IntersectWith(hitsoundingLibraryDirectories.Concat(hitsoundingLibraryFiles));
         FilterHitsoundingLibrary();
     }
     private bool HitsoundingDirectoryInsideRoot(string? path)
@@ -239,7 +276,9 @@ public sealed partial class EditorView
         try
         {
             if (!HitsoundingDirectoryInsideRoot(path) || !Directory.Exists(path)) return;
+            StopHitsoundingLibraryAudition();
             hitsoundingLibraryDirectory = Path.GetFullPath(path!); hitsoundingQuery = "";
+            hitsoundingLibrarySelection.Clear(); hitsoundingLibraryAnchor = null; hitsoundingNaming = false;
             textEditor.Field = ""; RefreshHitsoundingLibrary();
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { ShowError(error.Message); }
@@ -303,6 +342,7 @@ public sealed partial class EditorView
 
     private void PumpHitsoundingResources()
     {
+        UpdateHitsoundingLibraryHover(); PumpHitsoundingAudition();
         if (hitsoundingResourcesChanged)
         {
             hitsoundingResourcesChanged = false;
@@ -312,7 +352,9 @@ public sealed partial class EditorView
         {
             hitsoundingImportTask = null;
             RefreshHitsoundingLibrary();
-            if (task.IsCompletedSuccessfully) { if (task.Result is { } error) ShowError(error); }
+            var completed = hitsoundingFileCompleted; hitsoundingFileCompleted = null;
+            hitsoundingAudio.Clear(); hitsoundingResourcesChanged = true;
+            if (task.IsCompletedSuccessfully) { if (task.Result is { } error) ShowError(error); else completed?.Invoke(); }
             else if (task.Exception is { } error) ShowError(error.GetBaseException().Message);
         }
     }
@@ -340,26 +382,13 @@ public sealed partial class EditorView
         hitsoundingConversion = null; hitsoundConversion = null;
         hitsoundingResourcesChanged = true;
     }
-    private bool HitsoundingPointerDown(float x, float y, int button)
+    private bool HitsoundingPointerDown(float x, float y, int button, bool ctrl, bool shift)
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable || menu >= 0 || contextItems.Count > 0 || y < 122 || y >= TransportTop) return false;
         if (leftDockResizeBounds.Contains(x, y) || rightDockResizeBounds.Contains(x, y) || dockTabs.Any(t => t.Bounds.Contains(x, y))) return false;
         if (HitsoundingSearchFocused && !hitsoundingSearchBounds.Contains(x, y)) textEditor.Field = "";
         if (!hitsoundingBounds.Contains(x, y) && !hitsoundingDockBounds.Contains(x, y)) return false;
-        if (button == 1 && hitsoundingLibraryBounds.Contains(x, y))
-        {
-            contextItems.Clear();
-            contextItems.Add(new(L.Get("hitsounding.openFolder"), () =>
-            {
-                if (hitsoundingLibraryDirectory is { } folder && HitsoundingDirectoryInsideRoot(folder))
-                {
-                    try { Directory.CreateDirectory(folder); RequestOpenExternalPath?.Invoke(folder); }
-                    catch (Exception error) when (error is IOException or UnauthorizedAccessException) { ShowError(error.Message); }
-                }
-            }, hitsoundingLibraryDirectory is not null));
-            contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)), Math.Min(y, height - ContextMenuHeight), 240, ContextMenuHeight);
-            return true;
-        }
+        if (BeginHitsoundingLibraryPointer(x, y, button, ctrl, shift)) return true;
         if (BeginHitsoundingCanvasPointer(x, y, button)) return true;
         if (button == 0)
         {
@@ -382,15 +411,18 @@ public sealed partial class EditorView
     private bool HitsoundingPointerMove(float x, float y)
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable) return false;
+        if (MoveHitsoundingLibraryPointer(x, y)) return true;
         if (MoveHitsoundingCanvasPointer(x, y)) { mouseX = x; mouseY = y; return true; }
         if (hitsoundingSplitDrag is null && hitsoundingDragFile is null) return false;
         mouseX = x; mouseY = y;
         if (hitsoundingSplitDrag is { } group) group.Split = Math.Clamp((y - hitsoundingDockBounds.Y) / Math.Max(1, hitsoundingDockBounds.Height), .25f, .75f);
         return true;
     }
-    private bool HitsoundingPointerUp(float x, float y)
+    private bool HitsoundingPointerUp(float x, float y, int button)
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable) return false;
+        if (button != 0) return button == 2 && hitsoundingPainting && hitsoundingErase && EndHitsoundingCanvasPointer();
+        if (EndHitsoundingLibraryPointer(x, y)) return true;
         if (EndHitsoundingCanvasPointer()) return true;
         bool active = hitsoundingSplitDrag is not null || hitsoundingDragFile is not null;
         hitsoundingSplitDrag = null;
