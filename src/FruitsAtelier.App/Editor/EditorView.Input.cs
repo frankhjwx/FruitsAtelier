@@ -1742,7 +1742,7 @@ public sealed partial class EditorView
     public void CancelInteraction(bool preserveTestplay = false)
     {
         CancelHitsoundingTimingPointer();
-        hitsoundingDragFile = null; hitsoundingSplitDrag = null; hitsoundingSetDragging = false;
+        hitsoundingDragFile = null; hitsoundingSplitDrag = null; hitsoundingSetDragging = false; timingHelperVolumeDrag = null;
         hitsoundingLibraryPressed = hitsoundingLibraryDragging = hitsoundingLibraryBox = false;
         hitsoundingLibraryFocused = hitsoundingNaming = hitsoundingLibraryScrollbarDragging = false;
         discussionPreviewDragging = false;

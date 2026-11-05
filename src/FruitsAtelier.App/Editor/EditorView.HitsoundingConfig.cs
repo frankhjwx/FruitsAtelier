@@ -441,6 +441,7 @@ public sealed partial class EditorView
     private bool HitsoundingPointerMove(float x, float y)
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable) return false;
+        if (timingHelperVolumeDrag is not null) { MoveTimingHelperVolume(x); return true; }
         if (MoveHitsoundingLibraryPointer(x, y)) return true;
         if (MoveHitsoundingCanvasPointer(x, y)) { mouseX = x; mouseY = y; return true; }
         if (hitsoundingSplitDrag is null && hitsoundingDragFile is null) return false;
@@ -452,6 +453,7 @@ public sealed partial class EditorView
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable) return false;
         if (button != 0) return button == 2 && hitsoundingPainting && hitsoundingErase && EndHitsoundingCanvasPointer();
+        if (timingHelperVolumeDrag is not null) { MoveTimingHelperVolume(x); timingHelperVolumeDrag = null; return true; }
         if (EndHitsoundingLibraryPointer(x, y)) return true;
         if (EndHitsoundingCanvasPointer()) return true;
         bool active = hitsoundingSplitDrag is not null || hitsoundingDragFile is not null;

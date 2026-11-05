@@ -155,7 +155,7 @@ internal static class HitsoundingPanelTests
     {
         var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
         map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1, Volume = 80 });
-        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = 1, Volume = 60 });
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = 1, Volume = 60, Effects = 8 });
         map.TimingPoints.Add(new() { TimeMs = 1750, BeatLengthMs = -100, Uninherited = false, SampleSet = 3, SampleIndex = 2, Volume = 70 });
         foreach (int time in new[] { 1000, 1250, 2000, 2250 }) map.Fruits.Add(new() { TimeMs = time, X = 256,
             OriginalLine = $"256,192,{time},1,{(time < 1750 ? 6 : 0)},0:0:0:0:" });
@@ -169,10 +169,41 @@ internal static class HitsoundingPanelTests
         Check(ui.View.Document.TimingPoints.Count == 3 && ui.View.Document.TimingPoints[0].Volume == 80 && ui.View.Document.TimingPoints[1].Volume == 35,
             "Applying the second section modifies only the existing green line");
         ui.Key(90, ctrl: true);
+        ToggleGreenKiai();
+        Check(ui.View.Document.TimingPoints[1].Effects == 8, "Kiai toggle stays in the Timing Helper draft until applied");
+        ApplyGreenTiming();
+        Check(ui.View.Document.TimingPoints[1].Effects == 9, "Enabling Kiai preserves other effect flags");
+        ToggleGreenKiai(); ApplyGreenTiming();
+        Check(ui.View.Document.TimingPoints[1].Effects == 8, "Disabling Kiai preserves other effect flags");
+        ui.Key(90, ctrl: true);
+        Check(ui.View.Document.TimingPoints[1].Effects == 9, "Kiai changes support undo");
+        ui.Key(90, ctrl: true);
+        void ToggleGreenKiai()
+        {
+            var label = ui.Canvas.Texts.Where(t => t.Value == L.Get("timing.kiai")).OrderBy(t => t.Y).Last();
+            ui.Click(label.X + 5, label.Y + 5);
+        }
+        void ApplyGreenTiming()
+        {
+            var label = ui.Canvas.Texts.Where(t => t.Value == L.Get("hitsounding.applyExisting")).OrderBy(t => t.Y).Last();
+            ui.Click(label.X + 8, label.Y + 8);
+        }
         var interval = ui.Canvas.Fills.First(f => f.Color == 0x72C686 && f.Bounds.Y < 220).Bounds;
         ui.Click(interval.X + 15, interval.Y + 10);
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.selectedTiming")) && ui.Canvas.Texts.Count(t => t.Value == L.Get("hitsounding.applyExisting")) == 1,
             "Clicking a timing interval selects its own point");
+        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.sv")), "Timing Helper does not expose source SV as effective SV");
+        var volumeTrack = ui.Canvas.Lines.Single(l => l.X1 > 1100 && l.Width == 4 && l.Y1 == l.Y2);
+        double originalBeatLength = ui.View.Document.TimingPoints[1].BeatLengthMs;
+        ui.View.PointerDown(volumeTrack.X1, volumeTrack.Y1, 0, false, false);
+        Check(ui.View.WantsCapture, "Timing Helper volume slider captures dragging");
+        ui.View.PointerMove(volumeTrack.X2, volumeTrack.Y1, false, false);
+        ui.View.PointerUp(volumeTrack.X2, volumeTrack.Y1, 0); ui.Paint();
+        Check(ui.View.Document.TimingPoints[1].Volume == 60 && !ui.View.WantsCapture, "Volume drag remains a draft and releases capture");
+        ui.ClickText(L.Get("hitsounding.applyExisting"));
+        Check(ui.View.Document.TimingPoints[1].Volume == 100 && ui.View.Document.TimingPoints[1].BeatLengthMs == originalBeatLength, "Applying volume preserves inherited beat length");
+        ui.Key(90, ctrl: true);
+        Check(ui.View.Document.TimingPoints[1].Volume == 60, "Volume slider application is one undo step");
         var whistles = LaneBlocks(ui, 2);
         var finishes = LaneBlocks(ui, 3);
         ui.View.PointerDown(whistles[0].X - 4, whistles[0].Y - 4, 0, false, false);
@@ -461,13 +492,14 @@ internal static class HitsoundingPanelTests
         ui.ClickText(L.Get("hitsounding.openFolder"));
         Check(opened == libraryRoot, "Library context menu opens the current folder");
         ui.ClickText(L.Get("hitsounding.customSet", 1) + " ▾");
-        ui.ClickText(L.Get("hitsounding.default"));
+        var defaultChoice = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.default") && t.X < 400);
+        ui.Click(defaultChoice.X + 4, defaultChoice.Y + 5);
         Check(baseline.ContentEquals(ui.View.Document), "SampleSet selection preserves map content");
         for (int index = 2; index <= 12; index++) map.TimingPoints.Add(new() { TimeMs = index * 100, SampleIndex = index, Uninherited = false, BeatLengthMs = -100 });
         ui.LoadDocument(map); ui.View.ShowHitsoundingPage(); ui.Paint();
         ui.ClickText(L.Get("hitsounding.default") + " ▾");
-        Check(ui.Canvas.Texts.Count(t => t.Value.StartsWith("Custom ", StringComparison.Ordinal) && !t.Value.EndsWith("▾")) == 7, "Dropdown displays eight rows including Default");
-        var choice = ui.Canvas.Texts.First(t => t.Value == L.Get("hitsounding.customSet", 1));
+        Check(ui.Canvas.Texts.Count(t => t.X < 400 && t.Value.StartsWith("Custom ", StringComparison.Ordinal) && !t.Value.EndsWith("▾")) == 7, "Dropdown displays eight rows including Default");
+        var choice = ui.Canvas.Texts.First(t => t.X < 400 && t.Value == L.Get("hitsounding.customSet", 1));
         ui.View.Wheel(choice.X + 5, choice.Y + 5, -1200, false, false, false); ui.Paint();
         ui.ClickText(L.Get("hitsounding.customSet", 12));
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.customSet", 12) + " ▾"), "Scrollable dropdown selects later timing indices");

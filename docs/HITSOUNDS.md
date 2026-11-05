@@ -188,8 +188,11 @@ External changes to a shared file are checked before edits and undo/redo.
 **Timing Helper** follows the playhead when nothing is selected and the event
 time when an object is selected. Clicking a timing interval or its stem selects that
 specific timing point. At an exact timestamp with existing timing points, the helper
-shows each point in a separate section divided by horizontal rules. Offset, BPM/SV,
-meter, bank, sample index, volume and effects can be applied to the existing point.
+shows each point in a separate section divided by horizontal rules. Offset, red-line BPM,
+meter, bank, sample index, volume and the Kiai toggle can be applied to the existing point. Toggling Kiai preserves the point's other effect flags.
+Sample indices use Default, Custom 1 and Custom choices. Volume has a numeric input
+and slider; Hit, Finish, Whistle and Clap buttons preview the draft sample settings.
+The helper does not display or edit SV; applying sound settings preserves the green line's beat length.
 Only timestamps without a point show effective timing information and **Apply as new
 inherited timing point**, which inserts a green line while preserving effective SV.
 Changes remain drafts until applied and support undo.

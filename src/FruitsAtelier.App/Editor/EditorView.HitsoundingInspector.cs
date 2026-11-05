@@ -25,6 +25,14 @@ public sealed partial class EditorView
         public bool Dirty;
     }
     private TimingHelperDraft[] timingHelperDrafts = [];
+    private TimingHelperDraft? timingHelperVolumeDrag;
+    private Rect timingHelperVolumeTrack;
+    private void MoveTimingHelperVolume(float x)
+    {
+        if (timingHelperVolumeDrag is not { } draft) return;
+        draft.Volume = (int)Math.Round(Math.Clamp((x - timingHelperVolumeTrack.X) / Math.Max(1, timingHelperVolumeTrack.Width), 0, 1) * 100);
+        draft.Dirty = true;
+    }
     private int inspectorBank, inspectorIndex, inspectorVolume;
     private bool inspectorTimingDirty;
     private Rect hitsoundingInspectorBounds;
@@ -59,7 +67,7 @@ public sealed partial class EditorView
     {
         RefreshHitsoundingInspector();
         hitsoundingInspectorBounds = r;
-        hitsoundingInspectorScrollMaximum = Math.Max(0, (timingHelperDrafts.Length > 0 ? 60 + timingHelperDrafts.Length * 390 : 330) - r.Height);
+        hitsoundingInspectorScrollMaximum = Math.Max(0, (timingHelperDrafts.Length > 0 ? 62 + timingHelperDrafts.Sum(d => d.Source.Uninherited ? 527 : 490) : 330) - r.Height);
         hitsoundingInspectorScroll = Math.Clamp(hitsoundingInspectorScroll, 0, hitsoundingInspectorScrollMaximum);
         int firstHit = hits.Count, firstField = fields.Count;
         c.Clip(r);
@@ -77,7 +85,7 @@ public sealed partial class EditorView
         else
         {
             var timing = renderedTiming!.At(inspectorTime);
-            c.Text(L.Get("hitsounding.timingInfo", 60000 / timing.BeatLengthMs, timing.SliderVelocityMultiplier), x, y, 11, Muted, w); y += 28;
+            c.Text(L.Get("timing.bpm") + " " + Number(60000 / timing.BeatLengthMs), x, y, 11, Muted, w); y += 28;
             var red = LatestHitsoundingPoint(hitsoundingRedPoints, inspectorTime);
             var green = LatestHitsoundingPoint(hitsoundingGreenPoints, inspectorTime);
             c.Text(L.Get("hitsounding.redPoint", red is null ? "—" : Time(red.TimeMs)), x, y, 10, 0xE77785, w); y += 20;
@@ -110,21 +118,50 @@ public sealed partial class EditorView
         c.Text(L.Get(red ? "hitsounding.redPoint" : "hitsounding.greenPoint", Time(draft.Source.TimeMs)), x, y, 12,
             red ? 0xE77785u : 0x72C686u, w, true); y += 28;
         Field(c, x, ref y, w, L.Get("timing.offset"), draft.Time, v => { if (!double.IsFinite(v)) throw new ArgumentException(L.Get("timing.range")); draft.Time = v; draft.Dirty = true; }, 100);
-        Field(c, x, ref y, w, L.Get(red ? "timing.bpm" : "timing.sv"), red ? 60000 / draft.BeatLength : -100 / draft.BeatLength,
-            v => { if (!double.IsFinite(v) || v <= 0 || v > (red ? 10000 : 10)) throw new ArgumentException(L.Get("timing.range")); draft.BeatLength = (red ? 60000 : -100) / v; draft.Dirty = true; }, 100);
+        if (red) Field(c, x, ref y, w, L.Get("timing.bpm"), 60000 / draft.BeatLength,
+            v => { if (!double.IsFinite(v) || v <= 0 || v > 10000) throw new ArgumentException(L.Get("timing.range")); draft.BeatLength = 60000 / v; draft.Dirty = true; }, 100);
         Field(c, x, ref y, w, L.Get("timing.meter"), draft.Meter, v => { if (v < 1 || v > 32 || v != Math.Truncate(v)) throw new ArgumentException(L.Get("timing.range")); draft.Meter = (int)v; draft.Dirty = true; }, 100);
         c.Text(L.Get("samples.sampleset"), x, y, 11, Muted, w); y += 20;
         int displayedBank = draft.Bank > 0 ? draft.Bank : hitsoundingResolver!.Describe(new(Guid.Empty, 0, CatchObjectKind.Fruit, draft.Time - 5, 0, 0, 0, 0, true)).NormalSet;
+        float bankWidth = w * .44f, choiceX = x + bankWidth + 8, choiceWidth = w - bankWidth - 8;
         for (int i = 0; i < 3; i++)
         {
-            int bank = new[] { 2, 1, 3 }[i];
-            Button(c, new(x + i * w / 3, y, w / 3 - 3, 28), L.Get(bank == 2 ? "timing.soft" : bank == 1 ? "timing.normal" : "timing.drum"),
+            int bank = i + 1;
+            Button(c, new(x, y + i * 30, bankWidth, 28), L.Get(bank == 2 ? "timing.soft" : bank == 1 ? "timing.normal" : "timing.drum"),
                 () => { draft.Bank = bank; draft.Dirty = true; }, displayedBank == bank);
+            int index = i;
+            var choice = new Rect(choiceX, y + i * 30, choiceWidth, 28);
+            bool active = index == 2 ? draft.Index >= 2 : draft.Index == index;
+            c.Circle(choice.X + 7, choice.Y + 14, 6, Muted, false, 2);
+            if (active) c.Circle(choice.X + 7, choice.Y + 14, 3, Accent);
+            c.Text(L.Get(index == 0 ? "timing.default" : index == 1 ? "timing.custom1" : "timing.custom"), choice.X + 20, choice.Y + 7, 11, Foreground, choiceWidth - 20);
+            hits.Add(new(choice, () => { draft.Index = index == 2 ? Math.Max(2, draft.Index) : index; draft.Dirty = true; }, true));
         }
-        y += 38;
-        Field(c, x, ref y, w, L.Get("hitsounding.index"), draft.Index, v => { draft.Index = ValidHsIndex(v); draft.Dirty = true; }, 100);
+        y += 94;
+        if (draft.Index >= 2)
+            Field(c, choiceX + 20, ref y, choiceWidth - 20, L.Get("hitsounding.index"), draft.Index, v => { draft.Index = Math.Max(2, ValidHsIndex(v)); draft.Dirty = true; }, 0);
+        else y += 37;
         Field(c, x, ref y, w, L.Get("hitsounding.volume"), draft.Volume, v => { draft.Volume = (int)Math.Clamp(Math.Round(v), 0, 100); draft.Dirty = true; }, 100);
-        Field(c, x, ref y, w, L.Get("hitsounding.effects"), draft.Effects, v => { draft.Effects = ValidHsIndex(v); draft.Dirty = true; }, 100);
+        var slider = new Rect(x + 6, y, Math.Max(1, w - 12), 24);
+        c.Line(slider.X, slider.Y + 12, slider.Right, slider.Y + 12, Grid, 4);
+        c.Circle(slider.X + slider.Width * draft.Volume / 100, slider.Y + 12, 6, Accent);
+        hits.Add(new(slider, () => { if (!CommitField()) return; timingHelperVolumeDrag = draft; timingHelperVolumeTrack = slider; MoveTimingHelperVolume(mouseX); }, true));
+        y += 30;
+        string[] sounds = ["hitnormal", "hitfinish", "hitwhistle", "hitclap"];
+        for (int i = 0; i < sounds.Length; i++)
+        {
+            string sound = sounds[i];
+            Button(c, new(x + i % 2 * w / 2, y + i / 2 * 32, w / 2 - 4, 28), L.Get("timing." + sound), () =>
+            {
+                if (!CommitField()) return;
+                var point = TimingEditing.Copy(draft.Source);
+                point.SampleSet = draft.Bank; point.SampleIndex = draft.Index; point.Volume = draft.Volume;
+                PreviewTimingSample(point, sound);
+            });
+        }
+        y += 66;
+        ToggleSwitch(c, new(x, y, w, 32), L.Get("timing.kiai"), (draft.Effects & 1) != 0,
+            () => { draft.Effects ^= 1; draft.Dirty = true; }); y += 38;
         Button(c, new(x, y + 4, w, 32), L.Get("hitsounding.applyExisting"), () => ApplyTimingHelperPoint(draft), enabled: draft.Dirty || editField >= 0, fontSize: 11); y += 50;
     }
     private void ApplyTimingHelperPoint(TimingHelperDraft draft)
