@@ -38,7 +38,7 @@ internal static class HitsoundingPreciseAuditionTests
         clock.Now += 500; ui.Paint(); var box = Block(2);
         Check(ui.Canvas.Fills.Any(f => f.Bounds.Y == box.Y && f.Bounds.Height == box.Height && Math.Abs(f.Bounds.Width - box.Width / 2) < .1f), "Precise audition shows elapsed progress inside its outlined block");
         var button = ui.View.HitsoundingPreciseAuditionBounds;
-        Check(ui.Canvas.Fills.Any(f => f.Bounds.Width == 8 && f.Bounds.Height == 8 && button.Contains(f.Bounds.X, f.Bounds.Y)), "Active audition uses a Stop icon");
+        Check(ui.Canvas.Fills.Any(f => f.Bounds.Width == 6 && f.Bounds.Height == 6 && button.Contains(f.Bounds.X, f.Bounds.Y)), "Active audition uses a Stop icon");
         Select(3); Check(played.Count == 1, "Selecting a different sound does not start it");
         Play(); Check(stops == 1 && played.Count == 2 && played[1].Name == "hitfinish", "Starting another Precise sound replaces the previous audition");
         Play(); Check(stops == 2 && played.Count == 2, "Stop cancels without replaying");
