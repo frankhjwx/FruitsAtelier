@@ -114,11 +114,12 @@ public sealed partial class EditorView
             v => { if (!double.IsFinite(v) || v <= 0 || v > (red ? 10000 : 10)) throw new ArgumentException(L.Get("timing.range")); draft.BeatLength = (red ? 60000 : -100) / v; draft.Dirty = true; }, 100);
         Field(c, x, ref y, w, L.Get("timing.meter"), draft.Meter, v => { if (v < 1 || v > 32 || v != Math.Truncate(v)) throw new ArgumentException(L.Get("timing.range")); draft.Meter = (int)v; draft.Dirty = true; }, 100);
         c.Text(L.Get("samples.sampleset"), x, y, 11, Muted, w); y += 20;
-        for (int i = 0; i < 4; i++)
+        int displayedBank = draft.Bank > 0 ? draft.Bank : hitsoundingResolver!.Describe(new(Guid.Empty, 0, CatchObjectKind.Fruit, draft.Time - 5, 0, 0, 0, 0, true)).NormalSet;
+        for (int i = 0; i < 3; i++)
         {
-            int bank = new[] { 0, 2, 1, 3 }[i];
-            Button(c, new(x + i * w / 4, y, w / 4 - 3, 28), L.Get(bank == 0 ? "samples.auto" : bank == 2 ? "timing.soft" : bank == 1 ? "timing.normal" : "timing.drum"),
-                () => { draft.Bank = bank; draft.Dirty = true; }, draft.Bank == bank);
+            int bank = new[] { 2, 1, 3 }[i];
+            Button(c, new(x + i * w / 3, y, w / 3 - 3, 28), L.Get(bank == 2 ? "timing.soft" : bank == 1 ? "timing.normal" : "timing.drum"),
+                () => { draft.Bank = bank; draft.Dirty = true; }, displayedBank == bank);
         }
         y += 38;
         Field(c, x, ref y, w, L.Get("hitsounding.index"), draft.Index, v => { draft.Index = ValidHsIndex(v); draft.Dirty = true; }, 100);
@@ -194,9 +195,10 @@ public sealed partial class EditorView
             if (best is null || Math.Abs(hitsoundingNotes[i].TimeMs - time) < Math.Abs(best.TimeMs - time)) best = hitsoundingNotes[i];
         return best;
     }
-    private bool BeginHitsoundingCanvasPointer(float x, float y, int button)
+    private bool BeginHitsoundingCanvasPointer(float x, float y, int button, bool ctrl, bool shift)
     {
         if (!hitsoundingBounds.Contains(x, y)) return false;
+        if (BeginHitsoundingTimingPointer(x, y, button, ctrl, shift)) return true;
         if (button == 0 && HitsoundingHeadHovered(x, y))
         { hitsoundingHeadBefore = hitsoundingHeadRatio; hitsoundingHeadDrag = true; return true; }
         if (button == 0)
@@ -206,8 +208,7 @@ public sealed partial class EditorView
             if (pointHit.Point is not null)
             {
                 if (!CommitField()) return true;
-                hitsoundingSelectedTiming = pointHit.Point; hitsoundingSelected = null; hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
-                SelectObjects([]); return true;
+                SelectHitsoundingTimingPoint(pointHit.Point); return true;
             }
         }
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
@@ -269,6 +270,7 @@ public sealed partial class EditorView
     }
     private bool MoveHitsoundingCanvasPointer(float x, float y)
     {
+        if (MoveHitsoundingTimingPointer(x)) return true;
         if (hitsoundingHeadDrag)
         { hitsoundingHeadRatio = Math.Clamp((x - hitsoundingGridBounds.X) / Math.Max(1, hitsoundingGridBounds.Width), .05, .95); return true; }
         if (MoveHitsoundingStoryboard(x, y)) return true;
@@ -290,6 +292,7 @@ public sealed partial class EditorView
     }
     private bool EndHitsoundingCanvasPointer()
     {
+        if (EndHitsoundingTimingPointer()) return true;
         if (hitsoundingHeadDrag) { hitsoundingHeadDrag = false; return true; }
         if (EndHitsoundingStoryboardMove()) return true;
         if (EndHitsoundingSoundMove()) return true;

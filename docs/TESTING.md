@@ -1719,6 +1719,10 @@ live transport, and Mapping/Testplay isolation. The panel check exercises label
 visibility while dense neighbours enter and leave the viewport. Audio mixer checks
 verify exclusive audition replacement and stop against silent PCM.
 The timeline-layout check also exercises bookmark toolbar actions in Timing.
+The panel check covers green handle dragging, group selection, Snap, live interval
+previews without committed conversion rebuilds, red-point protection, cancellation,
+undo/redo, inherited-point creation parity with Timing Panel, and block/handle
+context menus that reopen Timing Helper or delete green points in both languages.
 
 `App.Tests --hitsounding-panel-check` covers the Snap ruler, actual slider ticks,
 centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,

@@ -282,6 +282,7 @@ internal static class HitsoundingPanelTests
     }
     public static void Run()
     {
+        HitsoundingTimingDragTests.Run();
         StableLabels();
         string root = Path.GetFullPath("artifacts/tests/hitsounding"); Directory.CreateDirectory(root);
         string wave = Path.Combine(root, "soft-hitnormal.wav");
@@ -537,6 +538,7 @@ internal static class HitsoundingPanelTests
     {
         var map = new MapDocument { DurationMs = 90000, BeatLengthMs = 500 };
         map.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 }, new() { TimeMs = 20000, BeatLengthMs = 400 },
+            new() { TimeMs = 30000, BeatLengthMs = -100, Uninherited = false, SampleIndex = 11 },
             new() { TimeMs = 40000, BeatLengthMs = -50, Uninherited = false }]);
         for (int i = 0; i < 3000; i++) map.Fruits.Add(new() { TimeMs = 200 + i * 20, X = 40 + i * 73 % 430 });
         for (int i = 0; i < 100; i++)
@@ -553,6 +555,10 @@ internal static class HitsoundingPanelTests
         ui.View.ShowHitsoundingPage(); ui.Paint();
         Console.WriteLine($"Hitsounding cold setup={System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds:F3}ms / {GC.GetAllocatedBytesForCurrentThread() - allocated}B");
         Measure("Note based");
+        var timingHandle = ui.View.HitsoundingTimingHandleBounds(ui.View.Document.TimingPoints.Single(p => p.TimeMs == 30000));
+        ui.View.PointerDown(timingHandle.X + 4, timingHandle.Y + 10, 0, false, false);
+        Measure("Timing handle drag"); ui.Key(27);
+        Check(baseline.ContentEquals(ui.View.Document) && ReferenceEquals(conversion, ui.View.Conversion), "Timing drag retains committed map and conversion");
         ui.View.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.5f, 200).ToArray(), 1));
         ui.ClickText(L.Get("hitsounding.precise")); Measure("Precise HS");
         ui.View.PointerDown(700, 400, 0, false, false);

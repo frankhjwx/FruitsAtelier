@@ -1991,6 +1991,8 @@
   "hitsounding.library": "Hitsound Library",
   "hitsounding.sampleSet": "SampleSet",
   "hitsounding.customSet": "Custom {0}",
+  "hitsounding.editTimingHelper": "Edit in Timing Helper",
+  "hitsounding.newInheritedPoint": "New inherited point",
   "hitsounding.newFolder": "New folder",
   "hitsounding.rename": "Rename",
   "hitsounding.copyFiles": "Copy",

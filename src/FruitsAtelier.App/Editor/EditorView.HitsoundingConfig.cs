@@ -389,7 +389,7 @@ public sealed partial class EditorView
         if (HitsoundingSearchFocused && !hitsoundingSearchBounds.Contains(x, y)) textEditor.Field = "";
         if (!hitsoundingBounds.Contains(x, y) && !hitsoundingDockBounds.Contains(x, y)) return false;
         if (BeginHitsoundingLibraryPointer(x, y, button, ctrl, shift)) return true;
-        if (BeginHitsoundingCanvasPointer(x, y, button)) return true;
+        if (BeginHitsoundingCanvasPointer(x, y, button, ctrl, shift)) return true;
         if (button == 0)
         {
             if (hitsoundingSplitBounds.Contains(x, y))

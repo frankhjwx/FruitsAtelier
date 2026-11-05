@@ -16,7 +16,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense" })
+            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu" })
             {
                 L.SetLanguage(locale);
                 var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
@@ -52,6 +52,14 @@ internal static class HitsoundingRenderCheck
                 editor.LibrarySettings.DockLayouts = layout; editor.RestoreDockLayouts();
                 canvas.Resize(size.Item1, size.Item2, 96);
                 canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
+                if (scenario is "-green-drag" or "-green-menu")
+                {
+                    var point = editor.Document.TimingPoints.First(p => !p.Uninherited && p.TimeMs == 2000);
+                    var handle = editor.HitsoundingTimingHandleBounds(point);
+                    editor.PointerDown(handle.X + 4, handle.Y + 10, scenario == "-green-menu" ? 2 : 0, false, false);
+                    if (scenario == "-green-drag") editor.PointerMove(handle.X + 44, handle.Y + 10, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
                 if (scenario == "-muted")
                 {
                     foreach (int lane in new[] { 1, 3, 6 })

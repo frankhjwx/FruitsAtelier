@@ -21,7 +21,8 @@ public sealed partial class EditorView
     private SoundTag[][] hitsoundingTagLanes = [];
     private SoundTag[] hitsoundingStoryboardTags = [];
     private StoryboardScene? hitsoundingStoryboardSource;
-    private (double Time, bool Red, string Bank, int Index, int Volume, TimingPoint Point)[] hitsoundingTimingLabels = [];
+    private readonly record struct HitsoundingTimingLabel(double Time, bool Red, string Bank, int Index, int Volume, TimingPoint Point);
+    private HitsoundingTimingLabel[] hitsoundingTimingLabels = [];
     private ConvertedCatchObject[] hitsoundingNotes = [];
     private Dictionary<(Guid, int), ConvertedCatchObject> hitsoundingNoteLookup = [];
     private HashSet<(Guid, int)> hitsoundingAudibleNotes = [];
@@ -66,6 +67,7 @@ public sealed partial class EditorView
         var current = GetHitsoundConversion();
         if (ReferenceEquals(current, hitsoundingConversion)) return;
         hitsoundingConversion = current;
+        hitsoundingTimingSelection.RemoveWhere(p => !Document.TimingPoints.Contains(p));
         var resolver = hitsoundingResolver = new HitsoundResolver(Document, current.Objects, inspectResources: false);
         var tags = new List<SoundTag>();
         hitsoundingNotes = current.Objects.Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.Banana).ToArray();
@@ -94,7 +96,7 @@ public sealed partial class EditorView
         hitsoundingTimingLabels = overviewTiming.Select(point =>
         {
             var sample = resolver.Describe(new ConvertedCatchObject(Guid.Empty, 0, CatchObjectKind.Fruit, point.TimeMs - 5, 0, 0, 0, 0, true));
-            return (point.TimeMs, point.Uninherited, BankCode(point.SampleSet > 0 ? point.SampleSet : sample.NormalSet), point.SampleIndex, point.Volume, point);
+            return new HitsoundingTimingLabel(point.TimeMs, point.Uninherited, BankCode(point.SampleSet > 0 ? point.SampleSet : sample.NormalSet), point.SampleIndex, point.Volume, point);
         }).ToArray();
         hitsoundingFallbackFiles.Clear();
         foreach (string folder in HitsoundSkinFolders)
@@ -154,13 +156,14 @@ public sealed partial class EditorView
         float gridX = r.X + labelWidth, gridWidth = Math.Max(10, r.Width - labelWidth);
         float X(double time) => gridX + (float)((time - start) / hitsoundingSpan * gridWidth);
         hitsoundingTimingBoxes.Clear();
-        int timingLow = 0, timingHigh = hitsoundingTimingLabels.Length;
-        while (timingLow < timingHigh) { int mid = (timingLow + timingHigh) / 2; if (hitsoundingTimingLabels[mid].Time < start) timingLow = mid + 1; else timingHigh = mid; }
-        for (int i = Math.Max(0, timingLow - 1); i < hitsoundingTimingLabels.Length && hitsoundingTimingLabels[i].Time <= end; i++)
+        var timingLabels = hitsoundingTimingPreview ?? hitsoundingTimingLabels;
+        int timingLow = 0, timingHigh = timingLabels.Length;
+        while (timingLow < timingHigh) { int mid = (timingLow + timingHigh) / 2; if (timingLabels[mid].Time < start) timingLow = mid + 1; else timingHigh = mid; }
+        for (int i = Math.Max(0, timingLow - 1); i < timingLabels.Length && timingLabels[i].Time <= end; i++)
         {
-            var point = hitsoundingTimingLabels[i];
-            double until = i + 1 < hitsoundingTimingLabels.Length ? hitsoundingTimingLabels[i + 1].Time : Math.Max(end, TimelineDurationMs);
-            if (until <= start || until <= point.Time) continue;
+            var point = timingLabels[i];
+            double until = i + 1 < timingLabels.Length ? timingLabels[i + 1].Time : Math.Max(end, TimelineDurationMs);
+            if (until < start || until < point.Time) continue;
             float anchor = X(point.Time), left = Math.Max(gridX, anchor), rightEdge = Math.Min(gridX + gridWidth, X(until));
             hitsoundingTimingBoxes.Add((new(left, r.Y + 53, Math.Max(0, rightEdge - left), 36), anchor,
                 point.Red ? 0xE77785u : 0x72C686u, point.Bank, point.Index, point.Volume, point.Point));
@@ -192,10 +195,11 @@ public sealed partial class EditorView
         foreach (var tag in hitsoundingTimingBoxes)
         {
             c.Line(tag.Anchor, g.Y, tag.Anchor, g.Bottom, tag.Color, 1, .45f);
-            c.Line(tag.Anchor, tag.Bounds.Bottom + 5, tag.Anchor, g.Y - 1, tag.Color, 3, .95f);
+            bool selectedTiming = hitsoundingTimingSelection.Contains(tag.Point);
+            c.Line(tag.Anchor, tag.Bounds.Bottom + 5, tag.Anchor, g.Y - 1, selectedTiming ? Accent : tag.Color, selectedTiming ? 5 : 3, .95f);
             c.Fill(tag.Bounds, Panel, 6);
             c.Fill(tag.Bounds, tag.Color, 6, .35f);
-            c.StrokeOpacity(tag.Bounds, tag.Color, hitsoundingSelectedTiming == tag.Point ? 2.5f : 1, 6, 1);
+            c.StrokeOpacity(tag.Bounds, tag.Color, selectedTiming || hitsoundingSelectedTiming == tag.Point ? 2.5f : 1, 6, 1);
             string bankLabel = tag.Index > 0 ? $"{tag.Bank}:{tag.Index}" : tag.Bank;
             string volumeLabel = $"{tag.Volume}%";
             float bankWidth = c.MeasureText(bankLabel, 13, true), volumeWidth = c.MeasureText(volumeLabel, 10, true);
@@ -204,6 +208,7 @@ public sealed partial class EditorView
             c.Text(volumeLabel, tag.Bounds.X + 6, tag.Bounds.Y + 20, 10, 0xFFFFFF, volumeWidth + 1, true);
             c.Unclip();
         }
+        DrawHitsoundingTimingMarquee(c);
         c.Unclip();
         for (int lane = 0; lane < 7; lane++)
         {

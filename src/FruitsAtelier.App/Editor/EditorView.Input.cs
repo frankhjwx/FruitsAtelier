@@ -1546,7 +1546,7 @@ public sealed partial class EditorView
         {
             if (virtualKey == 27)
             {
-                if (hitsoundingHeadDrag || hitsoundingPainting || hitsoundingMarquee || hitsoundingMoveSource is not null || hitsoundingStoryboardMove is not null || hitsoundingDragFile is not null || hitsoundingSplitDrag is not null) CancelInteraction();
+                if (hitsoundingTimingDrag is not null || hitsoundingTimingBox || hitsoundingHeadDrag || hitsoundingPainting || hitsoundingMarquee || hitsoundingMoveSource is not null || hitsoundingStoryboardMove is not null || hitsoundingDragFile is not null || hitsoundingSplitDrag is not null) CancelInteraction();
                 else if (panelMenuOpen || menu >= 0 || contextItems.Count > 0) { panelMenuOpen = false; menu = -1; contextItems.Clear(); }
                 else ShowLibrary();
             }
@@ -1738,6 +1738,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        CancelHitsoundingTimingPointer();
         hitsoundingDragFile = null; hitsoundingSplitDrag = null;
         hitsoundingLibraryPressed = hitsoundingLibraryDragging = hitsoundingLibraryBox = false;
         hitsoundingLibraryFocused = hitsoundingNaming = hitsoundingLibraryScrollbarDragging = false;

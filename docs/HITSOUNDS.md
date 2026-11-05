@@ -252,6 +252,16 @@ and hide when the block is too narrow. Equal-width blocks with the same number o
 index digits use a shared width threshold, independent of the particular digits
 or sample bank. Other blocks entering the viewport do not affect this decision.
 
+Drag green timing handles horizontally to move inherited points to the nearest
+Snap. Marquee-select handles to move several green points together, preserving
+their relative offsets while snapping the grabbed point. Red points cannot be
+dragged or included in this selection. Timing intervals update during the preview;
+release commits one undoable edit, and Escape cancels it. Right-click empty space
+in the handle strip to create an inherited point at the nearest Snap using the
+same parameter inheritance as Timing Panel. Right-click a timing block or handle
+to edit it in Timing Helper, opening the panel when needed. Green points also
+offer Delete. Timing Helper's sample bank choices are Soft, Normal and Drum.
+
 ## Maintenance
 
 Keep sample selection in Core and transport boundary handling in the shared editor.
