@@ -28,16 +28,26 @@ public sealed partial class EditorView
         if (range.Count == 0) return;
         c.Line(r.X, r.Y, r.Right, r.Y, Grid);
         c.Clip(r);
+        c.Text(L.Get("hitsounding.nearbyTiming"), r.X + 4, r.Y + 6, 11, Foreground, Math.Max(0, r.Width - 8), true);
         for (int row = 0; row < range.Count; row++)
         {
             int index = range.Start + row;
             var point = overviewTiming[index];
             bool current = index == range.Current;
-            var bounds = new Rect(r.X, r.Y + 6 + row * 20, r.Width, 19);
+            var bounds = new Rect(r.X, r.Y + 28 + row * 20, r.Width, 19);
             uint typeColor = point.Uninherited ? 0xE77785u : 0x72C686u;
             float strength = Math.Max(.3f, 1 - Math.Abs(index - range.Current) * .12f);
-            uint color = current ? Accent : MixThemeColour(Panel, typeColor, strength);
-            if (current) { c.Fill(bounds, SelectedSurface, 4); c.Stroke(bounds, Accent, 1, 4); }
+            uint selectedColor = point.Uninherited ? typeColor : Accent;
+            uint color = current ? selectedColor : MixThemeColour(Panel, typeColor, strength);
+            if (current) { c.Fill(bounds, MixThemeColour(Surface, selectedColor, .18f), 4); c.Stroke(bounds, selectedColor, 1, 4); }
+            else if (contextItems.Count == 0 && bounds.Contains(mouseX, mouseY)) c.Fill(bounds, HoverSurface, 4);
+            hits.Add(new(bounds, () =>
+            {
+                if (!CommitField()) return;
+                SelectHitsoundingTimingPoint(point);
+                hitsoundingInspectorScroll = 0;
+                SeekTo(Math.Max(0, point.TimeMs));
+            }, true));
             c.Text(Time(point.TimeMs), bounds.X + 4, bounds.Y + 3, 10, color, 74, current);
             c.Text(point.Volume + "%", bounds.Right - 38, bounds.Y + 3, 10, color, 34, current);
             string bank = point.SampleSet == 0 ? L.Get("timing.default") : BankCode(point.SampleSet);

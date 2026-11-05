@@ -26,7 +26,7 @@ public sealed partial class EditorView
     {
         bool strip = HitsoundingTimingStrip.Contains(x, y);
         var block = hitsoundingTimingBoxes.LastOrDefault(t => t.Bounds.Contains(x, y));
-        if (!strip && (button != 2 || block.Point is null)) return false;
+        if (!strip && (block.Point is null || button != 2 && !(button == 0 && ctrl))) return false;
         var hit = strip ? hitsoundingTimingBoxes.Where(t => Math.Abs(t.Anchor - x) <= 4).OrderBy(t => Math.Abs(t.Anchor - x)).ThenBy(t => t.Point.Uninherited).FirstOrDefault() : block;
         if (button == 2)
         {
@@ -55,6 +55,8 @@ public sealed partial class EditorView
             if (ctrl) { if (!hitsoundingTimingSelection.Add(point)) hitsoundingTimingSelection.Remove(point); }
             else if (!shift && !hitsoundingTimingSelection.Contains(point)) hitsoundingTimingSelection.Clear();
             if (!ctrl) hitsoundingTimingSelection.Add(point);
+            if (!hitsoundingTimingSelection.Contains(point)) hitsoundingSelectedTiming = hitsoundingTimingSelection.LastOrDefault();
+            if (!strip) return true;
             if (!hitsoundingTimingSelection.Contains(point)) return true;
             hitsoundingTimingDrag = point; hitsoundingTimingOffset = point.TimeMs - hitsoundingTimingStartTime;
             hitsoundingTimingMoving = hitsoundingTimingLabels.Where(t => hitsoundingTimingSelection.Contains(t.Point)).ToArray();

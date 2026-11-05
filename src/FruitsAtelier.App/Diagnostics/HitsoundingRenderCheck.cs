@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-audition" })
+            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-audition" })
             {
                 if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
@@ -83,6 +83,14 @@ internal static class HitsoundingRenderCheck
                     var point = editor.Document.TimingPoints.First(p => !p.Uninherited && p.TimeMs == 3000);
                     var handle = editor.HitsoundingTimingHandleBounds(point);
                     editor.PointerMove(handle.X + 4, handle.Y + 10, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
+                if (scenario == "-red-selected")
+                {
+                    var point = editor.Document.TimingPoints.First(p => p.Uninherited);
+                    var handle = editor.HitsoundingTimingHandleBounds(point);
+                    editor.PointerDown(handle.X + 4, handle.Y + 10, 0, false, false);
+                    editor.PointerUp(handle.X + 4, handle.Y + 10, 0);
                     editor.Render(canvas, size.Item1, size.Item2);
                 }
                 if (scenario is "-green-drag" or "-green-menu")

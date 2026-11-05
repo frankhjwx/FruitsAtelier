@@ -301,8 +301,23 @@ internal static class HitsoundingPanelTests
         var before = Rows();
         ui.View.Wheel(list.X + 8, list.Y + 20, -120, false, false, false); ui.Paint();
         Check(before.SequenceEqual(Rows()) && ui.View.PlayheadMs == 5500, "Nearby timing list has no independent scroll or seek action");
+        Jump("00:06:000");
+        Check(ui.View.PlayheadMs == 6000 && Rows().SequenceEqual(Enumerable.Range(3, 7).Select(i => $"00:{i:00}:000")), "Clicking a nearby row seeks and centers the selected timing point");
+        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.meter") || t.Value == L.Get("timing.bpm")), "Green timing points omit BPM and Meter controls");
+        var custom = ui.Canvas.Texts.Single(t => t.X > 1100 && t.Value == L.Get("timing.custom"));
+        var customIndex = ui.Canvas.Texts.Single(t => t.X > 1100 && t.Value == "6");
+        Check(Math.Abs(custom.Y - customIndex.Y) < 2 && customIndex.X > custom.X, "Custom index input shares the Custom radio row");
         map.TimingPoints.RemoveRange(3, 8); ui.LoadDocument(map); ui.View.ShowHitsoundingPage(); ui.Paint();
         Check(Rows().Length == 3, "Nearby timing lists all available points when fewer than seven exist");
+        var original = ui.View.Document.DeepClone(); Jump("00:00:000");
+        var red = ui.Canvas.Texts.Single(t => ui.View.TimingHelperNearbyBounds.Contains(t.X, t.Y) && t.Value == "00:00:000");
+        Check(red.Color == 0xE77785 && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.meter")), "Selected red points retain red highlighting and Meter controls");
+        Check(original.ContentEquals(ui.View.Document), "Nearby point navigation does not edit the map");
+        void Jump(string timestamp)
+        {
+            var text = ui.Canvas.Texts.Single(t => ui.View.TimingHelperNearbyBounds.Contains(t.X, t.Y) && t.Value == timestamp);
+            ui.Click(text.X + 3, text.Y + 4);
+        }
         void CheckRows(double time, int first)
         {
             ui.View.UpdateTransport(time, 20000, true, false, false, null, null); ui.Paint();
@@ -313,6 +328,37 @@ internal static class HitsoundingPanelTests
         {
             var bounds = ui.View.TimingHelperNearbyBounds;
             return ui.Canvas.Texts.Where(t => bounds.Contains(t.X, t.Y) && t.Value.StartsWith("00:") && t.Value.Length == 9).OrderBy(t => t.Y).Select(t => t.Value).ToArray();
+        }
+    }
+    public static void CtrlSelection()
+    {
+        var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+        foreach (int time in new[] { 1000, 1500 }) map.Fruits.Add(new() { TimeMs = time, X = 256, OriginalLine = $"256,192,{time},1,6,0:0:0:0:" });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+        var original = ui.View.Document.DeepClone();
+        foreach (bool removeFirst in new[] { false, true })
+        {
+            var blocks = LaneBlocks(ui, 2);
+            Click(blocks[0], false); Click(blocks[1], true);
+            Check(ui.View.SelectedObjectIds.Count == 2, "Ctrl-click adds a sound without replacing the previous selection");
+            if (removeFirst) Click(blocks[0], true);
+            Check(original.ContentEquals(ui.View.Document), "Ctrl selection changes neither map content nor time");
+            ui.Key(46);
+            Check(ui.View.Document.HitsoundOverrides.Count == (removeFirst ? 1 : 2) && ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 4), "Delete uses the Ctrl-selected sounds and excludes toggled-off sounds");
+            ui.Key(90, ctrl: true);
+            Check(original.ContentEquals(ui.View.Document), "Ctrl-selected deletion is one undo step");
+        }
+        var normal = LaneBlocks(ui, 1);
+        var notes = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane0") && t.X > 340 && t.X < 1100);
+        Click(new(normal[0].X, notes.Y, normal[0].Width, 12), false);
+        Click(new(normal[1].X, notes.Y, normal[1].Width, 12), true);
+        Check(ui.View.SelectedObjectIds.Count == 2, "Ctrl-click also accumulates Notes-row selection");
+        Click(new(normal[0].X, notes.Y, normal[0].Width, 12), true);
+        Check(ui.View.SelectedObjectIds.Count == 1 && ui.View.SelectedObjectIds.Contains(map.Fruits[1].Id), "Ctrl-click toggles a Notes-row object off");
+        void Click(FruitsAtelier.App.Rendering.Rect r, bool ctrl)
+        {
+            float x = r.X + r.Width / 2, y = r.Y + 5;
+            ui.View.PointerDown(x, y, 0, false, ctrl); ui.View.PointerUp(x, y, 0); ui.Paint();
         }
     }
     public static void LengthAndMove()
@@ -585,6 +631,12 @@ internal static class HitsoundingPanelTests
         var baseline = ui.View.Document.DeepClone(); double time = ui.View.PlayheadMs;
         var first = Blocks()[0]; ui.Click(first.X + 5, first.Y + 10);
         Check(ui.View.PlayheadMs == time, "Storyboard selection does not seek");
+        var ctrlTarget = Blocks()[1];
+        ui.View.PointerDown(ctrlTarget.X + 5, ctrlTarget.Y + 10, 0, false, true);
+        ui.View.PointerUp(ctrlTarget.X + 5, ctrlTarget.Y + 10, 0); ui.Paint(); ui.Key(46); Wait(0);
+        Check(Samples().Count == 0, "Ctrl-click adds storyboard sounds to a batch deletion");
+        ui.Key(90, ctrl: true); Wait(2);
+        first = Blocks()[0]; ui.Click(first.X + 5, first.Y + 10);
         ui.Key(67, ctrl: true); ui.View.UpdateTransport(1500, 6000, true, false, false, null, null); ui.Paint(); ui.Key(86, ctrl: true); Wait(3);
         Check(Samples().Any(s => s.TimeMs == 1500 && s.Volume == 65 && s.Path == samplePath), "Storyboard paste preserves filename, volume and targets the playhead without requiring a note");
         ui.Key(90, ctrl: true); Wait(2); Check(baseline.ContentEquals(ui.View.Document), "Storyboard paste undo restores source sections");

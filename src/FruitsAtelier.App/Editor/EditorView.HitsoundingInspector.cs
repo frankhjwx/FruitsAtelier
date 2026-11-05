@@ -83,8 +83,8 @@ public sealed partial class EditorView
         RefreshHitsoundingInspector();
         hitsoundingInspectorBounds = r;
         var nearby = TimingHelperNearbyRange();
-        float contentHeight = timingHelperPoints.Length > 0 ? 46 + timingHelperPoints.Sum(d => d.Source.Uninherited ? 477 : 440) : 388;
-        float nearbyHeight = nearby.Count > 0 ? 8 + nearby.Count * 20 : 0;
+        float contentHeight = timingHelperPoints.Length > 0 ? 46 + timingHelperPoints.Sum(d => d.Source.Uninherited ? 440 : 366) : 388;
+        float nearbyHeight = nearby.Count > 0 ? 30 + nearby.Count * 20 : 0;
         float editorHeight = Math.Min(contentHeight, Math.Max(0, r.Height - nearbyHeight - 8));
         var nearbyBounds = TimingHelperNearbyBounds = new Rect(r.X + 10, r.Y + editorHeight + 8, Math.Max(0, r.Width - 20), nearbyHeight);
         r = new(r.X, r.Y, r.Width, editorHeight);
@@ -142,27 +142,30 @@ public sealed partial class EditorView
         Field(c, x, ref y, w, L.Get("timing.offset"), entry.Time, v => { if (!double.IsFinite(v)) throw new ArgumentException(L.Get("timing.range")); entry.Time = v; }, 100);
         if (red) Field(c, x, ref y, w, L.Get("timing.bpm"), 60000 / entry.BeatLength,
             v => { if (!double.IsFinite(v) || v <= 0 || v > 10000) throw new ArgumentException(L.Get("timing.range")); entry.BeatLength = 60000 / v; }, 100);
-        Field(c, x, ref y, w, L.Get("timing.meter"), entry.Meter, v => { if (v < 1 || v > 32 || v != Math.Truncate(v)) throw new ArgumentException(L.Get("timing.range")); entry.Meter = (int)v; }, 100);
+        if (red) Field(c, x, ref y, w, L.Get("timing.meter"), entry.Meter, v => { if (v < 1 || v > 32 || v != Math.Truncate(v)) throw new ArgumentException(L.Get("timing.range")); entry.Meter = (int)v; }, 100);
         c.Text(L.Get("samples.sampleset"), x, y, 11, Muted, w); y += 20;
         int displayedBank = entry.Bank > 0 ? entry.Bank : hitsoundingResolver!.Describe(new(Guid.Empty, 0, CatchObjectKind.Fruit, entry.Time - 5, 0, 0, 0, 0, true)).NormalSet;
         float bankWidth = w * .44f, choiceX = x + bankWidth + 8, choiceWidth = w - bankWidth - 8;
+        float customLabelWidth = Math.Min(choiceWidth - 40, c.MeasureText(L.Get("timing.custom"), 11) + 26);
         for (int i = 0; i < 3; i++)
         {
             int bank = i + 1;
             Button(c, new(x, y + i * 30, bankWidth, 28), L.Get(bank == 2 ? "timing.soft" : bank == 1 ? "timing.normal" : "timing.drum"),
                 () => EditTimingHelperPoint(() => entry.Bank = bank), displayedBank == bank);
             int index = i;
-            var choice = new Rect(choiceX, y + i * 30, choiceWidth, 28);
+            var choice = new Rect(choiceX, y + i * 30, index == 2 && entry.Index >= 2 ? customLabelWidth : choiceWidth, 28);
             bool active = index == 2 ? entry.Index >= 2 : entry.Index == index;
             c.Circle(choice.X + 7, choice.Y + 14, 6, Muted, false, 2);
             if (active) c.Circle(choice.X + 7, choice.Y + 14, 3, Accent);
-            c.Text(L.Get(index == 0 ? "timing.default" : index == 1 ? "timing.custom1" : "timing.custom"), choice.X + 20, choice.Y + 7, 11, Foreground, choiceWidth - 20);
+            c.Text(L.Get(index == 0 ? "timing.default" : index == 1 ? "timing.custom1" : "timing.custom"), choice.X + 20, choice.Y + 7, 11, Foreground, choice.Width - 20);
             hits.Add(new(choice, () => EditTimingHelperPoint(() => entry.Index = index == 2 ? Math.Max(2, entry.Index) : index), true));
         }
-        y += 94;
         if (entry.Index >= 2)
-            Field(c, choiceX + 20, ref y, choiceWidth - 20, L.Get("hitsounding.index"), entry.Index, v => { entry.Index = Math.Max(2, ValidHsIndex(v)); }, 0);
-        else y += 37;
+        {
+            float customY = y + 60;
+            Field(c, choiceX + customLabelWidth, ref customY, choiceWidth - customLabelWidth, L.Get("hitsounding.index"), entry.Index, v => { entry.Index = Math.Max(2, ValidHsIndex(v)); }, 0);
+        }
+        y += 94;
         Field(c, x, ref y, w, L.Get("hitsounding.volume"), entry.Volume, v => { entry.Volume = (int)Math.Clamp(Math.Round(v), 0, 100); }, 100);
         var slider = new Rect(x + 6, y, Math.Max(1, w - 12), 24);
         c.Line(slider.X, slider.Y + 12, slider.Right, slider.Y + 12, Grid, 4);
@@ -257,10 +260,10 @@ public sealed partial class EditorView
     private bool BeginHitsoundingCanvasPointer(float x, float y, int button, bool ctrl, bool shift)
     {
         if (!hitsoundingBounds.Contains(x, y)) return false;
-        if (button == 0 && HitsoundingPrecise && hitsoundingPreciseAuditionButton is { } audition && audition.Bounds.Contains(x, y))
+        if (button == 0 && !ctrl && HitsoundingPrecise && hitsoundingPreciseAuditionButton is { } audition && audition.Bounds.Contains(x, y))
         { ToggleHitsoundingLibraryAudition(audition.Sound); return true; }
         if (BeginHitsoundingTimingPointer(x, y, button, ctrl, shift)) return true;
-        if (button == 0 && HitsoundingHeadHovered(x, y))
+        if (button == 0 && !ctrl && HitsoundingHeadHovered(x, y))
         { hitsoundingHeadBefore = hitsoundingHeadRatio; hitsoundingHeadDrag = true; return true; }
         if (button == 0)
         {
@@ -275,10 +278,28 @@ public sealed partial class EditorView
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
         hitsoundingTimingSelection.Clear();
         if (button == 2 && !hitsoundingDraw) { OpenHitsoundingSelectionMenu(x, y); return true; }
-        if (BeginHitsoundingStoryboardPointer(x, y, button)) return true;
+        if (BeginHitsoundingStoryboardPointer(x, y, button, ctrl)) return true;
         var note = HitsoundingNoteAt(x, y);
         int lane = Math.Clamp((int)((y - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7)), 0, 6);
         var pressedSound = hitsoundingSoundHits.LastOrDefault(h => h.Bounds.Contains(x, y));
+        if (button == 0 && !hitsoundingDraw && ctrl)
+        {
+            if (!CommitField()) return true;
+            if (pressedSound.Note is { } soundNote)
+            {
+                var key = (soundNote.SourceId, soundNote.EventIndex, pressedSound.Lane);
+                if (!hitsoundingMultiSelection.Add(key)) hitsoundingMultiSelection.Remove(key);
+            }
+            else if (note is not null)
+            {
+                var keys = hitsoundingSoundHits.Where(h => h.Note.SourceId == note.SourceId && h.Note.EventIndex == note.EventIndex && h.Lane > 0)
+                    .Select(h => (h.Note.SourceId, h.Note.EventIndex, h.Lane)).Distinct().ToArray();
+                if (keys.All(hitsoundingMultiSelection.Contains)) hitsoundingMultiSelection.ExceptWith(keys);
+                else hitsoundingMultiSelection.UnionWith(keys);
+            }
+            if (note is not null) SyncHitsoundingNoteSelection(note);
+            return true;
+        }
         bool canMove = !hitsoundingDraw && button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
         if (canMove)
         {
@@ -301,6 +322,7 @@ public sealed partial class EditorView
                 hitsoundingMarqueeStartTime = HitsoundingStart + (x - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan;
                 hitsoundingMarqueeStart = hitsoundingMarqueeEnd = (x, y);
             }
+            else SyncHitsoundingNoteSelection(note);
         }
         if (lane is >= 2 and <= 4 && (button == 2 || hitsoundingDraw && button == 0))
         {

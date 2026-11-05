@@ -2028,6 +2028,7 @@
   "hitsounding.noteBased": "Note based",
   "hitsounding.selectedTiming": "Selected timing point",
   "hitsounding.effects": "Effects",
+  "hitsounding.nearbyTiming": "臨近Timing Points",
   "hitsounding.applyExisting": "Apply to this timing point",
   "hitsounding.paste": "Paste hitsounds",
   "hitsounding.noPasteTargets": "No notes at the paste target times.",

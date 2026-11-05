@@ -17,6 +17,16 @@ public sealed partial class EditorView
     private HitsoundingCopy[] hitsoundingClipboard = [];
     private double hitsoundingMarqueeStartTime;
     private bool hitsoundingMarqueeMoved;
+    private void SyncHitsoundingNoteSelection(ConvertedCatchObject? preferred = null)
+    {
+        var selected = preferred is not null && hitsoundingMultiSelection.Any(k => k.Id == preferred.SourceId && k.Event == preferred.EventIndex)
+            ? preferred : hitsoundingMultiSelection.Select(k => hitsoundingNoteLookup.GetValueOrDefault((k.Id, k.Event))).LastOrDefault(n => n is not null);
+        SelectObjects(hitsoundingMultiSelection.Select(k => k.Id), selected?.SourceId ?? Guid.Empty);
+        hitsoundingSelected = selected is null ? null : (selected.SourceId, selected.EventIndex);
+        hitsoundingSelectedTiming = null;
+        if (selected is not null) PickSoundEdge(selected);
+        StatusMessage = L.Get("editor.status.objectsSelected", objectSelection.Count + hitsoundingStoryboardSelection.Count);
+    }
     private float HitsoundingMarqueeStartX => hitsoundingGridBounds.X
         + (float)((hitsoundingMarqueeStartTime - HitsoundingStart) / hitsoundingSpan * hitsoundingGridBounds.Width);
     private Rect HitsoundingMarqueeBounds => new(Math.Min(HitsoundingMarqueeStartX, hitsoundingMarqueeEnd.X),

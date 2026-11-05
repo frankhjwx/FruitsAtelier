@@ -15,11 +15,17 @@ public sealed partial class EditorView
     private (float X, float Y) hitsoundingStoryboardMoveStart;
     private bool hitsoundingStoryboardMoved;
 
-    private bool BeginHitsoundingStoryboardPointer(float x, float y, int button)
+    private bool BeginHitsoundingStoryboardPointer(float x, float y, int button, bool ctrl)
     {
         var hit = hitsoundingStoryboardHits.LastOrDefault(h => h.Bounds.Contains(x, y));
         if (hit.Sample.Path is null) return false;
         if (!CommitField()) return true;
+        if (button == 0 && !hitsoundingDraw && ctrl)
+        {
+            if (!hitsoundingStoryboardSelection.Add(hit.Sample)) hitsoundingStoryboardSelection.Remove(hit.Sample);
+            SyncHitsoundingNoteSelection();
+            return true;
+        }
         hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
         hitsoundingSelected = null; hitsoundingSelectedTiming = null; SelectObjects([]);
         hitsoundingStoryboardSelection.Add(hit.Sample);

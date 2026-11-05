@@ -16,6 +16,20 @@ internal static class HitsoundingTimingDragTests
         var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage();
         ui.View.UpdateTransport(1200, 10000, true, false, false, null, null); ui.Paint();
         var original = ui.View.Document.DeepClone(); var conversion = ui.View.Conversion;
+        foreach (double time in new[] { 1000d, 2500d })
+        {
+            var blockHandle = Handle(time);
+            ui.View.PointerDown(blockHandle.X + 20, blockHandle.Y - 20, 0, false, true);
+            ui.View.PointerUp(blockHandle.X + 20, blockHandle.Y - 20, 0); ui.Paint();
+        }
+        Check(ui.Canvas.Lines.Count(l => l.Width == 5 && l.Y1 >= Handle(1000).Y) == 2, "Ctrl-click selects multiple green interval blocks");
+        foreach (double time in new[] { 1000d, 2500d })
+        {
+            var blockHandle = Handle(time);
+            ui.View.PointerDown(blockHandle.X + 20, blockHandle.Y - 20, 0, false, true);
+            ui.View.PointerUp(blockHandle.X + 20, blockHandle.Y - 20, 0); ui.Paint();
+        }
+        Check(!ui.Canvas.Lines.Any(l => l.Width == 5 && l.Y1 >= Handle(1000).Y) && original.ContentEquals(ui.View.Document), "Ctrl-click removes interval selections without changing timing data");
         float scale = (Handle(2000).X - Handle(1000).X) / 1000;
         var start = Handle(1000); float x = start.X + 4, y = start.Y + 10;
         ui.View.PointerMove(x, y, false, false);
