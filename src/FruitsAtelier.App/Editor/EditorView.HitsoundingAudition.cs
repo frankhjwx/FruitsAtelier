@@ -32,7 +32,7 @@ public sealed partial class EditorView
 
     private void DrawHitsoundingPreciseAudition(ICanvas c, Rect box, Hitsound sound)
     {
-        if (box.X < hitsoundingGridBounds.X || Math.Min(box.Right, hitsoundingGridBounds.Right) - box.X < 48 || box.Height < 34) return;
+        if (box.X < hitsoundingGridBounds.X || Math.Min(box.Right, hitsoundingGridBounds.Right) - box.X < 24 || box.Height < 34) return;
         var button = new Rect(box.X + 4, box.Bottom - 18, 16, 16);
         c.Circle(button.X + 8, button.Y + 8, 5.5f, Muted, false, 1, .6f);
         if (HitsoundingAuditionKey(sound) == hitsoundingAuditionPath) c.Fill(new(button.X + 5, button.Y + 5, 6, 6), Foreground, 1);

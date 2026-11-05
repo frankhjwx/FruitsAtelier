@@ -48,8 +48,10 @@ internal static class HitsoundingPreciseAuditionTests
         clock.Now += 1000; ui.Paint(); Check(stops == 5, "Audition completes and resets its control");
         var selected = Block(3);
         ui.View.Wheel(selected.X, selected.Y, -960, false, false, true); ui.Paint();
-        Check(Block(3).Width < 48 && ui.View.HitsoundingPreciseAuditionBounds.Width == 0, "Narrow blocks hide the audition control");
-        ui.View.Wheel(selected.X, selected.Y, 960, false, false, true); ui.Paint();
+        Check(Block(3).Width is >= 24 and < 48 && ui.View.HitsoundingPreciseAuditionBounds.Width > 0, "Compact blocks still show the small audition control");
+        ui.View.Wheel(selected.X, selected.Y, -240, false, false, true); ui.Paint();
+        Check(Block(3).Width < 24 && ui.View.HitsoundingPreciseAuditionBounds.Width == 0, "Blocks too narrow to fit the control hide it");
+        ui.View.Wheel(selected.X, selected.Y, 1200, false, false, true); ui.Paint();
         Check(ui.View.HitsoundingPreciseAuditionBounds.Width > 0, "The control returns when the selected block is wide enough");
         ui.ClickText(L.Get("hitsounding.noteBased"));
         Check(ui.View.HitsoundingPreciseAuditionBounds.Width == 0 && baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty && ui.View.PlayheadMs == 1200,
