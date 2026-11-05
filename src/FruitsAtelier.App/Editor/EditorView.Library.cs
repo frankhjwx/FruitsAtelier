@@ -298,9 +298,9 @@ public sealed partial class EditorView
         else if (importedDifficulty) ShowWorkspaceExport();
         else BeginWorkspaceSave();
     }
-    public void LoadWorkspace(WorkspaceSession session, bool checkAdditionalDifficulties = false)
+    public void LoadWorkspace(WorkspaceSession session, bool checkAdditionalDifficulties = false, Guid? initialDifficultyId = null)
     {
-        LoadProject(session.Project); WorkspaceSession = session; CheckWorkspaceResources();
+        LoadProject(session.Project, initialDifficultyId); WorkspaceSession = session; CheckWorkspaceResources();
         CheckTimingAlignmentOnOpen();
         libraryProjectsNeedReindex = true; QueueLibrarySearch(); CloseLibrary();
         if (session.Project.Difficulties.Any(d => d.Document.SliderImportState == SliderImportState.Pending)) PrepareImportedSliders(true);

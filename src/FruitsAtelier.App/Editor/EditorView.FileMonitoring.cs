@@ -67,6 +67,16 @@ public sealed partial class EditorView
                 difficultyMediaReusePending = false;
             }
         }
+        if (hitsoundingLibraryRoot is { } sampleRoot && (changes.FullScan || changes.Paths.Any(path =>
+            WorkspaceProject.Within(sampleRoot, path) || WorkspaceProject.Within(path, sampleRoot))))
+        {
+            StopHitsoundingLibraryAudition();
+            int scroll = hitsoundingLibraryScroll;
+            RefreshHitsoundingLibrary();
+            hitsoundingLibraryScroll = scroll;
+            hitsoundingAudio.Clear();
+            hitsoundingResourcesChanged = true;
+        }
         if (changes.FullScan) libraryRescanRequested = true;
         foreach (string path in changes.Paths)
         {

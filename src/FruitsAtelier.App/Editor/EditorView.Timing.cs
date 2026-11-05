@@ -25,7 +25,7 @@ public sealed partial class EditorView
     private int timingTab, timingFilter, timingScroll, timingAnchor, timingCursor, timingNextId, timingSnap = 4, timingSort;
     private double timingShiftMs;
     private bool timingScale, timingResnap, timingLengths, timingBookmarks, timingMoveNotes, timingMoveMarkers, metronomeEnabled = true;
-    private string timingField = "", timingText = "", timingError = "", timingCommand = "";
+    private string timingField = "", timingText = "", timingInitialText = "", timingError = "", timingCommand = "";
     private Action<double>? timingFieldApply;
     private readonly List<(string Key, Rect Bounds, string Value, Action<double> Apply)> timingFields = [];
     private Rect timingListBounds;
@@ -129,8 +129,9 @@ public sealed partial class EditorView
         if (!CommitCollaborationField()) return;
         if (!PrepareFileOperation()) return;
         dockPressed = null; dockDragging = false;
+        HitsoundingPageVisible = false;
         TimingPageVisible = visible; panelMenuOpen = false; timingField = timingError = ""; timingTaps.Clear();
-        ResetHitsounds(); timingTapHeld = false;
+        ResetHitsounds(); timingTapHeld = false; SaveMapPanel();
     }
 
     private TimingEntry[] TimingSnapshot() => timingEntries.Select(e => e with { Point = TimingEditing.Copy(e.Point) }).ToArray();
@@ -315,7 +316,7 @@ public sealed partial class EditorView
         hits.Add(new(box, () =>
         {
             if (!CommitTimingField()) return;
-            timingField = key; timingText = value; timingFieldApply = apply;
+            timingField = key; timingText = timingInitialText = value; timingFieldApply = apply;
             SelectInput("timing:" + key, timingText); TimingInputSession++;
         }, true));
         if (stepper)
@@ -345,7 +346,11 @@ public sealed partial class EditorView
         if (timingField.Length == 0) return true;
         if (!double.TryParse(timingText, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) || !double.IsFinite(value))
         { timingError = L.Get("editor.error.finiteNumberRequired"); return false; }
-        try { timingFieldApply?.Invoke(value); }
+        try
+        {
+            if (!double.TryParse(timingInitialText, NumberStyles.Float, CultureInfo.InvariantCulture, out double initial) || value != initial)
+                timingFieldApply?.Invoke(value);
+        }
         catch (Exception ex) when (ex is ArgumentException or InvalidDataException) { timingError = ex.Message; return false; }
         timingField = ""; timingFieldApply = null; timingError = ""; TimingInputSession++; return true;
     }
@@ -397,11 +402,24 @@ public sealed partial class EditorView
                 if (CommitTimingField() && key == 9 && timingFields.Count > 0)
                 {
                     var next = timingFields[(index + (shift ? timingFields.Count - 1 : 1)) % timingFields.Count];
-                    timingField = next.Key; timingText = next.Value; timingFieldApply = next.Apply; SelectInput("timing:" + timingField, timingText);
+                    timingField = next.Key; timingText = timingInitialText = next.Value; timingFieldApply = next.Apply; SelectInput("timing:" + timingField, timingText);
                 }
                 return true;
             }
             InputKey("timing:" + timingField, ref timingText, key, ctrl, shift, 30, RequestPasteTiming); return true;
+        }
+        if (!TimingModal && timingCommand.Length == 0 && ctrl && !altHeld)
+        {
+            if (key == 66)
+            {
+                int time = (int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue);
+                Edit(L.Get("timeline.bookmark"), () =>
+                {
+                    if (shift) OsuTimeline.RemoveNearestBookmark(Document, time); else OsuTimeline.AddBookmark(Document, time);
+                });
+                return true;
+            }
+            if (!shift && key is 37 or 39) { SeekBookmark(key == 39); return true; }
         }
         if (TimingSetupVisible && timingSetupFocused && !TimingModal)
         {
@@ -426,7 +444,7 @@ public sealed partial class EditorView
             }
             else if (!ctrl && key == 9 && timingFields.Count > 0)
             {
-                var next = timingFields[0]; timingField = next.Key; timingText = next.Value; timingFieldApply = next.Apply; SelectInput("timing:" + timingField, timingText);
+                var next = timingFields[0]; timingField = next.Key; timingText = timingInitialText = next.Value; timingFieldApply = next.Apply; SelectInput("timing:" + timingField, timingText);
             }
             return true;
         }
@@ -436,7 +454,8 @@ public sealed partial class EditorView
         if (key == 84 && !ctrl && !shift) { if (!timingTapHeld) TapTiming(); timingTapHeld = true; return true; }
         if (key == 27 && panelMenuOpen) { panelMenuOpen = false; return true; }
         if (key == 27 && menu >= 0) { menu = -1; return true; }
-        if (key == 27 || key == 112) { ShowTimingPage(false); return true; }
+        if (key == 27) { ShowLibrary(); return true; }
+        if (key == 112) { ShowTimingPage(false); return true; }
         if (ctrl && altHeld && !shift && key == 69) return false;
         if (ctrl && shift && key is 37 or 39 or 73) return true;
         if (ctrl) return key is not (17 or 80 or 73 or 90 or 89 or 83 or 9 or 79 or 66 or 37 or 39 or 38 or 40 or 77);
@@ -583,6 +602,7 @@ public sealed partial class EditorView
             if (sliderMultiplierValidationText && TimingPageVisible && !TimingModal && timingField.Length == 0)
             {
                 timingField = "page.sliderMultiplier"; timingText = result.Value.ToString(CultureInfo.InvariantCulture);
+                timingInitialText = "";
                 timingFieldApply = ChangeSliderMultiplier; TimingInputSession++;
                 SelectInput("timing:" + timingField, timingText);
             }

@@ -20,7 +20,8 @@ public sealed partial class EditorView
     public static bool IsPatternArchive(string path) => Path.GetExtension(path).ToLowerInvariant() is ".fpt" or ".fap";
     public static bool IsBackgroundImage(string path) => Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".bmp";
 
-    public bool CanDropFile(string path) => CanDropBackground && IsBackgroundImage(path)
+    public bool CanDropFile(string path) => HitsoundingPageVisible && !LibraryVisible && CanDropAudio && Directory.Exists(path)
+        || CanDropBackground && IsBackgroundImage(path)
         || CanDropPatterns && IsPatternArchive(path)
         || CanDropAudio && Platform.FadArchive.IsPackage(path)
         || CanDropAudio && Platform.FazArchive.IsPackage(path)
@@ -33,7 +34,10 @@ public sealed partial class EditorView
 
     public void DropLibraryFiles(IEnumerable<string> paths)
     {
-        var files = paths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var dropped = paths.ToArray();
+        if (HitsoundingPageVisible && !LibraryVisible && CanDropAudio && dropped.Any(p => Directory.Exists(p) || IsHitsoundingAudio(p)))
+        { ImportHitsoundingLibrary(dropped); return; }
+        var files = dropped.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (CanDropPatterns && files.Any(IsPatternArchive))
         {
             if (files.Length != 1) { ShowError(FruitsAtelier.Localization.Strings.Get("gallery.oneFile")); return; }

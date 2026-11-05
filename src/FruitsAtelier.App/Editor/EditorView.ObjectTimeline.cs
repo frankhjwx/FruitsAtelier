@@ -435,97 +435,7 @@ public sealed partial class EditorView
             c.Line(X(tick.TimeMs), objectTimeline.Bottom - height, X(tick.TimeMs), objectTimeline.Bottom,
                 style.Color, style.Width);
         }
-        var placement = TimelinePlacementPreview();
-        double visibleStartMs = start - 20 / objectTimelineScale, visibleEndMs = end + 20 / objectTimelineScale;
-        var visibleItems = timelineVisibleMarkers;
-        visibleItems.Clear();
-        // Cached chronological order also defines painting and hit order; reuse the visible buffer each frame.
-        timelineMarkerRange.Fill(visibleStartMs, visibleEndMs, timelineVisibleIndices);
-        foreach (int i in timelineVisibleIndices)
-        {
-            var item = timelineMarkers[i];
-            if (item.Id != placement?.Id && item.StackIndex < TimelineStackLimit && item.End >= visibleStartMs && item.Start <= visibleEndMs)
-                visibleItems.Add(item);
-        }
-        foreach (var item in visibleItems)
-            timelineObjects.Add((item.Id, item.Start, TimelineObjectBounds(item.Start, item.End, item.StackOffset)));
-        // Each object's body, circles and number share its chronological layer and hit order.
-        for (int i = 0; i < visibleItems.Count; i++) { DrawBody(i); DrawMarkers(i); }
-        if (placement is { } ghost && ghost.End >= start - 20 / objectTimelineScale && ghost.Start <= end + 20 / objectTimelineScale)
-        {
-            var bounds = TimelineObjectBounds(ghost.Start, ghost.End, 0);
-            if (ghost.End > ghost.Start) c.Fill(bounds, ghost.Color, bounds.Height / 2, .35f);
-            FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin,
-                X(ghost.Start), bounds.Y + bounds.Height / 2, bounds.Height, ghost.Color, opacity: .45f);
-            if (ghost.End > ghost.Start)
-                FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin,
-                    X(ghost.End), bounds.Y + bounds.Height / 2, bounds.Height, ghost.Color, opacity: .45f);
-        }
-
-        void DrawBody(int index)
-        {
-            var item = visibleItems[index];
-            if (item.End <= item.Start) return;
-            bool selected = IsObjectSelected(item.Id);
-            uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true, eventIndex: item.EventIndex);
-            var bounds = timelineObjects[index].Bounds;
-            if (item.IsBanana && bananaSegments.TryGetValue(item.Id, out var segments))
-            {
-                for (int segmentIndex = FirstVisibleBananaSegment(segments, start);
-                    segmentIndex < segments.Count && segments[segmentIndex].TimeMs <= end; segmentIndex++)
-                {
-                    var segment = segments[segmentIndex];
-                    float from = X(segment.TimeMs), to = X(segment.EndTimeMs);
-                    if (to < objectTimeline.X || from > objectTimeline.Right) continue;
-                    c.Fill(new(from, bounds.Y + 3 * TimelineMarkerScale, Math.Max(1, to - from), bounds.Height - 6 * TimelineMarkerScale), color, 2, .7f);
-                }
-            }
-            else c.Fill(bounds, color, bounds.Height / 2, .7f);
-            if (item.IsBanana)
-            {
-                c.Stroke(bounds, 0xFFFFFF, 1.5f, bounds.Height / 2);
-                if (selected) c.Stroke(bounds, IsOsuCanvas ? OsuSelectionColour : SelectionHighlightColour, 2, bounds.Height / 2);
-            }
-        }
-
-        void DrawMarkers(int index)
-        {
-            var item = visibleItems[index];
-            bool selected = IsObjectSelected(item.Id);
-            uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true, eventIndex: item.EventIndex);
-            float left = X(item.Start), right = X(item.End), cy = timelineObjects[index].Bounds.Y + timelineObjects[index].Bounds.Height / 2;
-            void Ring(float ringX, int? number = null, int? edge = null)
-            {
-                // Timeline endpoints use the combo marker, independently of gameplay slider textures.
-                FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin, ringX, cy, 38 * TimelineMarkerScale, color, number);
-                if (selected && (soundEdge is not { } picked || picked.Id != item.Id || picked.Edge == edge))
-                {
-                    c.Circle(ringX, cy, 19 * TimelineMarkerScale, OsuSelectionColour, false, Math.Max(1, 3 * TimelineMarkerScale));
-                    if (!IsOsuCanvas)
-                        c.Circle(ringX, cy, 21 * TimelineMarkerScale, SelectionHighlightColour, false, Math.Max(1, 2 * TimelineMarkerScale));
-                }
-                if (!IsOsuCanvas && timelineFruit == (item.Id, item.EventIndex)) c.Circle(ringX, cy, 21 * TimelineMarkerScale, Gold, false, Math.Max(1, 2 * TimelineMarkerScale));
-            }
-            if (right > left + 1) Ring(right, edge: item.Spans);
-            if (item.Spans > 1 && item.End > item.Start)
-            {
-                double spanDuration = (item.End - item.Start) / item.Spans;
-                int first = (int)Math.Clamp(Math.Ceiling((start - 20 / objectTimelineScale - item.Start) / spanDuration), 1, item.Spans);
-                int last = (int)Math.Clamp(Math.Floor((end + 20 / objectTimelineScale - item.Start) / spanDuration), 0, item.Spans - 1);
-                for (int span = last; span >= first; span--)
-                {
-                    float repeatX = X(item.Start + span * spanDuration);
-                    Ring(repeatX, edge: span);
-                    if (skin is null || !skin.DrawReverseArrow(c, repeatX, cy, 38 * TimelineMarkerScale))
-                    {
-                        c.Line(repeatX - 8 * TimelineMarkerScale, cy, repeatX + 4 * TimelineMarkerScale, cy, Foreground, Math.Max(1, 5 * TimelineMarkerScale));
-                        c.Line(repeatX + TimelineMarkerScale, cy - 6 * TimelineMarkerScale, repeatX + 8 * TimelineMarkerScale, cy, Foreground, Math.Max(1, 3 * TimelineMarkerScale));
-                        c.Line(repeatX + 8 * TimelineMarkerScale, cy, repeatX + TimelineMarkerScale, cy + 6 * TimelineMarkerScale, Foreground, Math.Max(1, 3 * TimelineMarkerScale));
-                    }
-                }
-            }
-            Ring(left, timelineEventNumbers.TryGetValue((item.Id, item.EventIndex), out int number) ? number : null, edge: timelinePatterns.Contains(item.Id) ? null : 0);
-        }
+        DrawTimelineObjects(c, objectTimeline, start, objectTimelineScale, includePlacement: true);
         foreach (var period in breaks)
         {
             double visibleStart = Math.Max(start, period.StartMs), visibleEnd = Math.Min(end, period.EndMs);
@@ -554,6 +464,108 @@ public sealed partial class EditorView
         DrawTimelineBookmarks(c, objectTimeline, start, end);
         DrawCollaborationLocks(c, objectTimeline, start, end);
         c.Unclip();
+    }
+
+    private void DrawTimelineObjects(ICanvas c, Rect viewport, double start, double scale, bool includePlacement)
+    {
+        RefreshTimelineSources(); timelineObjects.Clear();
+        double end = start + viewport.Width / scale;
+        float markerScale = viewport.Height / 64;
+        float X(double time) => viewport.X + (float)((time - start) * scale);
+        Rect ObjectBounds(double from, double to, float stackOffset) => new(
+            X(from) - 19 * markerScale, viewport.Y + (8 + stackOffset) * markerScale,
+            (float)((to - from) * scale) + 38 * markerScale, 38 * markerScale);
+        var placement = includePlacement ? TimelinePlacementPreview() : null;
+        double visibleStartMs = start - 20 / scale, visibleEndMs = end + 20 / scale;
+        var visibleItems = timelineVisibleMarkers;
+        visibleItems.Clear();
+        // Cached chronological order also defines painting and hit order; reuse the visible buffer each frame.
+        timelineMarkerRange.Fill(visibleStartMs, visibleEndMs, timelineVisibleIndices);
+        foreach (int i in timelineVisibleIndices)
+        {
+            var item = timelineMarkers[i];
+            if (item.Id != placement?.Id && item.StackIndex < TimelineStackLimit && item.End >= visibleStartMs && item.Start <= visibleEndMs)
+                visibleItems.Add(item);
+        }
+        foreach (var item in visibleItems)
+            timelineObjects.Add((item.Id, item.Start, ObjectBounds(item.Start, item.End, item.StackOffset)));
+        // Each object's body, circles and number share its chronological layer and hit order.
+        for (int i = 0; i < visibleItems.Count; i++) { DrawBody(i); DrawMarkers(i); }
+        if (placement is { } ghost && ghost.End >= start - 20 / scale && ghost.Start <= end + 20 / scale)
+        {
+            var bounds = ObjectBounds(ghost.Start, ghost.End, 0);
+            if (ghost.End > ghost.Start) c.Fill(bounds, ghost.Color, bounds.Height / 2, .35f);
+            FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin,
+                X(ghost.Start), bounds.Y + bounds.Height / 2, bounds.Height, ghost.Color, opacity: .45f);
+            if (ghost.End > ghost.Start)
+                FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin,
+                    X(ghost.End), bounds.Y + bounds.Height / 2, bounds.Height, ghost.Color, opacity: .45f);
+        }
+
+        void DrawBody(int index)
+        {
+            var item = visibleItems[index];
+            if (item.End <= item.Start) return;
+            bool selected = IsObjectSelected(item.Id);
+            uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true, eventIndex: item.EventIndex);
+            var bounds = timelineObjects[index].Bounds;
+            if (item.IsBanana && bananaSegments.TryGetValue(item.Id, out var segments))
+            {
+                for (int segmentIndex = FirstVisibleBananaSegment(segments, start);
+                    segmentIndex < segments.Count && segments[segmentIndex].TimeMs <= end; segmentIndex++)
+                {
+                    var segment = segments[segmentIndex];
+                    float from = X(segment.TimeMs), to = X(segment.EndTimeMs);
+                    if (to < viewport.X || from > viewport.Right) continue;
+                    c.Fill(new(from, bounds.Y + 3 * markerScale, Math.Max(1, to - from), bounds.Height - 6 * markerScale), color, 2, .7f);
+                }
+            }
+            else c.Fill(bounds, color, bounds.Height / 2, .7f);
+            if (item.IsBanana)
+            {
+                c.Stroke(bounds, 0xFFFFFF, 1.5f, bounds.Height / 2);
+                if (selected) c.Stroke(bounds, IsOsuCanvas ? OsuSelectionColour : SelectionHighlightColour, 2, bounds.Height / 2);
+            }
+        }
+
+        void DrawMarkers(int index)
+        {
+            var item = visibleItems[index];
+            bool selected = IsObjectSelected(item.Id);
+            uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true, eventIndex: item.EventIndex);
+            float left = X(item.Start), right = X(item.End), cy = timelineObjects[index].Bounds.Y + timelineObjects[index].Bounds.Height / 2;
+            void Ring(float ringX, int? number = null, int? edge = null)
+            {
+                // Timeline endpoints use the combo marker, independently of gameplay slider textures.
+                FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin, ringX, cy, 38 * markerScale, color, number);
+                if (selected && (soundEdge is not { } picked || picked.Id != item.Id || picked.Edge == edge))
+                {
+                    c.Circle(ringX, cy, 19 * markerScale, OsuSelectionColour, false, Math.Max(1, 3 * markerScale));
+                    if (!IsOsuCanvas)
+                        c.Circle(ringX, cy, 21 * markerScale, SelectionHighlightColour, false, Math.Max(1, 2 * markerScale));
+                }
+                if (!IsOsuCanvas && timelineFruit == (item.Id, item.EventIndex)) c.Circle(ringX, cy, 21 * markerScale, Gold, false, Math.Max(1, 2 * markerScale));
+            }
+            if (right > left + 1) Ring(right, edge: item.Spans);
+            if (item.Spans > 1 && item.End > item.Start)
+            {
+                double spanDuration = (item.End - item.Start) / item.Spans;
+                int first = (int)Math.Clamp(Math.Ceiling((start - 20 / scale - item.Start) / spanDuration), 1, item.Spans);
+                int last = (int)Math.Clamp(Math.Floor((end + 20 / scale - item.Start) / spanDuration), 0, item.Spans - 1);
+                for (int span = last; span >= first; span--)
+                {
+                    float repeatX = X(item.Start + span * spanDuration);
+                    Ring(repeatX, edge: span);
+                    if (skin is null || !skin.DrawReverseArrow(c, repeatX, cy, 38 * markerScale))
+                    {
+                        c.Line(repeatX - 8 * markerScale, cy, repeatX + 4 * markerScale, cy, Foreground, Math.Max(1, 5 * markerScale));
+                        c.Line(repeatX + markerScale, cy - 6 * markerScale, repeatX + 8 * markerScale, cy, Foreground, Math.Max(1, 3 * markerScale));
+                        c.Line(repeatX + 8 * markerScale, cy, repeatX + markerScale, cy + 6 * markerScale, Foreground, Math.Max(1, 3 * markerScale));
+                    }
+                }
+            }
+            Ring(left, timelineEventNumbers.TryGetValue((item.Id, item.EventIndex), out int number) ? number : null, edge: timelinePatterns.Contains(item.Id) ? null : 0);
+        }
     }
 
     private void ZoomObjectTimeline(double factor)

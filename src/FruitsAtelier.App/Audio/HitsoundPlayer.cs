@@ -76,6 +76,17 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
         auditionMixer.QueueSamples(GetSamples(sound), sound.Volume);
         auditionOutput!.Play();
     }
+    public double PlayExclusiveAudition(Hitsound sound)
+    {
+        Stop(); cache.Clear(); cacheBytes = 0;
+        if (unavailable) return 0;
+        EnsureAuditionOutput();
+        var samples = GetSamples(sound);
+        auditionMixer!.Volume = Volume;
+        auditionMixer.QueueSamples(samples, sound.Volume);
+        auditionOutput!.Play();
+        return samples.Length * 1000d / HitsoundSamples.SampleRate;
+    }
     public void SetMenuLoop(Hitsound? sound)
     {
         if (unavailable) return;

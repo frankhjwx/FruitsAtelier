@@ -23,7 +23,7 @@ public sealed partial class EditorView
     private void DrawSampleBankSelectors(ICanvas c, float top)
     {
         var ids = FlagTargets();
-        bool placement = tool == Tool.Fruit || ids.Length == 0;
+        bool placement = HitsoundingPageVisible ? hitsoundingDraw || HitsoundingSelectedNote is null : tool == Tool.Fruit || ids.Length == 0;
         if (placement)
         {
             sampleBankConversion = null;
@@ -46,11 +46,19 @@ public sealed partial class EditorView
         }
         bool enabled = tool != Tool.Banana && draftTrack == Guid.Empty && draftBanana == Guid.Empty
             && (placement || sampleBankTargetsAvailable);
+        if (HitsoundingPageVisible && !hitsoundingDraw && HitsoundingSelectedNote is { } note)
+        {
+            var setting = hitsoundingResolver!.EventSettings(note);
+            selectedSampleBanks[0] = setting.InheritedFields.HasFlag(InheritedSampleFields.NormalSet) ? 0 : setting.Sample.NormalSet;
+            selectedSampleBanks[1] = setting.InheritedFields.HasFlag(InheritedSampleFields.AdditionSet) ? 0 : setting.Sample.AdditionSet;
+            enabled = note.Kind != CatchObjectKind.Banana;
+        }
         for (int i = 0; i < 2; i++)
         {
             bool additions = i == 1;
             int selected = placement ? additions ? nextAdditionBank : nextNormalBank : selectedSampleBanks[i];
-            var bounds = new Rect(leftPanel.Right + 6, top + i * 48 + 17, 96, 28);
+            var bounds = new Rect(leftPanel.Right + (HitsoundingPageVisible ? 16 : 6), top + i * 48 + 17,
+                HitsoundingPageVisible ? Math.Max(20, hitsoundingGridBounds.X - leftPanel.Right - 20) : 96, 28);
             if (additions) AdditionsBounds = bounds; else SamplesetBounds = bounds;
             c.Text(L.Get(additions ? "samples.additions" : "samples.sampleset"), bounds.X, bounds.Y - 17, 11, Muted, bounds.Width);
             c.Fill(bounds, Panel, 4);
@@ -72,6 +80,17 @@ public sealed partial class EditorView
 
     private void SetSampleBank(bool additions, int bank)
     {
+        if (HitsoundingPageVisible)
+        {
+            if (hitsoundingDraw || HitsoundingSelectedNote is not { } note)
+            { if (additions) nextAdditionBank = bank; else nextNormalBank = bank; return; }
+            var setting = hitsoundingResolver!.EventSettings(note);
+            var field = additions ? InheritedSampleFields.AdditionSet : InheritedSampleFields.NormalSet;
+            setting = setting with { Sample = additions ? setting.Sample with { AdditionSet = bank } : setting.Sample with { NormalSet = bank },
+                InheritedFields = bank == 0 ? setting.InheritedFields | field : setting.InheritedFields & ~field };
+            Edit(L.Get("samples.change"), () => SetHitsoundingEvent(setting));
+            return;
+        }
         if (tool == Tool.Banana || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
         var ids = FlagTargets();
         if (tool == Tool.Fruit || ids.Length == 0)

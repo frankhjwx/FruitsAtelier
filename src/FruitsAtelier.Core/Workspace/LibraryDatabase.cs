@@ -231,6 +231,12 @@ public sealed class LibrarySettings
 
 public sealed class MapEditingPreferences
 {
+    private string activePanel = "Mapping";
+    public string ActivePanel
+    {
+        get => activePanel;
+        set => activePanel = value is "Timing" or "Hitsounding" ? value : "Mapping";
+    }
     public const int MaximumObjectSnapBeats = 4;
     public bool AnchorSnap { get; set; }
     private int beatSnapDivisor = 4;
@@ -374,7 +380,12 @@ public sealed class LibraryDatabase
         foreach (string root in roots.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             cancellation.ThrowIfCancellationRequested();
-            if (!Directory.Exists(root)) { errors.Add(L.Get("library.sourceMissing", root)); continue; }
+            if (!Directory.Exists(root))
+            {
+                errors.Add(L.Get("library.sourceMissing", root));
+                ScanRoot(root, cancellation, Report, root, scanStandardMaps);
+                continue;
+            }
             string[] scopes = changed is null ? [root] : changed.Where(p => WorkspaceProject.Within(root, p))
                 .Where(p => !changed.Any(parent => !WorkspaceSynchronization.Paths.Equals(p, parent) && WorkspaceProject.Within(parent, p))).ToArray();
             foreach (string scope in scopes)

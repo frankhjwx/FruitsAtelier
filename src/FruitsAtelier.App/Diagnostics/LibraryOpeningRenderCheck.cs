@@ -12,7 +12,8 @@ internal static class LibraryOpeningRenderCheck
     {
         string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "library-opening", Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(root);
-        var first = new MapDocument { Name = "Library open", IsDemo = false };
+        var first = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Library open\nVersion:First\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,2,1,100,1,0\n[HitObjects]\n123,192,2000,2,0,L|223:192,1,100\n");
+        first.SliderImportState = SliderImportState.Pending;
         var second = new MapDocument { Name = "Second", IsDemo = false };
         foreach (var document in new[] { first, second }) SongSetup.Set(document, "Metadata", "Creator", "LibraryFixtureMapper");
         var session = WorkspaceProject.Create(root, BeatmapProject.FromDocuments([first, second]), "");
@@ -26,7 +27,8 @@ internal static class LibraryOpeningRenderCheck
             {
                 L.SetLanguage(locale);
                 var view = new EditorView(false);
-                view.InitializeLibrary(true, new LibrarySettings { Workspace = root, MapperUsernames = ["LibraryFixtureMapper"] });
+                view.InitializeLibrary(true, new LibrarySettings { Workspace = root, MapperUsernames = ["LibraryFixtureMapper"],
+                    ImportSliderConversion = ImportSliderConversionMode.KeepLegacy });
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
                 WaitForLibrary();
                 view.PointerDown(40, 150, 0, false, false); view.PointerUp(40, 150, 0);
@@ -74,6 +76,11 @@ internal static class LibraryOpeningRenderCheck
                 { Thread.Sleep(10); canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End(); }
                 if (view.LibraryOpening || completed != 1 || view.WorkspaceSession?.Directory != session.Directory || view.ActiveDifficultyIndex != 1)
                     throw new InvalidOperationException("Library open result did not publish on the UI thread.");
+                deadline.Restart();
+                while ((view.SliderConversionBusy || view.SynchronizationBusy) && deadline.Elapsed < TimeSpan.FromSeconds(10))
+                { Thread.Sleep(10); canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End(); }
+                if (view.SliderConversionBusy || view.SynchronizationBusy || view.ActiveDifficultyIndex != 1)
+                    throw new InvalidOperationException("Slider preparation did not retain the selected Library difficulty.");
                 CheckDifficultyPreparation(canvas, view, locale, size.Item1, size.Item2, dpi);
             }
             AppLog.Write("Library opening native check passed: 12 loading/input/publication cases.");

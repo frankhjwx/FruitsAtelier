@@ -103,12 +103,12 @@ internal static class DockingTests
                     "Tabs reorder within a group");
                 merged = ui.View.DockTabBounds(EditorView.DockPanel.MovementStrain);
                 ui.Key(114); Check(ui.Plot == timingPlot, "Timing geometry is independent of mapping groups");
-                ui.Key(27);
+                ui.Key(112);
                 Check(ui.View.DockTabBounds(EditorView.DockPanel.MovementStrain) == merged && ui.View.DifficultyCurveVisible,
                     "Mapping restores the active tab and order");
                 Click(ui.View.DifficultyCurveToggleBounds);
                 Check(!ui.View.DifficultyCurveVisible && !ui.View.CatchPreviewVisible, "Collapsing a group hides both panels");
-                ui.Key(114); ui.Key(27);
+                ui.Key(114); ui.Key(112);
                 Check(!ui.View.DifficultyCurveVisible && !ui.View.CatchPreviewVisible, "Collapsed state survives view switches");
                 Click(ui.View.DifficultyCurveToggleBounds);
                 Check(ui.View.DifficultyCurveVisible, "Reopening restores the active tab");

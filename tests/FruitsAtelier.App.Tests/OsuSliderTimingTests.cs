@@ -59,6 +59,10 @@ internal static class OsuSliderTimingTests
             ui.Key(27); ui.View.PointerUp(to.X, to.Y, 0); ui.Paint();
             Check(baseline.ContentEquals(ui.View.Document), "Canceling the snapped drag did not restore content.");
             var output = OsuBeatmapWriter.Serialize(ui.View.Document);
+            Check(output.ReadBack.ImportedSliders.Single().OriginalLine!.Split(',')[7]
+                == ui.View.Document.ImportedSliders.Single().PixelLength.ToString("G15", System.Globalization.CultureInfo.InvariantCulture),
+                "Native editor source lines must publish stable length precision.");
+            Check(baseline.ContentEquals(ui.View.Document), "Publishing native sliders must preserve exact editing state.");
             NearInteger(ImportedSliderConverter.DurationMs(output.ReadBack, output.ReadBack.ImportedSliders.Single()) / (beat / divisor));
         }
         var changing = CreateUi(); changing.Key('3'); Click(changing, 64, 192);

@@ -47,6 +47,7 @@ public sealed partial class EditorView
         storyboardRenderFrame++;
         PumpStoryboardGameplay();
         PumpBrowserClear();
+        PumpHitsoundingResources();
         videoRequestedThisFrame = false;
         try
         {
@@ -158,11 +159,12 @@ public sealed partial class EditorView
         try
         {
             c.Fill(new(0, 0, width, height), Background);
-            if (!TimingPageVisible)
+            if (!TimingPageVisible && !HitsoundingPageVisible)
                 DrawBeatmapBackground(c, new(leftPanel.Right, canvas.Y + 38,
                     canvas.Right - leftPanel.Right, plot.Bottom - canvas.Y - 38), LibrarySettings.MappingCanvasBackgroundDim / 100f, mappingCanvas: true);
             DrawChrome(c);
-            if (TimingPageVisible) DrawTimingWaveform(c);
+            if (HitsoundingPageVisible) DrawHitsoundingPage(c);
+            else if (TimingPageVisible) DrawTimingWaveform(c);
             else
             {
                 DrawCanvas(c);
@@ -178,7 +180,7 @@ public sealed partial class EditorView
             }
             DrawInspector(c);
             if (TimingPageVisible) DrawTimingPage(c); else DrawDockPanels(c);
-            if (!TimingPageVisible)
+            if (!TimingPageVisible && !HitsoundingPageVisible)
             {
                 DrawSliderHold(c);
                 DrawMovementOverlay(c);
@@ -191,8 +193,21 @@ public sealed partial class EditorView
             DrawStatus(c);
             DrawUpdateNotice(c);
             DrawDockDrag(c);
+            if (HitsoundingPageVisible && hitsoundingLibraryDragging && !hitsoundingLibraryBox && hitsoundingLibraryDragPaths.Length > 0)
+            {
+                var ghost = new Rect(Math.Min(mouseX + 12, width - 220), Math.Min(mouseY + 16, height - 32), 210, 28);
+                c.Fill(ghost, Surface, 4); c.Stroke(ghost, Accent, radius: 4);
+                c.Text(L.Get(hitsoundingLibraryCopyDrag ? "hitsounding.copyCount" : "hitsounding.moveCount", hitsoundingLibraryDragPaths.Length), ghost.X + 8, ghost.Y + 7, 11, Foreground, 194);
+            }
+            if (HitsoundingPageVisible && hitsoundingDragFile is { } soundPath)
+            {
+                var ghost = new Rect(Math.Min(mouseX + 12, width - 220), Math.Min(mouseY + 16, height - 32), 210, 28);
+                c.Fill(ghost, Surface, 4); c.Stroke(ghost, Accent, radius: 4);
+                c.Text(Path.GetFileName(soundPath), ghost.X + 8, ghost.Y + 7, 11, Foreground, 194);
+            }
         }
         finally { mouseX = pointer.X; mouseY = pointer.Y; }
+        if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingMuteTooltip(c);
         DrawPatternGalleryOverlay(c);
         DrawPatternEditingBanner(c);
         DrawTimingSetup(c);
@@ -514,7 +529,7 @@ public sealed partial class EditorView
         if (drag == DragKind.Objects && !objectDragTimeline && objectDragSnapPoint is { } snapPoint)
             DrawObjectSnapGuide(c, snapPoint);
         float headY = Screen(new(LazerPresentationTime, 0)).Y;
-        c.Line(plot.X, headY, plot.Right, headY, Gold, 1.5f);
+        c.Line(plot.X, headY, plot.Right, headY, MappingPlaybackLineHovered(mouseX, mouseY) || drag == DragKind.PlaybackLine ? 0xFFF0A6u : Gold, 1.5f);
         c.Fill(new(plot.X, headY - 3, 5, 6), Gold);
         DrawLazerCanvasCatcher(c);
         DrawLazerPlayfieldCorners(c);
@@ -577,7 +592,7 @@ public sealed partial class EditorView
         c.Line(WorkspaceStatsBounds.X, 84, WorkspaceStatsBounds.X, 122, Grid);
         c.Line(0, 122, width, 122, Grid);
         float rowY = 95;
-        Button(c, WorkspaceSelectorBounds, L.Get(TimingPageVisible ? "timing.panel" : "timing.detailsPanel") + " ▾", () => panelMenuOpen = !panelMenuOpen);
+        Button(c, WorkspaceSelectorBounds, L.Get(HitsoundingPageVisible ? "hitsounding.panel" : TimingPageVisible ? "timing.panel" : "timing.detailsPanel") + " ▾", () => panelMenuOpen = !panelMenuOpen);
         BpmMultiplierBounds = default;
         float statX = WorkspaceStatsBounds.X + 12;
         if (Document.EnableSliderBpmMultiplier)
@@ -852,7 +867,7 @@ public sealed partial class EditorView
             Item(L.Get("dock.resetLayout"), ResetDockLayout, !TimingPageVisible);
             Separator();
             Heading(L.Get("dock.panels"));
-            foreach (var panel in Enum.GetValues<DockPanel>())
+            foreach (var panel in AvailableDockPanels)
             {
                 bool exists = DockPanelExists(panel);
                 Item((exists ? "✓ " : "") + DockTitle(panel), () =>

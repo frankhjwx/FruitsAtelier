@@ -856,7 +856,9 @@ the workspace gate is held leaves rendering responsive, blocks duplicate opens
 and competing operations, publishes once, retains the document on failure, and
 retires results after a project replacement. It also checks direct difficulty-row
 opening, exact difficulty selection for saved projects and source imports, and
-selection after synchronization adds a new source difficulty.
+selection after synchronization adds a new source difficulty. Source imports with
+sliders must activate the clicked difficulty before import preparation starts and
+retain it after preparation completes.
 
 `App.Tests --mapping-canvas-check` verifies zoom-independent background bounds,
 independent dim drafts and persistence, image-drop replacement confirmation,
@@ -1396,6 +1398,10 @@ Synthetic App regressions cover the inclusive 5 ms edge boundary, the slider bod
 6 ms start lookup, tick inheritance across timing changes, mapset clipboard
 scope, combo reference numbers, horizontal grids, and timestamp precision.
 
+`App.Tests --clipboard-hitsound-check` checks per-event additions, sample settings,
+edge indices and inheritance through same- and cross-difficulty paste on both
+canvases, including export read-back, clipboard snapshot isolation, cut and undo/redo.
+
 `App.Tests --cross-difficulty-clipboard-check` checks mixed parent types across
 different AR/CS/STR, BPM and base SV, preserved Legacy duration and geometry,
 unchanged target settings and source content, undo/redo, unsupported SV rollback,
@@ -1415,6 +1421,15 @@ project/`.osu` persistence. Native window checks open all four tabs in both
 languages at each supported test size and DPI and exercise the color picker.
 
 ## Synchronization regression coverage
+
+`App.Tests --timing-precision-check` checks unchanged BPM input, external red-line
+precision acceptance, repeated read-only synchronization and explicit linked saves.
+Timing SV tests cover unchanged inherited input. `Formats.Tests --export-snap-check`
+checks stable red/green numeric output, all three slider-length publication paths,
+boundary repeat/tail and tiny-droplet times, cached publication and ten successive
+rebuilt exports in NM and HR. Native slider timing input tests verify source-line
+publication without changing authoring state; semantic
+synchronization tests distinguish section reconstruction from real authoring edits.
 
 `Formats.Tests --reference-discovery-check` verifies missing and relocated files,
 normalized first-object filtering, complete-sequence rejection, later online IDs,
@@ -1693,3 +1708,53 @@ plus recording-canvas frame CPU time and allocation. Native presentation is excl
 Windows renderer, operates the default multiplier input and captures settings,
 menus and inspector at narrow and ordinary window sizes under
 `artifacts/tests/slider-bpm/native`.
+
+## Hitsounding workspace checks
+
+`App.Tests --hitsound-library-files-check` covers real right-button context menus,
+relative paths, multi-selection, file operations, one-second drag navigation,
+exclusive audition progress and scrollbar dragging in English and Chinese.
+`App.Tests --hitsounding-mute-check` covers all six lane filters, full-row dimming,
+live transport, and Mapping/Testplay isolation. The panel check exercises label
+visibility while dense neighbours enter and leave the viewport. Audio mixer checks
+verify exclusive audition replacement and stop against silent PCM.
+The timeline-layout check also exercises bookmark toolbar actions in Timing.
+The panel check covers green handle dragging, group selection, Snap, live interval
+previews without committed conversion rebuilds, red-point protection, cancellation,
+undo/redo, inherited-point creation parity with Timing Panel, and block/handle
+context menus that reopen Timing Helper or delete green points in both languages.
+Precise audition checks cover selection-only Play controls, progress and Stop,
+exclusive switching between timeline and library sounds, and unchanged map history
+and playhead position. Native render checks include the active Precise control.
+
+`App.Tests --hitsounding-panel-check` covers the Snap ruler, actual slider ticks,
+centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,
+default bank labels, timing-tag order, the unified Config dock, library search/imports,
+slot drag/drop, and resource undo/redo. Config checks include the eight-row SampleSet
+dropdown, divider resize cursors, recursive folder imports, opening the current folder,
+and live library create/rename/delete notifications. It also checks live Inspector edits,
+undoable volume gestures with live playback and conversion reuse, nearby timing rows,
+new-point drafts, event-specific additions, single-click and continuous painting, complete
+stroke undo, empty-space selection, playback flashes, normalized narrow waveforms,
+visible interval labels and play-line bounds. It also checks marquee copy/delete/paste,
+sampleset mismatch confirmation and cancellation, separate simultaneous red/green
+sections and editing an existing timing point without inserting duplicates. Per-lane
+Precise HS boundaries, visible tails with offscreen starts, drag preview, move
+confirmation/cancellation and one-step move undo are also covered. `--hitsounding-performance` compares cold
+setup and warm pointer/render work with Mapping on the same mixed-object fixture,
+including allocations and committed-conversion reuse.
+
+`FruitsAtelier.App.exe --render-check --hitsounding-render-check` renders English
+and Chinese at 980×620 and 1440×900 under `artifacts/tests/hitsounding-native`.
+Run the object-timeline, docking and hitsound regressions when changing this view,
+because its note rendering, layouts and sample resolution share those boundaries.
+
+The window-preferences check covers per-map workspace selection across difficulty
+switches, Library navigation and restart, including automatic sound-library loading. Hitsounding checks also cover directional
+snap alignment from off-grid timestamps, Dock toggle input priority, volume popover
+mouse/keyboard/wheel input and non-seeking lane labels. Playback-line checks include
+playback-time dragging and the fixed lazer line.
+
+The Hitsounding panel regression also covers letter-only Note based labels, selection
+without seeking, and storyboard sound clipboard, marquee, snap movement, shared file
+edits and undo.

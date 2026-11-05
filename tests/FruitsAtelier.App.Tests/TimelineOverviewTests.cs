@@ -382,6 +382,12 @@ internal static class TimelineOverviewTests
         ui.Key(66, ctrl: true, shift: true);
         Check(OsuTimeline.Bookmarks(ui.View.Document).Count == bookmarkCount, "Ctrl+Shift+B did not remove the nearest bookmark");
         Toolbar();
+        ui.View.LibrarySettings.BookmarkToolbarOffsetX = 0;
+        OsuTimeline.ClearBookmarks(ui.View.Document);
+        ui.Key(114);
+        Check(ui.View.TimingPageVisible, "Timing panel opens for bookmark controls");
+        area = ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
+        Toolbar();
 
         void Toolbar()
         {

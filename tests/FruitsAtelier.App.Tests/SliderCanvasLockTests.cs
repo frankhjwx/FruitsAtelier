@@ -203,7 +203,7 @@ internal static class SliderCanvasLockTests
             Check(ui.View.Document.ImportedSliders.Count == 3 && ui.View.Document.Tracks.Count == 0
                 && ui.View.Document.ImportedSliders.All(s => (s.RandomizationSource is null || s.RandomizationSource.Id == s.Id)
                     && (s.RandomizationTrack is null || s.RandomizationTrack.Id == s.Id)),
-                "Every pasted Legacy effect baseline must belong to its new parent.");
+                $"Every pasted Legacy effect baseline must belong to its new parent: sliders={ui.View.Document.ImportedSliders.Count}, tracks={ui.View.Document.Tracks.Count}, status={ui.View.StatusMessage}.");
             ui.Key('Z', ctrl: true);
             Check(ui.View.Document.ContentEquals(copied), "Pasting a processed Legacy copy must remain one undo step.");
 

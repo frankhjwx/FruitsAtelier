@@ -13,16 +13,18 @@ public sealed class EditorHistory
     private long transactionVersion;
     private string transactionLabel = "";
     private Action<bool, MapDocument, MapDocument>? transactionRelated;
+    private object resourceState = new(), savedResourceState = new();
 
     public EditorHistory(MapDocument document)
     {
         Document = document.DeepClone();
         baseline = Document.DeepClone();
+        savedResourceState = resourceState;
     }
 
     public MapDocument Document { get; private set; }
     public long ContentRevision { get; private set; }
-    public bool IsDirty => !Document.ContentEquals(baseline);
+    public bool IsDirty => resourceState != savedResourceState || !Document.ContentEquals(baseline);
     public bool CanUndo => undo.Count > 0;
     public bool CanRedo => redo.Count > 0;
     public bool HasActiveTransaction => transactionStart is not null;
@@ -97,10 +99,25 @@ public sealed class EditorHistory
     }
 
     // A background save acknowledges its frozen snapshot, including while a newer edit is active.
-    public void MarkSaved(MapDocument savedDocument) => baseline = savedDocument.DeepClone();
+    public void MarkSaved(MapDocument savedDocument) { baseline = savedDocument.DeepClone(); savedResourceState = resourceState; }
 
     // The caller transfers a detached baseline prepared by its completed save worker.
-    public void AdoptSavedSnapshot(MapDocument savedDocument) => baseline = savedDocument;
+    public void AdoptSavedSnapshot(MapDocument savedDocument) { baseline = savedDocument; savedResourceState = resourceState; }
+
+    public void EditResources(string label, Action<bool> transition)
+    {
+        if (HasActiveTransaction) throw new InvalidOperationException(L.Get("core.history.activeEdit"));
+        var before = resourceState;
+        var after = new object();
+        transition(true);
+        resourceState = after;
+        undo.Push(new(label, Document.DeepClone(), Document.DeepClone(), (forward, _, _) =>
+        {
+            transition(forward);
+            resourceState = forward ? after : before;
+        }));
+        redo.Clear(); ContentRevision++;
+    }
 
     public void Begin(string label, Action<bool, MapDocument, MapDocument>? restoreRelated = null)
     {
@@ -185,6 +202,7 @@ public sealed class EditorHistory
 
     public void Reset(MapDocument document)
     {
+        resourceState = savedResourceState = new object();
         ContentRevision++;
         Document = document.DeepClone();
         breakSliderLengths.Retain(Document);

@@ -12,6 +12,7 @@ static class HitsoundMixerTests
         SpeedChangeSession();
         IndependentVolume();
         AuditionWithoutMusic();
+        ExclusiveAudition();
         TestplayMenuSamples();
         WaveformDecoding();
         using var mixer = new HitsoundPlayer();
@@ -43,6 +44,25 @@ static class HitsoundMixerTests
         mixer.Queue(new(CatchObjectKind.Fruit, normal, 1)); mixer.Read(buffer, 0, buffer.Length);
         if (!buffer.Any(v => Math.Abs(v) > .001)) throw new Exception("Default normal-only note emitted silent PCM");
         Console.WriteLine("PASS Hitsound PCM mixing, volume, overlap, stop, clipping and custom WAV decoding");
+    }
+
+    private static void ExclusiveAudition()
+    {
+        var output = new AuditionOutput();
+        using var mixer = new HitsoundPlayer(createAuditionOutput: () => output);
+        var sound = new Hitsound(CatchObjectKind.Fruit, null, .5f);
+        mixer.PlayExclusiveAudition(sound);
+        double duration = mixer.PlayExclusiveAudition(sound);
+        var expected = HitsoundSamples.Create(sound);
+        var bytes = new byte[(expected.Length + 8) * sizeof(float)];
+        output.Source!.Read(bytes, 0, bytes.Length);
+        var actual = new float[bytes.Length / sizeof(float)]; Buffer.BlockCopy(bytes, 0, actual, 0, bytes.Length);
+        if (Math.Abs(duration - expected.Length * 1000d / HitsoundSamples.SampleRate) > .001
+            || expected.Where((sample, i) => Math.Abs(sample * .5f - actual[i]) > .00001).Any())
+            throw new Exception("Exclusive audition overlaps the preceding voice or reports an incorrect duration.");
+        mixer.PlayExclusiveAudition(sound); mixer.Stop(); output.Source.Read(bytes, 0, bytes.Length);
+        if (bytes.Any(b => b != 0)) throw new Exception("Stopped exclusive audition emits PCM.");
+        Console.WriteLine("PASS Exclusive library audition replaces previous PCM and stops independently");
     }
 
     private static void TestplayMenuSamples()

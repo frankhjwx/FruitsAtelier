@@ -133,7 +133,9 @@ internal static class DraftConversionTests
                 "validated completion changed movement connections beyond export rounding");
             ui.Key('Z', ctrl: true); Wait(ui);
             Check(map.ContentEquals(ui.View.Document), "movement completion did not undo atomically");
-            RecordingCanvas.Segment[] Connections() => ui.Canvas.Lines.Where(l => l.Width == 4 && l.Opacity == .65f).ToArray();
+            // Stable length precision can split a tail connection into an additional subpixel segment.
+            RecordingCanvas.Segment[] Connections() => ui.Canvas.Lines.Where(l => l.Width == 4 && l.Opacity == .65f
+                && Math.Max(Math.Abs(l.X2 - l.X1), Math.Abs(l.Y2 - l.Y1)) >= 1).ToArray();
         }
     }
 

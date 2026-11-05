@@ -164,6 +164,9 @@ public sealed class HitsoundResolver
             Volume = fields.HasFlag(InheritedSampleFields.Volume) ? 0 : sample.Volume };
     }
 
+    public EventHitsound EventSettings(ConvertedCatchObject item) => overrides.GetValueOrDefault((item.SourceId, item.EventIndex))
+        ?? new(item.SourceId, item.EventIndex, Describe(item), item.IsStandalone ? 0 : edges.GetValueOrDefault((item.SourceId, item.EventIndex), -1), InheritedFields(item));
+
     public IReadOnlyList<Hitsound> Resolve(ConvertedCatchObject item)
     {
         if (item.Kind == CatchObjectKind.TinyDroplet) return [];

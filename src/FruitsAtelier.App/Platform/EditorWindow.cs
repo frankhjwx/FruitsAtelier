@@ -191,6 +191,12 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--hitsounding-render-check"))
+            {
+                Diagnostics.HitsoundingRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--docking-render-check"))
             {
                 Diagnostics.DockingRenderCheck.Run(canvas);
@@ -549,7 +555,7 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0020: // WM_SETCURSOR
                 if ((lParam.ToInt64() & 0xffff) == 1)
-                { Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.FloatingPanelResizeCursor is 1 or 4 ? 32642 : view.FloatingPanelResizeCursor is 2 or 3 ? 32643 : view.TimelinePanelResizeCursor ? 32645 : (view.DiscussionHandCursor || view.MapsetVerifierHandCursor) ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512))); return 1; }
+                { Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.FloatingPanelResizeCursor is 1 or 4 ? 32642 : view.FloatingPanelResizeCursor is 2 or 3 ? 32643 : (view.TimelinePanelResizeCursor || view.HitsoundingSplitResizeCursor) ? 32645 : (view.DiscussionHandCursor || view.MapsetVerifierHandCursor) ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512))); return 1; }
                 break;
             case 0x02A3: // WM_MOUSELEAVE
                 view.PointerLeave(); Invalidate(); return 0;
@@ -558,7 +564,7 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.TrackMouseEvent(ref tracking);
                 view.SetModifiers(Native.Alt, Native.Shift);
                 view.PointerMove(x, y, Native.Shift, Native.Control);
-                Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.FloatingPanelResizeCursor is 1 or 4 ? 32642 : view.FloatingPanelResizeCursor is 2 or 3 ? 32643 : view.TimelinePanelResizeCursor ? 32645 : (view.DiscussionHandCursor || view.MapsetVerifierHandCursor) ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512)));
+                Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.FloatingPanelResizeCursor is 1 or 4 ? 32642 : view.FloatingPanelResizeCursor is 2 or 3 ? 32643 : (view.TimelinePanelResizeCursor || view.HitsoundingSplitResizeCursor) ? 32645 : (view.DiscussionHandCursor || view.MapsetVerifierHandCursor) ? 32649 : view.DiscussionTextCursor ? 32513 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512)));
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0202:
             case 0x0205:
@@ -660,7 +666,7 @@ internal sealed partial class EditorWindow : IDisposable
         view.StopTestplay();
         audio.Dispose();
         setupAudio?.Dispose();
-        hitsounds.Dispose();
+        hitsounds.Dispose(); libraryAudition.Dispose();
         osuBrowser?.Dispose();
         _ = view.CompleteLibraryCacheWritesAsync();
         view.StopFileMonitoring();

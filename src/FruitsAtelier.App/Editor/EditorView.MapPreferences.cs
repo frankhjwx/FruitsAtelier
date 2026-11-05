@@ -11,6 +11,21 @@ public sealed partial class EditorView
         foreach (var difficulty in difficulties)
             difficulty.EditingPreferences = LibrarySettings.MapEditingPreferences.GetValueOrDefault(difficulty.Id) ?? new();
         RestoreSnapPreferences();
+        RestoreMapPanel();
+    }
+
+    private void RestoreMapPanel()
+    {
+        TimingPageVisible = EditingPreferences.ActivePanel == "Timing";
+        HitsoundingPageVisible = EditingPreferences.ActivePanel == "Hitsounding";
+        if (HitsoundingPageVisible) RefreshHitsoundingLibrary();
+    }
+    private void SaveMapPanel()
+    {
+        string panel = HitsoundingPageVisible ? "Hitsounding" : TimingPageVisible ? "Timing" : "Mapping";
+        if (EditingPreferences.ActivePanel == panel) return;
+        EditingPreferences.ActivePanel = panel;
+        SaveMapEditingPreferences();
     }
 
     private void RestoreSnapPreferences()

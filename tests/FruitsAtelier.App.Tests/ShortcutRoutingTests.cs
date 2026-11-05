@@ -214,7 +214,7 @@ internal static class ShortcutRoutingTests
         Check(exports == 2 && ui.View.TimingSetupVisible, "The focused F6 window retains export shortcuts.");
         ui.Key(27); ui.Key(115); ExportKey();
         Check(exports == 3 && ui.View.TimingPageVisible && !ui.View.SongSetupVisible, "F4 retains the locked Timing workspace and export routing.");
-        ui.Key(27); ExportKey();
+        ui.Key(112); ExportKey();
         Check(exports == 4, "Returning to Mapping retains export routing.");
     }
 

@@ -116,6 +116,167 @@ playback and keep the output device running. Timing tests check actual source-no
 timestamps as well as the music/host-clock mapping. These checks do not measure acoustic
 latency from speakers or headphones.
 
+## Hitsounding workspace
+
+Choose **Hitsounding Panel** from the same workspace selector as Mapping and Timing.
+Its dock layout and display mode are remembered independently. The horizontal ruler
+uses the current Snap division and the shared osu-style tick colours and lengths.
+Alt+wheel zooms around the pointer's time without changing playback position;
+ordinary wheel moves one current Snap division per notch. From an off-grid timestamp,
+the first notch lands on the nearest grid point in the chosen direction. Drag the highlighted yellow line to change its viewport
+position without seeking. Both dragging and zoom keep it within 5–95% of the timeline.
+
+The seven lanes are Notes, Normal, Whistle, Finish, Clap, SliderTick and SB Hitsound.
+Notes shares Mapping's object-timeline renderer, including combo colours, numbers,
+slider bodies, repeats and banana intervals, and adds converted slider-tick markers.
+The sound lanes use the same effective banks, indices and volumes as preview audio.
+Tiny droplets are silent. SB Hitsound shows unconditional storyboard samples;
+Pass/Fail-dependent samples are omitted.
+
+The top toolbar offers **Select / Draw** and **Note based / Precise HS**. Note based uses compact tags centred on event times. Tag width fits the bank/index text with horizontal padding
+and shrinks symmetrically to fit neighbouring events at dense zoom levels. Text keeps
+a fixed size and is hidden when the tag cannot contain it. Simultaneous samples share
+columns within their timestamp. Precise HS uses left-aligned horizontal labels and
+peak-normalized waveform envelopes along the bottom, including at narrow zoom levels;
+Object sounds end visually at the next occurrence in the same sound lane when their
+sample extends past it; intervening notes and sounds in other lanes do not truncate them;
+storyboard samples use the next unconditional sample as their visual boundary.
+Decoding is asynchronous and its cache is bounded and retired with the difficulty.
+Normal, Whistle, Finish, Clap and SliderTick tags use their resolved sample bank for colour: Soft
+green, Normal amber, and Drum red. Borders, waveforms and playback glows share that
+colour; these five lane labels have neutral markers. Timing lines retain red/green
+colouring, while SB Hitsound retains purple.
+Note-based bank tags show S, N or D above the sample index; default samples omit the
+index and centre the letter. The toolbar groups Select/Draw, Note based/Precise HS,
+and the HS text toggle with vertical separators. HS text controls sound-tag labels
+in both display modes and is remembered with the Hitsounding layout; it leaves
+Notes numbering, timing labels and waveforms visible. Precise HS retains the bank and non-default index beside the waveform. Timing tags show bank and optional index (for example S:2) above volume; both lines
+are bold, with the bank line three points larger. A short coloured stem marks their timestamp.
+Timing tags fill the interval up to the next timing point. Their left-aligned text stays
+at the visible left edge when the interval begins outside the viewport.
+
+In **Select**, only clicking a Notes object or an existing sound tag selects its event.
+Selecting a sound does not seek. Clicking empty grid or ruler space clears selection and preserves the playing position.
+Ctrl-click toggles individual sound tags, Notes events, storyboard sounds, and green timing blocks or handles without replacing the existing selection.
+Clicking the lane-label column does not seek. Dragging empty grid space draws a selection
+rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Its starting
+time follows the scrolling timeline during playback while the opposite edge stays
+under the pointer. Selection refreshes each frame, including sounds that have scrolled
+offscreen. Ctrl+C copies selected sounds, Ctrl+V
+pastes their relative times at the playhead onto existing fruit events (within 1 ms),
+Ctrl+X cuts deletable selected sounds, and Delete removes selected additions or SB sounds. Normal remains undeletable. Each batch is one
+undo step. In Select mode, right-clicking a selected sound or empty grid space preserves the selection and offers Delete for the entire selection. Right-clicking an unselected sound selects that sound instead. When source and target banks or sample indices differ, a dialog offers the
+copied sampleset, the target sampleset, or cancellation. Adjustments affect target event
+overrides, including their shared addition bank/index, without rewriting timing intervals.
+In **Select**, drag an existing Whistle, Finish or Clap tag onto another fruit event to
+move that addition, with a half-opacity preview and the same sampleset confirmation.
+Normal and SliderTick cannot be moved. A move is one undo step.
+In **Draw**, click or drag across existing fruit event
+times in Whistle, Finish or Clap to add that addition; the half-opacity ghost previews
+the target. A stroke is one undo step. Right-click removes additions, never Normal.
+W/E/R toggle the selected event's Whistle/Finish/Clap. Sampleset and Additions selectors
+edit the selected event or set banks for drawing. The three additions share one bank
+and index; a vertical connector links active additions belonging to the same event.
+Audible events flash with a white edge and a coloured outer glow for 280 ms as playback crosses their timestamps. Both Notes and sound tags show this feedback.
+
+SB Hitsound supports selection, marquee selection, cut/copy/paste, deletion and dragging.
+Pastes preserve relative times, filenames, layers and volumes without requiring a note
+at the destination. Dragging snaps to the beat grid and previews without changing content.
+Edits participate in undo/redo. Moving or deleting a shared `.osb` sample edits that shared
+file, so it affects every difficulty using it; pasted copies belong to the current map.
+External changes to a shared file are checked before edits and undo/redo.
+
+**Timing Helper** follows the playhead when nothing is selected and the event
+time when an object is selected. Clicking a timing interval or its stem selects that
+specific timing point. A fixed-height information card shows the context, timestamp,
+effective BPM and active red/green timestamps in every selection state. The parameter
+area starts at the same vertical position, and the nearby list stays anchored below it.
+At an exact timestamp with existing timing points, the helper
+shows each point in a separate section divided by horizontal rules. Offset, bank, sample index, volume and the Kiai toggle edit the existing point directly; BPM and meter controls appear only for red points. Numeric inputs take effect on Enter or focus loss. Toggling Kiai preserves the point's other effect flags.
+Sample indices use Default, Custom 1 and Custom choices, with the custom index input on the Custom row. Existing-point volume uses one row for its label, slider, numeric input and percent suffix; Hit, Finish, Whistle and Clap buttons preview the current sample settings.
+Volume updates while dragging, with one undo step for the complete gesture. The helper does not display or edit SV; sound edits preserve the green line's beat length.
+Only timestamps without a point show effective timing information and **Apply as new
+inherited timing point**, which inserts a green line while preserving effective SV.
+Settings for a new inherited point remain drafts until insertion. Existing-point edits support undo and mark the map as modified; saving remains explicit.
+A separator and **Nearby Timing Points** title introduce up to seven nearby timing points in chronological order, showing timestamp, timing/sample information and volume. The current point is highlighted, retaining red for red points; others fade with distance. The wheel only scrolls the visible rows, leaving the playhead and selection unchanged. Clicking a row selects that point in the helper and recenters the list without moving the playhead or canvas. The initial view prefers three points on each side, filling from the other side at map boundaries; it has no separate scrollbar.
+The Hitsounding dock menu provides Config, Timing Helper, Song Setup and Preview independently
+of Mapping.
+Restoring Hitsounding as the active panel on editor startup loads its sound library immediately, without requiring pointer input.
+
+**Map Samplesets** selects the map's indexed sample groups and S/D/N bank. Preview
+buttons audition the assigned sample or its skin/default fallback. The Default group
+uses skin/osu! samples and is read-only; numbered groups display actual indexed resource
+filenames. Fallback filenames are grey, while map resources use the accent colour. Drop a library
+file onto a slot to replace that bank/index's audio. This updates the shared map
+resource file, including other difficulties that use it, and is recorded in undo
+history. Replacement also refreshes preview audio; conflicting external file changes
+are rejected during undo/redo.
+
+**Hitsound Library** stores independent copies under `workspace/HitsoundLibrary`.
+Double-click directory rows to browse nested folders, or use the parent and Home buttons.
+Navigation stays inside this root and excludes symbolic links/junctions. Search filters
+files and folders in the current directory; imports are saved into that directory.
+Drop folders or WAV, OGG or MP3 files into the Hitsounding workspace to import them, or drag
+an assigned map sample into the library pane. Folder imports preserve nested directories
+and copy supported audio files. Right-click the library to open the current folder
+in the system file manager. The navigation bar shows the path relative to
+`HitsoundLibrary`, omitting the start when space is limited and leaving it empty at
+the root. External changes refresh the listing, waveforms and audition samples.
+The footer counts folders and audio files in the current directory; overflowing
+lists have a draggable scrollbar. Drops are accepted throughout the library pane.
+
+The context menu provides new folder, rename, copy, cut, paste and recycle operations.
+The corresponding shortcuts are Ctrl+Shift+N, F2, Ctrl+C, Ctrl+X, Ctrl+V and Delete.
+Click or drag a selection rectangle to select files and folders; Ctrl adds/toggles,
+Alt subtracts, and Shift selects a range. Drag selected items onto a folder to move
+them, or hold Ctrl to copy. Hover over the parent or Home button for one second
+during a drag to navigate while retaining the selected source items. Existing files
+are preserved with numbered destination names. Library file operations are independent
+of beatmap undo history.
+
+Library audition plays one file at a time. Starting another file stops the previous
+one; the active row shows a progress fill, outline and Stop button. Navigation and
+file changes stop audition. Audition uses independent playback from map preview.
+
+In Precise HS, clicking a sound block selects it and reveals an audition button
+inside its lower-left waveform area when the visible block is wide enough.
+Play/Stop and the progress fill use the same exclusive audition
+channel as Hitsound Library, so starting a sound in either view stops the previous
+audition. Selecting a block alone does not start playback or move the playhead.
+Imports preserve existing different
+files with a numbered filename and reuse identical copies. Library files can be
+dragged to map slots; their names need not match osu! sample filenames. Samples are
+limited to 16 MiB each and one drop accepts up to 128 files.
+
+**Hitsounding Config** contains Map Samplesets above Hitsound Library in one dock
+panel. Resize their internal divider to allocate space; the two sections keep their
+order. Hovering or dragging the divider uses a vertical resize cursor.
+The SampleSet dropdown offers Default and the custom indices defined by the
+map’s red and green timing points; more than eight choices scroll using the wheel, scrollbar dragging, or scrollbar track clicks. The selector
+does not create or edit sample indices. Audio rows provide audition controls and decoded waveform previews. Search
+filters the current folder by name. Long lists scroll within their own section.
+View and library navigation do not edit beatmap objects.
+
+Each sound track has a mute button. Muting greys its entire row and suppresses that
+track only during Hitsounding playback; Mapping and Testplay ignore these session
+settings. Note-based sound labels use a fixed font size when **HS text** is enabled
+and hide when the block is too narrow. Equal-width blocks with the same number of
+index digits use a shared width threshold, independent of the particular digits
+or sample bank. Other blocks entering the viewport do not affect this decision.
+
+Drag green timing handles horizontally to move inherited points to the nearest
+Snap. Marquee-select handles to move several green points together, preserving
+their relative offsets while snapping the grabbed point. Red points cannot be
+dragged or included in this selection. Timing intervals update during the preview;
+release commits one undoable edit, and Escape cancels it. Right-click empty space
+in the handle strip to create an inherited point at the nearest Snap using the
+same parameter inheritance as Timing Panel. Right-click a timing block or handle
+to edit it in Timing Helper, opening the panel when needed. Green points also
+offer Delete. The Delete key and context-menu Delete remove all selected green
+points in one undoable edit. Right-clicking a selected block or handle preserves
+the group; right-clicking an unselected point selects that point instead.
+Timing Helper's sample bank choices are Soft, Normal and Drum.
+
 ## Maintenance
 
 Keep sample selection in Core and transport boundary handling in the shared editor.
@@ -154,3 +315,18 @@ Song tempo is adjustable to 10%, 25%, 50%, 75%, 100%, and 150% with pitch preser
 ## Volume
 
 Library settings store All, Song and Hitsound percentages independently of beatmap sample volume. Effective song gain is All × Song; effective sample gain is All × Hitsound × the resolved beatmap sample volume. Windows applies song gain before preview mixing and hitsound gain to scheduled and live voices before clipping. macOS updates its music node and an atomic native hitsound mixer gain, including queued and active voices. Changes do not restart playback or change timing. Automated device output remains muted regardless of these preferences.
+
+The Timing Helper header lists **Affecting Timing Lines** using the same timestamp,
+timing information and volume columns as Nearby Timing Points. Click either active
+red or green row to select it without moving the playhead or canvas. The header’s
+**Jump** button seeks to the displayed point when requested and is disabled when
+the playhead already matches its displayed millisecond. Missing active lines retain
+a placeholder so the header height stays constant.
+
+**Add new inherited timing point here** is available without changing draft values.
+While paused at an existing timing timestamp (matched at the displayed millisecond precision), the helper displays that point’s full live editing
+controls while retaining the Current timestamp heading until a point is selected.
+
+During playback, Current timestamp retains its regular form when crossing timing
+points. Starting playback or dragging the transport timeline clears the timing-point
+selection and resumes following the current time.

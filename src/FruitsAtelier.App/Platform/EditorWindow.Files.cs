@@ -8,6 +8,7 @@ internal sealed partial class EditorWindow
 {
     private AudioTransport audio = new();
     private readonly HitsoundPlayer hitsounds = new(AppLog.Write);
+    private readonly HitsoundPlayer libraryAudition = new(AppLog.Write);
     private string? projectPath;
     private Action? pendingStartupFiles;
 
@@ -48,7 +49,7 @@ internal sealed partial class EditorWindow
         view.RequestSyncAudio = answer => answer(MapFileDialog.Select(hwnd, false, L.Get("sync.chooseAudio"), MapFileDialog.AudioFilter));
         view.RequestPausePlayback = () => audio.Pause();
         audio.Hitsounds = hitsounds;
-        view.RequestAudioVolume = (song, hit) => { audio.SongVolume = song; if (setupAudio is not null) setupAudio.SongVolume = song; hitsounds.Volume = hit; };
+        view.RequestAudioVolume = (song, hit) => { audio.SongVolume = song; if (setupAudio is not null) setupAudio.SongVolume = song; hitsounds.Volume = hit; libraryAudition.Volume = hit; };
         view.RequestSetupAudio = ControlSetupAudio;
         view.RequestSetupFinished = () => TransitionStartupWindow(() =>
         {
@@ -68,6 +69,13 @@ internal sealed partial class EditorWindow
         view.RequestScheduleHitsound = hitsounds.Schedule;
         view.RequestHitsound = hitsounds.PlayImmediate;
         view.RequestAuditionHitsound = hitsounds.PlayAudition;
+        view.RequestRecycleHitsoundingFiles = SystemTrash.Recycle;
+        view.RequestStartLibraryAudition = (sound, token) =>
+        {
+            token.ThrowIfCancellationRequested(); libraryAudition.Volume = hitsounds.Volume;
+            return Task.FromResult(libraryAudition.PlayExclusiveAudition(sound));
+        };
+        view.RequestStopLibraryAudition = libraryAudition.Stop;
         view.RequestTestplayMenuLoop = hitsounds.SetMenuLoop;
         view.RequestWaveform = WaveformDecoder.Load;
         view.RequestPrepareHitsound = hitsounds.Prepare;

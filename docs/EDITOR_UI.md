@@ -1439,7 +1439,7 @@ converts exact circular arcs to bounded Bezier approximations in the same transa
 
 Undo and redo reveal an affected position only when none of the affected positions is visible on the canvas. Deletion uses the removed position; restored notes and changed slider nodes use their resulting positions. Visible changes retain the viewport.
 
-Copy and cut write a legacy reference such as `02:27:094 (1,2,3) - ` to the system clipboard. Inside the editor, a separate snapshot retains complete objects for pattern pasting across difficulties in the current mapset. Opening or reopening a project clears that snapshot. Paste aligns the earliest start to the playhead, preserves other objects' relative times and positions, and assigns new IDs. Each batch move, delete, cut, or paste is one undo step.
+Copy and cut write a legacy reference such as `02:27:094 (1,2,3) - ` to the system clipboard. Inside the editor, a separate snapshot retains complete objects for pattern pasting across difficulties in the current mapset. Opening or reopening a project clears that snapshot. Paste aligns the earliest start to the playhead, preserves other objects' relative times and positions, and assigns new IDs. Per-event hitsound overrides follow their copied parents, including additions, edge assignments and timing inheritance. Each batch move, delete, cut, or paste is one undo step.
 
 Cross-difficulty paste keeps the target's HP, CS, AR, OD, base SV, STR and timing.
 Different tick settings regenerate nested events according to the target's rules;
@@ -1852,6 +1852,9 @@ While dragging one or more objects, ordinary wheel navigation, Ctrl+wheel Snap a
 
 ## Settings
 
+Settings owns editor input while open: wheel input scrolls settings rather than the
+underlying canvas or docks, and underlying volume popover controls are inactive.
+
 Categories are ordered General, Workspace, Appearance, Audio, Testplay, Mapping Canvas, and
 Application updates (where supported). Appearance groups the active skin selector
 with the default skin archive. Mapping Canvas groups background dim, reverse
@@ -2187,3 +2190,20 @@ slider restores authored BPM at its end. Generated red points are visible even
 with **Show SV** disabled. Their BPM/offset are derived from the slider and are
 read-only in Timing setup. Disabling the feature retains saved multipliers but
 uses the original BPM for conversion and export.
+
+## Hitsounding Panel
+
+The workspace selector opens Hitsounding alongside Mapping and Timing. Its display
+modes, seven lanes, Snap ruler, Alt-wheel navigation and unified sampleset/library
+Config dock are described in [Hitsounding workspace](HITSOUNDS.md#hitsounding-workspace).
+
+The active Mapping, Timing or Hitsounding workspace is remembered per difficulty in
+local user preferences. Reopening the same map, including after restarting the app,
+restores that workspace without changing beatmap content. Escape returns an idle
+editor to Library; active text edits, gestures and menus consume Escape first.
+Unsaved content follows the existing save/discard confirmation.
+
+In Mapping, the playback line highlights near its handle or outside the 0–512
+playfield and can be dragged while paused or playing. Dragging changes
+its viewport height, clamped to 5–95%, without seeking; release saves the height and
+Escape cancels the drag. The lazer playback line remains fixed.

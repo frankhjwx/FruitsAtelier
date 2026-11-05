@@ -276,10 +276,11 @@ public sealed partial class EditorView
     private void DrawPanelMenu(ICanvas c)
     {
         if (!panelMenuOpen) return;
-        panelMenuBounds = new(WorkspaceSelectorBounds.X, WorkspaceSelectorBounds.Bottom + 2, 180, 76);
+        panelMenuBounds = new(WorkspaceSelectorBounds.X, WorkspaceSelectorBounds.Bottom + 2, 180, 112);
         c.Fill(panelMenuBounds, Surface, 4); c.Stroke(panelMenuBounds, Muted, radius: 4);
-        Button(c, new(panelMenuBounds.X + 4, panelMenuBounds.Y + 4, 172, 32), L.Get("timing.detailsPanel"), () => ShowTimingPage(false), !TimingPageVisible);
+        Button(c, new(panelMenuBounds.X + 4, panelMenuBounds.Y + 4, 172, 32), L.Get("timing.detailsPanel"), () => ShowTimingPage(false), !TimingPageVisible && !HitsoundingPageVisible);
         Button(c, new(panelMenuBounds.X + 4, panelMenuBounds.Y + 40, 172, 32), L.Get("timing.panel"), () => ShowTimingPage(true), TimingPageVisible);
+        Button(c, new(panelMenuBounds.X + 4, panelMenuBounds.Y + 76, 172, 32), L.Get("hitsounding.panel"), ShowHitsoundingPage, HitsoundingPageVisible);
     }
 
     private void PanelPointerDown(float x, float y)

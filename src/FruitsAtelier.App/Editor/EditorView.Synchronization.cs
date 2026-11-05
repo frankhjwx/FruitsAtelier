@@ -95,7 +95,7 @@ public sealed partial class EditorView
                 merges[entry.Id] = entry.Sync is null
                     ? WorkspaceSynchronization.CompareWithoutBaseline(diff.Document, status.Candidate!, session.Directory, compensate)
                     : WorkspaceSynchronization.Merge(entry, diff.Document, status.Candidate!, session.Directory, compensate);
-                if (merges[entry.Id].CanExportLocalChanges && (!quiet || continuation is not null))
+                if (merges[entry.Id].CanExportLocalChanges && continuation == (Action)SaveCurrentDifficulty && entry.Id == syncDifficulty)
                 {
                     try
                     {
@@ -212,7 +212,7 @@ public sealed partial class EditorView
                     (AudioReady, AudioPlaying, AudioLoading, AudioDurationMs, AudioNotice, initializeTransport) = previousTransport;
                     playhead = previousPlayhead; viewStart = previousViewStart; pinPlayhead = previousPin;
                 }
-                RefreshSynchronization(continuation);
+                RefreshSynchronization(continuation, quiet: continuation is null);
             }
             catch (SyncSourceChangedException)
             {

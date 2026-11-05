@@ -6,6 +6,7 @@ public sealed partial class EditorView
 
     private void BeginTimelineScrub()
     {
+        ResumeTimingHelperFollow();
         resumeAfterTimelineScrub = AudioReady && AudioPlaying;
         if (resumeAfterTimelineScrub)
         {

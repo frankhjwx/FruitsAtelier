@@ -119,6 +119,21 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
     }
     private static string Key(Hitsound sound) => sound.FilePath ?? $"{sound.Kind}/{sound.SampleSet}/{sound.Name}";
     public void Play(Hitsound sound) => Schedule(sound, HostTime());
+    public async Task<double> PlayExclusiveAuditionAsync(Hitsound sound, CancellationToken token)
+    {
+        Stop();
+        await Preparation.ConfigureAwait(false);
+        lock (gate) { token.ThrowIfCancellationRequested(); if (disposed) return 0; ReleaseBank(); pending.Clear(); }
+        Prepare(sound);
+        await Preparation.ConfigureAwait(false);
+        lock (gate)
+        {
+            token.ThrowIfCancellationRequested();
+            if (disposed || engine == 0 || !samples.TryGetValue(Key(sound), out nint sample) || sample == 0) return 0;
+            ScheduleNative(engine, sample, HostTime(), sound.Volume);
+            return SampleBytes(sample) * 1000d / (sizeof(float) * HitsoundSamples.SampleRate);
+        }
+    }
     public void SetMenuLoop(Hitsound? sound)
     {
         lock (gate)

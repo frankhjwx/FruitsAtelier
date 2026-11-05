@@ -42,6 +42,12 @@ internal static class TimingVelocityRenderCheck
                 view.OpenTimingSetup(); Paint(); Click(view.TimingSvLockBounds); Paint("pure-locked");
                 if (view.TimingFields.Count != 0 || view.IsDirty) throw new InvalidOperationException("Pure SV is editable while locked.");
                 view.KeyDown(27, false, false);
+                var precise = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n315,434.782608695652,4,2,1,50,1,0\n[HitObjects]\n100,192,1000,1,0\n");
+                view.LoadDocument(precise); view.CloseLibrary(); view.KeyDown(114, false, false); Paint();
+                var beforeFocus = view.Document.DeepClone();
+                Click(view.TimingFields.Single(f => f.Key == "page.bpm").Bounds);
+                view.KeyDown(9, false, false); Paint("unchanged-bpm");
+                if (view.IsDirty || !view.Document.ContentEquals(beforeFocus)) throw new InvalidOperationException("Unchanged BPM focus rewrote timing precision.");
                 view.NewProject();
 
                 void Click(Rect bounds)

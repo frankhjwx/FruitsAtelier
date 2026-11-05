@@ -207,8 +207,9 @@ projects without a recorded confirmation remain read-only during synchronization
 Save opens export choices before their first overwrite. Cancelling keeps the source
 file unchanged. An export on one difficulty does not authorize other difficulties.
 While the external version is unchanged and export is confirmed,
-an explicit save or synchronization request can export the complete difficulty.
-Background checks do not publish unsaved edits or save a dirty project, and do not
+an explicit save can export the complete difficulty. Opening, resuming and checking
+synchronization do not publish local edits to the linked file. Background checks
+do not publish unsaved edits or save a dirty project, and do not
 open conflict review during normal editing. Leaving a dirty project for Library or
 closing the application retains the Save / Discard / Cancel confirmation; cancellation
 keeps editing active and discarding leaves the saved files unchanged. This includes metadata such as Tags, settings, sections,
@@ -223,8 +224,8 @@ an interrupted publication. A final fingerprint check rejects a new external sav
 instead of overwriting it. Export and conversion run on the synchronization worker,
 after active edits finish. Temporarily invalid maps or missing required resources
 remain in FA with the export diagnostic; they do not overwrite `.osu` or block
-background difficulty discovery. Correcting the content allows a later check to
-export it.
+background difficulty discovery. Correcting the content allows a later explicit save or export to
+publish it.
 
 Publishing local edits against an unchanged external version keeps playback,
 viewport navigation and note editing available. Completion acknowledges only the
@@ -260,7 +261,9 @@ wheel to scroll within a page. The bottom arrows move between object groups. Cho
 a side applies the complete field or section, including text on other pages.
 Full-version inspection remains available for searching or reading a whole storyboard.
 Emitted timing that differs from its unchanged authoring baseline does not itself
-create a conflict. Accepted choices remain resolved until their contents change.
+create a conflict. Equivalent red-line values rewritten by an external save adopt
+the external beat-length precision for subsequent calculations. Section ordering
+and numeric spelling alone do not constitute a local authoring edit. Accepted choices remain resolved until their contents change.
 
 Object comparisons preserve sequence order and meaningful fields while normalizing
 basic numeric spelling and line endings. Slider lengths use 15 significant digits

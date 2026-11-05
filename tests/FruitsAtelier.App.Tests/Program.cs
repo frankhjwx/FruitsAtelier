@@ -3,6 +3,12 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--hitsounding-mute-check")) { HitsoundingMuteTests.Run(); Console.WriteLine("PASS Hitsounding track mutes, transport, Mapping and Testplay isolation"); return 0; }
+if (args.Contains("--hitsound-library-files-check")) { HitsoundLibraryFileTests.Run(); Console.WriteLine("PASS hitsound library selection, file operations, context menus and hover navigation"); return 0; }
+if (args.Contains("--timing-precision-check")) { TimingEditorTests.Run(); SynchronizationUiTests.ReadOnlyTimingChecks(); return 0; }
+if (args.Contains("--clipboard-hitsound-check")) { ClipboardTests.EventHitsoundsSurvivePaste(); Console.WriteLine("PASS clipboard event hitsounds, inheritance and history on both canvases"); return 0; }
+if (args.Contains("--hitsounding-performance")) { HitsoundingPanelTests.Performance(); return 0; }
+if (args.Contains("--hitsounding-panel-check")) { HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); HitsoundingPanelTests.SelectionAndTiming(); HitsoundingPanelTests.LengthAndMove(); HitsoundingPanelTests.StoryboardEditing(); HitsoundingPanelTests.PlayingSelectionAndSettings(); HitsoundingPanelTests.NearbyTiming(); HitsoundingPanelTests.CtrlSelection(); HitsoundingTimingDragTests.Run(); return 0; }
 if (args.Contains("--difficulty-import-check")) { DifficultyImportTests.Run(); Console.WriteLine("PASS difficulty imports use project resources and preserve metadata"); return 0; }
 if (args.Contains("--slider-bpm-performance")) { SliderBpmTests.Performance(); return 0; }
 if (args.Contains("--slider-bpm-check")) { SliderBpmTests.Run(); Console.WriteLine("PASS slider BPM controls"); return 0; }
@@ -89,6 +95,7 @@ if (args.Contains("--independent-sv-check")) { IndependentSliderSvTests.Run(); C
 if (args.Contains("--legacy-droplet-modes-check")) { LegacyDropletModeTests.Run(); Console.WriteLine("PASS Legacy and FSlider droplet modes, history and persistence"); return 0; }
 if (args.Contains("--droplet-defaults-check")) { DropletDefaultsTests.Run(); Console.WriteLine("PASS Global droplet defaults and restart restoration"); return 0; }
 
+if (args.Contains("--volume-popover-check")) { VolumePopoverTests.Run(); Console.WriteLine("PASS Volume popover mouse, keyboard, wheel and fade"); return 0; }
 if (args.Contains("--window-preferences-check")) { WindowPreferenceTests.Run(); Console.WriteLine("PASS Window and canvas preferences"); return 0; }
 
 if (args.Contains("--legacy-droplet-worker-check"))
@@ -468,6 +475,7 @@ var tests = new (string Name, Action Run)[]
     ("Workspace saves and linked synchronization persist before optional Songs export", WorkspaceSaveTests.Run),
     ("Metadata merge rows share a page and highlight unresolved, retained and selected text", SynchronizationUiTests.MetadataRows),
     ("Local difficulty deletion reimports osu and preserves edits on cancel or failure", SynchronizationUiTests.DeleteLocalVersion),
+    ("Timing precision synchronization never publishes without a save", SynchronizationUiTests.ReadOnlyTimingChecks),
     ("Background synchronization preserves difficulty selection and limits fallback frequency", SynchronizationUiTests.BackgroundDifficultySelection),
     ("Synchronization UI permits background editing, preserves undo, repairs missing files and resolves objects", SynchronizationUiTests.Run),
     ("Synchronization canvases use AR and distinguish retained choices from renewed conflicts", SynchronizationUiTests.ArScaleAndDecisions),
@@ -746,6 +754,9 @@ var tests = new (string Name, Action Run)[]
     ("Legacy Sliders convert to FSliders and preserve repeats through project and osu export", MixedSliderTests.Import),
     ("Beatmap resource export excludes output subtrees and preserves selected audio", ResourceTests.Run),
     ("Empty selection clipboard copies playhead timestamps on both canvases", ClipboardTests.EmptySelectionTimestamp),
+    ("Hitsounding track mute isolation", HitsoundingMuteTests.Run),
+    ("Hitsound library file operations", HitsoundLibraryFileTests.Run),
+    ("Object clipboard preserves event hitsound overrides", ClipboardTests.EventHitsoundsSurvivePaste),
     ("Fruit clipboard snapshots preserve metadata and undo identities", ClipboardTests.FruitSnapshotAndHistory),
     ("Anchor clipboard actions copy and cut the entire repeated slider", ClipboardTests.AnchorCopiesAndCutsParent),
     ("Legacy Slider and banana clipboard preserve geometry and export samples", ClipboardTests.ImportedAndBananaMetadata),

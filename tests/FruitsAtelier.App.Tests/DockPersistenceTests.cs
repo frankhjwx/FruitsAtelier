@@ -35,7 +35,7 @@ internal static class DockPersistenceTests
         Check(reopened.View.DockTabBounds(EditorView.DockPanel.SongSetup).X < 720
             && reopened.View.DockTabBounds(EditorView.DockPanel.RandomizeDroplets).X > 720, "Restored panels render on their saved sides");
         Check(reopened.View.Document.ContentEquals(original) && !reopened.View.IsDirty, "Restoring layout does not edit the project");
-        reopened.Key(114); reopened.Key(27);
+        reopened.Key(114); reopened.Key(112);
         Check(JsonSerializer.Serialize(expected) == JsonSerializer.Serialize(reopened.View.CaptureDockLayouts()), "Timing switches retain restored Mapping layout");
         reopened.ClickText(L.Get("dock.layout")); reopened.ClickText(L.Get("dock.resetLayout"));
         var reset = reopened.View.LibrarySettings.DockLayouts!;

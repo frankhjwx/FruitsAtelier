@@ -2,6 +2,74 @@ using FruitsAtelier.Core;
 
 internal static class ClipboardTests
 {
+    public static void EventHitsoundsSurvivePaste()
+    {
+        foreach (bool osu in new[] { false, true })
+        foreach (bool crossDifficulty in new[] { false, true })
+        {
+            var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,2,1,80,1,0\n[HitObjects]\n100,192,1000,1,0,0:0:0:0:\n160,192,1250,2,0,L|260:192,2,100,0|0|0,0:0|0:0|0:0,0:0:0:0:\n");
+            map.DurationMs = 10000;
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.Add(new() { TimeMs = 2500, X = 200 }); track.Nodes.Add(new() { TimeMs = 3000, X = 300 });
+            map.Tracks.Add(track);
+            var objects = CatchStreamConverter.Convert(map).Objects;
+            var resolver = new HitsoundResolver(map, objects, inspectResources: false);
+            int i = 0;
+            foreach (var item in objects.Where(o => o.Kind == CatchObjectKind.Fruit))
+            {
+                var setting = resolver.EventSettings(item);
+                map.HitsoundOverrides.Add(setting with
+                {
+                    Sample = new(2, 3, 2, 65, new[] { 2, 4, 8, 14, 0 }[i++ % 5]),
+                    InheritedFields = i % 2 == 0 ? InheritedSampleFields.All : InheritedSampleFields.None
+                });
+            }
+            var expected = map.HitsoundOverrides.ToArray();
+            var target = new MapDocument { DurationMs = 10000, BeatLengthMs = 500, SliderMultiplier = 1 };
+            target.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 3, SampleIndex = 3, Volume = 50 });
+            var ui = new Ui(false); ui.View.LoadProject(BeatmapProject.FromDocuments([map, target]));
+            if (osu) ui.View.ToggleOsuCanvas();
+            ui.Paint(); ui.Key('A', ctrl: true);
+            Check(ui.View.CopySelection(), "Mixed hitsound selection copies");
+            ui.View.Document.HitsoundOverrides[0] = expected[0] with { Sample = expected[0].Sample with { Additions = 0 } };
+            if (crossDifficulty) { Check(ui.View.SwitchDifficulty(1), "Switch to the paste destination"); ui.Paint(); }
+            var before = ui.View.Document.DeepClone();
+            ui.View.UpdateTransport(5000, 10000, true, false, false, null, "fixture.wav");
+            Check(ui.View.PasteSelection(), ui.View.StatusMessage); ui.Paint();
+            var deadline = DateTime.UtcNow.AddSeconds(30);
+            while (ui.View.LegacyDropletRefreshBusy && DateTime.UtcNow < deadline) { Thread.Sleep(5); ui.Paint(); }
+            Check(!ui.View.LegacyDropletRefreshBusy, "Clipboard validation completes");
+            var pasted = ui.View.Document.HitsoundOverrides.Where(h => !expected.Any(e => e.SourceId == h.SourceId)).ToArray();
+            Check(pasted.Length == expected.Length, "Object paste retains every event hitsound override");
+            var ids = new Dictionary<Guid, Guid>();
+            for (i = 0; i < expected.Length; i++)
+            {
+                ids.TryAdd(expected[i].SourceId, pasted[i].SourceId);
+                Check(pasted[i] == expected[i] with { SourceId = ids[expected[i].SourceId] }, "Paste remaps only parent identities, preserving additions, edges and inheritance");
+            }
+            var converted = CatchStreamConverter.Convert(ui.View.Document).Objects;
+            var pastedResolver = new HitsoundResolver(ui.View.Document, converted, inspectResources: false);
+            foreach (var sound in pasted)
+                Check(pastedResolver.Describe(converted.Single(o => o.SourceId == sound.SourceId && o.EventIndex == sound.EventIndex)).Additions == sound.Sample.Additions,
+                    "Pasted playable events retain Whistle, Finish and Clap flags");
+            var output = OsuBeatmapWriter.Serialize(ui.View.Document, false);
+            var exportedEvents = CatchStreamConverter.Convert(output.ReadBack).Objects;
+            var exportedResolver = new HitsoundResolver(output.ReadBack, exportedEvents, inspectResources: false);
+            var expectedAdditions = converted.Where(o => ids.Values.Contains(o.SourceId) && o.Kind == CatchObjectKind.Fruit)
+                .OrderBy(o => o.TimeMs).Select(o => pastedResolver.Describe(o).Additions);
+            var exportedAdditions = exportedEvents.Where(o => o.TimeMs >= 5000 && o.Kind == CatchObjectKind.Fruit)
+                .OrderBy(o => o.TimeMs).Select(o => exportedResolver.Describe(o).Additions);
+            Check(expectedAdditions.SequenceEqual(exportedAdditions), "Export read-back retains pasted additions");
+            var after = ui.View.Document.DeepClone();
+            ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Paste undo restores source overrides");
+            ui.Key('Y', ctrl: true); Check(after.ContentEquals(ui.View.Document), "Paste redo restores override identities");
+            ui.Key('A', ctrl: true);
+            Check(ui.View.CutSelection(), "Pasted sounds can be cut: " + ui.View.StatusMessage);
+            Check(!ui.View.Document.HitsoundOverrides.Any(h => ids.Values.Contains(h.SourceId)), "Cut removes the selected parents' overrides");
+            ui.Key('Z', ctrl: true); Check(after.ContentEquals(ui.View.Document), "Cut undo restores event hitsounds");
+        }
+    }
+
     public static void FruitSnapshotAndHistory()
     {
         var ui = new Ui();

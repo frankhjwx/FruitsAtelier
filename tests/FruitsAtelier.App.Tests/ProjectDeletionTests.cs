@@ -23,6 +23,11 @@ internal static class ProjectDeletionTests
         string resources = Path.Combine(workspace, "Resources", "FAZ-" + session.Manifest.Id.ToString("N"));
         Directory.CreateDirectory(resources);
         File.WriteAllText(Path.Combine(resources, "audio.wav"), "resource fixture");
+        File.WriteAllText(Path.Combine(resources, "map.osu"), "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Deleted resource\nArtist:Fixture\nCreator:Fixture\nVersion:Catch\n[HitObjects]\n");
+        var database = new LibraryDatabase(workspace, "");
+        database.RegisterSource(resources);
+        database.Scan();
+        Check(database.Search("").Any(m => m.Directory == resources), "resource source is indexed");
         string[] expected = [session.Directory, history, resources];
         var contents = expected.SelectMany(path => Directory.GetFiles(path, "*", SearchOption.AllDirectories))
             .ToDictionary(path => path, File.ReadAllBytes);
@@ -56,7 +61,11 @@ internal static class ProjectDeletionTests
             }
         });
         Check(expected.All(path => !Directory.Exists(path)), "recycled folders leave the workspace");
+        database.Scan();
+        Check(database.Search("").Count == 0, "missing resource roots lose cached maps");
         foreach (var item in moved) Directory.Move(item.Recycled, item.Original);
+        database.Scan();
+        Check(database.Search("").Any(m => m.Directory == resources), "restored sources are indexed again");
         Check(contents.All(pair => File.ReadAllBytes(pair.Key).SequenceEqual(pair.Value)), "restoring all recycled folders preserves exact bytes");
         Check(WorkspaceProject.Open(session.Directory).Manifest.Id == session.Manifest.Id, "restored project opens with its original identity");
         WorkspaceAssociations.DeleteLocalProject(session.Directory, keepBackup: true, recycle: _ => throw new Exception("Backup must not use trash"));

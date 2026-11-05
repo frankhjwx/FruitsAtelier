@@ -146,6 +146,7 @@ public sealed partial class EditorView
             Document.Tracks.RemoveAll(t => ids.Contains(t.Id));
             Document.ImportedSliders.RemoveAll(s => ids.Contains(s.Id));
             Document.BananaShowers.RemoveAll(s => ids.Contains(s.Id));
+            Document.HitsoundOverrides.RemoveAll(h => ids.Contains(h.SourceId));
         }, allowSliderDeletion: true)) return false;
         StoreClipboard(snapshot!, reference);
         Select(Guid.Empty);
@@ -208,6 +209,8 @@ public sealed partial class EditorView
                     baseline.Id = slider.Id; baseline.SourceOrder = slider.SourceOrder;
                     baseline.OriginalLine = slider.OriginalLine;
                     ShiftTrack(baseline);
+                    // Saved slider length can round below the retained effect baseline's exact endpoint.
+                    IncludeEnd(CurveMath.EndTimeMs(baseline));
                 }
                 double sliderEnd;
                 try { sliderEnd = ImportedSliderConverter.EndTimeMs(Document, slider); }
@@ -225,6 +228,11 @@ public sealed partial class EditorView
                 IncludeEnd(shower.EndTimeMs);
             }
 
+            for (int i = 0; i < pasted.HitsoundOverrides.Count; i++)
+            {
+                var sound = pasted.HitsoundOverrides[i];
+                pasted.HitsoundOverrides[i] = sound with { SourceId = replacements[sound.SourceId].NewId };
+            }
             pasted.DurationMs = Math.Max(Document.DurationMs, end);
             if (crossDifficulty)
             {
@@ -238,6 +246,7 @@ public sealed partial class EditorView
             Document.Tracks.AddRange(pasted.Tracks);
             Document.ImportedSliders.AddRange(pasted.ImportedSliders);
             Document.BananaShowers.AddRange(pasted.BananaShowers);
+            Document.HitsoundOverrides.AddRange(pasted.HitsoundOverrides);
             Document.DurationMs = pasted.DurationMs;
             if (crossDifficulty && (pasted.Tracks.Count > 0 || pasted.ImportedSliders.Count > 0))
             {
@@ -309,6 +318,7 @@ public sealed partial class EditorView
         selected.Tracks.AddRange(Document.Tracks.Where(t => ids.Contains(t.Id)));
         selected.ImportedSliders.AddRange(Document.ImportedSliders.Where(s => ids.Contains(s.Id)));
         selected.BananaShowers.AddRange(Document.BananaShowers.Where(s => ids.Contains(s.Id)));
+        selected.HitsoundOverrides.AddRange(Document.HitsoundOverrides.Where(h => ids.Contains(h.SourceId)));
         if (selected.ImportedSliders.Count > 0) selected.TimingPoints.AddRange(Document.TimingPoints);
         try
         {

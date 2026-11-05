@@ -9,12 +9,15 @@ public sealed partial class EditorView
     private bool playbackLineDragPinned;
     private float playbackLineGrabOffset;
     internal Rect PlaybackLineHandleBounds => new(plot.X - 5, Screen(new(playhead, 0)).Y - 8, 15, 16);
+    private bool MappingPlaybackLineHovered(float x, float y) => !HitsoundingPageVisible && !TimingPageVisible && !IsLazerEditing
+        && plot.Contains(x, y) && Math.Abs(y - Screen(new(playhead, 0)).Y) <= 6
+        && (PlaybackLineHandleBounds.Contains(x, y) || Transform.ToMap(x, y).X is < 0 or > 512);
 
     private bool BeginPlaybackLineDrag(float x, float y)
     {
         if (IsLazerEditing) return false;
-        if (!plot.Contains(x, y) || !PlaybackLineHandleBounds.Contains(x, y)) return false;
-        if (AudioPlaying || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return true;
+        if (!MappingPlaybackLineHovered(x, y)) return false;
+        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return true;
         playbackLineDragRatio = playbackLineFromBottom;
         playbackLineDragViewStart = viewStart;
         playbackLineDragPinned = pinPlayhead;
@@ -25,7 +28,6 @@ public sealed partial class EditorView
 
     private void MovePlaybackLine(float y)
     {
-        if (AudioPlaying) { CancelPlaybackLineDrag(); return; }
         playbackLineFromBottom = Math.Clamp((plot.Bottom - y + playbackLineGrabOffset) / plot.Height, .05, .95);
         FollowPlayhead();
     }

@@ -43,6 +43,7 @@ internal static class TimingVelocityTests
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(locale);
+                UnchangedSv();
                 var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n1000,-50,4,2,2,35,0,1\n2000,-25,4,2,2,35,0,1\n[HitObjects]\n100,192,1000,2,0,L|240:192,1,140\n100,192,2000,2,0,L|240:192,1,140\n");
                 var track = new CurveTrack { Kind = CurveKind.Linear, SliderVelocityMultiplier = 1.7 };
                 track.Nodes.AddRange([new() { TimeMs = 3000, X = 100 }, new() { TimeMs = 3500, X = 200 }]);
@@ -107,6 +108,19 @@ internal static class TimingVelocityTests
             }
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void UnchangedSv()
+    {
+        var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n1000,-76.9230769230769,4,2,1,50,0,0\n[HitObjects]\n100,192,1000,2,0,L|240:192,1,140\n");
+        WorkspaceTimingSynchronization.NormalizeDocument(map);
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Key(114);
+        ui.ClickText(L.Get("timing.showSv"));
+        var before = ui.View.Document.DeepClone();
+        Select(ui, 1000); ClickLock(ui);
+        var field = ui.View.TimingFields.Single(f => f.Key == "sv");
+        ui.Click(field.Bounds.X + 8, field.Bounds.Y + 8); ui.Key(9); ui.Key(13);
+        Check(!ui.View.IsDirty && ui.View.Document.ContentEquals(before), "Unchanged visible SV preserves exact authored velocity and undo");
     }
 
     private static void ClickLock(Ui ui)

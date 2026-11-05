@@ -40,7 +40,7 @@ public sealed partial class EditorView
         LoadProject(BeatmapProject.FromDocuments([document]));
     }
 
-    public void LoadProject(BeatmapProject project)
+    public void LoadProject(BeatmapProject project, Guid? initialDifficultyId = null)
     {
         if (PatternEditingActive) throw new InvalidOperationException(L.Get("gallery.finishEditing"));
         project.Validate();
@@ -115,7 +115,8 @@ public sealed partial class EditorView
         }
         difficulties.Clear();
         difficulties.AddRange(project.Difficulties.Select(d => new DifficultySession(d)));
-        activeDifficulty = firstDifficultyTab = 0;
+        activeDifficulty = Math.Max(0, difficulties.FindIndex(d => d.Id == initialDifficultyId));
+        firstDifficultyTab = 0;
         difficultyTabOrder = []; difficultySortPending = true;
         difficultyTabsManuallyOrdered = false; pinnedDifficulties.Clear();
         RestoreMapEditingPreferences();
@@ -133,6 +134,7 @@ public sealed partial class EditorView
         timingAlignmentPlan = null; timingAlignmentSource = null;
         RestoreTemporarySnap();
         RestoreSnapPreferences();
+        RestoreMapPanel();
         CloseAimod();
         ResetDeferredConversion();
         pauseSnapDivisor = null;
@@ -434,9 +436,12 @@ public sealed partial class EditorView
         transportSamplePosition = positionMs;
         transportSampleLeadMs = outputBufferAheadMs;
         UpdateHitsounds(positionMs, ready && playing && !loading, filename);
-        if (playing && drag == DragKind.PlaybackLine) CancelPlaybackLineDrag();
         bool wasReady = AudioReady;
-        if (playing && !AudioPlaying) lazerSeekStarted = double.NegativeInfinity;
+        if (playing && !AudioPlaying)
+        {
+            lazerSeekStarted = double.NegativeInfinity;
+            ResumeTimingHelperFollow();
+        }
         double previousPlayhead = playhead;
         AudioReady = ready; AudioPlaying = playing; AudioLoading = loading;
         AudioDurationMs = double.IsFinite(durationMs) ? Math.Max(0, durationMs) : 0;
@@ -490,6 +495,7 @@ public sealed partial class EditorView
         if (!AudioPlaying && DeferMediaPlayback(false)) return;
         if (AudioReady)
         {
+            if (!AudioPlaying) ResumeTimingHelperFollow();
             if (IsLazerEditing && !AudioPlaying && TestplayRealtime < lazerSeekStarted + 300)
                 SeekTo(LazerPresentationTime);
             // Arm before the callback: hosts may publish the confirmed pause synchronously.
