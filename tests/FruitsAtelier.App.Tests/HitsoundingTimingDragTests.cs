@@ -71,24 +71,48 @@ internal static class HitsoundingTimingDragTests
         try
         {
             foreach (string locale in new[] { "en", "zh-CN" })
-            foreach (bool block in new[] { true, false })
             {
                 L.SetLanguage(locale);
-                var layout = ui.View.CaptureDockLayouts(); layout.Hitsounding!.Right!.Panels = []; layout.Hitsounding.Right.Collapsed = true;
-                ui.View.LibrarySettings.DockLayouts = layout; ui.View.RestoreDockLayouts(); ui.Paint();
-                Context(block, 1000);
-                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("editor.command.delete"))
-                    && !ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.newInheritedPoint")), "Green block and handle expose edit and delete actions");
-                ui.ClickText(L.Get("hitsounding.editTimingHelper"));
-                var reopened = ui.View.CaptureDockLayouts().Hitsounding!.Right!;
-                Check(!reopened.Collapsed && reopened.Active == "HitsoundingInspector" && reopened.Panels!.Contains("HitsoundingInspector")
-                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.selectedTiming")), "Edit opens the missing Timing Helper and selects the point");
-                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("samples.auto") && t.X > 1100), "Timing Helper exposes only concrete sample banks");
-                Context(block, 1000); ui.ClickText(L.Get("editor.command.delete"));
-                Check(ui.View.Document.TimingPoints.Count == original.TimingPoints.Count - 1 && !ui.View.Document.TimingPoints.Any(p => p.TimeMs == 1000), "Delete removes the clicked green point");
-                ui.Key(90, ctrl: true); Check(original.ContentEquals(ui.View.Document), "Context deletion is undoable");
-                Context(block, 2000);
-                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("editor.command.delete")), "Red timing points are protected from this delete action"); ui.Key(27);
+                foreach (string action in new[] { "keyboard", "block", "handle", "unselected" })
+                {
+                    var first = Handle(1000); var last = Handle(2500);
+                    float selectY = first.Y + 10;
+                    ui.View.PointerDown(first.X - 15, selectY, 0, false, false);
+                    ui.View.PointerMove(last.X + 20, selectY, false, false);
+                    ui.View.PointerUp(last.X + 20, selectY, 0); ui.Paint();
+                    Check(ui.Canvas.Lines.Count(l => l.Width == 5 && l.Y1 >= first.Y) == 2, "Deletion fixture selects two green points");
+                    if (action == "keyboard") ui.Key(46);
+                    else
+                    {
+                        Context(action == "block", action == "unselected" ? 3500 : 1000);
+                        ui.ClickText(L.Get("editor.command.delete"));
+                    }
+                    var expected = original.DeepClone();
+                    expected.TimingPoints.RemoveAll(p => action == "unselected" ? p.TimeMs == 3500 : p.TimeMs is 1000 or 2500);
+                    Check(expected.ContentEquals(ui.View.Document), "Delete removes the selected greens while preserving red points, other greens and notes: " + action);
+                    ui.Key(90, ctrl: true); Check(original.ContentEquals(ui.View.Document), "One undo restores the whole deletion: " + action);
+                    ui.Key(89, ctrl: true); Check(expected.ContentEquals(ui.View.Document), "One redo reapplies the whole deletion: " + action);
+                    ui.Key(90, ctrl: true);
+                }
+                foreach (bool block in new[] { true, false })
+                {
+                    L.SetLanguage(locale);
+                    var layout = ui.View.CaptureDockLayouts(); layout.Hitsounding!.Right!.Panels = []; layout.Hitsounding.Right.Collapsed = true;
+                    ui.View.LibrarySettings.DockLayouts = layout; ui.View.RestoreDockLayouts(); ui.Paint();
+                    Context(block, 1000);
+                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("editor.command.delete"))
+                        && !ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.newInheritedPoint")), "Green block and handle expose edit and delete actions");
+                    ui.ClickText(L.Get("hitsounding.editTimingHelper"));
+                    var reopened = ui.View.CaptureDockLayouts().Hitsounding!.Right!;
+                    Check(!reopened.Collapsed && reopened.Active == "HitsoundingInspector" && reopened.Panels!.Contains("HitsoundingInspector")
+                        && ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.selectedTiming")), "Edit opens the missing Timing Helper and selects the point");
+                    Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("samples.auto") && t.X > 1100), "Timing Helper exposes only concrete sample banks");
+                    Context(block, 1000); ui.ClickText(L.Get("editor.command.delete"));
+                    Check(ui.View.Document.TimingPoints.Count == original.TimingPoints.Count - 1 && !ui.View.Document.TimingPoints.Any(p => p.TimeMs == 1000), "Delete removes the clicked green point");
+                    ui.Key(90, ctrl: true); Check(original.ContentEquals(ui.View.Document), "Context deletion is undoable");
+                    Context(block, 2000);
+                    Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("editor.command.delete")), "Red timing points are protected from this delete action"); ui.Key(27);
+                }
             }
         }
         finally { L.SetLanguage(language); }

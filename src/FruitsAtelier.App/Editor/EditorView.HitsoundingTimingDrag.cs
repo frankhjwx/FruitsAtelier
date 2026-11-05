@@ -35,10 +35,10 @@ public sealed partial class EditorView
             contextItems.Clear();
             if (hit.Point is { } selected)
             {
-                SelectHitsoundingTimingPoint(selected);
+                SelectHitsoundingTimingPoint(selected, preserveSelection: true);
                 contextItems.Add(new(L.Get("hitsounding.editTimingHelper"), () => OpenHitsoundingTimingHelper(selected)));
                 if (!selected.Uninherited)
-                    contextItems.Add(new(L.Get("editor.command.delete"), () => DeleteHitsoundingTimingPoint(selected)));
+                    contextItems.Add(new(L.Get("editor.command.delete"), DeleteHitsoundingTimingSelection));
             }
             else contextItems.Add(new(L.Get("hitsounding.newInheritedPoint"), () => AddHitsoundingInheritedPoint(time)));
             contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)), Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 240, ContextMenuHeight);
@@ -51,7 +51,7 @@ public sealed partial class EditorView
         {
             hitsoundingSelectedTiming = point; hitsoundingSelected = null;
             hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); SelectObjects([]);
-            if (point.Uninherited) return true;
+            if (point.Uninherited) { hitsoundingTimingSelection.Clear(); return true; }
             if (ctrl) { if (!hitsoundingTimingSelection.Add(point)) hitsoundingTimingSelection.Remove(point); }
             else if (!shift && !hitsoundingTimingSelection.Contains(point)) hitsoundingTimingSelection.Clear();
             if (!ctrl) hitsoundingTimingSelection.Add(point);
@@ -63,6 +63,8 @@ public sealed partial class EditorView
         }
         else
         {
+            hitsoundingSelected = null; hitsoundingSelectedTiming = null;
+            hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); SelectObjects([]);
             hitsoundingTimingBox = true; hitsoundingTimingAdd = ctrl || shift;
             hitsoundingTimingBefore = hitsoundingTimingSelection.ToArray();
             if (!hitsoundingTimingAdd) hitsoundingTimingSelection.Clear();
@@ -143,11 +145,11 @@ public sealed partial class EditorView
         { hitsoundingTimingSelection.Clear(); hitsoundingTimingSelection.Add(point); hitsoundingSelectedTiming = point; inspectorConversion = null; }
     }
 
-    private void SelectHitsoundingTimingPoint(TimingPoint point)
+    private void SelectHitsoundingTimingPoint(TimingPoint point, bool preserveSelection = false)
     {
         hitsoundingSelectedTiming = point; hitsoundingSelected = null;
         hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); SelectObjects([]);
-        hitsoundingTimingSelection.Clear();
+        if (!preserveSelection || !hitsoundingTimingSelection.Contains(point)) hitsoundingTimingSelection.Clear();
         if (!point.Uninherited) hitsoundingTimingSelection.Add(point);
     }
 
@@ -161,10 +163,13 @@ public sealed partial class EditorView
         hitsoundingInspectorScroll = 0; inspectorConversion = null;
     }
 
-    private void DeleteHitsoundingTimingPoint(TimingPoint point)
+    private void DeleteHitsoundingTimingSelection()
     {
-        if (point.Uninherited || !Document.TimingPoints.Contains(point)) return;
-        if (Edit(L.Get("timing.edit"), () => Document.TimingPoints.Remove(point)))
-        { hitsoundingSelectedTiming = null; hitsoundingTimingSelection.Remove(point); inspectorConversion = null; }
+        if (!CommitField()) return;
+        var selected = Document.TimingPoints.Where(p => !p.Uninherited && hitsoundingTimingSelection.Contains(p)).ToHashSet();
+        if (selected.Count == 0) return;
+        CancelHitsoundingTimingPointer();
+        if (Edit(L.Get("editor.command.delete"), () => Document.TimingPoints.RemoveAll(selected.Contains)))
+        { hitsoundingSelectedTiming = null; hitsoundingTimingSelection.Clear(); inspectorConversion = null; }
     }
 }

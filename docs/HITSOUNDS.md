@@ -260,7 +260,10 @@ release commits one undoable edit, and Escape cancels it. Right-click empty spac
 in the handle strip to create an inherited point at the nearest Snap using the
 same parameter inheritance as Timing Panel. Right-click a timing block or handle
 to edit it in Timing Helper, opening the panel when needed. Green points also
-offer Delete. Timing Helper's sample bank choices are Soft, Normal and Drum.
+offer Delete. The Delete key and context-menu Delete remove all selected green
+points in one undoable edit. Right-clicking a selected block or handle preserves
+the group; right-clicking an unselected point selects that point instead.
+Timing Helper's sample bank choices are Soft, Normal and Drum.
 
 ## Maintenance
 

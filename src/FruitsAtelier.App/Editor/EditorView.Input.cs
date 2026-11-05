@@ -1557,6 +1557,7 @@ public sealed partial class EditorView
             else if (!hitsoundingDraw && ctrl && virtualKey == 88) { CopyHitsoundingSelection(); DeleteHitsoundingSelection(); }
             else if (!hitsoundingDraw && ctrl && virtualKey == 67) CopyHitsoundingSelection();
             else if (!hitsoundingDraw && ctrl && virtualKey == 86) PasteHitsoundingSelection();
+            else if (!ctrl && virtualKey == 46 && hitsoundingTimingSelection.Count > 0) DeleteHitsoundingTimingSelection();
             else if (!hitsoundingDraw && !ctrl && virtualKey == 46) DeleteHitsoundingSelection();
             else if (!ctrl && virtualKey == 32) TogglePlayback();
             else if (!ctrl && virtualKey is 37 or 39) SeekByWheel(virtualKey == 37 ? -1 : 1, 1);

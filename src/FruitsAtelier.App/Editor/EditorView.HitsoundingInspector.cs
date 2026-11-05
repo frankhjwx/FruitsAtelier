@@ -212,6 +212,7 @@ public sealed partial class EditorView
             }
         }
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
+        hitsoundingTimingSelection.Clear();
         if (BeginHitsoundingStoryboardPointer(x, y, button)) return true;
         var note = HitsoundingNoteAt(x, y);
         int lane = Math.Clamp((int)((y - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7)), 0, 6);
