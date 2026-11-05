@@ -4,6 +4,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private HitsoundResolver? hitsoundPlaybackResolver;
     public string[] HitsoundSkinFolders => LibrarySettings.UseSkinSounds
         ? new[] { skin?.FolderPath, defaultSkin?.FolderPath }
             .OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
@@ -122,7 +123,8 @@ public sealed partial class EditorView
         {
             if (!ShouldPlayCatchHitsound(objects[i], ref lastBananaTime)) continue;
             bool dispatched = false;
-            foreach (var sound in resolvedHitsounds[i])
+            foreach (var sound in timingHelperVolumeDrag is not null && hitsoundPlaybackResolver is not null
+                ? hitsoundPlaybackResolver.Resolve(objects[i]) : resolvedHitsounds[i])
             {
                 if (HitsoundingLaneMuted(HitsoundingSoundLane(sound))) continue;
                 if (scheduled) RequestScheduleHitsound!(sound, objects[i].TimeMs); else RequestHitsound!(sound);
@@ -151,7 +153,7 @@ public sealed partial class EditorView
         if (!ReferenceEquals(current, hitsoundConversion))
         {
             hitsoundConversion = current;
-            var resolver = new HitsoundResolver(Document, current.Objects, HitsoundSkinFolders);
+            var resolver = hitsoundPlaybackResolver = new HitsoundResolver(Document, current.Objects, HitsoundSkinFolders);
             resolvedHitsounds = current.Objects.Select(resolver.Resolve).ToArray();
         }
         return current;

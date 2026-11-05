@@ -18,6 +18,7 @@ public sealed partial class EditorView
     {
         TimingPageVisible = EditingPreferences.ActivePanel == "Timing";
         HitsoundingPageVisible = EditingPreferences.ActivePanel == "Hitsounding";
+        if (HitsoundingPageVisible) RefreshHitsoundingLibrary();
     }
     private void SaveMapPanel()
     {

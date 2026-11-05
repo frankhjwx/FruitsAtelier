@@ -1732,8 +1732,9 @@ centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Pre
 default bank labels, timing-tag order, the unified Config dock, library search/imports,
 slot drag/drop, and resource undo/redo. Config checks include the eight-row SampleSet
 dropdown, divider resize cursors, recursive folder imports, opening the current folder,
-and live library create/rename/delete notifications. It also checks Inspector drafts and manual
-application, event-specific additions, single-click and continuous painting, complete
+and live library create/rename/delete notifications. It also checks live Inspector edits,
+undoable volume gestures with live playback and conversion reuse, nearby timing rows,
+new-point drafts, event-specific additions, single-click and continuous painting, complete
 stroke undo, empty-space selection, playback flashes, normalized narrow waveforms,
 visible interval labels and play-line bounds. It also checks marquee copy/delete/paste,
 sampleset mismatch confirmation and cancellation, separate simultaneous red/green
@@ -1749,7 +1750,7 @@ Run the object-timeline, docking and hitsound regressions when changing this vie
 because its note rendering, layouts and sample resolution share those boundaries.
 
 The window-preferences check covers per-map workspace selection across difficulty
-switches, Library navigation and restart. Hitsounding checks also cover directional
+switches, Library navigation and restart, including automatic sound-library loading. Hitsounding checks also cover directional
 snap alignment from off-grid timestamps, Dock toggle input priority, volume popover
 mouse/keyboard/wheel input and non-seeking lane labels. Playback-line checks include
 playback-time dragging and the fixed lazer line.

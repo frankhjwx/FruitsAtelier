@@ -285,7 +285,7 @@ public sealed partial class EditorView
                     if (group.Active == DockPanel.HitsoundingConfig)
                         DrawHitsoundingDock(c, group, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - (left ? 30 : 16)), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.HitsoundingInspector)
-                        DrawHitsoundingInspector(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)));
+                        DrawHitsoundingInspector(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - (left ? 30 : 16)), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.MovementStrain)
                     {
                         DifficultyCurveGraphBounds = new(bounds.X + 18, bounds.Y + 58,

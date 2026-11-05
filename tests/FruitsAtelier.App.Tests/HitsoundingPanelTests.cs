@@ -159,21 +159,19 @@ internal static class HitsoundingPanelTests
         map.TimingPoints.Add(new() { TimeMs = 1750, BeatLengthMs = -100, Uninherited = false, SampleSet = 3, SampleIndex = 2, Volume = 70 });
         foreach (int time in new[] { 1000, 1250, 2000, 2250 }) map.Fruits.Add(new() { TimeMs = time, X = 256,
             OriginalLine = $"256,192,{time},1,{(time < 1750 ? 6 : 0)},0:0:0:0:" });
-        var ui = new Ui(overview: false); ui.LoadDocument(map); ui.Resize(1440, 1300); ui.View.ShowHitsoundingPage(); ui.Paint();
-        Check(ui.Canvas.Texts.Count(t => t.Value == L.Get("hitsounding.applyExisting")) == 2, "Exact red and green points get separate editable sections");
+        var ui = new Ui(overview: false); ui.LoadDocument(map); ui.Resize(1440, 1600); ui.View.ShowHitsoundingPage(); ui.Paint();
+        Check(ui.Canvas.Texts.Count(t => t.Value == L.Get("timing.offset")) == 2, "Exact red and green points get separate editable sections");
+        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.applyExisting")), "Existing timing controls do not need an Apply button");
         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.applyTiming")), "Existing lines never offer inserting a duplicate");
         var volumes = ui.Canvas.Texts.Where(t => t.Value == L.Get("hitsounding.volume") && t.X > 1100).OrderBy(t => t.Y).ToArray();
         ui.Click(volumes[1].X + 115, volumes[1].Y + 5); ui.Key(65, ctrl: true); ui.Type("35"); ui.Key(13);
-        var apply = ui.Canvas.Texts.Where(t => t.Value == L.Get("hitsounding.applyExisting")).OrderBy(t => t.Y).Last();
-        ui.Click(apply.X + 8, apply.Y + 8);
         Check(ui.View.Document.TimingPoints.Count == 3 && ui.View.Document.TimingPoints[0].Volume == 80 && ui.View.Document.TimingPoints[1].Volume == 35,
-            "Applying the second section modifies only the existing green line");
+            "Editing the second section immediately modifies only the existing green line");
+        Check(ui.View.IsDirty, "Live timing edits remain unsaved until the user saves");
         ui.Key(90, ctrl: true);
         ToggleGreenKiai();
-        Check(ui.View.Document.TimingPoints[1].Effects == 8, "Kiai toggle stays in the Timing Helper draft until applied");
-        ApplyGreenTiming();
         Check(ui.View.Document.TimingPoints[1].Effects == 9, "Enabling Kiai preserves other effect flags");
-        ToggleGreenKiai(); ApplyGreenTiming();
+        ToggleGreenKiai();
         Check(ui.View.Document.TimingPoints[1].Effects == 8, "Disabling Kiai preserves other effect flags");
         ui.Key(90, ctrl: true);
         Check(ui.View.Document.TimingPoints[1].Effects == 9, "Kiai changes support undo");
@@ -183,27 +181,34 @@ internal static class HitsoundingPanelTests
             var label = ui.Canvas.Texts.Where(t => t.Value == L.Get("timing.kiai")).OrderBy(t => t.Y).Last();
             ui.Click(label.X + 5, label.Y + 5);
         }
-        void ApplyGreenTiming()
-        {
-            var label = ui.Canvas.Texts.Where(t => t.Value == L.Get("hitsounding.applyExisting")).OrderBy(t => t.Y).Last();
-            ui.Click(label.X + 8, label.Y + 8);
-        }
         var interval = ui.Canvas.Fills.First(f => f.Color == 0x72C686 && f.Bounds.Y < 220).Bounds;
         ui.Click(interval.X + 15, interval.Y + 10);
-        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.selectedTiming")) && ui.Canvas.Texts.Count(t => t.Value == L.Get("hitsounding.applyExisting")) == 1,
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.selectedTiming")) && ui.Canvas.Texts.Count(t => t.Value == L.Get("timing.offset")) == 1,
             "Clicking a timing interval selects its own point");
         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.sv")), "Timing Helper does not expose source SV as effective SV");
         var volumeTrack = ui.Canvas.Lines.Single(l => l.X1 > 1100 && l.Width == 4 && l.Y1 == l.Y2);
         double originalBeatLength = ui.View.Document.TimingPoints[1].BeatLengthMs;
+        var conversionBeforeVolume = ui.View.Conversion;
         ui.View.PointerDown(volumeTrack.X1, volumeTrack.Y1, 0, false, false);
         Check(ui.View.WantsCapture, "Timing Helper volume slider captures dragging");
         ui.View.PointerMove(volumeTrack.X2, volumeTrack.Y1, false, false);
+        ui.Paint();
+        Check(ui.View.Document.TimingPoints[1].Volume == 100 && ReferenceEquals(conversionBeforeVolume, ui.View.Conversion), "Volume updates live without rebuilding map conversion during dragging");
+        var heard = new List<Hitsound>(); ui.View.RequestHitsound = heard.Add;
+        ui.View.UpdateTransport(1000, 6000, true, true, false, null, null);
+        Check(heard.Count > 0 && heard.All(sound => sound.Volume == 1), "Playback uses the live timing volume before the drag ends");
+        ui.View.UpdateTransport(0, 6000, true, false, false, null, null);
         ui.View.PointerUp(volumeTrack.X2, volumeTrack.Y1, 0); ui.Paint();
-        Check(ui.View.Document.TimingPoints[1].Volume == 60 && !ui.View.WantsCapture, "Volume drag remains a draft and releases capture");
-        ui.ClickText(L.Get("hitsounding.applyExisting"));
+        Check(!ui.View.WantsCapture, "Volume drag releases capture");
         Check(ui.View.Document.TimingPoints[1].Volume == 100 && ui.View.Document.TimingPoints[1].BeatLengthMs == originalBeatLength, "Applying volume preserves inherited beat length");
         ui.Key(90, ctrl: true);
         Check(ui.View.Document.TimingPoints[1].Volume == 60, "Volume slider application is one undo step");
+        interval = ui.Canvas.Fills.First(f => f.Color == 0x72C686 && f.Bounds.Y < 220).Bounds;
+        ui.Click(interval.X + 15, interval.Y + 10);
+        volumeTrack = ui.Canvas.Lines.Single(l => l.X1 > 1100 && l.Width == 4 && l.Y1 == l.Y2);
+        ui.View.PointerDown(volumeTrack.X1, volumeTrack.Y1, 0, false, false);
+        ui.View.PointerMove(volumeTrack.X2, volumeTrack.Y1, false, false); ui.Key(27); ui.Paint();
+        Check(ui.View.Document.TimingPoints[1].Volume == 60 && !ui.View.LibraryVisible && !ui.View.WantsCapture, "Escape cancels the timing volume gesture without leaving the editor");
         var whistles = LaneBlocks(ui, 2);
         var finishes = LaneBlocks(ui, 3);
         ui.View.PointerDown(whistles[0].X - 4, whistles[0].Y - 4, 0, false, false);
@@ -282,6 +287,33 @@ internal static class HitsoundingPanelTests
         Check(LaneBlocks(ui, 1).SequenceEqual(blocks) && System.Text.Json.JsonSerializer.Serialize(ui.View.CaptureDockLayouts()) == layout,
             "Settings wheel input cannot zoom or scroll the underlying Hitsounding canvas or docks");
         Console.WriteLine("PASS Playback-anchored Hitsounding marquee and exclusive Settings input");
+    }
+    public static void NearbyTiming()
+    {
+        var map = new MapDocument { DurationMs = 20000, BeatLengthMs = 500 };
+        for (int i = 0; i < 11; i++) map.TimingPoints.Add(new() { TimeMs = i * 1000, BeatLengthMs = i == 0 ? 500 : -100, Uninherited = i == 0, SampleSet = 2, SampleIndex = i, Volume = 50 + i });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+        CheckRows(500, 0);
+        CheckRows(5500, 2);
+        CheckRows(10500, 4);
+        ui.View.UpdateTransport(5500, 20000, true, false, false, null, null); ui.Paint();
+        var list = ui.View.TimingHelperNearbyBounds;
+        var before = Rows();
+        ui.View.Wheel(list.X + 8, list.Y + 20, -120, false, false, false); ui.Paint();
+        Check(before.SequenceEqual(Rows()) && ui.View.PlayheadMs == 5500, "Nearby timing list has no independent scroll or seek action");
+        map.TimingPoints.RemoveRange(3, 8); ui.LoadDocument(map); ui.View.ShowHitsoundingPage(); ui.Paint();
+        Check(Rows().Length == 3, "Nearby timing lists all available points when fewer than seven exist");
+        void CheckRows(double time, int first)
+        {
+            ui.View.UpdateTransport(time, 20000, true, false, false, null, null); ui.Paint();
+            Check(Rows().SequenceEqual(Enumerable.Range(first, 7).Select(i => $"00:{i:00}:000")), "Nearby timing balances seven chronological rows at the middle and both boundaries");
+            Check(ui.View.TimingHelperNearbyBounds.Bottom <= 900, "All nearby rows remain within the panel");
+        }
+        string[] Rows()
+        {
+            var bounds = ui.View.TimingHelperNearbyBounds;
+            return ui.Canvas.Texts.Where(t => bounds.Contains(t.X, t.Y) && t.Value.StartsWith("00:") && t.Value.Length == 9).OrderBy(t => t.Y).Select(t => t.Value).ToArray();
+        }
     }
     public static void LengthAndMove()
     {

@@ -167,7 +167,7 @@ public sealed partial class EditorView
             if (until < start || until < point.Time) continue;
             float anchor = X(point.Time), left = Math.Max(gridX, anchor), rightEdge = Math.Min(gridX + gridWidth, X(until));
             hitsoundingTimingBoxes.Add((new(left, r.Y + 53, Math.Max(0, rightEdge - left), 36), anchor,
-                point.Red ? 0xE77785u : 0x72C686u, point.Bank, point.Index, point.Volume, point.Point));
+                point.Red ? 0xE77785u : 0x72C686u, point.Bank, point.Index, point.Point.Volume, point.Point));
         }
         float top = r.Y + 122;
         hitsoundingGridBounds = new(gridX, top, gridWidth, Math.Max(7, r.Bottom - top));

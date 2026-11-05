@@ -67,9 +67,13 @@ internal static class WindowPreferenceTests
         ui.Key(27); Check(ui.View.LibraryVisible, "Escape returns idle Hitsounding to Library");
         Check(LibrarySettings.Load(path).MapEditingPreferences[project.Difficulties[0].Id].ActivePanel == "Hitsounding", "Leaving the editor retains its panel preference");
         var reopened = new Ui(false);
+        string sounds = Path.Combine(root, "HitsoundLibrary");
+        Directory.CreateDirectory(Path.Combine(sounds, "restart-folder"));
+        File.WriteAllBytes(Path.Combine(sounds, "restart-sound.wav"), HitsoundSamples.CreateWave(CatchObjectKind.Fruit));
         reopened.View.InitializeLibrary(false, LibrarySettings.Load(path));
         reopened.View.LoadProject(ProjectSerializer.ReadProject(content)); reopened.Paint();
         Check(reopened.View.HitsoundingPageVisible, "Hitsounding panel survives app restart");
+        Check(reopened.Canvas.Texts.Any(t => t.Value == "restart-folder") && reopened.Canvas.Texts.Any(t => t.Value == "restart-sound.wav"), "Restored Hitsounding library loads folders and samples without pointer input");
         reopened.View.SwitchDifficulty(1); reopened.Paint();
         Check(reopened.View.TimingPageVisible, "Timing panel preference survives app restart independently");
         reopened.Key(27); Check(reopened.View.LibraryVisible, "Escape returns idle Timing to Library");

@@ -27,10 +27,10 @@ public sealed partial class EditorView
         hitsoundingStoryboardMove = null; hitsoundingStoryboardMoved = false;
         hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
         hitsoundingAudio.Clear();
-        hitsoundingMultiSelection.Clear(); hitsoundingClipboard = []; hitsoundingStoryboardSelection.Clear(); hitsoundingStoryboardClipboard = []; hitsoundingStoryboardHits.Clear(); hitsoundingMarquee = false; hitsoundingSelectedTiming = null; timingHelperDrafts = [];
+        hitsoundingMultiSelection.Clear(); hitsoundingClipboard = []; hitsoundingStoryboardSelection.Clear(); hitsoundingStoryboardClipboard = []; hitsoundingStoryboardHits.Clear(); hitsoundingMarquee = false; hitsoundingSelectedTiming = null; timingHelperPoints = [];
         hitsoundingSelected = null; hitsoundingPaint.Clear(); hitsoundingPainting = hitsoundingHeadDrag = false; hitsoundingStoryboardSource = null; hitsoundingStoryboardTags = [];
         hitsoundingConversion = null; hitsoundingTagLanes = []; hitsoundingNotes = []; hitsoundingMapFiles.Clear();
-        hitsoundingResolver = null; inspectorConversion = null; hitsoundingNoteLookup.Clear(); hitsoundingAudibleNotes.Clear();
+        hitsoundingResolver = null; hitsoundPlaybackResolver = null; inspectorConversion = null; hitsoundingNoteLookup.Clear(); hitsoundingAudibleNotes.Clear();
         hitsoundingMapPaths.Clear(); hitsoundingFallbackFiles.Clear();
         hitsoundingAdditionLinks = []; hitsoundingAdditionTimes = []; hitsoundingRedPoints = []; hitsoundingGreenPoints = [];
         RetireDifficultyStoryboard(preserveMedia);

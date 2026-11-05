@@ -189,15 +189,17 @@ External changes to a shared file are checked before edits and undo/redo.
 time when an object is selected. Clicking a timing interval or its stem selects that
 specific timing point. At an exact timestamp with existing timing points, the helper
 shows each point in a separate section divided by horizontal rules. Offset, red-line BPM,
-meter, bank, sample index, volume and the Kiai toggle can be applied to the existing point. Toggling Kiai preserves the point's other effect flags.
+meter, bank, sample index, volume and the Kiai toggle edit the existing point directly. Numeric inputs take effect on Enter or focus loss. Toggling Kiai preserves the point's other effect flags.
 Sample indices use Default, Custom 1 and Custom choices. Volume has a numeric input
-and slider; Hit, Finish, Whistle and Clap buttons preview the draft sample settings.
-The helper does not display or edit SV; applying sound settings preserves the green line's beat length.
+and slider; Hit, Finish, Whistle and Clap buttons preview the current sample settings.
+Volume updates while dragging, with one undo step for the complete gesture. The helper does not display or edit SV; sound edits preserve the green line's beat length.
 Only timestamps without a point show effective timing information and **Apply as new
 inherited timing point**, which inserts a green line while preserving effective SV.
-Changes remain drafts until applied and support undo.
+Settings for a new inherited point remain drafts until insertion. Existing-point edits support undo and mark the map as modified; saving remains explicit.
+A separator below the controls introduces up to seven nearby timing points in chronological order, showing timestamp, timing/sample information and volume. The current point is highlighted; others fade with distance. The list prefers three points on each side, filling from the other side at map boundaries. It has no independent scrolling.
 The Hitsounding dock menu provides Config, Timing Helper, Song Setup and Preview independently
 of Mapping.
+Restoring Hitsounding as the active panel on editor startup loads its sound library immediately, without requiring pointer input.
 
 **Map Samplesets** selects the map's indexed sample groups and S/D/N bank. Preview
 buttons audition the assigned sample or its skin/default fallback. The Default group

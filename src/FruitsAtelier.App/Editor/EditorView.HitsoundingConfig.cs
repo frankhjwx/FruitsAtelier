@@ -453,7 +453,7 @@ public sealed partial class EditorView
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable) return false;
         if (button != 0) return button == 2 && hitsoundingPainting && hitsoundingErase && EndHitsoundingCanvasPointer();
-        if (timingHelperVolumeDrag is not null) { MoveTimingHelperVolume(x); timingHelperVolumeDrag = null; return true; }
+        if (timingHelperVolumeDrag is not null) { MoveTimingHelperVolume(x); FinishTimingHelperVolume(); return true; }
         if (EndHitsoundingLibraryPointer(x, y)) return true;
         if (EndHitsoundingCanvasPointer()) return true;
         bool active = hitsoundingSplitDrag is not null || hitsoundingDragFile is not null;
@@ -469,7 +469,7 @@ public sealed partial class EditorView
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable || menu >= 0 || contextItems.Count > 0) return false;
         if (hitsoundingInspectorBounds.Contains(x, y))
-        { if (CommitField()) hitsoundingInspectorScroll = Math.Clamp(hitsoundingInspectorScroll - delta / 120 * 32, 0, hitsoundingInspectorScrollMaximum); return true; }
+        { if (!TimingHelperNearbyBounds.Contains(x, y) && CommitField()) hitsoundingInspectorScroll = Math.Clamp(hitsoundingInspectorScroll - delta / 120 * 32, 0, hitsoundingInspectorScrollMaximum); return true; }
         if (hitsoundingSampleBounds.Contains(x, y)) { hitsoundingSampleScroll = Math.Max(0, hitsoundingSampleScroll - delta / 120 * 30); return true; }
         if (hitsoundingLibraryBounds.Contains(x, y)) { hitsoundingLibraryScroll = Math.Max(0, hitsoundingLibraryScroll - (int)(delta / 120)); return true; }
         if (!hitsoundingBounds.Contains(x, y)) return false;

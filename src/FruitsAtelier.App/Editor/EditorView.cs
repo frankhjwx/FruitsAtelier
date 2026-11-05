@@ -197,6 +197,8 @@ public sealed partial class EditorView
     {
         PumpLegacyDropletRefresh();
         if (LegacyDropletRefreshBusy) return;
+        // A timing-volume gesture changes samples only; retain geometry until its single commit.
+        if (timingHelperVolumeDrag is not null && conversion is not null) return;
         if (draftTrack != Guid.Empty && draftBaseConversion is not null)
         {
             UpdateDraftConversion();
