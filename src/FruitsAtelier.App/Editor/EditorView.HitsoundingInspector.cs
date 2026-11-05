@@ -74,9 +74,11 @@ public sealed partial class EditorView
     }
     private IEnumerable<TimingPoint> TimingHelperPointsAt(double time)
     {
+        // Match the millisecond precision shown by Time(), including fractional snap positions.
+        double timestamp = Math.Truncate(time);
         int lo = 0, hi = overviewTiming.Length;
-        while (lo < hi) { int mid = (lo + hi) / 2; if (overviewTiming[mid].TimeMs < time - .001) lo = mid + 1; else hi = mid; }
-        for (int i = lo; i < overviewTiming.Length && overviewTiming[i].TimeMs <= time + .001; i++) yield return overviewTiming[i];
+        while (lo < hi) { int mid = (lo + hi) / 2; if (Math.Truncate(overviewTiming[mid].TimeMs) < timestamp) lo = mid + 1; else hi = mid; }
+        for (int i = lo; i < overviewTiming.Length && Math.Truncate(overviewTiming[i].TimeMs) == timestamp; i++) yield return overviewTiming[i];
     }
     private void DrawHitsoundingInspector(ICanvas c, Rect r)
     {

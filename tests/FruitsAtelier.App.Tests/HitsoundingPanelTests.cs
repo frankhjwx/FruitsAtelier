@@ -300,6 +300,14 @@ internal static class HitsoundingPanelTests
         CheckRows(500, 0);
         CheckRows(5500, 2);
         CheckRows(10500, 4);
+        foreach (double time in new[] { 6000.01, 6000.999 })
+        {
+            ui.View.UpdateTransport(time, 20000, true, false, false, null, null); ui.Paint();
+            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.offset"))
+                && !ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.applyTiming")), "Fractional playhead positions at the displayed timing millisecond expose the existing point editor");
+        }
+        ui.View.UpdateTransport(6001, 20000, true, false, false, null, null); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.applyTiming")), "The next displayed millisecond retains the new timing point form");
         ui.View.UpdateTransport(6000, 20000, true, false, false, null, null); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.currentTime"))
             && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.offset"))

@@ -322,5 +322,5 @@ red or green row to select it and seek to its timestamp. Missing active lines re
 a placeholder so the header height stays constant.
 
 **Add new inherited timing point here** is available without changing draft values.
-At an existing timing timestamp, the helper displays that point’s full live editing
+At an existing timing timestamp (matched at the displayed millisecond precision), the helper displays that point’s full live editing
 controls while retaining the Current timestamp heading until a point is selected.
