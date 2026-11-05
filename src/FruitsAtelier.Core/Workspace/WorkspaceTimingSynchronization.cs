@@ -36,6 +36,24 @@ public static class WorkspaceTimingSynchronization
 
     private static string Key(TimingPoint point) => point.TimeMs.ToString("G15", CultureInfo.InvariantCulture);
 
+    internal static void AdoptEquivalentRedPrecision(MapDocument target, MapDocument external)
+    {
+        var outside = Groups(external.TimingPoints.Where(p => p.Uninherited));
+        foreach (var group in Groups(target.TimingPoints.Where(p => p.Uninherited)))
+        {
+            if (!outside.TryGetValue(group.Key, out var incoming) || incoming.Length != group.Value.Length) continue;
+            for (int i = 0; i < incoming.Length; i++)
+            {
+                var point = group.Value[i];
+                if (point.BeatLengthMs.ToString("G15", CultureInfo.InvariantCulture) != incoming[i].BeatLengthMs.ToString("G15", CultureInfo.InvariantCulture)) continue;
+                // A stable save can change the double without changing the displayed BPM.
+                point.BeatLengthMs = incoming[i].BeatLengthMs;
+            }
+        }
+        var first = target.TimingPoints.Where(p => p.Uninherited).OrderBy(p => p.TimeMs).FirstOrDefault();
+        if (first is not null) target.BeatLengthMs = TimingMap.EffectiveBeatLength(first.BeatLengthMs);
+    }
+
     internal static string Text(IEnumerable<TimingPoint> points, bool comparison = false) => string.Join('\n', points.Select(point =>
         string.Join(',', point.TimeMs.ToString(comparison ? "G15" : "R", CultureInfo.InvariantCulture),
             point.BeatLengthMs.ToString(comparison ? "G15" : "R", CultureInfo.InvariantCulture), point.Meter,

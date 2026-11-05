@@ -80,10 +80,12 @@ internal static class PerformanceSchedulingTests
         Check(WorkspaceVersionHistory.List(ui.View.WorkspaceSession).Count == 0,
             "read-only retry creates no recovery round");
         ui.View.RefreshSynchronization(); SynchronizationUiTests.Wait(ui);
+        Check(ui.View.IsDirty && OsuBeatmapReader.ReadFile(source).Fruits[0].X == 100, "Checking again does not publish local edits");
+        ui.View.SaveCurrentDifficulty(); SynchronizationUiTests.Wait(ui);
         Check(OsuBeatmapReader.ReadFile(source).Fruits[0].X == ui.View.Document.Fruits[0].X && !ui.View.IsDirty,
-            "explicit synchronization exports the latest edit");
+            "explicit save exports the latest edit");
         var versions = WorkspaceVersionHistory.List(ui.View.WorkspaceSession);
-        Check(versions.Count == 2 && versions.All(v => v.Operation == "before-sync") && versions.Any(v => v.WorkingCopy),
+        Check(versions.Count == 2 && versions.Any(v => v.WorkingCopy),
             "explicit publication keeps saved and working authoring in one recovery round");
         ui.Key('Z', ctrl: true);
         Check(ui.View.IsDirty, "retry publication preserves undo");

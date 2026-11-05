@@ -113,10 +113,13 @@ internal static class IndependentSliderSvTests
             ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory), checkAdditionalDifficulties: true);
             SynchronizationUiTests.Wait(ui);
             Check(!ui.View.SynchronizationVisible && !ui.View.LibraryVisible, "Opening a slider before a BPM boundary left a sync error or returned to Library.");
+            Check(OsuBeatmapReader.ReadFile(source).ImportedSliders.Single().SliderVelocityMultiplier == 1,
+                "Opening preserves the linked file until Save is requested.");
+            ui.View.SaveCurrentDifficulty(); SynchronizationUiTests.Wait(ui);
             var exported = OsuBeatmapReader.ReadFile(source);
             Check(exported.ImportedSliders.Single().TimeMs == 234070
                 && exported.ImportedSliders.Single().SliderVelocityMultiplier == 10,
-                "Opening did not synchronize the independent Legacy SV at the unchanged head.");
+                "Save did not synchronize the independent Legacy SV at the unchanged head.");
             Check(ui.View.Document.ImportedSliders.Single().TimeMs == 234070,
                 "Synchronization moved the authored slider head.");
         }

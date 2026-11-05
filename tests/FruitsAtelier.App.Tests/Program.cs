@@ -3,6 +3,7 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--timing-precision-check")) { TimingEditorTests.Run(); SynchronizationUiTests.ReadOnlyTimingChecks(); return 0; }
 if (args.Contains("--clipboard-hitsound-check")) { ClipboardTests.EventHitsoundsSurvivePaste(); Console.WriteLine("PASS clipboard event hitsounds, inheritance and history on both canvases"); return 0; }
 if (args.Contains("--hitsounding-performance")) { HitsoundingPanelTests.Performance(); return 0; }
 if (args.Contains("--hitsounding-panel-check")) { HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); HitsoundingPanelTests.SelectionAndTiming(); HitsoundingPanelTests.LengthAndMove(); HitsoundingPanelTests.StoryboardEditing(); HitsoundingPanelTests.PlayingSelectionAndSettings(); return 0; }
@@ -472,6 +473,7 @@ var tests = new (string Name, Action Run)[]
     ("Workspace saves and linked synchronization persist before optional Songs export", WorkspaceSaveTests.Run),
     ("Metadata merge rows share a page and highlight unresolved, retained and selected text", SynchronizationUiTests.MetadataRows),
     ("Local difficulty deletion reimports osu and preserves edits on cancel or failure", SynchronizationUiTests.DeleteLocalVersion),
+    ("Timing precision synchronization never publishes without a save", SynchronizationUiTests.ReadOnlyTimingChecks),
     ("Background synchronization preserves difficulty selection and limits fallback frequency", SynchronizationUiTests.BackgroundDifficultySelection),
     ("Synchronization UI permits background editing, preserves undo, repairs missing files and resolves objects", SynchronizationUiTests.Run),
     ("Synchronization canvases use AR and distinguish retained choices from renewed conflicts", SynchronizationUiTests.ArScaleAndDecisions),

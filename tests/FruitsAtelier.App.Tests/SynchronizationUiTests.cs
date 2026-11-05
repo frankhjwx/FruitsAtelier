@@ -4,6 +4,39 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class SynchronizationUiTests
 {
+    public static void ReadOnlyTimingChecks()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/sync-timing-precision", Guid.NewGuid().ToString("N")));
+        string source = Path.Combine(root, "Songs", "set", "map.osu");
+        Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+        string text = Fixture.Replace("0,500,4,1,0,100,1,0", "315,434.7826086956522,4,2,1,50,1,0");
+        File.WriteAllText(source, text);
+        var ui = new Ui(false);
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace");
+        ui.View.LibrarySettings.Songs = Path.Combine(root, "Songs");
+        ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+        ui.View.WorkspaceSession!.Manifest.Difficulties[0].ExportConfirmed = true;
+        try
+        {
+            string outside = text.Replace("434.7826086956522", "434.782608695652");
+            File.WriteAllText(source, outside);
+            var timestamp = File.GetLastWriteTimeUtc(source);
+            ui.View.RefreshSynchronization(quiet: true); Wait(ui);
+            Check(ui.View.Document.TimingPoints[0].BeatLengthMs == 434.782608695652, "Background acceptance adopts the saved red value");
+            for (int i = 0; i < 3; i++) { ui.View.RefreshSynchronization(); Wait(ui); }
+            Check(File.ReadAllText(source) == outside && File.GetLastWriteTimeUtc(source) == timestamp && !ui.View.IsDirty,
+                "Background completion and repeated checks do not rewrite the external map");
+            var history = (EditorHistory)ui.View.GetType().GetProperty("history", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+            history.Begin("Move fruit"); history.Document.Fruits[0].X++; history.Commit();
+            ui.View.RefreshSynchronization(); Wait(ui);
+            Check(ui.View.IsDirty && File.ReadAllText(source) == outside, "Checking linked files does not publish unsaved content");
+            ui.View.SaveCurrentDifficulty(); Wait(ui);
+            Check(!ui.View.IsDirty && OsuBeatmapReader.ReadFile(source).Fruits[0].X == ui.View.Document.Fruits[0].X,
+                "Explicit Save still publishes linked edits");
+        }
+        finally { ui.View.StopFileMonitoring(); }
+    }
+
     public static void BackgroundDifficultySelection()
     {
         foreach (bool switchDuringScan in new[] { false, true })

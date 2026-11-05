@@ -4,6 +4,8 @@ internal static class ExportSnapTests
 {
     public static void Run()
     {
+        RedPrecision();
+        GreenPrecision();
         Spinners();
         Kiai();
         NativeSliderHeads();
@@ -71,6 +73,47 @@ internal static class ExportSnapTests
         var exportedSamples = new HitsoundResolver(sampleExport.ReadBack, sampleExport.PlayableObjects);
         Check(sourceEvents.Zip(sampleExport.PlayableObjects).All(p => sourceSamples.Describe(p.First) == exportedSamples.Describe(p.Second)),
             "Pruning preserves every event's sample settings");
+    }
+
+    private static void GreenPrecision()
+    {
+        foreach (var (sv, expected) in new[] { (.6, "-166.666666666667"), (1.3, "-76.9230769230769"),
+            (1.5, "-66.6666666666667"), (3d, "-33.3333333333333"), (10d, "-10") })
+        {
+            var map = new MapDocument();
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500 });
+            map.TimingPoints.Add(new() { TimeMs = 315, BeatLengthMs = -100 / sv, Uninherited = false, SampleSet = 2, SampleIndex = 1, Volume = 50 });
+            var before = map.DeepClone();
+            var output = OsuBeatmapWriter.Serialize(map);
+            string line = $"315,{expected},4,2,1,50,0,0";
+            Check(output.Text.Split('\n').Any(l => l.TrimEnd('\r') == line), "SV exports the stable green-line spelling");
+            Check(map.ContentEquals(before), "Export does not round the authored SV");
+            var read = output.ReadBack;
+            Check(Math.Abs(TimingMap.At(read, 315).SliderVelocityMultiplier - sv) < 1e-12, "Persisted SV remains equivalent");
+            read.TimingPoints[1].OriginalLine = null;
+            Check(OsuBeatmapWriter.Serialize(read).Text.Split('\n').Any(l => l.TrimEnd('\r') == line), "Rebuilt green precision is stable");
+        }
+    }
+
+    private static void RedPrecision()
+    {
+        const string expected = "315,434.782608695652,4,2,1,50,1,0";
+        var document = new MapDocument { BeatLengthMs = 60000d / 138, TimingOffsetMs = 315 };
+        document.TimingPoints.Add(new() { TimeMs = 315, BeatLengthMs = document.BeatLengthMs, SampleSet = 2, SampleIndex = 1, Volume = 50 });
+        double authored = document.BeatLengthMs;
+        var output = OsuBeatmapWriter.Serialize(document);
+        Check(output.Text.Split('\n').Any(l => l.TrimEnd('\r') == expected), "138 BPM exports the stable red-line spelling");
+        Check(document.BeatLengthMs == authored && document.TimingPoints[0].BeatLengthMs == authored, "Export leaves authored timing unchanged");
+        for (int i = 0; i < 10; i++)
+        {
+            var read = output.ReadBack;
+            Check(TimingMap.At(read, 315).BeatLengthMs == 434.782608695652, "Read-back calculation uses persisted red precision");
+            read.TimingPoints[0].OriginalLine = null;
+            output = OsuBeatmapWriter.Serialize(read);
+            Check(output.Text.Split('\n').Any(l => l.TrimEnd('\r') == expected), "Rebuilt red lines remain stable over repeated exports");
+        }
+        var imported = OsuBeatmapReader.Read("osu file format v14\n[TimingPoints]\n315,434.7826086956522,4,2,1,50,1,0\n[HitObjects]\n");
+        Check(OsuBeatmapWriter.Serialize(imported).Text.Contains("315,434.7826086956522,4,2,1,50,1,0"), "Unedited imported precision is retained");
     }
 
     private static void NativeSliderHeads()

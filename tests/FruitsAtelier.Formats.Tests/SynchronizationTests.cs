@@ -4,6 +4,31 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: stable timing precision and section reconstruction do not create authoring edits", () => Run(f =>
+        {
+            string text = Fixture().Replace("0,500,4,1,0,100,1,0", "315,434.7826086956522,4,2,1,50,1,0");
+            f.Diff.Document = OsuBeatmapReader.Read(text, f.Source);
+            File.WriteAllText(f.Source, text);
+            var entry = f.Session.Manifest.Difficulties[0];
+            entry.ExportConfirmed = true;
+            entry.Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory);
+            File.WriteAllText(f.Source, text.Replace("434.7826086956522", "434.782608695652"));
+            var merge = f.Merge();
+            Check(!merge.RequiresResolution, "Stable numeric formatting needs no timing conflict choice");
+            var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+            Check(resolved.TimingPoints[0].BeatLengthMs == 434.782608695652 && resolved.BeatLengthMs == 434.782608695652,
+                "Accepted file precision reaches both timing points and the document fallback");
+            WorkspaceSynchronization.Accept(f.Session, entry, merge.External, resolved, true);
+            var working = resolved.DeepClone();
+            working.OriginalSections.Reverse();
+            foreach (var section in working.OriginalSections.Where(s => s.Name is "General" or "Metadata" or "Difficulty")) section.Lines.Reverse();
+            Check(!WorkspaceSynchronization.HasLocalChanges(entry, working, f.Session.Directory), "Section ordering alone is not a local edit");
+            working.Fruits[0].X++;
+            Check(WorkspaceSynchronization.HasLocalChanges(entry, working, f.Session.Directory), "Object edits still count");
+            working.Fruits[0].X--;
+            Set(working, "Tags", "changed");
+            Check(WorkspaceSynchronization.HasLocalChanges(entry, working, f.Session.Directory), "Metadata edits still count");
+        }));
         yield return ("Sync: independent break choices preserve mixed events across restart", () => Run(f =>
         {
             string original = Fixture().Replace("[HitObjects]", "[Events]\n// Background\n0,0,\"bg.png\",0,0\n// Breaks\n2,5000,6000\n2,9000,10000\n2,13000,14000\n// Storyboard\nSprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\n[HitObjects]");
@@ -29,7 +54,8 @@ internal static class SynchronizationTests
             WorkspaceSynchronization.Accept(f.Session, entry, review.External, result, true, review: review, choices: choices);
             f.Diff.Document = result;
             var retained = f.Merge();
-            Check(!retained.RequiresResolution && retained.PreviouslyResolved.Contains("Events/break/5000/0") && retained.PreviouslyResolved.Contains("Events/"), "retained break and background choices are recognized independently");
+            Check(!retained.RequiresResolution && retained.PreviouslyResolved.Contains("Events/break/5000/0") && retained.PreviouslyResolved.Contains("Events/"),
+                $"retained break and background choices are recognized independently: local={retained.CanExportLocalChanges}, conflicts={string.Join(',', retained.Conflicts.Select(c => c.Key))}, retained={string.Join(',', retained.PreviouslyResolved)}");
             WorkspaceProject.Save(f.Session, f.Session.Project);
             var reopened = WorkspaceProject.Open(f.Session.Directory);
             Check(!WorkspaceSynchronization.Merge(reopened.Manifest.Difficulties[0], reopened.Project.Difficulties[0].Document,

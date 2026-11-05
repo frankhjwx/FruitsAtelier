@@ -555,7 +555,8 @@ public static class OsuBeatmapWriter
     private static string TimingLine(TimingPoint point)
     {
         if (point.OriginalLine is not null && point.ContentEquals(OsuBeatmapReader.ParseTiming(point.OriginalLine, point.SourceOrder))) return point.OriginalLine;
-        string[] values = [Number(point.TimeMs), Number(point.BeatLengthMs), point.Meter.ToString(CultureInfo.InvariantCulture),
+        // Stable's framework formatter writes both red beat lengths and inherited SV with 15 significant digits.
+        string[] values = [Number(point.TimeMs), point.BeatLengthMs.ToString("G15", CultureInfo.InvariantCulture), point.Meter.ToString(CultureInfo.InvariantCulture),
             point.SampleSet.ToString(CultureInfo.InvariantCulture), point.SampleIndex.ToString(CultureInfo.InvariantCulture),
             point.Volume.ToString(CultureInfo.InvariantCulture), point.Uninherited ? "1" : "0", point.Effects.ToString(CultureInfo.InvariantCulture)];
         if (point.OriginalLine?.Split(',') is { Length: > 8 } previous) values = values.Concat(previous.Skip(8)).ToArray();

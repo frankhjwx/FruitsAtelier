@@ -1422,6 +1422,12 @@ languages at each supported test size and DPI and exercise the color picker.
 
 ## Synchronization regression coverage
 
+`App.Tests --timing-precision-check` checks unchanged BPM input, external red-line
+precision acceptance, repeated read-only synchronization and explicit linked saves.
+Timing SV tests cover unchanged inherited input. `Formats.Tests --export-snap-check`
+checks stable red/green numeric output and repeated export/read-back; semantic
+synchronization tests distinguish section reconstruction from real authoring edits.
+
 `Formats.Tests --reference-discovery-check` verifies missing and relocated files,
 normalized first-object filtering, complete-sequence rejection, later online IDs,
 empty maps, cancellation and association ownership. `App.Tests

@@ -11,6 +11,7 @@ internal static class TimingEditorTests
             foreach (string lang in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(lang);
+                UnchangedBpm();
                 FloatingWindow();
                 FloatingResize();
                 Scrollbar();
@@ -98,6 +99,25 @@ internal static class TimingEditorTests
             }
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void UnchangedBpm()
+    {
+        var map = Map();
+        map.BeatLengthMs = map.TimingPoints[0].BeatLengthMs = 434.782608695652;
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900);
+        ui.Key(114);
+        var before = ui.View.Document.DeepClone();
+        var field = ui.View.TimingFields.Single(f => f.Key == "page.bpm");
+        ui.Click(field.Bounds.X + 8, field.Bounds.Y + 8); ui.Key(9);
+        Check(!ui.View.IsDirty && ui.View.Document.ContentEquals(before), "Tabbing out of an unchanged BPM preserves exact timing");
+        ui.Key(27);
+        Set(ui, "page.bpm", "138.00");
+        Check(!ui.View.IsDirty && ui.View.Document.ContentEquals(before), "Equivalent BPM spelling does not replace imported precision");
+        ui.Key(117);
+        field = ui.View.TimingFields.Single(f => f.Key == "bpm");
+        ui.Click(field.Bounds.X + 8, field.Bounds.Y + 8); ui.Key(9); ui.Key(13);
+        Check(!ui.View.IsDirty && ui.View.Document.ContentEquals(before), "Unchanged setup input and confirmation preserve timing");
     }
 
     private static void FloatingResize()

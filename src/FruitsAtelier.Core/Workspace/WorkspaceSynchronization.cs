@@ -82,6 +82,10 @@ public static partial class WorkspaceSynchronization
         var normalized = local.DeepClone();
         WorkspaceTimingSynchronization.NormalizeDocument(normalized);
         WorkspaceTimingSynchronization.NormalizeDocument(original);
+        if (HasFieldDifferences(normalized, original)) return true;
+        // Parsed section ordering and numeric spelling are file context, not authoring edits.
+        normalized.OriginalSections.Clear();
+        normalized.OriginalSections.AddRange(original.OriginalSections);
         return !normalized.ContentEquals(original);
     }
     public static bool HasFieldDifferences(MapDocument local, MapDocument external)
@@ -559,6 +563,7 @@ public static partial class WorkspaceSynchronization
                 ? merge.ExternalTiming ?? outside.GetValueOrDefault(conflict.Key) : outside.GetValueOrDefault(conflict.Key);
         if (merge.EventReview is { } events) fields["Events/"] = events.Resolve(externalChoices);
         ApplyFields(result, fields, merge.External.Path);
+        WorkspaceTimingSynchronization.AdoptEquivalentRedPrecision(result, merge.External.Document);
         foreach (var group in merge.Objects)
         {
             if (!externalChoices.GetValueOrDefault(group.Key)) continue;
