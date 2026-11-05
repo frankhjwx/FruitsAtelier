@@ -62,20 +62,23 @@ public sealed partial class EditorView
             var point = overviewTiming[index];
             bool current = index == range.Current;
             var bounds = new Rect(r.X, r.Y + 28 + row * 20, r.Width, 19);
-            uint typeColor = point.Uninherited ? 0xE77785u : 0x72C686u;
-            float strength = Math.Max(.3f, 1 - Math.Abs(index - range.Current) * .12f);
-            uint selectedColor = point.Uninherited ? typeColor : Accent;
-            uint color = current ? selectedColor : MixThemeColour(Panel, typeColor, strength);
-            if (current) { c.Fill(bounds, MixThemeColour(Surface, selectedColor, .18f), 4); c.Stroke(bounds, selectedColor, 1, 4); }
-            else if (contextItems.Count == 0 && bounds.Contains(mouseX, mouseY)) c.Fill(bounds, HoverSurface, 4);
-            hits.Add(new(bounds, () => NavigateTimingHelperPoint(point), true));
-            c.Text(Time(point.TimeMs), bounds.X + 4, bounds.Y + 3, 10, color, 74, current);
-            c.Text(point.Volume + "%", bounds.Right - 38, bounds.Y + 3, 10, color, 34, current);
-            string bank = point.SampleSet == 0 ? L.Get("timing.default") : BankCode(point.SampleSet);
-            string info = bank + (point.SampleIndex > 0 ? ":" + point.SampleIndex : "");
-            if (point.Uninherited) info = L.Get("timing.bpm") + " " + Number(60000 / point.BeatLengthMs) + " · " + info;
-            c.Text(info, bounds.X + 80, bounds.Y + 3, 10, color, Math.Max(0, bounds.Width - 120));
+            DrawTimingHelperRow(c, bounds, point, current, Math.Max(.3f, 1 - Math.Abs(index - range.Current) * .12f));
         }
         c.Unclip();
+    }
+    private void DrawTimingHelperRow(ICanvas c, Rect bounds, TimingPoint point, bool current, float strength = 1)
+    {
+        uint typeColor = point.Uninherited ? 0xE77785u : 0x72C686u;
+        uint selectedColor = point.Uninherited ? typeColor : Accent;
+        uint color = current ? selectedColor : MixThemeColour(Panel, typeColor, strength);
+        if (current) { c.Fill(bounds, MixThemeColour(Surface, selectedColor, .18f), 4); c.Stroke(bounds, selectedColor, 1, 4); }
+        else if (contextItems.Count == 0 && bounds.Contains(mouseX, mouseY)) c.Fill(bounds, HoverSurface, 4);
+        hits.Add(new(bounds, () => NavigateTimingHelperPoint(point), true));
+        c.Text(Time(point.TimeMs), bounds.X + 4, bounds.Y + 3, 10, color, 74, current);
+        c.Text(point.Volume + "%", bounds.Right - 38, bounds.Y + 3, 10, color, 34, current);
+        string bank = point.SampleSet == 0 ? L.Get("timing.default") : BankCode(point.SampleSet);
+        string info = bank + (point.SampleIndex > 0 ? ":" + point.SampleIndex : "");
+        if (point.Uninherited) info = L.Get("timing.bpm") + " " + Number(60000 / point.BeatLengthMs) + " · " + info;
+        c.Text(info, bounds.X + 80, bounds.Y + 3, 10, color, Math.Max(0, bounds.Width - 120));
     }
 }

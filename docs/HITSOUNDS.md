@@ -315,3 +315,12 @@ Song tempo is adjustable to 10%, 25%, 50%, 75%, 100%, and 150% with pitch preser
 ## Volume
 
 Library settings store All, Song and Hitsound percentages independently of beatmap sample volume. Effective song gain is All × Song; effective sample gain is All × Hitsound × the resolved beatmap sample volume. Windows applies song gain before preview mixing and hitsound gain to scheduled and live voices before clipping. macOS updates its music node and an atomic native hitsound mixer gain, including queued and active voices. Changes do not restart playback or change timing. Automated device output remains muted regardless of these preferences.
+
+The Timing Helper header lists **Affecting Timing Lines** using the same timestamp,
+timing information and volume columns as Nearby Timing Points. Click either active
+red or green row to select it and seek to its timestamp. Missing active lines retain
+a placeholder so the header height stays constant.
+
+**Add new inherited timing point here** is available without changing draft values.
+At an existing timing timestamp, the helper displays that point’s full live editing
+controls while retaining the Current timestamp heading until a point is selected.

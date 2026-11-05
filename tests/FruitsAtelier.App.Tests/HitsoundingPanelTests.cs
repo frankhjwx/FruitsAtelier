@@ -96,6 +96,9 @@ internal static class HitsoundingPanelTests
         ui.View.Wheel(block.X, block.Y, 120, false, false, false); ui.Paint();
         Check(ui.View.PlayheadMs == 1000, "Backward wheel first aligns to the preceding snap");
 
+        ui.ClickText(L.Get("hitsounding.applyTiming"));
+        Check(ui.View.Document.TimingPoints.Last() is { Uninherited: false, TimeMs: 1000 }, "An unchanged timing draft can insert a new inherited point");
+        ui.Key(90, ctrl: true);
         var volumeLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.volume") && t.X > 1100);
         ui.Click(volumeLabel.X + 95, volumeLabel.Y + 5); ui.Key(65, ctrl: true); ui.Type("40"); ui.Key(13);
         Check(baseline.ContentEquals(ui.View.Document), "Timing draft is not automatically applied");
@@ -297,6 +300,11 @@ internal static class HitsoundingPanelTests
         CheckRows(500, 0);
         CheckRows(5500, 2);
         CheckRows(10500, 4);
+        ui.View.UpdateTransport(6000, 20000, true, false, false, null, null); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.currentTime"))
+            && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.offset"))
+            && ui.Canvas.Texts.Any(t => t.Value == L.Get("volume.title"))
+            && !ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.applyTiming")), "Current timestamp at an existing point exposes its full editor without selecting it");
         ui.View.UpdateTransport(5500, 20000, true, false, false, null, null); ui.Paint();
         var list = ui.View.TimingHelperNearbyBounds;
         float headerTop = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.currentTime")).Y;
@@ -318,6 +326,14 @@ internal static class HitsoundingPanelTests
         var custom = ui.Canvas.Texts.Single(t => t.X > 1100 && t.Value == L.Get("timing.custom"));
         var customIndex = ui.Canvas.Texts.Single(t => t.X > 1100 && t.Value == "6");
         Check(Math.Abs(custom.Y - customIndex.Y) < 2 && customIndex.X > custom.X, "Custom index input shares the Custom radio row");
+        var affectingTitle = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.affectingTiming"));
+        var affectingGreen = ui.Canvas.Texts.Single(t => t.Value == "00:06:000" && t.Y > affectingTitle.Y && t.Y < affectingTitle.Y + 60);
+        ui.Click(affectingGreen.X + 3, affectingGreen.Y + 4);
+        Check(ui.View.PlayheadMs == 6000, "Affecting green row seeks to its timing point");
+        var affectingRed = ui.Canvas.Texts.Single(t => t.Value == "00:00:000" && t.Y > affectingTitle.Y && t.Y < affectingTitle.Y + 60);
+        ui.Click(affectingRed.X + 3, affectingRed.Y + 4);
+        Check(ui.View.PlayheadMs == 0 && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.meter")), "Affecting red row seeks and selects its timing point");
+        Check(navigationBaseline.ContentEquals(ui.View.Document), "Affecting row navigation preserves map content");
         map.TimingPoints.RemoveRange(3, 8); ui.LoadDocument(map); ui.View.ShowHitsoundingPage(); ui.Paint();
         Check(Rows().Length == 3, "Nearby timing lists all available points when fewer than seven exist");
         var original = ui.View.Document.DeepClone(); Jump("00:00:000");
