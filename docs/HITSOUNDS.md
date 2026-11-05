@@ -319,9 +319,14 @@ Library settings store All, Song and Hitsound percentages independently of beatm
 The Timing Helper header lists **Affecting Timing Lines** using the same timestamp,
 timing information and volume columns as Nearby Timing Points. Click either active
 red or green row to select it without moving the playhead or canvas. The header’s
-**Jump** button seeks to the displayed point when requested. Missing active lines retain
+**Jump** button seeks to the displayed point when requested and is disabled when
+the playhead already matches its displayed millisecond. Missing active lines retain
 a placeholder so the header height stays constant.
 
 **Add new inherited timing point here** is available without changing draft values.
-At an existing timing timestamp (matched at the displayed millisecond precision), the helper displays that point’s full live editing
+While paused at an existing timing timestamp (matched at the displayed millisecond precision), the helper displays that point’s full live editing
 controls while retaining the Current timestamp heading until a point is selected.
+
+During playback, Current timestamp retains its regular form when crossing timing
+points. Starting playback or dragging the transport timeline clears the timing-point
+selection and resumes following the current time.

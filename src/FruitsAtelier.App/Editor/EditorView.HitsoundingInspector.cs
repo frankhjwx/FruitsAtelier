@@ -16,6 +16,7 @@ public sealed partial class EditorView
     private (Guid Id, int Event)? inspectorSelection;
     private CatchConversionResult? inspectorConversion;
     private double inspectorTime;
+    private bool inspectorPlaying;
     private TimingPoint? hitsoundingSelectedTiming, inspectorTimingSelection;
     private sealed class TimingHelperPoint(TimingPoint source)
     {
@@ -61,13 +62,13 @@ public sealed partial class EditorView
         var note = HitsoundingSelectedNote;
         if (!ReferenceEquals(inspectorConversion, hitsoundingConversion) && hitsoundingSelectedTiming is not null && !Document.TimingPoints.Contains(hitsoundingSelectedTiming)) hitsoundingSelectedTiming = null;
         double time = hitsoundingSelectedTiming?.TimeMs ?? note?.TimeMs ?? playhead;
-        bool changed = inspectorTimingSelection != hitsoundingSelectedTiming || inspectorSelection != hitsoundingSelected || !ReferenceEquals(inspectorConversion, hitsoundingConversion);
+        bool changed = inspectorPlaying != AudioPlaying || inspectorTimingSelection != hitsoundingSelectedTiming || inspectorSelection != hitsoundingSelected || !ReferenceEquals(inspectorConversion, hitsoundingConversion);
         if (!changed && inspectorTime == time) return;
         if (inspectorTimingSelection != hitsoundingSelectedTiming || inspectorSelection != hitsoundingSelected) hitsoundingInspectorScroll = 0;
         inspectorSelection = hitsoundingSelected; inspectorConversion = hitsoundingConversion;
-        inspectorTimingSelection = hitsoundingSelectedTiming;
+        inspectorTimingSelection = hitsoundingSelectedTiming; inspectorPlaying = AudioPlaying;
         timingHelperPoints = (hitsoundingSelectedTiming is { } selectedPoint ? new[] { selectedPoint }
-            : TimingHelperPointsAt(time)).Select(p => new TimingHelperPoint(p)).ToArray();
+            : !AudioPlaying || note is not null ? TimingHelperPointsAt(time) : []).Select(p => new TimingHelperPoint(p)).ToArray();
         inspectorTime = time;
         var sample = hitsoundingResolver!.Describe(new(Guid.Empty, 0, CatchObjectKind.Fruit, time - 5, 0, 0, 0, 0, true));
         inspectorBank = sample.NormalSet; inspectorIndex = sample.Index; inspectorVolume = sample.Volume;
@@ -140,10 +141,13 @@ public sealed partial class EditorView
         float x = r.X + 10, w = Math.Max(0, r.Width - 20);
         c.Text(L.Get(hitsoundingSelectedTiming is not null ? "hitsounding.selectedTiming" : hitsoundingSelected is null ? "hitsounding.currentTime" : "hitsounding.selectedNote"), x, r.Y + 8, 11, Muted, w);
         c.Text(Time(inspectorTime), x, r.Y + 27, 20, Foreground, Math.Max(0, w - 60), true);
-        Button(c, new(r.Right - 64, r.Y + 28, 54, 28), L.Get("timeJump.go"), () =>
+        string jumpLabel = L.Get("timeJump.go");
+        float jumpPadding = Math.Max(0, (54 - c.MeasureText(jumpLabel, 12, true)) / 2);
+        Button(c, new(r.Right - 64, r.Y + 28, 54, 28), jumpLabel, () =>
         {
             if (CommitField()) SeekTo(Math.Max(0, hitsoundingSelectedTiming?.TimeMs ?? inspectorTime));
-        });
+        }, enabled: Math.Truncate(playhead) != Math.Truncate(Math.Max(0, inspectorTime)), bold: true,
+            textPadding: jumpPadding, textRightPadding: jumpPadding);
         var timing = renderedTiming!.At(inspectorTime);
         c.Text(L.Get("timing.bpm") + " " + Number(60000 / timing.BeatLengthMs), x, r.Y + 54, 10, Muted, w);
         c.Line(x, r.Y + 73, x + w, r.Y + 73, Grid);

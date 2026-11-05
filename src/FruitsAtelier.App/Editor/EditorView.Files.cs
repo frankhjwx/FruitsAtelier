@@ -437,7 +437,11 @@ public sealed partial class EditorView
         transportSampleLeadMs = outputBufferAheadMs;
         UpdateHitsounds(positionMs, ready && playing && !loading, filename);
         bool wasReady = AudioReady;
-        if (playing && !AudioPlaying) lazerSeekStarted = double.NegativeInfinity;
+        if (playing && !AudioPlaying)
+        {
+            lazerSeekStarted = double.NegativeInfinity;
+            ResumeTimingHelperFollow();
+        }
         double previousPlayhead = playhead;
         AudioReady = ready; AudioPlaying = playing; AudioLoading = loading;
         AudioDurationMs = double.IsFinite(durationMs) ? Math.Max(0, durationMs) : 0;
@@ -491,6 +495,7 @@ public sealed partial class EditorView
         if (!AudioPlaying && DeferMediaPlayback(false)) return;
         if (AudioReady)
         {
+            if (!AudioPlaying) ResumeTimingHelperFollow();
             if (IsLazerEditing && !AudioPlaying && TestplayRealtime < lazerSeekStarted + 300)
                 SeekTo(LazerPresentationTime);
             // Arm before the callback: hosts may publish the confirmed pause synchronously.

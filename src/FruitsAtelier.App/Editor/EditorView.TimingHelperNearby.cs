@@ -11,6 +11,15 @@ public sealed partial class EditorView
     private TimingPoint? timingHelperNearbyContext;
     private TimingPoint[]? timingHelperNearbySource;
     private (Guid Id, int Event)? timingHelperNearbyNote;
+    private void ResumeTimingHelperFollow()
+    {
+        if (hitsoundingSelectedTiming is null && hitsoundingTimingSelection.Count == 0) return;
+        hitsoundingSelectedTiming = null;
+        hitsoundingTimingSelection.Clear();
+        timingHelperNearbyFirst = null;
+        inspectorConversion = null;
+        hitsoundingInspectorScroll = 0;
+    }
     private void NavigateTimingHelperPoint(TimingPoint point)
     {
         if (!CommitField()) return;

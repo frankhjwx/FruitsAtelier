@@ -313,6 +313,12 @@ internal static class HitsoundingPanelTests
             && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.offset"))
             && ui.Canvas.Texts.Any(t => t.Value == L.Get("volume.title"))
             && !ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.applyTiming")), "Current timestamp at an existing point exposes its full editor without selecting it");
+        ui.View.UpdateTransport(6000, 20000, true, true, false, null, null); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.applyTiming"))
+            && !ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.offset")), "Playing through a timing point keeps the current timestamp form stable");
+        ui.View.UpdateTransport(6000, 20000, true, false, false, null, null); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.offset")), "Pausing at the same timestamp restores timing controls");
+        var disabledJump = ui.Canvas.Texts.Single(t => t.Value == L.Get("timeJump.go"));
         ui.View.UpdateTransport(5500, 20000, true, false, false, null, null); ui.Paint();
         var list = ui.View.TimingHelperNearbyBounds;
         float headerTop = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.currentTime")).Y;
@@ -343,6 +349,8 @@ internal static class HitsoundingPanelTests
         Check(ui.View.PlayheadMs == 5500 && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.meter")), "Affecting red row selects its timing point without moving canvas time");
         ui.ClickText(L.Get("timeJump.go"));
         Check(ui.View.PlayheadMs == 0, "Jump explicitly seeks to the selected timing point");
+        Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("timeJump.go")).Color == disabledJump.Color,
+            "Jump is disabled when the playhead reaches the displayed timestamp");
         Check(navigationBaseline.ContentEquals(ui.View.Document), "Affecting row navigation preserves map content");
         map.TimingPoints.RemoveRange(3, 8); ui.LoadDocument(map); ui.View.ShowHitsoundingPage(); ui.Paint();
         Check(Rows().Length == 3, "Nearby timing lists all available points when fewer than seven exist");
@@ -350,6 +358,18 @@ internal static class HitsoundingPanelTests
         var red = ui.Canvas.Texts.Single(t => ui.View.TimingHelperNearbyBounds.Contains(t.X, t.Y) && t.Value == "00:00:000");
         Check(red.Color == 0xE77785 && ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.meter")), "Selected red points retain red highlighting and Meter controls");
         Check(original.ContentEquals(ui.View.Document), "Nearby point navigation does not edit the map");
+        ui.View.UpdateTransport(1500, 20000, true, true, false, null, null); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.currentTime"))
+            && !ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.selectedTiming")), "Starting playback clears the timing selection and resumes following current time");
+        ui.View.UpdateTransport(1500, 20000, true, false, false, null, null); ui.Paint();
+        Jump("00:00:000");
+        var transportHead = ui.Canvas.Lines.Single(l => l.Color == 0xFFFFFF && l.X1 == l.X2 && l.Y1 > 800);
+        ui.View.PointerDown(transportHead.X1, transportHead.Y1 + 12, 0, false, false);
+        ui.View.PointerMove(transportHead.X1 + 20, transportHead.Y1 + 12, false, false);
+        ui.View.PointerUp(transportHead.X1 + 20, transportHead.Y1 + 12, 0); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.currentTime"))
+            && !ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.selectedTiming")), "Dragging the transport timeline clears timing selection and resumes following");
+        Check(original.ContentEquals(ui.View.Document), "Resuming Timing Helper follow does not edit the map");
         void Jump(string timestamp)
         {
             var text = ui.Canvas.Texts.Single(t => ui.View.TimingHelperNearbyBounds.Contains(t.X, t.Y) && t.Value == timestamp);
