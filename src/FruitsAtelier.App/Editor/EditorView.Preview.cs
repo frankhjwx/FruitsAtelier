@@ -10,6 +10,15 @@ public sealed partial class EditorView
     private const float MinimumPreviewWidth = 344;
     private int previewMod { get => DockWorkspaceState.PreviewMod; set => DockWorkspaceState.PreviewMod = value; }
     private int previewDisplayMode { get => DockWorkspaceState.PreviewDisplayMode; set => DockWorkspaceState.PreviewDisplayMode = value; }
+    private float previewZoom = 1, previewZoomX, previewZoomY;
+    private void ZoomHrPreview(float x, float y, float delta)
+    {
+        float previous = previewZoom;
+        previewZoom = Math.Clamp(previous * (float)Math.Pow(1.16, delta / 120), .25f, 8);
+        float ratio = previewZoom / previous;
+        previewZoomX = x - PreviewViewport.X - (x - PreviewViewport.X - previewZoomX) * ratio;
+        previewZoomY = y - PreviewViewport.Y - (y - PreviewViewport.Y - previewZoomY) * ratio;
+    }
     private CatchAutoPreview? previewAutoplay;
     private CatchPlatePreview? previewPlate;
     private HashSet<(Guid SourceId, int EventIndex)> previewComboEnds = [];

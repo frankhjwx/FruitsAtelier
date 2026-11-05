@@ -1099,6 +1099,10 @@ The top-bar **Settings** button is available in both Library and Editor. Setting
 
 ## Testplay
 
+In the docked Catch/Testplay preview with HR selected, hold Alt and scroll over
+its playfield to zoom in or out around the pointer. This viewport-only zoom does
+not change the editor canvas or timeline; their Alt+wheel controls are unchanged.
+
 **Settings > Testplay > Testplay speed** sets an independent starting speed from
 10% to 150% in 5% steps (default 100%). Apply saves it across launches. F5 uses this
 speed for music and gameplay; returning to the editor restores its previous speed.

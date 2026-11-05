@@ -634,6 +634,12 @@ public sealed partial class EditorView
         // Fit extends visibility above the complete legacy 4:3 reference view, including its catcher area.
         if (previewDisplayMode == 2)
             c.Stroke(new(stage.X + 9, referenceTop, referenceWidth, referenceHeight), Chrome(0x2B3442, Grid));
+        if (previewMod == 2)
+        {
+            fieldLeft = stage.X + (fieldLeft - stage.X) * previewZoom + previewZoomX;
+            catchY = stage.Y + (catchY - stage.Y) * previewZoom + previewZoomY;
+            fieldWidth *= previewZoom;
+        }
         double scrollSpeed = CatchScrollTiming.PixelsPerMs(PreviewApproachRate, fieldWidth);
         double visibleAhead = (catchY - stage.Y + CatchSize.FruitDiameter(PreviewCircleSize) * fieldWidth / 512 * 1.2) / scrollSpeed;
         DrawPreviewPlate(c, fieldLeft, fieldWidth, catchY);

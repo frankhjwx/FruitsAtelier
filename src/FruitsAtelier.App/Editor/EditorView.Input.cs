@@ -1144,6 +1144,9 @@ public sealed partial class EditorView
                 Math.Max(0, difficulties.Count - visibleDifficultyTabs));
             return;
         }
+        if (DockContentInputAvailable && CatchPreviewVisible && previewMod == 2
+            && PreviewViewport.Contains(x, y) && alt && !ctrl && !shift)
+        { ZoomHrPreview(x, y, delta); return; }
         if (rightPanel.Contains(x, y))
         {
             return;
