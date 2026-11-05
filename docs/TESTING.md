@@ -1276,6 +1276,12 @@ movement of an imported slider's head and tail, reporting pointer-path CPU time,
 counting-canvas rendering time, and current-thread allocations separately. It invokes
 the selected-object drag path directly and excludes native input dispatch and GPU work.
 
+`App.Tests --slider-draft-check` covers draft preview DS and movement indicators,
+including Legacy endpoints preceded by fruits or droplets, repeated pointer updates,
+invalid-position recovery, single endpoint rendering and cancellation. Windows
+`FruitsAtelier.App --render-check --slider-draft-render-check` checks both modes' preview readouts
+through the native renderer at two window sizes and three DPI settings.
+
 The App test executable accepts `--slider-draft-performance <path.catchdiff>` for
 new FSlider previews in Legacy and Pen modes. Use an isolated copy of the project.
 It measures pointer dispatch, rendering and allocations for horizontal movement

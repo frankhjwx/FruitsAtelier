@@ -10,6 +10,7 @@ internal static class DraftConversionTests
         CurrentBaseSv();
         PenHead();
         PenFinishMovement();
+        LegacyPreviewMovement();
         foreach (var mode in Enum.GetValues<SliderEditingMode>())
         {
             var map = DemoMap.Create();
@@ -64,6 +65,49 @@ internal static class DraftConversionTests
             ui.View.NewProject(); ui.Paint(); Thread.Sleep(30); ui.Paint();
             Check(!ui.View.ConversionRefreshing && ui.View.Conversion.Objects.Count == 0,
                 "retired worker overwrote a new project");
+        }
+    }
+
+    private static void LegacyPreviewMovement()
+    {
+        var map = new MapDocument { DurationMs = 12000 };
+        map.Fruits.Add(new Fruit { TimeMs = 500, X = 50 });
+        map.Fruits.Add(new Fruit { TimeMs = 3500, X = 450 });
+        var ui = new Ui(); ui.LoadDocument(map);
+        ui.View.SetSliderEditingMode(SliderEditingMode.OsuLegacy);
+        ui.Key('B'); ui.ClickMap(1000, 100);
+        var export = Export(ui.View);
+        ui.MoveMap(1250, 130); AssertEndpoint(CatchObjectKind.Fruit);
+        ui.MoveMap(2000, 300); AssertEndpoint();
+        ui.ClickMap(2000, 300); AssertEndpoint();
+        ui.MoveMap(2500, 350); AssertEndpoint();
+        ui.MoveMap(3000, 200); AssertEndpoint();
+        ui.MoveMap(1500, 200);
+        ui.MoveMap(3000, 250); AssertEndpoint();
+        ui.Paint(); AssertEndpoint();
+        ui.View.CancelInteraction(); ui.Paint();
+        Check(map.ContentEquals(ui.View.Document), "legacy movement preview cancellation changed content");
+
+        void AssertEndpoint(CatchObjectKind previousKind = CatchObjectKind.Droplet)
+        {
+            var objects = CatchStreamConverter.Convert(ui.View.Document).Objects;
+            var track = ui.View.Document.Tracks.Single();
+            var target = objects.Last(o => o.SourceId == track.Id && o.Kind == CatchObjectKind.Fruit);
+            var previous = objects.Last(o => o.TimeMs < target.TimeMs
+                && o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet);
+            Check(previous.Kind == previousKind, "legacy movement fixture has the wrong preceding event kind");
+            double expected = DistanceSnap.Ratio(new(previous.TimeMs, previous.X), new(target.TimeMs, target.X),
+                DistanceSnap.BaseVelocity(ui.View.Document, previous.TimeMs))!.Value;
+            Check(ui.View.DistanceReadout.Previous is { } actual && Math.Abs(actual - expected) < .000001,
+                "legacy draft DS does not measure the preview endpoint from the preceding fruit/droplet");
+            var movement = HyperDashCalculator.Calculate(objects, ui.View.Document.CircleSize)[objects.ToList().IndexOf(previous)].Movement;
+            Check(ui.View.MovementOverlayBounds is not null && ui.View.MovementReadout.Previous == movement,
+                "legacy draft indicator does not describe the preview endpoint");
+            var p = ui.ScreenAt(target.TimeMs, target.X);
+            Check(ui.Canvas.Circles.Count(c => c.Filled && c.Radius > 8
+                && Math.Abs(c.X - p.X) < 1 && Math.Abs(c.Y - p.Y) < 1) == 1,
+                "legacy movement preview duplicates the endpoint");
+            Check(ReferenceEquals(export, Export(ui.View)), "legacy movement preview exports the full map");
         }
     }
 
