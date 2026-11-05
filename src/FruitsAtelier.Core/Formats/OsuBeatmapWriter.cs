@@ -157,11 +157,12 @@ public static class OsuBeatmapWriter
                 original.ImportedSliders[0].ProcessedSliderVelocityMultiplier = slider.ProcessedSliderVelocityMultiplier;
                 if (!slider.ContentEquals(original.ImportedSliders[0])) throw new InvalidDataException(L.Get("core.writer.importedChanged"));
                 string line = slider.OriginalLine;
-                if (slider.PreserveNativeGeometry && slider.TimeMs != QuantizeTime(slider.TimeMs))
+                if (slider.PreserveNativeGeometry)
                 {
-                    // Canvas source lines retain authoring precision; exported heads must match generated SV times.
+                    // Canvas source lines retain authoring precision; publication uses stable's saved precision.
                     var values = line.Split(',');
                     values[2] = Time(slider.TimeMs);
+                    values[7] = StableNumber(slider.PixelLength);
                     line = string.Join(',', values);
                 }
                 if (line.Contains(",,", StringComparison.Ordinal) || line.EndsWith(',')
@@ -177,7 +178,7 @@ public static class OsuBeatmapWriter
             else
             {
                 string path = slider.PathType + "|" + string.Join('|', slider.ControlPoints.Skip(1).Select(p => Coordinate(p.X) + ":" + Coordinate(p.GeometryY)));
-                lines.Add((slider.TimeMs, slider.SourceOrder, slider.Id, $"{Coordinate(slider.X)},{Coordinate(slider.Y)},{Time(slider.TimeMs)},2,0,{path},{slider.SpanCount},{Number(slider.PixelLength)},{DefaultEdges(slider.SpanCount, "0")},{DefaultEdges(slider.SpanCount, "0:0")},0:0:0:0:"));
+                lines.Add((slider.TimeMs, slider.SourceOrder, slider.Id, $"{Coordinate(slider.X)},{Coordinate(slider.Y)},{Time(slider.TimeMs)},2,0,{path},{slider.SpanCount},{StableNumber(slider.PixelLength)},{DefaultEdges(slider.SpanCount, "0")},{DefaultEdges(slider.SpanCount, "0:0")},0:0:0:0:"));
             }
         }
         foreach (var shower in document.BananaShowers)
@@ -214,7 +215,7 @@ public static class OsuBeatmapWriter
             if (values.Length < 11) Array.Resize(ref values, 11);
             FillSliderSamples(values, originalSpans);
             values[0] = Coordinate(first.X); values[1] = Coordinate(first.GeometryY); values[2] = Time(slider.StartTimeMs);
-            values[5] = path; values[6] = slider.SpanCount.ToString(CultureInfo.InvariantCulture); values[7] = Number(slider.Length);
+            values[5] = path; values[6] = slider.SpanCount.ToString(CultureInfo.InvariantCulture); values[7] = StableNumber(slider.Length);
             if (track.OriginalLine is null || originalSpans != slider.SpanCount)
             {
                 values[8] = ResizeEdges(values[8], slider.SpanCount, "0");
@@ -555,8 +556,7 @@ public static class OsuBeatmapWriter
     private static string TimingLine(TimingPoint point)
     {
         if (point.OriginalLine is not null && point.ContentEquals(OsuBeatmapReader.ParseTiming(point.OriginalLine, point.SourceOrder))) return point.OriginalLine;
-        // Stable's framework formatter writes both red beat lengths and inherited SV with 15 significant digits.
-        string[] values = [Number(point.TimeMs), point.BeatLengthMs.ToString("G15", CultureInfo.InvariantCulture), point.Meter.ToString(CultureInfo.InvariantCulture),
+        string[] values = [Number(point.TimeMs), StableNumber(point.BeatLengthMs), point.Meter.ToString(CultureInfo.InvariantCulture),
             point.SampleSet.ToString(CultureInfo.InvariantCulture), point.SampleIndex.ToString(CultureInfo.InvariantCulture),
             point.Volume.ToString(CultureInfo.InvariantCulture), point.Uninherited ? "1" : "0", point.Effects.ToString(CultureInfo.InvariantCulture)];
         if (point.OriginalLine?.Split(',') is { Length: > 8 } previous) values = values.Concat(previous.Skip(8)).ToArray();
@@ -607,6 +607,8 @@ public static class OsuBeatmapWriter
         return string.Join('|', values);
     }
     private static string Number(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+    // Stable's framework formatter saves beat lengths and slider lengths with 15 significant digits.
+    private static string StableNumber(double value) => value.ToString("G15", CultureInfo.InvariantCulture);
     private static void SetNumber(MapDocument document, string section, string key, double value)
     {
         string? old = OsuBeatmapReader.Setting(document, section, key);

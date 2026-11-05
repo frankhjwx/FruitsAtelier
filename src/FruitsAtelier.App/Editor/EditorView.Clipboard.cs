@@ -209,6 +209,8 @@ public sealed partial class EditorView
                     baseline.Id = slider.Id; baseline.SourceOrder = slider.SourceOrder;
                     baseline.OriginalLine = slider.OriginalLine;
                     ShiftTrack(baseline);
+                    // Saved slider length can round below the retained effect baseline's exact endpoint.
+                    IncludeEnd(CurveMath.EndTimeMs(baseline));
                 }
                 double sliderEnd;
                 try { sliderEnd = ImportedSliderConverter.EndTimeMs(Document, slider); }

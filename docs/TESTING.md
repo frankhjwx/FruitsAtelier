@@ -1425,7 +1425,10 @@ languages at each supported test size and DPI and exercise the color picker.
 `App.Tests --timing-precision-check` checks unchanged BPM input, external red-line
 precision acceptance, repeated read-only synchronization and explicit linked saves.
 Timing SV tests cover unchanged inherited input. `Formats.Tests --export-snap-check`
-checks stable red/green numeric output and repeated export/read-back; semantic
+checks stable red/green numeric output, all three slider-length publication paths,
+boundary repeat/tail and tiny-droplet times, cached publication and ten successive
+rebuilt exports in NM and HR. Native slider timing input tests verify source-line
+publication without changing authoring state; semantic
 synchronization tests distinguish section reconstruction from real authoring edits.
 
 `Formats.Tests --reference-discovery-check` verifies missing and relocated files,

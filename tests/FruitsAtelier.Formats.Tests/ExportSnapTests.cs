@@ -6,6 +6,7 @@ internal static class ExportSnapTests
     {
         RedPrecision();
         GreenPrecision();
+        SliderPrecisionTests.Run();
         Spinners();
         Kiai();
         NativeSliderHeads();
@@ -135,7 +136,7 @@ internal static class ExportSnapTests
             Check(Math.Abs(ImportedSliderConverter.DurationMs(map, slider) - ImportedSliderConverter.DurationMs(output.ReadBack, emitted)) < 1e-6,
                 "Quantizing a canvas slider head must preserve its SV and duration");
             Check(emitted.PathType == slider.PathType && emitted.ControlPoints.SequenceEqual(slider.ControlPoints)
-                && emitted.PixelLength == slider.PixelLength, "Head quantization changed native geometry");
+                && emitted.PixelLength == 200, "Native export retains control points and saves stable length precision");
             Check(output.MaxTimeQuantizationMs > .43 && output.MaxTimeQuantizationMs < .44, "Native head quantization must be reported");
             Check(output.Text == OsuBeatmapWriter.Serialize(map, cache: cache).Text
                 && output.Text == OsuBeatmapWriter.Serialize(map).Text, "Cached native export differs");
