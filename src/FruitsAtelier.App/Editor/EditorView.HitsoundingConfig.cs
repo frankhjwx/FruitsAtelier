@@ -469,7 +469,11 @@ public sealed partial class EditorView
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable || menu >= 0 || contextItems.Count > 0) return false;
         if (hitsoundingInspectorBounds.Contains(x, y))
-        { if (!TimingHelperNearbyBounds.Contains(x, y) && CommitField()) hitsoundingInspectorScroll = Math.Clamp(hitsoundingInspectorScroll - delta / 120 * 32, 0, hitsoundingInspectorScrollMaximum); return true; }
+        {
+            if (TimingHelperNearbyBounds.Contains(x, y)) StepTimingHelperPoint(delta);
+            else if (CommitField()) hitsoundingInspectorScroll = Math.Clamp(hitsoundingInspectorScroll - delta / 120 * 32, 0, hitsoundingInspectorScrollMaximum);
+            return true;
+        }
         if (hitsoundingSampleBounds.Contains(x, y)) { hitsoundingSampleScroll = Math.Max(0, hitsoundingSampleScroll - delta / 120 * 30); return true; }
         if (hitsoundingLibraryBounds.Contains(x, y)) { hitsoundingLibraryScroll = Math.Max(0, hitsoundingLibraryScroll - (int)(delta / 120)); return true; }
         if (!hitsoundingBounds.Contains(x, y)) return false;

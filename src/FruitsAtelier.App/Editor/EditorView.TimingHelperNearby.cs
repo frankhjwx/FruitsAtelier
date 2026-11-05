@@ -1,4 +1,5 @@
 using FruitsAtelier.App.Rendering;
+using FruitsAtelier.Core;
 using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.App.Editor;
@@ -6,14 +7,31 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     internal Rect TimingHelperNearbyBounds { get; private set; }
+    private void NavigateTimingHelperPoint(TimingPoint point)
+    {
+        if (!CommitField()) return;
+        SelectHitsoundingTimingPoint(point);
+        hitsoundingInspectorScroll = 0;
+        SeekTo(Math.Max(0, point.TimeMs));
+    }
+    private void StepTimingHelperPoint(float delta)
+    {
+        if (!float.IsFinite(delta) || delta == 0 || !CommitField()) return;
+        var range = TimingHelperNearbyRange();
+        if (range.Current < 0) return;
+        int steps = Math.Max(1, (int)Math.Min(overviewTiming.Length, Math.Round(Math.Abs(delta) / 120)));
+        int target = Math.Clamp(range.Current + (delta > 0 ? -steps : steps), 0, overviewTiming.Length - 1);
+        if (target != range.Current) NavigateTimingHelperPoint(overviewTiming[target]);
+    }
     private (int Start, int Count, int Current) TimingHelperNearbyRange()
     {
         if (overviewTiming.Length == 0) return (0, 0, -1);
+        double time = hitsoundingSelectedTiming?.TimeMs ?? inspectorTime;
         int lo = 0, hi = overviewTiming.Length;
         while (lo < hi)
         {
             int mid = (lo + hi) / 2;
-            if (overviewTiming[mid].TimeMs <= inspectorTime) lo = mid + 1; else hi = mid;
+            if (overviewTiming[mid].TimeMs <= time) lo = mid + 1; else hi = mid;
         }
         int current = Math.Max(0, lo - 1);
         if (hitsoundingSelectedTiming is { } selected)
@@ -41,13 +59,7 @@ public sealed partial class EditorView
             uint color = current ? selectedColor : MixThemeColour(Panel, typeColor, strength);
             if (current) { c.Fill(bounds, MixThemeColour(Surface, selectedColor, .18f), 4); c.Stroke(bounds, selectedColor, 1, 4); }
             else if (contextItems.Count == 0 && bounds.Contains(mouseX, mouseY)) c.Fill(bounds, HoverSurface, 4);
-            hits.Add(new(bounds, () =>
-            {
-                if (!CommitField()) return;
-                SelectHitsoundingTimingPoint(point);
-                hitsoundingInspectorScroll = 0;
-                SeekTo(Math.Max(0, point.TimeMs));
-            }, true));
+            hits.Add(new(bounds, () => NavigateTimingHelperPoint(point), true));
             c.Text(Time(point.TimeMs), bounds.X + 4, bounds.Y + 3, 10, color, 74, current);
             c.Text(point.Volume + "%", bounds.Right - 38, bounds.Y + 3, 10, color, 34, current);
             string bank = point.SampleSet == 0 ? L.Get("timing.default") : BankCode(point.SampleSet);

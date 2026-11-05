@@ -298,9 +298,13 @@ internal static class HitsoundingPanelTests
         CheckRows(10500, 4);
         ui.View.UpdateTransport(5500, 20000, true, false, false, null, null); ui.Paint();
         var list = ui.View.TimingHelperNearbyBounds;
-        var before = Rows();
         ui.View.Wheel(list.X + 8, list.Y + 20, -120, false, false, false); ui.Paint();
-        Check(before.SequenceEqual(Rows()) && ui.View.PlayheadMs == 5500, "Nearby timing list has no independent scroll or seek action");
+        Check(ui.View.PlayheadMs == 6000, "Nearby timing wheel advances to the next timing point");
+        for (int i = 0; i < 7; i++) Wheel(-120);
+        Check(ui.View.PlayheadMs == 10000 && Rows().First() == "00:04:000", "Wheel continues beyond the initial seven rows and stops at the final point");
+        Wheel(2400); Wheel(120);
+        Check(ui.View.PlayheadMs == 0, "Reverse wheel reaches and stops at the first timing point");
+        Wheel(-720);
         Jump("00:06:000");
         Check(ui.View.PlayheadMs == 6000 && Rows().SequenceEqual(Enumerable.Range(3, 7).Select(i => $"00:{i:00}:000")), "Clicking a nearby row seeks and centers the selected timing point");
         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.meter") || t.Value == L.Get("timing.bpm")), "Green timing points omit BPM and Meter controls");
@@ -317,6 +321,11 @@ internal static class HitsoundingPanelTests
         {
             var text = ui.Canvas.Texts.Single(t => ui.View.TimingHelperNearbyBounds.Contains(t.X, t.Y) && t.Value == timestamp);
             ui.Click(text.X + 3, text.Y + 4);
+        }
+        void Wheel(float delta)
+        {
+            var bounds = ui.View.TimingHelperNearbyBounds;
+            ui.View.Wheel(bounds.X + 8, bounds.Y + 20, delta, false, false, false); ui.Paint();
         }
         void CheckRows(double time, int first)
         {

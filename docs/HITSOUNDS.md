@@ -196,7 +196,7 @@ Volume updates while dragging, with one undo step for the complete gesture. The 
 Only timestamps without a point show effective timing information and **Apply as new
 inherited timing point**, which inserts a green line while preserving effective SV.
 Settings for a new inherited point remain drafts until insertion. Existing-point edits support undo and mark the map as modified; saving remains explicit.
-A separator and **Nearby Timing Points** title introduce up to seven nearby timing points in chronological order, showing timestamp, timing/sample information and volume. The current point is highlighted, retaining red for red points; others fade with distance. Clicking a row seeks to its timestamp and selects that point in the helper. The list prefers three points on each side, filling from the other side at map boundaries. It has no independent scrolling.
+A separator and **Nearby Timing Points** title introduce up to seven nearby timing points in chronological order, showing timestamp, timing/sample information and volume. The current point is highlighted, retaining red for red points; others fade with distance. Clicking a row seeks to its timestamp and selects that point in the helper. The wheel over this area selects and seeks to the previous or next timing point, continuing beyond the visible rows and stopping at the first or last point. The list prefers three points on each side, filling from the other side at map boundaries; it has no separate scrollbar.
 The Hitsounding dock menu provides Config, Timing Helper, Song Setup and Preview independently
 of Mapping.
 Restoring Hitsounding as the active panel on editor startup loads its sound library immediately, without requiring pointer input.
