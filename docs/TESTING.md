@@ -1398,6 +1398,10 @@ Synthetic App regressions cover the inclusive 5 ms edge boundary, the slider bod
 6 ms start lookup, tick inheritance across timing changes, mapset clipboard
 scope, combo reference numbers, horizontal grids, and timestamp precision.
 
+`App.Tests --clipboard-hitsound-check` checks per-event additions, sample settings,
+edge indices and inheritance through same- and cross-difficulty paste on both
+canvases, including export read-back, clipboard snapshot isolation, cut and undo/redo.
+
 `App.Tests --cross-difficulty-clipboard-check` checks mixed parent types across
 different AR/CS/STR, BPM and base SV, preserved Legacy duration and geometry,
 unchanged target settings and source content, undo/redo, unsupported SV rollback,

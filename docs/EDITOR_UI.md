@@ -1439,7 +1439,7 @@ converts exact circular arcs to bounded Bezier approximations in the same transa
 
 Undo and redo reveal an affected position only when none of the affected positions is visible on the canvas. Deletion uses the removed position; restored notes and changed slider nodes use their resulting positions. Visible changes retain the viewport.
 
-Copy and cut write a legacy reference such as `02:27:094 (1,2,3) - ` to the system clipboard. Inside the editor, a separate snapshot retains complete objects for pattern pasting across difficulties in the current mapset. Opening or reopening a project clears that snapshot. Paste aligns the earliest start to the playhead, preserves other objects' relative times and positions, and assigns new IDs. Each batch move, delete, cut, or paste is one undo step.
+Copy and cut write a legacy reference such as `02:27:094 (1,2,3) - ` to the system clipboard. Inside the editor, a separate snapshot retains complete objects for pattern pasting across difficulties in the current mapset. Opening or reopening a project clears that snapshot. Paste aligns the earliest start to the playhead, preserves other objects' relative times and positions, and assigns new IDs. Per-event hitsound overrides follow their copied parents, including additions, edge assignments and timing inheritance. Each batch move, delete, cut, or paste is one undo step.
 
 Cross-difficulty paste keeps the target's HP, CS, AR, OD, base SV, STR and timing.
 Different tick settings regenerate nested events according to the target's rules;

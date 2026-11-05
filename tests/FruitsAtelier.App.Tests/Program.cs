@@ -3,6 +3,7 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--clipboard-hitsound-check")) { ClipboardTests.EventHitsoundsSurvivePaste(); Console.WriteLine("PASS clipboard event hitsounds, inheritance and history on both canvases"); return 0; }
 if (args.Contains("--hitsounding-performance")) { HitsoundingPanelTests.Performance(); return 0; }
 if (args.Contains("--hitsounding-panel-check")) { HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); HitsoundingPanelTests.SelectionAndTiming(); HitsoundingPanelTests.LengthAndMove(); HitsoundingPanelTests.StoryboardEditing(); HitsoundingPanelTests.PlayingSelectionAndSettings(); return 0; }
 if (args.Contains("--difficulty-import-check")) { DifficultyImportTests.Run(); Console.WriteLine("PASS difficulty imports use project resources and preserve metadata"); return 0; }
@@ -749,6 +750,7 @@ var tests = new (string Name, Action Run)[]
     ("Legacy Sliders convert to FSliders and preserve repeats through project and osu export", MixedSliderTests.Import),
     ("Beatmap resource export excludes output subtrees and preserves selected audio", ResourceTests.Run),
     ("Empty selection clipboard copies playhead timestamps on both canvases", ClipboardTests.EmptySelectionTimestamp),
+    ("Object clipboard preserves event hitsound overrides", ClipboardTests.EventHitsoundsSurvivePaste),
     ("Fruit clipboard snapshots preserve metadata and undo identities", ClipboardTests.FruitSnapshotAndHistory),
     ("Anchor clipboard actions copy and cut the entire repeated slider", ClipboardTests.AnchorCopiesAndCutsParent),
     ("Legacy Slider and banana clipboard preserve geometry and export samples", ClipboardTests.ImportedAndBananaMetadata),
