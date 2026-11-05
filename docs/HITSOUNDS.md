@@ -245,7 +245,7 @@ limited to 16 MiB each and one drop accepts up to 128 files.
 panel. Resize their internal divider to allocate space; the two sections keep their
 order. Hovering or dragging the divider uses a vertical resize cursor.
 The SampleSet dropdown offers Default and the custom indices defined by the
-map’s red and green timing points; more than eight choices scroll. The selector
+map’s red and green timing points; more than eight choices scroll using the wheel, scrollbar dragging, or scrollbar track clicks. The selector
 does not create or edit sample indices. Audio rows provide audition controls and decoded waveform previews. Search
 filters the current folder by name. Long lists scroll within their own section.
 View and library navigation do not edit beatmap objects.

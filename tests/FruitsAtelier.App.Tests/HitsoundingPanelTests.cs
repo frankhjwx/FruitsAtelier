@@ -471,6 +471,20 @@ internal static class HitsoundingPanelTests
         ui.View.Wheel(choice.X + 5, choice.Y + 5, -1200, false, false, false); ui.Paint();
         ui.ClickText(L.Get("hitsounding.customSet", 12));
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.customSet", 12) + " ▾"), "Scrollable dropdown selects later timing indices");
+        ui.ClickText(L.Get("hitsounding.customSet", 12) + " ▾");
+        var thumb = ui.Canvas.Fills.Last(f => f.Bounds.Width == 4 && f.Bounds.Height >= 16).Bounds;
+        var lastChoice = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.customSet", 12));
+        float trackTop = lastChoice.Y - 7 - 7 * 32;
+        ui.View.PointerDown(thumb.X + 2, thumb.Y + 2, 0, false, false);
+        Check(ui.View.WantsCapture, "SampleSet scrollbar captures pointer while dragging");
+        ui.View.PointerMove(thumb.X + 2, trackTop + 2, false, false);
+        ui.View.PointerUp(thumb.X + 2, trackTop + 2, 0); ui.Paint();
+        Check(!ui.View.WantsCapture, "SampleSet scrollbar releases pointer after dragging");
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.default")), "Dragging SampleSet thumb reaches the first row without closing the menu");
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.customSet", 12) + " ▾"), "Scrollbar drag does not select a SampleSet");
+        ui.Click(thumb.X + 2, trackTop + 254);
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.customSet", 12)), "Clicking the SampleSet scrollbar track reaches the last row");
+        ui.ClickText(L.Get("hitsounding.customSet", 12));
         void WaitFor(Func<bool> condition)
         {
             var clock = System.Diagnostics.Stopwatch.StartNew();

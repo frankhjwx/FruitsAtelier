@@ -77,6 +77,7 @@ public sealed partial class EditorView
             foreach (int index in hitsoundingSets)
                 contextItems.Add(new(HitsoundingSetLabel(index), () => hitsoundingIndex = index, Active: index == hitsoundingIndex));
             hitsoundingSetMenu = contextItems[0];
+            hitsoundingSetDragging = false;
             hitsoundingSetFirst = Math.Clamp(Array.IndexOf(hitsoundingSets, hitsoundingIndex) - HitsoundingSetRows + 1, 0, Math.Max(0, hitsoundingSets.Length - HitsoundingSetRows));
             contextBounds = new(selector.X, Math.Min(selector.Bottom, height - ContextMenuHeight - 8), selector.Width, ContextMenuHeight);
         }, fontSize: 11);
@@ -115,6 +116,37 @@ public sealed partial class EditorView
     }
     private ContextItem? hitsoundingSetMenu;
     private int hitsoundingSetFirst;
+    private bool hitsoundingSetDragging;
+    private float hitsoundingSetDragOffset;
+    private bool HitsoundingSetScrollable => HitsoundingSetMenuOpen && contextItems.Count > HitsoundingSetRows;
+    private Rect HitsoundingSetScrollTrack => new(contextBounds.Right - 12, contextBounds.Y + 6, 10, contextBounds.Height - 12);
+    private Rect HitsoundingSetScrollThumb
+    {
+        get
+        {
+            var track = HitsoundingSetScrollTrack;
+            float size = Math.Max(16, track.Height * HitsoundingSetRows / contextItems.Count);
+            return new(track.X, track.Y + (track.Height - size) * hitsoundingSetFirst / (contextItems.Count - HitsoundingSetRows), track.Width, size);
+        }
+    }
+    private bool BeginHitsoundingSetScroll(float x, float y)
+    {
+        if (!HitsoundingSetScrollable || !HitsoundingSetScrollTrack.Contains(x, y)) return false;
+        var thumb = HitsoundingSetScrollThumb;
+        hitsoundingSetDragOffset = thumb.Contains(x, y) ? y - thumb.Y : thumb.Height / 2;
+        hitsoundingSetDragging = true;
+        MoveHitsoundingSetScroll(y);
+        return true;
+    }
+    private bool MoveHitsoundingSetScroll(float y)
+    {
+        if (!hitsoundingSetDragging) return false;
+        if (!HitsoundingSetScrollable) { hitsoundingSetDragging = false; return false; }
+        var track = HitsoundingSetScrollTrack;
+        float travel = track.Height - HitsoundingSetScrollThumb.Height;
+        hitsoundingSetFirst = (int)Math.Round(Math.Clamp((y - track.Y - hitsoundingSetDragOffset) / Math.Max(1, travel), 0, 1) * (contextItems.Count - HitsoundingSetRows));
+        return true;
+    }
     private bool HitsoundingSetMenuOpen => contextItems.Count > 0 && ReferenceEquals(contextItems[0], hitsoundingSetMenu);
     private int HitsoundingSetRows => Math.Max(1, Math.Min(8, (int)((height - 28) / 32)));
     private static string HitsoundingSetLabel(int index) => index == 0 ? L.Get("hitsounding.default") : L.Get("hitsounding.customSet", index);

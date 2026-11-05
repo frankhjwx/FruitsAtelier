@@ -511,6 +511,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (MoveHitsoundingSetScroll(y)) return;
         if (volumePopoverDrag >= 0) { MoveVolumePopoverPointer(x, y); return; }
         if (HitsoundingPointerMove(x, y)) return;
         if (MoveOverlayDrag(x, y)) return;
@@ -687,6 +688,7 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (hitsoundingSetDragging && button == 0) { MoveHitsoundingSetScroll(y); hitsoundingSetDragging = false; return; }
         if (EndVolumePopoverPointer(x, y, button)) return;
         if (HitsoundingPointerUp(x, y, button)) return;
         if (overlayDragging != 0 && button == 0) { MoveOverlayDrag(x, y); FinishOverlayDrag(); return; }
@@ -1740,7 +1742,7 @@ public sealed partial class EditorView
     public void CancelInteraction(bool preserveTestplay = false)
     {
         CancelHitsoundingTimingPointer();
-        hitsoundingDragFile = null; hitsoundingSplitDrag = null;
+        hitsoundingDragFile = null; hitsoundingSplitDrag = null; hitsoundingSetDragging = false;
         hitsoundingLibraryPressed = hitsoundingLibraryDragging = hitsoundingLibraryBox = false;
         hitsoundingLibraryFocused = hitsoundingNaming = hitsoundingLibraryScrollbarDragging = false;
         discussionPreviewDragging = false;

@@ -41,10 +41,10 @@ public sealed partial class EditorView
             }
             else DrawContextAction(c, item, rect);
         }
-        if (HitsoundingSetMenuOpen && contextItems.Count > HitsoundingSetRows)
+        if (HitsoundingSetScrollable)
         {
-            float track = contextBounds.Height - 12, thumb = track * HitsoundingSetRows / contextItems.Count;
-            c.Fill(new(contextBounds.Right - 4, contextBounds.Y + 6 + (track - thumb) * hitsoundingSetFirst / (contextItems.Count - HitsoundingSetRows), 2, thumb), Muted, 1);
+            var thumb = HitsoundingSetScrollThumb;
+            c.Fill(new(thumb.X + 3, thumb.Y, 4, thumb.Height), hitsoundingSetDragging || HitsoundingSetScrollTrack.Contains(mouseX, mouseY) ? Accent : Muted, 2);
         }
         DrawContextSubmenu(c);
     }
@@ -76,7 +76,7 @@ public sealed partial class EditorView
 
     private Rect ContextItemBounds(int index) => new(contextBounds.X + 6,
         contextBounds.Y + 6 + contextItems.Skip(ContextFirstRow).Take(index - ContextFirstRow).Sum(item => item.Separator ? 10 : 32),
-        contextBounds.Width - 12, contextItems[index].Separator ? 8 : 30);
+        contextBounds.Width - (HitsoundingSetScrollable ? 20 : 12), contextItems[index].Separator ? 8 : 30);
 
     private Rect ContextActionBounds(int row, int column)
     {
@@ -88,6 +88,7 @@ public sealed partial class EditorView
 
     private void ActivateContextMenu(float x, float y)
     {
+        if (BeginHitsoundingSetScroll(x, y)) return;
         if (ActivateContextSubmenu(x, y)) return;
         Action? action = null;
         for (int i = ContextFirstRow; i < ContextLastRow; i++)
