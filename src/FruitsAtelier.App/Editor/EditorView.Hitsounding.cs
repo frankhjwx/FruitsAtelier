@@ -30,8 +30,7 @@ public sealed partial class EditorView
     private TimingPoint[] hitsoundingRedPoints = [], hitsoundingGreenPoints = [];
     private Rect hitsoundingBounds, hitsoundingGridBounds;
     private int hitsoundingBank = 2, hitsoundingIndex = 1;
-    private bool hitsoundingAllSets = true;
-    private int[] hitsoundingSets = [1];
+    private int[] hitsoundingSets = [0];
     private string[] hitsoundingLibraryFiles = [];
     private string? hitsoundingLibraryRoot;
     private string? hitsoundingDragFile;
@@ -39,7 +38,7 @@ public sealed partial class EditorView
     private Rect hitsoundingSplitBounds, hitsoundingDockBounds, hitsoundingLibraryBounds;
     private readonly List<(Rect Bounds, string Path)> hitsoundingFileRows = [];
     private readonly List<(Rect Bounds, string Name)> hitsoundingSlots = [];
-    private int hitsoundingLibraryScroll, hitsoundingSetScroll;
+    private int hitsoundingLibraryScroll;
     private static readonly string[] HitsoundingNames = ["hitnormal", "hitwhistle", "hitfinish", "hitclap", "slidertick"];
     private static readonly uint[] HitsoundingColors = [0xB5A7CD, 0x56B9AA, 0x51BDD2, 0xE0BD62, 0xD56EAB, 0x829DC7, 0xA57CC7];
     private static uint HitsoundingBankColor(int bank) => bank == 2 ? 0x65BF8Au : bank == 3 ? 0xDC747Bu : 0xE0B55Fu;
@@ -74,11 +73,11 @@ public sealed partial class EditorView
         if (hitsoundingSelected is { } selected && !hitsoundingNoteLookup.ContainsKey((selected.Id, selected.Event))) hitsoundingSelected = null;
         hitsoundingRedPoints = overviewTiming.Where(p => p.Uninherited).ToArray();
         hitsoundingGreenPoints = overviewTiming.Where(p => !p.Uninherited).ToArray();
-        var sets = new SortedSet<int>(Document.TimingPoints.Select(p => Math.Max(0, p.SampleIndex))) { 0, 1 };
+        var sets = new SortedSet<int>(Document.TimingPoints.Select(p => Math.Max(0, p.SampleIndex))) { 0 };
         for (int i = 0; i < current.Objects.Count; i++)
         {
             var item = current.Objects[i];
-            var settings = resolver.Describe(item); sets.Add(Math.Max(0, settings.Index));
+            var settings = resolver.Describe(item);
             foreach (var group in resolvedHitsounds[i].Where(s => s.Volume > 0).GroupBy(sound =>
                 sound.Name switch { "hitwhistle" => 2, "hitfinish" => 3, "hitclap" => 4, "slidertick" => 5, _ => 1 }))
             {
@@ -109,12 +108,9 @@ public sealed partial class EditorView
             foreach (string path in Directory.EnumerateFiles(root).Take(20000).OrderBy(p => Path.GetExtension(p).ToLowerInvariant() switch { ".wav" => 0, ".ogg" => 1, _ => 2 }))
             {
                 if (IsHitsoundingAudio(path)) hitsoundingMapFiles.TryAdd(Path.GetFileNameWithoutExtension(path), path);
-                var match = System.Text.RegularExpressions.Regex.Match(Path.GetFileNameWithoutExtension(path),
-                    @"^(normal|soft|drum)-(hitnormal|hitwhistle|hitfinish|hitclap|slidertick)(\d*)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                if (match.Success && (match.Groups[3].Value.Length == 0 || int.TryParse(match.Groups[3].Value, out _)))
-                    sets.Add(match.Groups[3].Value.Length == 0 ? 1 : int.Parse(match.Groups[3].Value));
             }
         hitsoundingSets = sets.ToArray();
+        if (!sets.Contains(hitsoundingIndex)) hitsoundingIndex = hitsoundingSets[0];
         hitsoundingMapPaths.Clear(); hitsoundingMapPaths.UnionWith(hitsoundingMapFiles.Values);
     }
     private void ZoomHitsounding(double factor, float anchorX)

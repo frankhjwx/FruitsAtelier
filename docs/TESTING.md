@@ -1701,7 +1701,9 @@ menus and inspector at narrow and ordinary window sizes under
 `App.Tests --hitsounding-panel-check` covers the Snap ruler, actual slider ticks,
 centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,
 default bank labels, timing-tag order, the unified Config dock, library search/imports,
-slot drag/drop, and resource undo/redo. It also checks Inspector drafts and manual
+slot drag/drop, and resource undo/redo. Config checks include the eight-row SampleSet
+dropdown, divider resize cursors, recursive folder imports, opening the current folder,
+and live library create/rename/delete notifications. It also checks Inspector drafts and manual
 application, event-specific additions, single-click and continuous painting, complete
 stroke undo, empty-space selection, playback flashes, normalized narrow waveforms,
 visible interval labels and play-line bounds. It also checks marquee copy/delete/paste,

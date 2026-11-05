@@ -6,6 +6,9 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    public bool HitsoundingSplitResizeCursor => HitsoundingPageVisible && DockContentInputAvailable
+        && PanelVisible(DockPanel.HitsoundingConfig) && menu < 0 && contextItems.Count == 0
+        && (hitsoundingSplitDrag is not null || hitsoundingSplitBounds.Contains(mouseX, mouseY));
     private bool hitsoundingResourcesChanged;
     private Task<string?>? hitsoundingImportTask;
     private readonly Dictionary<string, string> hitsoundingFallbackFiles = new(StringComparer.OrdinalIgnoreCase);
@@ -24,6 +27,8 @@ public sealed partial class EditorView
     private string hitsoundingQuery = "";
     private string[] hitsoundingFilteredFiles = [];
     private string? hitsoundingLibraryDirectory;
+    private (string Path, float Width, Type Canvas) hitsoundingPathKey;
+    private string hitsoundingPathLabel = "";
     private readonly HashSet<string> hitsoundingLibraryDirectories = new(StringComparer.OrdinalIgnoreCase);
     private Rect hitsoundingSearchBounds;
     private bool HitsoundingSearchFocused => HitsoundingPageVisible && DockContentInputAvailable
@@ -63,35 +68,23 @@ public sealed partial class EditorView
     }
     private void DrawHitsoundingSamplesets(ICanvas c, Rect r)
     {
-        float toggleWidth = Math.Min(150, r.Width * .53f);
-        var allSets = new Rect(r.X, r.Y, toggleWidth, 24);
-        hits.Add(new(allSets, () => hitsoundingAllSets = !hitsoundingAllSets, true));
-        c.Fill(new(r.X, r.Y + 5, 28, 14), hitsoundingAllSets ? Accent : Grid, 7);
-        c.Circle(r.X + (hitsoundingAllSets ? 21 : 7), r.Y + 12, 5, Foreground);
-        c.Text(L.Get("hitsounding.allSets"), r.X + 35, r.Y + 5, 10, Foreground, toggleWidth - 39);
-        int[] sets = hitsoundingAllSets ? hitsoundingSets : [hitsoundingIndex];
-        float chipsX = r.X + toggleWidth;
-        float chipWidth = Math.Max(38, c.MeasureText(L.Get("hitsounding.default"), 10) + 20);
-        int count = Math.Max(1, (int)((r.Width - toggleWidth - 32) / (chipWidth + 2)));
-        hitsoundingSetScroll = Math.Clamp(hitsoundingSetScroll, 0, Math.Max(0, sets.Length - count));
-        if (sets.Length > count) SetArrow(new(chipsX, r.Y, 16, 24), "‹", () => hitsoundingSetScroll = Math.Max(0, hitsoundingSetScroll - count));
-        for (int i = hitsoundingSetScroll; i < Math.Min(sets.Length, hitsoundingSetScroll + count); i++)
+        c.Text(L.Get("hitsounding.sampleSet"), r.X, r.Y + 5, 11, Foreground, 85);
+        var selector = new Rect(r.X + 90, r.Y, Math.Max(40, r.Width - 90), 24);
+        Button(c, selector, HitsoundingSetLabel(hitsoundingIndex) + " ▾", () =>
         {
-            int index = sets[i];
-            Button(c, new(chipsX + 16 + (i - hitsoundingSetScroll) * (chipWidth + 2), r.Y, chipWidth, 24), index == 0 ? L.Get("hitsounding.default") : index.ToString(), () => hitsoundingIndex = index, hitsoundingIndex == index, fontSize: 10);
-        }
-        if (sets.Length > count) SetArrow(new(r.Right - 16, r.Y, 16, 24), "›", () => hitsoundingSetScroll = Math.Min(Math.Max(0, sets.Length - count), hitsoundingSetScroll + count));
-        void SetArrow(Rect bounds, string label, Action action)
-        {
-            c.Text(label, bounds.X + 3, bounds.Y + 3, 14, Muted, 12);
-            hits.Add(new(bounds, action, true));
-        }
+            contextItems.Clear();
+            foreach (int index in hitsoundingSets)
+                contextItems.Add(new(HitsoundingSetLabel(index), () => hitsoundingIndex = index, Active: index == hitsoundingIndex));
+            hitsoundingSetMenu = contextItems[0];
+            hitsoundingSetFirst = Math.Clamp(Array.IndexOf(hitsoundingSets, hitsoundingIndex) - HitsoundingSetRows + 1, 0, Math.Max(0, hitsoundingSets.Length - HitsoundingSetRows));
+            contextBounds = new(selector.X, Math.Min(selector.Bottom, height - ContextMenuHeight - 8), selector.Width, ContextMenuHeight);
+        }, fontSize: 11);
         for (int i = 0; i < 3; i++)
         {
             int bank = new[] { 2, 3, 1 }[i];
             Button(c, new(r.X + i * r.Width / 3, r.Y + 31, r.Width / 3 - 4, 26), BankCode(bank) + " · " + L.Get(bank == 2 ? "timing.soft" : bank == 3 ? "timing.drum" : "timing.normal"), () => hitsoundingBank = bank, bank == hitsoundingBank, fontSize: 11);
         }
-        hitsoundingSampleBounds = new(r.X, r.Y + 65, r.Width, Math.Max(0, r.Height - 85));
+        hitsoundingSampleBounds = new(r.X, r.Y + 65, r.Width, Math.Max(0, r.Height - 65));
         float rowHeight = Math.Clamp(hitsoundingSampleBounds.Height / 5, 40, 46);
         hitsoundingSampleScroll = Math.Clamp(hitsoundingSampleScroll, 0, Math.Max(0, rowHeight * 5 - hitsoundingSampleBounds.Height));
         c.Clip(hitsoundingSampleBounds);
@@ -118,7 +111,17 @@ public sealed partial class EditorView
             if (path is not null) hitsoundingFileRows.Add((new(visibleRow.X + 32, visibleRow.Y, visibleRow.Width - 32, visibleRow.Height), path));
         }
         c.Unclip();
-        c.Text(L.Get(hitsoundingIndex == 0 ? "hitsounding.defaultHint" : "hitsounding.slotHint"), r.X + 3, r.Bottom - 14, 9, Muted, r.Width - 6);
+    }
+    private ContextItem? hitsoundingSetMenu;
+    private int hitsoundingSetFirst;
+    private bool HitsoundingSetMenuOpen => contextItems.Count > 0 && ReferenceEquals(contextItems[0], hitsoundingSetMenu);
+    private int HitsoundingSetRows => Math.Max(1, Math.Min(8, (int)((height - 28) / 32)));
+    private static string HitsoundingSetLabel(int index) => index == 0 ? L.Get("hitsounding.default") : L.Get("hitsounding.customSet", index);
+    private bool ScrollHitsoundingSets(float x, float y, float delta)
+    {
+        if (!HitsoundingSetMenuOpen || !contextBounds.Contains(x, y)) return false;
+        hitsoundingSetFirst = Math.Clamp(hitsoundingSetFirst - (int)(delta / 120), 0, Math.Max(0, contextItems.Count - HitsoundingSetRows));
+        return true;
     }
     private void DrawHitsoundingAudition(ICanvas c, Rect row, Hitsound sound)
     {
@@ -143,11 +146,29 @@ public sealed partial class EditorView
     {
         hitsoundingLibraryBounds = r;
         bool atRoot = hitsoundingLibraryDirectory == hitsoundingLibraryRoot;
-        Button(c, new(r.X, r.Y, 28, 24), "↑", () => NavigateHitsoundingDirectory(Path.GetDirectoryName(hitsoundingLibraryDirectory!)), enabled: !atRoot, fontSize: 12);
+        Button(c, new(r.X, r.Y, 28, 24), "←", () => NavigateHitsoundingDirectory(Path.GetDirectoryName(hitsoundingLibraryDirectory!)), enabled: !atRoot, fontSize: 12);
         Button(c, new(r.X + 32, r.Y, 28, 24), "⌂", () => NavigateHitsoundingDirectory(hitsoundingLibraryRoot), fontSize: 12);
-        string relative = atRoot || hitsoundingLibraryRoot is null || hitsoundingLibraryDirectory is null
-            ? L.Get("hitsounding.workspaceLibrary") : Path.GetRelativePath(hitsoundingLibraryRoot, hitsoundingLibraryDirectory);
-        c.Text(relative, r.X + 67, r.Y + 5, 10, Muted, r.Width - 70);
+        string location = hitsoundingLibraryDirectory ?? L.Get("hitsounding.workspaceLibrary");
+        float pathWidth = Math.Max(0, r.Width - 70);
+        var pathKey = (location, pathWidth, c.GetType());
+        if (hitsoundingPathKey != pathKey)
+        {
+            hitsoundingPathKey = pathKey;
+            hitsoundingPathLabel = location;
+            if (c.MeasureText(location, 10) > pathWidth)
+            {
+                int first = 0, end = location.Length;
+                while (first < end)
+                {
+                    int middle = (first + end) / 2;
+                    if (c.MeasureText("…" + location[middle..], 10) > pathWidth) first = middle + 1;
+                    else end = middle;
+                }
+                if (first < location.Length && char.IsLowSurrogate(location[first])) first++;
+                hitsoundingPathLabel = "…" + location[first..];
+            }
+        }
+        c.Text(hitsoundingPathLabel, r.X + 67, r.Y + 5, 10, Muted, pathWidth);
         hitsoundingSearchBounds = new(r.X, r.Y + 31, r.Width, 26);
         c.Fill(hitsoundingSearchBounds, Surface, 4); c.StrokeOpacity(hitsoundingSearchBounds, HitsoundingSearchFocused ? Accent : Muted, 1, 4, .6f);
         DrawInputText(c, new(r.X + 8, r.Y + 36, r.Width - 16, 18), hitsoundingQuery, 11, HitsoundingSearchFocused, "hitsounding:search");
@@ -186,7 +207,7 @@ public sealed partial class EditorView
         if (root != hitsoundingLibraryRoot) hitsoundingLibraryDirectory = root;
         hitsoundingLibraryRoot = root;
         hitsoundingLibraryFiles = []; hitsoundingLibraryDirectories.Clear();
-        if (!HitsoundingDirectoryInsideRoot(hitsoundingLibraryDirectory)) hitsoundingLibraryDirectory = root;
+        if (!HitsoundingDirectoryInsideRoot(hitsoundingLibraryDirectory) || !Directory.Exists(hitsoundingLibraryDirectory)) hitsoundingLibraryDirectory = root;
         try
         {
             if (hitsoundingLibraryDirectory is { } current && HitsoundingDirectoryInsideRoot(current) && Directory.Exists(current))
@@ -229,14 +250,57 @@ public sealed partial class EditorView
         if (hitsoundingImportTask is not null) return;
         RefreshHitsoundingLibrary();
         if (hitsoundingLibraryDirectory is not { } root || !HitsoundingDirectoryInsideRoot(root)) { ShowError(L.Get("hitsounding.workspaceRequired")); return; }
-        var files = paths.Where(IsHitsoundingAudio).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        if (files.Length > 128) { ShowError(L.Get("resource.limit")); return; }
+        var sources = paths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         hitsoundingImportTask = Task.Run<string?>(() =>
         {
-            try { foreach (string path in files) HitsoundResourcePlan.ImportLibrarySample(root, path); return null; }
+            try
+            {
+                var files = new List<(string Source, string Directory)>();
+                var directories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                int entries = 0;
+                foreach (string source in sources)
+                {
+                    if ((File.GetAttributes(source) & FileAttributes.ReparsePoint) != 0) continue;
+                    if (Directory.Exists(source))
+                    {
+                        string full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(source));
+                        var pending = new Stack<(string Source, string Target)>();
+                        pending.Push((full, Path.Combine(root, Path.GetFileName(full))));
+                        var options = new EnumerationOptions { AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = false };
+                        while (pending.TryPop(out var directory))
+                        {
+                            directories.Add(directory.Target);
+                            foreach (string child in Directory.EnumerateFileSystemEntries(directory.Source, "*", options))
+                            {
+                                if (++entries > 20000) throw new IOException(L.Get("resource.limit"));
+                                if (Directory.Exists(child)) pending.Push((child, Path.Combine(directory.Target, Path.GetFileName(child))));
+                                else if (IsHitsoundingAudio(child)) AddFile(child, directory.Target);
+                            }
+                        }
+                    }
+                    else if (IsHitsoundingAudio(source)) AddFile(source, root);
+                }
+                foreach (string directory in directories)
+                {
+                    if (!HitsoundingDirectoryInsideRoot(directory)) throw new IOException(L.Get("resource.limit"));
+                    Directory.CreateDirectory(directory);
+                }
+                foreach (var file in files)
+                {
+                    if (!HitsoundingDirectoryInsideRoot(file.Directory)) throw new IOException(L.Get("resource.limit"));
+                    HitsoundResourcePlan.ImportLibrarySample(file.Directory, file.Source);
+                }
+                return null;
+                void AddFile(string source, string directory)
+                {
+                    if (files.Count >= 128 || new FileInfo(source).Length > 16 * 1024 * 1024) throw new IOException(L.Get("resource.limit"));
+                    files.Add((source, directory));
+                }
+            }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { return error.Message; }
         });
     }
+
     private void PumpHitsoundingResources()
     {
         if (hitsoundingResourcesChanged)
@@ -282,6 +346,20 @@ public sealed partial class EditorView
         if (leftDockResizeBounds.Contains(x, y) || rightDockResizeBounds.Contains(x, y) || dockTabs.Any(t => t.Bounds.Contains(x, y))) return false;
         if (HitsoundingSearchFocused && !hitsoundingSearchBounds.Contains(x, y)) textEditor.Field = "";
         if (!hitsoundingBounds.Contains(x, y) && !hitsoundingDockBounds.Contains(x, y)) return false;
+        if (button == 1 && hitsoundingLibraryBounds.Contains(x, y))
+        {
+            contextItems.Clear();
+            contextItems.Add(new(L.Get("hitsounding.openFolder"), () =>
+            {
+                if (hitsoundingLibraryDirectory is { } folder && HitsoundingDirectoryInsideRoot(folder))
+                {
+                    try { Directory.CreateDirectory(folder); RequestOpenExternalPath?.Invoke(folder); }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException) { ShowError(error.Message); }
+                }
+            }, hitsoundingLibraryDirectory is not null));
+            contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)), Math.Min(y, height - ContextMenuHeight), 240, ContextMenuHeight);
+            return true;
+        }
         if (BeginHitsoundingCanvasPointer(x, y, button)) return true;
         if (button == 0)
         {

@@ -271,6 +271,17 @@ internal static class HitsoundingPanelTests
         var baseline = ui.View.Document.DeepClone();
         ui.View.ShowHitsoundingPage(); ui.Paint(); ui.SetSnapDivisor(4);
         Check(ui.View.HitsoundingPageVisible, "Hitsounding mode opens");
+        var divider = ui.Canvas.Fills.First(f => f.Bounds.Width == 32 && f.Bounds.Height == 3 && f.Bounds.X < 340 && f.Bounds.Y > 200).Bounds;
+        ui.View.PointerMove(divider.X + 16, divider.Y + 1, false, false);
+        Check(ui.View.HitsoundingSplitResizeCursor, "Config divider hover uses a vertical resize cursor");
+        ui.View.PointerDown(divider.X + 16, divider.Y + 1, 0, false, false);
+        ui.View.PointerMove(divider.X + 16, divider.Y + 10, false, false);
+        Check(ui.View.HitsoundingSplitResizeCursor, "Divider drag retains its resize cursor");
+        ui.View.PointerMove(divider.X + 16, divider.Y + 1, false, false);
+        ui.View.PointerUp(divider.X + 16, divider.Y + 1, 0); ui.Paint();
+        ui.View.PointerMove(500, 200, false, false);
+        Check(!ui.View.HitsoundingSplitResizeCursor, "Leaving the divider restores the ordinary cursor");
+
         Check(!ui.View.IsDirty && baseline.ContentEquals(ui.View.Document), "Mode changes leave content intact");
         for (int i = 0; i < 7; i++) Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.lane" + i)), "Seven lane labels");
         Check(ui.Canvas.Lines.Any(l => l.Color == 0x66AAFF && Math.Abs(l.Y2 - l.Y1 - 5) < .01), "Quarter subdivisions use short blue ticks");
@@ -368,9 +379,60 @@ internal static class HitsoundingPanelTests
         ui.View.DropLibraryFiles([source]); WaitImport();
         Check(File.Exists(Path.Combine(nested, "replacement.wav")), "Imports target the browsed subfolder");
         ui.View.NavigateHitsoundingDirectory(Path.GetDirectoryName(libraryRoot)); ui.Paint();
-        Check(ui.Canvas.Texts.Any(t => t.Value == Path.Combine("Drums", "Tight")), "Navigation cannot escape the audio library root");
-        ui.ClickText("↑"); Check(ui.Canvas.Texts.Any(t => t.Value == "Tight"), "Parent navigation shows child directories");
+        Check(ui.Canvas.Texts.Any(t => t.Value.EndsWith(Path.Combine("Drums", "Tight"), StringComparison.Ordinal)), "Navigation cannot escape the audio library root");
+        ui.ClickText("←"); Check(ui.Canvas.Texts.Any(t => t.Value == "Tight"), "Parent navigation shows child directories");
         ui.ClickText("⌂"); Check(ui.Canvas.Texts.Any(t => t.Value == "Drums"), "Home navigation returns to the library root");
+        string importFolder = Path.Combine(root, "FolderDrop");
+        Directory.CreateDirectory(Path.Combine(importFolder, "Nested"));
+        File.WriteAllBytes(Path.Combine(importFolder, "Nested", "tap.wav"), replacement);
+        File.WriteAllText(Path.Combine(importFolder, "ignore.txt"), "not audio");
+        Check(ui.View.CanDropFile(importFolder), "Folder drops are accepted in Hitsounding");
+        ui.View.DropLibraryFiles([importFolder]); WaitImport();
+        Check(File.Exists(Path.Combine(libraryRoot, "FolderDrop", "Nested", "tap.wav"))
+            && !File.Exists(Path.Combine(libraryRoot, "FolderDrop", "ignore.txt")), "Folder imports preserve nested audio only");
+        string watchFolder = Path.Combine(libraryRoot, "Watched"); Directory.CreateDirectory(watchFolder);
+        ui.View.NavigateHitsoundingDirectory(watchFolder); ui.Paint();
+        int audioRefreshes = 0;
+        ui.View.RequestPreloadHitsounds = _ => audioRefreshes++;
+        ui.View.EnableFileMonitoring();
+        try
+        {
+            string watched = Path.Combine(watchFolder, "watch-test.wav");
+            File.WriteAllBytes(watched, replacement);
+            WaitFor(() => ui.Canvas.Texts.Any(t => t.Value == "watch-test.wav"));
+            int refreshCount = audioRefreshes;
+            File.WriteAllBytes(watched, before);
+            WaitFor(() => audioRefreshes > refreshCount);
+            File.Move(watched, Path.Combine(watchFolder, "watch-renamed.wav"), true);
+            WaitFor(() => ui.Canvas.Texts.Any(t => t.Value == "watch-renamed.wav") && !ui.Canvas.Texts.Any(t => t.Value == "watch-test.wav"));
+            File.Delete(Path.Combine(watchFolder, "watch-renamed.wav"));
+            WaitFor(() => !ui.Canvas.Texts.Any(t => t.Value == "watch-renamed.wav"));
+        }
+        finally { ui.View.StopFileMonitoring(); }
+        ui.View.NavigateHitsoundingDirectory(libraryRoot); ui.Paint();
+        string? opened = null;
+        ui.View.RequestOpenExternalPath = path => opened = path;
+        var search = ui.Canvas.Texts.First(t => t.Value == L.Get("hitsounding.search"));
+        ui.View.PointerDown(search.X + 5, search.Y + 5, 1, false, false); ui.Paint();
+        ui.ClickText(L.Get("hitsounding.openFolder"));
+        Check(opened == libraryRoot, "Library context menu opens the current folder");
+        ui.ClickText(L.Get("hitsounding.customSet", 1) + " ▾");
+        ui.ClickText(L.Get("hitsounding.default"));
+        Check(baseline.ContentEquals(ui.View.Document), "SampleSet selection preserves map content");
+        for (int index = 2; index <= 12; index++) map.TimingPoints.Add(new() { TimeMs = index * 100, SampleIndex = index, Uninherited = false, BeatLengthMs = -100 });
+        ui.LoadDocument(map); ui.View.ShowHitsoundingPage(); ui.Paint();
+        ui.ClickText(L.Get("hitsounding.default") + " ▾");
+        Check(ui.Canvas.Texts.Count(t => t.Value.StartsWith("Custom ", StringComparison.Ordinal) && !t.Value.EndsWith("▾")) == 7, "Dropdown displays eight rows including Default");
+        var choice = ui.Canvas.Texts.First(t => t.Value == L.Get("hitsounding.customSet", 1));
+        ui.View.Wheel(choice.X + 5, choice.Y + 5, -1200, false, false, false); ui.Paint();
+        ui.ClickText(L.Get("hitsounding.customSet", 12));
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.customSet", 12) + " ▾"), "Scrollable dropdown selects later timing indices");
+        void WaitFor(Func<bool> condition)
+        {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            do { Thread.Sleep(25); ui.Paint(); if (condition()) return; } while (clock.Elapsed.TotalSeconds < 5);
+            throw new TimeoutException("Library watcher did not refresh");
+        }
         ui.Resize(980, 620); Check(ui.Canvas.Fills.All(f => float.IsFinite(f.Bounds.Width) && f.Bounds.Width >= 0), "Narrow layout stays valid");
         void WaitImport()
         {

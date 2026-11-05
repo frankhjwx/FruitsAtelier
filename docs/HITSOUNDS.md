@@ -210,15 +210,22 @@ are rejected during undo/redo.
 Browse nested folders using directory rows, the parent button and the root button.
 Navigation stays inside this root and excludes symbolic links/junctions. Search filters
 files and folders in the current directory; imports are saved into that directory.
-Drop WAV, OGG or MP3 files into the Hitsounding workspace to import them, or drag
-an assigned map sample into the library pane. Imports preserve existing different
+Drop folders or WAV, OGG or MP3 files into the Hitsounding workspace to import them, or drag
+an assigned map sample into the library pane. Folder imports preserve nested directories
+and copy supported audio files. Right-click the library to open the current folder
+in the system file manager. The navigation bar shows its full path, omitting the
+start when space is limited. External changes refresh the listing, waveforms and audition samples.
+Imports preserve existing different
 files with a numbered filename and reuse identical copies. Library files can be
 dragged to map slots; their names need not match osu! sample filenames. Samples are
 limited to 16 MiB each and one drop accepts up to 128 files.
 
 **Hitsounding Config** contains Map Samplesets above Hitsound Library in one dock
 panel. Resize their internal divider to allocate space; the two sections keep their
-order. Audio rows provide audition controls and decoded waveform previews. Search
+order. Hovering or dragging the divider uses a vertical resize cursor.
+The SampleSet dropdown offers Default and the custom indices defined by the
+map’s red and green timing points; more than eight choices scroll. The selector
+does not create or edit sample indices. Audio rows provide audition controls and decoded waveform previews. Search
 filters the current folder by name. Long lists scroll within their own section.
 View and library navigation do not edit beatmap objects.
 

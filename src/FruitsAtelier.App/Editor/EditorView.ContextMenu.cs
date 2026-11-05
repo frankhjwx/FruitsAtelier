@@ -9,7 +9,9 @@ public sealed partial class EditorView
     private readonly List<ContextItem> contextItems = [];
     private Rect contextBounds;
     private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null, bool Separator = false, bool Heading = false, bool Active = false, int SliderAction = 0, ContextItem[]? Actions = null, int Weight = 1, ContextItem[]? Children = null);
-    private float ContextMenuHeight => 12 + contextItems.Sum(item => item.Separator ? 10 : 32);
+    private float ContextMenuHeight => HitsoundingSetMenuOpen ? 12 + 32 * Math.Min(HitsoundingSetRows, contextItems.Count) : 12 + contextItems.Sum(item => item.Separator ? 10 : 32);
+    private int ContextFirstRow => HitsoundingSetMenuOpen ? hitsoundingSetFirst : 0;
+    private int ContextLastRow => HitsoundingSetMenuOpen ? Math.Min(contextItems.Count, hitsoundingSetFirst + HitsoundingSetRows) : contextItems.Count;
     private void AddContextSeparator() => contextItems.Add(new("", () => { }, Enabled: false, Separator: true));
     private sealed record SliderLocation(Guid Id, double FirstSpanTimeMs);
 
@@ -20,7 +22,7 @@ public sealed partial class EditorView
         c.Fill(new(contextBounds.X + 3, contextBounds.Y + 4, contextBounds.Width, contextBounds.Height), 0x11151B, 5);
         c.Fill(contextBounds, Surface, 5);
         c.Stroke(contextBounds, Grid, 1, 5);
-        for (int i = 0; i < contextItems.Count; i++)
+        for (int i = ContextFirstRow; i < ContextLastRow; i++)
         {
             var item = contextItems[i];
             var rect = ContextItemBounds(i);
@@ -38,6 +40,11 @@ public sealed partial class EditorView
                     DrawContextAction(c, actions[column], ContextActionBounds(i, column));
             }
             else DrawContextAction(c, item, rect);
+        }
+        if (HitsoundingSetMenuOpen && contextItems.Count > HitsoundingSetRows)
+        {
+            float track = contextBounds.Height - 12, thumb = track * HitsoundingSetRows / contextItems.Count;
+            c.Fill(new(contextBounds.Right - 4, contextBounds.Y + 6 + (track - thumb) * hitsoundingSetFirst / (contextItems.Count - HitsoundingSetRows), 2, thumb), Muted, 1);
         }
         DrawContextSubmenu(c);
     }
@@ -68,7 +75,7 @@ public sealed partial class EditorView
     }
 
     private Rect ContextItemBounds(int index) => new(contextBounds.X + 6,
-        contextBounds.Y + 6 + contextItems.Take(index).Sum(item => item.Separator ? 10 : 32),
+        contextBounds.Y + 6 + contextItems.Skip(ContextFirstRow).Take(index - ContextFirstRow).Sum(item => item.Separator ? 10 : 32),
         contextBounds.Width - 12, contextItems[index].Separator ? 8 : 30);
 
     private Rect ContextActionBounds(int row, int column)
@@ -83,7 +90,7 @@ public sealed partial class EditorView
     {
         if (ActivateContextSubmenu(x, y)) return;
         Action? action = null;
-        for (int i = 0; i < contextItems.Count; i++)
+        for (int i = ContextFirstRow; i < ContextLastRow; i++)
             if (ContextItemBounds(i).Contains(x, y) && contextItems[i].Enabled)
             {
                 if (contextItems[i].Children is not null) { OpenContextSubmenu(contextItems[i], ContextItemBounds(i)); return; }
