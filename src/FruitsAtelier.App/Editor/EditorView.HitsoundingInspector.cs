@@ -215,6 +215,7 @@ public sealed partial class EditorView
         }
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
         hitsoundingTimingSelection.Clear();
+        if (button == 2 && !hitsoundingDraw) { OpenHitsoundingSelectionMenu(x, y); return true; }
         if (BeginHitsoundingStoryboardPointer(x, y, button)) return true;
         var note = HitsoundingNoteAt(x, y);
         int lane = Math.Clamp((int)((y - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7)), 0, 6);
@@ -302,8 +303,6 @@ public sealed partial class EditorView
         if (hitsoundingMarquee)
         {
             hitsoundingMarquee = false;
-            if (!AudioPlaying && !hitsoundingMarqueeMoved)
-                SeekTo(Math.Max(0, hitsoundingMarqueeStartTime));
             return true;
         }
         if (!hitsoundingPainting) return false;

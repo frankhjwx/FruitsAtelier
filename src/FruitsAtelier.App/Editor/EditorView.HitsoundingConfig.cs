@@ -402,8 +402,6 @@ public sealed partial class EditorView
             {
                 hitsoundingSelectedTiming = null; hitsoundingSelected = null; hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
                 SelectObjects([]);
-                double start = HitsoundingStart;
-                if (!AudioPlaying) SeekTo(Math.Max(0, start + (x - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan));
             }
         }
         return true;

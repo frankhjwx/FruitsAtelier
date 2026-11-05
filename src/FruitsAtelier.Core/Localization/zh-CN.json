@@ -2008,7 +2008,7 @@
   "hitsounding.muteLane": "静音 {0}",
   "hitsounding.unmuteLane": "取消静音 {0}",
   "hitsounding.folderCounts": "{0} 个文件夹，{1} 个音频文件",
-  "hitsounding.openFolder": "打开当前文件夹",
+  "hitsounding.openFolder": "在系统浏览器打开",
   "hitsounding.workspaceLibrary": "工作区音源库",
   "hitsounding.libraryHint": "拖入音频以保存副本",
   "hitsounding.fallback": "皮肤 / 默认音效",

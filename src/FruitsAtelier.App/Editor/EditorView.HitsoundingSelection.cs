@@ -70,6 +70,27 @@ public sealed partial class EditorView
         hitsoundingStoryboardClipboard = hitsoundingStoryboardSelection.Select(s => s with { TimeMs = s.TimeMs - start }).ToArray();
         hitsoundingClipboard = entries.Select(e => new HitsoundingCopy(e.Note.TimeMs - start, e.Lane, hitsoundingResolver!.Describe(e.Note))).ToArray();
     }
+    private void OpenHitsoundingSelectionMenu(float x, float y)
+    {
+        if (!CommitField()) return;
+        var sound = hitsoundingSoundHits.LastOrDefault(h => h.Bounds.Contains(x, y));
+        var storyboard = hitsoundingStoryboardHits.LastOrDefault(h => h.Bounds.Contains(x, y));
+        if (storyboard.Sample is { Path: not null } sample && !hitsoundingStoryboardSelection.Contains(sample))
+        {
+            hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); hitsoundingStoryboardSelection.Add(sample);
+            hitsoundingSelected = null; hitsoundingSelectedTiming = null; SelectObjects([]);
+        }
+        else if (sound.Note is { } note && !hitsoundingMultiSelection.Contains((note.SourceId, note.EventIndex, sound.Lane)))
+        {
+            hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
+            hitsoundingMultiSelection.Add((note.SourceId, note.EventIndex, sound.Lane)); SelectHitsoundingNote(note, seek: false);
+        }
+        bool deletable = hitsoundingMultiSelection.Any(k => k.Lane is >= 2 and <= 4) || hitsoundingStoryboardSelection.Count > 0;
+        contextItems.Clear();
+        contextItems.Add(new(L.Get("editor.command.delete"), DeleteHitsoundingSelection, deletable));
+        contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 200)), Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 200, ContextMenuHeight);
+    }
+
     private void DeleteHitsoundingSelection()
     {
         var changes = new List<EventHitsound>();

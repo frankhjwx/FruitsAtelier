@@ -56,7 +56,7 @@ internal static class HitsoundingPanelTests
             Check(ui.View.PlayheadMs == 1000 && ui.View.AudioPlaying, "Playing blank grid and ruler clicks preserve playback position and state");
             ui.View.UpdateTransport(1000, 10000, true, false, false, null, null); ui.Paint();
             ui.Click(emptyX, y);
-            Check(ui.View.PlayheadMs > 1000, "Paused blank grid and ruler clicks still seek");
+            Check(ui.View.PlayheadMs == 1000, "Paused blank grid and ruler clicks preserve the playhead");
         }
         Check(baseline.ContentEquals(ui.View.Document), "Blank clicks do not edit beatmap content");
         ui.View.UpdateTransport(1000, 10000, true, false, false, null, null); ui.Paint();
@@ -183,6 +183,21 @@ internal static class HitsoundingPanelTests
         ui.Key(46);
         Check(ui.View.Document.HitsoundOverrides.Count == 2 && ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 0), "Marquee delete removes all selected additions");
         ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Batch delete is one undo step");
+        foreach (bool blank in new[] { false, true })
+        {
+            whistles = LaneBlocks(ui, 2); finishes = LaneBlocks(ui, 3);
+            ui.View.PointerDown(whistles[0].X - 4, whistles[0].Y - 4, 0, false, false);
+            ui.View.PointerMove(whistles[1].Right + 4, finishes[1].Bottom + 4, false, false);
+            ui.View.PointerUp(whistles[1].Right + 4, finishes[1].Bottom + 4, 0); ui.Paint();
+            float contextX = whistles[0].X + 5, contextY = blank ? finishes[1].Bottom + 10 : whistles[0].Y + 10;
+            ui.View.PointerDown(contextX, contextY, 2, false, false); ui.View.PointerUp(contextX, contextY, 2); ui.Paint();
+            Check(baseline.ContentEquals(ui.View.Document), "Select right-click preserves the group and waits for its menu action");
+            ui.ClickText(L.Get("editor.command.delete"));
+            Check(ui.View.Document.HitsoundOverrides.Count == 2 && ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 0), "Context Delete removes every selected addition");
+            ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Context group deletion is one undo step");
+            ui.Key(89, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Count == 2, "Context group deletion is one redo step");
+            ui.Key(90, ctrl: true);
+        }
         ui.View.UpdateTransport(2000, 6000, true, false, false, null, null); ui.Paint();
         ui.Key(86, ctrl: true);
         Check(ui.View.DiscardConfirmationVisible && baseline.ContentEquals(ui.View.Document), "Mismatched paste waits for a decision");
@@ -508,7 +523,10 @@ internal static class HitsoundingPanelTests
         first = Blocks()[0]; second = Blocks()[1];
         ui.View.PointerDown(first.X - 5, first.Y - 5, 0, false, false);
         ui.View.PointerMove(second.Right + 5, second.Bottom + 5, false, false);
-        ui.View.PointerUp(second.Right + 5, second.Bottom + 5, 0); ui.Paint(); ui.Key(46); Wait(0);
+        ui.View.PointerUp(second.Right + 5, second.Bottom + 5, 0); ui.Paint();
+        ui.View.PointerDown(first.X + 5, first.Y + 10, 2, false, false);
+        ui.View.PointerUp(first.X + 5, first.Y + 10, 2); ui.Paint();
+        ui.ClickText(L.Get("editor.command.delete")); Wait(0);
         Check(Samples().Count == 0, "Storyboard marquee selects multiple sounds for deletion");
         ui.Key(90, ctrl: true); Wait(2);
         File.WriteAllText(shared, "[Events]\nSample,1250,0,\"sound,one.wav\",40\n");
@@ -531,7 +549,7 @@ internal static class HitsoundingPanelTests
         void Wait(int count)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            do { ui.Paint(); if (Blocks().Length == count) return; Thread.Sleep(5); } while (watch.Elapsed.TotalSeconds < 10);
+            do { ui.Paint(); if (Blocks().Length == count && (count != 0 || Samples().Count == 0)) return; Thread.Sleep(5); } while (watch.Elapsed.TotalSeconds < 10);
             throw new InvalidOperationException($"Expected {count} storyboard blocks, saw {Blocks().Length}");
         }
     }

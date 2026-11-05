@@ -156,8 +156,7 @@ Timing tags fill the interval up to the next timing point. Their left-aligned te
 at the visible left edge when the interval begins outside the viewport.
 
 In **Select**, only clicking a Notes object or an existing sound tag selects its event.
-Selecting a sound does not seek. Clicking empty timeline space clears selection and seeks
-only while paused; during playback, empty grid and ruler clicks preserve the playing position;
+Selecting a sound does not seek. Clicking empty grid or ruler space clears selection and preserves the playing position;
 clicking the lane-label column does not seek. Dragging empty grid space draws a selection
 rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Its starting
 time follows the scrolling timeline during playback while the opposite edge stays
@@ -165,7 +164,7 @@ under the pointer. Selection refreshes each frame, including sounds that have sc
 offscreen. Ctrl+C copies selected sounds, Ctrl+V
 pastes their relative times at the playhead onto existing fruit events (within 1 ms),
 Ctrl+X cuts deletable selected sounds, and Delete removes selected additions or SB sounds. Normal remains undeletable. Each batch is one
-undo step. When source and target banks or sample indices differ, a dialog offers the
+undo step. In Select mode, right-clicking a selected sound or empty grid space preserves the selection and offers Delete for the entire selection. Right-clicking an unselected sound selects that sound instead. When source and target banks or sample indices differ, a dialog offers the
 copied sampleset, the target sampleset, or cancellation. Adjustments affect target event
 overrides, including their shared addition bank/index, without rewriting timing intervals.
 In **Select**, drag an existing Whistle, Finish or Clap tag onto another fruit event to

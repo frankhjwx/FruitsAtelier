@@ -2008,7 +2008,7 @@
   "hitsounding.muteLane": "Mute {0}",
   "hitsounding.unmuteLane": "Unmute {0}",
   "hitsounding.folderCounts": "{0} folders, {1} audio files",
-  "hitsounding.openFolder": "Open current folder",
+  "hitsounding.openFolder": "在系統瀏覽器開啟",
   "hitsounding.workspaceLibrary": "Workspace library",
   "hitsounding.libraryHint": "Drop audio here to keep a copy",
   "hitsounding.fallback": "Skin / default sample",
