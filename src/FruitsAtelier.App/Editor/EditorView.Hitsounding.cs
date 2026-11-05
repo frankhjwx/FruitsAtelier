@@ -193,13 +193,21 @@ public sealed partial class EditorView
             if (tick.IsMeasure) c.Text(Time(tick.TimeMs), x + 3, r.Y, 10, Muted, 82);
         }
         c.Clip(new(g.X, r.Y, g.Width, r.Height));
+        TimingPoint? hoveredTiming = null;
+        if (DockContentInputAvailable && menu < 0 && contextItems.Count == 0 && !hitsoundingTimingBox)
+        {
+            hoveredTiming = HitsoundingTimingStrip.Contains(mouseX, mouseY)
+                ? hitsoundingTimingBoxes.Where(t => Math.Abs(t.Anchor - mouseX) <= 4).OrderBy(t => Math.Abs(t.Anchor - mouseX)).ThenBy(t => t.Point.Uninherited).FirstOrDefault().Point
+                : hitsoundingTimingBoxes.LastOrDefault(t => t.Bounds.Contains(mouseX, mouseY)).Point;
+        }
         foreach (var tag in hitsoundingTimingBoxes)
         {
             c.Line(tag.Anchor, g.Y, tag.Anchor, g.Bottom, tag.Color, 1, .45f);
             bool selectedTiming = hitsoundingTimingSelection.Contains(tag.Point);
-            c.Line(tag.Anchor, tag.Bounds.Bottom + 5, tag.Anchor, g.Y - 1, selectedTiming ? Accent : tag.Color, selectedTiming ? 5 : 3, .95f);
+            bool hovered = hoveredTiming == tag.Point && !selectedTiming && hitsoundingSelectedTiming != tag.Point;
+            c.Line(tag.Anchor, tag.Bounds.Bottom + 5, tag.Anchor, g.Y - 1, selectedTiming ? Accent : tag.Color, selectedTiming ? 5 : hovered ? 4 : 3, .95f);
             c.Fill(tag.Bounds, Panel, 6);
-            c.Fill(tag.Bounds, tag.Color, 6, .35f);
+            c.Fill(tag.Bounds, tag.Color, 6, hovered ? .55f : .35f);
             c.StrokeOpacity(tag.Bounds, tag.Color, selectedTiming || hitsoundingSelectedTiming == tag.Point ? 2.5f : 1, 6, 1);
             string bankLabel = tag.Index > 0 ? $"{tag.Bank}:{tag.Index}" : tag.Bank;
             string volumeLabel = $"{tag.Volume}%";
