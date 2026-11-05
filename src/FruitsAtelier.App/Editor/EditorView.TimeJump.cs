@@ -62,7 +62,14 @@ public sealed partial class EditorView
         else if (match.Success) double.TryParse(value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out time);
         if (!double.IsFinite(time) || time < 0 || time > int.MaxValue)
         { timeJumpError = L.Get("editor.error.timestampRequired"); return; }
-        SeekTo(time); TimeJumpVisible = false;
+        if (timeJumpText.Contains('('))
+        {
+            if (!FruitsAtelier.Core.EditorTimestamp.TryParse(timeJumpText, out var reference))
+            { timeJumpError = L.Get("editor.error.timestampRequired"); return; }
+            ApplyEditorTimestamp(reference!);
+        }
+        else SeekTo(time);
+        TimeJumpVisible = false;
     }
     private void DrawTimeJump(ICanvas c)
     {

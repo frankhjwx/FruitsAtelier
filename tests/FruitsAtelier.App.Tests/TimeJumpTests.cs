@@ -5,6 +5,7 @@ internal static class TimeJumpTests
 {
     public static void Run()
     {
+        SelectionReferences();
         var ui = new Ui();
         var map = new MapDocument { DurationMs = 240000 };
         map.Fruits.Add(new Fruit { TimeMs = 2000, X = 256 }); ui.LoadDocument(map);
@@ -54,6 +55,44 @@ internal static class TimeJumpTests
         Check(copied == "00:12:345", "late clipboard response cannot overwrite a new dialog");
         ui.Key(27); Check(!ui.View.LibraryVisible && !ui.View.TimeJumpVisible, "Escape dismisses only dialog");
         Check(!ui.View.IsDirty && ui.View.Document.ContentEquals(map), "time navigation does not edit beatmap");
+    }
+    private static void SelectionReferences()
+    {
+        var ui = new Ui();
+        var map = new MapDocument { DurationMs = 10000 };
+        for (int i = 0; i < 3; i++) map.Fruits.Add(new Fruit { TimeMs = 2000 + i * 200, X = 100 + i * 100 });
+        ui.LoadDocument(map);
+        void Jump(string text)
+        {
+            var r = ui.View.TimeDisplayBounds; ui.Click(r.X + 8, r.Y + 8);
+            Check(ui.View.TimeJumpVisible, "jump dialog opens");
+            ui.View.PasteTimeJumpText(text, ui.View.TimeJumpSession); ui.Key(13);
+            Check(!ui.View.TimeJumpVisible, "valid reference closes dialog");
+        }
+        uint color = ui.View.LibrarySettings.SelectionHighlightColour;
+        foreach (string plain in new[] { "00:01:999", "1999" })
+        {
+            Jump(plain); Near(1999, ui.View.PlayheadMs);
+            Check(ui.View.SelectedObjectIds.Count == 0, "plain timestamp does not select objects");
+            Check(!ui.Canvas.Circles.Any(c => !c.Filled && c.Color == color), "plain timestamp has no selection rings");
+        }
+        foreach (string reference in new[] { "00:02:000 (1, 2)", "2000 (1,2) -" })
+        {
+            Jump(reference); Near(2000, ui.View.PlayheadMs);
+            Check(ui.View.SelectedObjectIds.ToHashSet().SetEquals(map.Fruits.Take(2).Select(f => f.Id)), "reference selects matching objects only");
+            var timeline = ui.View.ObjectTimelineBounds;
+            foreach (var fruit in map.Fruits)
+            {
+                var p = ui.ScreenAt(fruit.TimeMs, fruit.X);
+                bool expected = fruit != map.Fruits[2];
+                Check(ui.Canvas.Circles.Any(c => !c.Filled && c.Color == color && Math.Abs(c.X - p.X) < .01 && Math.Abs(c.Y - p.Y) < .01) == expected,
+                    "canvas selection ring matches selected object");
+                float x = timeline.X + (float)((fruit.TimeMs - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+                Check(ui.Canvas.Circles.Any(c => !c.Filled && c.Color == color && timeline.Contains(c.X, c.Y) && Math.Abs(c.X - x) < .01) == expected,
+                    "timeline selection ring matches selected object");
+            }
+        }
+        Check(!ui.View.IsDirty && ui.View.Document.ContentEquals(map), "reference navigation preserves content");
     }
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
     private static void Near(double expected, double actual) => Check(Math.Abs(expected - actual) < .01, $"Expected {expected}, got {actual}");
