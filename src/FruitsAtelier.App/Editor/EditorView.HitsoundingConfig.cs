@@ -128,7 +128,7 @@ public sealed partial class EditorView
     {
         var hit = new Rect(row.X + 3, row.Y + 3, 28, row.Height - 6);
         c.Circle(row.X + 17, row.Y + row.Height / 2, 11, Muted, false, 1, .6f);
-        if (library && sound.FilePath == hitsoundingAuditionPath) c.Fill(new(row.X + 13, row.Y + row.Height / 2 - 4, 8, 8), Foreground, 1);
+        if (library && HitsoundingAuditionKey(sound) == hitsoundingAuditionPath) c.Fill(new(row.X + 13, row.Y + row.Height / 2 - 4, 8, 8), Foreground, 1);
         else c.Text("▶", row.X + 13, row.Y + row.Height / 2 - 8, 12, Foreground, 14);
         hits.Add(new(hit, () => { if (library) ToggleHitsoundingLibraryAudition(sound); else RequestAuditionHitsound?.Invoke(sound); }, true));
     }

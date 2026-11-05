@@ -283,6 +283,7 @@ internal static class HitsoundingPanelTests
     public static void Run()
     {
         HitsoundingTimingDragTests.Run();
+        HitsoundingPreciseAuditionTests.Run();
         StableLabels();
         string root = Path.GetFullPath("artifacts/tests/hitsounding"); Directory.CreateDirectory(root);
         string wave = Path.Combine(root, "soft-hitnormal.wav");

@@ -198,6 +198,8 @@ public sealed partial class EditorView
     private bool BeginHitsoundingCanvasPointer(float x, float y, int button, bool ctrl, bool shift)
     {
         if (!hitsoundingBounds.Contains(x, y)) return false;
+        if (button == 0 && HitsoundingPrecise && hitsoundingPreciseAuditionButton is { } audition && audition.Bounds.Contains(x, y))
+        { ToggleHitsoundingLibraryAudition(audition.Sound); return true; }
         if (BeginHitsoundingTimingPointer(x, y, button, ctrl, shift)) return true;
         if (button == 0 && HitsoundingHeadHovered(x, y))
         { hitsoundingHeadBefore = hitsoundingHeadRatio; hitsoundingHeadDrag = true; return true; }

@@ -7,6 +7,12 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class HitsoundingRenderCheck
 {
+    private sealed class AuditionClock : TimeProvider
+    {
+        public long Now;
+        public override long TimestampFrequency => 1000;
+        public override long GetTimestamp() => Now;
+    }
     internal static void Run(D2DCanvas canvas)
     {
         string language = L.Language;
@@ -16,8 +22,9 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu" })
+            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-audition" })
             {
+                if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
                 var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
                 map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, Uninherited = true, SampleSet = 2, SampleIndex = 1, Volume = 80 });
@@ -40,8 +47,14 @@ internal static class HitsoundingRenderCheck
                     foreach (int time in Enumerable.Range(0, 100).Select(i => i * 75).Concat(new[] { 1499, 3001 }))
                         map.Fruits.Add(new() { TimeMs = time, X = 256, OriginalLine = $"256,192,{time},1,2,0:0:0:0:" });
                 }
-                var editor = new EditorView(false); editor.LoadDocument(map);
+                var clock = new AuditionClock();
+                var editor = new EditorView(false, timeProvider: clock); editor.LoadDocument(map);
                 editor.RequestWaveform = (path, token) => Task.FromResult(FruitsAtelier.App.Audio.WaveformDecoder.Load(path, token).GetAwaiter().GetResult());
+                if (scenario == "-audition")
+                {
+                    editor.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.5f, 1000).ToArray(), 1));
+                    editor.RequestStartLibraryAudition = (_, _) => Task.FromResult(1000d);
+                }
                 editor.LibrarySettings.Workspace = Path.Combine(folder, "workspace");
                 string library = Path.Combine(editor.LibrarySettings.Workspace, "HitsoundLibrary");
                 Directory.CreateDirectory(Path.Combine(library, "Drums", "Percussion"));
@@ -52,6 +65,19 @@ internal static class HitsoundingRenderCheck
                 editor.LibrarySettings.DockLayouts = layout; editor.RestoreDockLayouts();
                 canvas.Resize(size.Item1, size.Item2, 96);
                 canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
+                if (scenario == "-audition")
+                {
+                    float zero = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 0)).X + 4;
+                    float twoSeconds = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 2000)).X + 4;
+                    var lane = editor.HitsoundingMuteBounds(3);
+                    float x = (zero + twoSeconds) / 2 + 4, y = lane.Y + 12;
+                    editor.PointerDown(x, y, 0, false, false); editor.PointerUp(x, y, 0);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                    var play = editor.HitsoundingPreciseAuditionBounds;
+                    editor.PointerDown(play.X + 14, play.Y + 12, 0, false, false); editor.PointerUp(play.X + 14, play.Y + 12, 0);
+                    clock.Now += 500;
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
                 if (scenario is "-green-drag" or "-green-menu")
                 {
                     var point = editor.Document.TimingPoints.First(p => !p.Uninherited && p.TimeMs == 2000);

@@ -231,6 +231,11 @@ of beatmap undo history.
 Library audition plays one file at a time. Starting another file stops the previous
 one; the active row shows a progress fill, outline and Stop button. Navigation and
 file changes stop audition. Audition uses independent playback from map preview.
+
+In Precise HS, clicking a sound block selects it and reveals an audition button
+above the block. Play/Stop and the progress fill use the same exclusive audition
+channel as Hitsound Library, so starting a sound in either view stops the previous
+audition. Selecting a block alone does not start playback or move the playhead.
 Imports preserve existing different
 files with a numbered filename and reuse identical copies. Library files can be
 dragged to map slots; their names need not match osu! sample filenames. Samples are

@@ -1723,6 +1723,9 @@ The panel check covers green handle dragging, group selection, Snap, live interv
 previews without committed conversion rebuilds, red-point protection, cancellation,
 undo/redo, inherited-point creation parity with Timing Panel, and block/handle
 context menus that reopen Timing Helper or delete green points in both languages.
+Precise audition checks cover selection-only Play controls, progress and Stop,
+exclusive switching between timeline and library sounds, and unchanged map history
+and playhead position. Native render checks include the active Precise control.
 
 `App.Tests --hitsounding-panel-check` covers the Snap ruler, actual slider ticks,
 centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,

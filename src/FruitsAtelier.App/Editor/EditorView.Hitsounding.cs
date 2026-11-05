@@ -127,6 +127,7 @@ public sealed partial class EditorView
     {
         RefreshHitsoundingSnapshot();
         hitsoundingSoundHits.Clear(); hitsoundingStoryboardHits.Clear();
+        hitsoundingPreciseAuditionButton = null;
         hitsoundingFileRows.Clear(); hitsoundingSlots.Clear();
         hitsoundingSplitBounds = hitsoundingLibraryBounds = hitsoundingDockBounds = hitsoundingSampleBounds = hitsoundingInspectorBounds = default;
         objectTimeline = default; zoomSlider = default;
@@ -258,6 +259,7 @@ public sealed partial class EditorView
         float bankLabelWidth = Math.Max(c.MeasureText("N", 11, true), Math.Max(c.MeasureText("S", 11, true), c.MeasureText("D", 11, true)));
         float digitLabelWidth = 0;
         foreach (string digit in HitsoundingDigits) digitLabelWidth = Math.Max(digitLabelWidth, c.MeasureText(digit, 11, true));
+        (Rect Bounds, Hitsound Sound)? selectedAudition = null;
         foreach (var laneTags in hitsoundingTagLanes) DrawTags(laneTags);
         DrawTags(hitsoundingStoryboardTags);
         if (!hitsoundingErase)
@@ -304,6 +306,7 @@ public sealed partial class EditorView
         for (int lane = 1; lane <= 6; lane++)
             if (hitsoundingMuted[lane])
                 c.Fill(new(g.X, top + lane * laneHeight, g.Width, laneHeight), Panel, opacity: .65f);
+        if (selectedAudition is { } audition) DrawHitsoundingPreciseAudition(c, audition.Bounds, audition.Sound);
         c.Unclip();
         float head = X(playhead); c.Line(head, r.Y, head, g.Bottom, HitsoundingHeadHovered(mouseX, mouseY) || hitsoundingHeadDrag ? 0xFFF0A6u : 0xE9CA64u, 2);
         c.Unclip();
@@ -346,6 +349,10 @@ public sealed partial class EditorView
                     box = new(x, y, duration > 0 ? Math.Max(1, X(to) - x) : HitsoundingTagWidth, h);
                 }
                 uint color = tag.Lane is >= 1 and <= 5 ? HitsoundingBankColor(tag.Sounds[0].SampleSet) : HitsoundingColors[tag.Lane];
+                bool auditionSelected = HitsoundingPrecise && !hitsoundingDraw && !hitsoundingMarquee && box.Right > g.X && box.X < g.Right
+                    && (tag.Note is { } selectedNote && hitsoundingMultiSelection.Count == 1 && hitsoundingMultiSelection.Contains((selectedNote.SourceId, selectedNote.EventIndex, tag.Lane))
+                        || tag.Storyboard is { } selectedSample && hitsoundingStoryboardSelection.Count == 1 && hitsoundingStoryboardSelection.Contains(selectedSample));
+                if (auditionSelected) selectedAudition = (box, tag.Sounds[0]);
                 if (hitsoundingMuted[tag.Lane]) color = Muted;
                 float flash = hitsoundingMuted[tag.Lane] ? 0 : HitsoundingFlash(tag.Time);
                 if (flash > 0)
@@ -355,6 +362,12 @@ public sealed partial class EditorView
                 }
                 c.Fill(box, Panel, 4);
                 c.Fill(box, color, 4, HitsoundingPrecise ? .4f : .6f);
+                if (auditionSelected && HitsoundingAuditionKey(tag.Sounds[0]) == hitsoundingAuditionPath)
+                {
+                    c.Fill(box, Surface, 4);
+                    c.Clip(box); c.Fill(new(box.X, box.Y, box.Width * HitsoundingAuditionProgress, box.Height), SelectedSurface, 4); c.Unclip();
+                    c.Stroke(box, Accent, radius: 4);
+                }
                 if (flash > 0) c.Fill(box, 0xFFFFFF, 4, flash * .65f);
                 c.Stroke(box, color, radius: Math.Min(4, box.Width / 3));
                 if (flash > 0) c.StrokeOpacity(box, 0xFFFFFF, 2, Math.Min(4, box.Width / 3), flash);

@@ -1,4 +1,5 @@
 using FruitsAtelier.Core;
+using FruitsAtelier.App.Rendering;
 
 namespace FruitsAtelier.App.Editor;
 
@@ -10,19 +11,32 @@ public sealed partial class EditorView
     private Task<double>? hitsoundingAuditionTask;
     private CancellationTokenSource? hitsoundingAuditionCancellation;
     private double hitsoundingAuditionStarted, hitsoundingAuditionDuration;
+    private (Rect Bounds, Hitsound Sound)? hitsoundingPreciseAuditionButton;
+    internal Rect HitsoundingPreciseAuditionBounds => hitsoundingPreciseAuditionButton?.Bounds ?? default;
+    private static string HitsoundingAuditionKey(Hitsound sound) => sound.FilePath ?? $"builtin:{sound.Kind}/{sound.SampleSet}/{sound.Name}";
     private float HitsoundingAuditionProgress => hitsoundingAuditionDuration <= 0 ? 0
         : (float)Math.Clamp((CanvasDimNowMs - hitsoundingAuditionStarted) / hitsoundingAuditionDuration, 0, 1);
 
     private void ToggleHitsoundingLibraryAudition(Hitsound sound)
     {
-        bool stop = hitsoundingAuditionPath == sound.FilePath;
+        string key = HitsoundingAuditionKey(sound);
+        bool stop = hitsoundingAuditionPath == key;
         StopHitsoundingLibraryAudition();
-        if (stop || sound.FilePath is null || RequestStartLibraryAudition is null) return;
-        hitsoundingAuditionPath = sound.FilePath;
+        if (stop || RequestStartLibraryAudition is null) return;
+        hitsoundingAuditionPath = key;
         hitsoundingAuditionCancellation = new();
         try { hitsoundingAuditionTask = RequestStartLibraryAudition(sound, hitsoundingAuditionCancellation.Token); }
         catch { StopHitsoundingLibraryAudition(); throw; }
         PumpHitsoundingAudition();
+    }
+
+    private void DrawHitsoundingPreciseAudition(ICanvas c, Rect box, Hitsound sound)
+    {
+        var row = new Rect(Math.Clamp(box.Right - 34, hitsoundingGridBounds.X, Math.Max(hitsoundingGridBounds.X, hitsoundingGridBounds.Right - 34)),
+            Math.Max(hitsoundingGridBounds.Y, box.Y - 32), 34, 30);
+        c.Fill(row, Surface, 5);
+        DrawHitsoundingAudition(c, row, sound, library: true);
+        hitsoundingPreciseAuditionButton = (new(row.X + 3, row.Y + 3, 28, row.Height - 6), sound);
     }
 
     private void StopHitsoundingLibraryAudition()
