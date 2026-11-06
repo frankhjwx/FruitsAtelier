@@ -161,6 +161,20 @@ internal sealed class EditorControl : Control, IDisposable
             catch (Exception error) { View.SetNotice(error.Message); }
             Refresh();
         };
+        View.RequestPasteBookmarkColour = async () =>
+        {
+            int session = View.BookmarkColourPasteSession;
+            try
+            {
+                if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                {
+                    string text = await clipboard.TryGetTextAsync() ?? "";
+                    if (!View.ErrorVisible) View.PasteBookmarkColour(text, session);
+                }
+            }
+            catch (Exception error) { View.SetNotice(error.Message); }
+            Refresh();
+        };
         View.RequestCopyText = async text =>
         {
             try { if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard) await clipboard.SetTextAsync(text); }

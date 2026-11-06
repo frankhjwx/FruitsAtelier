@@ -72,6 +72,9 @@ public sealed partial class EditorView
         movementSnapshots.Clear(); movementStates = []; movementIndices = [];
         sampleBankConversion = null; sliderSnapLabelSource = null; sliderSnapLabels.Clear();
         inspectorExport = null; inspectorSnapshot = null; inspectorRows.Clear();
+        bookmarkEditingTime = bookmarkColourTime = null; bookmarkError = ""; bookmarkPanelScroll = 0;
+        bookmarkColourPaste = null;
+        bookmarkCommittedMove = null; bookmarkPickerHueTime = null;
         songDockSnapshot = randomDockSnapshot = patternDockSnapshot = null;
         liveSongSnapshot = liveRandomSnapshot = livePatternSnapshot = null;
         placementWriteCache = new(); placementSource = null; placementOrderSource = null; placementOrder = [];

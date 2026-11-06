@@ -48,8 +48,7 @@ public static class TimingEditing
         if (options.Scale) TransformObjects(map, Transform);
         if (options.Bookmarks)
         {
-            SongSetup.Set(map, "Editor", "Bookmarks", string.Join(',', OsuTimeline.Bookmarks(before).Select(t =>
-                Math.Clamp(Math.Round(Transform(t).Time), 0, int.MaxValue).ToString(CultureInfo.InvariantCulture))));
+            OsuTimeline.TransformBookmarks(map, before, t => (int)Math.Clamp(Math.Round(Transform(t).Time), 0, int.MaxValue));
             if (double.TryParse(SongSetup.Get(before, "General", "PreviewTime"), CultureInfo.InvariantCulture, out double preview) && preview >= 0)
                 SongSetup.Set(map, "General", "PreviewTime", Math.Clamp(Math.Round(Transform(preview).Time), 0, int.MaxValue).ToString(CultureInfo.InvariantCulture));
         }
@@ -73,10 +72,7 @@ public static class TimingEditing
                 double moved = MoveMarker(point.TimeMs);
                 if (moved != point.TimeMs) point.TimeMs = Math.Truncate(moved);
             }
-            var bookmarks = OsuTimeline.Bookmarks(before);
-            var movedBookmarks = bookmarks.Select(t => (int)Math.Clamp(Math.Round(MoveMarker(t)), 0, int.MaxValue)).ToArray();
-            if (!bookmarks.SequenceEqual(movedBookmarks))
-                SongSetup.Set(map, "Editor", "Bookmarks", string.Join(',', movedBookmarks.Select(t => t.ToString(CultureInfo.InvariantCulture))));
+            OsuTimeline.TransformBookmarks(map, before, t => (int)Math.Clamp(Math.Round(MoveMarker(t)), 0, int.MaxValue));
         }
         if (options.Snap) Resnap(map, options.Divisor);
         if (options.SliderLengths) ResnapLengths(map, options.Divisor);

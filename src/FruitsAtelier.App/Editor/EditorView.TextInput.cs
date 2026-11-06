@@ -86,6 +86,7 @@ public sealed partial class EditorView
         }
         if (RotationVisible) { RotationText(text); return; }
         if (NotesFocused) { InsertNotes(text); return; }
+        if (BookmarkPanelFocused) { BookmarkText(text); return; }
         if (RandomDockFocused) { RandomDockText(text); return; }
         if (PatternDockEditing && patternDockKind == 2 && bananaEditField >= 0) { BananaEditText(text); return; }
         if (PatternDockEditing && patternDockKind == 1 && stackNumericField >= 0) { StackNumericText(text); return; }
@@ -155,6 +156,7 @@ public sealed partial class EditorView
             "stack:0" or "stack:1" => stackNumericText,
             _ when key.StartsWith("song:") => songValues.GetValueOrDefault(key[5..], ""),
             "random:0" => randomNumbers[0], "random:1" => randomNumbers[1],
+            _ when key.StartsWith("bookmark:") => bookmarkText,
             _ when key.StartsWith("library:") => LibraryFieldValue,
             _ when key.StartsWith("numeric:") => editBuffer,
             _ => ""

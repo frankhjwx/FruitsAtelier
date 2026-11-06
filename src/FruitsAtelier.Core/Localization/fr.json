@@ -2037,5 +2037,20 @@
   "hitsounding.pasteMismatchHelp": "Choose the source or target banks and index. Shared additions change together.",
   "hitsounding.pasteAdjust": "Use copied sampleset",
   "hitsounding.pasteKeep": "Keep target sampleset",
-  "hitsounding.move": "Move hitsound"
+  "hitsounding.move": "Move hitsound",
+  "bookmark.title": "Signets",
+  "bookmark.colour": "Couleur",
+  "bookmark.showInterval": "Afficher la couleur de l’intervalle",
+  "bookmark.new": "Nouveau signet",
+  "bookmark.count": "{0} signets",
+  "bookmark.colourAt": "Couleur · {0}",
+  "bookmark.insertAbove": "Insérer un signet au-dessus",
+  "bookmark.insertBelow": "Insérer un signet en dessous",
+  "bookmark.invalid": "Saisissez un temps unique non négatif et une couleur RVB valide.",
+  "bookmark.interval": "Intervalle",
+  "bookmark.copyColour": "Copier la couleur",
+  "bookmark.pasteColour": "Coller la couleur",
+  "bookmark.jump": "Jump",
+  "bookmark.enableIntervals": "Afficher toutes les couleurs d’intervalle",
+  "bookmark.disableIntervals": "Masquer toutes les couleurs d’intervalle"
 }

@@ -2037,5 +2037,20 @@
   "hitsounding.pasteMismatchHelp": "Choose the source or target banks and index. Shared additions change together.",
   "hitsounding.pasteAdjust": "Use copied sampleset",
   "hitsounding.pasteKeep": "Keep target sampleset",
-  "hitsounding.move": "Move hitsound"
+  "hitsounding.move": "Move hitsound",
+  "bookmark.title": "Marcadores",
+  "bookmark.colour": "Color",
+  "bookmark.showInterval": "Mostrar color del intervalo",
+  "bookmark.new": "Nuevo marcador",
+  "bookmark.count": "{0} marcadores",
+  "bookmark.colourAt": "Color · {0}",
+  "bookmark.insertAbove": "Insertar marcador arriba",
+  "bookmark.insertBelow": "Insertar marcador abajo",
+  "bookmark.invalid": "Introduce un tiempo único no negativo y un color RGB válido.",
+  "bookmark.interval": "Intervalo",
+  "bookmark.copyColour": "Copiar color",
+  "bookmark.pasteColour": "Pegar color",
+  "bookmark.jump": "Jump",
+  "bookmark.enableIntervals": "Mostrar todos los colores de intervalo",
+  "bookmark.disableIntervals": "Ocultar todos los colores de intervalo"
 }

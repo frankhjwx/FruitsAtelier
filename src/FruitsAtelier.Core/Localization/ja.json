@@ -2037,5 +2037,20 @@
   "hitsounding.pasteMismatchHelp": "Choose the source or target banks and index. Shared additions change together.",
   "hitsounding.pasteAdjust": "Use copied sampleset",
   "hitsounding.pasteKeep": "Keep target sampleset",
-  "hitsounding.move": "Move hitsound"
+  "hitsounding.move": "Move hitsound",
+  "bookmark.title": "ブックマーク",
+  "bookmark.colour": "色",
+  "bookmark.showInterval": "区間の色を表示",
+  "bookmark.new": "新規ブックマーク",
+  "bookmark.count": "{0} 件のブックマーク",
+  "bookmark.colourAt": "色 · {0}",
+  "bookmark.insertAbove": "上にブックマークを挿入",
+  "bookmark.insertBelow": "下にブックマークを挿入",
+  "bookmark.invalid": "重複しない非負の時刻と有効な RGB 色を入力してください。",
+  "bookmark.interval": "区間",
+  "bookmark.copyColour": "色をコピー",
+  "bookmark.pasteColour": "色を貼り付け",
+  "bookmark.jump": "Jump",
+  "bookmark.enableIntervals": "すべての区間の色を表示",
+  "bookmark.disableIntervals": "すべての区間の色を非表示"
 }

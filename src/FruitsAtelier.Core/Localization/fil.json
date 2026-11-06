@@ -2037,5 +2037,20 @@
   "hitsounding.pasteMismatchHelp": "Choose the source or target banks and index. Shared additions change together.",
   "hitsounding.pasteAdjust": "Use copied sampleset",
   "hitsounding.pasteKeep": "Keep target sampleset",
-  "hitsounding.move": "Move hitsound"
+  "hitsounding.move": "Move hitsound",
+  "bookmark.title": "Mga bookmark",
+  "bookmark.colour": "Kulay",
+  "bookmark.showInterval": "Ipakita ang kulay ng pagitan",
+  "bookmark.new": "Bagong bookmark",
+  "bookmark.count": "{0} bookmark",
+  "bookmark.colourAt": "Kulay · {0}",
+  "bookmark.insertAbove": "Magsingit ng bookmark sa itaas",
+  "bookmark.insertBelow": "Magsingit ng bookmark sa ibaba",
+  "bookmark.invalid": "Maglagay ng natatanging oras na hindi negatibo at wastong kulay na RGB.",
+  "bookmark.interval": "Pagitan",
+  "bookmark.copyColour": "Kopyahin ang kulay",
+  "bookmark.pasteColour": "Idikit ang kulay",
+  "bookmark.jump": "Jump",
+  "bookmark.enableIntervals": "Ipakita ang lahat ng kulay ng pagitan",
+  "bookmark.disableIntervals": "Itago ang lahat ng kulay ng pagitan"
 }

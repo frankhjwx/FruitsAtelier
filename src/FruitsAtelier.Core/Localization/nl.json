@@ -2037,5 +2037,20 @@
   "hitsounding.pasteMismatchHelp": "Choose the source or target banks and index. Shared additions change together.",
   "hitsounding.pasteAdjust": "Use copied sampleset",
   "hitsounding.pasteKeep": "Keep target sampleset",
-  "hitsounding.move": "Move hitsound"
+  "hitsounding.move": "Move hitsound",
+  "bookmark.title": "Bladwijzers",
+  "bookmark.colour": "Kleur",
+  "bookmark.showInterval": "Intervalkleur tonen",
+  "bookmark.new": "Nieuwe bladwijzer",
+  "bookmark.count": "{0} bladwijzers",
+  "bookmark.colourAt": "Kleur · {0}",
+  "bookmark.insertAbove": "Bladwijzer erboven invoegen",
+  "bookmark.insertBelow": "Bladwijzer eronder invoegen",
+  "bookmark.invalid": "Voer een unieke niet-negatieve tijd en een geldige RGB-kleur in.",
+  "bookmark.interval": "Interval",
+  "bookmark.copyColour": "Kleur kopiëren",
+  "bookmark.pasteColour": "Kleur plakken",
+  "bookmark.jump": "Jump",
+  "bookmark.enableIntervals": "Alle intervalkleuren tonen",
+  "bookmark.disableIntervals": "Alle intervalkleuren verbergen"
 }

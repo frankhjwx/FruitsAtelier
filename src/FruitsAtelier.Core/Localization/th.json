@@ -2037,5 +2037,20 @@
   "hitsounding.pasteMismatchHelp": "Choose the source or target banks and index. Shared additions change together.",
   "hitsounding.pasteAdjust": "Use copied sampleset",
   "hitsounding.pasteKeep": "Keep target sampleset",
-  "hitsounding.move": "Move hitsound"
+  "hitsounding.move": "Move hitsound",
+  "bookmark.title": "บุ๊กมาร์ก",
+  "bookmark.colour": "สี",
+  "bookmark.showInterval": "แสดงสีช่วง",
+  "bookmark.new": "บุ๊กมาร์กใหม่",
+  "bookmark.count": "{0} บุ๊กมาร์ก",
+  "bookmark.colourAt": "สี · {0}",
+  "bookmark.insertAbove": "แทรกบุ๊กมาร์กด้านบน",
+  "bookmark.insertBelow": "แทรกบุ๊กมาร์กด้านล่าง",
+  "bookmark.invalid": "ป้อนเวลาที่ไม่ซ้ำและไม่ติดลบ พร้อมสี RGB ที่ถูกต้อง",
+  "bookmark.interval": "ช่วง",
+  "bookmark.copyColour": "คัดลอกสี",
+  "bookmark.pasteColour": "วางสี",
+  "bookmark.jump": "Jump",
+  "bookmark.enableIntervals": "แสดงสีทุกช่วง",
+  "bookmark.disableIntervals": "ซ่อนสีทุกช่วง"
 }

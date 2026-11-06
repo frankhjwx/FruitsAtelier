@@ -2037,5 +2037,20 @@
   "hitsounding.pasteMismatchHelp": "Choose the source or target banks and index. Shared additions change together.",
   "hitsounding.pasteAdjust": "Use copied sampleset",
   "hitsounding.pasteKeep": "Keep target sampleset",
-  "hitsounding.move": "Move hitsound"
+  "hitsounding.move": "Move hitsound",
+  "bookmark.title": "書籤",
+  "bookmark.colour": "顏色",
+  "bookmark.showInterval": "顯示區間顏色",
+  "bookmark.new": "新增書籤",
+  "bookmark.count": "{0} 個書籤",
+  "bookmark.colourAt": "顏色 · {0}",
+  "bookmark.insertAbove": "在上方插入書籤",
+  "bookmark.insertBelow": "在下方插入書籤",
+  "bookmark.invalid": "請輸入不重複的非負書籤時間和有效的 RGB 顏色。",
+  "bookmark.interval": "區間",
+  "bookmark.copyColour": "複製顏色",
+  "bookmark.pasteColour": "貼上顏色",
+  "bookmark.jump": "Jump",
+  "bookmark.enableIntervals": "啟用全部區間顏色顯示",
+  "bookmark.disableIntervals": "關閉全部區間顏色顯示"
 }

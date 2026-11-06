@@ -2037,5 +2037,20 @@
   "hitsounding.pasteMismatchHelp": "Choose the source or target banks and index. Shared additions change together.",
   "hitsounding.pasteAdjust": "Use copied sampleset",
   "hitsounding.pasteKeep": "Keep target sampleset",
-  "hitsounding.move": "Move hitsound"
+  "hitsounding.move": "Move hitsound",
+  "bookmark.title": "Zakładki",
+  "bookmark.colour": "Kolor",
+  "bookmark.showInterval": "Pokaż kolor przedziału",
+  "bookmark.new": "Nowa zakładka",
+  "bookmark.count": "Zakładki: {0}",
+  "bookmark.colourAt": "Kolor · {0}",
+  "bookmark.insertAbove": "Wstaw zakładkę powyżej",
+  "bookmark.insertBelow": "Wstaw zakładkę poniżej",
+  "bookmark.invalid": "Podaj unikalny nieujemny czas i prawidłowy kolor RGB.",
+  "bookmark.interval": "Przedział",
+  "bookmark.copyColour": "Kopiuj kolor",
+  "bookmark.pasteColour": "Wklej kolor",
+  "bookmark.jump": "Jump",
+  "bookmark.enableIntervals": "Pokaż kolory wszystkich przedziałów",
+  "bookmark.disableIntervals": "Ukryj kolory wszystkich przedziałów"
 }

@@ -3,6 +3,7 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--bookmark-panel-check")) { BookmarkPanelTests.Run(); return 0; }
 if (args.Contains("--hitsounding-mute-check")) { HitsoundingMuteTests.Run(); Console.WriteLine("PASS Hitsounding track mutes, transport, Mapping and Testplay isolation"); return 0; }
 if (args.Contains("--hitsound-library-files-check")) { HitsoundLibraryFileTests.Run(); Console.WriteLine("PASS hitsound library selection, file operations, context menus and hover navigation"); return 0; }
 if (args.Contains("--timing-precision-check")) { TimingEditorTests.Run(); SynchronizationUiTests.ReadOnlyTimingChecks(); return 0; }
@@ -563,6 +564,7 @@ var tests = new (string Name, Action Run)[]
     ("Background resource checks refresh missing files and discard stale edits and projects", ResourcePollingTests.RefreshAndStaleResults),
     ("Preview drawer, mods, resizing and aligned shortcuts preserve content", PreviewSidebarTests.Sidebar),
     ("Docking and independent Mapping/Timing workspaces", DockingTests.Run),
+    ("Bookmark panel", BookmarkPanelTests.Run),
     ("Pattern editing and project Notes docks", PatternNotesTests.Run),
     ("Difficulty curve panel resizes, seeks, and preserves canvas width", DifficultyCurveSidebarTests.LayoutAndSeeking),
     ("Preview aspect modes, Fit height and edge overscan", PreviewSidebarTests.DisplayModesAndOverscan),

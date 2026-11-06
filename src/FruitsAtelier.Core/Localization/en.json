@@ -2037,5 +2037,20 @@
   "hitsounding.pasteMismatchHelp": "Choose the source or target banks and index. Shared additions change together.",
   "hitsounding.pasteAdjust": "Use copied sampleset",
   "hitsounding.pasteKeep": "Keep target sampleset",
-  "hitsounding.move": "Move hitsound"
+  "hitsounding.move": "Move hitsound",
+  "bookmark.title": "Bookmarks",
+  "bookmark.colour": "Color",
+  "bookmark.showInterval": "Show interval colour",
+  "bookmark.new": "Add new bookmark",
+  "bookmark.count": "{0} bookmarks",
+  "bookmark.colourAt": "Colour · {0}",
+  "bookmark.insertAbove": "Insert bookmark above",
+  "bookmark.insertBelow": "Insert bookmark below",
+  "bookmark.invalid": "Enter a unique nonnegative bookmark time and a valid RGB colour.",
+  "bookmark.interval": "Interval",
+  "bookmark.copyColour": "Copy color",
+  "bookmark.pasteColour": "Paste color",
+  "bookmark.jump": "Jump",
+  "bookmark.enableIntervals": "Enable all Interval Color Display",
+  "bookmark.disableIntervals": "Disable all Interval Color Display"
 }

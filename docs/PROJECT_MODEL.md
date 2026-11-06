@@ -451,6 +451,22 @@ code units. Notes have a separate saved baseline and text undo history; they do 
 modify map documents, invalidate conversion, or enter exported beatmap data.
 
 
+## Bookmark appearance
+
+`MapDocument.BookmarkAppearances` maps bookmark timestamps to immutable RGB colour
+and `ShowInterval` records. Absent entries use blue `#4B9EF5` with interval display
+off. Timestamps remain in the retained `.osu` `[Editor] Bookmarks` setting; colour
+and interval display are authoring data and are not exported to `.osu`.
+
+Appearance entries participate in deep cloning, content equality, undo and project
+persistence. Moving a bookmark through the panel or timing tools carries its
+appearance; deletion and clearing remove it. A displayed interval runs from its
+bookmark to the next one in chronological order.
+
+Single-difficulty schema 49 and multi-difficulty schema 50 store non-default
+appearances. Empty appearance dictionaries are omitted, preserving the earlier
+schema for projects that do not use these settings. Earlier schemas remain readable.
+
 ## Aspire slider BPM settings
 
 Schema 47 (single difficulty) and 48 (multi-difficulty) add

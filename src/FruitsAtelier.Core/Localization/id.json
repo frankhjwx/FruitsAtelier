@@ -2037,5 +2037,20 @@
   "hitsounding.pasteMismatchHelp": "Choose the source or target banks and index. Shared additions change together.",
   "hitsounding.pasteAdjust": "Use copied sampleset",
   "hitsounding.pasteKeep": "Keep target sampleset",
-  "hitsounding.move": "Move hitsound"
+  "hitsounding.move": "Move hitsound",
+  "bookmark.title": "Penanda",
+  "bookmark.colour": "Warna",
+  "bookmark.showInterval": "Tampilkan warna interval",
+  "bookmark.new": "Penanda baru",
+  "bookmark.count": "{0} penanda",
+  "bookmark.colourAt": "Warna · {0}",
+  "bookmark.insertAbove": "Sisipkan penanda di atas",
+  "bookmark.insertBelow": "Sisipkan penanda di bawah",
+  "bookmark.invalid": "Masukkan waktu unik nonnegatif dan warna RGB yang valid.",
+  "bookmark.interval": "Interval",
+  "bookmark.copyColour": "Salin warna",
+  "bookmark.pasteColour": "Tempel warna",
+  "bookmark.jump": "Jump",
+  "bookmark.enableIntervals": "Tampilkan semua warna interval",
+  "bookmark.disableIntervals": "Sembunyikan semua warna interval"
 }

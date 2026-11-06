@@ -53,6 +53,7 @@ internal sealed partial class EditorWindow : IDisposable
         view.RequestTimingSampleHelp = () => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://osu.ppy.sh/wiki/en/Beatmapping/Hitsound") { UseShellExecute = true });
         view.RequestPasteLibrary = () => view.PasteLibraryText(Native.ReadClipboardText(hwnd));
         view.RequestPasteField = () => view.PasteFieldText(Native.ReadClipboardText(hwnd));
+        view.RequestPasteBookmarkColour = () => view.PasteBookmarkColour(Native.ReadClipboardText(hwnd), view.BookmarkColourPasteSession);
         view.RequestClose = Close;
         view.RequestLoadSkin = () =>
         {

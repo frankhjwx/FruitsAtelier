@@ -307,6 +307,7 @@ public sealed partial class MapDocument
             DerandomizeFSliderDroplets = DerandomizeFSliderDroplets, DerandomizeDropletsForHardRock = DerandomizeDropletsForHardRock, RandomizeNewSliders = RandomizeNewSliders,
             SliderTickRate = SliderTickRate, LegacySliderTicks = LegacySliderTicks, DistanceSpacing = DistanceSpacing, OsuDistanceSpacing = OsuDistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
         };
+        foreach (var pair in BookmarkAppearances) copy.BookmarkAppearances.Add(pair.Key, pair.Value);
         copy.DistanceSnapRatios.AddRange(DistanceSnapRatios);
         copy.HitsoundOverrides.AddRange(HitsoundOverrides);
         copy.Fruits.AddRange(Fruits.Select(f => f.DeepClone()));
@@ -346,6 +347,8 @@ public sealed partial class MapDocument
     private bool ContentEquals(MapDocument other, bool ignoreMultiplierOverride, bool ignoreOsuDistanceSpacing)
     {
         if (EnableSliderBpmMultiplier != other.EnableSliderBpmMultiplier || DefaultSliderBpmMultiplier != other.DefaultSliderBpmMultiplier
+            || BookmarkAppearances.Count != other.BookmarkAppearances.Count
+            || BookmarkAppearances.Any(pair => !other.BookmarkAppearances.TryGetValue(pair.Key, out var value) || pair.Value != value)
             || !CollaborationReferencesEqual(other)
             || Name != other.Name || DurationMs != other.DurationMs || BeatLengthMs != other.BeatLengthMs
             || TimingOffsetMs != other.TimingOffsetMs || ApproachRate != other.ApproachRate

@@ -96,6 +96,16 @@ cache refresh, exact cutoff boundaries, DS/speed modes and narrow English/Chines
 settings. `FruitsAtelier.App --render-check --mapping-canvas-settings-render-check` captures
 the scrolled control and applies it through native pointer input.
 
+## Bookmark panel checks
+
+`App.Tests --bookmark-panel-check` checks timestamp editing, duplicate rejection,
+default colours, swatch copy/paste, rejected and delayed clipboard results, interval
+toggles, bulk interval undo, contextual insertion, deletion, scrolling and project
+round trips. It also checks that timing offsets carry bookmark appearance data.
+`FruitsAtelier.App --render-check --bookmark-panel-render-check` launches native
+input and rendering checks in English and Chinese at two window sizes and three
+DPI scales, with captures under `artifacts/tests/bookmark-panel/native`.
+
 ## Editor theme checks
 
 `App.Tests --editor-theme-check` verifies all seven themes in English and Chinese,

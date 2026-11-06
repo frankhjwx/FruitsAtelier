@@ -2037,5 +2037,20 @@
   "hitsounding.pasteMismatchHelp": "\u8bf7\u9009\u62e9\u4f7f\u7528\u6765\u6e90\u6216\u76ee\u6807\u7684\u97f3\u8272\u7ec4\u4e0e\u7f16\u53f7\u3002\u5171\u4eab\u7684\u9644\u52a0\u97f3\u6548\u4f1a\u4e00\u8d77\u8c03\u6574\u3002",
   "hitsounding.pasteAdjust": "\u4f7f\u7528\u590d\u5236\u6765\u6e90\u7684 sampleset",
   "hitsounding.pasteKeep": "\u4fdd\u7559\u76ee\u6807 sampleset",
-  "hitsounding.move": "\u79fb\u52a8\u97f3\u6548"
+  "hitsounding.move": "\u79fb\u52a8\u97f3\u6548",
+  "bookmark.title": "书签",
+  "bookmark.colour": "颜色",
+  "bookmark.showInterval": "显示区间颜色",
+  "bookmark.new": "新建书签",
+  "bookmark.count": "{0} 个书签",
+  "bookmark.colourAt": "颜色 · {0}",
+  "bookmark.insertAbove": "在上方插入书签",
+  "bookmark.insertBelow": "在下方插入书签",
+  "bookmark.invalid": "请输入不重复的非负书签时间和有效的 RGB 颜色。",
+  "bookmark.interval": "区间",
+  "bookmark.copyColour": "复制颜色",
+  "bookmark.pasteColour": "粘贴颜色",
+  "bookmark.jump": "Jump",
+  "bookmark.enableIntervals": "启用全部区间颜色显示",
+  "bookmark.disableIntervals": "关闭全部区间颜色显示"
 }
