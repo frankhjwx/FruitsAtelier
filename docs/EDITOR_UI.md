@@ -220,7 +220,7 @@ Choose **+ → Add new difficulty** to name a new difficulty and choose
 **Create this difficulty in Fruits Atelier Only**. **Create from a difficulty or template**
 starts disabled on first use and remembers its last state globally across projects and restarts;
 with it disabled, creation retains the current difficulty's settings and timing
-and clears all objects, as with ordinary blank creation.
+and clears all objects and break periods, as with ordinary blank creation.
 
 The disabled source area is greyed out and cannot be edited. Enable the switch
 and choose one of two mutually exclusive tabs:

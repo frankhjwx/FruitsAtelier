@@ -351,6 +351,7 @@ public sealed partial class EditorView
                 document.HitsoundOverrides.Clear();
                 document.CollaborationReferences = null;
                 document.Fruits.Clear(); document.Tracks.Clear(); document.ImportedSliders.Clear(); document.BananaShowers.Clear();
+                foreach (var period in OsuTimeline.Breaks(document)) OsuTimeline.RemoveBreak(document, period);
                 document.IsDemo = false;
                 foreach (var section in document.OriginalSections.Where(s => s.Name == "HitObjects")) section.Lines.Clear();
             }
