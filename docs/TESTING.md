@@ -1760,7 +1760,7 @@ new-point drafts, event-specific additions, single-click placement and its undo,
 placement-origin marquee selection without added sounds or history, empty-space selection, Q bank cycling for single and multiple selections,
 Normal/addition bank isolation (including inherited Normal banks when placing each addition), selection-aware bank selectors with mixed/Auto values and batch undo, direct right-click deletion,
 placement and selection at the play line, and one-step bank-change undo, playback flashes, normalized narrow waveforms,
-visible interval labels and play-line bounds. It also checks marquee copy/delete/paste,
+visible interval labels, Kiai span boundaries and timing-drag previews, and play-line bounds. It also checks marquee copy/delete/paste,
 red/green timing-index mismatch confirmation and cancellation, bank and event-index
 override independence, inherited transfer indices following new timing lines in display,
 playback and export/read-back (including saved zero-index overrides), right-click blank-space deselection, separate simultaneous red/green

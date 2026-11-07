@@ -153,7 +153,8 @@ in both display modes and is remembered with the Hitsounding layout; it leaves
 Notes numbering, timing labels and waveforms visible. Precise HS retains the bank and non-default index beside the waveform. Timing tags show bank and optional index (for example S:2) above volume; both lines
 are bold, with the bank line three points larger. A short coloured stem marks their timestamp.
 Timing tags fill the interval up to the next timing point. Their left-aligned text stays
-at the visible left edge when the interval begins outside the viewport.
+at the visible left edge when the interval begins outside the viewport. An amber line
+below the timing blocks marks Kiai intervals and follows timing edits and drag previews.
 
 Clicking a Notes object or an existing sound tag selects its event.
 Selecting a sound does not seek. Clicking empty grid or ruler space clears selection and preserves the playing position.

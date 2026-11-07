@@ -332,6 +332,33 @@ internal static class HitsoundingPanelTests
             ui.Click(text.X + 5, text.Y + 5);
         }
     }
+    public static void KiaiStrip()
+    {
+        var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500 });
+        map.TimingPoints.Add(new() { TimeMs = 500, BeatLengthMs = -100, Uninherited = false, Effects = 1 });
+        map.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = -100, Uninherited = false, Effects = 1, SampleSet = 3 });
+        map.TimingPoints.Add(new() { TimeMs = 1500, BeatLengthMs = -100, Uninherited = false });
+        map.TimingPoints.Add(new() { TimeMs = 2000, BeatLengthMs = 500, Effects = 1 });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+        float initialX = ui.View.HitsoundingTimingHandleBounds(ui.View.Document.TimingPoints[0]).X + 4;
+        float pixelsPerMs = (ui.View.HitsoundingTimingHandleBounds(ui.View.Document.TimingPoints[2]).X + 4 - initialX) / 1000;
+        Check(Covered(750) && Covered(1250) && !Covered(250) && !Covered(1750) && Covered(2250),
+            "Amber strip covers Kiai across bank changes and red/green transitions only");
+        var baseline = ui.View.Document.DeepClone();
+        var handle = ui.View.HitsoundingTimingHandleBounds(ui.View.Document.TimingPoints[1]);
+        float delta = X(1000) - X(500);
+        ui.View.PointerDown(handle.X + 4, handle.Y + handle.Height / 2, 0, false, false);
+        ui.View.PointerMove(handle.X + 4 + delta / 2, handle.Y + handle.Height / 2, false, false); ui.Paint();
+        Check(baseline.ContentEquals(ui.View.Document) && !Covered(600) && Covered(800), "Kiai strip follows timing drag preview without editing content");
+        ui.Key(27); Check(Covered(600), "Cancel restores the Kiai strip");
+        ui.View.UpdateTransport(4000, 6000, true, false, false, null, null); ui.Paint();
+        Check(Covered(3500) && baseline.ContentEquals(ui.View.Document), "Open-ended Kiai remains visible when its start scrolls offscreen");
+        Console.WriteLine("PASS Hitsounding Kiai strip boundaries, clipping and drag preview");
+        float X(double time) => initialX + (float)(time - ui.View.PlayheadMs) * pixelsPerMs;
+        bool Covered(double time) => ui.Canvas.Lines.Any(l => l.Color == 0xD89532 && l.Width == 3 && l.Y1 == 242
+            && l.X1 <= X(time) && l.X2 >= X(time));
+    }
     public static void SelectionAndTiming()
     {
         var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };

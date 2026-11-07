@@ -214,6 +214,13 @@ public sealed partial class EditorView
             c.Text(volumeLabel, tag.Bounds.X + 6, tag.Bounds.Y + 20, 10, 0xFFFFFF, volumeWidth + 1, true);
             c.Unclip();
         }
+        for (int i = Math.Max(0, timingLow - 1); i < timingLabels.Length && timingLabels[i].Time < end; i++)
+        {
+            if ((timingLabels[i].Point.Effects & 1) == 0) continue;
+            double from = Math.Max(start, timingLabels[i].Time);
+            double to = Math.Min(end, i + 1 < timingLabels.Length ? timingLabels[i + 1].Time : Math.Max(end, TimelineDurationMs));
+            if (to > from) c.Line(X(from), g.Y - 10, X(to), g.Y - 10, 0xD89532, 3);
+        }
         DrawHitsoundingTimingMarquee(c);
         c.Unclip();
         for (int lane = 0; lane < 7; lane++)

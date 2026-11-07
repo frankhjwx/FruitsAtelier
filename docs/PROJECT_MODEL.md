@@ -160,9 +160,9 @@ Hitsound Copier matches the nearest exported playable event within 2ms after che
 red timing points. Source SV participates in event decoding. Copying leaves target
 geometry, red timing and SV intact. Source sample bank, index and volume changes
 are stored as visible authoring timing points; new green points use the target SV
-and effects. Unmatched audible events retain their initial sound through sample timing points. Export writes circle/stream object
+and effects. Unmatched audible events retain their flags and banks; inherited volume follows the copied sample timing, while explicit object volume is preserved. Export writes circle/stream object
 samples, slider edge banks and additions, and timing sample states while retaining
-the emitted SV and effects. Unmatched target events keep their sound at copy time and subsequently follow their timing inheritance.
+the emitted SV and effects. Unmatched target events retain their timing inheritance after copying.
 Copied samples retain which fields inherit timing. Playback resolves those fields
 from current timing at each event; export writes zero for inherited object/edge
 fields. Explicit object-specific samples remain intact. Projects store this
