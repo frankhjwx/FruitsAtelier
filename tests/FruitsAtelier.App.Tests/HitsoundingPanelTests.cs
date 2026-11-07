@@ -646,6 +646,63 @@ internal static class HitsoundingPanelTests
         }
         Console.WriteLine("PASS transfer confirmation uses red/green timing sample indices");
     }
+    public static void TransferIndexInheritance()
+    {
+        foreach (int initialIndex in new[] { 0, 1 })
+        foreach (bool move in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = initialIndex });
+            map.Fruits.Add(new() { TimeMs = 1000, X = 256, OriginalLine = "256,192,1000,1,2,3:3:0:0:" });
+            map.Fruits.Add(new() { TimeMs = 2000, X = 256 });
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+            var source = LaneBlocks(ui, 2).Single(); var target = LaneBlocks(ui, 1).Last();
+            float x = source.X + source.Width / 2, y = source.Y + 10;
+            if (move)
+            {
+                float destination = target.X + target.Width / 2;
+                ui.View.PointerDown(x, y, 0, false, false); ui.View.PointerMove(destination, y, false, false);
+                ui.View.PointerUp(destination, y, 0); ui.Paint();
+            }
+            else
+            {
+                ui.Click(x, y); ui.Key(67, ctrl: true);
+                ui.View.UpdateTransport(2000, 6000, true, false, false, null, null); ui.Paint(); ui.Key(86, ctrl: true);
+            }
+            Check(!ui.View.DiscardConfirmationVisible && ui.View.Document.HitsoundOverrides.Single(h => h.SourceId == map.Fruits[1].Id)
+                .InheritedFields.HasFlag(InheritedSampleFields.Index), "Same-index transfer retains timing index inheritance");
+            target = LaneBlocks(ui, 2).Last(); ui.Click(target.X + target.Width / 2, target.Y + 10);
+            var index = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.index") && t.X > 1100);
+            ui.Click(index.X + 95, index.Y + 5); ui.Key(65, ctrl: true); ui.Type("2"); ui.Key(13);
+            ui.ClickText(L.Get("hitsounding.applyTiming"));
+            Check(ui.View.Document.TimingPoints.Any(p => p.TimeMs == 2000 && p.SampleIndex == 2), "Timing Helper inserts the S:2 line");
+            CheckIndex(ui.View.Document, 2);
+            var tag = LaneBlocks(ui, 2).Last();
+            Check(ui.Canvas.Texts.Any(t => t.Value == "2" && t.X >= tag.X && t.X < tag.Right && t.Y >= tag.Y && t.Y < tag.Bottom), "Drum tag displays index 2 after timing insertion");
+            ui.Key(90, ctrl: true); CheckIndex(ui.View.Document, initialIndex);
+            ui.Key(89, ctrl: true); CheckIndex(ui.View.Document, 2);
+            var saved = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)); CheckIndex(saved, 2);
+            if (initialIndex == 0)
+            {
+                int position = saved.HitsoundOverrides.FindIndex(h => h.SourceId == map.Fruits[1].Id);
+                saved.HitsoundOverrides[position] = saved.HitsoundOverrides[position] with { Sample = saved.HitsoundOverrides[position].Sample with { Index = 0 },
+                    InheritedFields = saved.HitsoundOverrides[position].InheritedFields & ~InheritedSampleFields.Index };
+                CheckIndex(ProjectSerializer.Read(ProjectSerializer.Serialize(saved)), 2);
+            }
+        }
+        Console.WriteLine("PASS transferred and saved zero-index sounds follow timing in UI, playback and export");
+        static void CheckIndex(MapDocument document, int expected)
+        {
+            var exported = OsuBeatmapWriter.Serialize(document);
+            var resolver = new HitsoundResolver(document, exported.PlayableObjects);
+            var note = exported.PlayableObjects.Single(n => n.Kind == CatchObjectKind.Fruit && n.TimeMs == 2000);
+            Check(resolver.Describe(note) is { AdditionSet: 3 } sample && sample.Index == expected, "Authoring audio uses the timing index and retains Drum");
+            var readback = OsuBeatmapReader.Read(exported.Text);
+            var objects = OsuBeatmapWriter.Serialize(readback).PlayableObjects;
+            var exportedSample = new HitsoundResolver(readback, objects).Describe(objects.Single(n => n.Kind == CatchObjectKind.Fruit && n.TimeMs == 2000));
+            Check(exportedSample.AdditionSet == 3 && exportedSample.Index == expected, "Export read-back matches the inherited timing sample");
+        }
+    }
     public static void LengthAndMove()
     {
         var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };

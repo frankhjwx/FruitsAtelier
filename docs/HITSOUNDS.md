@@ -168,7 +168,9 @@ Ctrl+X cuts deletable selected sounds, and Delete removes selected additions or 
 undo step. With sounds selected, right-clicking a selected sound immediately deletes the selected additions and storyboard sounds. Right-clicking empty grid space clears selection without editing content. Right-clicking an unselected sound deletes that sound. Normal remains undeletable. When the red/green timing points governing the source and target have different sample indices, a dialog offers the
 copied sampleset, the target sampleset, or cancellation. Bank differences and per-event
 index overrides do not trigger this dialog. Matching timing indices transfer the source
-bank and sample index directly. Adjustments affect target event
+bank directly and preserve an inherited sample index so later timing edits still apply.
+Explicit nonzero object indices remain explicit. A zero object index, including saved
+event overrides, inherits timing for display, playback and export. Adjustments affect target event
 overrides, including their shared addition bank/index, without rewriting timing intervals.
 Drag an existing Whistle, Finish or Clap tag onto another fruit event to
 move that addition, with a half-opacity preview and the same sampleset confirmation.

@@ -13,7 +13,7 @@ public sealed partial class EditorView
     private (float X, float Y) hitsoundingMoveStart;
     private bool hitsoundingMoveActive;
     private (float X, float Y) hitsoundingMarqueeStart, hitsoundingMarqueeEnd;
-    private sealed record HitsoundingCopy(double Offset, int Lane, HitSampleSettings Sample, int TimingIndex);
+    private sealed record HitsoundingCopy(double Offset, int Lane, HitSampleSettings Sample, int TimingIndex, bool InheritIndex);
     private HitsoundingCopy[] hitsoundingClipboard = [];
     private double hitsoundingMarqueeStartTime;
     private bool hitsoundingMarqueeMoved;
@@ -123,7 +123,7 @@ public sealed partial class EditorView
         if (entries.Length == 0 && hitsoundingStoryboardSelection.Count == 0) return;
         double start = Math.Min(entries.FirstOrDefault().Note?.TimeMs ?? double.PositiveInfinity, hitsoundingStoryboardSelection.Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min());
         hitsoundingStoryboardClipboard = hitsoundingStoryboardSelection.Select(s => s with { TimeMs = s.TimeMs - start }).ToArray();
-        hitsoundingClipboard = entries.Select(e => new HitsoundingCopy(e.Note.TimeMs - start, e.Lane, hitsoundingResolver!.Describe(e.Note), HitsoundingTimingIndex(e.Note.TimeMs))).ToArray();
+        hitsoundingClipboard = entries.Select(e => new HitsoundingCopy(e.Note.TimeMs - start, e.Lane, hitsoundingResolver!.Describe(e.Note), HitsoundingTimingIndex(e.Note.TimeMs), hitsoundingResolver.EventSettings(e.Note).InheritedFields.HasFlag(InheritedSampleFields.Index))).ToArray();
     }
     private void DeleteHitsoundingAt(float x, float y)
     {
@@ -207,7 +207,8 @@ public sealed partial class EditorView
                 if (adjust)
                 {
                     sample = sample with { Index = copy.Sample.Index };
-                    inherited &= ~InheritedSampleFields.Index;
+                    bool inheritIndex = copy.Sample.Index == 0 || copy.InheritIndex && HitsoundingTimingIndex(note.TimeMs) == copy.TimingIndex;
+                    inherited = inheritIndex ? inherited | InheritedSampleFields.Index : inherited & ~InheritedSampleFields.Index;
                     if (copy.Lane == 1) { sample = sample with { NormalSet = copy.Sample.NormalSet }; inherited &= ~InheritedSampleFields.NormalSet; }
                     else { sample = sample with { AdditionSet = copy.Sample.AdditionSet }; inherited &= ~InheritedSampleFields.AdditionSet; }
                 }
@@ -246,7 +247,7 @@ public sealed partial class EditorView
         if (!hitsoundingNoteLookup.TryGetValue((source.Id, source.Event), out var note)) return true;
         if (!moved) return true;
         if (target is null || target.SourceId == source.Id && target.EventIndex == source.Event) return true;
-        TransferHitsounding([new(0, source.Lane, hitsoundingResolver!.Describe(note), HitsoundingTimingIndex(note.TimeMs))], target.TimeMs, source, target);
+        TransferHitsounding([new(0, source.Lane, hitsoundingResolver!.Describe(note), HitsoundingTimingIndex(note.TimeMs), hitsoundingResolver.EventSettings(note).InheritedFields.HasFlag(InheritedSampleFields.Index))], target.TimeMs, source, target);
         return true;
     }
     private void DrawHitsoundingPasteConfirmation(ICanvas c)

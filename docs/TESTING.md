@@ -1762,7 +1762,8 @@ Normal/addition bank isolation (including inherited Normal banks when placing ea
 placement and selection at the play line, and one-step bank-change undo, playback flashes, normalized narrow waveforms,
 visible interval labels and play-line bounds. It also checks marquee copy/delete/paste,
 red/green timing-index mismatch confirmation and cancellation, bank and event-index
-override independence, right-click blank-space deselection, separate simultaneous red/green
+override independence, inherited transfer indices following new timing lines in display,
+playback and export/read-back (including saved zero-index overrides), right-click blank-space deselection, separate simultaneous red/green
 sections and editing an existing timing point without inserting duplicates. Per-lane
 Precise HS boundaries, visible tails with offscreen starts, drag preview, move
 confirmation/cancellation and one-step move undo are also covered. `--hitsounding-performance` compares cold

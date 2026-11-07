@@ -15,7 +15,9 @@ public sealed class HitsoundResolver
     private readonly Dictionary<Guid, CurveTrack> streams;
     public HitsoundResolver(MapDocument document, IReadOnlyList<ConvertedCatchObject> objects, IEnumerable<string>? skinFolders = null, bool inspectResources = true)
     {
-        overrides = document.HitsoundOverrides.ToDictionary(s => (s.SourceId, s.EventIndex), s => s);
+        // Zero object indices inherit timing in the legacy format, including saved overrides.
+        overrides = document.HitsoundOverrides.ToDictionary(s => (s.SourceId, s.EventIndex),
+            s => s.Sample.Index == 0 ? s with { InheritedFields = s.InheritedFields | InheritedSampleFields.Index } : s);
         streams = document.Tracks.Where(t => t.StreamSnapDivisor is not null).ToDictionary(t => t.Id);
         sampleFields = document.Fruits.Select(f => (f.Id, f.OriginalLine))
             .Concat(document.Tracks.Select(f => (f.Id, f.OriginalLine)))
