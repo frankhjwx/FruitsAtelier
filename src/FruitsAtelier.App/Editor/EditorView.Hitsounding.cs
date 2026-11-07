@@ -283,25 +283,6 @@ public sealed partial class EditorView
         (Rect Bounds, Hitsound Sound)? selectedAudition = null;
         foreach (var laneTags in hitsoundingTagLanes) DrawTags(laneTags);
         DrawTags(hitsoundingStoryboardTags);
-        if (!hitsoundingErase)
-            foreach (var pending in hitsoundingPaint.Values)
-                if (hitsoundingNoteLookup.TryGetValue((pending.SourceId, pending.EventIndex), out var note))
-                {
-                    float y = top + (hitsoundingPaintLane + .5f) * laneHeight - 16;
-                    c.Fill(new(X(note.TimeMs) - 9, y, 18, 32), HitsoundingBankColor(pending.Sample.AdditionSet), 4, .5f);
-                    c.StrokeOpacity(new(X(note.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
-                }
-        if (!hitsoundingHeadDrag && !hitsoundingMarquee && hitsoundingMoveSource is null && hitsoundingGridBounds.Contains(mouseX, mouseY))
-        {
-            int lane = (int)((mouseY - top) / laneHeight);
-            if (lane is >= 2 and <= 4 && HitsoundingPlacementNoteAt(mouseX, mouseY) is { Kind: CatchObjectKind.Fruit } candidate
-                && (hitsoundingResolver!.Describe(candidate).Additions & (1 << (lane - 1))) == 0)
-            {
-                float ghostY = top + (lane + .5f) * laneHeight - 16;
-                c.Fill(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), HitsoundingBankColor(HitsoundingPlacementAdditionBank(candidate)), 4, .5f);
-                c.StrokeOpacity(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), Foreground, 1, 4, .5f);
-            }
-        }
         if (hitsoundingMoveActive && hitsoundingMoveSource is { } moving && hitsoundingMoveTarget is { } target)
         {
             float y = top + (moving.Lane + .5f) * laneHeight - 16;

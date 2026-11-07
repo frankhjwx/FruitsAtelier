@@ -187,7 +187,7 @@ Drag an existing Whistle, Finish or Clap tag onto another fruit event to
 move that addition, with a half-opacity preview and the same sampleset confirmation.
 Normal and SliderTick cannot be moved. A move is one undo step.
 Click an empty addition slot at an existing fruit event in Whistle, Finish or Clap
-to add that addition; the half-opacity ghost previews the target. Holding and dragging
+to add that addition. Hovering or holding a pending click does not draw a placement ghost. Holding and dragging
 from that slot cancels placement and starts marquee selection. Releasing the marquee
 does not add sounds or create content history. Placement and existing-sound selection
 take priority over dragging the play line where they overlap. A placement is one undo step. Right-click removes additions, never Normal.
@@ -199,7 +199,7 @@ and preserves the existing Normal bank and its inheritance. Auto additions resol
 from the existing event, independently of the Sampleset placement default.
 With no sound tags selected, Q cycles the placement
 bank for the lane under the pointer: Sampleset for Normal, Additions for Whistle,
-Finish or Clap. The selector and placement preview reflect the new bank.
+Finish or Clap. The selector reflects the new bank for the next placement.
 W/E/R toggle the selected event's Whistle/Finish/Clap. Q cycles Normal, Soft and Drum for selected sound tags, using the earliest selected
 event (Normal first for tied lanes) to choose one bank for the selection. Normal tags
 change their normal bank; Whistle, Finish and Clap change their shared addition bank.

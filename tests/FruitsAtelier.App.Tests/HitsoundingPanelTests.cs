@@ -114,7 +114,7 @@ internal static class HitsoundingPanelTests
         float finishX = normal[2].X + normal[2].Width / 2;
         float selectionY = normal[1].Y - 4;
         ui.View.PointerDown(startX, whistleY, 0, false, false); ui.Paint();
-        Check(ui.Canvas.PaintCalls.Any(p => p.Color == 0x65BF8A && p.FillBounds is not null && p.Opacity == .5f), "Click placement previews use half opacity");
+        Check(!ui.Canvas.PaintCalls.Any(p => p.Color == 0x65BF8A && p.FillBounds is not null && p.Opacity == .5f), "Pending click placement does not draw a ghost");
         ui.View.PointerMove(finishX, selectionY, false, false); ui.Paint();
         Check(baseline.ContentEquals(ui.View.Document), "Dragging from a placement slot switches to selection without changing content");
         Check(!ui.Canvas.PaintCalls.Any(p => p.Color == 0x65BF8A && p.FillBounds is not null && p.Opacity == .5f), "Marquee disables placement previews");
