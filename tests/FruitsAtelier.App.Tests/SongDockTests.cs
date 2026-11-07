@@ -18,7 +18,8 @@ internal static class SongDockTests
                 SongSetup.Set(map, "Metadata", "TitleUnicode", "Song");
                 SongSetup.Set(map, "Metadata", "Title", "Song");
                 SongSetup.Set(map, "Metadata", "Version", "Normal");
-                ui.LoadDocument(map); ui.Key(115); ui.Paint();
+                var sibling = map.DeepClone(); SongSetup.Set(sibling, "Metadata", "Source", "Sibling source");
+                ui.View.LoadProject(BeatmapProject.FromDocuments([map, sibling])); ui.Paint(); ui.Key(115); ui.Paint();
                 if (size.Item1 == 980)
                 {
                     var resize = ui.View.DockResizeBounds(false);
@@ -30,12 +31,26 @@ internal static class SongDockTests
                     "F4 selects docked Song Setup without a modal");
                 Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("song.title") && t.Y < 40), "Header Song Setup entry is removed");
                 Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply") || t.Value == L.Get("mac.cancel")), "Song dock has no confirmation controls");
+                foreach (string key in new[] { "ArtistUnicode", "Artist", "TitleUnicode", "Title", "Creator", "Version", "Source" })
+                {
+                    var field = ui.View.SongSetupFieldBounds[key];
+                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("song." + key) && Math.Abs(t.Y - field.Y - 9) < .1f && t.X < field.X),
+                        "General labels and inputs share a row");
+                }
                 Set("TitleUnicode", "Updated title");
                 ui.Type("!");
                 Check(ui.View.Document.Name == "Updated title!", "Typing retains focus after conversion refresh");
                 ui.Key(8);
                 Check(ui.View.Document.Name == "Updated title" && ui.View.IsDirty && !ui.View.SongSetupVisible, "Typing edits and dirties the map immediately");
                 ui.Key(27); ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Song edit undoes in one step");
+                ui.View.ShowSongDock(); ui.Paint();
+                var syncBounds = ui.View.SongDockViewport;
+                ui.View.Wheel(syncBounds.X + 10, syncBounds.Y + 80, -12000, false, false); ui.Paint();
+                var syncText = ui.Canvas.Texts.First(t => t.Value.Length > 5 && L.Get("song.syncGeneral").StartsWith(t.Value, StringComparison.Ordinal));
+                ui.Click(syncText.X + 4, syncText.Y + 4);
+                Check(SongSetup.Get(ui.View.CaptureProject().Difficulties[1].Document, "Metadata", "Source") == "", "Dock button synchronizes siblings");
+                ui.Key('Z', ctrl: true);
+                Check(SongSetup.Get(ui.View.CaptureProject().Difficulties[1].Document, "Metadata", "Source") == "Sibling source", "Dock sync undoes from source difficulty");
                 ui.View.ShowSongDock(); ui.Paint(); Category(1);
                 Set("CircleSize", "4.5");
                 Check(ui.View.Document.CircleSize == 4.5, "Dock difficulty fields update immediately");

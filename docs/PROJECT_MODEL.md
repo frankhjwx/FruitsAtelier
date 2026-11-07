@@ -140,10 +140,13 @@ The editor maintains an independent `EditorHistory` per difficulty and accesses 
 
 Song Setup stores metadata, HP/OD, combo colors and Design options in the existing
 raw sections; AR/CS remain the authoritative model properties. No project schema
-change is needed. Shared metadata edits propagate only the changed keys to the
-other difficulty histories. Their saved baselines remain intact for dirty checks,
-and their local undo snapshots retain the shared values. The initiating undo
-transaction restores each difficulty's own previous shared values.
+change is needed. Ordinary edits affect only the current difficulty. The explicit
+General synchronization action copies the selected metadata, combo colors and
+Design fields to sibling histories. Their saved baselines remain intact for dirty
+checks, and their local undo snapshots retain the synchronized values. The source
+history records an undo step even when only siblings change; undo restores each
+sibling's previous synchronized fields, preserving fields edited locally after
+the synchronization.
 
 ## Event hitsounds
 

@@ -1033,6 +1033,7 @@
   "song.faOnlyKeepFile": "ファイルを残して FA only にする",
   "song.faOnlyDeleteFile": ".osu をバックアップして削除",
   "song.newDifficultySyncHelp": "新しい難易度は標準で同期と生成を行います。FA workspace にのみ保存するには FA only を選択してください。",
+  "song.syncGeneral": "一般メタデータとカラーをこのセットの全難易度に同期",
   "song.general": "全般",
   "song.difficulty": "難易度",
   "song.colours": "色",

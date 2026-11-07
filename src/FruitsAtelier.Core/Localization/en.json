@@ -1062,6 +1062,7 @@
   "song.faOnlyKeepFile": "Keep file and use FA only",
   "song.faOnlyDeleteFile": "Back up and delete .osu",
   "song.newDifficultySyncHelp": "New difficulties synchronize and generate by default. Select FA only to keep this difficulty in the FA workspace.",
+  "song.syncGeneral": "Sync General Metadata and Colors to all difficulties in this set",
   "song.general": "General",
   "song.difficulty": "Difficulty",
   "song.colours": "Colors",

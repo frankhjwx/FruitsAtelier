@@ -1033,6 +1033,7 @@
   "song.faOnlyKeepFile": "Zachowaj plik i użyj FA only",
   "song.faOnlyDeleteFile": "Utwórz kopię i usuń .osu",
   "song.newDifficultySyncHelp": "Nowe trudności są domyślnie synchronizowane i generowane. Wybierz FA only, aby pozostawić je tylko w FA workspace.",
+  "song.syncGeneral": "Synchronizuj ogólne metadane i kolory ze wszystkimi poziomami trudności zestawu",
   "song.general": "Ogólne",
   "song.difficulty": "Trudność",
   "song.colours": "Kolorystyka",

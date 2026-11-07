@@ -1033,6 +1033,7 @@
   "song.faOnlyKeepFile": "保留檔案，設為 FA only",
   "song.faOnlyDeleteFile": "備份並刪除 .osu 檔案",
   "song.newDifficultySyncHelp": "新難度預設參與同步與產生。選擇 FA only 可將此難度僅保留在 FA workspace。",
+  "song.syncGeneral": "將一般中繼資料與顏色同步至此圖譜集的所有難度",
   "song.general": "一般",
   "song.difficulty": "難度",
   "song.colours": "顔色",

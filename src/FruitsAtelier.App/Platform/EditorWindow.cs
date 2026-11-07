@@ -198,6 +198,12 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--song-setup-render-check"))
+            {
+                Diagnostics.SongSetupRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--docking-render-check"))
             {
                 Diagnostics.DockingRenderCheck.Run(canvas);

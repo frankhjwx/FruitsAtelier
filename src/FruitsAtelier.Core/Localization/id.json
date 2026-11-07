@@ -1033,6 +1033,7 @@
   "song.faOnlyKeepFile": "Simpan berkas dan gunakan FA only",
   "song.faOnlyDeleteFile": "Cadangkan dan hapus .osu",
   "song.newDifficultySyncHelp": "Kesulitan baru disinkronkan dan dibuat secara bawaan. Pilih FA only untuk menyimpannya hanya di FA workspace.",
+  "song.syncGeneral": "Sinkronkan metadata umum dan warna ke semua tingkat kesulitan dalam set ini",
   "song.general": "Umum",
   "song.difficulty": "Tingkat Kesulitan",
   "song.colours": "Warna",

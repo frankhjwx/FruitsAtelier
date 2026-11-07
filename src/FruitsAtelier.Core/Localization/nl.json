@@ -1033,6 +1033,7 @@
   "song.faOnlyKeepFile": "Bestand bewaren en FA only gebruiken",
   "song.faOnlyDeleteFile": "Back-up maken en .osu verwijderen",
   "song.newDifficultySyncHelp": "Nieuwe moeilijkheden synchroniseren en genereren standaard. Kies FA only om ze alleen in FA workspace te bewaren.",
+  "song.syncGeneral": "Algemene metadata en kleuren synchroniseren met alle moeilijkheidsgraden in deze set",
   "song.general": "Algemeen",
   "song.difficulty": "Moeilijkheidsgraad",
   "song.colours": "Kleuren",

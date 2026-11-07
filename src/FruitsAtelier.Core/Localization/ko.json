@@ -1033,6 +1033,7 @@
   "song.faOnlyKeepFile": "파일 유지 및 FA only 적용",
   "song.faOnlyDeleteFile": ".osu 백업 후 삭제",
   "song.newDifficultySyncHelp": "새 난이도는 기본적으로 동기화 및 생성됩니다. FA workspace에만 유지하려면 FA only를 선택하세요.",
+  "song.syncGeneral": "일반 메타데이터와 색상을 이 세트의 모든 난이도에 동기화",
   "song.general": "일반",
   "song.difficulty": "난이도",
   "song.colours": "색상",

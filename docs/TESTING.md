@@ -1431,10 +1431,16 @@ field focus, left docking, immediate edits, undo and retained Timing layouts, to
 with the existing metadata and randomization checks. Native docking captures
 include every Song Setup category and its scrolled controls.
 
-Song Setup regressions cover shared metadata, independent difficulty settings,
+Song Setup regressions cover difficulty-local metadata, explicit set-wide synchronization,
+independent difficulty settings,
 romanised fields, modal isolation, cancellation, undo/redo, palette HEX input and
 project/`.osu` persistence. Native window checks open all four tabs in both
 languages at each supported test size and DPI and exercise the color picker.
+
+`FruitsAtelier.App.exe --render-check --song-setup-render-check` checks the General
+dock at compact and wide window sizes in English and Chinese at 96/144/192 DPI.
+Captures under `artifacts/tests/song-setup-native` cover inline fields and the
+wrapped synchronization button below Tags.
 
 ## Synchronization regression coverage
 

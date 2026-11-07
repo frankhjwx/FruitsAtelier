@@ -180,7 +180,7 @@ if (args.Contains("--group-drag-boundary-check")) { GroupDragBoundaryTests.Run()
 
 if (args.Contains("--inspector-panels-check")) { InspectorSectionTests.Run(); InspectorPanelsTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS Inspector sections, endpoint labels, metrics and Song Setup categories"); return 0; }
 
-if (args.Contains("--song-dock-check")) { SongDockTests.Run(); SongSetupTests.Run(); DropletRandomizationTests.Run(); Console.WriteLine("PASS Song Setup dock, metadata, colours and randomization"); return 0; }
+if (args.Contains("--song-dock-check")) { SongDockTests.Run(); SongSetupTests.Run(); SongSynchronizationTests.Run(); DropletRandomizationTests.Run(); Console.WriteLine("PASS Song Setup dock, metadata, colours and randomization"); return 0; }
 
 if (args.Contains("--pattern-notes-check")) { PatternNotesTests.Run(); Console.WriteLine("PASS Pattern and Notes dock editing and persistence"); return 0; }
 
@@ -466,7 +466,8 @@ var tests = new (string Name, Action Run)[]
     ("Stream middle fruits edit isolated samples and endpoints drag with undo and cancellation", StreamFruitDragTests.EditEvents),
     ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
-    ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
+    ("Song Setup explicitly synchronizes metadata, colours and design", SongSynchronizationTests.Run),
+    ("Song Setup keeps metadata local and explicitly synchronizes set settings", SongSetupTests.Run),
     ("Song Setup docks, scrolls and applies cancellable drafts", SongDockTests.Run),
     ("Dock layout settings restore across editor restarts", DockPersistenceTests.Run),
     ("Slider Inspector metrics and immediate randomization edits", InspectorPanelsTests.Run),

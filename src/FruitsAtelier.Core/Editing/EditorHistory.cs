@@ -119,6 +119,16 @@ public sealed class EditorHistory
         redo.Clear(); ContentRevision++;
     }
 
+    // A set-wide edit may change only sibling documents and still needs an undo step here.
+    public void EditRelatedDocuments(string label, Action<bool> transition)
+    {
+        if (HasActiveTransaction) throw new InvalidOperationException(L.Get("core.history.activeEdit"));
+        var snapshot = Document.DeepClone();
+        transition(true);
+        undo.Push(new(label, snapshot, Document.DeepClone(), (forward, _, _) => transition(forward)));
+        redo.Clear(); ContentRevision++;
+    }
+
     public void Begin(string label, Action<bool, MapDocument, MapDocument>? restoreRelated = null)
     {
         if (transactionStart is not null) throw new InvalidOperationException(L.Get("core.history.activeEdit"));

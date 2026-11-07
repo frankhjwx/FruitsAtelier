@@ -1033,6 +1033,7 @@
   "song.faOnlyKeepFile": "Сохранить файл и включить FA only",
   "song.faOnlyDeleteFile": "Создать копию и удалить .osu",
   "song.newDifficultySyncHelp": "Новые сложности по умолчанию синхронизируются и создаются в Songs. FA only оставляет сложность только в FA workspace.",
+  "song.syncGeneral": "Синхронизировать общие метаданные и цвета со всеми сложностями набора",
   "song.general": "Общее",
   "song.difficulty": "Сложность",
   "song.colours": "Цвета",

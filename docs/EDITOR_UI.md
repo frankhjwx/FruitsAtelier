@@ -1066,14 +1066,20 @@ the project dirty, preserving field focus. There are no Apply/Cancel buttons.
 Use normal project saving and undo. Difficulty or document changes reload the
 form from current content. Opening this panel does not pause playback.
 
-General edits artist, title, creator, source and tags across every difficulty in
-the project. Non-ASCII artist/title text enables a separate romanised field;
-ASCII text supplies both forms; the romanised value appears as unframed,
-read-only text until a separate spelling is needed. Difficulty Name belongs only
-to the current difficulty. Undo/redo in the difficulty where the change was made
-also restores the affected shared fields in the other difficulties, retaining
-their independent object histories. Unedited fields and source settings are
-preserved.
+General edits artist, title, creator, source and tags for the current difficulty.
+All text fields except Tags place their label beside the input. Tags retains a
+wrapped area below its label in the dock. Non-ASCII artist/title text enables a
+separate romanised field; ASCII text supplies both forms; the romanised value
+appears as unframed, read-only text until a separate spelling is needed.
+
+**Sync General Metadata and Colors to all difficulties in this set**, at the
+bottom of General, copies artist, romanised artist, title, romanised title,
+creator, source, tags, custom combo colors, countdown and offset, widescreen
+support, letterboxing and the flashing-light warning to every difficulty.
+Difficulty names and other difficulty-specific settings are preserved. Disabling
+custom colors before synchronizing removes combo overrides from the other
+difficulties. Undo/redo in the source difficulty restores the synchronized fields
+across the set while retaining the other difficulties' independent object histories.
 
 Difficulty edits the current difficulty's HP, CS, AR and OD from 0 to 10. Each
 slider has fine integer tick marks without labels. Drag in whole steps, hold

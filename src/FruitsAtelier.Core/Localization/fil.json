@@ -1033,6 +1033,7 @@
   "song.faOnlyKeepFile": "Panatilihin ang file at gamitin ang FA only",
   "song.faOnlyDeleteFile": "I-backup at burahin ang .osu",
   "song.newDifficultySyncHelp": "Naka-on ang sync at generation para sa bagong difficulty. Piliin ang FA only upang itago lamang ito sa FA workspace.",
+  "song.syncGeneral": "I-sync ang pangkalahatang metadata at mga kulay sa lahat ng difficulty sa set na ito",
   "song.general": "Pangkalahatan",
   "song.difficulty": "Kahirapan",
   "song.colours": "Mga kulay",
