@@ -73,7 +73,6 @@ public sealed partial class EditorView
     private int HitsoundingPlacementAdditionBank(ConvertedCatchObject note)
     {
         if (nextAdditionBank > 0) return nextAdditionBank;
-        if (nextNormalBank > 0 && hitsoundingResolver!.EventSettings(note).InheritedFields.HasFlag(InheritedSampleFields.AdditionSet)) return nextNormalBank;
         return hitsoundingResolver!.Describe(note).AdditionSet;
     }
     private void CycleHitsoundingPlacementBank()

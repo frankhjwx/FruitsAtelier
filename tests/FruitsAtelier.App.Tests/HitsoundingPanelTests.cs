@@ -210,8 +210,8 @@ internal static class HitsoundingPanelTests
         var head = ui.Canvas.Lines.Single(l => l.Color is 0xE9CA64 or 0xFFF0A6 && l.Y1 == 130);
         Check(Math.Abs(x - head.X1) < 1, "Placement fixture overlaps the play line");
         ui.Click(x, y);
-        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 2, Sample.AdditionSet: 3, Sample.Additions: 2 },
-            "Click at the play line places the addition with the chosen banks");
+        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 1, Sample.AdditionSet: 3, Sample.Additions: 2 },
+            "Click at the play line uses the addition bank without changing Normal");
         var whistle = LaneBlocks(ui, 2)[0]; ui.Click(whistle.X + whistle.Width / 2, whistle.Y + 10); ui.Key(81);
         Check(ui.View.Document.HitsoundOverrides.Single().Sample.AdditionSet == 1, "Existing sound at the play line selects for Q");
         ui.Key(90, ctrl: true);
@@ -228,7 +228,7 @@ internal static class HitsoundingPanelTests
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.normal") + " ▾" && t.X >= bank.X && t.X < bank.Right),
             "Preview Q cycles the addition bank in its selector");
         ui.Click(x, y);
-        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 2, Sample.AdditionSet: 1 },
+        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 1, Sample.AdditionSet: 1 },
             "Placement uses the Q-cycled addition bank");
         ui.Key(90, ctrl: true);
         ui.View.PointerMove(second.Right + 20, second.Y + 10, false, false); ui.Key(81);
@@ -237,14 +237,47 @@ internal static class HitsoundingPanelTests
             && baseline.ContentEquals(ui.View.Document), "Q in the blank Normal lane changes only its placement bank");
         bank = ui.View.AdditionsBounds; ui.Click(bank.X + 10, bank.Y + 10); ChooseBank("samples.auto");
         ui.View.PointerMove(x, y, false, false); ui.Key(81); ui.Click(x, y);
-        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 3, Sample.AdditionSet: 1 },
-            "Q cycles Auto additions from the effective placement Normal bank");
+        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 1, Sample.AdditionSet: 2 },
+            "Q cycles Auto additions from the existing event bank without applying the Normal placement default");
         Console.WriteLine("PASS placement banks, direct deletion and play-line input priority");
         void ChooseBank(string key)
         {
             var text = ui.Canvas.Texts.Single(t => t.Value == L.Get(key) && t.X >= bank.X && t.X < bank.Right);
             ui.Click(text.X + 5, text.Y + 5);
         }
+    }
+    public static void PlacementBankIsolation()
+    {
+        foreach (int lane in new[] { 2, 3, 4 })
+        foreach (bool inheritedNormal in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2 });
+            map.Fruits.Add(new() { TimeMs = 1000, X = 256,
+                OriginalLine = $"256,192,1000,1,0,{(inheritedNormal ? 0 : 1)}:0:0:0:" });
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+            var baseline = ui.View.Document.DeepClone();
+            Choose(ui.View.SamplesetBounds, "timing.drum");
+            Choose(ui.View.AdditionsBounds, "timing.soft");
+            var normal = LaneBlocks(ui, 1).Single();
+            var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100);
+            ui.Click(normal.X + normal.Width / 2, label.Y + 8);
+            var setting = ui.View.Document.HitsoundOverrides.Single();
+            Check(setting.Sample.NormalSet == (inheritedNormal ? 2 : 1)
+                && setting.InheritedFields.HasFlag(InheritedSampleFields.NormalSet) == inheritedNormal,
+                "Addition placement preserves both the existing Normal bank and its inheritance");
+            Check(setting.Sample.AdditionSet == 2 && setting.Sample.Additions == 1 << (lane - 1),
+                "Whistle, Finish and Clap placement uses only the chosen addition bank");
+            ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Isolated placement is one undo step");
+            ui.Key(89, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Single() == setting, "Redo retains bank isolation");
+            void Choose(FruitsAtelier.App.Rendering.Rect bounds, string key)
+            {
+                ui.Click(bounds.X + 10, bounds.Y + 10);
+                var text = ui.Canvas.Texts.Single(t => t.Value == L.Get(key) && t.X >= bounds.X && t.X < bounds.Right);
+                ui.Click(text.X + 5, text.Y + 5);
+            }
+        }
+        Console.WriteLine("PASS addition placement preserves Normal banks and inheritance");
     }
     public static void SelectionAndTiming()
     {

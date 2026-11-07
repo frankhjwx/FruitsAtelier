@@ -180,7 +180,10 @@ does not add sounds or create content history. Placement and existing-sound sele
 take priority over dragging the play line where they overlap. A placement is one undo step. Right-click removes additions, never Normal.
 Sampleset and Additions at the upper left choose the normal and shared addition banks
 for subsequent placement, even while sounds are selected. Changing these selectors
-does not edit existing sounds. With no sound tags selected, Q cycles the placement
+does not edit existing sounds. Placing Whistle, Finish or Clap uses only Additions
+and preserves the existing Normal bank and its inheritance. Auto additions resolve
+from the existing event, independently of the Sampleset placement default.
+With no sound tags selected, Q cycles the placement
 bank for the lane under the pointer: Sampleset for Normal, Additions for Whistle,
 Finish or Clap. The selector and placement preview reflect the new bank.
 W/E/R toggle the selected event's Whistle/Finish/Clap. Q cycles Normal, Soft and Drum for selected sound tags, using the earliest selected

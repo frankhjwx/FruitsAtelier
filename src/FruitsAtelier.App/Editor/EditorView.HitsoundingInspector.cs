@@ -388,8 +388,6 @@ public sealed partial class EditorView
         int additions = hitsoundingErase ? setting.Sample.Additions & ~flag : setting.Sample.Additions | flag;
         if (!hitsoundingErase && nextAdditionBank > 0)
             setting = setting with { Sample = setting.Sample with { AdditionSet = nextAdditionBank }, InheritedFields = setting.InheritedFields & ~InheritedSampleFields.AdditionSet };
-        if (!hitsoundingErase && nextNormalBank > 0)
-            setting = setting with { Sample = setting.Sample with { NormalSet = nextNormalBank }, InheritedFields = setting.InheritedFields & ~InheritedSampleFields.NormalSet };
         if (additions != setting.Sample.Additions) hitsoundingPaint[key] = setting with { Sample = setting.Sample with { Additions = additions } };
     }
     private void ToggleHitsoundingAddition(int flag)
