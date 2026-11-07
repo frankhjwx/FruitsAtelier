@@ -155,6 +155,7 @@ are bold, with the bank line three points larger. A short coloured stem marks th
 Timing tags fill the interval up to the next timing point. Their left-aligned text stays
 at the visible left edge when the interval begins outside the viewport. An amber line
 below the timing blocks marks Kiai intervals and follows timing edits and drag previews.
+Kiai-enabled timing blocks prefix their sampleset label with a star (⭐), such as `⭐ D:1`.
 
 Clicking a Notes object or an existing sound tag selects its event.
 Selecting a sound does not seek. Clicking empty grid or ruler space clears selection and preserves the playing position.

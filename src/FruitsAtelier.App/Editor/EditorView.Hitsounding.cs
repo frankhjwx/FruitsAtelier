@@ -207,6 +207,7 @@ public sealed partial class EditorView
             c.Fill(tag.Bounds, tag.Color, 6, hovered ? .55f : .35f);
             c.StrokeOpacity(tag.Bounds, tag.Color, selectedTiming || hitsoundingSelectedTiming == tag.Point ? 2.5f : 1, 6, 1);
             string bankLabel = tag.Index > 0 ? $"{tag.Bank}:{tag.Index}" : tag.Bank;
+            if ((tag.Point.Effects & 1) != 0) bankLabel = "⭐ " + bankLabel;
             string volumeLabel = $"{tag.Volume}%";
             float bankWidth = c.MeasureText(bankLabel, 13, true), volumeWidth = c.MeasureText(volumeLabel, 10, true);
             c.Clip(tag.Bounds);
