@@ -172,7 +172,7 @@ public sealed partial class EditorView
         c.Fill(r, Chrome(0x191E26, Background), 6); c.StrokeOpacity(r, Grid, 1, 6, .65f); c.Clip(r);
         for (int lane = 0; lane < 7; lane++)
             c.Fill(new(g.X, top + lane * laneHeight, g.Width, laneHeight), Panel, opacity: lane % 2 == 0 ? .5f : .22f);
-        SamplesetBounds = AdditionsBounds = default;
+        DrawSampleBankSelectors(c, r.Y + 10);
         renderedTiming!.FillGrid(start, end, divisor, hitsoundingGrid);
         float lastNumber = -1000;
         foreach (var tick in hitsoundingGrid)
@@ -282,7 +282,7 @@ public sealed partial class EditorView
                 && (hitsoundingResolver!.Describe(candidate).Additions & (1 << (lane - 1))) == 0)
             {
                 float ghostY = top + (lane + .5f) * laneHeight - 16;
-                c.Fill(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), HitsoundingBankColor(nextAdditionBank > 0 ? nextAdditionBank : hitsoundingResolver!.Describe(candidate).AdditionSet), 4, .5f);
+                c.Fill(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), HitsoundingBankColor(HitsoundingPlacementAdditionBank(candidate)), 4, .5f);
                 c.StrokeOpacity(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), Foreground, 1, 4, .5f);
             }
         }

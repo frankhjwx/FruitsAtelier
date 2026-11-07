@@ -1758,7 +1758,8 @@ and live library create/rename/delete notifications. It also checks live Inspect
 undoable volume gestures with live playback and conversion reuse, nearby timing rows,
 new-point drafts, event-specific additions, single-click and continuous painting, complete
 stroke undo, empty-space selection, Q bank cycling for single and multiple selections,
-Normal/addition bank isolation and one-step bank-change undo, playback flashes, normalized narrow waveforms,
+Normal/addition bank isolation, placement-only bank selectors, direct right-click deletion,
+placement and selection at the play line, and one-step bank-change undo, playback flashes, normalized narrow waveforms,
 visible interval labels and play-line bounds. It also checks marquee copy/delete/paste,
 sampleset mismatch confirmation and cancellation, separate simultaneous red/green
 sections and editing an existing timing point without inserting duplicates. Per-lane

@@ -23,7 +23,7 @@ public sealed partial class EditorView
     private void DrawSampleBankSelectors(ICanvas c, float top)
     {
         var ids = FlagTargets();
-        bool placement = HitsoundingPageVisible ? HitsoundingSelectedNote is null : tool == Tool.Fruit || ids.Length == 0;
+        bool placement = HitsoundingPageVisible || tool == Tool.Fruit || ids.Length == 0;
         if (placement)
         {
             sampleBankConversion = null;
@@ -44,15 +44,8 @@ public sealed partial class EditorView
                 selectedSampleBanks[i] = values.Length == 1 ? values[0] : 0;
             }
         }
-        bool enabled = tool != Tool.Banana && draftTrack == Guid.Empty && draftBanana == Guid.Empty
+        bool enabled = HitsoundingPageVisible || tool != Tool.Banana && draftTrack == Guid.Empty && draftBanana == Guid.Empty
             && (placement || sampleBankTargetsAvailable);
-        if (HitsoundingPageVisible && HitsoundingSelectedNote is { } note)
-        {
-            var setting = hitsoundingResolver!.EventSettings(note);
-            selectedSampleBanks[0] = setting.InheritedFields.HasFlag(InheritedSampleFields.NormalSet) ? 0 : setting.Sample.NormalSet;
-            selectedSampleBanks[1] = setting.InheritedFields.HasFlag(InheritedSampleFields.AdditionSet) ? 0 : setting.Sample.AdditionSet;
-            enabled = note.Kind != CatchObjectKind.Banana;
-        }
         for (int i = 0; i < 2; i++)
         {
             bool additions = i == 1;
@@ -82,13 +75,7 @@ public sealed partial class EditorView
     {
         if (HitsoundingPageVisible)
         {
-            if (HitsoundingSelectedNote is not { } note)
-            { if (additions) nextAdditionBank = bank; else nextNormalBank = bank; return; }
-            var setting = hitsoundingResolver!.EventSettings(note);
-            var field = additions ? InheritedSampleFields.AdditionSet : InheritedSampleFields.NormalSet;
-            setting = setting with { Sample = additions ? setting.Sample with { AdditionSet = bank } : setting.Sample with { NormalSet = bank },
-                InheritedFields = bank == 0 ? setting.InheritedFields | field : setting.InheritedFields & ~field };
-            Edit(L.Get("samples.change"), () => SetHitsoundingEvent(setting));
+            if (additions) nextAdditionBank = bank; else nextNormalBank = bank;
             return;
         }
         if (tool == Tool.Banana || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;

@@ -293,7 +293,7 @@ public sealed partial class EditorView
         if (button == 0 && !ctrl && HitsoundingPrecise && hitsoundingPreciseAuditionButton is { } audition && audition.Bounds.Contains(x, y))
         { ToggleHitsoundingLibraryAudition(audition.Sound); return true; }
         if (BeginHitsoundingTimingPointer(x, y, button, ctrl, shift)) return true;
-        if (button == 0 && !ctrl && HitsoundingHeadHovered(x, y))
+        if (button == 0 && !ctrl && !hitsoundingGridBounds.Contains(x, y) && HitsoundingHeadHovered(x, y))
         { hitsoundingHeadBefore = hitsoundingHeadRatio; hitsoundingHeadDrag = true; return true; }
         if (button == 0)
         {
@@ -308,7 +308,7 @@ public sealed partial class EditorView
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
         hitsoundingTimingSelection.Clear();
         if (button == 2 && (hitsoundingMultiSelection.Count > 0 || hitsoundingStoryboardSelection.Count > 0))
-        { OpenHitsoundingSelectionMenu(x, y); return true; }
+        { DeleteHitsoundingAt(x, y); return true; }
         if (BeginHitsoundingStoryboardPointer(x, y, button, ctrl)) return true;
         var note = HitsoundingNoteAt(x, y);
         int lane = Math.Clamp((int)((y - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7)), 0, 6);
@@ -342,6 +342,8 @@ public sealed partial class EditorView
             hitsoundingPaintX = x; hitsoundingPaint.Clear(); PaintHitsoundingNote(placement);
             return true;
         }
+        if (button == 0 && note is null && placement is null && HitsoundingHeadHovered(x, y))
+        { hitsoundingHeadBefore = hitsoundingHeadRatio; hitsoundingHeadDrag = true; return true; }
         bool canMove = button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
         if (canMove)
         {

@@ -160,7 +160,7 @@ internal static class HitsoundingPanelTests
             OriginalLine = $"256,192,{time},1,14,{(time == 1000 ? 1 : 3)}:2:0:0:" });
         var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.select") || t.Value == L.Get("hitsounding.draw"))
-            && ui.View.SamplesetBounds.Width == 0 && ui.View.AdditionsBounds.Width == 0, "Unified toolbar omits modes and bank selectors");
+            && ui.View.SamplesetBounds.Width > 0 && ui.View.AdditionsBounds.Width > 0, "Unified toolbar retains placement banks without modes");
         var baseline = ui.View.Document.DeepClone();
         Click(1, 1); Click(1, 0, true); ui.Key(81);
         Check(ui.View.Document.HitsoundOverrides.Count == 2 && ui.View.Document.HitsoundOverrides.All(h => h.Sample.NormalSet == 2 && h.Sample.AdditionSet == 2),
@@ -184,6 +184,62 @@ internal static class HitsoundingPanelTests
             var box = LaneBlocks(ui, lane)[index];
             ui.View.PointerDown(box.X + box.Width / 2, box.Y + 10, 0, false, ctrl);
             ui.View.PointerUp(box.X + box.Width / 2, box.Y + 10, 0); ui.Paint();
+        }
+    }
+    public static void PlacementBanksAndHeadPriority()
+    {
+        var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 1 });
+        map.Fruits.Add(new() { TimeMs = 1000, X = 256 });
+        map.Fruits.Add(new() { TimeMs = 1500, X = 256 });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage();
+        ui.View.UpdateTransport(1000, 6000, true, false, false, null, null); ui.Paint();
+        var normal = LaneBlocks(ui, 1)[0];
+        ui.Click(normal.X + normal.Width / 2, normal.Y + 10);
+        var baseline = ui.View.Document.DeepClone();
+        var bank = ui.View.SamplesetBounds; ui.Click(bank.X + 10, bank.Y + 10); ChooseBank("timing.soft");
+        bank = ui.View.AdditionsBounds; ui.Click(bank.X + 10, bank.Y + 10); ChooseBank("timing.drum");
+        Check(baseline.ContentEquals(ui.View.Document), "Placement bank selectors do not edit the selected note");
+        normal = LaneBlocks(ui, 1)[0];
+        var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane2") && t.X > 340 && t.X < 1100);
+        float x = normal.X + normal.Width / 2, y = label.Y + 8;
+        var head = ui.Canvas.Lines.Single(l => l.Color is 0xE9CA64 or 0xFFF0A6 && l.Y1 == 130);
+        Check(Math.Abs(x - head.X1) < 1, "Placement fixture overlaps the play line");
+        ui.Click(x, y);
+        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 2, Sample.AdditionSet: 3, Sample.Additions: 2 },
+            "Click at the play line places the addition with the chosen banks");
+        var whistle = LaneBlocks(ui, 2)[0]; ui.Click(whistle.X + whistle.Width / 2, whistle.Y + 10); ui.Key(81);
+        Check(ui.View.Document.HitsoundOverrides.Single().Sample.AdditionSet == 1, "Existing sound at the play line selects for Q");
+        ui.Key(90, ctrl: true);
+        ui.View.PointerDown(x, y, 2, false, false); ui.View.PointerUp(x, y, 2); ui.Paint();
+        Check(ui.View.Document.HitsoundOverrides.Single().Sample.Additions == 0
+            && !ui.Canvas.Texts.Any(t => t.Value == L.Get("editor.command.delete")), "Right-click deletes selected sound immediately");
+        ui.Key(90, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Single().Sample.Additions == 2, "Direct deletion is undoable");
+        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Placement is one undo step with no selector history");
+        var second = LaneBlocks(ui, 1)[1];
+        ui.Click(second.X + second.Width / 2, second.Y - 10);
+        ui.View.PointerMove(x, y, false, false); ui.Key(81);
+        Check(baseline.ContentEquals(ui.View.Document), "Q over an empty addition slot only changes placement defaults");
+        bank = ui.View.AdditionsBounds;
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.normal") + " ▾" && t.X >= bank.X && t.X < bank.Right),
+            "Preview Q cycles the addition bank in its selector");
+        ui.Click(x, y);
+        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 2, Sample.AdditionSet: 1 },
+            "Placement uses the Q-cycled addition bank");
+        ui.Key(90, ctrl: true);
+        ui.View.PointerMove(second.Right + 20, second.Y + 10, false, false); ui.Key(81);
+        bank = ui.View.SamplesetBounds;
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.drum") + " ▾" && t.X >= bank.X && t.X < bank.Right)
+            && baseline.ContentEquals(ui.View.Document), "Q in the blank Normal lane changes only its placement bank");
+        bank = ui.View.AdditionsBounds; ui.Click(bank.X + 10, bank.Y + 10); ChooseBank("samples.auto");
+        ui.View.PointerMove(x, y, false, false); ui.Key(81); ui.Click(x, y);
+        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 3, Sample.AdditionSet: 1 },
+            "Q cycles Auto additions from the effective placement Normal bank");
+        Console.WriteLine("PASS placement banks, direct deletion and play-line input priority");
+        void ChooseBank(string key)
+        {
+            var text = ui.Canvas.Texts.Single(t => t.Value == L.Get(key) && t.X >= bank.X && t.X < bank.Right);
+            ui.Click(text.X + 5, text.Y + 5);
         }
     }
     public static void SelectionAndTiming()
@@ -263,11 +319,10 @@ internal static class HitsoundingPanelTests
             ui.View.PointerUp(whistles[1].Right + 4, finishes[1].Bottom + 4, 0); ui.Paint();
             float contextX = whistles[0].X + 5, contextY = blank ? finishes[1].Bottom + 10 : whistles[0].Y + 10;
             ui.View.PointerDown(contextX, contextY, 2, false, false); ui.View.PointerUp(contextX, contextY, 2); ui.Paint();
-            Check(baseline.ContentEquals(ui.View.Document), "Select right-click preserves the group and waits for its menu action");
-            ui.ClickText(L.Get("editor.command.delete"));
-            Check(ui.View.Document.HitsoundOverrides.Count == 2 && ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 0), "Context Delete removes every selected addition");
-            ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Context group deletion is one undo step");
-            ui.Key(89, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Count == 2, "Context group deletion is one redo step");
+            Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("editor.command.delete")), "Sound right-click does not open a menu");
+            Check(ui.View.Document.HitsoundOverrides.Count == 2 && ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 0), "Right-click removes every selected addition");
+            ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Right-click group deletion is one undo step");
+            ui.Key(89, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Count == 2, "Right-click group deletion is one redo step");
             ui.Key(90, ctrl: true);
         }
         ui.View.UpdateTransport(2000, 6000, true, false, false, null, null); ui.Paint();
@@ -750,7 +805,7 @@ internal static class HitsoundingPanelTests
         ui.View.PointerUp(second.Right + 5, second.Bottom + 5, 0); ui.Paint();
         ui.View.PointerDown(first.X + 5, first.Y + 10, 2, false, false);
         ui.View.PointerUp(first.X + 5, first.Y + 10, 2); ui.Paint();
-        ui.ClickText(L.Get("editor.command.delete")); Wait(0);
+        Wait(0);
         Check(Samples().Count == 0, "Storyboard marquee selects multiple sounds for deletion");
         ui.Key(90, ctrl: true); Wait(2);
         File.WriteAllText(shared, "[Events]\nSample,1250,0,\"sound,one.wav\",40\n");
