@@ -17,6 +17,23 @@ internal static class TimingFeedbackTests
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(locale);
+                var navigation = new Ui(false, new Clock()); var navigationMap = Map(); navigation.LoadDocument(navigationMap);
+                var navigationSeeks = new List<double>(); navigation.View.RequestSeek = navigationSeeks.Add;
+                navigation.Key(117);
+                var list = navigation.View.TimingListViewport;
+                for (int row = 1; row >= 0; row--)
+                {
+                    float x = list.X + 30, y = list.Y + 46 + row * 28;
+                    navigation.Click(x, y);
+                    Check(navigationSeeks.Count == 1 - row, "Single-clicking a timing row must only select it.");
+                    navigation.View.PointerDoubleClick(x, y, false, false); navigation.Paint();
+                    Check(navigationSeeks[^1] == row * 500 && navigation.View.PlayheadMs == row * 500
+                        && navigation.View.TimingSetupVisible && navigation.View.Document.ContentEquals(navigationMap)
+                        && !navigation.View.IsDirty, "Double-clicking a timing row must seek without applying the draft.");
+                }
+                navigation.View.PointerDoubleClick(list.X + 30, list.Y + 10, false, false);
+                navigation.View.PointerDoubleClick(list.X + 30, list.Bottom - 10, false, false);
+                Check(navigationSeeks.Count == 2, "Timing headers and empty list space must not seek.");
                 foreach (bool red in new[] { true, false })
                 {
                     var map = Map(); var ui = new Ui(false, new Clock()); ui.LoadDocument(map);

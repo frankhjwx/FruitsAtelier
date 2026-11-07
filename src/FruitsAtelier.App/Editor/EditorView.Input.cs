@@ -879,6 +879,17 @@ public sealed partial class EditorView
         }
         if (TimingModal || TimingWindowContains(x, y) || TimingPageVisible && rightPanel.Contains(x, y))
         {
+            if (!TimingModal && TimingWindowContains(x, y) && timingListBounds.Contains(x, y))
+            {
+                var entries = VisibleTimingEntries();
+                int row = (int)Math.Floor((y - timingListBounds.Y - 32 * TimingRowScale) / (28 * TimingRowScale));
+                int capacity = Math.Max(1, (int)((timingListBounds.Height / TimingRowScale - 34) / 28));
+                int index = timingScroll + row;
+                if (x >= timingListBounds.X + 3 * TimingRowScale && x < timingListBounds.Right - 9 * TimingRowScale
+                    && row >= 0 && row < capacity && index < entries.Length && CommitTimingField())
+                    SeekTo(entries[index].Point.TimeMs);
+                return;
+            }
             var field = timingFields.FirstOrDefault(f => f.Bounds.Contains(x, y));
             if (field.Key is not null && CommitTimingField())
             { timingField = field.Key; timingText = field.Value; timingFieldApply = field.Apply; SelectInput("timing:" + field.Key, timingText); }

@@ -921,7 +921,8 @@ and offsets to integer milliseconds. **Use Current Time** takes the whole-millis
 part of the playback position. The draft is committed by OK as one undo step; Cancel, Escape or the close
 button discards it. Timing, Audio and Style pages edit the selected rows, while
 All, Timing Points and Inherited Points filter the list. Ctrl-click toggles rows;
-Shift-click selects a range. Ctrl+A selects visible rows. Mixed numeric values are
+Shift-click selects a range. Double-click a row to seek to its timestamp while keeping
+the window open. Ctrl+A selects visible rows. Mixed numeric values are
 blank until explicitly replaced. Offset arrows add or subtract from each selected
 row independently, including mixed values. **Shift selected points (ms)** accepts a
 signed amount; **Apply** translates the selected rows while retaining their spacing
