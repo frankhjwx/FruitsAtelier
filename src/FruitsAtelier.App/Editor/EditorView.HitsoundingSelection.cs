@@ -70,6 +70,32 @@ public sealed partial class EditorView
                 else hitsoundingMultiSelection.Remove(key);
             }
     }
+    private void CycleHitsoundingSampleSet()
+    {
+        var selected = hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4 && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event)))
+            .Select(k => (Note: hitsoundingNoteLookup[(k.Id, k.Event)], k.Lane))
+            .OrderBy(e => e.Note.TimeMs).ThenBy(e => e.Note.SourceId).ThenBy(e => e.Note.EventIndex).ThenBy(e => e.Lane).ToArray();
+        if (selected.Length == 0) return;
+        var first = selected[0];
+        var sample = hitsoundingResolver!.Describe(first.Note);
+        int bank = (first.Lane == 1 ? sample.NormalSet : sample.AdditionSet) % 3 + 1;
+        var changes = selected.GroupBy(e => (e.Note.SourceId, e.Note.EventIndex)).Select(group =>
+        {
+            var setting = hitsoundingResolver.EventSettings(group.First().Note);
+            bool normal = group.Any(e => e.Lane == 1), additions = group.Any(e => e.Lane > 1);
+            var resolved = hitsoundingResolver.Describe(group.First().Note);
+            // AdditionSet inherits NormalSet, so retain audible additions when only Normal changes.
+            bool retainAdditions = normal && !additions && resolved.Additions != 0;
+            return setting with
+            {
+                Sample = setting.Sample with { NormalSet = normal ? bank : setting.Sample.NormalSet,
+                    AdditionSet = additions ? bank : retainAdditions ? resolved.AdditionSet : setting.Sample.AdditionSet },
+                InheritedFields = setting.InheritedFields & ~(normal ? InheritedSampleFields.NormalSet : 0)
+                    & ~(additions || retainAdditions ? InheritedSampleFields.AdditionSet : 0)
+            };
+        }).ToArray();
+        Edit(L.Get("samples.change"), () => { foreach (var setting in changes) SetHitsoundingEvent(setting); });
+    }
     private void CopyHitsoundingSelection()
     {
         var entries = hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4 && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event)))

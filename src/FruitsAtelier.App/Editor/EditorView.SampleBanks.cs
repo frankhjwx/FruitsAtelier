@@ -23,7 +23,7 @@ public sealed partial class EditorView
     private void DrawSampleBankSelectors(ICanvas c, float top)
     {
         var ids = FlagTargets();
-        bool placement = HitsoundingPageVisible ? hitsoundingDraw || HitsoundingSelectedNote is null : tool == Tool.Fruit || ids.Length == 0;
+        bool placement = HitsoundingPageVisible ? HitsoundingSelectedNote is null : tool == Tool.Fruit || ids.Length == 0;
         if (placement)
         {
             sampleBankConversion = null;
@@ -46,7 +46,7 @@ public sealed partial class EditorView
         }
         bool enabled = tool != Tool.Banana && draftTrack == Guid.Empty && draftBanana == Guid.Empty
             && (placement || sampleBankTargetsAvailable);
-        if (HitsoundingPageVisible && !hitsoundingDraw && HitsoundingSelectedNote is { } note)
+        if (HitsoundingPageVisible && HitsoundingSelectedNote is { } note)
         {
             var setting = hitsoundingResolver!.EventSettings(note);
             selectedSampleBanks[0] = setting.InheritedFields.HasFlag(InheritedSampleFields.NormalSet) ? 0 : setting.Sample.NormalSet;
@@ -82,7 +82,7 @@ public sealed partial class EditorView
     {
         if (HitsoundingPageVisible)
         {
-            if (hitsoundingDraw || HitsoundingSelectedNote is not { } note)
+            if (HitsoundingSelectedNote is not { } note)
             { if (additions) nextAdditionBank = bank; else nextNormalBank = bank; return; }
             var setting = hitsoundingResolver!.EventSettings(note);
             var field = additions ? InheritedSampleFields.AdditionSet : InheritedSampleFields.NormalSet;

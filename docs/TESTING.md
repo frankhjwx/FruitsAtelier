@@ -1757,7 +1757,8 @@ dropdown, divider resize cursors, recursive folder imports, opening the current 
 and live library create/rename/delete notifications. It also checks live Inspector edits,
 undoable volume gestures with live playback and conversion reuse, nearby timing rows,
 new-point drafts, event-specific additions, single-click and continuous painting, complete
-stroke undo, empty-space selection, playback flashes, normalized narrow waveforms,
+stroke undo, empty-space selection, Q bank cycling for single and multiple selections,
+Normal/addition bank isolation and one-step bank-change undo, playback flashes, normalized narrow waveforms,
 visible interval labels and play-line bounds. It also checks marquee copy/delete/paste,
 sampleset mismatch confirmation and cancellation, separate simultaneous red/green
 sections and editing an existing timing point without inserting duplicates. Per-lane

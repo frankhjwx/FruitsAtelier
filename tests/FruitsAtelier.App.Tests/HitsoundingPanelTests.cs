@@ -105,7 +105,6 @@ internal static class HitsoundingPanelTests
         ui.ClickText(L.Get("hitsounding.applyTiming"));
         Check(ui.View.Document.TimingPoints.Last() is { Uninherited: false, TimeMs: 1000, Volume: 40 }, "Apply inserts an inherited timing point at the note timestamp");
         ui.Key(90, ctrl: true);
-        ui.ClickText(L.Get("hitsounding.draw"));
         var normal = NormalBlocks();
         float whistleY = LaneY(2), startX = normal[1].X + normal[1].Width / 2;
         ui.Click(startX, whistleY);
@@ -125,7 +124,6 @@ internal static class HitsoundingPanelTests
         ui.View.PointerDown(whistle.X + whistle.Width / 2, whistle.Y + 10, 2, false, false);
         ui.View.PointerUp(whistle.X + whistle.Width / 2, whistle.Y + 10, 2); ui.Paint();
         Check(ui.View.Document.HitsoundOverrides.All(s => (s.Sample.Additions & 2) == 0), "Right click deletes only the clicked addition");
-        ui.ClickText(L.Get("hitsounding.select"));
         normal = NormalBlocks();
         ui.Click(normal[1].X + normal[1].Width / 2, normal[1].Y - 10);
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.currentTime")), "Clicking empty lane space does not select a nearby note");
@@ -153,6 +151,40 @@ internal static class HitsoundingPanelTests
         FruitsAtelier.App.Rendering.Rect[] NormalBlocks() => LaneBlocks(ui, 1);
         float LaneY(int lane) { var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100); return label.Y + 8; }
 
+    }
+    public static void SampleSetCycling()
+    {
+        var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 1 });
+        foreach (int time in new[] { 1000, 1500 }) map.Fruits.Add(new() { TimeMs = time, X = 256,
+            OriginalLine = $"256,192,{time},1,14,{(time == 1000 ? 1 : 3)}:2:0:0:" });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.select") || t.Value == L.Get("hitsounding.draw"))
+            && ui.View.SamplesetBounds.Width == 0 && ui.View.AdditionsBounds.Width == 0, "Unified toolbar omits modes and bank selectors");
+        var baseline = ui.View.Document.DeepClone();
+        Click(1, 1); Click(1, 0, true); ui.Key(81);
+        Check(ui.View.Document.HitsoundOverrides.Count == 2 && ui.View.Document.HitsoundOverrides.All(h => h.Sample.NormalSet == 2 && h.Sample.AdditionSet == 2),
+            "Q uses earliest selected Normal even when selected last, preserving additions");
+        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Batch bank change is one undo step");
+        Click(2, 0); ui.Key(81);
+        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 1, Sample.AdditionSet: 3, Sample.Additions: 14 },
+            "Q on Whistle changes the shared addition bank without changing Normal or flags");
+        ui.Key(81); Check(ui.View.Document.HitsoundOverrides.Single().Sample.AdditionSet == 1, "Drum cycles to Normal");
+        ui.Key(90, ctrl: true); ui.Key(90, ctrl: true);
+        Check(baseline.ContentEquals(ui.View.Document), "Addition cycling preserves undo history");
+        map.Fruits[0].OriginalLine = "256,192,1000,1,14,0:0:0:0:";
+        ui.LoadDocument(map); ui.View.ShowHitsoundingPage(); ui.Paint();
+        Click(1, 0); ui.Key(81);
+        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 2, Sample.AdditionSet: 1 }
+            && !ui.View.Document.HitsoundOverrides.Single().InheritedFields.HasFlag(InheritedSampleFields.AdditionSet),
+            "Normal cycling preserves inherited audible additions");
+        Console.WriteLine("PASS unified Hitsounding input and selected sampleset cycling");
+        void Click(int lane, int index, bool ctrl = false)
+        {
+            var box = LaneBlocks(ui, lane)[index];
+            ui.View.PointerDown(box.X + box.Width / 2, box.Y + 10, 0, false, ctrl);
+            ui.View.PointerUp(box.X + box.Width / 2, box.Y + 10, 0); ui.Paint();
+        }
     }
     public static void SelectionAndTiming()
     {

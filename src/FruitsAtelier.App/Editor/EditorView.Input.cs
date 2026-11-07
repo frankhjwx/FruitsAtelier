@@ -1571,13 +1571,14 @@ public sealed partial class EditorView
             else if (ctrl && virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (ctrl && virtualKey == 89) Redo();
             else if (ctrl && virtualKey == 9) SwitchDifficulty(AdjacentDifficulty(shift));
-            else if (!hitsoundingDraw && ctrl && virtualKey == 88) { CopyHitsoundingSelection(); DeleteHitsoundingSelection(); }
-            else if (!hitsoundingDraw && ctrl && virtualKey == 67) CopyHitsoundingSelection();
-            else if (!hitsoundingDraw && ctrl && virtualKey == 86) PasteHitsoundingSelection();
+            else if (ctrl && virtualKey == 88) { CopyHitsoundingSelection(); DeleteHitsoundingSelection(); }
+            else if (ctrl && virtualKey == 67) CopyHitsoundingSelection();
+            else if (ctrl && virtualKey == 86) PasteHitsoundingSelection();
             else if (!ctrl && virtualKey == 46 && hitsoundingTimingSelection.Count > 0) DeleteHitsoundingTimingSelection();
-            else if (!hitsoundingDraw && !ctrl && virtualKey == 46) DeleteHitsoundingSelection();
+            else if (!ctrl && virtualKey == 46) DeleteHitsoundingSelection();
             else if (!ctrl && virtualKey == 32) TogglePlayback();
             else if (!ctrl && virtualKey is 37 or 39) SeekByWheel(virtualKey == 37 ? -1 : 1, 1);
+            else if (!ctrl && !altHeld && virtualKey == 81) CycleHitsoundingSampleSet();
             else if (!ctrl && virtualKey is 87 or 69 or 82) ToggleHitsoundingAddition(virtualKey == 87 ? 2 : virtualKey == 69 ? 4 : 8);
             else if (!ctrl && virtualKey is 187 or 189) ZoomHitsounding(virtualKey == 187 ? .8 : 1.25, hitsoundingGridBounds.X + hitsoundingGridBounds.Width * .3f);
             return;

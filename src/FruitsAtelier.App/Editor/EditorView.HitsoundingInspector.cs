@@ -9,7 +9,7 @@ public sealed partial class EditorView
     private (Guid Id, int Event)? hitsoundingSelected;
     private readonly List<(Rect Bounds, ConvertedCatchObject Note, int Lane)> hitsoundingSoundHits = [];
     private readonly Dictionary<(Guid, int), EventHitsound> hitsoundingPaint = [];
-    private bool hitsoundingDraw, hitsoundingPainting, hitsoundingErase, hitsoundingHeadDrag;
+    private bool hitsoundingPainting, hitsoundingErase, hitsoundingHeadDrag;
     private float hitsoundingPaintX;
     private double hitsoundingHeadBefore;
     private int hitsoundingPaintLane;
@@ -307,12 +307,13 @@ public sealed partial class EditorView
         }
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
         hitsoundingTimingSelection.Clear();
-        if (button == 2 && !hitsoundingDraw) { OpenHitsoundingSelectionMenu(x, y); return true; }
+        if (button == 2 && (hitsoundingMultiSelection.Count > 0 || hitsoundingStoryboardSelection.Count > 0))
+        { OpenHitsoundingSelectionMenu(x, y); return true; }
         if (BeginHitsoundingStoryboardPointer(x, y, button, ctrl)) return true;
         var note = HitsoundingNoteAt(x, y);
         int lane = Math.Clamp((int)((y - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7)), 0, 6);
         var pressedSound = hitsoundingSoundHits.LastOrDefault(h => h.Bounds.Contains(x, y));
-        if (button == 0 && !hitsoundingDraw && ctrl)
+        if (button == 0 && ctrl)
         {
             if (!CommitField()) return true;
             if (pressedSound.Note is { } soundNote)
@@ -330,15 +331,26 @@ public sealed partial class EditorView
             if (note is not null) SyncHitsoundingNoteSelection(note);
             return true;
         }
-        bool canMove = !hitsoundingDraw && button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
+        var placement = lane is >= 2 and <= 4 && note is null && button == 0
+            ? HitsoundingPlacementNoteAt(x, y) : null;
+        if (placement is { Kind: CatchObjectKind.Fruit }
+            && (hitsoundingResolver!.Describe(placement).Additions & (1 << (lane - 1))) == 0)
+        {
+            hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
+            hitsoundingSelected = null; hitsoundingSelectedTiming = null; SelectObjects([]);
+            hitsoundingPainting = true; hitsoundingErase = false; hitsoundingPaintLane = lane;
+            hitsoundingPaintX = x; hitsoundingPaint.Clear(); PaintHitsoundingNote(placement);
+            return true;
+        }
+        bool canMove = button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
         if (canMove)
         {
             hitsoundingMoveSource = (pressedSound.Note!.SourceId, pressedSound.Note.EventIndex, pressedSound.Lane);
             hitsoundingMoveStart = (x, y); hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
         }
         if (note is not null) SelectHitsoundingNote(note, seek: false);
-        else if (button == 0 && !hitsoundingDraw) { hitsoundingSelectedTiming = null; hitsoundingSelected = null; SelectObjects([]); }
-        if (button == 0 && !hitsoundingDraw)
+        else if (button == 0) { hitsoundingSelectedTiming = null; hitsoundingSelected = null; SelectObjects([]); }
+        if (button == 0)
         {
             hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
             var soundHit = hitsoundingSoundHits.LastOrDefault(h => h.Bounds.Contains(x, y));
@@ -354,7 +366,7 @@ public sealed partial class EditorView
             }
             else SyncHitsoundingNoteSelection(note);
         }
-        if (lane is >= 2 and <= 4 && (button == 2 || hitsoundingDraw && button == 0))
+        if (lane is >= 2 and <= 4 && button == 2)
         {
             hitsoundingPainting = true; hitsoundingErase = button == 2; hitsoundingPaintLane = lane;
             hitsoundingPaintX = x; hitsoundingPaint.Clear();
