@@ -54,7 +54,7 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
                     document.Tracks.RemoveAll(t => t.Nodes.Count < 2);
                     var objects = CatchStreamConverter.Convert(document).Objects;
                     var resolver = new HitsoundResolver(document, objects, skinFolders);
-                    foreach (var sound in objects.SelectMany(resolver.Resolve).DistinctBy(Key))
+                    foreach (var sound in objects.Concat(SpinnerHitsounds.Events(document)).SelectMany(resolver.Resolve).DistinctBy(Key))
                     {
                         if (Retired(version)) return;
                         LoadSample(sound, version);

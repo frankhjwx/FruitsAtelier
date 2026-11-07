@@ -40,7 +40,7 @@ public sealed partial class EditorView
             sampleBankConversion = conversion;
             sampleBankSelection = ids;
             sampleBankEdge = soundEdge;
-            var targets = ids.Where(id => !Document.BananaShowers.Any(b => b.Id == id)).ToArray();
+            var targets = ids;
             sampleBankTargetsAvailable = targets.Length > 0;
             for (int i = 0; i < 2; i++)
             {
@@ -139,7 +139,7 @@ public sealed partial class EditorView
             if (additions) nextAdditionBank = bank; else nextNormalBank = bank;
             return;
         }
-        var targets = ids.Where(id => !Document.BananaShowers.Any(b => b.Id == id)).ToArray();
+        var targets = ids;
         if (targets.Length == 0) return;
         Edit(L.Get("samples.change"), () =>
         {

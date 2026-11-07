@@ -254,6 +254,12 @@ public sealed partial class EditorView
     }
     private void SetHitsoundingEvent(EventHitsound setting)
     {
+        if (setting.EventIndex >= int.MaxValue - 9999
+            && Document.BananaShowers.FirstOrDefault(s => s.Id == setting.SourceId) is { } shower)
+        {
+            SpinnerHitsounds.SetSample(shower, setting);
+            return;
+        }
         int index = Document.HitsoundOverrides.FindIndex(s => s.SourceId == setting.SourceId && s.EventIndex == setting.EventIndex);
         if (index >= 0) Document.HitsoundOverrides[index] = setting; else Document.HitsoundOverrides.Add(setting);
     }
@@ -274,7 +280,7 @@ public sealed partial class EditorView
         var marker = timelineObjects.LastOrDefault(m => m.Bounds.Contains(x, y));
         if (marker.Id == Guid.Empty) return null;
         double time = HitsoundingStart + (x - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan;
-        return hitsoundingNotes.Where(n => n.SourceId == marker.Id).MinBy(n => Math.Abs(n.TimeMs - time));
+        return hitsoundingNotes.Where(n => n.SourceId == marker.Id).MinBy(n => (Math.Abs(n.TimeMs - time), SpinnerHitsounds.IsEndEvent(n) ? 0 : 1));
     }
     private ConvertedCatchObject? HitsoundingPlacementNoteAt(float x, float y)
     {
@@ -284,7 +290,8 @@ public sealed partial class EditorView
         int first = FirstAfter(hitsoundingNotes, time - tolerance - .001);
         ConvertedCatchObject? best = null;
         for (int i = first; i < hitsoundingNotes.Length && hitsoundingNotes[i].TimeMs <= time + tolerance; i++)
-            if (best is null || Math.Abs(hitsoundingNotes[i].TimeMs - time) < Math.Abs(best.TimeMs - time)) best = hitsoundingNotes[i];
+            if (hitsoundingNotes[i].Kind == CatchObjectKind.Fruit
+                && (best is null || Math.Abs(hitsoundingNotes[i].TimeMs - time) < Math.Abs(best.TimeMs - time))) best = hitsoundingNotes[i];
         return best;
     }
     private bool BeginHitsoundingCanvasPointer(float x, float y, int button, bool ctrl, bool shift)

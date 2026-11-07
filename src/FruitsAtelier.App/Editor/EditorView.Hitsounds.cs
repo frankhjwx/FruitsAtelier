@@ -5,6 +5,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private HitsoundResolver? hitsoundPlaybackResolver;
+    private ConvertedCatchObject[] hitsoundEvents = [];
     public string[] HitsoundSkinFolders => LibrarySettings.UseSkinSounds
         ? new[] { skin?.FolderPath, defaultSkin?.FolderPath }
             .OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
@@ -114,12 +115,12 @@ public sealed partial class EditorView
             storyboardPendingPreviewSounds.Clear();
             start = position - .001;
         }
-        var objects = current.Objects;
+        var objects = hitsoundEvents;
         bool scheduled = RequestScheduleHitsound is not null;
         double end = scheduled ? position + HitsoundLookaheadMs : position;
         int low = FirstAfter(objects, scheduled ? scheduledThrough ?? start : start);
         double? lastBananaTime = null;
-        for (int i = low; i < objects.Count && objects[i].TimeMs <= end; i++)
+        for (int i = low; i < objects.Length && objects[i].TimeMs <= end; i++)
         {
             if (!ShouldPlayCatchHitsound(objects[i], ref lastBananaTime)) continue;
             bool dispatched = false;
@@ -154,7 +155,8 @@ public sealed partial class EditorView
         {
             hitsoundConversion = current;
             var resolver = hitsoundPlaybackResolver = new HitsoundResolver(Document, current.Objects, HitsoundSkinFolders);
-            resolvedHitsounds = current.Objects.Select(resolver.Resolve).ToArray();
+            hitsoundEvents = current.Objects.Concat(SpinnerHitsounds.Events(Document)).OrderBy(o => o.TimeMs).ToArray();
+            resolvedHitsounds = hitsoundEvents.Select(resolver.Resolve).ToArray();
         }
         return current;
     }
@@ -162,10 +164,11 @@ public sealed partial class EditorView
     private void PrepareUpcoming(double position)
     {
         if (RequestPrepareHitsound is null) return;
-        var objects = GetHitsoundConversion().Objects;
+        GetHitsoundConversion();
+        var objects = hitsoundEvents;
         int low = FirstAfter(objects, position - .001);
         var prepared = new HashSet<Hitsound>();
-        for (int i = low; i < objects.Count && objects[i].TimeMs <= position + 1000 && prepared.Count < 128; i++)
+        for (int i = low; i < objects.Length && objects[i].TimeMs <= position + 1000 && prepared.Count < 128; i++)
             foreach (var sound in resolvedHitsounds[i])
                 if (prepared.Add(sound)) RequestPrepareHitsound(sound);
         preparedThrough = position + 1000;

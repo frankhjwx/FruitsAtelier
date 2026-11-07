@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-audition" })
+            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-audition" })
             {
                 if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
@@ -46,6 +46,12 @@ internal static class HitsoundingRenderCheck
                     map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 79 });
                     foreach (int time in Enumerable.Range(0, 100).Select(i => i * 75).Concat(new[] { 1499, 3001 }))
                         map.Fruits.Add(new() { TimeMs = time, X = 256, OriginalLine = $"256,192,{time},1,2,0:0:0:0:" });
+                }
+                if (scenario == "-spinner")
+                {
+                    map.Fruits.Clear(); map.Tracks.Clear();
+                    map.BananaShowers.Add(new() { TimeMs = 500, EndTimeMs = 1800,
+                        OriginalLine = "256,192,500,8,6,1800,3:2:0:0:" });
                 }
                 var clock = new AuditionClock();
                 var editor = new EditorView(false, timeProvider: clock); editor.LoadDocument(map);

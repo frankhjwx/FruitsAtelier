@@ -23,9 +23,15 @@ public sealed partial class EditorView
     private void SaveMapPanel()
     {
         string panel = HitsoundingPageVisible ? "Hitsounding" : TimingPageVisible ? "Timing" : "Mapping";
-        if (EditingPreferences.ActivePanel == panel) return;
-        EditingPreferences.ActivePanel = panel;
-        SaveMapEditingPreferences();
+        bool changed = false;
+        foreach (var difficulty in difficulties)
+        {
+            if (difficulty.EditingPreferences.ActivePanel == panel) continue;
+            difficulty.EditingPreferences.ActivePanel = panel;
+            LibrarySettings.MapEditingPreferences[difficulty.Id] = difficulty.EditingPreferences;
+            changed = true;
+        }
+        if (changed) RequestViewPreference?.Invoke();
     }
 
     private void RestoreSnapPreferences()

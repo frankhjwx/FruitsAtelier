@@ -13,6 +13,14 @@ window stops active hitsound voices. Seeking does not play the skipped interval.
 | Droplet (slider tick) | `slidertick` |
 | Tiny droplet / slider body | Silent; no looping slide or whistle sound |
 | Banana | Packaged Catch banana sample |
+| Banana shower end | Spinner normal sample plus whistle, finish, and clap flags |
+
+The Hitsounding Panel exposes each spinner / banana-shower end as an editable sound event.
+Fixed per-banana sounds are hidden from the editable lanes.
+Placement, selection, Q cycling and the Sampleset/Additions selectors edit its preserved
+spinner sample fields. The end sample plays once in preview and Testplay, independently
+of catching individual bananas. Patterned showers share their authored sample settings
+across segment ends. Export retains these settings in the spinner line.
 
 Bananas at the same timestamp share one sample in preview and Testplay, so stacked
 banana showers do not amplify the sound. Testplay plays it when any banana at that
@@ -32,7 +40,8 @@ targets its edge; a whole-slider selection updates all edges and the object bank
 Existing custom indices, volumes, filenames and hitsound flags are retained, including
 copied hitsound overrides. With no selection, or with the Fruit tool active, the
 dropdowns set defaults for newly placed fruits and sliders. They are disabled during
-an unfinished object and for banana showers, which use the fixed Catch banana sound.
+an unfinished object and while the Banana placement tool is active. A selected banana
+shower edits the spinner end sample; its Whistle, Finish and Clap controls are also editable.
 
 The menus close on selection, an outside click or Escape. The shared editor implements
 the same controls on Windows and macOS. The underlying fields follow the
@@ -155,7 +164,7 @@ are bold, with the bank line three points larger. A short coloured stem marks th
 Timing tags fill the interval up to the next timing point. Their left-aligned text stays
 at the visible left edge when the interval begins outside the viewport. An amber line
 below the timing blocks marks Kiai intervals and follows timing edits and drag previews.
-Kiai-enabled timing blocks prefix their sampleset label with a star (⭐), such as `⭐ D:1`.
+Kiai-enabled timing blocks prefix their sampleset label with a proportionally drawn, outlined five-point star.
 
 Clicking a Notes object or an existing sound tag selects its event.
 Selecting a sound does not seek. Clicking empty grid or ruler space clears selection and preserves the playing position.
@@ -349,3 +358,7 @@ controls while retaining the Current timestamp heading until a point is selected
 During playback, Current timestamp retains its regular form when crossing timing
 points. Starting playback or dragging the transport timeline clears the timing-point
 selection and resumes following the current time.
+
+Within one mapset, difficulty switches retain the active editor panel and the hitsound
+clipboard. Copy in one difficulty and paste at the playhead in another; paste uses
+the destination difficulty's undo history. Opening another project clears the clipboard.

@@ -7,6 +7,12 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public bool HitsoundingPageVisible { get; private set; }
+    private static readonly System.Numerics.Vector2[] HitsoundingKiaiStar = Enumerable.Range(0, 11).Select(i =>
+    {
+        float angle = -MathF.PI / 2 + i * MathF.PI / 5;
+        float radius = i % 2 == 0 ? 1 : .42f;
+        return new System.Numerics.Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
+    }).ToArray();
     private double hitsoundingSpan = 4000;
     private double hitsoundingHeadRatio = .3;
     internal const float HitsoundingTagWidth = 36;
@@ -70,15 +76,16 @@ public sealed partial class EditorView
         hitsoundingTimingSelection.RemoveWhere(p => !Document.TimingPoints.Contains(p));
         var resolver = hitsoundingResolver = new HitsoundResolver(Document, current.Objects, inspectResources: false);
         var tags = new List<SoundTag>();
-        hitsoundingNotes = current.Objects.Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.Banana).ToArray();
+        hitsoundingNotes = hitsoundEvents.Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.Banana).ToArray();
         hitsoundingNoteLookup = hitsoundingNotes.ToDictionary(n => (n.SourceId, n.EventIndex));
         if (hitsoundingSelected is { } selected && !hitsoundingNoteLookup.ContainsKey((selected.Id, selected.Event))) hitsoundingSelected = null;
         hitsoundingRedPoints = overviewTiming.Where(p => p.Uninherited).ToArray();
         hitsoundingGreenPoints = overviewTiming.Where(p => !p.Uninherited).ToArray();
         var sets = new SortedSet<int>(Document.TimingPoints.Select(p => Math.Max(0, p.SampleIndex))) { 0 };
-        for (int i = 0; i < current.Objects.Count; i++)
+        for (int i = 0; i < hitsoundEvents.Length; i++)
         {
-            var item = current.Objects[i];
+            var item = hitsoundEvents[i];
+            if (item.Kind == CatchObjectKind.Banana) continue;
             var settings = resolver.Describe(item);
             foreach (var group in resolvedHitsounds[i].Where(s => s.Volume > 0).GroupBy(sound =>
                 sound.Name switch { "hitwhistle" => 2, "hitfinish" => 3, "hitclap" => 4, "slidertick" => 5, _ => 1 }))
@@ -207,11 +214,12 @@ public sealed partial class EditorView
             c.Fill(tag.Bounds, tag.Color, 6, hovered ? .55f : .35f);
             c.StrokeOpacity(tag.Bounds, tag.Color, selectedTiming || hitsoundingSelectedTiming == tag.Point ? 2.5f : 1, 6, 1);
             string bankLabel = tag.Index > 0 ? $"{tag.Bank}:{tag.Index}" : tag.Bank;
-            if ((tag.Point.Effects & 1) != 0) bankLabel = "⭐ " + bankLabel;
+            bool kiai = (tag.Point.Effects & 1) != 0;
             string volumeLabel = $"{tag.Volume}%";
             float bankWidth = c.MeasureText(bankLabel, 13, true), volumeWidth = c.MeasureText(volumeLabel, 10, true);
             c.Clip(tag.Bounds);
-            c.Text(bankLabel, tag.Bounds.X + 6, tag.Bounds.Y + 2, 13, 0xFFFFFF, bankWidth + 1, true);
+            if (kiai) c.Polyline(HitsoundingKiaiStar, tag.Bounds.X + 12, tag.Bounds.Y + 11, 6, 0xFFFFFF, 1.2f, 1);
+            c.Text(bankLabel, tag.Bounds.X + (kiai ? 23 : 6), tag.Bounds.Y + 2, 13, 0xFFFFFF, bankWidth + 1, true);
             c.Text(volumeLabel, tag.Bounds.X + 6, tag.Bounds.Y + 20, 10, 0xFFFFFF, volumeWidth + 1, true);
             c.Unclip();
         }

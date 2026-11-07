@@ -1052,6 +1052,80 @@ internal static class HitsoundingPanelTests
             throw new InvalidOperationException($"Expected {count} storyboard blocks, saw {Blocks().Length}");
         }
     }
+    public static void CrossDifficultyClipboard()
+    {
+        var source = new MapDocument { Name = "Source", DurationMs = 6000 };
+        source.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, Volume = 80 });
+        source.Fruits.Add(new() { TimeMs = 1000, X = 256, OriginalLine = "256,192,1000,1,2,2:3:0:0:" });
+        var target = source.DeepClone(); target.Name = "Target";
+        target.Fruits[0].OriginalLine = "256,192,1000,1,0,2:0:0:0:";
+        var ui = new Ui(false); ui.View.LoadProject(BeatmapProject.FromDocuments([source, target])); ui.Resize(1440, 900);
+        ui.View.ShowHitsoundingPage(); ui.View.UpdateTransport(1000, 6000, true, false, false, null, null); ui.Paint();
+        var block = LaneBlocks(ui, 2).Single(); ui.Click(block.X + block.Width / 2, block.Y + 10); ui.Key('C', ctrl: true);
+        Check(ui.View.SwitchDifficulty(1), "Switch to paste target"); ui.Paint();
+        Check(ui.View.HitsoundingPageVisible, "Mapset retains Hitsounding panel across difficulties");
+        ui.Key('V', ctrl: true);
+        var resolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
+        Check(resolver.Describe(ui.View.Conversion.Objects.Single()) is { NormalSet: 2, AdditionSet: 3, Additions: 2 },
+            "Copied addition pastes across difficulties without changing target Normal");
+        ui.Key('Z', ctrl: true); Check(target.ContentEquals(ui.View.Document), "Cross-difficulty paste has target-local undo");
+        ui.View.SwitchDifficulty(0); ui.Paint();
+        Check(source.ContentEquals(ui.View.Document), "Cross-difficulty copy preserves source content");
+        Console.WriteLine("PASS shared mapset panel and cross-difficulty sound clipboard");
+    }
+    public static void SpinnerEndSamples()
+    {
+        var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, Volume = 80 });
+        map.TimingPoints.Add(new() { TimeMs = 1500, BeatLengthMs = -100, Uninherited = false, SampleSet = 3, SampleIndex = 2, Volume = 60 });
+        map.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 2000,
+            OriginalLine = "256,192,1000,8,0,2000,0:0:0:0:" });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900);
+        ui.View.UpdateTransport(2000, 6000, true, false, false, null, null); ui.Paint();
+        ui.View.ShowHitsoundingPage(); ui.Paint();
+        var note = SpinnerHitsounds.Events(ui.View.Document).Single();
+        var resolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
+        Check(resolver.Describe(note) is { NormalSet: 3, Index: 2, Volume: 60 }, "Spinner end inherits timing at its end");
+        var normal = LaneBlocks(ui, 1).Single();
+        ui.Click(normal.X + normal.Width / 2, normal.Y + 10); ui.Key(81);
+        resolver = new(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
+        Check(resolver.Describe(note).NormalSet == 1, "Spinner Normal tag is selectable and editable");
+        ui.Key(90, ctrl: true);
+        normal = LaneBlocks(ui, 1).Single();
+        float x = normal.X + normal.Width / 2;
+        var whistle = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane2") && t.X > 340 && t.X < 1100);
+        ui.Click(x, whistle.Y + 8);
+        resolver = new(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
+        Check(resolver.Describe(note).Additions == 2 && ui.View.Document.HitsoundOverrides.Count == 0,
+            "Placing at a banana shower end edits the spinner sample columns");
+        var block = LaneBlocks(ui, 2).Single(); ui.Click(block.X + block.Width / 2, block.Y + 10); ui.Key(81);
+        resolver = new(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
+        Check(resolver.Describe(note) is { NormalSet: 3, AdditionSet: 1, Index: 2, Volume: 60 }, "Spinner Q preserves base bank and timing inheritance");
+        var exported = OsuBeatmapWriter.Serialize(ui.View.Document).Text;
+        Check(exported.Contains("256,192,1000,8,2,2000,0:1:0:0:"), "Spinner export preserves end time and authored additions");
+        var sounds = new List<(Hitsound Sound, double Time)>();
+        ui.View.RequestScheduleHitsound = (sound, time) => sounds.Add((sound, time));
+        ui.View.PrimeScheduledHitsounds(1999);
+        Check(sounds.Count(s => s.Time == 2000 && s.Sound.Name == "hitwhistle") == 1,
+            "Spinner end schedules its addition exactly once");
+        Check(ui.View.Conversion.Objects.Where(o => o.Kind == CatchObjectKind.Banana)
+            .All(o => resolver.Resolve(o).Single().Name == "catch-banana"), "Individual bananas retain their fixed sample");
+        ui.Key(90, ctrl: true); ui.Key(90, ctrl: true);
+        Check(map.ContentEquals(ui.View.Document), "Spinner sound edits undo without changing geometry");
+        var mapping = new Ui(); mapping.LoadDocument(map); mapping.Resize(1440, 900);
+        mapping.Key('1'); mapping.Key('A', ctrl: true);
+        var bounds = mapping.View.SamplesetBounds;
+        mapping.Click(bounds.X + 10, bounds.Y + 10); mapping.ClickText(L.Get("timing.normal"));
+        bounds = mapping.View.AdditionsBounds;
+        mapping.Click(bounds.X + 10, bounds.Y + 10); mapping.ClickText(L.Get("timing.soft"));
+        mapping.ClickText(L.Get("assist.finish"));
+        resolver = new(mapping.View.Document, mapping.View.Conversion.Objects, inspectResources: false);
+        Check(resolver.Describe(note) is { NormalSet: 1, AdditionSet: 2, Additions: 4, Index: 2, Volume: 60 },
+            "Mapping panel enables spinner banks and additions without changing index or volume");
+        mapping.Key('Z', ctrl: true); mapping.Key('Z', ctrl: true); mapping.Key('Z', ctrl: true);
+        Check(map.ContentEquals(mapping.View.Document), "Mapping spinner edits undo together with preserved fields");
+        Console.WriteLine("PASS spinner end placement, Normal selection, mapping controls, timing, playback, export and undo");
+    }
     public static void Performance()
     {
         var map = new MapDocument { DurationMs = 90000, BeatLengthMs = 500 };

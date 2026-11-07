@@ -22,6 +22,7 @@ public sealed class HitsoundResolver
         sampleFields = document.Fruits.Select(f => (f.Id, f.OriginalLine))
             .Concat(document.Tracks.Select(f => (f.Id, f.OriginalLine)))
             .Concat(document.ImportedSliders.Select(f => (f.Id, f.OriginalLine)))
+            .Concat(document.BananaShowers.Select(f => (f.Id, f.OriginalLine)))
             .ToDictionary(f => f.Id, f => f.OriginalLine is { } line ? SampleFields(line) : null);
         foreach (var group in objects.Where(o => o.Kind == CatchObjectKind.Fruit && !o.IsStandalone).GroupBy(o => o.SourceId))
         {
@@ -87,7 +88,7 @@ public sealed class HitsoundResolver
             if (streams.TryGetValue(item.SourceId, out var stream))
                 p = SampleFields(SliderFruitStream.FruitLine(stream, item.EventIndex, "0", "0"));
             bool slider = (Number(p, 3) & 2) != 0;
-            string[] sample = At(p, slider ? 10 : 5).Split(':', 5);
+            string[] sample = At(p, slider ? 10 : (Number(p, 3) & 8) != 0 ? 6 : 5).Split(':', 5);
             int normal = Number(sample, 0); if (normal is >= 1 and <= 3) bank = normal;
             additionBank = Number(sample, 1);
             // Legacy sliders carry banks here; their index and volume follow timing.
@@ -125,7 +126,7 @@ public sealed class HitsoundResolver
         {
             int comma = remaining.IndexOf(',');
             var field = comma < 0 ? remaining : remaining[..comma];
-            if (index is 3 or 4 or 8 or 9 or 10 || index == 5 && !slider) fields[index] = field.ToString();
+            if (index is 3 or 4 or 6 or 8 or 9 or 10 || index == 5 && !slider) fields[index] = field.ToString();
             if (index == 3) slider = (Number(fields, 3) & 2) != 0;
             if (comma < 0) break;
             remaining = remaining[(comma + 1)..];
@@ -139,7 +140,7 @@ public sealed class HitsoundResolver
         if (!sampleFields.TryGetValue(item.SourceId, out var p) || p is null) return InheritedSampleFields.All;
         if (streams.TryGetValue(item.SourceId, out var stream)) p = SampleFields(SliderFruitStream.FruitLine(stream, item.EventIndex, "0", "0"));
         bool slider = (Number(p, 3) & 2) != 0;
-        var sample = At(p, slider ? 10 : 5).Split(':', 5);
+        var sample = At(p, slider ? 10 : (Number(p, 3) & 8) != 0 ? 6 : 5).Split(':', 5);
         int normal = Number(sample, 0), addition = Number(sample, 1);
         if (slider && edges.TryGetValue((item.SourceId, item.EventIndex), out int edge))
         {

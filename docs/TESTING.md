@@ -1775,7 +1775,7 @@ and Chinese at 980×620 and 1440×900 under `artifacts/tests/hitsounding-native`
 Run the object-timeline, docking and hitsound regressions when changing this view,
 because its note rendering, layouts and sample resolution share those boundaries.
 
-The window-preferences check covers per-map workspace selection across difficulty
+The window-preferences check covers shared mapset workspace selection across difficulty
 switches, Library navigation and restart, including automatic sound-library loading. Hitsounding checks also cover directional
 snap alignment from off-grid timestamps, Dock toggle input priority, volume popover
 mouse/keyboard/wheel input and non-seeking lane labels. Playback-line checks include

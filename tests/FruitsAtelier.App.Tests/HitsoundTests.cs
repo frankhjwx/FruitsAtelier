@@ -110,8 +110,8 @@ static class HitsoundTests
             Replay();
             Require(sounds.Count(s => s.Kind == CatchObjectKind.Banana) == expected,
                 "Stacked and offset showers play one banana sample per timestamp");
-            Require(sounds.Count(s => s.Kind == CatchObjectKind.Fruit) == 2,
-                "Simultaneous fruits retain both hitsounds");
+            Require(sounds.Count(s => s.Kind == CatchObjectKind.Fruit) == 5,
+                "Simultaneous fruits and all three spinner ends retain their hitsounds");
             Replay();
             Require(sounds.Count(s => s.Kind == CatchObjectKind.Banana) == expected * 2,
                 "Seeking rearms all banana timestamps");
@@ -138,8 +138,8 @@ static class HitsoundTests
                 clock.Advance(4000); ui.Paint();
                 Require(caughtSounds.Count(s => s.Kind == CatchObjectKind.Banana) == bananaTimes * replay,
                     $"Testplay and replay play one sample per caught banana timestamp, including after misses: autoplay={autoplay}, replay={replay}, expected={bananaTimes * replay}, actual={caughtSounds.Count(s => s.Kind == CatchObjectKind.Banana)}, playhead={ui.View.PlayheadMs}");
-                Require(caughtSounds.Count(s => s.Kind == CatchObjectKind.Fruit) == 2 * replay,
-                    "Testplay preserves simultaneous fruit sounds");
+                Require(caughtSounds.Count(s => s.Kind == CatchObjectKind.Fruit) == 5 * replay,
+                    "Testplay preserves fruit sounds and plays each spinner end once, independent of caught bananas");
                 ui.View.StopTestplay();
             }
         }

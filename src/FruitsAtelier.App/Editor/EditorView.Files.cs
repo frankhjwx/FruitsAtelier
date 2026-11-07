@@ -129,8 +129,9 @@ public sealed partial class EditorView
         PreloadProjectHitsounds();
     }
 
-    private void ResetDifficultyView(bool prepareMediaInEditor = false, bool preserveMedia = false, bool preserveAudio = false)
+    private void ResetDifficultyView(bool prepareMediaInEditor = false, bool preserveMedia = false, bool preserveAudio = false, bool preserveMapsetState = false)
     {
+        if (preserveMapsetState) SaveMapPanel();
         timingAlignmentPlan = null; timingAlignmentSource = null;
         RestoreTemporarySnap();
         RestoreSnapPreferences();
@@ -142,7 +143,7 @@ public sealed partial class EditorView
         nextSounds = 0; soundEdge = null; timelineFruit = null;
         var document = Document;
         convertedSnapshot = null;
-        ReleaseDifficultyCaches(preserveMedia);
+        ReleaseDifficultyCaches(preserveMedia, preserveMapsetState);
         mediaPreparationInEditor = prepareMediaInEditor;
         Select(Guid.Empty);
         tool = Tool.Select;
@@ -249,7 +250,7 @@ public sealed partial class EditorView
         activeDifficulty = index;
         collaborationField = collaborationError = ""; collaborationPanelScroll = 0;
         RevealDifficultyTab();
-        ResetDifficultyView(prepareMediaInEditor, preserveMedia, preserveAudio);
+        ResetDifficultyView(prepareMediaInEditor, preserveMedia, preserveAudio, preserveMapsetState: true);
         playhead = currentPlayhead;
         viewStart = currentViewStart;
         if (reloadAudio)

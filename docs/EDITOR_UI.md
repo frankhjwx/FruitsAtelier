@@ -2244,9 +2244,10 @@ The workspace selector opens Hitsounding alongside Mapping and Timing. Its displ
 modes, seven lanes, Snap ruler, Alt-wheel navigation and unified sampleset/library
 Config dock are described in [Hitsounding workspace](HITSOUNDS.md#hitsounding-workspace).
 
-The active Mapping, Timing or Hitsounding workspace is remembered per difficulty in
-local user preferences. Reopening the same map, including after restarting the app,
-restores that workspace without changing beatmap content. Escape returns an idle
+The active Mapping, Timing or Hitsounding workspace is shared by difficulties in the
+mapset and saved in local user preferences. Switching difficulties retains the panel
+and hitsound clipboard. Reopening the mapset, including after restarting the app,
+restores the panel without changing beatmap content. Escape returns an idle
 editor to Library; active text edits, gestures and menus consume Escape first.
 Unsaved content follows the existing save/discard confirmation.
 

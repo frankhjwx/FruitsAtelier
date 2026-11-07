@@ -58,11 +58,13 @@ internal static class WindowPreferenceTests
         ui.View.ShowHitsoundingPage(); ui.Paint();
         Check(LibrarySettings.Load(path).MapEditingPreferences[project.Difficulties[0].Id].ActivePanel == "Hitsounding", "Panel selection must save immediately in user settings");
         ui.View.SwitchDifficulty(1); ui.Paint();
-        Check(!ui.View.HitsoundingPageVisible && !ui.View.TimingPageVisible, "A different map uses its own panel preference");
+        Check(ui.View.HitsoundingPageVisible, "Difficulties in a mapset share the active panel");
+        ui.ClickText(L.Get("hitsounding.panel") + " ▾"); ui.ClickText(L.Get("timing.detailsPanel"));
         ui.ClickText(L.Get("timing.detailsPanel") + " ▾"); ui.ClickText(L.Get("timing.panel"));
         Check(ui.View.TimingPageVisible, "Second map opens Timing");
         ui.View.SwitchDifficulty(0); ui.Paint();
-        Check(ui.View.HitsoundingPageVisible, "Switching back restores Hitsounding");
+        Check(ui.View.TimingPageVisible, "Switching back retains the shared panel");
+        ui.View.ShowHitsoundingPage(); ui.Paint();
         Check(!ui.View.IsDirty && ProjectSerializer.Serialize(ui.View.CaptureProject()) == content, "Panel preferences do not modify the project");
         ui.Key(27); Check(ui.View.LibraryVisible, "Escape returns idle Hitsounding to Library");
         Check(LibrarySettings.Load(path).MapEditingPreferences[project.Difficulties[0].Id].ActivePanel == "Hitsounding", "Leaving the editor retains its panel preference");
@@ -75,7 +77,7 @@ internal static class WindowPreferenceTests
         Check(reopened.View.HitsoundingPageVisible, "Hitsounding panel survives app restart");
         Check(reopened.Canvas.Texts.Any(t => t.Value == "restart-folder") && reopened.Canvas.Texts.Any(t => t.Value == "restart-sound.wav"), "Restored Hitsounding library loads folders and samples without pointer input");
         reopened.View.SwitchDifficulty(1); reopened.Paint();
-        Check(reopened.View.TimingPageVisible, "Timing panel preference survives app restart independently");
+        Check(reopened.View.HitsoundingPageVisible, "Shared panel preference survives app restart across difficulties");
         reopened.Key(27); Check(reopened.View.LibraryVisible, "Escape returns idle Timing to Library");
         Check(new MapEditingPreferences { ActivePanel = "Unknown" }.ActivePanel == "Mapping", "Unknown panel names safely use Mapping");
     }
