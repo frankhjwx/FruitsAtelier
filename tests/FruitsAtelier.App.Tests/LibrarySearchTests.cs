@@ -50,6 +50,7 @@ internal static class LibrarySearchTests
         Wait(() => !view.LibraryLoading && (string)Get("libraryBrowserQuery")! == "x");
         Check(view.LibrarySetTotal == db.Search("x").Select(m => m.Directory).Distinct().Count(), "Latest query publishes after the obsolete result is discarded");
         view.CompleteLibraryCacheWrites();
+        CheckFaOnlyDifficulties();
         Console.WriteLine("PASS Library indexed substring search, membership, updates and superseded input");
 
         string Write(string folder, string title, string artist, string unicode, string difficulty, string tags)
@@ -68,6 +69,36 @@ internal static class LibrarySearchTests
             do { Paint(); if (ready()) return; Thread.Sleep(5); } while (watch.Elapsed < TimeSpan.FromSeconds(10));
             throw new Exception("Library search did not settle");
         }
+    }
+
+    private static void CheckFaOnlyDifficulties()
+    {
+        string root = Path.GetFullPath("artifacts/tests/library-fa-only-" + Guid.NewGuid().ToString("N"));
+        string songs = Path.Combine(root, "Songs"), set = Path.Combine(songs, "Set"), workspace = Path.Combine(root, "Workspace");
+        Directory.CreateDirectory(set);
+        string source = Path.Combine(set, "Cup.osu");
+        File.WriteAllText(source, "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Local HS song\nArtist:Artist\nCreator:Mapper\nVersion:Cup\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n");
+        var session = WorkspaceProject.Create(workspace, BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source)]), songs);
+        session.Project.Difficulties.Add(new() { Name = "HS", FaOnly = true, Document = new MapDocument() });
+        WorkspaceProject.Save(session, session.Project);
+        File.WriteAllText(Path.Combine(set, "Rain.osu"), File.ReadAllText(source).Replace("Version:Cup", "Version:Rain"));
+        var db = new LibraryDatabase(workspace, songs); db.Scan();
+        foreach (string query in new[] { "", "Local HS song" })
+        {
+            using var snapshot = db.SearchSnapshot(query);
+            var row = snapshot.Page(0).Single();
+            var details = snapshot.Difficulties(row, 0);
+            Check(row.Count == 3 && details.Count == 3, "All songs counts saved and unimported difficulties exactly once");
+            Check(details.Select(d => d.Difficulty).Order().SequenceEqual(new[] { "Cup", "HS", "Rain" }), "All songs includes FA-only HS alongside source difficulties");
+            var hs = details.Single(d => d.Difficulty == "HS");
+            Check(hs.Path.EndsWith(".catchdiff") && File.Exists(hs.Path) && hs.ProjectPath == session.Directory,
+                "FA-only row identifies its saved workspace difficulty");
+            Check(snapshot.Difficulties(row, 1, 1).Single() == details[1], "Workspace difficulty pagination agrees with the full list");
+        }
+        using var collection = db.SearchSnapshot("", organization: new(DifficultyPaths: [source]));
+        var collected = collection.Page(0).Single();
+        Check(collected.Count == 1 && collection.Difficulties(collected, 0).Single().Difficulty == "Cup",
+            "osu collections retain exact membership for projects with FA-only difficulties");
     }
 
     public static void Profile(string workspace, string songs)
