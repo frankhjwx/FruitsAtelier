@@ -112,13 +112,17 @@ internal static class HitsoundingPanelTests
         ui.Key(90, ctrl: true);
         normal = NormalBlocks(); startX = normal[1].X + normal[1].Width / 2;
         float finishX = normal[2].X + normal[2].Width / 2;
-        ui.View.PointerDown(startX, whistleY, 0, false, false);
-        ui.View.PointerMove(finishX, whistleY, false, false); ui.Paint();
-        Check(baseline.ContentEquals(ui.View.Document), "A paint stroke previews without rebuilding committed content");
-        Check(ui.Canvas.PaintCalls.Any(p => p.Color == 0x65BF8A && p.FillBounds is not null && p.Opacity == .5f), "Draw previews use half opacity");
-        ui.View.PointerUp(finishX, whistleY, 0); ui.Paint();
-        Check(ui.View.Document.HitsoundOverrides.Count == 2, "A paint stroke covers crossed notes");
-        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "One undo reverses the complete paint stroke");
+        float selectionY = normal[1].Y - 4;
+        ui.View.PointerDown(startX, whistleY, 0, false, false); ui.Paint();
+        Check(ui.Canvas.PaintCalls.Any(p => p.Color == 0x65BF8A && p.FillBounds is not null && p.Opacity == .5f), "Click placement previews use half opacity");
+        ui.View.PointerMove(finishX, selectionY, false, false); ui.Paint();
+        Check(baseline.ContentEquals(ui.View.Document), "Dragging from a placement slot switches to selection without changing content");
+        Check(!ui.Canvas.PaintCalls.Any(p => p.Color == 0x65BF8A && p.FillBounds is not null && p.Opacity == .5f), "Marquee disables placement previews");
+        ui.View.PointerUp(finishX, selectionY, 0); ui.Paint();
+        Check(baseline.ContentEquals(ui.View.Document), "Releasing a placement-origin marquee adds no sounds");
+        ui.Key(81);
+        Check(ui.View.Document.HitsoundOverrides.Count == 2 && ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 0), "Placement-origin marquee selects both enclosed Normal sounds for Q");
+        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Selection creates no content history before the Q edit");
         ui.Click(startX, whistleY); ui.Paint();
         var whistle = LaneBlocks(ui, 2).First();
         ui.View.PointerDown(whistle.X + whistle.Width / 2, whistle.Y + 10, 2, false, false);
@@ -146,7 +150,7 @@ internal static class HitsoundingPanelTests
         var interval = ui.Canvas.Fills.First(f => f.Color == 0xE77785).Bounds;
         Check(ui.Canvas.Texts.Any(t => t.Value == "S:1" && Math.Abs(t.X - interval.X - 6) < .1), "Timing text remains at the visible interval edge after its start leaves the canvas");
         PlaybackLineTests.Run();
-        Console.WriteLine("PASS Timing Helper drafts, event editing, paint undo, exact selection, playback feedback and play-line clamps");
+        Console.WriteLine("PASS Timing Helper drafts, event editing, placement-to-marquee selection, exact selection, playback feedback and play-line clamps");
 
         FruitsAtelier.App.Rendering.Rect[] NormalBlocks() => LaneBlocks(ui, 1);
         float LaneY(int lane) { var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100); return label.Y + 8; }
@@ -320,6 +324,12 @@ internal static class HitsoundingPanelTests
             float contextX = whistles[0].X + 5, contextY = blank ? finishes[1].Bottom + 10 : whistles[0].Y + 10;
             ui.View.PointerDown(contextX, contextY, 2, false, false); ui.View.PointerUp(contextX, contextY, 2); ui.Paint();
             Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("editor.command.delete")), "Sound right-click does not open a menu");
+            if (blank)
+            {
+                ui.Key(46);
+                Check(baseline.ContentEquals(ui.View.Document), "Right-click blank space clears the selection without deleting sounds or creating history");
+                continue;
+            }
             Check(ui.View.Document.HitsoundOverrides.Count == 2 && ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 0), "Right-click removes every selected addition");
             ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Right-click group deletion is one undo step");
             ui.Key(89, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Count == 2, "Right-click group deletion is one redo step");
@@ -509,6 +519,46 @@ internal static class HitsoundingPanelTests
             float x = r.X + r.Width / 2, y = r.Y + 5;
             ui.View.PointerDown(x, y, 0, false, ctrl); ui.View.PointerUp(x, y, 0); ui.Paint();
         }
+    }
+    public static void TransferTimingIndex()
+    {
+        foreach (bool move in new[] { false, true })
+        foreach (bool red in new[] { false, true })
+        foreach (bool differentIndex in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1 });
+            map.TimingPoints.Add(new() { TimeMs = 1750, BeatLengthMs = red ? 500 : -100, Uninherited = red,
+                SampleSet = 2, SampleIndex = differentIndex ? 2 : 1 });
+            map.Fruits.Add(new() { TimeMs = 1000, X = 256, OriginalLine = "256,192,1000,1,2,2:3:7:0:" });
+            map.Fruits.Add(new() { TimeMs = 2000, X = 256, OriginalLine = $"256,192,2000,1,0,2:{(differentIndex ? 3 : 1)}:{(differentIndex ? 7 : 8)}:0:" });
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+            var baseline = ui.View.Document.DeepClone();
+            var source = LaneBlocks(ui, 2).Single(); var target = LaneBlocks(ui, 1).Last();
+            float x = source.X + source.Width / 2, y = source.Y + 10;
+            if (move)
+            {
+                float destination = target.X + target.Width / 2;
+                ui.View.PointerDown(x, y, 0, false, false); ui.View.PointerMove(destination, y, false, false);
+                ui.View.PointerUp(destination, y, 0); ui.Paint();
+            }
+            else
+            {
+                ui.Click(x, y); ui.Key(67, ctrl: true);
+                ui.View.UpdateTransport(2000, 6000, true, false, false, null, null); ui.Paint(); ui.Key(86, ctrl: true);
+            }
+            Check(ui.View.DiscardConfirmationVisible == differentIndex,
+                "Only timing-point sample index differences trigger transfer confirmation, regardless of event banks and overrides");
+            if (differentIndex)
+            {
+                Check(baseline.ContentEquals(ui.View.Document), "Index mismatch waits without editing content");
+                ui.ClickText(L.Get("hitsounding.pasteAdjust"));
+            }
+            var placed = ui.View.Document.HitsoundOverrides.Single(h => h.SourceId == map.Fruits[1].Id);
+            Check(placed.Sample is { AdditionSet: 3, Additions: 2, Index: 7 }, "Transfer preserves the source sound bank and explicit index");
+            ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Transfer is one undo step");
+        }
+        Console.WriteLine("PASS transfer confirmation uses red/green timing sample indices");
     }
     public static void LengthAndMove()
     {

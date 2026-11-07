@@ -13,7 +13,7 @@ public sealed partial class EditorView
     private (float X, float Y) hitsoundingMoveStart;
     private bool hitsoundingMoveActive;
     private (float X, float Y) hitsoundingMarqueeStart, hitsoundingMarqueeEnd;
-    private sealed record HitsoundingCopy(double Offset, int Lane, HitSampleSettings Sample);
+    private sealed record HitsoundingCopy(double Offset, int Lane, HitSampleSettings Sample, int TimingIndex);
     private HitsoundingCopy[] hitsoundingClipboard = [];
     private double hitsoundingMarqueeStartTime;
     private bool hitsoundingMarqueeMoved;
@@ -124,13 +124,19 @@ public sealed partial class EditorView
         if (entries.Length == 0 && hitsoundingStoryboardSelection.Count == 0) return;
         double start = Math.Min(entries.FirstOrDefault().Note?.TimeMs ?? double.PositiveInfinity, hitsoundingStoryboardSelection.Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min());
         hitsoundingStoryboardClipboard = hitsoundingStoryboardSelection.Select(s => s with { TimeMs = s.TimeMs - start }).ToArray();
-        hitsoundingClipboard = entries.Select(e => new HitsoundingCopy(e.Note.TimeMs - start, e.Lane, hitsoundingResolver!.Describe(e.Note))).ToArray();
+        hitsoundingClipboard = entries.Select(e => new HitsoundingCopy(e.Note.TimeMs - start, e.Lane, hitsoundingResolver!.Describe(e.Note), HitsoundingTimingIndex(e.Note.TimeMs))).ToArray();
     }
     private void DeleteHitsoundingAt(float x, float y)
     {
         if (!CommitField()) return;
         var sound = hitsoundingSoundHits.LastOrDefault(h => h.Bounds.Contains(x, y));
         var storyboard = hitsoundingStoryboardHits.LastOrDefault(h => h.Bounds.Contains(x, y));
+        if (sound.Note is null && storyboard.Sample.Path is null)
+        {
+            hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
+            hitsoundingSelected = null; hitsoundingSelectedTiming = null; SelectObjects([]);
+            return;
+        }
         if (storyboard.Sample is { Path: not null } sample && !hitsoundingStoryboardSelection.Contains(sample))
         {
             hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); hitsoundingStoryboardSelection.Add(sample);
@@ -167,6 +173,8 @@ public sealed partial class EditorView
         if (hitsoundingClipboard.Length == 0) { if (samples.Length > 0) EditHitsoundingStoryboard([], samples); return; }
         TransferHitsounding(hitsoundingClipboard, playhead, storyboard: samples);
     }
+    private int HitsoundingTimingIndex(double time) => hitsoundingResolver!.Describe(
+        new(Guid.Empty, 0, CatchObjectKind.Fruit, time, 0, 0, 0, 0, true)).Index;
     private void TransferHitsounding(HitsoundingCopy[] copied, double targetTime, (Guid Id, int Event, int Lane)? moveSource = null, ConvertedCatchObject? moveTarget = null, StoryboardSample[]? storyboard = null)
     {
         var targets = new List<(HitsoundingCopy Copy, ConvertedCatchObject Note)>();
@@ -179,11 +187,7 @@ public sealed partial class EditorView
         }
         if (targets.Count == 0 && storyboard is { Length: > 0 }) { EditHitsoundingStoryboard([], storyboard); return; }
         if (targets.Count == 0) { StatusMessage = L.Get("hitsounding.noPasteTargets"); return; }
-        bool mismatch = targets.Any(t =>
-        {
-            var sample = hitsoundingResolver!.Describe(t.Note);
-            return sample.Index != t.Copy.Sample.Index || (t.Copy.Lane == 1 ? sample.NormalSet != t.Copy.Sample.NormalSet : sample.AdditionSet != t.Copy.Sample.AdditionSet);
-        });
+        bool mismatch = targets.Any(t => HitsoundingTimingIndex(t.Note.TimeMs) != t.Copy.TimingIndex);
         var document = Document;
         void Apply(bool adjust)
         {
@@ -222,7 +226,7 @@ public sealed partial class EditorView
                 foreach (var target in targets) hitsoundingMultiSelection.Add((target.Note.SourceId, target.Note.EventIndex, target.Copy.Lane));
             }
         }
-        if (!mismatch) { Apply(false); return; }
+        if (!mismatch) { Apply(true); return; }
         ShowDiscardConfirmation(answer => { if (answer is 6 or 7) Apply(answer == 6); });
         hitsoundingPasteConfirmation = true;
     }
@@ -243,7 +247,7 @@ public sealed partial class EditorView
         if (!hitsoundingNoteLookup.TryGetValue((source.Id, source.Event), out var note)) return true;
         if (!moved) return true;
         if (target is null || target.SourceId == source.Id && target.EventIndex == source.Event) return true;
-        TransferHitsounding([new(0, source.Lane, hitsoundingResolver!.Describe(note))], target.TimeMs, source, target);
+        TransferHitsounding([new(0, source.Lane, hitsoundingResolver!.Describe(note), HitsoundingTimingIndex(note.TimeMs))], target.TimeMs, source, target);
         return true;
     }
     private void DrawHitsoundingPasteConfirmation(ICanvas c)

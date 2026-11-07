@@ -1756,12 +1756,13 @@ slot drag/drop, and resource undo/redo. Config checks include the eight-row Samp
 dropdown, divider resize cursors, recursive folder imports, opening the current folder,
 and live library create/rename/delete notifications. It also checks live Inspector edits,
 undoable volume gestures with live playback and conversion reuse, nearby timing rows,
-new-point drafts, event-specific additions, single-click and continuous painting, complete
-stroke undo, empty-space selection, Q bank cycling for single and multiple selections,
+new-point drafts, event-specific additions, single-click placement and its undo,
+placement-origin marquee selection without added sounds or history, empty-space selection, Q bank cycling for single and multiple selections,
 Normal/addition bank isolation, placement-only bank selectors, direct right-click deletion,
 placement and selection at the play line, and one-step bank-change undo, playback flashes, normalized narrow waveforms,
 visible interval labels and play-line bounds. It also checks marquee copy/delete/paste,
-sampleset mismatch confirmation and cancellation, separate simultaneous red/green
+red/green timing-index mismatch confirmation and cancellation, bank and event-index
+override independence, right-click blank-space deselection, separate simultaneous red/green
 sections and editing an existing timing point without inserting duplicates. Per-lane
 Precise HS boundaries, visible tails with offscreen starts, drag preview, move
 confirmation/cancellation and one-step move undo are also covered. `--hitsounding-performance` compares cold

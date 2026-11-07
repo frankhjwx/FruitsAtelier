@@ -165,16 +165,19 @@ under the pointer. Selection refreshes each frame, including sounds that have sc
 offscreen. Ctrl+C copies selected sounds, Ctrl+V
 pastes their relative times at the playhead onto existing fruit events (within 1 ms),
 Ctrl+X cuts deletable selected sounds, and Delete removes selected additions or SB sounds. Normal remains undeletable. Each batch is one
-undo step. With sounds selected, right-clicking a selected sound or empty grid space immediately deletes the selected additions and storyboard sounds. Right-clicking an unselected sound deletes that sound. Normal remains undeletable. When source and target banks or sample indices differ, a dialog offers the
-copied sampleset, the target sampleset, or cancellation. Adjustments affect target event
+undo step. With sounds selected, right-clicking a selected sound immediately deletes the selected additions and storyboard sounds. Right-clicking empty grid space clears selection without editing content. Right-clicking an unselected sound deletes that sound. Normal remains undeletable. When the red/green timing points governing the source and target have different sample indices, a dialog offers the
+copied sampleset, the target sampleset, or cancellation. Bank differences and per-event
+index overrides do not trigger this dialog. Matching timing indices transfer the source
+bank and sample index directly. Adjustments affect target event
 overrides, including their shared addition bank/index, without rewriting timing intervals.
 Drag an existing Whistle, Finish or Clap tag onto another fruit event to
 move that addition, with a half-opacity preview and the same sampleset confirmation.
 Normal and SliderTick cannot be moved. A move is one undo step.
-Click an empty addition slot at an existing fruit event, or drag from that slot across fruit event
-times in Whistle, Finish or Clap to add that addition; the half-opacity ghost previews
-the target. Placement and existing-sound selection take priority over dragging the
-play line where they overlap. A stroke is one undo step. Right-click removes additions, never Normal.
+Click an empty addition slot at an existing fruit event in Whistle, Finish or Clap
+to add that addition; the half-opacity ghost previews the target. Holding and dragging
+from that slot cancels placement and starts marquee selection. Releasing the marquee
+does not add sounds or create content history. Placement and existing-sound selection
+take priority over dragging the play line where they overlap. A placement is one undo step. Right-click removes additions, never Normal.
 Sampleset and Additions at the upper left choose the normal and shared addition banks
 for subsequent placement, even while sounds are selected. Changing these selectors
 does not edit existing sounds. With no sound tags selected, Q cycles the placement

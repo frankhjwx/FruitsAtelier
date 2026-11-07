@@ -338,6 +338,8 @@ public sealed partial class EditorView
         {
             hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
             hitsoundingSelected = null; hitsoundingSelectedTiming = null; SelectObjects([]);
+            hitsoundingMarqueeStartTime = HitsoundingStart + (x - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan;
+            hitsoundingMarqueeStart = hitsoundingMarqueeEnd = (x, y);
             hitsoundingPainting = true; hitsoundingErase = false; hitsoundingPaintLane = lane;
             hitsoundingPaintX = x; hitsoundingPaint.Clear(); PaintHitsoundingNote(placement);
             return true;
@@ -404,6 +406,12 @@ public sealed partial class EditorView
         { hitsoundingHeadRatio = Math.Clamp((x - hitsoundingGridBounds.X) / Math.Max(1, hitsoundingGridBounds.Width), .05, .95); return true; }
         if (MoveHitsoundingStoryboard(x, y)) return true;
         if (MoveHitsoundingSound(x, y)) return true;
+        if (hitsoundingPainting && !hitsoundingErase)
+        {
+            if (Math.Abs(x - hitsoundingMarqueeStart.X) < ContentDragThreshold && Math.Abs(y - hitsoundingMarqueeStart.Y) < ContentDragThreshold) return true;
+            hitsoundingPainting = false; hitsoundingPaint.Clear();
+            hitsoundingMarquee = true; hitsoundingMarqueeMoved = true;
+        }
         if (hitsoundingMarquee)
         {
             hitsoundingMarqueeEnd = (Math.Clamp(x, hitsoundingGridBounds.X, hitsoundingGridBounds.Right), Math.Clamp(y, hitsoundingGridBounds.Y, hitsoundingGridBounds.Bottom));
