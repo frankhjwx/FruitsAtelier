@@ -199,11 +199,10 @@ internal static class HitsoundingPanelTests
         var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage();
         ui.View.UpdateTransport(1000, 6000, true, false, false, null, null); ui.Paint();
         var normal = LaneBlocks(ui, 1)[0];
-        ui.Click(normal.X + normal.Width / 2, normal.Y + 10);
         var baseline = ui.View.Document.DeepClone();
         var bank = ui.View.SamplesetBounds; ui.Click(bank.X + 10, bank.Y + 10); ChooseBank("timing.soft");
         bank = ui.View.AdditionsBounds; ui.Click(bank.X + 10, bank.Y + 10); ChooseBank("timing.drum");
-        Check(baseline.ContentEquals(ui.View.Document), "Placement bank selectors do not edit the selected note");
+        Check(baseline.ContentEquals(ui.View.Document), "Placement bank selectors without selection do not edit existing notes");
         normal = LaneBlocks(ui, 1)[0];
         var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane2") && t.X > 340 && t.X < 1100);
         float x = normal.X + normal.Width / 2, y = label.Y + 8;
@@ -278,6 +277,60 @@ internal static class HitsoundingPanelTests
             }
         }
         Console.WriteLine("PASS addition placement preserves Normal banks and inheritance");
+    }
+    public static void SelectedBankSelectors()
+    {
+        var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2 });
+        map.Fruits.Add(new() { TimeMs = 1000, X = 256, OriginalLine = "256,192,1000,1,14,0:0:0:0:" });
+        map.Fruits.Add(new() { TimeMs = 1500, X = 256, OriginalLine = "256,192,1500,1,14,3:1:0:0:" });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+        Choose(false, "timing.normal"); Choose(true, "timing.soft");
+        var baseline = ui.View.Document.DeepClone();
+        Select(1, 1); Display(false, "timing.drum"); Display(true, "timing.normal");
+        Choose(true, "timing.drum");
+        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 3, Sample.AdditionSet: 3 }, "Single selected event uses the selector without changing the other bank");
+        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Single selector edit is undoable");
+        Select(1, 0, true); Display(false, "samples.auto"); Display(true, "samples.auto");
+        Choose(false, "timing.normal"); Display(false, "timing.normal");
+        var settings = ui.View.Document.HitsoundOverrides;
+        Check(settings.Count == 2 && settings.All(h => h.Sample.NormalSet == 1), "Sampleset applies to all selected events");
+        Check(settings.Single(h => h.SourceId == map.Fruits[0].Id).Sample.AdditionSet == 2
+            && settings.Single(h => h.SourceId == map.Fruits[1].Id).Sample.AdditionSet == 1, "Normal changes preserve both inherited and explicit addition banks");
+        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Batch Sampleset change is one undo step");
+        Display(false, "samples.auto");
+        Choose(true, "timing.drum"); Display(true, "timing.drum");
+        settings = ui.View.Document.HitsoundOverrides;
+        Check(settings.Count == 2 && settings.All(h => h.Sample.AdditionSet == 3)
+            && settings.Single(h => h.SourceId == map.Fruits[0].Id).InheritedFields.HasFlag(InheritedSampleFields.NormalSet)
+            && settings.Single(h => h.SourceId == map.Fruits[1].Id).Sample.NormalSet == 3, "Batch Additions preserves each Normal bank and inheritance");
+        Choose(true, "samples.auto"); Display(true, "samples.auto");
+        Check(ui.View.Document.HitsoundOverrides.All(h => h.InheritedFields.HasFlag(InheritedSampleFields.AdditionSet)), "Auto restores inheritance on all selected events");
+        ui.Key(90, ctrl: true); Display(true, "timing.drum");
+        ui.Key(89, ctrl: true); Display(true, "samples.auto");
+        var normal = LaneBlocks(ui, 1)[0]; ui.Click(normal.X + normal.Width / 2, normal.Y - 10);
+        Display(false, "timing.normal"); Display(true, "timing.soft");
+        Select(2, 0); Select(3, 1, true); Choose(true, "timing.normal");
+        Check(ui.View.Document.HitsoundOverrides.All(h => h.Sample.AdditionSet == 1), "Mixed addition-lane selections update every selected event");
+        Console.WriteLine("PASS selected bank display, batch editing, Auto, isolation and undo");
+        void Select(int lane, int index, bool ctrl = false)
+        {
+            var box = LaneBlocks(ui, lane)[index];
+            ui.View.PointerDown(box.X + box.Width / 2, box.Y + 10, 0, false, ctrl);
+            ui.View.PointerUp(box.X + box.Width / 2, box.Y + 10, 0); ui.Paint();
+        }
+        void Display(bool additions, string key)
+        {
+            var bounds = additions ? ui.View.AdditionsBounds : ui.View.SamplesetBounds;
+            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get(key) + " ▾" && t.X >= bounds.X && t.X < bounds.Right), "Selector reflects authored selection or placement defaults");
+        }
+        void Choose(bool additions, string key)
+        {
+            var bounds = additions ? ui.View.AdditionsBounds : ui.View.SamplesetBounds;
+            ui.Click(bounds.X + 10, bounds.Y + 10);
+            var text = ui.Canvas.Texts.Where(t => t.Value.TrimStart('✓', ' ') == L.Get(key) && t.X >= bounds.X && t.X < bounds.Right && t.Y >= bounds.Bottom).OrderBy(t => t.Y).First();
+            ui.Click(text.X + 5, text.Y + 5);
+        }
     }
     public static void SelectionAndTiming()
     {

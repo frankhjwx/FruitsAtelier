@@ -178,9 +178,10 @@ to add that addition; the half-opacity ghost previews the target. Holding and dr
 from that slot cancels placement and starts marquee selection. Releasing the marquee
 does not add sounds or create content history. Placement and existing-sound selection
 take priority over dragging the play line where they overlap. A placement is one undo step. Right-click removes additions, never Normal.
-Sampleset and Additions at the upper left choose the normal and shared addition banks
-for subsequent placement, even while sounds are selected. Changing these selectors
-does not edit existing sounds. Placing Whistle, Finish or Clap uses only Additions
+Sampleset and Additions at the upper left display the authored banks of the selected
+events, using Auto for inherited or mixed values as in Mapping. Changing either
+selector applies that bank to every selected event in one undo step; the other bank
+remains unchanged. With no selected events, the selectors control subsequent placement. Placing Whistle, Finish or Clap uses only Additions
 and preserves the existing Normal bank and its inheritance. Auto additions resolve
 from the existing event, independently of the Sampleset placement default.
 With no sound tags selected, Q cycles the placement

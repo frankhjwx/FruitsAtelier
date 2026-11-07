@@ -70,7 +70,8 @@ public sealed partial class EditorView
         lazerGuideMovementSource = null; lazerGuideMovementObjects = []; lazerGuideMovementContexts = []; lazerGuideExcluded.Clear();
         lazerVisualSource = null; lazerAutoplay = null; lazerLighting = []; lazerCaught.Clear();
         movementSnapshots.Clear(); movementStates = []; movementIndices = [];
-        sampleBankConversion = null; sliderSnapLabelSource = null; sliderSnapLabels.Clear();
+        sampleBankConversion = null; hitsoundingSampleBankConversion = null; hitsoundingSampleBankSelection.Clear();
+        hitsoundingSampleBankTargetsAvailable = false; sliderSnapLabelSource = null; sliderSnapLabels.Clear();
         inspectorExport = null; inspectorSnapshot = null; inspectorRows.Clear();
         bookmarkEditingTime = bookmarkColourTime = null; bookmarkError = ""; bookmarkPanelScroll = 0;
         bookmarkColourPaste = null;

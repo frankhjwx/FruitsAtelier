@@ -1758,7 +1758,7 @@ and live library create/rename/delete notifications. It also checks live Inspect
 undoable volume gestures with live playback and conversion reuse, nearby timing rows,
 new-point drafts, event-specific additions, single-click placement and its undo,
 placement-origin marquee selection without added sounds or history, empty-space selection, Q bank cycling for single and multiple selections,
-Normal/addition bank isolation (including inherited Normal banks when placing each addition), placement-only bank selectors, direct right-click deletion,
+Normal/addition bank isolation (including inherited Normal banks when placing each addition), selection-aware bank selectors with mixed/Auto values and batch undo, direct right-click deletion,
 placement and selection at the play line, and one-step bank-change undo, playback flashes, normalized narrow waveforms,
 visible interval labels and play-line bounds. It also checks marquee copy/delete/paste,
 red/green timing-index mismatch confirmation and cancellation, bank and event-index
