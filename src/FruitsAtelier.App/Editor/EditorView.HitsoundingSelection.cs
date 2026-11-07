@@ -13,7 +13,7 @@ public sealed partial class EditorView
     private (float X, float Y) hitsoundingMoveStart;
     private bool hitsoundingMoveActive;
     private (float X, float Y) hitsoundingMarqueeStart, hitsoundingMarqueeEnd;
-    private sealed record HitsoundingCopy(double Offset, int Lane, HitSampleSettings Sample);
+    private sealed record HitsoundingCopy(double Offset, int Lane, HitSampleSettings Sample, int TimingIndex, bool InheritIndex);
     private HitsoundingCopy[] hitsoundingClipboard = [];
     private double hitsoundingMarqueeStartTime;
     private bool hitsoundingMarqueeMoved;
@@ -70,6 +70,51 @@ public sealed partial class EditorView
                 else hitsoundingMultiSelection.Remove(key);
             }
     }
+    private int HitsoundingPlacementAdditionBank(ConvertedCatchObject note)
+    {
+        if (nextAdditionBank > 0) return nextAdditionBank;
+        return hitsoundingResolver!.Describe(note).AdditionSet;
+    }
+    private void CycleHitsoundingPlacementBank()
+    {
+        if (!hitsoundingGridBounds.Contains(mouseX, mouseY)) return;
+        int lane = (int)((mouseY - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7));
+        if (lane is < 1 or > 4) return;
+        double time = HitsoundingStart + (mouseX - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan;
+        var note = HitsoundingPlacementNoteAt(mouseX, mouseY)
+            ?? new ConvertedCatchObject(Guid.Empty, 0, CatchObjectKind.Fruit, time, 0, 0, 0, 0, true);
+        var sample = hitsoundingResolver!.Describe(note);
+        bool additions = lane > 1;
+        int bank = additions ? nextAdditionBank : nextNormalBank;
+        if (bank == 0) bank = additions ? HitsoundingPlacementAdditionBank(note) : sample.NormalSet;
+        SetSampleBank(additions, bank % 3 + 1);
+    }
+    private void CycleHitsoundingSampleSet()
+    {
+        var selected = hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4 && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event)))
+            .Select(k => (Note: hitsoundingNoteLookup[(k.Id, k.Event)], k.Lane))
+            .OrderBy(e => e.Note.TimeMs).ThenBy(e => e.Note.SourceId).ThenBy(e => e.Note.EventIndex).ThenBy(e => e.Lane).ToArray();
+        if (selected.Length == 0) { CycleHitsoundingPlacementBank(); return; }
+        var first = selected[0];
+        var sample = hitsoundingResolver!.Describe(first.Note);
+        int bank = (first.Lane == 1 ? sample.NormalSet : sample.AdditionSet) % 3 + 1;
+        var changes = selected.GroupBy(e => (e.Note.SourceId, e.Note.EventIndex)).Select(group =>
+        {
+            var setting = hitsoundingResolver.EventSettings(group.First().Note);
+            bool normal = group.Any(e => e.Lane == 1), additions = group.Any(e => e.Lane > 1);
+            var resolved = hitsoundingResolver.Describe(group.First().Note);
+            // AdditionSet inherits NormalSet, so retain audible additions when only Normal changes.
+            bool retainAdditions = normal && !additions && resolved.Additions != 0;
+            return setting with
+            {
+                Sample = setting.Sample with { NormalSet = normal ? bank : setting.Sample.NormalSet,
+                    AdditionSet = additions ? bank : retainAdditions ? resolved.AdditionSet : setting.Sample.AdditionSet },
+                InheritedFields = setting.InheritedFields & ~(normal ? InheritedSampleFields.NormalSet : 0)
+                    & ~(additions || retainAdditions ? InheritedSampleFields.AdditionSet : 0)
+            };
+        }).ToArray();
+        Edit(L.Get("samples.change"), () => { foreach (var setting in changes) SetHitsoundingEvent(setting); });
+    }
     private void CopyHitsoundingSelection()
     {
         var entries = hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4 && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event)))
@@ -78,13 +123,19 @@ public sealed partial class EditorView
         if (entries.Length == 0 && hitsoundingStoryboardSelection.Count == 0) return;
         double start = Math.Min(entries.FirstOrDefault().Note?.TimeMs ?? double.PositiveInfinity, hitsoundingStoryboardSelection.Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min());
         hitsoundingStoryboardClipboard = hitsoundingStoryboardSelection.Select(s => s with { TimeMs = s.TimeMs - start }).ToArray();
-        hitsoundingClipboard = entries.Select(e => new HitsoundingCopy(e.Note.TimeMs - start, e.Lane, hitsoundingResolver!.Describe(e.Note))).ToArray();
+        hitsoundingClipboard = entries.Select(e => new HitsoundingCopy(e.Note.TimeMs - start, e.Lane, hitsoundingResolver!.Describe(e.Note), HitsoundingTimingIndex(e.Note.TimeMs), hitsoundingResolver.EventSettings(e.Note).InheritedFields.HasFlag(InheritedSampleFields.Index))).ToArray();
     }
-    private void OpenHitsoundingSelectionMenu(float x, float y)
+    private void DeleteHitsoundingAt(float x, float y)
     {
         if (!CommitField()) return;
         var sound = hitsoundingSoundHits.LastOrDefault(h => h.Bounds.Contains(x, y));
         var storyboard = hitsoundingStoryboardHits.LastOrDefault(h => h.Bounds.Contains(x, y));
+        if (sound.Note is null && storyboard.Sample.Path is null)
+        {
+            hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
+            hitsoundingSelected = null; hitsoundingSelectedTiming = null; SelectObjects([]);
+            return;
+        }
         if (storyboard.Sample is { Path: not null } sample && !hitsoundingStoryboardSelection.Contains(sample))
         {
             hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); hitsoundingStoryboardSelection.Add(sample);
@@ -95,10 +146,7 @@ public sealed partial class EditorView
             hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
             hitsoundingMultiSelection.Add((note.SourceId, note.EventIndex, sound.Lane)); SelectHitsoundingNote(note, seek: false);
         }
-        bool deletable = hitsoundingMultiSelection.Any(k => k.Lane is >= 2 and <= 4) || hitsoundingStoryboardSelection.Count > 0;
-        contextItems.Clear();
-        contextItems.Add(new(L.Get("editor.command.delete"), DeleteHitsoundingSelection, deletable));
-        contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 200)), Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 200, ContextMenuHeight);
+        DeleteHitsoundingSelection();
     }
 
     private void DeleteHitsoundingSelection()
@@ -124,6 +172,8 @@ public sealed partial class EditorView
         if (hitsoundingClipboard.Length == 0) { if (samples.Length > 0) EditHitsoundingStoryboard([], samples); return; }
         TransferHitsounding(hitsoundingClipboard, playhead, storyboard: samples);
     }
+    private int HitsoundingTimingIndex(double time) => hitsoundingResolver!.Describe(
+        new(Guid.Empty, 0, CatchObjectKind.Fruit, time, 0, 0, 0, 0, true)).Index;
     private void TransferHitsounding(HitsoundingCopy[] copied, double targetTime, (Guid Id, int Event, int Lane)? moveSource = null, ConvertedCatchObject? moveTarget = null, StoryboardSample[]? storyboard = null)
     {
         var targets = new List<(HitsoundingCopy Copy, ConvertedCatchObject Note)>();
@@ -136,11 +186,7 @@ public sealed partial class EditorView
         }
         if (targets.Count == 0 && storyboard is { Length: > 0 }) { EditHitsoundingStoryboard([], storyboard); return; }
         if (targets.Count == 0) { StatusMessage = L.Get("hitsounding.noPasteTargets"); return; }
-        bool mismatch = targets.Any(t =>
-        {
-            var sample = hitsoundingResolver!.Describe(t.Note);
-            return sample.Index != t.Copy.Sample.Index || (t.Copy.Lane == 1 ? sample.NormalSet != t.Copy.Sample.NormalSet : sample.AdditionSet != t.Copy.Sample.AdditionSet);
-        });
+        bool mismatch = targets.Any(t => HitsoundingTimingIndex(t.Note.TimeMs) != t.Copy.TimingIndex);
         var document = Document;
         void Apply(bool adjust)
         {
@@ -161,7 +207,8 @@ public sealed partial class EditorView
                 if (adjust)
                 {
                     sample = sample with { Index = copy.Sample.Index };
-                    inherited &= ~InheritedSampleFields.Index;
+                    bool inheritIndex = copy.Sample.Index == 0 || copy.InheritIndex && HitsoundingTimingIndex(note.TimeMs) == copy.TimingIndex;
+                    inherited = inheritIndex ? inherited | InheritedSampleFields.Index : inherited & ~InheritedSampleFields.Index;
                     if (copy.Lane == 1) { sample = sample with { NormalSet = copy.Sample.NormalSet }; inherited &= ~InheritedSampleFields.NormalSet; }
                     else { sample = sample with { AdditionSet = copy.Sample.AdditionSet }; inherited &= ~InheritedSampleFields.AdditionSet; }
                 }
@@ -179,7 +226,7 @@ public sealed partial class EditorView
                 foreach (var target in targets) hitsoundingMultiSelection.Add((target.Note.SourceId, target.Note.EventIndex, target.Copy.Lane));
             }
         }
-        if (!mismatch) { Apply(false); return; }
+        if (!mismatch) { Apply(true); return; }
         ShowDiscardConfirmation(answer => { if (answer is 6 or 7) Apply(answer == 6); });
         hitsoundingPasteConfirmation = true;
     }
@@ -200,7 +247,7 @@ public sealed partial class EditorView
         if (!hitsoundingNoteLookup.TryGetValue((source.Id, source.Event), out var note)) return true;
         if (!moved) return true;
         if (target is null || target.SourceId == source.Id && target.EventIndex == source.Event) return true;
-        TransferHitsounding([new(0, source.Lane, hitsoundingResolver!.Describe(note))], target.TimeMs, source, target);
+        TransferHitsounding([new(0, source.Lane, hitsoundingResolver!.Describe(note), HitsoundingTimingIndex(note.TimeMs), hitsoundingResolver.EventSettings(note).InheritedFields.HasFlag(InheritedSampleFields.Index))], target.TimeMs, source, target);
         return true;
     }
     private void DrawHitsoundingPasteConfirmation(ICanvas c)

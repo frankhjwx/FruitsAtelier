@@ -85,8 +85,15 @@ public static class HitsoundCopier
                 count++;
             }
             else
+            {
+                var sample = targetResolver.Describe(item);
+                var fields = targetResolver.InheritedFields(item);
+                // Unmatched inherited volume follows the copied timing, not the target's old resolved snapshot.
+                if (fields.HasFlag(InheritedSampleFields.Volume))
+                    sample = sample with { Volume = sourceResolver.Describe(item with { SourceId = Guid.Empty }).Volume };
                 updates[(item.SourceId, item.EventIndex)] = new(item.SourceId, item.EventIndex,
-                    targetResolver.Describe(item), edgeIndices.GetValueOrDefault((item.SourceId,item.EventIndex), -1), targetResolver.InheritedFields(item));
+                    sample, edgeIndices.GetValueOrDefault((item.SourceId,item.EventIndex), -1), fields);
+            }
         result.HitsoundOverrides.Clear(); result.HitsoundOverrides.AddRange(updates.Values);
         MaterializeInheritedSamples(result, targetEvents);
         // Validate the actual legacy representation before exposing a successful copy.

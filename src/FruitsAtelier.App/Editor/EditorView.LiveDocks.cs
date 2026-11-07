@@ -22,6 +22,8 @@ public sealed partial class EditorView
     }
     private void InvalidateLiveDocks()
     {
+        bookmarkEditingTime = bookmarkColourTime = null; bookmarkError = "";
+        bookmarkCommittedMove = null;
         songDockSnapshot = randomDockSnapshot = patternDockSnapshot = null;
         liveSongSnapshot = liveRandomSnapshot = livePatternSnapshot = null;
     }

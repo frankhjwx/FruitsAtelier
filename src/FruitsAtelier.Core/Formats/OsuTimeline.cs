@@ -4,7 +4,7 @@ namespace FruitsAtelier.Core;
 
 public readonly record struct BreakPeriod(int StartMs, int EndMs);
 
-public static class OsuTimeline
+public static partial class OsuTimeline
 {
     public static string? BackgroundFilename(MapDocument document)
     {
@@ -236,6 +236,7 @@ public static class OsuTimeline
         if (time < 0) throw new ArgumentOutOfRangeException(nameof(time));
         var values = Bookmarks(document).ToList();
         if (!values.Remove(time)) values.Add(time);
+        else document.BookmarkAppearances.Remove(time);
         values.Sort();
         SongSetup.Set(document, "Editor", "Bookmarks", values.Count == 0 ? null : string.Join(',', values));
     }
@@ -259,6 +260,7 @@ public static class OsuTimeline
     public static void ClearBookmarks(MapDocument document)
     {
         if (Bookmarks(document).Count > 0) SongSetup.Set(document, "Editor", "Bookmarks", null);
+        document.BookmarkAppearances.Clear();
     }
 
     public static void AddBreak(MapDocument document, int start, int end)

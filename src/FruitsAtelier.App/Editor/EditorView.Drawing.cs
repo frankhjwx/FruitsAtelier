@@ -211,6 +211,7 @@ public sealed partial class EditorView
         DrawPatternGalleryOverlay(c);
         DrawPatternEditingBanner(c);
         DrawTimingSetup(c);
+        DrawTimingCopyFeedback(c);
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);
         if (!librarySettingsOpen) DrawLanguageMenu(c);
@@ -784,6 +785,7 @@ public sealed partial class EditorView
         float headX = IsLazerEditing ? TimelineX(LazerPresentationTime) : TimelineHeadX;
         c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, Chrome(0xFFFFFF, Foreground), 2);
         c.Fill(new(headX - 2, overview.Y - 5, 4, 6), Chrome(0xFFFFFF, Foreground));
+        DrawBookmarkIntervals(c);
         DrawTimelineBookmarks(c, overview, 0, TimelineDurationMs);
         DrawCollaborationLocks(c, overview, 0, TimelineDurationMs);
         DrawBookmarkToolbar(c);

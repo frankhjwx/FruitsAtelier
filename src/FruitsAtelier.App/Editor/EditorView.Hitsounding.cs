@@ -7,6 +7,12 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public bool HitsoundingPageVisible { get; private set; }
+    private static readonly System.Numerics.Vector2[] HitsoundingKiaiStar = Enumerable.Range(0, 11).Select(i =>
+    {
+        float angle = -MathF.PI / 2 + i * MathF.PI / 5;
+        float radius = i % 2 == 0 ? 1 : .42f;
+        return new System.Numerics.Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
+    }).ToArray();
     private double hitsoundingSpan = 4000;
     private double hitsoundingHeadRatio = .3;
     internal const float HitsoundingTagWidth = 36;
@@ -70,15 +76,16 @@ public sealed partial class EditorView
         hitsoundingTimingSelection.RemoveWhere(p => !Document.TimingPoints.Contains(p));
         var resolver = hitsoundingResolver = new HitsoundResolver(Document, current.Objects, inspectResources: false);
         var tags = new List<SoundTag>();
-        hitsoundingNotes = current.Objects.Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.Banana).ToArray();
+        hitsoundingNotes = hitsoundEvents.Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.Banana).ToArray();
         hitsoundingNoteLookup = hitsoundingNotes.ToDictionary(n => (n.SourceId, n.EventIndex));
         if (hitsoundingSelected is { } selected && !hitsoundingNoteLookup.ContainsKey((selected.Id, selected.Event))) hitsoundingSelected = null;
         hitsoundingRedPoints = overviewTiming.Where(p => p.Uninherited).ToArray();
         hitsoundingGreenPoints = overviewTiming.Where(p => !p.Uninherited).ToArray();
         var sets = new SortedSet<int>(Document.TimingPoints.Select(p => Math.Max(0, p.SampleIndex))) { 0 };
-        for (int i = 0; i < current.Objects.Count; i++)
+        for (int i = 0; i < hitsoundEvents.Length; i++)
         {
-            var item = current.Objects[i];
+            var item = hitsoundEvents[i];
+            if (item.Kind == CatchObjectKind.Banana) continue;
             var settings = resolver.Describe(item);
             foreach (var group in resolvedHitsounds[i].Where(s => s.Volume > 0).GroupBy(sound =>
                 sound.Name switch { "hitwhistle" => 2, "hitfinish" => 3, "hitclap" => 4, "slidertick" => 5, _ => 1 }))
@@ -133,14 +140,11 @@ public sealed partial class EditorView
         objectTimeline = default; zoomSlider = default;
         c.Fill(CanvasToolbarBounds, Panel);
         float toolsX = CanvasToolbarBounds.X + 8;
-        float toolScale = Math.Min(1, Math.Max(0, CanvasToolbarBounds.Width - 174) / 458);
-        Button(c, new(toolsX, 88, 70 * toolScale, 28), L.Get("hitsounding.select"), () => hitsoundingDraw = false, !hitsoundingDraw, fontSize: 11);
-        Button(c, new(toolsX + 74 * toolScale, 88, 70 * toolScale, 28), L.Get("hitsounding.draw"), () => hitsoundingDraw = true, hitsoundingDraw, fontSize: 11);
-        Button(c, new(toolsX + 160 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
-        Button(c, new(toolsX + 252 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
-        c.Line(toolsX + 152 * toolScale, 92, toolsX + 152 * toolScale, 112, Grid);
-        c.Line(toolsX + 348 * toolScale, 92, toolsX + 348 * toolScale, 112, Grid);
-        Button(c, new(toolsX + 356 * toolScale, 88, 102 * toolScale, 28), L.Get("hitsounding.showText"),
+        float toolScale = Math.Min(1, Math.Max(0, CanvasToolbarBounds.Width - 174) / 298);
+        Button(c, new(toolsX, 88, 88 * toolScale, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
+        Button(c, new(toolsX + 92 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
+        c.Line(toolsX + 188 * toolScale, 92, toolsX + 188 * toolScale, 112, Grid);
+        Button(c, new(toolsX + 196 * toolScale, 88, 102 * toolScale, 28), L.Get("hitsounding.showText"),
             () => hitsoundingDockWorkspace.ShowHitsoundText = !hitsoundingDockWorkspace.ShowHitsoundText,
             hitsoundingDockWorkspace.ShowHitsoundText, fontSize: 11);
         snapSlider = new(CanvasToolbarBounds.Right - 118, 88, 106, 29);
@@ -210,12 +214,21 @@ public sealed partial class EditorView
             c.Fill(tag.Bounds, tag.Color, 6, hovered ? .55f : .35f);
             c.StrokeOpacity(tag.Bounds, tag.Color, selectedTiming || hitsoundingSelectedTiming == tag.Point ? 2.5f : 1, 6, 1);
             string bankLabel = tag.Index > 0 ? $"{tag.Bank}:{tag.Index}" : tag.Bank;
+            bool kiai = (tag.Point.Effects & 1) != 0;
             string volumeLabel = $"{tag.Volume}%";
             float bankWidth = c.MeasureText(bankLabel, 13, true), volumeWidth = c.MeasureText(volumeLabel, 10, true);
             c.Clip(tag.Bounds);
-            c.Text(bankLabel, tag.Bounds.X + 6, tag.Bounds.Y + 2, 13, 0xFFFFFF, bankWidth + 1, true);
+            if (kiai) c.Polyline(HitsoundingKiaiStar, tag.Bounds.X + 12, tag.Bounds.Y + 11, 6, 0xFFFFFF, 1.2f, 1);
+            c.Text(bankLabel, tag.Bounds.X + (kiai ? 23 : 6), tag.Bounds.Y + 2, 13, 0xFFFFFF, bankWidth + 1, true);
             c.Text(volumeLabel, tag.Bounds.X + 6, tag.Bounds.Y + 20, 10, 0xFFFFFF, volumeWidth + 1, true);
             c.Unclip();
+        }
+        for (int i = Math.Max(0, timingLow - 1); i < timingLabels.Length && timingLabels[i].Time < end; i++)
+        {
+            if ((timingLabels[i].Point.Effects & 1) == 0) continue;
+            double from = Math.Max(start, timingLabels[i].Time);
+            double to = Math.Min(end, i + 1 < timingLabels.Length ? timingLabels[i + 1].Time : Math.Max(end, TimelineDurationMs));
+            if (to > from) c.Line(X(from), g.Y - 10, X(to), g.Y - 10, 0xD89532, 3);
         }
         DrawHitsoundingTimingMarquee(c);
         c.Unclip();
@@ -278,13 +291,14 @@ public sealed partial class EditorView
                     c.Fill(new(X(note.TimeMs) - 9, y, 18, 32), HitsoundingBankColor(pending.Sample.AdditionSet), 4, .5f);
                     c.StrokeOpacity(new(X(note.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
                 }
-        if (hitsoundingDraw && !hitsoundingHeadDrag && hitsoundingGridBounds.Contains(mouseX, mouseY))
+        if (!hitsoundingHeadDrag && !hitsoundingMarquee && hitsoundingMoveSource is null && hitsoundingGridBounds.Contains(mouseX, mouseY))
         {
             int lane = (int)((mouseY - top) / laneHeight);
-            if (lane is >= 2 and <= 4 && HitsoundingPlacementNoteAt(mouseX, mouseY) is { Kind: CatchObjectKind.Fruit } candidate)
+            if (lane is >= 2 and <= 4 && HitsoundingPlacementNoteAt(mouseX, mouseY) is { Kind: CatchObjectKind.Fruit } candidate
+                && (hitsoundingResolver!.Describe(candidate).Additions & (1 << (lane - 1))) == 0)
             {
                 float ghostY = top + (lane + .5f) * laneHeight - 16;
-                c.Fill(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), HitsoundingBankColor(nextAdditionBank > 0 ? nextAdditionBank : hitsoundingResolver!.Describe(candidate).AdditionSet), 4, .5f);
+                c.Fill(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), HitsoundingBankColor(HitsoundingPlacementAdditionBank(candidate)), 4, .5f);
                 c.StrokeOpacity(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), Foreground, 1, 4, .5f);
             }
         }
@@ -357,7 +371,7 @@ public sealed partial class EditorView
                     box = new(x, y, duration > 0 ? Math.Max(1, X(to) - x) : HitsoundingTagWidth, h);
                 }
                 uint color = tag.Lane is >= 1 and <= 5 ? HitsoundingBankColor(tag.Sounds[0].SampleSet) : HitsoundingColors[tag.Lane];
-                bool auditionSelected = HitsoundingPrecise && !hitsoundingDraw && !hitsoundingMarquee && box.Right > g.X && box.X < g.Right
+                bool auditionSelected = HitsoundingPrecise && !hitsoundingMarquee && box.Right > g.X && box.X < g.Right
                     && (tag.Note is { } selectedNote && hitsoundingMultiSelection.Count == 1 && hitsoundingMultiSelection.Contains((selectedNote.SourceId, selectedNote.EventIndex, tag.Lane))
                         || tag.Storyboard is { } selectedSample && hitsoundingStoryboardSelection.Count == 1 && hitsoundingStoryboardSelection.Contains(selectedSample));
                 if (auditionSelected) selectedAudition = (box, tag.Sounds[0]);

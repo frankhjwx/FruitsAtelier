@@ -4,7 +4,7 @@ namespace FruitsAtelier.Core;
 
 public static class SongSetup
 {
-    public static readonly string[] SharedKeys = ["Artist", "ArtistUnicode", "Title", "TitleUnicode", "Creator", "Source", "Tags"];
+    public static readonly string[] SyncMetadataKeys = ["Artist", "ArtistUnicode", "Title", "TitleUnicode", "Creator", "Source", "Tags"];
 
     public static string Get(MapDocument document, string section, string key, string fallback = "")
         => OsuBeatmapReader.Setting(document, section, key) ?? fallback;

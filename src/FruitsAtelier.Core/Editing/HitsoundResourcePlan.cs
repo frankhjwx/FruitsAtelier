@@ -238,7 +238,7 @@ public sealed class HitsoundResourcePlan
         var events = OsuBeatmapWriter.Serialize(document).PlayableObjects;
         var resolver = new HitsoundResolver(document, events);
         string? root = Root(document);
-        foreach (var p in events.Where(HitsoundCopier.Audible).SelectMany(resolver.Resolve).Select(s => s.FilePath).OfType<string>())
+        foreach (var p in events.Where(HitsoundCopier.Audible).Concat(SpinnerHitsounds.Events(document)).SelectMany(resolver.Resolve).Select(s => s.FilePath).OfType<string>())
             if (root is not null && Inside(root,p)) yield return Path.GetFullPath(p);
         foreach (var path in StoryboardSamples(document)) yield return path;
     }

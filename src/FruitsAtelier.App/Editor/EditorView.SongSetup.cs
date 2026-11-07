@@ -113,6 +113,7 @@ public sealed partial class EditorView
         if (songTab == 0)
         {
             for (int i = 0; i < SongMetadata.Length; i++) SongTextField(c, SongMetadata[i], r.Y + 112 + i * 40);
+            DrawSongSyncButton(c, new(r.X + 22, r.Bottom - 126, r.Width - 44, 32));
         }
         else if (songTab == 1)
         {
@@ -183,11 +184,14 @@ public sealed partial class EditorView
     private void SongTextField(ICanvas c, string key, float y, bool compact = false)
     {
         var r = drawingSongDock ? songDockBounds : SongSetupBounds;
-        c.Text(L.Get($"song.{key}"), drawingSongDock ? r.X : r.X + 22, y + 9, 13, SongFieldEnabled(key) ? Foreground : Muted, drawingSongDock ? r.Width : 206,
+        bool inline = drawingSongDock && songTab == 0 && key != "Tags";
+        float labelWidth = inline ? Math.Min(160, r.Width * .45f) : drawingSongDock ? r.Width : 206;
+        c.Text(L.Get($"song.{key}"), drawingSongDock ? r.X : r.X + 22, y + 9, 13, SongFieldEnabled(key) ? Foreground : Muted, labelWidth,
             bold: SongDifficulty.Contains(key));
         var box = new Rect(compact ? r.Right - 116 : r.X + 240, y, compact ? 94 : r.Width - 262,
-            key == "Tags" ? Math.Max(32, r.Bottom - 90 - y) : 32);
+            key == "Tags" ? Math.Max(32, r.Bottom - 150 - y) : 32);
         if (drawingSongDock) box = new(r.X, y + 30, r.Width, key == "Tags" ? Math.Max(64, songTagRows.Count * (songTagSize + 5) + 14) : 32);
+        if (inline) box = new(r.X + labelWidth + 8, y, r.Width - labelWidth - 8, 32);
         if (drawingSongDock && compact) box = new(r.Right - 64, y + 30, 64, 32);
         songFieldBounds[key] = box;
         bool enabled = SongFieldEnabled(key), focused = enabled && songField == key;
@@ -239,30 +243,6 @@ public sealed partial class EditorView
             if (songValues[key + "Unicode"] != songInitial[key + "Unicode"] && !NeedsRomanisation(songValues[key + "Unicode"]))
                 songValues[key] = songValues[key + "Unicode"];
         var original = Document.DeepClone();
-        var changed = SongSetup.SharedKeys.Where(k => songValues[k] != songInitial[k]).ToArray();
-        var owner = history;
-        var prior = difficulties.ToDictionary(d => d.History, d => (
-            Values: changed.ToDictionary(k => k, k => OsuBeatmapReader.Setting(d.History.Document, "Metadata", k)),
-            Name: d.History.Document.Name));
-        var afterValues = changed.ToDictionary(k => k, k => songValues[k]);
-        bool nameChanged = songValues["TitleUnicode"] != songInitial["TitleUnicode"];
-        string newName = songValues["TitleUnicode"];
-        void RestoreRelated(bool redo, MapDocument before, MapDocument after)
-        {
-            var restoring = changed.Where(key => OsuBeatmapReader.Setting(before, "Metadata", key) != OsuBeatmapReader.Setting(after, "Metadata", key)).ToArray();
-            bool restoreName = nameChanged && before.Name != after.Name;
-            if (restoring.Length == 0 && !restoreName) return;
-            foreach (var session in difficulties.Where(d => d.History != owner))
-            {
-                var saved = prior.GetValueOrDefault(session.History, prior[owner]);
-                session.History.RebaseSharedMetadata(target =>
-                {
-                    foreach (string key in restoring)
-                        SongSetup.Set(target, "Metadata", key, redo ? afterValues[key] : saved.Values[key]);
-                    if (restoreName) target.Name = redo ? newName : saved.Name;
-                });
-            }
-        }
         if (!Edit(L.Get("song.title"), () =>
         {
             foreach (string key in SongMetadata.Where(k => songValues[k] != songInitial[k])) SongSetup.Set(Document, "Metadata", key, songValues[key]);
@@ -280,8 +260,7 @@ public sealed partial class EditorView
             foreach (string key in SongDesign.Where(k => songValues[k] != songInitial[k])) SongSetup.Set(Document, "General", key, songValues[key]);
             SongSetup.SetColours(Document, songCustomColours ? songColours : Array.Empty<uint>());
             OsuBeatmapReader.Validate(Document);
-        }, RestoreRelated)) { songError = StatusMessage; return; }
-        RestoreRelated(true, original, Document);
+        })) { songError = StatusMessage; return; }
         if (original.DerandomizeFSliderDroplets != Document.DerandomizeFSliderDroplets
             || original.DerandomizeDropletsForHardRock != Document.DerandomizeDropletsForHardRock
             || original.RandomizeDropletStrength != Document.RandomizeDropletStrength

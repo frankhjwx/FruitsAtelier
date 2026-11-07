@@ -30,7 +30,7 @@ internal static class HitsoundCopierTests
         Check(tick.NormalSet == 2 && tick.Index == 2 && tick.Volume == 35, "Export tick sample");
         Check(tail.NormalSet == 3 && tail.Additions == 2 && tail.Index == 3 && tail.Volume == 60, "Export slider tail sample");
         var unmatched = resolver.Describe(events.Single(o => o.TimeMs == 2000));
-        Check(unmatched.Additions == 8 && unmatched.NormalSet == 1 && unmatched.Index == 0 && unmatched.Volume == 100, "Unmatched target sound remains unchanged");
+        Check(unmatched.Additions == 8 && unmatched.NormalSet == 1 && unmatched.Index == 0 && unmatched.Volume == 70, "Unmatched target flags and banks remain intact while inherited volume follows copied timing");
         var originalEvents = CatchStreamConverter.Convert(target).Objects;
         Check(events.Select(e => (e.Kind,e.TimeMs,e.X)).SequenceEqual(originalEvents.Select(e => (e.Kind,e.TimeMs,e.X))), "Export sound changes preserve geometry and event times");
         Check(ProjectSerializer.Read(ProjectSerializer.Serialize(result.Document)).ContentEquals(result.Document), "Persist overrides");
@@ -64,7 +64,37 @@ internal static class HitsoundCopierTests
         Check(!ObjectFlags.Sounds(result.Document,result.Document.ImportedSliders[0].Id,0).Any(s=>(s&8)!=0),"Existing sound controls update copied samples");
         TimingEdits();
         Tolerance();
+        UnmatchedInheritedVolume();
         Resources();
+    }
+
+    private static void UnmatchedInheritedVolume()
+    {
+        var source = Read("256,192,53771,1,2,0:0:0:0:\n256,192,53958.5,1,0,0:0:0:0:\n256,192,54146,1,2,0:0:0:0:\n256,192,54333.5,1,2,0:0:0:0:",
+            "521,375,4,2,0,80,1,0");
+        var target = Read("96,192,53771,2,0,L|171:192,2,75,0|0|0,0:0|0:0|0:0,0:0:0:0:\n256,192,55000,1,4,1:1:0:65:",
+            "521,375,4,2,0,100,1,0");
+        var original = target.DeepClone();
+        var sourceBefore = source.DeepClone();
+        var result = HitsoundCopier.Copy(source, target).Document;
+        Check(source.ContentEquals(sourceBefore) && target.ContentEquals(original), "Copy leaves both source documents unchanged");
+        Check(result.TimingPoints.All(p => p.Volume == 80), "Unmatched slider repeat does not materialize a 100-percent green line");
+        Verify(result);
+        Verify(ProjectSerializer.Read(ProjectSerializer.Serialize(result)));
+        Verify(OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(result).Text));
+        var history = new EditorHistory(target); history.RestoreVersion("Copy", result);
+        history.Undo(); Check(history.Document.ContentEquals(original), "Undo restores the original volume state");
+        history.Redo(); Verify(history.Document);
+        static void Verify(MapDocument map)
+        {
+            var objects = OsuBeatmapWriter.Serialize(map).PlayableObjects;
+            var resolver = new HitsoundResolver(map, objects);
+            var repeat = objects.Single(o => o.Kind == CatchObjectKind.Fruit && Math.Abs(o.TimeMs - 54052.25) < 1);
+            Check(resolver.Describe(repeat).Volume == 80, "Unmatched repeat inherits copied 80-percent timing");
+            Check(objects.Where(o => o.TimeMs < 55000 && o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet)
+                .All(o => resolver.Describe(o).Volume == 80), "Matched and unmatched slider events agree on inherited volume");
+            Check(resolver.Describe(objects.Single(o => o.TimeMs == 55000)).Volume == 65, "Explicit unmatched object volume is preserved");
+        }
     }
 
     private static void TimingEdits()

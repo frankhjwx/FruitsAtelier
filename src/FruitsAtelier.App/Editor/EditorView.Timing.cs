@@ -116,6 +116,8 @@ public sealed partial class EditorView
 
     private void CloseTimingSetup()
     {
+        timingCopiedAt = null; timingCopiedPainted = 0;
+        if (timingContextMenu) { contextItems.Clear(); timingContextMenu = false; }
         if (TimingModal) ResetHitsounds();
         timingVolumeStart = null; timingSetupSource = [];
         timingScrollDragging = timingWindowDragging = timingSetupFocused = false;
@@ -393,6 +395,11 @@ public sealed partial class EditorView
     {
         if (!TimingModal && !(TimingSetupInputAvailable && timingSetupFocused) && !TimingPageVisible) return false;
         if (TimingSetupVisible && !timingSetupFocused && !TimingPageVisible) return false;
+        if (timingContextMenu && contextItems.Count > 0)
+        {
+            contextItems.Clear(); timingContextMenu = false;
+            if (key == 27) return true;
+        }
         if (timingField.Length > 0)
         {
             if (key == 27) { timingField = timingError = ""; TimingInputSession++; return true; }
@@ -425,9 +432,9 @@ public sealed partial class EditorView
         {
             if (altHeld) return true;
             if (ctrl && !shift && key == 65) { timingSelected.Clear(); foreach (var entry in VisibleTimingEntries()) timingSelected.Add(entry.Id); }
-            else if (ctrl && !shift && key == 67) RequestCopyText?.Invoke(TimingEditing.Serialize(VisibleTimingEntries().Where(e => timingSelected.Contains(e.Id)).Select(e => e.Point)));
+            else if (ctrl && !shift && key == 67) CopyTimingSelection();
             else if (ctrl && !shift && key == 88)
-            { RequestCopyText?.Invoke(TimingEditing.Serialize(VisibleTimingEntries().Where(e => timingSelected.Contains(e.Id)).Select(e => e.Point))); DeleteTimingPoints(); }
+            { CopyTimingSelection(); DeleteTimingPoints(); }
             else if (ctrl && !shift && key == 86) RequestPasteTiming?.Invoke();
             else if (ctrl && key == 90) TimingDraftUndo(shift);
             else if (ctrl && !shift && key == 89) TimingDraftUndo(true);
@@ -465,6 +472,8 @@ public sealed partial class EditorView
 
     private void TimingPointerDown(float x, float y, int button)
     {
+        if (button == 2 && !TimingModal && TimingSetupVisible && timingListBounds.Contains(x, y))
+        { RequestTimingContextMenu(x, y); return; }
         if (button != 0) return;
         if (!timingFields.Any(f => f.Key == timingField && f.Bounds.Contains(x, y)) && !CommitTimingField()) return;
         if (!TimingModal && TimingSetupVisible && timingSetupFocused && (TimingWindowCorner(x, y) != 0 || new Rect(TimingSetupBounds.X, TimingSetupBounds.Y, TimingSetupBounds.Width - 56 * timingWindowScale, 44 * timingWindowScale).Contains(x, y)))

@@ -108,7 +108,9 @@ public sealed partial class EditorView
         storyboardSamplePosition = testplayStart - .001; storyboardSamplesThrough = null;
         comboCurrent = comboPrevious = 0; comboChangedAt = double.NegativeInfinity;
         var resolver = new HitsoundResolver(Document, PreviewObjects(), HitsoundSkinFolders);
-        var sounds = PreviewObjects().ToDictionary(item => (item.SourceId, item.EventIndex), resolver.Resolve);
+        var spinnerEnds = SpinnerHitsounds.Events(Document).Where(o => o.TimeMs >= testplayStart).ToArray();
+        int nextSpinnerEnd = 0;
+        var sounds = PreviewObjects().Concat(spinnerEnds).ToDictionary(item => (item.SourceId, item.EventIndex), resolver.Resolve);
         foreach (var sound in sounds.Values.SelectMany(s => s).Distinct()) RequestPrepareHitsound?.Invoke(sound);
         var playSound = RequestHitsound;
         var scheduleSound = OperatingSystem.IsWindows() && AudioReady ? RequestScheduleHitsound : null;
@@ -129,7 +131,19 @@ public sealed partial class EditorView
                     if (scheduleSound is not null) scheduleSound(sound, item.TimeMs);
                     else playSound?.Invoke(sound);
                 }
-            }, judged: (item, hit) => storyboardTestplay?.Judge(item, hit), advanced: time => storyboardTestplay?.Advance(time));
+            }, judged: (item, hit) => storyboardTestplay?.Judge(item, hit), advanced: time =>
+            {
+                storyboardTestplay?.Advance(time);
+                while (nextSpinnerEnd < spinnerEnds.Length && spinnerEnds[nextSpinnerEnd].TimeMs <= time)
+                {
+                    var end = spinnerEnds[nextSpinnerEnd++];
+                    foreach (var sound in sounds[(end.SourceId, end.EventIndex)])
+                    {
+                        if (scheduleSound is not null) scheduleSound(sound, end.TimeMs);
+                        else playSound?.Invoke(sound);
+                    }
+                }
+            });
         if (startPaused) testplay.TogglePause();
         if (RequestRunTestplay is null)
             foreach (int key in heldEditorKeys) testplay.SetKey(key, true);

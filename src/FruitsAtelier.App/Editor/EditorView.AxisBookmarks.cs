@@ -62,7 +62,6 @@ public sealed partial class EditorView
     {
         var bookmarks = AxisBookmarks();
         if (bookmarks.Count == 0) return;
-        const uint blue = 0x4B9EF5;
         (int Count, int First, int Last, float Y)? hovered = null;
         for (int row = (int)Math.Floor(plot.Y); row <= (int)Math.Floor(plot.Bottom); row++)
         {
@@ -71,13 +70,14 @@ public sealed partial class EditorView
             int first = UpperBound(bookmarks, earliest), end = UpperBound(bookmarks, latest);
             if (first == end) continue;
             int count = end - first;
+            uint colour = Document.BookmarkAppearanceAt(bookmarks[first]).Colour;
             float y = Math.Clamp(row + .5f, plot.Y + .5f, plot.Bottom - .5f);
-            c.Line(plot.X, y, plot.Right, y, blue, 1.5f, .22f);
+            c.Line(plot.X, y, plot.Right, y, colour, 1.5f, .22f);
             float labelY = Math.Clamp(y - 7, plot.Y, plot.Bottom - 14);
             if (!occupiedLabelRows.Any(other => Math.Abs(other - labelY) < 14))
             {
                 string label = count == 1 ? Time(bookmarks[first]) : L.Get("axis.bookmarkCount", count);
-                c.Text(label, canvas.X + 3, labelY, 10, blue, 64);
+                c.Text(label, canvas.X + 3, labelY, 10, colour, 64);
                 occupiedLabelRows.Add(labelY);
             }
             if (mouseX >= plot.X - 10 && mouseX < plot.X && Math.Abs(mouseY - y) <= 3)

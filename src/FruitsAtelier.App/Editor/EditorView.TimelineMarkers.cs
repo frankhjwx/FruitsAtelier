@@ -20,7 +20,7 @@ public sealed partial class EditorView
         {
             if (bookmark < start || bookmark > end) continue;
             float x = bounds.X + (float)((bookmark - start) / (end - start) * bounds.Width);
-            c.Line(x, bounds.Y + bounds.Height / 2, x, bounds.Bottom - 1, 0x4B9EF5, 1, .8f);
+            c.Line(x, bounds.Y + bounds.Height / 2, x, bounds.Bottom - 1, Document.BookmarkAppearanceAt(bookmark).Colour, 1, .8f);
         }
     }
 }

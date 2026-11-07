@@ -141,7 +141,7 @@ public sealed partial class EditorView
         if (TimingPageVisible) return;
         if (tool == Tool.Banana) return;
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
-        var ids = FlagTargets().Where(id => !Document.BananaShowers.Any(b => b.Id == id)).ToArray();
+        var ids = FlagTargets();
         if (tool == Tool.Fruit || ids.Length == 0 && FlagTargets().Length == 0) { nextSounds ^= flag; return; }
         if (ids.Length == 0) return;
         bool enabled = !ids.SelectMany(id => ObjectFlags.Sounds(Document, id, SoundEdge(id))).All(s => (s & flag) != 0);
@@ -240,7 +240,7 @@ public sealed partial class EditorView
         Action[] actions = [ToggleCombo, () => ToggleSound(2), () => ToggleSound(4), () => ToggleSound(8), () => gridSnap = !gridSnap, () => distanceSnap = !distanceSnap, ToggleNotesLock];
         var ids = FlagTargets();
         bool placement = tool == Tool.Fruit || ids.Length == 0;
-        var sounds = ids.Where(id => !Document.BananaShowers.Any(b => b.Id == id)).SelectMany(id => ObjectFlags.Sounds(Document, id, SoundEdge(id))).ToArray();
+        var sounds = ids.SelectMany(id => ObjectFlags.Sounds(Document, id, SoundEdge(id))).ToArray();
         var selectedFruit = SelectedTimelineFruit();
         bool combo = placement ? nextFruitNewCombo : selectedFruit is not null
             ? newComboEvents.Contains((selectedFruit.SourceId, selectedFruit.EventIndex))

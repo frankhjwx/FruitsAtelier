@@ -204,6 +204,8 @@ public static class OsuBeatmapReader
     {
         if (!Enum.IsDefined(document.SliderImportState)) throw new InvalidDataException(L.Get("core.project.schema"));
         document.ValidateCollaborationReferences();
+        if (document.BookmarkAppearances.Any(pair => pair.Key < 0 || pair.Value is null || pair.Value.Colour > 0xFFFFFF))
+            throw new InvalidDataException(L.Get("bookmark.invalid"));
         if (!double.IsFinite(document.RandomizeDropletStrength) || document.RandomizeDropletStrength is < 0 or > 100)
             throw new InvalidDataException(L.Get("randomize.invalid"));
         if (document.DistanceSnapRatios.Count > DistanceSnap.MaximumPresets || document.DistanceSnapRatios.Any(r => !double.IsFinite(r) || r < 0))

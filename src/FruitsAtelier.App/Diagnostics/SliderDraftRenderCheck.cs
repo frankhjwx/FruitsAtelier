@@ -22,6 +22,8 @@ internal static class SliderDraftRenderCheck
             {
                 view.PointerMove(x + bounds.Width * (.1f + i * .01f), y - bounds.Height * (.1f + i * .01f), false, false);
                 Paint();
+                if (view.MovementOverlayBounds is null || view.DistanceReadout.Previous is null)
+                    throw new InvalidOperationException("Native slider preview endpoint is missing its DS or movement indicator.");
             }
             Click(x + bounds.Width * .4f, y - bounds.Height * .4f);
             view.KeyDown(13, false, false);

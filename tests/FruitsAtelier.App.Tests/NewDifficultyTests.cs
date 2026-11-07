@@ -5,6 +5,7 @@ internal static class NewDifficultyTests
 {
     public static void Run()
     {
+        BreaksAndUndo();
         SourceControls();
         TemplateReordering();
         foreach (string locale in new[] { "en", "zh-CN" })
@@ -171,6 +172,44 @@ internal static class NewDifficultyTests
             }
         }
     }
+    private static void BreaksAndUndo()
+    {
+        foreach (bool useTemplate in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 8000, IsDemo = false };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500 });
+            map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 7000, X = 300 }]);
+            string[] media = ["//Break Periods", "0,0,\"background.jpg\",0,0", "Video,0,\"video.mp4\"",
+                "Sprite,Background,Centre,\"sprite.png\",320,240", " F,0,0,1000,0,1"];
+            var events = new OsuSection { Name = "Events" };
+            events.Lines.AddRange([.. media, "2,1200,3000 // first break", "Break,4000,6000"]);
+            map.OriginalSections.Add(events);
+            var duplicate = new OsuSection { Name = "Events" };
+            duplicate.Lines.Add("2,1200,3000"); map.OriginalSections.Add(duplicate);
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Paint();
+            var source = ui.View.Document.DeepClone();
+            Check(ui.View.AddDifficulty(copyFrom: 0), "Copy creation succeeds with breaks"); ui.Paint();
+            Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual(OsuTimeline.Breaks(source)), "Copies retain source breaks");
+            Check(ui.View.AddDifficulty(imported: source), "Import succeeds with breaks"); ui.Paint();
+            Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual(OsuTimeline.Breaks(source)), "Imports retain source breaks");
+            Check(ui.View.AddDifficulty(template: useTemplate ? new MapTemplate { ApproachRate = 6 } : null), "Empty creation succeeds"); ui.Paint();
+            Check(OsuTimeline.Breaks(ui.View.Document).Count == 0, "Blank and template difficulties start without source breaks");
+            Check(ui.View.Document.OriginalSections.Where(s => s.Name == "Events").SelectMany(s => s.Lines).SequenceEqual(media),
+                "Empty creation preserves background, video, storyboard and comments");
+            var empty = ui.View.Document.DeepClone();
+            ui.Key('2'); ui.ClickMap(3000, 240);
+            Check(ui.View.Document.Fruits.Count == 1, "Placement creates one fruit in the new difficulty");
+            var placed = ui.View.Document.DeepClone();
+            ui.Key('Z', ctrl: true);
+            Check(empty.ContentEquals(ui.View.Document), "Undo restores the empty difficulty without source breaks");
+            ui.Key('Y', ctrl: true);
+            Check(placed.ContentEquals(ui.View.Document) && OsuTimeline.Breaks(ui.View.Document).Count == 0,
+                "Redo restores only the placed fruit");
+            ui.View.SwitchDifficulty(0); ui.Paint();
+            Check(source.ContentEquals(ui.View.Document), "Creating and editing empty difficulties leaves the source unchanged");
+        }
+    }
+
     private static void TemplateReordering()
     {
         foreach (string locale in new[] { "en", "zh-CN" })

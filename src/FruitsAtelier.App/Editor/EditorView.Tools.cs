@@ -122,6 +122,8 @@ public sealed partial class EditorView
     private CurveTrack? placementDraftTrack;
     private IReadOnlyList<ConvertedCatchObject> placementDraftEvents = [];
     private (double? Previous, double? Next) placementDistances;
+    private bool LegacyDraftPreviewActive => !IsOsuCanvas && tool == Tool.Slider
+        && draftTrack != Guid.Empty && LegacyMode && legacyPreviewValid;
     private IReadOnlyList<ConvertedCatchObject>? placementMovementObjects;
     private HashSet<(Guid SourceId, int EventIndex)> placementHyperdash = [];
     private OsuWriteResult? placementOrderSource;
@@ -146,6 +148,14 @@ public sealed partial class EditorView
         placementGhost = null; placementMovementObjects = null; placementHyperdash = hyperdashObjects;
         placementDraftTrack = null; placementDraftEvents = [];
         placementDistances = (null, null);
+        if (LegacyDraftPreviewActive)
+        {
+            // The live legacy track already contains its preview endpoint and generated events.
+            placementMovementObjects = playableObjects;
+            placementGhost = playableObjects.LastOrDefault(o => o.SourceId == draftTrack && o.Kind == CatchObjectKind.Fruit);
+            if (placementGhost is { } endpoint) UpdatePlacementDistances(endpoint, playableObjects);
+            return;
+        }
         if ((tool == Tool.Fruit || draftTrack == Guid.Empty) && TryPreviewFruitPlacement(point.Value)) return;
         // Conversion reads its inputs; clone only the track whose uncommitted endpoint needs editing.
         var candidate = new MapDocument
@@ -242,8 +252,11 @@ public sealed partial class EditorView
             }
             return new(OsuPlacementTime, position.X);
         }
-        if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack
-            && (LegacyMode && legacyPreviewValid || draft.Nodes.Any(n => Near(Point(n), mouseX, mouseY, 8)))) return null;
+        if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack)
+        {
+            if (LegacyDraftPreviewActive) return Point(draft.Nodes[^1]);
+            if (draft.Nodes.Any(n => Near(Point(n), mouseX, mouseY, 8))) return null;
+        }
         var point = tool == Tool.Slider && !LegacyMode
             ? draftTrack == Guid.Empty ? PenStartPoint(mouseX, mouseY) : MapAt(mouseX, mouseY, true, clampX: false)
             : PlacementPoint(mouseX, mouseY);
@@ -263,6 +276,7 @@ public sealed partial class EditorView
             return;
         }
         if (PlacementGhostPoint() is not { } point) return;
+        if (LegacyDraftPreviewActive) return;
         DrawObjectSnapGuide(c, point);
         if (placementDraftTrack is { Nodes.Count: >= 2 } previewTrack && draftTrack != Guid.Empty)
         {

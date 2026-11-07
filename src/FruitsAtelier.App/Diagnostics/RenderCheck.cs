@@ -954,6 +954,16 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--slider-draft-render-check"))
+        {
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (1440, 900), (980, 620) })
+            {
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                SliderDraftRenderCheck.Run(canvas, size.Item1, size.Item2);
+            }
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--slider-bpm-render-check"))
         { SliderBpmRenderCheck.Run(canvas); return; }
         if (Environment.GetCommandLineArgs().Contains("--discussions-render-check"))
@@ -1175,6 +1185,11 @@ internal static class RenderCheck
                 CheckTimingSetup(canvas, view, size.Item1, size.Item2);
             }
             AppLog.Write("SV/DPB controls passed at all sizes, DPI values and languages.");
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--bookmark-panel-render-check"))
+        {
+            BookmarkPanelRenderCheck.Run(canvas);
             return;
         }
         if (Environment.GetCommandLineArgs().Contains("--mapping-canvas-render-check")

@@ -3,12 +3,13 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--bookmark-panel-check")) { BookmarkPanelTests.Run(); return 0; }
 if (args.Contains("--hitsounding-mute-check")) { HitsoundingMuteTests.Run(); Console.WriteLine("PASS Hitsounding track mutes, transport, Mapping and Testplay isolation"); return 0; }
 if (args.Contains("--hitsound-library-files-check")) { HitsoundLibraryFileTests.Run(); Console.WriteLine("PASS hitsound library selection, file operations, context menus and hover navigation"); return 0; }
 if (args.Contains("--timing-precision-check")) { TimingEditorTests.Run(); SynchronizationUiTests.ReadOnlyTimingChecks(); return 0; }
 if (args.Contains("--clipboard-hitsound-check")) { ClipboardTests.EventHitsoundsSurvivePaste(); Console.WriteLine("PASS clipboard event hitsounds, inheritance and history on both canvases"); return 0; }
 if (args.Contains("--hitsounding-performance")) { HitsoundingPanelTests.Performance(); return 0; }
-if (args.Contains("--hitsounding-panel-check")) { HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); HitsoundingPanelTests.SelectionAndTiming(); HitsoundingPanelTests.LengthAndMove(); HitsoundingPanelTests.StoryboardEditing(); HitsoundingPanelTests.PlayingSelectionAndSettings(); HitsoundingPanelTests.NearbyTiming(); HitsoundingPanelTests.CtrlSelection(); HitsoundingTimingDragTests.Run(); return 0; }
+if (args.Contains("--hitsounding-panel-check")) { HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); HitsoundingPanelTests.SampleSetCycling(); HitsoundingPanelTests.PlacementBanksAndHeadPriority(); HitsoundingPanelTests.PlacementBankIsolation(); HitsoundingPanelTests.SelectedBankSelectors(); HitsoundingPanelTests.KiaiStrip(); HitsoundingPanelTests.SpinnerEndSamples(); HitsoundingPanelTests.CrossDifficultyClipboard(); HitsoundingPanelTests.SelectionAndTiming(); HitsoundingPanelTests.LengthAndMove(); HitsoundingPanelTests.TransferTimingIndex(); HitsoundingPanelTests.TransferIndexInheritance(); HitsoundingPanelTests.StoryboardEditing(); HitsoundingPanelTests.PlayingSelectionAndSettings(); HitsoundingPanelTests.NearbyTiming(); HitsoundingPanelTests.CtrlSelection(); HitsoundingTimingDragTests.Run(); return 0; }
 if (args.Contains("--difficulty-import-check")) { DifficultyImportTests.Run(); Console.WriteLine("PASS difficulty imports use project resources and preserve metadata"); return 0; }
 if (args.Contains("--slider-bpm-performance")) { SliderBpmTests.Performance(); return 0; }
 if (args.Contains("--slider-bpm-check")) { SliderBpmTests.Run(); Console.WriteLine("PASS slider BPM controls"); return 0; }
@@ -83,7 +84,7 @@ if (args.Contains("--canvas-feedback-performance")) { CanvasFeedbackPerformance.
 if (args.Contains("--rotation-preview-performance")) { CanvasFeedbackPerformance.RunRotation(); return 0; }
 if (args.Contains("--timing-sv-performance")) { TimingVelocityTests.Benchmark(); return 0; }
 if (args.Contains("--timing-sv-check")) { TimingVelocityTests.Run(); Console.WriteLine("PASS Timing SV display, locking, editing and persistence"); return 0; }
-if (args.Contains("--timing-feedback-check")) { TimingEditorTests.Run(); TimingFeedbackTests.Run(); Console.WriteLine("PASS Timing setup, shortcuts, precision and range selection"); return 0; }
+if (args.Contains("--timing-feedback-check")) { TimingEditorTests.Run(); TimingFeedbackTests.Run(); TimingClipboardTests.Run(); Console.WriteLine("PASS Timing setup, shortcuts, precision and range selection"); return 0; }
 
 if (args.Contains("--note-snap-check")) { NoteSnapTests.InspectBeatPosition(); Console.WriteLine("PASS nearest note beat snap recognition"); return 0; }
 
@@ -179,7 +180,7 @@ if (args.Contains("--group-drag-boundary-check")) { GroupDragBoundaryTests.Run()
 
 if (args.Contains("--inspector-panels-check")) { InspectorSectionTests.Run(); InspectorPanelsTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS Inspector sections, endpoint labels, metrics and Song Setup categories"); return 0; }
 
-if (args.Contains("--song-dock-check")) { SongDockTests.Run(); SongSetupTests.Run(); DropletRandomizationTests.Run(); Console.WriteLine("PASS Song Setup dock, metadata, colours and randomization"); return 0; }
+if (args.Contains("--song-dock-check")) { SongDockTests.Run(); SongSetupTests.Run(); SongSynchronizationTests.Run(); DropletRandomizationTests.Run(); Console.WriteLine("PASS Song Setup dock, metadata, colours and randomization"); return 0; }
 
 if (args.Contains("--pattern-notes-check")) { PatternNotesTests.Run(); Console.WriteLine("PASS Pattern and Notes dock editing and persistence"); return 0; }
 
@@ -350,6 +351,7 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Timing clipboard menus preserve selection and copy feedback fades", TimingClipboardTests.Run),
     ("Slider BPM presets, custom input, placement, history and red visibility", SliderBpmTests.Run),
     ("Storyboard sources retain scenes across unrelated General edits", StoryboardSourceCacheTests.Run),
     ("Opening a map offers undoable object and timing alignment", TimingAlignmentUiTests.Run),
@@ -465,7 +467,8 @@ var tests = new (string Name, Action Run)[]
     ("Stream middle fruits edit isolated samples and endpoints drag with undo and cancellation", StreamFruitDragTests.EditEvents),
     ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
-    ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
+    ("Song Setup explicitly synchronizes metadata, colours and design", SongSynchronizationTests.Run),
+    ("Song Setup keeps metadata local and explicitly synchronizes set settings", SongSetupTests.Run),
     ("Song Setup docks, scrolls and applies cancellable drafts", SongDockTests.Run),
     ("Dock layout settings restore across editor restarts", DockPersistenceTests.Run),
     ("Slider Inspector metrics and immediate randomization edits", InspectorPanelsTests.Run),
@@ -563,6 +566,7 @@ var tests = new (string Name, Action Run)[]
     ("Background resource checks refresh missing files and discard stale edits and projects", ResourcePollingTests.RefreshAndStaleResults),
     ("Preview drawer, mods, resizing and aligned shortcuts preserve content", PreviewSidebarTests.Sidebar),
     ("Docking and independent Mapping/Timing workspaces", DockingTests.Run),
+    ("Bookmark panel", BookmarkPanelTests.Run),
     ("Pattern editing and project Notes docks", PatternNotesTests.Run),
     ("Difficulty curve panel resizes, seeks, and preserves canvas width", DifficultyCurveSidebarTests.LayoutAndSeeking),
     ("Preview aspect modes, Fit height and edge overscan", PreviewSidebarTests.DisplayModesAndOverscan),

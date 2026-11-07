@@ -22,12 +22,12 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-audition" })
+            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-audition" })
             {
                 if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
                 var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
-                map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, Uninherited = true, SampleSet = 2, SampleIndex = 1, Volume = 80 });
+                map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, Uninherited = true, SampleSet = 2, SampleIndex = 1, Volume = 80, Effects = 1 });
                 map.TimingPoints.Add(new() { TimeMs = 2000, BeatLengthMs = -100, Uninherited = false, SampleSet = 3, SampleIndex = 2, Volume = 65 });
                 foreach (int time in new[] { 2100, 2150, 2200, 2250 })
                     map.TimingPoints.Add(new() { TimeMs = time, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = 0, Volume = time % 100 == 0 ? 60 : 5 });
@@ -46,6 +46,12 @@ internal static class HitsoundingRenderCheck
                     map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 79 });
                     foreach (int time in Enumerable.Range(0, 100).Select(i => i * 75).Concat(new[] { 1499, 3001 }))
                         map.Fruits.Add(new() { TimeMs = time, X = 256, OriginalLine = $"256,192,{time},1,2,0:0:0:0:" });
+                }
+                if (scenario == "-spinner")
+                {
+                    map.Fruits.Clear(); map.Tracks.Clear();
+                    map.BananaShowers.Add(new() { TimeMs = 500, EndTimeMs = 1800,
+                        OriginalLine = "256,192,500,8,6,1800,3:2:0:0:" });
                 }
                 var clock = new AuditionClock();
                 var editor = new EditorView(false, timeProvider: clock); editor.LoadDocument(map);

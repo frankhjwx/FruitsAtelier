@@ -104,6 +104,12 @@ public sealed partial class EditorView
             DistanceSnapPointerDown(x, y, button);
             return;
         }
+        if (timingContextMenu && contextItems.Count > 0)
+        {
+            if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear();
+            timingContextMenu = contextItems.Count > 0;
+            return;
+        }
         if (TimingModal || TimingWindowContains(x, y))
         {
             timingSetupFocused = TimingSetupVisible;
@@ -169,6 +175,7 @@ public sealed partial class EditorView
         if (BeginDockHorizontal(x, y, button)) return;
         if (BeginDockPointer(x, y, button)) return;
         if (AimodPointer(x, y, button, shift, ctrl)) return;
+        if (BookmarkPanelPointer(x, y, button)) return;
         if (RandomDockPointer(x, y, button)) return;
         if (DockContentInputAvailable && PanelVisible(DockPanel.SliderInspector) && menu < 0 && contextItems.Count == 0 && inspectorBounds.Contains(x, y))
         {
@@ -953,6 +960,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        timingContextRequest++;
         if (ErrorVisible)
         {
             errorScroll = Math.Clamp(errorScroll - (int)(delta / 120) * 3, 0, Math.Max(0, errorLineCount - errorVisibleLines));
@@ -1050,6 +1058,7 @@ public sealed partial class EditorView
             return;
         }
         if (WheelDockTabs(x, y, delta)) return;
+        if (WheelBookmarkPanel(x, y, delta)) return;
         if (WheelDiscussions(x, y, delta)) return;
         if (MapsetVerifierVisible && DockContentInputAvailable && verifierBounds.Contains(x, y))
         {
@@ -1070,6 +1079,8 @@ public sealed partial class EditorView
         }
         if (SynchronizationVisible) { ScrollSyncComparison(x, y, delta, ctrl); return; }
         if (librarySettingsOpen) { ScrollStorage(x, y, delta); return; }
+        if (timingContextMenu && contextItems.Count > 0)
+        { contextItems.Clear(); timingContextMenu = false; return; }
         if (TimingModal || TimingWindowContains(x, y))
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (WheelDockHorizontal(x, y, delta, shift)) return;
@@ -1445,6 +1456,10 @@ public sealed partial class EditorView
         if (BananaEditVisible) { BananaEditKey(virtualKey, ctrl, shift); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
         if (PatternDockKey(virtualKey, ctrl, shift)) return;
+        if (BookmarkPanelFocused && !(ctrl && virtualKey == 'S'))
+        { BookmarkKey(virtualKey, ctrl, shift); return; }
+        if (BookmarkPanelAvailable && bookmarkColourTime is not null && virtualKey == 27)
+        { bookmarkColourTime = null; bookmarkError = ""; return; }
         if (RandomDockFocused && !(ctrl && virtualKey == 'S'))
         {
             if (virtualKey == 27) { randomField = -1; return; }
@@ -1556,13 +1571,14 @@ public sealed partial class EditorView
             else if (ctrl && virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (ctrl && virtualKey == 89) Redo();
             else if (ctrl && virtualKey == 9) SwitchDifficulty(AdjacentDifficulty(shift));
-            else if (!hitsoundingDraw && ctrl && virtualKey == 88) { CopyHitsoundingSelection(); DeleteHitsoundingSelection(); }
-            else if (!hitsoundingDraw && ctrl && virtualKey == 67) CopyHitsoundingSelection();
-            else if (!hitsoundingDraw && ctrl && virtualKey == 86) PasteHitsoundingSelection();
+            else if (ctrl && virtualKey == 88) { CopyHitsoundingSelection(); DeleteHitsoundingSelection(); }
+            else if (ctrl && virtualKey == 67) CopyHitsoundingSelection();
+            else if (ctrl && virtualKey == 86) PasteHitsoundingSelection();
             else if (!ctrl && virtualKey == 46 && hitsoundingTimingSelection.Count > 0) DeleteHitsoundingTimingSelection();
-            else if (!hitsoundingDraw && !ctrl && virtualKey == 46) DeleteHitsoundingSelection();
+            else if (!ctrl && virtualKey == 46) DeleteHitsoundingSelection();
             else if (!ctrl && virtualKey == 32) TogglePlayback();
             else if (!ctrl && virtualKey is 37 or 39) SeekByWheel(virtualKey == 37 ? -1 : 1, 1);
+            else if (!ctrl && !altHeld && virtualKey == 81) CycleHitsoundingSampleSet();
             else if (!ctrl && virtualKey is 87 or 69 or 82) ToggleHitsoundingAddition(virtualKey == 87 ? 2 : virtualKey == 69 ? 4 : 8);
             else if (!ctrl && virtualKey is 187 or 189) ZoomHitsounding(virtualKey == 187 ? .8 : 1.25, hitsoundingGridBounds.X + hitsoundingGridBounds.Width * .3f);
             return;
@@ -1712,6 +1728,7 @@ public sealed partial class EditorView
             return;
         }
         if (NotesFocused && !char.IsControl(value)) { InsertNotes(value.ToString()); return; }
+        if (BookmarkPanelFocused && !char.IsControl(value)) { BookmarkText(value.ToString()); return; }
         if (RandomDockFocused && !char.IsControl(value)) { RandomDockText(value.ToString()); return; }
         if (SongDockFocused && !char.IsControl(value)) { PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }
         if (PatternDockEditing && patternDockKind == 2 && bananaEditField >= 0) { BananaEditText(value.ToString()); return; }
@@ -1992,6 +2009,7 @@ public sealed partial class EditorView
 
     private bool CommitField()
     {
+        if (!CommitBookmarkText()) return false;
         if (editField < 0 || editField >= fields.Count) { editField = -1; return true; }
         var field = fields[editField];
         if (field.Timestamp && replaceText && editBuffer == Time(field.Value)) { editField = -1; fieldError = ""; return true; }
@@ -2067,6 +2085,7 @@ public sealed partial class EditorView
     }
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
+        timingContextRequest++;
         if (preparingError) return;
         if (ErrorVisible)
         {
@@ -2098,6 +2117,7 @@ public sealed partial class EditorView
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        timingContextRequest++;
         if (preparingError) return;
         if (ErrorVisible)
         {

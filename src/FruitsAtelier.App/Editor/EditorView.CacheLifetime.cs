@@ -22,12 +22,13 @@ public sealed partial class EditorView
         GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
     }
 
-    private void ReleaseDifficultyCaches(bool preserveMedia = false)
+    private void ReleaseDifficultyCaches(bool preserveMedia = false, bool preserveClipboard = false)
     {
         hitsoundingStoryboardMove = null; hitsoundingStoryboardMoved = false;
         hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
         hitsoundingAudio.Clear();
-        hitsoundingMultiSelection.Clear(); hitsoundingClipboard = []; hitsoundingStoryboardSelection.Clear(); hitsoundingStoryboardClipboard = []; hitsoundingStoryboardHits.Clear(); hitsoundingMarquee = false; hitsoundingSelectedTiming = null; timingHelperPoints = [];
+        if (!preserveClipboard) { hitsoundingClipboard = []; hitsoundingStoryboardClipboard = []; }
+        hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); hitsoundingStoryboardHits.Clear(); hitsoundingMarquee = false; hitsoundingSelectedTiming = null; timingHelperPoints = [];
         hitsoundingSelected = null; hitsoundingPaint.Clear(); hitsoundingPainting = hitsoundingHeadDrag = false; hitsoundingStoryboardSource = null; hitsoundingStoryboardTags = [];
         hitsoundingConversion = null; hitsoundingTagLanes = []; hitsoundingNotes = []; hitsoundingMapFiles.Clear();
         hitsoundingResolver = null; hitsoundPlaybackResolver = null; inspectorConversion = null; hitsoundingNoteLookup.Clear(); hitsoundingAudibleNotes.Clear();
@@ -61,7 +62,7 @@ public sealed partial class EditorView
         timelineVisibleMarkers.Clear(); timelineObjects.Clear(); timelinePatternEvents.Clear(); timelineEventNumbers.Clear();
         previewSource = null; previewObjects = []; previewAutoplay = null; previewPlate = null;
         previewLighting = []; previewHyperdash.Clear(); previewComboEnds.Clear();
-        hitsoundConversion = null; hitsoundDocument = null; resolvedHitsounds = [];
+        hitsoundConversion = null; hitsoundDocument = null; resolvedHitsounds = []; hitsoundEvents = [];
         distanceConversion = null; distanceReferences = [];
         distanceLayoutSource = distanceLayoutAuthoredSource = null; distanceLayoutTiming = null;
         distanceLayoutBreaks = null; distanceLayout.Clear();
@@ -70,8 +71,12 @@ public sealed partial class EditorView
         lazerGuideMovementSource = null; lazerGuideMovementObjects = []; lazerGuideMovementContexts = []; lazerGuideExcluded.Clear();
         lazerVisualSource = null; lazerAutoplay = null; lazerLighting = []; lazerCaught.Clear();
         movementSnapshots.Clear(); movementStates = []; movementIndices = [];
-        sampleBankConversion = null; sliderSnapLabelSource = null; sliderSnapLabels.Clear();
+        sampleBankConversion = null; hitsoundingSampleBankConversion = null; hitsoundingSampleBankSelection.Clear();
+        hitsoundingSampleBankTargetsAvailable = false; sliderSnapLabelSource = null; sliderSnapLabels.Clear();
         inspectorExport = null; inspectorSnapshot = null; inspectorRows.Clear();
+        bookmarkEditingTime = bookmarkColourTime = null; bookmarkError = ""; bookmarkPanelScroll = 0;
+        bookmarkColourPaste = null;
+        bookmarkCommittedMove = null; bookmarkPickerHueTime = null;
         songDockSnapshot = randomDockSnapshot = patternDockSnapshot = null;
         liveSongSnapshot = liveRandomSnapshot = livePatternSnapshot = null;
         placementWriteCache = new(); placementSource = null; placementOrderSource = null; placementOrder = [];

@@ -140,10 +140,13 @@ The editor maintains an independent `EditorHistory` per difficulty and accesses 
 
 Song Setup stores metadata, HP/OD, combo colors and Design options in the existing
 raw sections; AR/CS remain the authoritative model properties. No project schema
-change is needed. Shared metadata edits propagate only the changed keys to the
-other difficulty histories. Their saved baselines remain intact for dirty checks,
-and their local undo snapshots retain the shared values. The initiating undo
-transaction restores each difficulty's own previous shared values.
+change is needed. Ordinary edits affect only the current difficulty. The explicit
+General synchronization action copies the selected metadata, combo colors and
+Design fields to sibling histories. Their saved baselines remain intact for dirty
+checks, and their local undo snapshots retain the synchronized values. The source
+history records an undo step even when only siblings change; undo restores each
+sibling's previous synchronized fields, preserving fields edited locally after
+the synchronization.
 
 ## Event hitsounds
 
@@ -157,9 +160,9 @@ Hitsound Copier matches the nearest exported playable event within 2ms after che
 red timing points. Source SV participates in event decoding. Copying leaves target
 geometry, red timing and SV intact. Source sample bank, index and volume changes
 are stored as visible authoring timing points; new green points use the target SV
-and effects. Unmatched audible events retain their initial sound through sample timing points. Export writes circle/stream object
+and effects. Unmatched audible events retain their flags and banks; inherited volume follows the copied sample timing, while explicit object volume is preserved. Export writes circle/stream object
 samples, slider edge banks and additions, and timing sample states while retaining
-the emitted SV and effects. Unmatched target events keep their sound at copy time and subsequently follow their timing inheritance.
+the emitted SV and effects. Unmatched target events retain their timing inheritance after copying.
 Copied samples retain which fields inherit timing. Playback resolves those fields
 from current timing at each event; export writes zero for inherited object/edge
 fields. Explicit object-specific samples remain intact. Projects store this
@@ -450,6 +453,22 @@ Missing notes default to an empty string. The editor supports up to 65,536 UTF-1
 code units. Notes have a separate saved baseline and text undo history; they do not
 modify map documents, invalidate conversion, or enter exported beatmap data.
 
+
+## Bookmark appearance
+
+`MapDocument.BookmarkAppearances` maps bookmark timestamps to immutable RGB colour
+and `ShowInterval` records. Absent entries use blue `#4B9EF5` with interval display
+off. Timestamps remain in the retained `.osu` `[Editor] Bookmarks` setting; colour
+and interval display are authoring data and are not exported to `.osu`.
+
+Appearance entries participate in deep cloning, content equality, undo and project
+persistence. Moving a bookmark through the panel or timing tools carries its
+appearance; deletion and clearing remove it. A displayed interval runs from its
+bookmark to the next one in chronological order.
+
+Single-difficulty schema 49 and multi-difficulty schema 50 store non-default
+appearances. Empty appearance dictionaries are omitted, preserving the earlier
+schema for projects that do not use these settings. Earlier schemas remain readable.
 
 ## Aspire slider BPM settings
 

@@ -96,6 +96,16 @@ cache refresh, exact cutoff boundaries, DS/speed modes and narrow English/Chines
 settings. `FruitsAtelier.App --render-check --mapping-canvas-settings-render-check` captures
 the scrolled control and applies it through native pointer input.
 
+## Bookmark panel checks
+
+`App.Tests --bookmark-panel-check` checks timestamp editing, duplicate rejection,
+default colours, swatch copy/paste, rejected and delayed clipboard results, interval
+toggles, bulk interval undo, contextual insertion, deletion, scrolling and project
+round trips. It also checks that timing offsets carry bookmark appearance data.
+`FruitsAtelier.App --render-check --bookmark-panel-render-check` launches native
+input and rendering checks in English and Chinese at two window sizes and three
+DPI scales, with captures under `artifacts/tests/bookmark-panel/native`.
+
 ## Editor theme checks
 
 `App.Tests --editor-theme-check` verifies all seven themes in English and Chinese,
@@ -1276,6 +1286,12 @@ movement of an imported slider's head and tail, reporting pointer-path CPU time,
 counting-canvas rendering time, and current-thread allocations separately. It invokes
 the selected-object drag path directly and excludes native input dispatch and GPU work.
 
+`App.Tests --slider-draft-check` covers draft preview DS and movement indicators,
+including Legacy endpoints preceded by fruits or droplets, repeated pointer updates,
+invalid-position recovery, single endpoint rendering and cancellation. Windows
+`FruitsAtelier.App --render-check --slider-draft-render-check` checks both modes' preview readouts
+through the native renderer at two window sizes and three DPI settings.
+
 The App test executable accepts `--slider-draft-performance <path.catchdiff>` for
 new FSlider previews in Legacy and Pen modes. Use an isolated copy of the project.
 It measures pointer dispatch, rendering and allocations for horizontal movement
@@ -1415,10 +1431,16 @@ field focus, left docking, immediate edits, undo and retained Timing layouts, to
 with the existing metadata and randomization checks. Native docking captures
 include every Song Setup category and its scrolled controls.
 
-Song Setup regressions cover shared metadata, independent difficulty settings,
+Song Setup regressions cover difficulty-local metadata, explicit set-wide synchronization,
+independent difficulty settings,
 romanised fields, modal isolation, cancellation, undo/redo, palette HEX input and
 project/`.osu` persistence. Native window checks open all four tabs in both
 languages at each supported test size and DPI and exercise the color picker.
+
+`FruitsAtelier.App.exe --render-check --song-setup-render-check` checks the General
+dock at compact and wide window sizes in English and Chinese at 96/144/192 DPI.
+Captures under `artifacts/tests/song-setup-native` cover inline fields and the
+wrapped synchronization button below Tags.
 
 ## Synchronization regression coverage
 
@@ -1734,10 +1756,14 @@ slot drag/drop, and resource undo/redo. Config checks include the eight-row Samp
 dropdown, divider resize cursors, recursive folder imports, opening the current folder,
 and live library create/rename/delete notifications. It also checks live Inspector edits,
 undoable volume gestures with live playback and conversion reuse, nearby timing rows,
-new-point drafts, event-specific additions, single-click and continuous painting, complete
-stroke undo, empty-space selection, playback flashes, normalized narrow waveforms,
-visible interval labels and play-line bounds. It also checks marquee copy/delete/paste,
-sampleset mismatch confirmation and cancellation, separate simultaneous red/green
+new-point drafts, event-specific additions, single-click placement and its undo,
+placement-origin marquee selection without added sounds or history, empty-space selection, Q bank cycling for single and multiple selections,
+Normal/addition bank isolation (including inherited Normal banks when placing each addition), selection-aware bank selectors with mixed/Auto values and batch undo, direct right-click deletion,
+placement and selection at the play line, and one-step bank-change undo, playback flashes, normalized narrow waveforms,
+visible interval labels, Kiai span boundaries and timing-drag previews, and play-line bounds. It also checks marquee copy/delete/paste,
+red/green timing-index mismatch confirmation and cancellation, bank and event-index
+override independence, inherited transfer indices following new timing lines in display,
+playback and export/read-back (including saved zero-index overrides), right-click blank-space deselection, separate simultaneous red/green
 sections and editing an existing timing point without inserting duplicates. Per-lane
 Precise HS boundaries, visible tails with offscreen starts, drag preview, move
 confirmation/cancellation and one-step move undo are also covered. `--hitsounding-performance` compares cold
@@ -1749,7 +1775,7 @@ and Chinese at 980×620 and 1440×900 under `artifacts/tests/hitsounding-native`
 Run the object-timeline, docking and hitsound regressions when changing this view,
 because its note rendering, layouts and sample resolution share those boundaries.
 
-The window-preferences check covers per-map workspace selection across difficulty
+The window-preferences check covers shared mapset workspace selection across difficulty
 switches, Library navigation and restart, including automatic sound-library loading. Hitsounding checks also cover directional
 snap alignment from off-grid timestamps, Dock toggle input priority, volume popover
 mouse/keyboard/wheel input and non-seeking lane labels. Playback-line checks include
@@ -1758,3 +1784,12 @@ playback-time dragging and the fixed lazer line.
 The Hitsounding panel regression also covers letter-only Note based labels, selection
 without seeking, and storyboard sound clipboard, marquee, snap movement, shared file
 edits and undo.
+
+## Timing clipboard feedback
+
+`App.Tests --timing-feedback-check` covers selected-row and empty-list context
+menus, valid/invalid clipboard contents, copy feedback expiry, draft paste undo,
+and stale asynchronous clipboard responses at normal and half window scale.
+`FruitsAtelier.App.exe --render-check --timing-clipboard-render-check` checks the
+one-second popup and its fade, plus copy/paste menus in English and Chinese at
+96/144/192 DPI. Captures go to `artifacts/tests/timing-clipboard-native`.

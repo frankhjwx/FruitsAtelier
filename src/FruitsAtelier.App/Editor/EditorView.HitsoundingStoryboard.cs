@@ -20,7 +20,7 @@ public sealed partial class EditorView
         var hit = hitsoundingStoryboardHits.LastOrDefault(h => h.Bounds.Contains(x, y));
         if (hit.Sample.Path is null) return false;
         if (!CommitField()) return true;
-        if (button == 0 && !hitsoundingDraw && ctrl)
+        if (button == 0 && ctrl)
         {
             if (!hitsoundingStoryboardSelection.Add(hit.Sample)) hitsoundingStoryboardSelection.Remove(hit.Sample);
             SyncHitsoundingNoteSelection();
@@ -30,7 +30,7 @@ public sealed partial class EditorView
         hitsoundingSelected = null; hitsoundingSelectedTiming = null; SelectObjects([]);
         hitsoundingStoryboardSelection.Add(hit.Sample);
         if (button == 2) DeleteHitsoundingStoryboardSelection();
-        else if (button == 0 && !hitsoundingDraw)
+        else if (button == 0)
         {
             hitsoundingStoryboardMove = hit.Sample;
             hitsoundingStoryboardMoveTime = hit.Sample.TimeMs;

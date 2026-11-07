@@ -47,7 +47,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
             document.Tracks.RemoveAll(t => t.Nodes.Count < 2);
             var objects = CatchStreamConverter.Convert(document).Objects;
             var resolver = new HitsoundResolver(document, objects, skinFolders);
-            foreach (var sound in objects.SelectMany(resolver.Resolve).DistinctBy(s => s.FilePath ?? $"{s.Kind}/{s.SampleSet}/{s.Name}"))
+            foreach (var sound in objects.Concat(SpinnerHitsounds.Events(document)).SelectMany(resolver.Resolve).DistinctBy(s => s.FilePath ?? $"{s.Kind}/{s.SampleSet}/{s.Name}"))
                 Prepare(sound);
         }
     }

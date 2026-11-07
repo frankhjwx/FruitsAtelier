@@ -115,7 +115,7 @@ public sealed partial class EditorView
             }
         }
         catch { resources.Restore(); throw; }
-        activeDifficulty = index; ResetDifficultyView(); RevealDifficultyTab();
+        activeDifficulty = index; ResetDifficultyView(preserveMapsetState: true); RevealDifficultyTab();
         syncStatuses.Remove(incoming.Id); syncMerges.Remove(incoming.Id); syncComparisons.Remove(incoming.Id);
         resourceSnapshot = null; resourceReferences = null;
         ResetHitsounds(); PreloadProjectHitsounds(); RequestDifficultyChanged?.Invoke();

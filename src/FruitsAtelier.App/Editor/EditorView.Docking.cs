@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping, PatternGallery, Discussion, MapsetVerifier, HitsoundingConfig, HitsoundingInspector }
+    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping, PatternGallery, Discussion, MapsetVerifier, HitsoundingConfig, HitsoundingInspector, Bookmarks }
     private sealed class DockGroup(DockPanel panel, float width)
     {
         public readonly List<DockPanel> Panels = [panel];
@@ -112,7 +112,7 @@ public sealed partial class EditorView
     private static string DockTitle(DockPanel panel) => L.Get(panel switch
     {
         DockPanel.HitsoundingConfig => "hitsounding.config", DockPanel.HitsoundingInspector => "hitsounding.inspector", DockPanel.MapsetVerifier => "mv.title", DockPanel.Discussion => "discussion.title", DockPanel.PatternGallery => "dock.gallery", DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
-        DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title", DockPanel.CollaborationMapping => "collab.title",
+        DockPanel.Bookmarks => "bookmark.title", DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title", DockPanel.CollaborationMapping => "collab.title",
         DockPanel.RandomizeDroplets => "randomize.title", DockPanel.SliderInspector => "inspector.title", _ => "difficulty.curve.title"
     });
 
@@ -300,6 +300,8 @@ public sealed partial class EditorView
                         DrawPatternGallery(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.PatternEditor)
                         DrawPatternDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                    else if (group.Active == DockPanel.Bookmarks)
+                        DrawBookmarkPanel(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.RandomizeDroplets)
                         DrawRandomDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.SliderInspector)

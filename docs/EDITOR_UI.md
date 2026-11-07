@@ -220,7 +220,7 @@ Choose **+ → Add new difficulty** to name a new difficulty and choose
 **Create this difficulty in Fruits Atelier Only**. **Create from a difficulty or template**
 starts disabled on first use and remembers its last state globally across projects and restarts;
 with it disabled, creation retains the current difficulty's settings and timing
-and clears all objects, as with ordinary blank creation.
+and clears all objects and break periods, as with ordinary blank creation.
 
 The disabled source area is greyed out and cannot be edited. Enable the switch
 and choose one of two mutually exclusive tabs:
@@ -935,6 +935,15 @@ the list. Drag the list scrollbar or click its track to navigate longer lists wi
 changing the selected rows. Tab moves between numeric fields; Enter commits a field before accepting
 the dialog. Ctrl+Z/Y operate on the draft while no numeric field has focus.
 
+Ctrl+C copies the selected visible timing lines to the system clipboard. A one-second
+confirmation popup fades out during its final 300 ms. Right-clicking any selected
+row offers **Copy** without changing the selection. **Paste** appears when the
+clipboard contains valid timing lines, including when right-clicking unused space
+in the list. Right-clicking an unselected row does not offer Copy. Pasted lines
+retain their timestamps and enter the timing draft, with the same SV-lock rules
+and undo behavior as Ctrl+V.
+
+
 Drag the title bar to reposition the window within the application. Drag any corner
 to scale its controls and text proportionally from 50% to 100% of its original
 size; the opposite corner stays fixed. The editor remains undimmed and
@@ -1066,14 +1075,20 @@ the project dirty, preserving field focus. There are no Apply/Cancel buttons.
 Use normal project saving and undo. Difficulty or document changes reload the
 form from current content. Opening this panel does not pause playback.
 
-General edits artist, title, creator, source and tags across every difficulty in
-the project. Non-ASCII artist/title text enables a separate romanised field;
-ASCII text supplies both forms; the romanised value appears as unframed,
-read-only text until a separate spelling is needed. Difficulty Name belongs only
-to the current difficulty. Undo/redo in the difficulty where the change was made
-also restores the affected shared fields in the other difficulties, retaining
-their independent object histories. Unedited fields and source settings are
-preserved.
+General edits artist, title, creator, source and tags for the current difficulty.
+All text fields except Tags place their label beside the input. Tags retains a
+wrapped area below its label in the dock. Non-ASCII artist/title text enables a
+separate romanised field; ASCII text supplies both forms; the romanised value
+appears as unframed, read-only text until a separate spelling is needed.
+
+**Sync General Metadata and Colors to all difficulties in this set**, at the
+bottom of General, copies artist, romanised artist, title, romanised title,
+creator, source, tags, custom combo colors, countdown and offset, widescreen
+support, letterboxing and the flashing-light warning to every difficulty.
+Difficulty names and other difficulty-specific settings are preserved. Disabling
+custom colors before synchronizing removes combo overrides from the other
+difficulties. Undo/redo in the source difficulty restores the synchronized fields
+across the set while retaining the other difficulties' independent object histories.
 
 Difficulty edits the current difficulty's HP, CS, AR and OD from 0 to 10. Each
 slider has fine integer tick marks without labels. Drag in whole steps, hold
@@ -1267,9 +1282,9 @@ edit; Esc or lost capture restores the gesture's starting content.
 
 In the upper object timeline, clicking a slider head, tail, or reverse marker selects that edge for Whistle, Finish, and Clap edits. Only the selected edge marker is highlighted. Clicking the slider body selects the whole slider for sound edits. Head/body movement and tail repeat resizing retain their existing drag behavior.
 
-The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and blue bookmarks extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 80% opacity and colors tuned against osu!legacy. Hovering over the overview starts fading in a bookmark toolbar after 0.25 seconds and reaches full opacity at 0.5 seconds, initially above its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar stays visible while moving from the overview to its controls, and its tooltip appears above it. The toolbar uses an ImageGen-created background texture. The time display and separate Play, Pause, Stop, and Testplay controls sit to the left of the overview; Stop pauses audio and seeks to the start. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right seeks to the previous/next bookmark; Ctrl+Shift+Left/Right moves selected objects one X unit. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
+The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and bookmarks (blue by default) extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 80% opacity and colors tuned against osu!legacy. Hovering over the overview starts fading in a bookmark toolbar after 0.25 seconds and reaches full opacity at 0.5 seconds, initially above its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar stays visible while moving from the overview to its controls, and its tooltip appears above it. The toolbar uses an ImageGen-created background texture. The time display and separate Play, Pause, Stop, and Testplay controls sit to the left of the overview; Stop pauses audio and seeks to the start. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right seeks to the previous/next bookmark; Ctrl+Shift+Left/Right moves selected objects one X unit. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
 
-Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow line and bookmarks as blue lower lines. Preview lines draw before timing points, the playhead and bookmarks, so overlapping markers remain visible. Red and green timing points meet the overview center line and also appear on the upper object timeline. Short overview spans retain a minimum two-DIP width. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, blue bookmark labels, and ordinary time labels in the default muted color. Red timing and blue bookmark lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. Double-click an upper timeline object to select it and seek to its start without editing content. During a slider endpoint or timeline-tail drag, wheel navigation, Ctrl+wheel Snap, Alt+wheel zoom and Space/C playback remain available; release commits one edit and Esc restores its starting content. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. Drag the handle on the left of the bookmark toolbar to move it horizontally within the editor at its fixed height above the overview; its horizontal position is saved as a view preference. Initially it is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
+Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow line and bookmarks as lower lines using each bookmark's colour (blue by default). Preview lines draw before timing points, the playhead and bookmarks, so overlapping markers remain visible. Red and green timing points meet the overview center line and also appear on the upper object timeline. Short overview spans retain a minimum two-DIP width. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, bookmark-coloured labels, and ordinary time labels in the default muted color. Red timing and bookmark-coloured lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. Double-click an upper timeline object to select it and seek to its start without editing content. During a slider endpoint or timeline-tail drag, wheel navigation, Ctrl+wheel Snap, Alt+wheel zoom and Space/C playback remain available; release commits one edit and Esc restores its starting content. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. Drag the handle on the left of the bookmark toolbar to move it horizontally within the editor at its fixed height above the overview; its horizontal position is saved as a view preference. Initially it is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
 
 Drag the divider below the upper object timeline or above the bottom overview to
 adjust their heights: 32–64 DIP for the upper timeline and 16–40 DIP for the
@@ -1323,6 +1338,36 @@ During active testplay, plain Up/Down opens the volume controls and adjusts the
 selected channel by five percentage points only when the key is not bound to
 catcher movement or dash. The pause menu retains Up/Down navigation. Catcher
 movement keys do not extend the volume controls' inactivity timeout.
+
+
+## Bookmarks panel
+
+Open **Layout → Bookmarks** to edit the active difficulty's bookmarks in a dockable
+panel. Rows are sorted by time and show the editable timestamp, colour swatch,
+interval-display switch, **Jump** button and red **×** delete button. Narrow docks
+wrap a row's controls beneath its timestamp. Enter commits a timestamp; Escape
+cancels the draft. Duplicate and negative times are rejected. Jump seeks without
+changing content. Right-click a timestamp to insert a bookmark above or below it;
+the initial time is between its neighbours and is selected for editing.
+
+Click a swatch to open its colour picker and editable `#RRGGBB` value. Right-click
+the swatch to **Copy color** or **Paste color** directly. Paste accepts six RGB hex
+digits with or without `#`; invalid values leave the colour unchanged. New and
+imported bookmarks default to the existing blue, `#4B9EF5`.
+
+Each interval switch defaults to off. When enabled, a five-DIP bar in that
+bookmark's colour spans to the next bookmark, separated from the overview's Kiai
+bar by five DIPs. The last bookmark has no following interval and its switch is
+disabled. **Add new bookmark** follows the last row and starts with the current
+playhead time, moving forward to the first unused millisecond when needed. The
+bottom **Enable all Interval Color Display** and **Disable all Interval Color
+Display** buttons change all intervals in one undo step. The list scrolls while
+these two buttons remain visible.
+
+Time, colour, interval and deletion changes use content history. Colours and
+interval switches persist per difficulty in `.catchproj`; `.osu` exports retain
+ordinary bookmark timestamps. Timing operations that move bookmarks carry their
+colours and interval switches with them.
 
 ## Tools and selection
 
@@ -1566,6 +1611,8 @@ Absolute timestamps use `mm:ss:fff` (minutes, seconds, milliseconds), truncating
 ## FSliders
 
 Hover over **FSlider** to reveal two vertically stacked buttons on its right: **osu legacy mode** and **pen tool mode**. The default is osu legacy mode. The active mode is highlighted, and either can be selected with any tool active. The mode is a session setting: both tools edit the same FSlider objects, and changing modes does not change geometry or create undo history. New and existing sliders may be edited with either tool. Imported Legacy Sliders still require conversion to an editable FSlider.
+
+While drawing in either mode, the DS readout and movement indicator describe the current preview endpoint relative to the preceding fruit or droplet, including generated events within the draft slider.
 
 In **pen tool mode**, press B or 3 to clear selection and start drawing. Click to add curved anchors; Ctrl+click adds a straight segment. The first anchor and its preview follow Distance Snap within the playfield; later anchors follow the pointer without Distance Snap. Hold and drag to pull direction handles. The placed head fruit remains visible from the first anchor. Moving the pointer previews the next segment and its generated objects. Anchors and handles can extend beyond X=0–512 where the resulting path remains renderable. Click the last anchor again to begin a new curve section. Right-click a placed draft point to remove it, or right-click elsewhere to finish at that position. One track may mix straight and Bezier segments. Enter also finishes; Esc cancels the draft. Finishing keeps the final draft objects and Movement Analysis connections visible while background validation completes, and keeps the FSlider placement tool active for another slider. Press 1 to select and edit existing objects.
 
@@ -2197,9 +2244,10 @@ The workspace selector opens Hitsounding alongside Mapping and Timing. Its displ
 modes, seven lanes, Snap ruler, Alt-wheel navigation and unified sampleset/library
 Config dock are described in [Hitsounding workspace](HITSOUNDS.md#hitsounding-workspace).
 
-The active Mapping, Timing or Hitsounding workspace is remembered per difficulty in
-local user preferences. Reopening the same map, including after restarting the app,
-restores that workspace without changing beatmap content. Escape returns an idle
+The active Mapping, Timing or Hitsounding workspace is shared by difficulties in the
+mapset and saved in local user preferences. Switching difficulties retains the panel
+and hitsound clipboard. Reopening the mapset, including after restarting the app,
+restores the panel without changing beatmap content. Escape returns an idle
 editor to Library; active text edits, gestures and menus consume Escape first.
 Unsaved content follows the existing save/discard confirmation.
 
