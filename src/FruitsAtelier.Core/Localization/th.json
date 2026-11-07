@@ -1079,6 +1079,7 @@
   "song.Hex": "HEX",
   "song.invalidHex": "Enter สี HEX หกหลัก เช่น #59D3C3",
   "song.singleLine": "Enter ค่าบรรทัดเดียว",
+  "timing.copied": "คัดลอกข้อมูลเส้นไทมิงแล้ว",
   "timing.title": "เวลา และจุดควบคุม",
   "timing.waveformLoading": "กำลังโหลดรูปคลื่นเสียง...",
   "timing.waveform": "รูปคลื่นเสียง",

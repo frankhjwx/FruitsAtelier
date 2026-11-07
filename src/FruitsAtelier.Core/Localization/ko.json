@@ -1079,6 +1079,7 @@
   "song.Hex": "HEX",
   "song.invalidHex": "Enter 6자리 HEX 색상(예: #59D3C3)",
   "song.singleLine": "Enter는 한 줄 값입니다.",
+  "timing.copied": "타이밍 라인 정보를 복사했습니다",
   "timing.title": "타이밍 및 제어점",
   "timing.waveformLoading": "오디오 파형 로드 중…",
   "timing.waveform": "오디오 파형",

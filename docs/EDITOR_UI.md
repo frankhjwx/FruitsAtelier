@@ -935,6 +935,15 @@ the list. Drag the list scrollbar or click its track to navigate longer lists wi
 changing the selected rows. Tab moves between numeric fields; Enter commits a field before accepting
 the dialog. Ctrl+Z/Y operate on the draft while no numeric field has focus.
 
+Ctrl+C copies the selected visible timing lines to the system clipboard. A one-second
+confirmation popup fades out during its final 300 ms. Right-clicking any selected
+row offers **Copy** without changing the selection. **Paste** appears when the
+clipboard contains valid timing lines, including when right-clicking unused space
+in the list. Right-clicking an unselected row does not offer Copy. Pasted lines
+retain their timestamps and enter the timing draft, with the same SV-lock rules
+and undo behavior as Ctrl+V.
+
+
 Drag the title bar to reposition the window within the application. Drag any corner
 to scale its controls and text proportionally from 50% to 100% of its original
 size; the opposite corner stays fixed. The editor remains undimmed and

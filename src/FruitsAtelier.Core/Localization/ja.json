@@ -1079,6 +1079,7 @@
   "song.Hex": "HEX",
   "song.invalidHex": "Enter 6 桁の HEX カラー (例: #59D3C3)。",
   "song.singleLine": "Enter 単一行の値。",
+  "timing.copied": "タイミングラインの情報をコピーしました",
   "timing.title": "タイミング とコントロール ポイント",
   "timing.waveformLoading": "オーディオ波形をロード中…",
   "timing.waveform": "音声波形",

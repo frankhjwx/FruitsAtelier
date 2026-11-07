@@ -1079,6 +1079,7 @@
   "song.Hex": "HEX",
   "song.invalidHex": "Enter warna HEX enam digit, misalnya #59D3C3.",
   "song.singleLine": "Enter nilai satu baris.",
+  "timing.copied": "Informasi timing line disalin",
   "timing.title": "Timing dan Titik Kontrol",
   "timing.waveformLoading": "Memuat bentuk gelombang audio…",
   "timing.waveform": "Bentuk gelombang audio",

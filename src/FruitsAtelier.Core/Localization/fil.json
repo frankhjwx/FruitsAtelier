@@ -1079,6 +1079,7 @@
   "song.Hex": "HEX",
   "song.invalidHex": "Enter isang anim na digit na HEX na kulay, halimbawa #59D3C3.",
   "song.singleLine": "Enter isang solong linya na halaga.",
+  "timing.copied": "Nakopya ang impormasyon ng mga timing line",
   "timing.title": "Timing at Mga Control Point",
   "timing.waveformLoading": "Nilo-load ang audio waveform...",
   "timing.waveform": "Audio waveform",

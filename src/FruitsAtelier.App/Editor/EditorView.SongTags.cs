@@ -10,7 +10,7 @@ public sealed partial class EditorView
     private float songTagWidth, songTagSize = 13;
     private float songTagWindowHeight;
     private Rect songTagContent;
-    private float SongSetupHeight => Math.Min(Math.Max(580, songTab == 0 ? 548 + songTagRows.Count * (songTagSize + 5) : 580), height - 32);
+    private float SongSetupHeight => Math.Min(Math.Max(580, songTab == 0 ? 560 + songTagRows.Count * (songTagSize + 5) : 580), height - 32);
 
     private void PrepareSongTags(ICanvas c)
     {
@@ -20,7 +20,7 @@ public sealed partial class EditorView
         songTagText = value; songTagWidth = availableWidth; songTagWindowHeight = height;
         songTagSize = 13;
         Wrap();
-        while (songTagSize > 10 && 548 + songTagRows.Count * (songTagSize + 5) > height - 32)
+        while (songTagSize > 10 && 560 + songTagRows.Count * (songTagSize + 5) > height - 32)
         { songTagSize--; Wrap(); }
 
         void Wrap()

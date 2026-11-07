@@ -1079,6 +1079,7 @@
   "song.Hex": "HEX",
   "song.invalidHex": "Enter un color HEX de seis dígitos, por ejemplo #59D3C3.",
   "song.singleLine": "Enter un valor de una sola línea.",
+  "timing.copied": "Información de las líneas de timing copiada",
   "timing.title": "Tiempo y puntos de control",
   "timing.waveformLoading": "Cargando forma de onda de audio...",
   "timing.waveform": "Forma de onda de audio",

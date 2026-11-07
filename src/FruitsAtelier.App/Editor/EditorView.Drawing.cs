@@ -211,6 +211,7 @@ public sealed partial class EditorView
         DrawPatternGalleryOverlay(c);
         DrawPatternEditingBanner(c);
         DrawTimingSetup(c);
+        DrawTimingCopyFeedback(c);
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);
         if (!librarySettingsOpen) DrawLanguageMenu(c);

@@ -189,7 +189,7 @@ public sealed partial class EditorView
         c.Text(L.Get($"song.{key}"), drawingSongDock ? r.X : r.X + 22, y + 9, 13, SongFieldEnabled(key) ? Foreground : Muted, labelWidth,
             bold: SongDifficulty.Contains(key));
         var box = new Rect(compact ? r.Right - 116 : r.X + 240, y, compact ? 94 : r.Width - 262,
-            key == "Tags" ? Math.Max(32, r.Bottom - 138 - y) : 32);
+            key == "Tags" ? Math.Max(32, r.Bottom - 150 - y) : 32);
         if (drawingSongDock) box = new(r.X, y + 30, r.Width, key == "Tags" ? Math.Max(64, songTagRows.Count * (songTagSize + 5) + 14) : 32);
         if (inline) box = new(r.X + labelWidth + 8, y, r.Width - labelWidth - 8, 32);
         if (drawingSongDock && compact) box = new(r.Right - 64, y + 30, 64, 32);

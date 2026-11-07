@@ -1079,6 +1079,7 @@
   "song.Hex": "HEX",
   "song.invalidHex": "Enter 六位 HEX 顏色，例如#59D3C3。",
   "song.singleLine": "Enter 單行值。",
+  "timing.copied": "已複製時間軸線資訊",
   "timing.title": "時間軸 和控制點",
   "timing.waveformLoading": "正在加載音訊波形...",
   "timing.waveform": "音訊波形",

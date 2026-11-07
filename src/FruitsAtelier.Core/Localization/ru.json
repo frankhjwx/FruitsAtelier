@@ -1079,6 +1079,7 @@
   "song.Hex": "HEX",
   "song.invalidHex": "Enter — шестизначный цвет HEX, например #59D3C3.",
   "song.singleLine": "Enter — однострочное значение.",
+  "timing.copied": "Информация о линиях тайминга скопирована",
   "timing.title": "Тайминг и контрольные точки",
   "timing.waveformLoading": "Загрузка аудиосигнала…",
   "timing.waveform": "Форма аудиосигнала",

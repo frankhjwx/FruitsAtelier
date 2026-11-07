@@ -104,6 +104,12 @@ public sealed partial class EditorView
             DistanceSnapPointerDown(x, y, button);
             return;
         }
+        if (timingContextMenu && contextItems.Count > 0)
+        {
+            if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear();
+            timingContextMenu = contextItems.Count > 0;
+            return;
+        }
         if (TimingModal || TimingWindowContains(x, y))
         {
             timingSetupFocused = TimingSetupVisible;
@@ -954,6 +960,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        timingContextRequest++;
         if (ErrorVisible)
         {
             errorScroll = Math.Clamp(errorScroll - (int)(delta / 120) * 3, 0, Math.Max(0, errorLineCount - errorVisibleLines));
@@ -1072,6 +1079,8 @@ public sealed partial class EditorView
         }
         if (SynchronizationVisible) { ScrollSyncComparison(x, y, delta, ctrl); return; }
         if (librarySettingsOpen) { ScrollStorage(x, y, delta); return; }
+        if (timingContextMenu && contextItems.Count > 0)
+        { contextItems.Clear(); timingContextMenu = false; return; }
         if (TimingModal || TimingWindowContains(x, y))
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (WheelDockHorizontal(x, y, delta, shift)) return;
@@ -2075,6 +2084,7 @@ public sealed partial class EditorView
     }
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
+        timingContextRequest++;
         if (preparingError) return;
         if (ErrorVisible)
         {
@@ -2106,6 +2116,7 @@ public sealed partial class EditorView
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        timingContextRequest++;
         if (preparingError) return;
         if (ErrorVisible)
         {

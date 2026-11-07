@@ -49,6 +49,7 @@ internal sealed partial class EditorWindow : IDisposable
         };
         view.RequestPasteTime = () => view.PasteTimeJumpText(Native.ReadClipboardText(hwnd), view.TimeJumpSession);
         view.RequestPasteSongSetup = () => view.PasteSongSetupText(Native.ReadClipboardText(hwnd), view.SongSetupInputSession);
+        view.RequestTimingClipboardMenu = request => view.ShowTimingClipboardMenu(Native.ReadClipboardText(hwnd), request);
         view.RequestPasteTiming = () => view.PasteTimingText(Native.ReadClipboardText(hwnd), view.TimingInputSession);
         view.RequestTimingSampleHelp = () => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://osu.ppy.sh/wiki/en/Beatmapping/Hitsound") { UseShellExecute = true });
         view.RequestPasteLibrary = () => view.PasteLibraryText(Native.ReadClipboardText(hwnd));
@@ -195,6 +196,12 @@ internal sealed partial class EditorWindow : IDisposable
             if (Environment.GetCommandLineArgs().Contains("--hitsounding-render-check"))
             {
                 Diagnostics.HitsoundingRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
+            if (Environment.GetCommandLineArgs().Contains("--timing-clipboard-render-check"))
+            {
+                Diagnostics.TimingClipboardRenderCheck.Run(canvas);
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
@@ -512,7 +519,7 @@ internal sealed partial class EditorWindow : IDisposable
                     Invalidate();
                 }
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
-                if ((view.BrowserFeedbackNeedsRedraw || view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
+                if ((view.BrowserFeedbackNeedsRedraw || view.TimingFeedbackNeedsRedraw || view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
                     || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.BookmarkToolbarNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.DiscussionNeedsRedraw || view.MapsetVerifierNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
                     || view.MediaNeedsRedraw || canvas?.MediaNeedsRedraw == true || canvas?.SliderRasterNeedsRedraw == true) && !Native.IsIconic(window)) Invalidate();
                 return 0;

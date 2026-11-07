@@ -1108,6 +1108,7 @@
   "song.Hex": "HEX",
   "song.invalidHex": "Enter a six-digit HEX color, for example #59D3C3.",
   "song.singleLine": "Enter a single-line value.",
+  "timing.copied": "Timing line information copied",
   "timing.title": "Timing and Control Points",
   "timing.waveformLoading": "Loading audio waveform…",
   "timing.waveform": "Audio waveform",

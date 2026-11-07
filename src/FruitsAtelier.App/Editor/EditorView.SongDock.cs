@@ -40,7 +40,7 @@ public sealed partial class EditorView
         string[] tabs = ["song.general", "song.difficulty", "song.colours", "song.design", "song.faSettings"];
         songTab = Math.Clamp(songTab, 0, 4);
         const float categoryHeight = 44;
-        float bodyHeight = songTab switch { 0 => 7 * 40 + Math.Max(64, songTagRows.Count * (songTagSize + 5) + 14) + 38 + SongSyncButtonHeight(c, bounds.Width) + 8,
+        float bodyHeight = songTab switch { 0 => 7 * 40 + Math.Max(64, songTagRows.Count * (songTagSize + 5) + 14) + 38 + SongSyncButtonHeight(c, bounds.Width) + 24,
             1 => SongDifficulty.Length * 82, 2 => 650, 3 => 320, _ => 470 };
         songDockContentHeight = categoryHeight + bodyHeight + 32;
         songDockScroll = Math.Clamp(songDockScroll, 0, Math.Max(0, songDockContentHeight - bounds.Height));
@@ -61,7 +61,7 @@ public sealed partial class EditorView
         if (songTab == 0)
         {
             for (int i = 0; i < SongMetadata.Length; i++) SongTextField(c, SongMetadata[i], y + i * 40);
-            DrawSongSyncButton(c, new(bounds.X, songFieldBounds["Tags"].Bottom + 8, bounds.Width, SongSyncButtonHeight(c, bounds.Width)));
+            DrawSongSyncButton(c, new(bounds.X, songFieldBounds["Tags"].Bottom + 24, bounds.Width, SongSyncButtonHeight(c, bounds.Width)));
         }
         else if (songTab == 1)
             for (int i = 0; i < SongDifficulty.Length; i++) SongRangeSlider(c, SongDifficulty[i], y + i * 82, 10);

@@ -1079,6 +1079,7 @@
   "song.Hex": "HEX",
   "song.invalidHex": "Enter een zescijferige HEX-kleur, bijvoorbeeld #59D3C3.",
   "song.singleLine": "Enter een waarde van één regel.",
+  "timing.copied": "Informatie over timinglijnen gekopieerd",
   "timing.title": "Timing en controlepunten",
   "timing.waveformLoading": "Audiogolfvorm laden…",
   "timing.waveform": "Audiogolfvorm",

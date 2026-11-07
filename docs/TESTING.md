@@ -1780,3 +1780,12 @@ playback-time dragging and the fixed lazer line.
 The Hitsounding panel regression also covers letter-only Note based labels, selection
 without seeking, and storyboard sound clipboard, marquee, snap movement, shared file
 edits and undo.
+
+## Timing clipboard feedback
+
+`App.Tests --timing-feedback-check` covers selected-row and empty-list context
+menus, valid/invalid clipboard contents, copy feedback expiry, draft paste undo,
+and stale asynchronous clipboard responses at normal and half window scale.
+`FruitsAtelier.App.exe --render-check --timing-clipboard-render-check` checks the
+one-second popup and its fade, plus copy/paste menus in English and Chinese at
+96/144/192 DPI. Captures go to `artifacts/tests/timing-clipboard-native`.

@@ -37,6 +37,7 @@ public sealed partial class EditorView
 
     private void DrawSongSyncButton(ICanvas c, Rect bounds)
     {
+        c.Line(bounds.X, bounds.Y - 12, bounds.Right, bounds.Y - 12, Grid);
         bool enabled = difficulties.Count > 1 && !history.HasActiveTransaction && !SynchronizationBusy;
         Button(c, bounds, "", SynchronizeSongSetup, enabled: enabled);
         var lines = WrapSyncText(c, L.Get("song.syncGeneral"), bounds.Width - 18);

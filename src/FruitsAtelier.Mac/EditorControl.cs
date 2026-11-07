@@ -104,6 +104,18 @@ internal sealed class EditorControl : Control, IDisposable
             catch (Exception error) { View.SetNotice(error.Message); }
             Refresh();
         };
+        View.RequestTimingClipboardMenu = async request =>
+        {
+            string text = "";
+            try
+            {
+                if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                    text = await clipboard.TryGetTextAsync() ?? "";
+            }
+            catch (Exception error) { View.SetNotice(error.Message); }
+            if (!View.ErrorVisible) View.ShowTimingClipboardMenu(text, request);
+            Refresh();
+        };
         View.RequestPasteTiming = async () =>
         {
             int session = View.TimingInputSession;
