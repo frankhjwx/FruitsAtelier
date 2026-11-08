@@ -5,6 +5,7 @@ internal static class HitsoundingNotesTests
 {
     public static void Run()
     {
+        LaneLocks();
         foreach (string language in new[] { "en", "zh-CN" })
         foreach (bool draw in new[] { false, true })
         {
@@ -35,19 +36,28 @@ internal static class HitsoundingNotesTests
             Click(1750);
             Check(baseline.ContentEquals(ui.View.Document), "Notes editing is off by default");
             Toggle();
+            ui.View.PointerMove(X(1750), Y(), false, false); ui.Paint();
+            Check(HasCircle(1750) == draw, "Only unlocked Draw shows a placement preview");
+            if (!draw)
+            {
+                Click(1750);
+                Check(baseline.ContentEquals(ui.View.Document), "Select never creates notes");
+                ui.Key(50);
+            }
             Click(1750);
-            Check(ui.View.Document.Fruits.Count == 5 && ui.View.Document.Fruits.Single(f => f.TimeMs == 1750) is { X: 256, Y: 192 }, "Both tools create a centred circle");
+            Check(ui.View.Document.Fruits.Count == 5 && ui.View.Document.Fruits.Single(f => f.TimeMs == 1750) is { X: 256, Y: 192 }, "Unlocked Draw creates a centred circle");
             int scale = ui.View.LibrarySettings.UiScalePercent;
             ui.Key(187, ctrl: true);
             Check(ui.View.LibrarySettings.UiScalePercent == scale, "Circle selection does not redirect reverse shortcuts to UI scaling");
             ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Creation is one undo step");
             ui.Key(89, ctrl: true); Check(ui.View.Document.Fruits.Count == 5, "Circle creation supports redo");
             ui.Key(90, ctrl: true);
+            ui.Key(draw ? 50 : 49);
             ui.View.PointerDown(X(1000), Y(), 0, false, false);
             ui.View.PointerMove(X(1125), Y(), false, false); ui.Paint();
             Check(baseline.ContentEquals(ui.View.Document), "Moving Notes previews without mutating content");
             Check(HasCircle(1125) && !HasCircle(1000), "Preview moves the original note graphic instead of leaving a duplicate");
-            ui.Key(27); ui.View.PointerUp(X(1125), Y(), 0); ui.Paint();
+            ui.Key(27); ui.View.PointerUp(X(1125), Y(), 0); ui.View.PointerMove(0, 0, false, false); ui.Paint();
             Check(HasCircle(1000) && !HasCircle(1125), "Escape restores the original note graphic");
             Drag(1000, 1125);
             Check(ui.View.Document.Fruits.Any(f => f.TimeMs == 1125), "Release commits the preview position");
@@ -107,7 +117,7 @@ internal static class HitsoundingNotesTests
             Check(differentReverse.ContentEquals(ui.View.Document) && ui.View.StatusMessage == L.Get("hitsounding.noteRhythmMismatch"), "A reverse-count mismatch rejects paste atomically");
             Toggle(); var disabled = ui.View.Document.DeepClone(); Click(7000);
             Check(disabled.ContentEquals(ui.View.Document), "Disabling Notes editing protects content again");
-            void Toggle() { var r = ui.View.HitsoundingNotesToggleBounds; ui.Click(r.X + r.Width / 2, r.Y + 12); }
+            void Toggle() { var r = ui.View.HitsoundingLockBounds(0); ui.Click(r.X + r.Width / 2, r.Y + 12); }
             float X(double time) => ui.View.HitsoundingNotesLaneBounds.X + (float)((time - (ui.View.PlayheadMs - 1200)) / 4000 * ui.View.HitsoundingNotesLaneBounds.Width);
             float Y() { var r = ui.View.HitsoundingNotesLaneBounds; return r.Y + r.Height / 2; }
             bool HasCircle(double time) => ui.Canvas.Circles.Any(c => c.Radius > 10 && Math.Abs(c.X - X(time)) < 1
@@ -121,6 +131,40 @@ internal static class HitsoundingNotesTests
         }
         L.SetLanguage("en");
         Console.WriteLine("PASS Hitsounding Notes creation, selection, clipboard, endpoints and reverses");
+    }
+    private static void LaneLocks()
+    {
+        var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500 });
+        map.Fruits.Add(new() { TimeMs = 1000, X = 256, OriginalLine = "256,192,1000,1,14,0:0:0:80:" });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage();
+        ui.View.UpdateTransport(1200, 6000, true, false, false, null, null); ui.Paint();
+        ui.Key(50);
+        var baseline = ui.View.Document.DeepClone();
+        for (int lane = 1; lane < 7; lane++)
+        {
+            var button = ui.View.HitsoundingLockBounds(lane);
+            ui.Click(button.X + 12, button.Y + 12);
+            var notes = ui.View.HitsoundingNotesLaneBounds;
+            float x = notes.X + notes.Width / 4, y = notes.Y + (lane + .5f) * notes.Height;
+            ui.Click(x, y); ui.Key(68); ui.Key(81); ui.Key(46);
+            ui.View.PointerDown(x, y, 2, false, false); ui.View.PointerUp(x, y, 2); ui.Paint();
+            Check(ui.View.SelectedObjectIds.Count == 0 && baseline.ContentEquals(ui.View.Document), "Locked tracks reject selection and edits");
+            Check(ui.Canvas.Fills.Any(f => f.Color == 0x293649 && f.Bounds.Contains(x, y)), "Locked tracks display an overlay");
+            ui.Click(button.X + 12, button.Y + 12);
+            if (lane <= 4)
+            {
+                ui.Click(x, y);
+                Check(ui.View.SelectedObjectIds.Count == 1, "Unlocking restores sound selection");
+            }
+        }
+        var whistleLock = ui.View.HitsoundingLockBounds(2); ui.Click(whistleLock.X + 12, whistleLock.Y + 12);
+        var bounds = ui.View.HitsoundingNotesLaneBounds;
+        ui.Click(bounds.X + bounds.Width / 4, bounds.Y + 1.5f * bounds.Height); ui.Key(68);
+        var resolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
+        Check(resolver.Describe(ui.View.Conversion.Objects.Single()) is { NormalSet: 3, AdditionSet: 1, Additions: 14 },
+            "Changing Normal preserves the inherited bank used by a locked addition");
+        ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Lock-protected sound edit remains undoable");
     }
     private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

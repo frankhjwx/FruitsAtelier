@@ -46,6 +46,7 @@ public sealed partial class EditorView
         {
             if (tags.Length == 0) continue;
             int lane = tags[0].Lane;
+            if (hitsoundingLocked[lane]) continue;
             float y = hitsoundingGridBounds.Y + (lane + .5f) * laneHeight - tagHeight / 2;
             if (y >= r.Bottom || y + tagHeight <= r.Y) continue;
             for (int i = LowerTag(tags, from); i < tags.Length && tags[i].Time <= to; i++)
@@ -156,6 +157,7 @@ public sealed partial class EditorView
         var targets = new List<(HitsoundingCopy Copy, ConvertedCatchObject Note)>();
         foreach (var copy in copied)
         {
+            if (hitsoundingLocked[copy.Lane]) continue;
             double time = targetTime + copy.Offset;
             int first = FirstAfter(hitsoundingNotes, time - 1.001);
             for (int i = first; i < hitsoundingNotes.Length && hitsoundingNotes[i].TimeMs <= time + 1; i++)

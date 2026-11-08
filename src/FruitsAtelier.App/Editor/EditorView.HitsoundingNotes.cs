@@ -10,7 +10,7 @@ public sealed partial class EditorView
     private HitsoundingNoteGesture hitsoundingNoteGesture;
     private bool hitsoundingNotesSelection, hitsoundingNoteMoved, hitsoundingNoteCanCreate;
     private double hitsoundingNoteFrom, hitsoundingNoteTo, hitsoundingNoteOriginalStart, hitsoundingNoteOriginalEnd;
-    private float hitsoundingNotePointerX;
+    private float hitsoundingNotePointerX, hitsoundingNotePointerY;
     private double hitsoundingMoveMin, hitsoundingMoveMax;
     private Guid hitsoundingNoteId;
     private Guid[] hitsoundingNoteSelectionBefore = [];
@@ -40,8 +40,8 @@ public sealed partial class EditorView
         hitsoundingNotesSelection = true;
         hitsoundingNoteSelectionBefore = objectSelection.ToArray();
         hitsoundingNoteFrom = hitsoundingNoteTo = HitsoundingNoteTime(x);
-        hitsoundingNoteCanCreate = !ctrl && !shift;
-        hitsoundingNotePointerX = x; hitsoundingNoteMoved = false;
+        hitsoundingNoteCanCreate = hitsoundingDraw && !ctrl && !shift;
+        hitsoundingNotePointerX = x; hitsoundingNotePointerY = y; hitsoundingNoteMoved = false;
         if (hit.Id != Guid.Empty)
         {
             if (ctrl)
@@ -78,7 +78,8 @@ public sealed partial class EditorView
     {
         if (hitsoundingNoteGesture == HitsoundingNoteGesture.None) return false;
         hitsoundingNoteTo = HitsoundingNoteTime(x);
-        hitsoundingNoteMoved |= Math.Abs(x - hitsoundingNotePointerX) >= ContentDragThreshold;
+        hitsoundingNoteMoved |= Math.Abs(x - hitsoundingNotePointerX) >= ContentDragThreshold
+            || Math.Abs(y - hitsoundingNotePointerY) >= ContentDragThreshold;
         if (hitsoundingNoteGesture == HitsoundingNoteGesture.Marquee && hitsoundingNoteMoved)
         {
             double from = Math.Min(hitsoundingNoteFrom, hitsoundingNoteTo), to = Math.Max(hitsoundingNoteFrom, hitsoundingNoteTo);
@@ -140,6 +141,15 @@ public sealed partial class EditorView
                 Math.Abs(X(hitsoundingNoteTo) - X(hitsoundingNoteFrom)), lane.Height);
             c.Fill(box, Accent, opacity: .15f); c.Stroke(box, Accent, 1); return;
         }
+        if (!hitsoundingDraw || notesLocked || !lane.Contains(mouseX, mouseY)
+            || hitsoundingHeadDrag || hitsoundingMarquee || hitsoundingPainting
+            || hitsoundingNoteGesture is not (HitsoundingNoteGesture.None or HitsoundingNoteGesture.Marquee)
+            || timelineObjects.Any(t => t.Bounds.Contains(mouseX, mouseY))) return;
+        if (hitsoundingNoteGesture == HitsoundingNoteGesture.Marquee && !hitsoundingNoteCanCreate) return;
+        float height = Math.Min(64, lane.Height);
+        float cy = lane.Y + (lane.Height - height) / 2 + 27 * height / 64;
+        FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin,
+            X(HitsoundingNoteTime(mouseX)), cy, 38 * height / 64, Accent, opacity: .45f);
     }
     private double HitsoundingNoteMoveDelta => Math.Clamp(hitsoundingNoteTo - hitsoundingNoteFrom, hitsoundingMoveMin, hitsoundingMoveMax);
     private double HitsoundingNotePreviewTime(Guid id, double time)

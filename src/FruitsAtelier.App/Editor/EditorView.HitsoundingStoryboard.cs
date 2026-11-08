@@ -61,6 +61,11 @@ public sealed partial class EditorView
     }
     private void EditHitsoundingStoryboard(StoryboardSample[] remove, StoryboardSample[] add, bool move = false, Action? editNotes = null)
     {
+        if (hitsoundingLocked[6])
+        {
+            if (editNotes is not null) Edit(L.Get("hitsounding.paste"), editNotes);
+            return;
+        }
         if (!CommitField()) return;
         string? root = StoryboardMediaDirectory(Document);
         if (root is null) return;

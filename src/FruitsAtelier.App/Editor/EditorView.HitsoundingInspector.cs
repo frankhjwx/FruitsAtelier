@@ -254,6 +254,40 @@ public sealed partial class EditorView
     }
     private void SetHitsoundingEvent(EventHitsound setting)
     {
+        if (hitsoundingNoteLookup.TryGetValue((setting.SourceId, setting.EventIndex), out var note))
+        {
+            if (note.Kind == CatchObjectKind.Droplet && hitsoundingLocked[5]) return;
+            var original = hitsoundingResolver!.EventSettings(note);
+            var sample = setting.Sample;
+            var inherited = setting.InheritedFields;
+            bool lockedAddition = false;
+            for (int lane = 2; lane <= 4; lane++)
+            {
+                if (!hitsoundingLocked[lane]) continue;
+                int flag = 1 << (lane - 1);
+                sample = sample with { Additions = (sample.Additions & ~flag) | (original.Sample.Additions & flag) };
+                lockedAddition |= (original.Sample.Additions & flag) != 0;
+            }
+            void Preserve(InheritedSampleFields field) => inherited = (inherited & ~field) | (original.InheritedFields & field);
+            if (hitsoundingLocked[1]) { sample = sample with { NormalSet = original.Sample.NormalSet }; Preserve(InheritedSampleFields.NormalSet); }
+            if (lockedAddition)
+            {
+                sample = sample with { AdditionSet = original.Sample.AdditionSet }; Preserve(InheritedSampleFields.AdditionSet);
+                if (inherited.HasFlag(InheritedSampleFields.AdditionSet) && (sample.NormalSet != original.Sample.NormalSet
+                    || inherited.HasFlag(InheritedSampleFields.NormalSet) != original.InheritedFields.HasFlag(InheritedSampleFields.NormalSet)))
+                {
+                    sample = sample with { AdditionSet = hitsoundingResolver.Describe(note).AdditionSet };
+                    inherited &= ~InheritedSampleFields.AdditionSet;
+                }
+            }
+            if (hitsoundingLocked[1] || lockedAddition)
+            {
+                sample = sample with { Index = original.Sample.Index, Volume = original.Sample.Volume, FileName = original.Sample.FileName };
+                Preserve(InheritedSampleFields.Index | InheritedSampleFields.Volume);
+            }
+            setting = setting with { Sample = sample, InheritedFields = inherited };
+            if (setting == original) return;
+        }
         if (setting.EventIndex >= int.MaxValue - 9999
             && Document.BananaShowers.FirstOrDefault(s => s.Id == setting.SourceId) is { } shower)
         {
@@ -318,6 +352,8 @@ public sealed partial class EditorView
             }
         }
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
+        int pointerLane = Math.Clamp((int)((y - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7)), 0, 6);
+        if (hitsoundingLocked[pointerLane]) return true;
         if (BeginHitsoundingNotesPointer(x, y, button, ctrl, shift)) return true;
         hitsoundingNotesSelection = false;
         hitsoundingTimingSelection.Clear();
@@ -397,6 +433,7 @@ public sealed partial class EditorView
     }
     private void ToggleHitsoundingAddition(int flag)
     {
+        if (hitsoundingLocked[flag == 2 ? 2 : flag == 4 ? 3 : 4]) return;
         if (HitsoundingSelectedNote is not { Kind: CatchObjectKind.Fruit } note) return;
         var setting = hitsoundingResolver!.EventSettings(note);
         setting = setting with { Sample = setting.Sample with { Additions = setting.Sample.Additions ^ flag } };

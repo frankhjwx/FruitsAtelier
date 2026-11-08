@@ -1816,7 +1816,7 @@ and stale asynchronous clipboard responses at normal and half window scale.
 one-second popup and its fade, plus copy/paste menus in English and Chinese at
 96/144/192 DPI. Captures go to `artifacts/tests/timing-clipboard-native`.
 
-`App.Tests --hitsounding-notes-check` checks opt-in Notes creation at the canvas
-centre, marquee selection in both tools, atomic matching/empty/conflicting clipboard
+`App.Tests --hitsounding-notes-check` checks per-track locking, Draw-only Notes
+creation and snapped previews at the canvas centre, marquee selection in both tools, atomic matching/empty/conflicting clipboard
 pastes, slider head/tail timing, reverse shortcuts, undo/redo and cancellation in
 English and Chinese.

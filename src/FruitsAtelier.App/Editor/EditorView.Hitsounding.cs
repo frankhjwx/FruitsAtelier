@@ -135,19 +135,12 @@ public sealed partial class EditorView
         objectTimeline = default; zoomSlider = default;
         c.Fill(CanvasToolbarBounds, Panel);
         float toolsX = CanvasToolbarBounds.X + 8;
-        float toolScale = Math.Min(1, Math.Max(0, CanvasToolbarBounds.Width - 174) / 438);
+        float toolScale = Math.Min(1, Math.Max(0, CanvasToolbarBounds.Width - 174) / 290);
         Button(c, new(toolsX, 88, 88 * toolScale, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
         Button(c, new(toolsX + 92 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
         Button(c, new(toolsX + 188 * toolScale, 88, 102 * toolScale, 28), L.Get("hitsounding.showText"),
             () => hitsoundingDockWorkspace.ShowHitsoundText = !hitsoundingDockWorkspace.ShowHitsoundText,
             hitsoundingDockWorkspace.ShowHitsoundText, fontSize: 11);
-        HitsoundingNotesToggleBounds = new(toolsX + 298 * toolScale, 88, 140 * toolScale, 28);
-        Button(c, HitsoundingNotesToggleBounds, L.Get("hitsounding.editNotes"), () =>
-        {
-            CancelInteraction(); hitsoundingAllowNotes = !hitsoundingAllowNotes;
-            if (hitsoundingNotesSelection) SelectObjects([]);
-            hitsoundingNotesSelection = false;
-        }, hitsoundingAllowNotes, fontSize: 11);
         snapSlider = new(CanvasToolbarBounds.Right - 118, 88, 106, 29);
         c.Text(L.Get("ui.snap"), snapSlider.X - 40, 97, 11, Muted, 40);
         float snapStart = snapSlider.X + 7, snapEnd = snapSlider.Right - 31;
@@ -228,11 +221,13 @@ public sealed partial class EditorView
             float y = top + lane * laneHeight;
             c.Fill(new(r.X, y, labelWidth, laneHeight), Panel);
             c.Fill(new(r.X + 9, y + (laneHeight - 20) / 2, 3, 20), lane is >= 1 and <= 5 ? Muted : HitsoundingColors[lane], 1.5f);
-            c.Text(L.Get("hitsounding.lane" + lane), r.X + 20, y + (laneHeight - 16) / 2, 12, hitsoundingMuted[lane] ? Muted : Foreground, labelWidth - (lane > 0 ? 54 : 24), true);
+            c.Text(L.Get("hitsounding.lane" + lane), r.X + 20, y + (laneHeight - 16) / 2, 12, hitsoundingMuted[lane] ? Muted : Foreground, labelWidth - 80, true);
+            DrawHitsoundingLock(c, new(r.X + labelWidth - 54, y + (laneHeight - 24) / 2, 24, 24), lane);
             if (lane > 0) DrawHitsoundingMute(c, new(r.X + labelWidth - 28, y + (laneHeight - 24) / 2, 24, 24), lane);
             c.Line(r.X, y, r.Right, y, Grid, opacity: .55f);
         }
         c.Clip(g);
+        DrawHitsoundingLockBackground(c);
         float notesHeight = Math.Min(64, laneHeight);
         var notesViewport = new Rect(g.X, top + (laneHeight - notesHeight) / 2, g.Width, notesHeight);
         c.Clip(notesViewport);
@@ -287,7 +282,7 @@ public sealed partial class EditorView
             && hitsoundingMoveSource is null && hitsoundingGridBounds.Contains(mouseX, mouseY))
         {
             int lane = (int)((mouseY - top) / laneHeight);
-            if (lane is >= 2 and <= 4 && HitsoundingPlacementNoteAt(mouseX, mouseY) is { } candidate
+            if (lane is >= 2 and <= 4 && !hitsoundingLocked[lane] && HitsoundingPlacementNoteAt(mouseX, mouseY) is { } candidate
                 && (hitsoundingResolver!.Describe(candidate).Additions & (1 << (lane - 1))) == 0)
             {
                 float y = top + (lane + .5f) * laneHeight - 16;
@@ -388,12 +383,12 @@ public sealed partial class EditorView
                 if (flash > 0) c.StrokeOpacity(box, 0xFFFFFF, 2, Math.Min(4, box.Width / 3), flash);
                 if (tag.Note is { } note)
                 {
-                    hitsoundingSoundHits.Add((box, note, tag.Lane));
+                    if (!hitsoundingLocked[tag.Lane]) hitsoundingSoundHits.Add((box, note, tag.Lane));
                     if (!hitsoundingMarquee && hitsoundingMultiSelection.Contains((note.SourceId, note.EventIndex, tag.Lane))) c.Stroke(box, Foreground, 2, 4);
                 }
                 if (tag.Storyboard is { } sb)
                 {
-                    hitsoundingStoryboardHits.Add((box, sb));
+                    if (!hitsoundingLocked[6]) hitsoundingStoryboardHits.Add((box, sb));
                     if (!hitsoundingMarquee && hitsoundingStoryboardSelection.Contains(sb)) c.Stroke(box, Foreground, 2, 4);
                 }
                 if (hitsoundingDockWorkspace.ShowHitsoundText && HitsoundingPrecise)

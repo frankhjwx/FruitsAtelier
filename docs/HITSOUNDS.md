@@ -214,8 +214,11 @@ Without a selection, Draw changes only its placement brush. Placing an addition
 uses that bank while preserving Normal. W/E/R toggle Whistle/Finish/Clap on the selected
 event. Text inputs and modified shortcuts retain priority.
 
-**Edit Notes** in the top toolbar is off by default. Enable it to edit the Notes
-lane with either Select or Draw: click empty space to create a circle at Mapping
+Each track has a **Lock** button beside its label. Locked tracks show a tinted background
+behind their notes, cannot be selected, and reject direct editing and paste. Notes starts
+locked; the other tracks start unlocked. Locks do not mute playback or change history.
+Unlock Notes to edit existing notes in either mode. In Draw, an empty-space hover
+shows a snapped placement preview and a click creates a circle at Mapping
 X=256 (osu! Y=192), drag empty space to marquee-select parents, and Ctrl-click to
 add or remove a parent from the selection. Drag an existing note body to move the
 selection in time. Drag a slider's head or tail to adjust that endpoint while
@@ -231,7 +234,7 @@ intersect the interval, every parent must match the source's relative start/end,
 slider span count and nested event rhythm; a complete match transfers sounds while
 preserving destination geometry. Partial overlap or a rhythm mismatch rejects the
 whole paste with an error. Sound-tag-only copy/paste retains its existing behavior.
-Notes mutations require Edit Notes to remain enabled.
+Notes mutations require its track to remain unlocked.
 
 The workspace combines drawing, clicking to select, Ctrl-click selection and empty-space marquee selection. The three additions share one bank
 and index; a vertical connector links active additions belonging to the same event.

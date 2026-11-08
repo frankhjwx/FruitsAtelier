@@ -645,6 +645,7 @@ internal static class HitsoundingPanelTests
             ui.Key(90, ctrl: true);
             Check(original.ContentEquals(ui.View.Document), "Ctrl-selected deletion is one undo step");
         }
+        var notesLock = ui.View.HitsoundingLockBounds(0); ui.Click(notesLock.X + 12, notesLock.Y + 12);
         var normal = LaneBlocks(ui, 1);
         var notes = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane0") && t.X > 340 && t.X < 1100 && t.Y >= ui.View.HitsoundingNotesLaneBounds.Y && t.X >= ui.View.HitsoundingNotesLaneBounds.X - 146);
         Click(new(normal[0].X, notes.Y, normal[0].Width, 12), false);

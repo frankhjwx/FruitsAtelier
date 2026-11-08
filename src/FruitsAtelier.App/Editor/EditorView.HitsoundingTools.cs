@@ -7,13 +7,12 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private int hitsoundingBrush = 2;
-    private bool hitsoundingAllowNotes;
+    private bool hitsoundingAllowNotes => !hitsoundingLocked[0];
     private float hitsoundingToolsWidth;
     internal int HitsoundingBrush => hitsoundingBrush;
     internal bool HitsoundingDraw => hitsoundingDraw;
     internal bool HitsoundingBrushEnabled => hitsoundingDraw || hitsoundingMultiSelection.Count > 0
         || hitsoundingNotesSelection && objectSelection.Count > 0;
-    internal Rect HitsoundingNotesToggleBounds { get; private set; }
     private void SetHitsoundingTool(bool draw)
     {
         CancelInteraction();
@@ -50,10 +49,11 @@ public sealed partial class EditorView
     }
     private void DrawHitsoundingTools(ICanvas c, Rect bounds)
     {
-        const float padding = 12, minGap = 8;
-        float size = Math.Min(bounds.Width - 12, Math.Min(72, Math.Max(18, (bounds.Height - 2 * padding - 4 * minGap) / 5)));
-        float gap = Math.Max(minGap, (bounds.Height - 2 * padding - 5 * size) / 4);
-        float x = bounds.X + (bounds.Width - size) / 2, y = bounds.Y + padding;
+        const float padding = 10;
+        float size = Math.Min(bounds.Width - 12, Math.Min(72, Math.Max(18, (bounds.Height - 2 * padding) / 5.72f)));
+        float gap = size * .11f, groupGap = size * .39f;
+        float total = 5 * size + 3 * gap + groupGap;
+        float x = bounds.X + (bounds.Width - size) / 2, y = bounds.Y + Math.Max(padding, (bounds.Height - total) / 2);
         string[] names = ["select", "draw", "soft", "normal", "drum"];
         string[] keys = ["hitsounding.select", "hitsounding.draw", "timing.soft", "timing.normal", "timing.drum"];
         string[] shortcuts = ["1", "2", "A", "S", "D"];
@@ -61,7 +61,7 @@ public sealed partial class EditorView
         for (int i = 0; i < names.Length; i++)
         {
             int index = i;
-            if (i == 2) c.Line(x + 8, y - gap / 2, x + size - 8, y - gap / 2, Grid);
+            if (i == 2) { y += groupGap - gap; c.Line(x + 8, y - groupGap / 2, x + size - 8, y - groupGap / 2, Grid); }
             var box = new Rect(x, y, size, size - 2);
             bool enabled = i < 2 || HitsoundingBrushEnabled;
             bool active = enabled && (i < 2 ? hitsoundingDraw == (i == 1) : hitsoundingBrush == banks[i]);
