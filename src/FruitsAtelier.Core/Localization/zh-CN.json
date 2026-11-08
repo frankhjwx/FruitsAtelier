@@ -2056,5 +2056,10 @@
   "bookmark.pasteColour": "粘贴颜色",
   "bookmark.jump": "Jump",
   "bookmark.enableIntervals": "启用全部区间颜色显示",
-  "bookmark.disableIntervals": "关闭全部区间颜色显示"
+  "bookmark.disableIntervals": "关闭全部区间颜色显示",
+  "hitsounding.editNotes": "编辑 Notes",
+  "hitsounding.createNote": "创建音符",
+  "hitsounding.resizeNote": "调整音符时间",
+  "hitsounding.moveNotes": "移动音符",
+  "hitsounding.noteRhythmMismatch": "无法粘贴音符：目标位置的节奏、slider 时长或 reverse 数量不匹配。"
 }

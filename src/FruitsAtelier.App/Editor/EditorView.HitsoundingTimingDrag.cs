@@ -62,7 +62,7 @@ public sealed partial class EditorView
         hitsoundingTimingMoved = false; hitsoundingTimingDelta = 0;
         if (hit.Point is { } point)
         {
-            hitsoundingSelectedTiming = point; hitsoundingSelected = null;
+            hitsoundingSelectedTiming = point; hitsoundingSelected = null; hitsoundingNotesSelection = false;
             hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); SelectObjects([]);
             if (point.Uninherited) { hitsoundingTimingSelection.Clear(); return true; }
             if (ctrl) { if (!hitsoundingTimingSelection.Add(point)) hitsoundingTimingSelection.Remove(point); }
@@ -162,7 +162,7 @@ public sealed partial class EditorView
 
     private void SelectHitsoundingTimingPoint(TimingPoint point, bool preserveSelection = false)
     {
-        hitsoundingSelectedTiming = point; hitsoundingSelected = null;
+        hitsoundingSelectedTiming = point; hitsoundingSelected = null; hitsoundingNotesSelection = false;
         hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); SelectObjects([]);
         if (!preserveSelection || !hitsoundingTimingSelection.Contains(point)) hitsoundingTimingSelection.Clear();
         if (!point.Uninherited) hitsoundingTimingSelection.Add(point);

@@ -1778,9 +1778,9 @@ dropdown, divider resize cursors, recursive folder imports, opening the current 
 and live library create/rename/delete notifications. It also checks live Inspector edits,
 undoable volume gestures with live playback and conversion reuse, nearby timing rows,
 new-point drafts, event-specific additions, single-click placement and its undo,
-placement-origin marquee selection without added sounds or history, empty-space selection, Q bank cycling for single and multiple selections,
+placement-origin marquee selection without added sounds or history, empty-space selection, independent Q/ASD brush switching with single and multiple selections,
 Normal/addition bank isolation (including inherited Normal banks when placing each addition), selection-aware bank selectors with mixed/Auto values and batch undo, direct right-click deletion,
-placement and selection at the play line, and one-step bank-change undo, playback flashes, normalized narrow waveforms,
+placement and selection at the play line, and one-step bank-change undo through the selectors, playback flashes, normalized narrow waveforms,
 visible interval labels, Kiai span boundaries and timing-drag previews, and play-line bounds. It also checks marquee copy/delete/paste,
 red/green timing-index mismatch confirmation and cancellation, bank and event-index
 override independence, inherited transfer indices following new timing lines in display,
@@ -1815,3 +1815,8 @@ and stale asynchronous clipboard responses at normal and half window scale.
 `FruitsAtelier.App.exe --render-check --timing-clipboard-render-check` checks the
 one-second popup and its fade, plus copy/paste menus in English and Chinese at
 96/144/192 DPI. Captures go to `artifacts/tests/timing-clipboard-native`.
+
+`App.Tests --hitsounding-notes-check` checks opt-in Notes creation at the canvas
+centre, marquee selection in both tools, atomic matching/empty/conflicting clipboard
+pastes, slider head/tail timing, reverse shortcuts, undo/redo and cancellation in
+English and Chinese.

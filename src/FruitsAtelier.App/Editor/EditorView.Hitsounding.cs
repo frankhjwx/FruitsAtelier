@@ -136,17 +136,18 @@ public sealed partial class EditorView
         c.Fill(CanvasToolbarBounds, Panel);
         float toolsX = CanvasToolbarBounds.X + 8;
         float toolScale = Math.Min(1, Math.Max(0, CanvasToolbarBounds.Width - 174) / 438);
-        Button(c, new(toolsX, 88, 60 * toolScale, 28), L.Get("hitsounding.select"),
-            () => { CancelInteraction(); hitsoundingDraw = false; }, !hitsoundingDraw, fontSize: 11);
-        Button(c, new(toolsX + 64 * toolScale, 88, 60 * toolScale, 28), L.Get("hitsounding.draw"),
-            () => { CancelInteraction(); hitsoundingDraw = true; }, hitsoundingDraw, fontSize: 11);
-        c.Line(toolsX + 132 * toolScale, 92, toolsX + 132 * toolScale, 112, Grid);
-        Button(c, new(toolsX + 140 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
-        Button(c, new(toolsX + 232 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
-        c.Line(toolsX + 328 * toolScale, 92, toolsX + 328 * toolScale, 112, Grid);
-        Button(c, new(toolsX + 336 * toolScale, 88, 102 * toolScale, 28), L.Get("hitsounding.showText"),
+        Button(c, new(toolsX, 88, 88 * toolScale, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
+        Button(c, new(toolsX + 92 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
+        Button(c, new(toolsX + 188 * toolScale, 88, 102 * toolScale, 28), L.Get("hitsounding.showText"),
             () => hitsoundingDockWorkspace.ShowHitsoundText = !hitsoundingDockWorkspace.ShowHitsoundText,
             hitsoundingDockWorkspace.ShowHitsoundText, fontSize: 11);
+        HitsoundingNotesToggleBounds = new(toolsX + 298 * toolScale, 88, 140 * toolScale, 28);
+        Button(c, HitsoundingNotesToggleBounds, L.Get("hitsounding.editNotes"), () =>
+        {
+            CancelInteraction(); hitsoundingAllowNotes = !hitsoundingAllowNotes;
+            if (hitsoundingNotesSelection) SelectObjects([]);
+            hitsoundingNotesSelection = false;
+        }, hitsoundingAllowNotes, fontSize: 11);
         snapSlider = new(CanvasToolbarBounds.Right - 118, 88, 106, 29);
         c.Text(L.Get("ui.snap"), snapSlider.X - 40, 97, 11, Muted, 40);
         float snapStart = snapSlider.X + 7, snapEnd = snapSlider.Right - 31;
@@ -155,7 +156,9 @@ public sealed partial class EditorView
         c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, 97, 10, Foreground, 40);
         float right = DockWorkspaceState.Right.Collapsed || DockWorkspaceState.Right.Panels.Count == 0 ? width : rightPanel.X;
         hitsoundingBounds = new(leftPanel.Right + 8, 130, Math.Max(40, right - leftPanel.Right - 16), Math.Max(100, TransportTop - 138));
-        var r = hitsoundingBounds;
+        hitsoundingToolsWidth = Math.Min(84, Math.Max(60, hitsoundingBounds.Width * .13f));
+        var r = new Rect(hitsoundingBounds.X + hitsoundingToolsWidth, hitsoundingBounds.Y,
+            hitsoundingBounds.Width - hitsoundingToolsWidth, hitsoundingBounds.Height);
         float labelWidth = Math.Min(146, r.Width * .32f);
         double start = HitsoundingStart, end = start + hitsoundingSpan;
         float gridX = r.X + labelWidth, gridWidth = Math.Max(10, r.Width - labelWidth);
@@ -176,6 +179,7 @@ public sealed partial class EditorView
         float top = r.Y + 53 + HitsoundingTimingRowHeight * 4 + 33;
         hitsoundingGridBounds = new(gridX, top, gridWidth, Math.Max(7, r.Bottom - top));
         var g = hitsoundingGridBounds; float laneHeight = g.Height / 7;
+        DrawHitsoundingTools(c, new(hitsoundingBounds.X, g.Y, hitsoundingToolsWidth, g.Height));
         c.Fill(r, Chrome(0x191E26, Background), 6); c.StrokeOpacity(r, Grid, 1, 6, .65f); c.Clip(r);
         for (int lane = 0; lane < 7; lane++)
             c.Fill(new(g.X, top + lane * laneHeight, g.Width, laneHeight), Panel, opacity: lane % 2 == 0 ? .5f : .22f);
@@ -250,6 +254,7 @@ public sealed partial class EditorView
                 c.Circle(x, y, radius, Foreground, false, 2 * notesHeight / 64, flash);
             }
         }
+        DrawHitsoundingNotePreview(c);
         c.Unclip();
         if (!ReferenceEquals(hitsoundingStoryboardSource, storyboardScene))
         {

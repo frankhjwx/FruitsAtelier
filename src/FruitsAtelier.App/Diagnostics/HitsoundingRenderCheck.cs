@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-audition" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-audition" })
             {
                 if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
@@ -72,12 +72,17 @@ internal static class HitsoundingRenderCheck
                 editor.LibrarySettings.DockLayouts = layout; editor.RestoreDockLayouts();
                 canvas.Resize(size.Item1, size.Item2, 96);
                 canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
+                if (scenario == "-notes")
+                {
+                    var toggle = editor.HitsoundingNotesToggleBounds;
+                    editor.PointerDown(toggle.X + toggle.Width / 2, toggle.Y + 12, 0, false, false);
+                    editor.PointerUp(toggle.X + toggle.Width / 2, toggle.Y + 12, 0);
+                    editor.KeyDown(50, false, false); editor.KeyDown(68, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
                 if (scenario == "-draw")
                 {
-                    var toolbar = editor.CanvasToolbarBounds;
-                    float scale = Math.Min(1, Math.Max(0, toolbar.Width - 174) / 438);
-                    float buttonX = toolbar.X + 8 + 94 * scale;
-                    editor.PointerDown(buttonX, 102, 0, false, false); editor.PointerUp(buttonX, 102, 0);
+                    editor.KeyDown(50, false, false);
                     float zero = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 0)).X + 4;
                     float twoSeconds = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 2000)).X + 4;
                     editor.PointerMove(zero + (twoSeconds - zero) * .375f, editor.HitsoundingMuteBounds(2).Y + 12, false, false);

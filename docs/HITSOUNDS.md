@@ -194,21 +194,40 @@ Select is the default input mode. Clicking an empty addition slot does not place
 sound; dragging empty space selects sounds with a marquee. Draw mode previews the
 addition under the pointer: click to place it, or hold and drag to paint all crossed
 fruit events on the current lane. A complete stroke is one undo step. Both modes
-retain existing-sound selection, Q bank cycling, clipboard operations and right-click
+retain existing-sound selection, clipboard operations and right-click
 deletion. Placement and existing-sound selection take priority over dragging the play
 line where they overlap. Right-click removes additions, never Normal.
 Sampleset and Additions at the upper left display the authored banks of the selected
 events, using Auto for inherited or mixed values as in Mapping. Changing either
 selector applies that bank to every selected event in one undo step; the other bank
-remains unchanged. With no selected events, the selectors control subsequent placement. Placing Whistle, Finish or Clap uses only Additions
-and preserves the existing Normal bank and its inheritance. Auto additions resolve
-from the existing event, independently of the Sampleset placement default.
-With no sound tags selected, Q cycles the placement
-bank for the lane under the pointer: Sampleset for Normal, Additions for Whistle,
-Finish or Clap. The selector reflects the new bank for the next placement.
-W/E/R toggle the selected event's Whistle/Finish/Clap. Q cycles Normal, Soft and Drum for selected sound tags, using the earliest selected
-event (Normal first for tied lanes) to choose one bank for the selection. Normal tags
-change their normal bank; Whistle, Finish and Clap change their shared addition bank.
+remains unchanged. With no selected events, the selectors retain their independent
+placement defaults; Hitsounding painting uses its own brush instead.
+
+The left tool column offers **Select (1)**, **Draw (2)**, then **Soft (A)**,
+**Normal (S)** and **Drum (D)** brushes. Mode and brush are independent selections. In Select mode, brush buttons and Q/A/S/D are enabled only while notes or sound events are selected; otherwise the buttons are dimmed. Draw mode always enables the brushes.
+**Q** cycles Soft → Normal → Drum without changing selected sounds or either
+Sampleset/Additions selector. Painting an addition uses the brush's bank and
+preserves the existing Normal bank and inheritance. Painting an existing addition
+replaces its shared addition bank. W/E/R toggle Whistle/Finish/Clap on the selected
+event. Text inputs and modified shortcuts retain priority.
+
+**Edit Notes** in the top toolbar is off by default. Enable it to edit the Notes
+lane with either Select or Draw: click empty space to create a circle at Mapping
+X=256 (osu! Y=192), drag empty space to marquee-select parents, and Ctrl-click to
+add or remove a parent from the selection. Drag an existing note body to move the
+selection in time. Drag a slider's head or tail to adjust that endpoint while
+retaining the other; Ctrl+plus/minus changes its reverse count as in Mapping.
+Dragging previews the change and release creates one undo step; Escape cancels it.
+
+Notes selection uses a separate clipboard payload from sound tags. Ctrl+C/X/V
+copies, cuts or pastes complete selected notes. A destination interval with no
+notes receives new copies with relative timing preserved. If existing notes
+intersect the interval, every parent must match the source's relative start/end,
+slider span count and nested event rhythm; a complete match transfers sounds while
+preserving destination geometry. Partial overlap or a rhythm mismatch rejects the
+whole paste with an error. Sound-tag-only copy/paste retains its existing behavior.
+Notes mutations require Edit Notes to remain enabled.
+
 The workspace combines drawing, clicking to select, Ctrl-click selection and empty-space marquee selection. The three additions share one bank
 and index; a vertical connector links active additions belonging to the same event.
 Audible events flash with a white edge and a coloured outer glow for 280 ms as playback crosses their timestamps. Both Notes and sound tags show this feedback.

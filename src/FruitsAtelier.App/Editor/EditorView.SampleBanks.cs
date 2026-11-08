@@ -59,8 +59,8 @@ public sealed partial class EditorView
                 HitsoundingPageVisible ? Math.Max(20, hitsoundingGridBounds.X - leftPanel.Right - 20) : 96, 28);
             if (HitsoundingPageVisible)
             {
-                float bankWidth = Math.Max(20, (hitsoundingGridBounds.X - leftPanel.Right - 24) / 2);
-                bounds = new(leftPanel.Right + 16 + i * (bankWidth + 4), top + 17, bankWidth, 28);
+                float bankWidth = Math.Max(20, (hitsoundingGridBounds.X - leftPanel.Right - hitsoundingToolsWidth - 24) / 2);
+                bounds = new(leftPanel.Right + hitsoundingToolsWidth + 16 + i * (bankWidth + 4), top + 17, bankWidth, 28);
             }
             if (additions) AdditionsBounds = bounds; else SamplesetBounds = bounds;
             c.Text(L.Get(additions ? "samples.additions" : "samples.sampleset"), bounds.X, bounds.Y - 17, 11, Muted, bounds.Width);

@@ -318,6 +318,8 @@ public sealed partial class EditorView
             }
         }
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
+        if (BeginHitsoundingNotesPointer(x, y, button, ctrl, shift)) return true;
+        hitsoundingNotesSelection = false;
         hitsoundingTimingSelection.Clear();
         if (button == 2 && (hitsoundingMultiSelection.Count > 0 || hitsoundingStoryboardSelection.Count > 0))
         { DeleteHitsoundingAt(x, y); return true; }
@@ -395,10 +397,12 @@ public sealed partial class EditorView
         if (hitsoundingPaint.ContainsKey(key)) return;
         int flag = 1 << (hitsoundingPaintLane - 1);
         var setting = hitsoundingResolver!.EventSettings(note);
+        var original = setting;
         int additions = hitsoundingErase ? setting.Sample.Additions & ~flag : setting.Sample.Additions | flag;
-        if (!hitsoundingErase && nextAdditionBank > 0)
-            setting = setting with { Sample = setting.Sample with { AdditionSet = nextAdditionBank }, InheritedFields = setting.InheritedFields & ~InheritedSampleFields.AdditionSet };
-        if (additions != setting.Sample.Additions) hitsoundingPaint[key] = setting with { Sample = setting.Sample with { Additions = additions } };
+        if (!hitsoundingErase)
+            setting = setting with { Sample = setting.Sample with { AdditionSet = hitsoundingBrush }, InheritedFields = setting.InheritedFields & ~InheritedSampleFields.AdditionSet };
+        setting = setting with { Sample = setting.Sample with { Additions = additions } };
+        if (setting != original) hitsoundingPaint[key] = setting;
     }
     private void ToggleHitsoundingAddition(int flag)
     {
@@ -409,6 +413,7 @@ public sealed partial class EditorView
     }
     private bool MoveHitsoundingCanvasPointer(float x, float y)
     {
+        if (MoveHitsoundingNotesPointer(x, y)) return true;
         if (MoveHitsoundingTimingPointer(x)) return true;
         if (hitsoundingHeadDrag)
         { hitsoundingHeadRatio = Math.Clamp((x - hitsoundingGridBounds.X) / Math.Max(1, hitsoundingGridBounds.Width), .05, .95); return true; }
@@ -425,12 +430,13 @@ public sealed partial class EditorView
         double to = HitsoundingStart + (Math.Max(x, hitsoundingPaintX) - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan;
         int first = FirstAfter(hitsoundingNotes, from - .001);
         if (hitsoundingGridBounds.Contains(x, y))
-            for (int i = first; i < hitsoundingNotes.Length && hitsoundingNotes[i].TimeMs <= to; i++)
+            for (int i = first; i < hitsoundingNotes.Length && hitsoundingNotes[i].TimeMs <= to + .001; i++)
                 if (hitsoundingNotes[i].Kind == CatchObjectKind.Fruit) PaintHitsoundingNote(hitsoundingNotes[i]);
         hitsoundingPaintX = x; return true;
     }
     private bool EndHitsoundingCanvasPointer()
     {
+        if (EndHitsoundingNotesPointer()) return true;
         if (EndHitsoundingTimingPointer()) return true;
         if (hitsoundingHeadDrag) { hitsoundingHeadDrag = false; return true; }
         if (EndHitsoundingStoryboardMove()) return true;

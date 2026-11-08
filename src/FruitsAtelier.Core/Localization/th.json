@@ -2056,5 +2056,10 @@
   "bookmark.pasteColour": "วางสี",
   "bookmark.jump": "Jump",
   "bookmark.enableIntervals": "แสดงสีทุกช่วง",
-  "bookmark.disableIntervals": "ซ่อนสีทุกช่วง"
+  "bookmark.disableIntervals": "ซ่อนสีทุกช่วง",
+  "hitsounding.editNotes": "Edit Notes",
+  "hitsounding.createNote": "Create note",
+  "hitsounding.resizeNote": "Change note timing",
+  "hitsounding.moveNotes": "Move notes",
+  "hitsounding.noteRhythmMismatch": "Cannot paste notes: the destination rhythm, slider duration or reverse count does not match."
 }

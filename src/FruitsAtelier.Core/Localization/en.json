@@ -2056,5 +2056,10 @@
   "bookmark.pasteColour": "Paste color",
   "bookmark.jump": "Jump",
   "bookmark.enableIntervals": "Enable all Interval Color Display",
-  "bookmark.disableIntervals": "Disable all Interval Color Display"
+  "bookmark.disableIntervals": "Disable all Interval Color Display",
+  "hitsounding.editNotes": "Edit Notes",
+  "hitsounding.createNote": "Create note",
+  "hitsounding.resizeNote": "Change note timing",
+  "hitsounding.moveNotes": "Move notes",
+  "hitsounding.noteRhythmMismatch": "Cannot paste notes: the destination rhythm, slider duration or reverse count does not match."
 }
