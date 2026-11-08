@@ -985,7 +985,7 @@ Linking preserves editable project data and reviews differences against the loca
 
 Use **File → Export as .fad…** or the difficulty tab menu. Open the corresponding project before importing a FAD. It does not create a standalone Library project. Open, drop or use **File → Import difficulty (.fad)…** in that project.
 
-An existing matched difficulty enters merge review; a missing difficulty can be added. Objects and FA settings are reviewed together; metadata and timing have separate choices. Review the merged difficulty, then save or export it. Export includes unsaved work without changing the local Songs association.
+An existing matched difficulty enters merge review; a missing difficulty can be added. Objects and FA settings are reviewed together; metadata and timing have separate choices. Review the merged difficulty, then save or export it. Export includes unsaved work without changing the local Songs association. FAD contains only difficulty data; audio and other resource files must already be available in the receiving project.
 
 ### Choose the appropriate file
 
@@ -1087,7 +1087,7 @@ Use Movement Analysis, the strain graph, Catch Preview and Testplay for playabil
 | .catchdiff and workspace manifest | Native editable difficulty and project organization; keep the complete folder |
 | .catchproj | Older native format, accepted and migrated on save |
 | .faz | Portable FA project with available resources; optionally includes playable OSZ |
-| .fad | One FA difficulty and resources for import into an open project |
+| .fad | One FA difficulty’s data for import into an open project |
 | .fpt | Reusable gallery pattern package |
 | .osu / .osz | Playable difficulty / set; does not retain all FA authoring controls |
 

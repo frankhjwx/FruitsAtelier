@@ -66,8 +66,9 @@ finish. Both hosts retain unsaved-change prompts when replacing an open project.
 
 ## Portable individual difficulties
 
-`.fad` (Fruits Atelier Difficulty) carries one difficulty's native authoring data
-and available resources. Use **File → Export as .fad…** for the current difficulty,
+`.fad` (Fruits Atelier Difficulty) carries only one difficulty's native authoring
+data. Audio, images, samples, videos and storyboard files are not included; import
+uses resources already available in the receiving project. Use **File → Export as .fad…** for the current difficulty,
 or **Export as .fad…** in a difficulty tab's context menu for that tab. Unsaved edits
 are included; exporting does not change the saved state or local Songs associations.
 
@@ -86,7 +87,8 @@ and FA settings group, which is reviewed as one unit to preserve exact editable
 curves, handles, streams and other authoring state. Updates form one undo step and
 retain the receiver's native difficulty ID, local audio and Songs associations.
 
-Imported resources are checked before application. Different files with the same
+Older `.fad` packages containing resources remain supported. Their imported
+resources are checked before application. Different files with the same
 relative name cause an error; existing resources are never overwritten. Added
 resources remain available after undoing an update because other difficulties may
 use them. The original `.osu` is not written by importing a `.fad`; save and export
@@ -95,7 +97,9 @@ use **Collab Mapping → Sync references** to update the destination difficulty.
 
 The `.fad` ZIP uses the version 1 container described below with
 `Format: FruitsAtelierDifficulty`, `Complete: false`, and exactly one difficulty.
-Package resource paths use relative paths with slash separators. Local source,
+New exports retain only the `.fa-resource` container anchor under the resource
+root, with no media files or embedded audio path. Package resource paths use
+relative paths with slash separators. Local source,
 export and synchronization associations are not carried into the receiving project.
 
 ## Version 1 container

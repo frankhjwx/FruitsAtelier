@@ -360,8 +360,8 @@ The native check includes Markdown and image cards; pass
 `--discussions-image-fixture=<absolute-image-path>` to use a local image fixture
 without network access.
 
-`App.Tests --fad-check` verifies portable difficulty packages, local resource
-conflicts, matching, adding difficulties, native merge choices, undo/redo, Library
+`App.Tests --fad-check` verifies data-only difficulty exports, export with missing
+source resources, legacy resource-package imports and local resource conflicts, matching, adding difficulties, native merge choices, undo/redo, Library
 rejection and the FAZ export chooser. `FruitsAtelier.App.exe --render-check
 --fad-render-check` captures the File menu, difficulty context menu, FAZ choices,
 native merge review and Library error in English and Chinese at two window sizes
