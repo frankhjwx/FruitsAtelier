@@ -116,6 +116,7 @@ public sealed partial class EditorView
         PumpLibrary();
         if (!LibraryVisible)
         {
+            AdvanceTimelineDragScroll();
             EnsureConversion();
             if (DrawMediaOpening(c)) return;
         }

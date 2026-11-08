@@ -3,6 +3,9 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--placement-bounds-check")) { FeedbackBugTests.PlacementBounds(); return 0; }
+if (args.Contains("--hidden-path-double-click-check")) { FeedbackBugTests.HiddenPathDoubleClick(); return 0; }
+if (args.Contains("--timeline-edge-drag-check")) { FeedbackBugTests.TimelineEdges(); return 0; }
 if (args.Contains("--bookmark-panel-check")) { BookmarkPanelTests.Run(); return 0; }
 if (args.Contains("--hitsounding-mute-check")) { HitsoundingMuteTests.Run(); Console.WriteLine("PASS Hitsounding track mutes, transport, Mapping and Testplay isolation"); return 0; }
 if (args.Contains("--hitsound-library-files-check")) { HitsoundLibraryFileTests.Run(); Console.WriteLine("PASS hitsound library selection, file operations, context menus and hover navigation"); return 0; }
@@ -351,6 +354,9 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Fruit placement ignores canvas padding", FeedbackBugTests.PlacementBounds),
+    ("Draft double-click creates boundaries with hidden slider paths", FeedbackBugTests.HiddenPathDoubleClick),
+    ("Timeline object drags scroll at edges and retain one undo", FeedbackBugTests.TimelineEdges),
     ("Timing clipboard menus preserve selection and copy feedback fades", TimingClipboardTests.Run),
     ("Slider BPM presets, custom input, placement, history and red visibility", SliderBpmTests.Run),
     ("Storyboard sources retain scenes across unrelated General edits", StoryboardSourceCacheTests.Run),

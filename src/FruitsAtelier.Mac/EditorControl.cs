@@ -208,8 +208,8 @@ internal sealed class EditorControl : Control, IDisposable
             View.Render(canvas, (float)Bounds.Width / uiScale, (float)Bounds.Height / uiScale);
         if (View.ErrorVisible) return;
         UpdatePointerCursor();
-        if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)
-            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => boundary.Run(() => { if (!View.ErrorVisible && (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)) InvalidateVisual(); }));
+        if (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.TimelineDragScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)
+            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => boundary.Run(() => { if (!View.ErrorVisible && (View.IsTestplaying || View.LazerPresentationNeedsRedraw || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.TimelineDragScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.BookmarkToolbarNeedsRedraw || View.BookmarkToolbarHoverPending || View.VolumePopoverNeedsRedraw || View.PatternGalleryNeedsRedraw)) InvalidateVisual(); }));
     }
     private StandardCursorType? pointerCursorType;
     private void UpdatePointerCursor()

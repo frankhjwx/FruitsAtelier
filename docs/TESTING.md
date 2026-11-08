@@ -1,5 +1,19 @@
 # Building and Testing
 
+## Feedback editing regressions
+
+`App.Tests --placement-bounds-check` checks Catch fruit placement and previews in
+canvas padding at different zoom levels, horizontal pan limits and placement undo.
+`--hidden-path-double-click-check` checks Legacy draft segment boundaries with
+Slider Path visible or hidden, Windows and macOS click sequences, and undo/redo.
+`--timeline-edge-drag-check` checks stationary-pointer scrolling in both directions,
+frame-rate-independent speed, canvas coordination, Mapping/lazer modes, playing/paused transport,
+group spacing, map boundaries, release, cancellation and one-step undo.
+`FruitsAtelier.App --render-check --feedback-bugs-render-check` exercises these
+interactions with native rendering in English and Chinese, two window sizes and
+96/144/192 DPI. F6 row navigation is covered by `--timing-feedback-check` and the
+native `--timing-clipboard-render-check`.
+
 ## Artifact lifetime
 
 Keep task-generated outputs under ignored `artifacts/`. After a feature is
