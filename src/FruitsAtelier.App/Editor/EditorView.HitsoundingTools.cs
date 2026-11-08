@@ -9,6 +9,8 @@ public sealed partial class EditorView
     private int hitsoundingBrush = 2;
     private bool hitsoundingAllowNotes => !hitsoundingLocked[0];
     private float hitsoundingToolsWidth;
+    private readonly Rect[] hitsoundingToolButtons = new Rect[5];
+    internal Rect HitsoundingToolBounds(int index) => hitsoundingToolButtons[index];
     internal int HitsoundingBrush => hitsoundingBrush;
     internal bool HitsoundingDraw => hitsoundingDraw;
     internal bool HitsoundingBrushEnabled => hitsoundingDraw || hitsoundingMultiSelection.Count > 0
@@ -63,6 +65,7 @@ public sealed partial class EditorView
             int index = i;
             if (i == 2) { y += groupGap - gap; c.Line(x + 8, y - groupGap / 2, x + size - 8, y - groupGap / 2, Grid); }
             var box = new Rect(x, y, size, size - 2);
+            hitsoundingToolButtons[i] = box;
             bool enabled = i < 2 || HitsoundingBrushEnabled;
             bool active = enabled && (i < 2 ? hitsoundingDraw == (i == 1) : hitsoundingBrush == banks[i]);
             uint color = !enabled ? Muted : i < 2 ? Accent : HitsoundingBankColor(banks[i]);
@@ -82,6 +85,18 @@ public sealed partial class EditorView
                 font, active ? Foreground : Muted, size - 4, true);
             if (enabled) hits.Add(new(box, () => { if (index < 2) SetHitsoundingTool(index == 1); else SetHitsoundingBrush(banks[index]); }, true));
             y += size + gap;
+        }
+    }
+    private void DrawHitsoundingToolTooltip(ICanvas c)
+    {
+        if (menu >= 0 || contextItems.Count > 0 || WantsCapture) return;
+        for (int i = 0; i < hitsoundingToolButtons.Length; i++)
+        {
+            var bounds = hitsoundingToolButtons[i];
+            if (!bounds.Contains(mouseX, mouseY)) continue;
+            string text = i < 2 ? L.Get(i == 0 ? "hitsounding.hint.select" : "hitsounding.hint.draw")
+                : L.Get("hitsounding.hint.brush", L.Get(i == 2 ? "timing.soft" : i == 3 ? "timing.normal" : "timing.drum"), i == 2 ? "A" : i == 3 ? "S" : "D");
+            DrawPaletteTooltip(c, text, bounds, left: false, above: false);
         }
     }
 }

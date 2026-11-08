@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-notes-preview", "-locked", "-audition" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition" })
             {
                 if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
@@ -73,6 +73,13 @@ internal static class HitsoundingRenderCheck
                 editor.LibrarySettings.DockLayouts = layout; editor.RestoreDockLayouts();
                 canvas.Resize(size.Item1, size.Item2, 96);
                 canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
+                if (scenario.StartsWith("-tool-", StringComparison.Ordinal))
+                {
+                    int index = Array.IndexOf(new[] { "select", "draw", "soft", "normal", "drum" }, scenario[6..]);
+                    var button = editor.HitsoundingToolBounds(index);
+                    editor.PointerMove(button.X + button.Width / 2, button.Y + button.Height / 2, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
                 if (scenario == "-locked")
                 {
                     for (int lane = 1; lane < 7; lane++)

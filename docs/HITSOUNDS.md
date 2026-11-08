@@ -212,7 +212,8 @@ normal bank; selected addition tags change their shared addition bank. Selected
 Notes parents change both banks on their events. Other sample fields are retained.
 Without a selection, Draw changes only its placement brush. Placing an addition
 uses that bank while preserving Normal. W/E/R toggle Whistle/Finish/Clap on the selected
-event. Text inputs and modified shortcuts retain priority.
+event. Text inputs and modified shortcuts retain priority. Hover tips explain each
+tool's shortcut and interaction behavior.
 
 Each track has a **Lock** button beside its label. Locked tracks show a tinted background
 behind their notes, cannot be selected, and reject direct editing and paste. Notes starts
