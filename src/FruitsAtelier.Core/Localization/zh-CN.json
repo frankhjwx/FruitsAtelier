@@ -1124,6 +1124,8 @@
   "timing.red": "红线",
   "timing.green": "绿线",
   "timing.offset": "偏移 (ms)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "音效组",
   "timing.bpm": "BPM",
   "timing.meter": "拍号",
   "timing.sample": "采样",

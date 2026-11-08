@@ -209,6 +209,12 @@ public sealed partial class EditorView
         }
         finally { mouseX = pointer.X; mouseY = pointer.Y; }
         if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingMuteTooltip(c);
+        if (HitsoundingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
+            && hitsoundingTimingTooltip is { } timingTip && timingTip.Bounds.Contains(mouseX, mouseY))
+            DrawPaletteTooltip(c, timingTip.Text, timingTip.Bounds, left: false, above: false, centered: true);
+        if (!HitsoundingPageVisible && !TimingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
+            && timelineBpmTooltip is { } bpmTip && bpmTip.Bounds.Contains(mouseX, mouseY))
+            DrawPaletteTooltip(c, bpmTip.Text, bpmTip.Bounds, left: false, above: false, centered: true);
         DrawPatternGalleryOverlay(c);
         DrawPatternEditingBanner(c);
         DrawTimingSetup(c);

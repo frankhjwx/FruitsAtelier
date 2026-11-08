@@ -1095,6 +1095,8 @@
   "timing.red": "Timing-punten",
   "timing.green": "Overerfde punten",
   "timing.offset": "Offset (ms)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "Hitsoundset",
   "timing.bpm": "BPM",
   "timing.meter": "Meter",
   "timing.sample": "Voorbeeld",

@@ -7,12 +7,6 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public bool HitsoundingPageVisible { get; private set; }
-    private static readonly System.Numerics.Vector2[] HitsoundingKiaiStar = Enumerable.Range(0, 11).Select(i =>
-    {
-        float angle = -MathF.PI / 2 + i * MathF.PI / 5;
-        float radius = i % 2 == 0 ? 1 : .42f;
-        return new System.Numerics.Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
-    }).ToArray();
     private double hitsoundingSpan = 4000;
     private double hitsoundingHeadRatio = .3;
     internal const float HitsoundingTagWidth = 36;
@@ -170,10 +164,10 @@ public sealed partial class EditorView
             double until = i + 1 < timingLabels.Length ? timingLabels[i + 1].Time : Math.Max(end, TimelineDurationMs);
             if (until < start || until < point.Time) continue;
             float anchor = X(point.Time), left = Math.Max(gridX, anchor), rightEdge = Math.Min(gridX + gridWidth, X(until));
-            hitsoundingTimingBoxes.Add((new(left, r.Y + 53, Math.Max(0, rightEdge - left), 36), anchor,
+            hitsoundingTimingBoxes.Add((new(left, r.Y + 53 + HitsoundingTimingRowHeight, Math.Max(0, rightEdge - left), HitsoundingTimingRowHeight * 3), anchor,
                 point.Red ? 0xE77785u : 0x72C686u, point.Bank, point.Index, point.Point.Volume, point.Point));
         }
-        float top = r.Y + 122;
+        float top = r.Y + 53 + HitsoundingTimingRowHeight * 4 + 33;
         hitsoundingGridBounds = new(gridX, top, gridWidth, Math.Max(7, r.Bottom - top));
         var g = hitsoundingGridBounds; float laneHeight = g.Height / 7;
         c.Fill(r, Chrome(0x191E26, Background), 6); c.StrokeOpacity(r, Grid, 1, 6, .65f); c.Clip(r);
@@ -197,6 +191,7 @@ public sealed partial class EditorView
             if (tick.IsMeasure) c.Text(Time(tick.TimeMs), x + 3, r.Y, 10, Muted, 82);
         }
         c.Clip(new(g.X, r.Y, g.Width, r.Height));
+        DrawHitsoundingTimingTracks(c, start, end);
         TimingPoint? hoveredTiming = null;
         if (DockContentInputAvailable && menu < 0 && contextItems.Count == 0 && !hitsoundingTimingBox)
         {
@@ -210,28 +205,14 @@ public sealed partial class EditorView
             bool selectedTiming = hitsoundingTimingSelection.Contains(tag.Point);
             bool hovered = hoveredTiming == tag.Point && !selectedTiming && hitsoundingSelectedTiming != tag.Point;
             c.Line(tag.Anchor, tag.Bounds.Bottom + 5, tag.Anchor, g.Y - 1, selectedTiming ? Accent : tag.Color, selectedTiming ? 5 : hovered ? 4 : 3, .95f);
-            c.Fill(tag.Bounds, Panel, 6);
-            c.Fill(tag.Bounds, tag.Color, 6, hovered ? .55f : .35f);
-            c.StrokeOpacity(tag.Bounds, tag.Color, selectedTiming || hitsoundingSelectedTiming == tag.Point ? 2.5f : 1, 6, 1);
-            string bankLabel = tag.Index > 0 ? $"{tag.Bank}:{tag.Index}" : tag.Bank;
-            bool kiai = (tag.Point.Effects & 1) != 0;
-            string volumeLabel = $"{tag.Volume}%";
-            float bankWidth = c.MeasureText(bankLabel, 13, true), volumeWidth = c.MeasureText(volumeLabel, 10, true);
-            c.Clip(tag.Bounds);
-            if (kiai) c.Polyline(HitsoundingKiaiStar, tag.Bounds.X + 12, tag.Bounds.Y + 11, 6, 0xFFFFFF, 1.2f, 1);
-            c.Text(bankLabel, tag.Bounds.X + (kiai ? 23 : 6), tag.Bounds.Y + 2, 13, 0xFFFFFF, bankWidth + 1, true);
-            c.Text(volumeLabel, tag.Bounds.X + 6, tag.Bounds.Y + 20, 10, 0xFFFFFF, volumeWidth + 1, true);
-            c.Unclip();
-        }
-        for (int i = Math.Max(0, timingLow - 1); i < timingLabels.Length && timingLabels[i].Time < end; i++)
-        {
-            if ((timingLabels[i].Point.Effects & 1) == 0) continue;
-            double from = Math.Max(start, timingLabels[i].Time);
-            double to = Math.Min(end, i + 1 < timingLabels.Length ? timingLabels[i + 1].Time : Math.Max(end, TimelineDurationMs));
-            if (to > from) c.Line(X(from), g.Y - 10, X(to), g.Y - 10, 0xD89532, 3);
+            bool selected = selectedTiming || hitsoundingSelectedTiming == tag.Point;
+            if (selected || hovered) c.StrokeOpacity(tag.Bounds, tag.Color, selected ? 2.5f : 1, 3, .9f);
         }
         DrawHitsoundingTimingMarquee(c);
         c.Unclip();
+        string[] timingLaneKeys = ["timing.bpm", "hitsounding.timingSet", "volume.title", "timeline.kiaiIndicator"];
+        for (int lane = 0; lane < timingLaneKeys.Length; lane++)
+            c.Text(L.Get(timingLaneKeys[lane]), r.X + 10, r.Y + 57 + lane * HitsoundingTimingRowHeight, 11, Foreground, labelWidth - 16, true);
         for (int lane = 0; lane < 7; lane++)
         {
             float y = top + lane * laneHeight;

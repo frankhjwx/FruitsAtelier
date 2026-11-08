@@ -463,6 +463,7 @@ public sealed partial class EditorView
         c.Line(objectTimeline.X, objectTimeline.Bottom - 1, objectTimeline.Right, objectTimeline.Bottom - 1, Grid);
         DrawTimelineBookmarks(c, objectTimeline, start, end);
         DrawCollaborationLocks(c, objectTimeline, start, end);
+        DrawTimelineBpmFlags(c, start, end);
         c.Unclip();
     }
 

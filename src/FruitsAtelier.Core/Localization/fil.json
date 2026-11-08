@@ -1095,6 +1095,8 @@
   "timing.red": "Mga Punto ng Timing",
   "timing.green": "Mga Namanang Punto",
   "timing.offset": "Offset (ms)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "Hitsound Set",
   "timing.bpm": "BPM",
   "timing.meter": "Metro",
   "timing.sample": "Sample",

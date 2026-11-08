@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-audition" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-audition" })
             {
                 if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
@@ -66,7 +66,8 @@ internal static class HitsoundingRenderCheck
                 Directory.CreateDirectory(Path.Combine(library, "Drums", "Percussion"));
                 if (HitsoundDefaults.Find(2, "hitnormal") is { } sample && File.Exists(sample))
                     File.Copy(sample, Path.Combine(library, "soft-tap" + Path.GetExtension(sample)), true);
-                editor.ShowHitsoundingPage(); editor.UpdateTransport(scenario == "-timing" ? 0 : scenario == "-flash" ? 1000 : 1200, 10000, true, scenario == "-flash", false, null, null);
+                if (scenario != "-mapping") editor.ShowHitsoundingPage();
+                editor.UpdateTransport(scenario == "-timing" ? 0 : scenario == "-flash" ? 1000 : 1200, 10000, true, scenario == "-flash", false, null, null);
                 var layout = editor.CaptureDockLayouts(); layout.Hitsounding!.PreciseHitsounds = precise;
                 editor.LibrarySettings.DockLayouts = layout; editor.RestoreDockLayouts();
                 canvas.Resize(size.Item1, size.Item2, 96);

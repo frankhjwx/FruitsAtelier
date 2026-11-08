@@ -57,6 +57,11 @@ public sealed partial class EditorView
                 : HitsoundingPageVisible ? hitsoundingSelectedSampleBanks[i] : selectedSampleBanks[i];
             var bounds = new Rect(leftPanel.Right + (HitsoundingPageVisible ? 16 : 6), top + i * 48 + 17,
                 HitsoundingPageVisible ? Math.Max(20, hitsoundingGridBounds.X - leftPanel.Right - 20) : 96, 28);
+            if (HitsoundingPageVisible)
+            {
+                float bankWidth = Math.Max(20, (hitsoundingGridBounds.X - leftPanel.Right - 24) / 2);
+                bounds = new(leftPanel.Right + 16 + i * (bankWidth + 4), top + 17, bankWidth, 28);
+            }
             if (additions) AdditionsBounds = bounds; else SamplesetBounds = bounds;
             c.Text(L.Get(additions ? "samples.additions" : "samples.sampleset"), bounds.X, bounds.Y - 17, 11, Muted, bounds.Width);
             c.Fill(bounds, Panel, 4);

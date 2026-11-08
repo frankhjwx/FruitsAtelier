@@ -42,7 +42,9 @@ public sealed partial class EditorView
         // The library does not render a difficulty, so lazy invalidation cannot release its data.
         editorWriteCache = new(); editorConversionCache = new(); draftConversionCache = new();
         conversion = null; playableExport = null; playableObjects = [];
-        displayedTiming = []; svOnlyTiming.Clear();
+        displayedTiming = []; timelineBpmPoints = []; timelineBpmTooltip = null; svOnlyTiming.Clear();
+        hitsoundingBpmBoxes.Clear(); hitsoundingTimingTooltip = null;
+        hitsoundingTimingRuns = []; hitsoundingRunSource = null; hitsoundingRunLanguage = null;
         customBpmTarget = null; customDefaultBpm = false; BpmMultiplierBounds = default;
         CloseTimingSetup();
         timingEntries.Clear(); timingUndo.Clear(); timingRedo.Clear(); timingDisplayOriginals.Clear();

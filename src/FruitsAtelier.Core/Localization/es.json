@@ -1095,6 +1095,8 @@
   "timing.red": "Puntos Tiempo",
   "timing.green": "Puntos heredados",
   "timing.offset": "Desplazamiento (ms)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "Conjunto de hitsounds",
   "timing.bpm": "BPM",
   "timing.meter": "Metro",
   "timing.sample": "muestra",

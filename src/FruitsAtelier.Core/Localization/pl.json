@@ -1095,6 +1095,8 @@
   "timing.red": "Punkty Rytmika",
   "timing.green": "Odziedziczone punkty",
   "timing.offset": "Przesunięcie (ms)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "Zestaw hitsoundów",
   "timing.bpm": "BPM",
   "timing.meter": "Miernik",
   "timing.sample": "Próbka",

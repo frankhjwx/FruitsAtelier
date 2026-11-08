@@ -1095,6 +1095,8 @@
   "timing.red": "Тайминг Очки",
   "timing.green": "Унаследованные очки",
   "timing.offset": "Смещение (мс)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "Набор хитсаундов",
   "timing.bpm": "BPM",
   "timing.meter": "Метр",
   "timing.sample": "Образец",

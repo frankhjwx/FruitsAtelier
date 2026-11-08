@@ -1095,6 +1095,8 @@
   "timing.red": "타이밍 포인트",
   "timing.green": "상속된 포인트",
   "timing.offset": "오프셋(밀리초)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "히트사운드 세트",
   "timing.bpm": "BPM",
   "timing.meter": "미터",
   "timing.sample": "샘플",

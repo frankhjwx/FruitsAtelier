@@ -484,7 +484,9 @@ Their placement time follows the snapped playhead; pointer Y controls only the
 geometric position, including the placement marker in the upper timeline.
 Combo colour also takes precedence over skin slider-track overrides in this view.
 Alt+wheel over the upper object timeline changes its time scale independently of
-osu! canvas zoom.
+osu! canvas zoom. In Mapping, small BPM flags attach to red timing lines at the top
+of the object timeline. Dense labels are suppressed to avoid overlap; hover over
+the flag or its red marker to read the BPM.
 
 Slider bodies retain a white border and a brighter centre with darker edges.
 Static `sliderb.png` and numbered slider-ball animations use the owning skin's

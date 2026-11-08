@@ -1095,6 +1095,8 @@
   "timing.red": "คะแนน เวลา",
   "timing.green": "คะแนนที่สืบทอดมา",
   "timing.offset": "ออฟเซ็ต (มิลลิวินาที)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "ชุดเสียงฮิตซาวด์",
   "timing.bpm": "BPM",
   "timing.meter": "เมตร",
   "timing.sample": "ตัวอย่าง",

@@ -1095,6 +1095,8 @@
   "timing.red": "Poin Timing",
   "timing.green": "Poin Warisan",
   "timing.offset": "Offset (md)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "Set hitsound",
   "timing.bpm": "BPM",
   "timing.meter": "Meteran",
   "timing.sample": "Sampel",

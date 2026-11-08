@@ -91,7 +91,7 @@ bindings; agree on their interaction details before implementation.
 | ID | Task | Complexity | Scope and acceptance considerations |
 | --- | --- | --- | --- |
 | F01 | [ ] Distinguish major and minor white beat ticks in the Timing panel. | Low | Use clear line width, length or brightness hierarchy, including dense subdivisions. |
-| F02 | [ ] Show BPM values at red timing lines on the canvas. | Low | Label the BPM at each timing point and avoid overlapping labels in dense regions. |
+| F02 | [x] Show BPM flags on Mapping's upper timeline and four timing tracks in Hitsounding. | Low | Mapping flags attach to red lines, suppress overlapping labels and expose their values on hover. Hitsounding shows BPM, Hitsound Set, volume and Kiai, merging consecutive equal values independently per track. Kiai uses orange On and blue-grey Off; original timing points remain intact and red points cannot be dragged. |
 | F03 | [ ] Show the time difference in milliseconds for two selected notes. | Low | Start with the absolute difference between start timestamps; explicitly define slider-head, tail and child-event selection behavior. This is a measurement, not an automatic ranking-criteria verdict. |
 | F04 | [ ] Add shortcuts for switching difficulties. | Low | Navigate in tab order; assess Ctrl+Alt+Left/Right as candidate bindings and handle conflicts, text focus and active gestures. |
 | F05 | [x] Seek to red or green timing points when double-clicking their F6 list rows. | Low–medium | Double-click locates the selected timestamp; single-click only selects, and neither applies the timing draft. |

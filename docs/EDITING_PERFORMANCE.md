@@ -245,6 +245,11 @@ Exact control-curve and internal NC snapshot comparisons use indexed lists to
 avoid allocating enumerators per track during conversion, dirty-state and rating
 checks. The transport overview retains sorted timing points with the Kiai
 presentation snapshot; content and timing edits rebuild it.
+Mapping BPM flags binary-search a red-point array rebuilt with displayed timing.
+Hitsounding retains merged timing runs per track, keyed by the timing-label
+snapshot, drag-preview delta and language. Viewport and pointer changes reuse
+these runs and binary-search the visible intervals. Difficulty retirement clears
+the run cache and its source reference.
 
 Base-SV input uses the editor's current exported snapshot for a constant-time
 range rejection from inherited beat-length bounds, including compensated red

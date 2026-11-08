@@ -1095,6 +1095,8 @@
   "timing.red": "タイミング ポイント",
   "timing.green": "継承ポイント",
   "timing.offset": "オフセット (ミリ秒)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "ヒットサウンドセット",
   "timing.bpm": "BPM",
   "timing.meter": "メーター",
   "timing.sample": "サンプル",

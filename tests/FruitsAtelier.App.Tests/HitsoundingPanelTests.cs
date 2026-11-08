@@ -49,14 +49,14 @@ internal static class HitsoundingPanelTests
         }
         ui.View.UpdateTransport(1000, 10000, true, false, false, null, null); ui.Paint();
         float emptyX = NormalBlocks().Last().X + 40, emptyY = LaneY(6);
-        foreach (float y in new[] { emptyY, 145f })
+        foreach (float y in new[] { emptyY })
         {
             ui.View.UpdateTransport(1000, 10000, true, true, false, null, null); ui.Paint();
             ui.Click(emptyX, y);
-            Check(ui.View.PlayheadMs == 1000 && ui.View.AudioPlaying, "Playing blank grid and ruler clicks preserve playback position and state");
+            Check(ui.View.PlayheadMs == 1000 && ui.View.AudioPlaying, "Playing blank grid clicks preserve playback position and state");
             ui.View.UpdateTransport(1000, 10000, true, false, false, null, null); ui.Paint();
             ui.Click(emptyX, y);
-            Check(ui.View.PlayheadMs == 1000, "Paused blank grid and ruler clicks preserve the playhead");
+            Check(ui.View.PlayheadMs == 1000, "Paused blank grid clicks preserve the playhead");
         }
         Check(baseline.ContentEquals(ui.View.Document), "Blank clicks do not edit beatmap content");
         ui.View.UpdateTransport(1000, 10000, true, false, false, null, null); ui.Paint();
@@ -344,7 +344,7 @@ internal static class HitsoundingPanelTests
         float initialX = ui.View.HitsoundingTimingHandleBounds(ui.View.Document.TimingPoints[0]).X + 4;
         float pixelsPerMs = (ui.View.HitsoundingTimingHandleBounds(ui.View.Document.TimingPoints[2]).X + 4 - initialX) / 1000;
         Check(Covered(750) && Covered(1250) && !Covered(250) && !Covered(1750) && Covered(2250),
-            "Amber strip covers Kiai across bank changes and red/green transitions only");
+            "Orange On intervals cover Kiai across bank changes and red/green transitions only");
         var baseline = ui.View.Document.DeepClone();
         var handle = ui.View.HitsoundingTimingHandleBounds(ui.View.Document.TimingPoints[1]);
         float delta = X(1000) - X(500);
@@ -356,8 +356,8 @@ internal static class HitsoundingPanelTests
         Check(Covered(3500) && baseline.ContentEquals(ui.View.Document), "Open-ended Kiai remains visible when its start scrolls offscreen");
         Console.WriteLine("PASS Hitsounding Kiai strip boundaries, clipping and drag preview");
         float X(double time) => initialX + (float)(time - ui.View.PlayheadMs) * pixelsPerMs;
-        bool Covered(double time) => ui.Canvas.Lines.Any(l => l.Color == 0xD89532 && l.Width == 3 && l.Y1 == 242
-            && l.X1 <= X(time) && l.X2 >= X(time));
+        bool Covered(double time) => ui.Canvas.Fills.Any(f => f.Color == 0xD89532 && f.Bounds.Height == 22
+            && f.Bounds.X <= X(time) && f.Bounds.Right >= X(time));
     }
     public static void SelectionAndTiming()
     {
@@ -546,7 +546,7 @@ internal static class HitsoundingPanelTests
         Check(ui.View.PlayheadMs == 5500 && Rows().SequenceEqual(Enumerable.Range(3, 7).Select(i => $"00:{i:00}:000")), "Clicking a nearby row selects and centers the list without moving the canvas");
         Check(ui.View.TimingHelperNearbyBounds.Y == list.Y && ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.selectedTiming")).Y == headerTop
             && ui.Canvas.Texts.Single(t => t.Value == L.Get("timing.offset")).Y - 8 == parameterTop, "Timestamp header height and nearby list position remain stable after selecting a green point");
-        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.meter") || t.Value == L.Get("timing.bpm")), "Green timing points omit BPM and Meter controls");
+        Check(!ui.Canvas.Texts.Any(t => t.X > 1100 && (t.Value == L.Get("timing.meter") || t.Value == L.Get("timing.bpm"))), "Green timing points omit BPM and Meter controls");
         var custom = ui.Canvas.Texts.Single(t => t.X > 1100 && t.Value == L.Get("timing.custom"));
         var customIndex = ui.Canvas.Texts.Single(t => t.X > 1100 && t.Value == "6");
         Check(Math.Abs(custom.Y - customIndex.Y) < 2 && customIndex.X > custom.X, "Custom index input shares the Custom radio row");
@@ -831,9 +831,10 @@ internal static class HitsoundingPanelTests
         Check(zoomed[1].X - zoomed[0].X > blocks[1].X - blocks[0].X, "Alt-wheel expands temporal spacing");
         Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Zoom leaves content and history intact");
         Check(!ui.Canvas.Texts.Any(t => t.Value.Contains("S:0") || t.Value.Contains("N:0") || t.Value.Contains("D:0")), "Default banks omit index zero everywhere");
-        var timingLabels = ui.Canvas.Fills.Where(f => f.Color is 0x72C686 or 0xE77785).Select(f => f.Bounds).ToArray();
-        Check(timingLabels.Select(r => r.Y).Distinct().Count() == 1, "Timing labels share one row");
-        Check(timingLabels.Zip(timingLabels.Skip(1)).All(pair => pair.First.X <= pair.Second.X), "Later timing labels paint on top of earlier labels");
+        var timingLabels = ui.Canvas.Fills.Where(f => f.Color is 0x72C686 or 0xE77785 or 0xD89532 or 0x54728C).Select(f => f.Bounds).ToArray();
+        Check(timingLabels.Select(r => r.Y).Distinct().Count() == 4, "Timing values occupy four separate tracks");
+        Check(timingLabels.GroupBy(r => r.Y).All(row => row.Zip(row.Skip(1)).All(pair => pair.First.X <= pair.Second.X)),
+            "Timing intervals retain timestamp order in every track");
         var conversion = ui.View.Conversion;
         ui.View.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.001f, 400).ToArray(), 1));
         ui.ClickText(L.Get("hitsounding.precise"));

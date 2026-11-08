@@ -1095,6 +1095,8 @@
   "timing.red": "時間軸 積分",
   "timing.green": "继承点数",
   "timing.offset": "偏移（毫秒）",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "音效組",
   "timing.bpm": "BPM",
   "timing.meter": "米",
   "timing.sample": "樣品",

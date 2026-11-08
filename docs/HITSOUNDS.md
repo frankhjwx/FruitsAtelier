@@ -159,15 +159,19 @@ Note-based bank tags show S, N or D above the sample index; default samples omit
 index and centre the letter. The toolbar groups Note based/Precise HS,
 and the HS text toggle with vertical separators. HS text controls sound-tag labels
 in both display modes and is remembered with the Hitsounding layout; it leaves
-Notes numbering, timing labels and waveforms visible. Precise HS retains the bank and non-default index beside the waveform. Timing tags show bank and optional index (for example S:2) above volume; both lines
-are bold, with the bank line three points larger. A short coloured stem marks their timestamp.
-Timing tags fill the interval up to the next timing point. Their left-aligned text stays
-at the visible left edge when the interval begins outside the viewport. An amber line
-below the timing blocks marks Kiai intervals and follows timing edits and drag previews.
-Kiai-enabled timing blocks prefix their sampleset label with a proportionally drawn, outlined five-point star.
+Notes numbering, timing labels and waveforms visible. Precise HS retains the bank and non-default index beside the waveform.
+Four timing tracks above Notes show BPM, Hitsound Set (bank and optional index, for
+example S:2), volume and Kiai. Each track independently merges consecutive equal
+values for display, while preserving the original timing points and their stems.
+Labels stay at the visible left edge; narrow intervals reveal their text on hover.
+Kiai shows only On or Off: On uses the overview timeline's orange and Off uses
+blue-grey. Timing edits and drag previews refresh these intervals. Red timing
+points can be selected but cannot be dragged in Hitsounding.
 
 Clicking a Notes object or an existing sound tag selects its event.
-Selecting a sound does not seek. Clicking empty grid or ruler space clears selection and preserves the playing position.
+Selecting a sound does not seek. Clicking empty grid space clears selection and preserves the playing position.
+Left-click the upper time ruler to seek directly to the corresponding time, while
+retaining the playing or paused state. Dragging the play line still adjusts its viewport position.
 Ctrl-click toggles individual sound tags, Notes events, storyboard sounds, and green timing blocks or handles without replacing the existing selection.
 Clicking the lane-label column does not seek. Dragging empty grid space draws a selection
 rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Its starting

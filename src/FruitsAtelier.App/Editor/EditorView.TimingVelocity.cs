@@ -8,6 +8,7 @@ public sealed partial class EditorView
 {
     private bool showTimingSv, timingSvLocked = true;
     private TimingPoint[] displayedTiming = [];
+    private TimingPoint[] timelineBpmPoints = [];
     private readonly HashSet<TimingPoint> svOnlyTiming = [];
     private const uint TimingSvGreen = 0x246348, TimingLockPink = 0xF18BB8;
     internal Rect TimingSvDisplayBounds { get; private set; }
@@ -23,6 +24,7 @@ public sealed partial class EditorView
                 ? Document.TimingPoints.Where(p => !p.Uninherited).Concat(playableExport.ReadBack.TimingPoints.Where(p => p.Uninherited))
                 : Document.TimingPoints)
             .OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        timelineBpmPoints = displayedTiming.Where(p => p.Uninherited).ToArray();
         svOnlyTiming.Clear();
         TimingPoint? previous = null;
         foreach (var point in displayedTiming)

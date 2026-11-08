@@ -1124,6 +1124,8 @@
   "timing.red": "Timing Points",
   "timing.green": "Inherited Points",
   "timing.offset": "Offset (ms)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "Hitsound Set",
   "timing.bpm": "BPM",
   "timing.meter": "Meter",
   "timing.sample": "Sample",

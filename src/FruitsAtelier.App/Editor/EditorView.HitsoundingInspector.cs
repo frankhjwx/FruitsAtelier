@@ -302,6 +302,11 @@ public sealed partial class EditorView
         if (BeginHitsoundingTimingPointer(x, y, button, ctrl, shift)) return true;
         if (button == 0 && !ctrl && !hitsoundingGridBounds.Contains(x, y) && HitsoundingHeadHovered(x, y))
         { hitsoundingHeadBefore = hitsoundingHeadRatio; hitsoundingHeadDrag = true; return true; }
+        if (button == 0 && x >= hitsoundingGridBounds.X && x < hitsoundingGridBounds.Right && y < hitsoundingBounds.Y + 53)
+        {
+            if (CommitField()) SeekTo(HitsoundingPointerTime(x));
+            return true;
+        }
         if (button == 0)
         {
             var pointHit = hitsoundingTimingBoxes.LastOrDefault(t => t.Bounds.Contains(x, y)

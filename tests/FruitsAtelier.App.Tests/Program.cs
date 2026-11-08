@@ -3,6 +3,7 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--timing-presentation-check")) { TimingPresentationTests.Run(); return 0; }
 if (args.Contains("--placement-bounds-check")) { FeedbackBugTests.PlacementBounds(); return 0; }
 if (args.Contains("--hidden-path-double-click-check")) { FeedbackBugTests.HiddenPathDoubleClick(); return 0; }
 if (args.Contains("--timeline-edge-drag-check")) { FeedbackBugTests.TimelineEdges(); return 0; }
@@ -354,6 +355,7 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Mapping BPM flags and Hitsounding timing tracks preserve content and red positions", TimingPresentationTests.Run),
     ("Fruit placement ignores canvas padding", FeedbackBugTests.PlacementBounds),
     ("Draft double-click creates boundaries with hidden slider paths", FeedbackBugTests.HiddenPathDoubleClick),
     ("Timeline object drags scroll at edges and retain one undo", FeedbackBugTests.TimelineEdges),

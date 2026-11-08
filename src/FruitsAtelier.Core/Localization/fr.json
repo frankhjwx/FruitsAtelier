@@ -1095,6 +1095,8 @@
   "timing.red": "Points Timing",
   "timing.green": "Points hérités",
   "timing.offset": "Décalage (ms)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "Jeu de hitsounds",
   "timing.bpm": "BPM",
   "timing.meter": "Compteur",
   "timing.sample": "Échantillon",
