@@ -345,20 +345,18 @@ public sealed partial class EditorView
         }
         var placement = lane is >= 2 and <= 4 && note is null && button == 0
             ? HitsoundingPlacementNoteAt(x, y) : null;
-        if (placement is { Kind: CatchObjectKind.Fruit }
-            && (hitsoundingResolver!.Describe(placement).Additions & (1 << (lane - 1))) == 0)
+        if (hitsoundingDraw && lane is >= 2 and <= 4 && note is null && button == 0)
         {
             hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
             hitsoundingSelected = null; hitsoundingSelectedTiming = null; SelectObjects([]);
-            hitsoundingMarqueeStartTime = HitsoundingStart + (x - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan;
-            hitsoundingMarqueeStart = hitsoundingMarqueeEnd = (x, y);
             hitsoundingPainting = true; hitsoundingErase = false; hitsoundingPaintLane = lane;
-            hitsoundingPaintX = x; hitsoundingPaint.Clear(); PaintHitsoundingNote(placement);
+            hitsoundingPaintX = x; hitsoundingPaint.Clear();
+            if (placement is not null) PaintHitsoundingNote(placement);
             return true;
         }
         if (button == 0 && note is null && placement is null && HitsoundingHeadHovered(x, y))
         { hitsoundingHeadBefore = hitsoundingHeadRatio; hitsoundingHeadDrag = true; return true; }
-        bool canMove = button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
+        bool canMove = !hitsoundingDraw && button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
         if (canMove)
         {
             hitsoundingMoveSource = (pressedSound.Note!.SourceId, pressedSound.Note.EventIndex, pressedSound.Lane);
@@ -382,7 +380,7 @@ public sealed partial class EditorView
             }
             else SyncHitsoundingNoteSelection(note);
         }
-        if (lane is >= 2 and <= 4 && button == 2)
+        if (lane is >= 2 and <= 4 && (button == 2 || hitsoundingDraw && button == 0))
         {
             hitsoundingPainting = true; hitsoundingErase = button == 2; hitsoundingPaintLane = lane;
             hitsoundingPaintX = x; hitsoundingPaint.Clear();
@@ -416,12 +414,6 @@ public sealed partial class EditorView
         { hitsoundingHeadRatio = Math.Clamp((x - hitsoundingGridBounds.X) / Math.Max(1, hitsoundingGridBounds.Width), .05, .95); return true; }
         if (MoveHitsoundingStoryboard(x, y)) return true;
         if (MoveHitsoundingSound(x, y)) return true;
-        if (hitsoundingPainting && !hitsoundingErase)
-        {
-            if (Math.Abs(x - hitsoundingMarqueeStart.X) < ContentDragThreshold && Math.Abs(y - hitsoundingMarqueeStart.Y) < ContentDragThreshold) return true;
-            hitsoundingPainting = false; hitsoundingPaint.Clear();
-            hitsoundingMarquee = true; hitsoundingMarqueeMoved = true;
-        }
         if (hitsoundingMarquee)
         {
             hitsoundingMarqueeEnd = (Math.Clamp(x, hitsoundingGridBounds.X, hitsoundingGridBounds.Right), Math.Clamp(y, hitsoundingGridBounds.Y, hitsoundingGridBounds.Bottom));

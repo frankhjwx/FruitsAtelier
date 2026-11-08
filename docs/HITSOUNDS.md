@@ -187,14 +187,16 @@ bank directly and preserve an inherited sample index so later timing edits still
 Explicit nonzero object indices remain explicit. A zero object index, including saved
 event overrides, inherits timing for display, playback and export. Adjustments affect target event
 overrides, including their shared addition bank/index, without rewriting timing intervals.
-Drag an existing Whistle, Finish or Clap tag onto another fruit event to
+In Select mode, drag an existing Whistle, Finish or Clap tag onto another fruit event to
 move that addition, with a half-opacity preview and the same sampleset confirmation.
 Normal and SliderTick cannot be moved. A move is one undo step.
-Click an empty addition slot at an existing fruit event in Whistle, Finish or Clap
-to add that addition. Hovering or holding a pending click does not draw a placement ghost. Holding and dragging
-from that slot cancels placement and starts marquee selection. Releasing the marquee
-does not add sounds or create content history. Placement and existing-sound selection
-take priority over dragging the play line where they overlap. A placement is one undo step. Right-click removes additions, never Normal.
+Select is the default input mode. Clicking an empty addition slot does not place a
+sound; dragging empty space selects sounds with a marquee. Draw mode previews the
+addition under the pointer: click to place it, or hold and drag to paint all crossed
+fruit events on the current lane. A complete stroke is one undo step. Both modes
+retain existing-sound selection, Q bank cycling, clipboard operations and right-click
+deletion. Placement and existing-sound selection take priority over dragging the play
+line where they overlap. Right-click removes additions, never Normal.
 Sampleset and Additions at the upper left display the authored banks of the selected
 events, using Auto for inherited or mixed values as in Mapping. Changing either
 selector applies that bank to every selected event in one undo step; the other bank

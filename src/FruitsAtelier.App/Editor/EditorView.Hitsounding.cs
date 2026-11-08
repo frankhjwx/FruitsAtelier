@@ -7,6 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public bool HitsoundingPageVisible { get; private set; }
+    private bool hitsoundingDraw;
     private double hitsoundingSpan = 4000;
     private double hitsoundingHeadRatio = .3;
     internal const float HitsoundingTagWidth = 36;
@@ -134,13 +135,18 @@ public sealed partial class EditorView
         objectTimeline = default; zoomSlider = default;
         c.Fill(CanvasToolbarBounds, Panel);
         float toolsX = CanvasToolbarBounds.X + 8;
-        float toolScale = Math.Min(1, Math.Max(0, CanvasToolbarBounds.Width - 174) / 298);
+        float toolScale = Math.Min(1, Math.Max(0, CanvasToolbarBounds.Width - 174) / 438);
         Button(c, new(toolsX, 88, 88 * toolScale, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
         Button(c, new(toolsX + 92 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
         c.Line(toolsX + 188 * toolScale, 92, toolsX + 188 * toolScale, 112, Grid);
         Button(c, new(toolsX + 196 * toolScale, 88, 102 * toolScale, 28), L.Get("hitsounding.showText"),
             () => hitsoundingDockWorkspace.ShowHitsoundText = !hitsoundingDockWorkspace.ShowHitsoundText,
             hitsoundingDockWorkspace.ShowHitsoundText, fontSize: 11);
+        c.Line(toolsX + 306 * toolScale, 92, toolsX + 306 * toolScale, 112, Grid);
+        Button(c, new(toolsX + 314 * toolScale, 88, 60 * toolScale, 28), L.Get("hitsounding.select"),
+            () => { CancelInteraction(); hitsoundingDraw = false; }, !hitsoundingDraw, fontSize: 11);
+        Button(c, new(toolsX + 378 * toolScale, 88, 60 * toolScale, 28), L.Get("hitsounding.draw"),
+            () => { CancelInteraction(); hitsoundingDraw = true; }, hitsoundingDraw, fontSize: 11);
         snapSlider = new(CanvasToolbarBounds.Right - 118, 88, 106, 29);
         c.Text(L.Get("ui.snap"), snapSlider.X - 40, 97, 11, Muted, 40);
         float snapStart = snapSlider.X + 7, snapEnd = snapSlider.Right - 31;
@@ -264,6 +270,26 @@ public sealed partial class EditorView
         (Rect Bounds, Hitsound Sound)? selectedAudition = null;
         foreach (var laneTags in hitsoundingTagLanes) DrawTags(laneTags);
         DrawTags(hitsoundingStoryboardTags);
+        if (hitsoundingDraw && !hitsoundingErase)
+            foreach (var pending in hitsoundingPaint.Values)
+                if (hitsoundingNoteLookup.TryGetValue((pending.SourceId, pending.EventIndex), out var note))
+                {
+                    float y = top + (hitsoundingPaintLane + .5f) * laneHeight - 16;
+                    c.Fill(new(X(note.TimeMs) - 9, y, 18, 32), HitsoundingBankColor(pending.Sample.AdditionSet), 4, .5f);
+                    c.StrokeOpacity(new(X(note.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
+                }
+        if (hitsoundingDraw && !hitsoundingPainting && !hitsoundingHeadDrag && !hitsoundingMarquee
+            && hitsoundingMoveSource is null && hitsoundingGridBounds.Contains(mouseX, mouseY))
+        {
+            int lane = (int)((mouseY - top) / laneHeight);
+            if (lane is >= 2 and <= 4 && HitsoundingPlacementNoteAt(mouseX, mouseY) is { } candidate
+                && (hitsoundingResolver!.Describe(candidate).Additions & (1 << (lane - 1))) == 0)
+            {
+                float y = top + (lane + .5f) * laneHeight - 16;
+                c.Fill(new(X(candidate.TimeMs) - 9, y, 18, 32), HitsoundingBankColor(HitsoundingPlacementAdditionBank(candidate)), 4, .5f);
+                c.StrokeOpacity(new(X(candidate.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
+            }
+        }
         if (hitsoundingMoveActive && hitsoundingMoveSource is { } moving && hitsoundingMoveTarget is { } target)
         {
             float y = top + (moving.Lane + .5f) * laneHeight - 16;
