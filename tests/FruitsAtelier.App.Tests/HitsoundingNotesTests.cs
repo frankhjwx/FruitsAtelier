@@ -43,6 +43,18 @@ internal static class HitsoundingNotesTests
             ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Creation is one undo step");
             ui.Key(89, ctrl: true); Check(ui.View.Document.Fruits.Count == 5, "Circle creation supports redo");
             ui.Key(90, ctrl: true);
+            ui.View.PointerDown(X(1000), Y(), 0, false, false);
+            ui.View.PointerMove(X(1125), Y(), false, false); ui.Paint();
+            Check(baseline.ContentEquals(ui.View.Document), "Moving Notes previews without mutating content");
+            Check(HasCircle(1125) && !HasCircle(1000), "Preview moves the original note graphic instead of leaving a duplicate");
+            ui.Key(27); ui.View.PointerUp(X(1125), Y(), 0); ui.Paint();
+            Check(HasCircle(1000) && !HasCircle(1125), "Escape restores the original note graphic");
+            Drag(1000, 1125);
+            Check(ui.View.Document.Fruits.Any(f => f.TimeMs == 1125), "Release commits the preview position");
+            ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Note movement is one undo step");
+            ui.View.PointerDown(X(1000), Y(), 2, false, false); ui.View.PointerUp(X(1000), Y(), 2); ui.Paint();
+            Check(ui.View.Document.Fruits.Count == 3, "Right-click deletes a note in either mode");
+            ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Right-click note deletion is undoable");
             float y = Y();
             ui.View.PointerDown(X(850), y, 0, false, false);
             ui.View.PointerMove(X(1600), y, false, false); ui.Paint();
@@ -57,6 +69,11 @@ internal static class HitsoundingNotesTests
             var drumButton = ui.Canvas.Images.Single(i => i.Path.EndsWith("hitsounding" + Path.DirectorySeparatorChar + "drum.png")).Bounds;
             ui.Click(drumButton.X + drumButton.Width / 2, drumButton.Y + drumButton.Height / 2);
             Check(ui.View.HitsoundingBrush == 3, "Selected Notes enable brush button clicks");
+            var soundResolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
+            Check(ui.View.Conversion.Objects.Where(n => ui.View.SelectedObjectIds.Contains(n.SourceId))
+                .All(n => soundResolver.Describe(n) is { NormalSet: 3, AdditionSet: 3 }), "Brush buttons apply both banks to all selected Notes in either mode");
+            for (int i = 0; i < 5; i++) ui.Key(90, ctrl: true);
+            Check(baseline.ContentEquals(ui.View.Document), "Each bank change is one undo step");
             ui.Key(67, ctrl: true);
             ui.View.UpdateTransport(2000, 12000, true, false, false, null, null); ui.Paint(); ui.Key(86, ctrl: true);
             Check(ui.View.Document.Fruits.Count == 4 && ui.View.Document.Fruits[2].X == 64, "Matching paste preserves destination geometry");
@@ -93,6 +110,8 @@ internal static class HitsoundingNotesTests
             void Toggle() { var r = ui.View.HitsoundingNotesToggleBounds; ui.Click(r.X + r.Width / 2, r.Y + 12); }
             float X(double time) => ui.View.HitsoundingNotesLaneBounds.X + (float)((time - (ui.View.PlayheadMs - 1200)) / 4000 * ui.View.HitsoundingNotesLaneBounds.Width);
             float Y() { var r = ui.View.HitsoundingNotesLaneBounds; return r.Y + r.Height / 2; }
+            bool HasCircle(double time) => ui.Canvas.Circles.Any(c => c.Radius > 10 && Math.Abs(c.X - X(time)) < 1
+                && ui.View.HitsoundingNotesLaneBounds.Contains(c.X, c.Y));
             void Click(double time) => ui.Click(X(time), Y());
             void Drag(double from, double to)
             {

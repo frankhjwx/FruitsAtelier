@@ -1778,7 +1778,7 @@ dropdown, divider resize cursors, recursive folder imports, opening the current 
 and live library create/rename/delete notifications. It also checks live Inspector edits,
 undoable volume gestures with live playback and conversion reuse, nearby timing rows,
 new-point drafts, event-specific additions, single-click placement and its undo,
-placement-origin marquee selection without added sounds or history, empty-space selection, independent Q/ASD brush switching with single and multiple selections,
+placement-origin marquee selection without added sounds or history, empty-space selection, Q/ASD bank changes with single and multiple selections in both modes,
 Normal/addition bank isolation (including inherited Normal banks when placing each addition), selection-aware bank selectors with mixed/Auto values and batch undo, direct right-click deletion,
 placement and selection at the play line, and one-step bank-change undo through the selectors, playback flashes, normalized narrow waveforms,
 visible interval labels, Kiai span boundaries and timing-drag previews, and play-line bounds. It also checks marquee copy/delete/paste,

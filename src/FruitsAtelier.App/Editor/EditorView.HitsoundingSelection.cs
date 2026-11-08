@@ -71,7 +71,26 @@ public sealed partial class EditorView
             }
     }
     private int HitsoundingPlacementAdditionBank(ConvertedCatchObject note) => hitsoundingBrush;
-    private void CycleHitsoundingSampleSet() => SetHitsoundingBrush(hitsoundingBrush switch { 2 => 1, 1 => 3, _ => 2 });
+    private void CycleHitsoundingSampleSet()
+    {
+        int bank = hitsoundingBrush;
+        if (hitsoundingNotesSelection)
+        {
+            var first = hitsoundingNotes.FirstOrDefault(n => objectSelection.Contains(n.SourceId));
+            if (first is not null) bank = hitsoundingResolver!.Describe(first).NormalSet;
+        }
+        else
+        {
+            var first = hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4 && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event)))
+                .OrderBy(k => hitsoundingNoteLookup[(k.Id, k.Event)].TimeMs).ThenBy(k => k.Lane).FirstOrDefault();
+            if (first.Id != Guid.Empty)
+            {
+                var sample = hitsoundingResolver!.Describe(hitsoundingNoteLookup[(first.Id, first.Event)]);
+                bank = first.Lane == 1 ? sample.NormalSet : sample.AdditionSet;
+            }
+        }
+        SetHitsoundingBrush(bank switch { 2 => 1, 1 => 3, _ => 2 });
+    }
     private void CopyHitsoundingSelection()
     {
         hitsoundingClipboardContainsNotes = false;

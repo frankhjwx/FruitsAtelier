@@ -347,15 +347,6 @@ public sealed partial class EditorView
         }
         var placement = lane is >= 2 and <= 4 && note is null && button == 0
             ? HitsoundingPlacementNoteAt(x, y) : null;
-        if (hitsoundingDraw && lane is >= 2 and <= 4 && note is null && button == 0)
-        {
-            hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
-            hitsoundingSelected = null; hitsoundingSelectedTiming = null; SelectObjects([]);
-            hitsoundingPainting = true; hitsoundingErase = false; hitsoundingPaintLane = lane;
-            hitsoundingPaintX = x; hitsoundingPaint.Clear();
-            if (placement is not null) PaintHitsoundingNote(placement);
-            return true;
-        }
         if (button == 0 && note is null && placement is null && HitsoundingHeadHovered(x, y))
         { hitsoundingHeadBefore = hitsoundingHeadRatio; hitsoundingHeadDrag = true; return true; }
         bool canMove = !hitsoundingDraw && button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
@@ -374,7 +365,7 @@ public sealed partial class EditorView
             else if (note is not null)
                 foreach (var hit in hitsoundingSoundHits.Where(h => h.Note.SourceId == note.SourceId && h.Note.EventIndex == note.EventIndex && h.Lane > 0))
                     hitsoundingMultiSelection.Add((hit.Note.SourceId, hit.Note.EventIndex, hit.Lane));
-            if (note is null)
+            if (note is null || hitsoundingDraw)
             {
                 hitsoundingMarquee = true; hitsoundingMarqueeMoved = false;
                 hitsoundingMarqueeStartTime = HitsoundingStart + (x - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan;
@@ -382,7 +373,7 @@ public sealed partial class EditorView
             }
             else SyncHitsoundingNoteSelection(note);
         }
-        if (lane is >= 2 and <= 4 && (button == 2 || hitsoundingDraw && button == 0))
+        if (lane is >= 2 and <= 4 && (button == 2 || hitsoundingDraw && button == 0 && note is null))
         {
             hitsoundingPainting = true; hitsoundingErase = button == 2; hitsoundingPaintLane = lane;
             hitsoundingPaintX = x; hitsoundingPaint.Clear();
@@ -423,6 +414,7 @@ public sealed partial class EditorView
         {
             hitsoundingMarqueeEnd = (Math.Clamp(x, hitsoundingGridBounds.X, hitsoundingGridBounds.Right), Math.Clamp(y, hitsoundingGridBounds.Y, hitsoundingGridBounds.Bottom));
             hitsoundingMarqueeMoved |= Math.Abs(x - hitsoundingMarqueeStart.X) >= ContentDragThreshold || Math.Abs(y - hitsoundingMarqueeStart.Y) >= ContentDragThreshold;
+            if (hitsoundingMarqueeMoved) { hitsoundingPainting = false; hitsoundingPaint.Clear(); }
             UpdateHitsoundingMarquee(); return true;
         }
         if (!hitsoundingPainting) return false;
@@ -444,7 +436,8 @@ public sealed partial class EditorView
         if (hitsoundingMarquee)
         {
             hitsoundingMarquee = false;
-            return true;
+            if (hitsoundingMarqueeMoved) SyncHitsoundingNoteSelection();
+            if (!hitsoundingPainting) return true;
         }
         if (!hitsoundingPainting) return false;
         hitsoundingPainting = false;

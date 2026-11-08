@@ -123,7 +123,8 @@ internal static class HitsoundingPanelTests
         ui.View.PointerUp(finishX, selectionY, 0); ui.Paint();
         Check(baseline.ContentEquals(ui.View.Document), "Releasing a placement-origin marquee adds no sounds");
         ui.Key(81);
-        Check(baseline.ContentEquals(ui.View.Document) && ui.View.HitsoundingBrush == 1, "Q changes only the brush after marquee selection");
+        Check(!baseline.ContentEquals(ui.View.Document) && ui.View.HitsoundingBrush == 1, "Q changes selected sounds after marquee selection");
+        ui.Key(90, ctrl: true);
         ui.ClickText(L.Get("hitsounding.draw"));
         ui.Click(startX, whistleY); ui.Paint();
         var whistle = LaneBlocks(ui, 2).First();
@@ -178,12 +179,21 @@ internal static class HitsoundingPanelTests
         ui.View.PointerMove(end, y, false, false); ui.Paint();
         Check(baseline.ContentEquals(ui.View.Document), "Draw stroke commits at release");
         ui.View.PointerUp(end, y, 0); ui.Paint();
-        Check(ui.View.Document.HitsoundOverrides.Count == 3 && ui.View.Document.HitsoundOverrides.All(s => s.Sample.Additions == 2),
-            "Draw sweeps all crossed events from an empty starting position");
-        ui.Key('Z', ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Continuous drawing is one undo step");
+        Check(baseline.ContentEquals(ui.View.Document), "Draw dragging creates a marquee without adding sounds");
+        ui.Click(x, y);
+        Check(ui.View.Document.HitsoundOverrides.Count == 1, "Draw click places one sound");
+        ui.Key('Z', ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Single placement is one undo step");
+        blocks = LaneBlocks(ui, 1);
+        float normalY = blocks[0].Y + 10;
+        ui.View.PointerDown(x, normalY, 0, false, false);
+        ui.View.PointerMove(end, normalY, false, false); ui.View.PointerUp(end, normalY, 0); ui.Paint();
+        Check(ui.View.SelectedObjectIds.Count == 3 && baseline.ContentEquals(ui.View.Document), "Draw drag from an existing sound selects all crossed tags");
+        ui.Key(68);
+        Check(ui.View.Document.HitsoundOverrides.Count == 3 && ui.View.Document.HitsoundOverrides.All(s => s.Sample.NormalSet == 3), "Draw marquee selection receives a batch bank change");
+        ui.Key(90, ctrl: true);
         ui.ClickText(L.Get("hitsounding.select"));
         Check(baseline.ContentEquals(ui.View.Document), "Mode changes do not create beatmap edits");
-        Console.WriteLine("PASS Select safety and Draw hover, continuous painting and undo");
+        Console.WriteLine("PASS Select safety and Draw hover, marquee, single placement and undo");
         bool Ghost() => ui.Canvas.PaintCalls.Any(p => p.Color == 0x65BF8A && p.FillBounds is not null && p.Opacity == .5f);
     }
     public static void SampleSetCycling()
@@ -198,20 +208,20 @@ internal static class HitsoundingPanelTests
         var baseline = ui.View.Document.DeepClone();
         Click(1, 1); Click(1, 0, true);
         Check(ui.View.HitsoundingBrushEnabled, "Selected sounds enable brushes in Select mode");
-        string[] BeforeSelectors() => ui.Canvas.Texts.Where(t => t.Value.EndsWith(" ▾") && (ui.View.SamplesetBounds.Contains(t.X, t.Y) || ui.View.AdditionsBounds.Contains(t.X, t.Y))).Select(t => t.Value).ToArray();
-        var selectors = BeforeSelectors();
-        foreach (int expected in new[] { 1, 3, 2 })
+        foreach (int expected in new[] { 3, 2, 1 })
         {
             ui.Key(81);
-            Check(ui.View.HitsoundingBrush == expected && baseline.ContentEquals(ui.View.Document), "Q cycles only the independent brush with selected notes");
-            Check(selectors.SequenceEqual(BeforeSelectors()), "Q preserves both selectors");
+            var resolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
+            Check(ui.View.HitsoundingBrush == expected && ui.View.Conversion.Objects.All(n => resolver.Describe(n).NormalSet == expected
+                && resolver.Describe(n).AdditionSet == 2), "Q applies the bank to both selected Normal sounds");
         }
         foreach (var (key, bank) in new[] { (65, 2), (83, 1), (68, 3) })
-        { ui.Key(key); Check(ui.View.HitsoundingBrush == bank && baseline.ContentEquals(ui.View.Document), "ASD selects the brush without editing content"); }
+        { ui.Key(key); Check(ui.View.HitsoundingBrush == bank && ui.View.Document.HitsoundOverrides.All(s => s.Sample.NormalSet == bank), "ASD changes selected sound banks"); }
         ui.Key(50); Check(ui.View.HitsoundingDraw, "2 selects Draw");
+        ui.Key(65); Check(ui.View.Document.HitsoundOverrides.All(s => s.Sample.NormalSet == 2), "Draw also changes selected sound banks");
         ui.Key(49); Check(!ui.View.HitsoundingDraw, "1 selects Select");
         Click(2, 0); ui.Key(81);
-        Check(baseline.ContentEquals(ui.View.Document), "Q with an addition selected does not change its bank");
+        Check(ui.View.Document.HitsoundOverrides.Single(s => s.SourceId == map.Fruits[0].Id) is { Sample.NormalSet: 2, Sample.AdditionSet: 1 }, "Q changes the selected addition bank while preserving Normal");
         Console.WriteLine("PASS independent Hitsounding brushes and keyboard modes");
         void Click(int lane, int index, bool ctrl = false)
         {
@@ -245,10 +255,11 @@ internal static class HitsoundingPanelTests
             "Click at the play line uses the addition bank without changing Normal");
         ui.Key(49);
         var whistle = LaneBlocks(ui, 2)[0]; ui.Click(whistle.X + whistle.Width / 2, whistle.Y + 10); ui.Key(81);
-        Check(ui.View.Document.HitsoundOverrides.Single().Sample.AdditionSet == 3 && ui.View.HitsoundingBrush == 2, "Q preserves an existing sound at the play line");
+        Check(ui.View.Document.HitsoundOverrides.Single().Sample.AdditionSet == 2 && ui.View.HitsoundingBrush == 2, "Q updates an existing sound at the play line");
         ui.View.PointerDown(x, y, 2, false, false); ui.View.PointerUp(x, y, 2); ui.Paint();
         Check(ui.View.Document.HitsoundOverrides.Single().Sample.Additions == 0, "Right-click deletes selected sound immediately");
         ui.Key(90, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Single().Sample.Additions == 2, "Direct deletion is undoable");
+        ui.Key(90, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Single().Sample.AdditionSet == 3, "Bank change is undoable");
         ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Placement is one undo step with no selector history");
         ui.Key(50); ui.Key(83); ui.Click(x, y);
         Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 1, Sample.AdditionSet: 1 }, "Drawing uses the independent Normal brush");

@@ -1,4 +1,5 @@
 using FruitsAtelier.App.Rendering;
+using FruitsAtelier.Core;
 using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.App.Editor;
@@ -22,11 +23,36 @@ public sealed partial class EditorView
     {
         if (!HitsoundingBrushEnabled || hitsoundingPainting || hitsoundingNoteGesture != HitsoundingNoteGesture.None) return;
         hitsoundingBrush = bank;
+        if (notesLocked || !CommitField()) return;
+        var targets = hitsoundingNotesSelection
+            ? hitsoundingNotes.Where(n => objectSelection.Contains(n.SourceId) && (n.Kind != CatchObjectKind.Banana || SpinnerHitsounds.IsEndEvent(n)))
+                .Select(n => (Note: n, Normal: true, Addition: true))
+            : hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4)
+                .GroupBy(k => (k.Id, k.Event))
+                .Where(g => hitsoundingNoteLookup.ContainsKey(g.Key))
+                .Select(g => (Note: hitsoundingNoteLookup[g.Key], Normal: g.Any(k => k.Lane == 1), Addition: g.Any(k => k.Lane > 1)));
+        var changes = targets.Where(t => CanSelectCollaborationObject(t.Note.SourceId)).Select(t =>
+        {
+            var setting = hitsoundingResolver!.EventSettings(t.Note);
+            var sample = setting.Sample;
+            var inherited = setting.InheritedFields;
+            if (t.Normal && !t.Addition && sample.Additions != 0 && inherited.HasFlag(InheritedSampleFields.AdditionSet))
+            {
+                sample = sample with { AdditionSet = hitsoundingResolver.Describe(t.Note).AdditionSet };
+                inherited &= ~InheritedSampleFields.AdditionSet;
+            }
+            if (t.Normal) { sample = sample with { NormalSet = bank }; inherited &= ~InheritedSampleFields.NormalSet; }
+            if (t.Addition) { sample = sample with { AdditionSet = bank }; inherited &= ~InheritedSampleFields.AdditionSet; }
+            return (Before: setting, After: setting with { Sample = sample, InheritedFields = inherited });
+        }).Where(t => t.Before != t.After).Select(t => t.After).ToArray();
+        if (changes.Length > 0)
+            Edit(L.Get("samples.change"), () => { foreach (var change in changes) SetHitsoundingEvent(change); });
     }
     private void DrawHitsoundingTools(ICanvas c, Rect bounds)
     {
-        const float padding = 8, gap = 6, groupGap = 10;
-        float size = Math.Min(bounds.Width - 8, Math.Min(72, Math.Max(18, (bounds.Height - 2 * padding - 4 * gap - groupGap) / 5)));
+        const float padding = 12, minGap = 8;
+        float size = Math.Min(bounds.Width - 12, Math.Min(72, Math.Max(18, (bounds.Height - 2 * padding - 4 * minGap) / 5)));
+        float gap = Math.Max(minGap, (bounds.Height - 2 * padding - 5 * size) / 4);
         float x = bounds.X + (bounds.Width - size) / 2, y = bounds.Y + padding;
         string[] names = ["select", "draw", "soft", "normal", "drum"];
         string[] keys = ["hitsounding.select", "hitsounding.draw", "timing.soft", "timing.normal", "timing.drum"];
@@ -35,7 +61,7 @@ public sealed partial class EditorView
         for (int i = 0; i < names.Length; i++)
         {
             int index = i;
-            if (i == 2) { c.Line(x + 8, y + groupGap / 2, x + size - 8, y + groupGap / 2, Grid); y += groupGap; }
+            if (i == 2) c.Line(x + 8, y - gap / 2, x + size - 8, y - gap / 2, Grid);
             var box = new Rect(x, y, size, size - 2);
             bool enabled = i < 2 || HitsoundingBrushEnabled;
             bool active = enabled && (i < 2 ? hitsoundingDraw == (i == 1) : hitsoundingBrush == banks[i]);

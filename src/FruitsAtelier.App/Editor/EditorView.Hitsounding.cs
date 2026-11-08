@@ -236,12 +236,12 @@ public sealed partial class EditorView
         float notesHeight = Math.Min(64, laneHeight);
         var notesViewport = new Rect(g.X, top + (laneHeight - notesHeight) / 2, g.Width, notesHeight);
         c.Clip(notesViewport);
-        DrawTimelineObjects(c, notesViewport, start, g.Width / hitsoundingSpan, includePlacement: false);
+        DrawTimelineObjects(c, notesViewport, start, g.Width / hitsoundingSpan, includePlacement: false, previewHitsounding: true);
         int first = FirstAfter(hitsoundingNotes, start - .001);
         for (int i = first; i < hitsoundingNotes.Length && hitsoundingNotes[i].TimeMs <= end; i++)
         {
             var item = hitsoundingNotes[i];
-            float x = X(item.TimeMs), y = notesViewport.Y + 27 * notesHeight / 64;
+            float x = X(HitsoundingNotePreviewTime(item.SourceId, item.TimeMs)), y = notesViewport.Y + 27 * notesHeight / 64;
             if (item.Kind == CatchObjectKind.Droplet) c.Circle(x, y, Math.Max(2, 4 * notesHeight / 64), Foreground, false, 1.5f);
             if (item.Kind == CatchObjectKind.Droplet)
                 hitsoundingSoundHits.Add((new(x - 5, y - 5, 10, 10), item, 0));

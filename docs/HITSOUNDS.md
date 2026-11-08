@@ -192,8 +192,8 @@ move that addition, with a half-opacity preview and the same sampleset confirmat
 Normal and SliderTick cannot be moved. A move is one undo step.
 Select is the default input mode. Clicking an empty addition slot does not place a
 sound; dragging empty space selects sounds with a marquee. Draw mode previews the
-addition under the pointer: click to place it, or hold and drag to paint all crossed
-fruit events on the current lane. A complete stroke is one undo step. Both modes
+addition under the pointer: click to place one sound, or drag to marquee-select
+sounds without placing any. A placement is one undo step. Both modes
 retain existing-sound selection, clipboard operations and right-click
 deletion. Placement and existing-sound selection take priority over dragging the play
 line where they overlap. Right-click removes additions, never Normal.
@@ -205,10 +205,13 @@ placement defaults; Hitsounding painting uses its own brush instead.
 
 The left tool column offers **Select (1)**, **Draw (2)**, then **Soft (A)**,
 **Normal (S)** and **Drum (D)** brushes. Mode and brush are independent selections. In Select mode, brush buttons and Q/A/S/D are enabled only while notes or sound events are selected; otherwise the buttons are dimmed. Draw mode always enables the brushes.
-**Q** cycles Soft → Normal → Drum without changing selected sounds or either
-Sampleset/Additions selector. Painting an addition uses the brush's bank and
-preserves the existing Normal bank and inheritance. Painting an existing addition
-replaces its shared addition bank. W/E/R toggle Whistle/Finish/Clap on the selected
+**Q** cycles Soft → Normal → Drum, using the earliest selected event's current bank
+when a selection exists. In either mode, Q/A/S/D and the brush buttons
+apply the bank to the selection in one undo step. Selected Normal tags change their
+normal bank; selected addition tags change their shared addition bank. Selected
+Notes parents change both banks on their events. Other sample fields are retained.
+Without a selection, Draw changes only its placement brush. Placing an addition
+uses that bank while preserving Normal. W/E/R toggle Whistle/Finish/Clap on the selected
 event. Text inputs and modified shortcuts retain priority.
 
 **Edit Notes** in the top toolbar is off by default. Enable it to edit the Notes
@@ -217,7 +220,9 @@ X=256 (osu! Y=192), drag empty space to marquee-select parents, and Ctrl-click t
 add or remove a parent from the selection. Drag an existing note body to move the
 selection in time. Drag a slider's head or tail to adjust that endpoint while
 retaining the other; Ctrl+plus/minus changes its reverse count as in Mapping.
-Dragging previews the change and release creates one undo step; Escape cancels it.
+Dragging moves the note graphics to their preview positions; release creates one
+undo step and Escape restores the original positions. Right-click a note to delete
+it, or the selected group if that note is selected, with undo support.
 
 Notes selection uses a separate clipboard payload from sound tags. Ctrl+C/X/V
 copies, cuts or pastes complete selected notes. A destination interval with no
