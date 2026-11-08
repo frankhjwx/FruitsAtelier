@@ -216,6 +216,7 @@ public sealed partial class EditorView
         objectDragTimeline = timeline;
         objectDragTimelineScale = objectTimelineScale;
         objectDragFollowTime = 0;
+        timelineEdgeScrollTimestamp = timeProvider.GetTimestamp();
         drag = DragKind.Objects;
         BeginPointerDrag(x, y);
     }

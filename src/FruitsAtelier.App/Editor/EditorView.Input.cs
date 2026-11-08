@@ -879,6 +879,17 @@ public sealed partial class EditorView
         }
         if (TimingModal || TimingWindowContains(x, y) || TimingPageVisible && rightPanel.Contains(x, y))
         {
+            if (!TimingModal && TimingWindowContains(x, y) && timingListBounds.Contains(x, y))
+            {
+                var entries = VisibleTimingEntries();
+                int row = (int)Math.Floor((y - timingListBounds.Y - 32 * TimingRowScale) / (28 * TimingRowScale));
+                int capacity = Math.Max(1, (int)((timingListBounds.Height / TimingRowScale - 34) / 28));
+                int index = timingScroll + row;
+                if (x >= timingListBounds.X + 3 * TimingRowScale && x < timingListBounds.Right - 9 * TimingRowScale
+                    && row >= 0 && row < capacity && index < entries.Length && CommitTimingField())
+                    SeekTo(entries[index].Point.TimeMs);
+                return;
+            }
             var field = timingFields.FirstOrDefault(f => f.Bounds.Contains(x, y));
             if (field.Key is not null && CommitTimingField())
             { timingField = field.Key; timingText = field.Value; timingFieldApply = field.Apply; SelectInput("timing:" + field.Key, timingText); }
@@ -1563,10 +1574,13 @@ public sealed partial class EditorView
         {
             if (virtualKey == 27)
             {
-                if (timingHelperVolumeDrag is not null || hitsoundingTimingDrag is not null || hitsoundingTimingBox || hitsoundingHeadDrag || hitsoundingPainting || hitsoundingMarquee || hitsoundingMoveSource is not null || hitsoundingStoryboardMove is not null || hitsoundingDragFile is not null || hitsoundingSplitDrag is not null) CancelInteraction();
+                if (hitsoundingNoteGesture != HitsoundingNoteGesture.None || timingHelperVolumeDrag is not null || hitsoundingTimingDrag is not null || hitsoundingTimingBox || hitsoundingHeadDrag || hitsoundingPainting || hitsoundingMarquee || hitsoundingMoveSource is not null || hitsoundingStoryboardMove is not null || hitsoundingDragFile is not null || hitsoundingSplitDrag is not null) CancelInteraction();
                 else if (panelMenuOpen || menu >= 0 || contextItems.Count > 0) { panelMenuOpen = false; menu = -1; contextItems.Clear(); }
                 else ShowLibrary();
             }
+            else if (HitsoundingNotesKey(virtualKey, ctrl, shift)) { }
+            else if (!ctrl && !altHeld && !shift && virtualKey is 49 or 50) SetHitsoundingTool(virtualKey == 50);
+            else if (!ctrl && !altHeld && !shift && virtualKey is 65 or 83 or 68) SetHitsoundingBrush(virtualKey == 65 ? 2 : virtualKey == 83 ? 1 : 3);
             else if (altHeld && virtualKey is 81 or 87 or 69 or 82) SetSampleBank(ctrl, virtualKey switch { 81 => 0, 87 => 1, 69 => 2, _ => 3 });
             else if (ctrl && virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (ctrl && virtualKey == 89) Redo();
@@ -1798,6 +1812,7 @@ public sealed partial class EditorView
         songDrag = -1;
         randomDragging = false; dockHorizontalDrag = null;
         if (hitsoundingHeadDrag) hitsoundingHeadRatio = hitsoundingHeadBefore;
+        hitsoundingNoteGesture = HitsoundingNoteGesture.None;
         hitsoundingHeadDrag = hitsoundingPainting = hitsoundingMarquee = false; hitsoundingPaint.Clear();
         hitsoundingStoryboardMove = null; hitsoundingStoryboardMoved = false;
         hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;

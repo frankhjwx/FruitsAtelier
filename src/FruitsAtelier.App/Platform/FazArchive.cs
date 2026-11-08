@@ -45,7 +45,7 @@ public static class FazArchive
     public static void Export(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace)
         => ExportPackage(snapshot, destination, complete, compensate, workspace, "FruitsAtelier");
 
-    internal static void ExportPackage(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace, string format)
+    internal static void ExportPackage(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace, string format, bool includeResources = true)
     {
         string staging = Temporary(workspace);
         string temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -66,11 +66,15 @@ public static class FazArchive
                 if (!complete && first)
                 {
                     Directory.CreateDirectory(resources);
-                    BeatmapResources.Copy(d, resources, d);
-                    LibraryOperations.CopyArchiveExtras(d, resources);
+                    if (includeResources)
+                    {
+                        BeatmapResources.Copy(d, resources, d);
+                        LibraryOperations.CopyArchiveExtras(d, resources);
+                    }
                     File.WriteAllText(Path.Combine(resources, ".fa-resource"), "FruitsAtelier resource root");
                 }
                 string? audio = OsuBeatmapReader.Setting(d, "General", "AudioFilename");
+                if (!includeResources) d.AudioPath = null;
                 if (!string.IsNullOrWhiteSpace(d.AudioPath))
                 {
                     if (string.IsNullOrWhiteSpace(audio) || !File.Exists(d.AudioPath)) throw new IOException(L.Get("faz.missingAudio"));

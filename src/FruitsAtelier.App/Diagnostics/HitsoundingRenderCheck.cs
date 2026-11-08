@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-audition" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition" })
             {
                 if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
@@ -35,6 +35,7 @@ internal static class HitsoundingRenderCheck
                     map.TimingPoints.Add(new() { TimeMs = index == 12 ? 3000 : 3500, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = index, Volume = 80 });
                 map.Fruits.AddRange(Enumerable.Range(0, 20).Select(i => new Fruit { TimeMs = i * 250, X = 256,
                     OriginalLine = $"256,192,{i * 250},1,{(i % 4 == 0 ? 4 : i % 3 == 0 ? 8 : i % 2 == 0 ? 2 : 0)},0:0:0:0:" }));
+                if (scenario == "-notes-preview") map.Fruits.RemoveAll(f => f.TimeMs == 750);
                 var track = new CurveTrack { Kind = CurveKind.Linear };
                 track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 100 }, new Anchor { TimeMs = 2500, X = 400 }]); map.Tracks.Add(track);
                 if (scenario == "-timing") map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = 1, Volume = 60 });
@@ -66,11 +67,59 @@ internal static class HitsoundingRenderCheck
                 Directory.CreateDirectory(Path.Combine(library, "Drums", "Percussion"));
                 if (HitsoundDefaults.Find(2, "hitnormal") is { } sample && File.Exists(sample))
                     File.Copy(sample, Path.Combine(library, "soft-tap" + Path.GetExtension(sample)), true);
-                editor.ShowHitsoundingPage(); editor.UpdateTransport(scenario == "-timing" ? 0 : scenario == "-flash" ? 1000 : 1200, 10000, true, scenario == "-flash", false, null, null);
+                if (scenario != "-mapping") editor.ShowHitsoundingPage();
+                editor.UpdateTransport(scenario == "-timing" ? 0 : scenario == "-flash" ? 1000 : 1200, 10000, true, scenario == "-flash", false, null, null);
                 var layout = editor.CaptureDockLayouts(); layout.Hitsounding!.PreciseHitsounds = precise;
                 editor.LibrarySettings.DockLayouts = layout; editor.RestoreDockLayouts();
                 canvas.Resize(size.Item1, size.Item2, 96);
                 canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
+                if (scenario.StartsWith("-tool-", StringComparison.Ordinal))
+                {
+                    int index = Array.IndexOf(new[] { "select", "draw", "soft", "normal", "drum" }, scenario[6..]);
+                    var button = editor.HitsoundingToolBounds(index);
+                    editor.PointerMove(button.X + button.Width / 2, button.Y + button.Height / 2, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
+                if (scenario == "-locked")
+                {
+                    for (int lane = 1; lane < 7; lane++)
+                    {
+                        var button = editor.HitsoundingLockBounds(lane);
+                        editor.PointerDown(button.X + 12, button.Y + 12, 0, false, false);
+                        editor.PointerUp(button.X + 12, button.Y + 12, 0);
+                    }
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
+                if (scenario is "-notes" or "-notes-drag" or "-notes-preview")
+                {
+                    var toggle = editor.HitsoundingLockBounds(0);
+                    editor.PointerDown(toggle.X + toggle.Width / 2, toggle.Y + 12, 0, false, false);
+                    editor.PointerUp(toggle.X + toggle.Width / 2, toggle.Y + 12, 0);
+                    editor.KeyDown(50, false, false); editor.KeyDown(68, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                    if (scenario == "-notes-preview")
+                    {
+                        var lane = editor.HitsoundingNotesLaneBounds;
+                        editor.PointerMove(lane.X + lane.Width * 750 / 4000, lane.Y + lane.Height / 2, false, false);
+                        editor.Render(canvas, size.Item1, size.Item2);
+                    }
+                    if (scenario == "-notes-drag")
+                    {
+                        var lane = editor.HitsoundingNotesLaneBounds;
+                        float x = lane.X + lane.Width * 750 / 4000, y = lane.Y + lane.Height / 2;
+                        editor.PointerDown(x, y, 0, false, false);
+                        editor.PointerMove(x + lane.Width * 125 / 4000, y, false, false);
+                        editor.Render(canvas, size.Item1, size.Item2);
+                    }
+                }
+                if (scenario == "-draw")
+                {
+                    editor.KeyDown(50, false, false);
+                    float zero = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 0)).X + 4;
+                    float twoSeconds = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 2000)).X + 4;
+                    editor.PointerMove(zero + (twoSeconds - zero) * .375f, editor.HitsoundingMuteBounds(2).Y + 12, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
                 if (scenario == "-audition")
                 {
                     float zero = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 0)).X + 4;

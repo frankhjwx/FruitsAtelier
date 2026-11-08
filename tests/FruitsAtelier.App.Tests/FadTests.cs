@@ -19,6 +19,8 @@ internal static class FadTests
         File.Copy(fixture, Path.Combine(sender, "audio.ogg")); File.Copy(fixture, Path.Combine(receiver, "local.ogg"));
         File.WriteAllText(Path.Combine(sender, "bg.jpg"), "background");
         File.Copy(fixture, Path.Combine(sender, "custom.ogg"));
+        File.WriteAllText(Path.Combine(sender, "video.mp4"), "video");
+        File.WriteAllText(Path.Combine(sender, "storyboard.osb"), "storyboard");
         var original = new MapDocument { Name = "Song", IsDemo = false, DurationMs = 10000, SourcePath = Path.Combine(sender, "source.osu"), AudioPath = Path.Combine(sender, "audio.ogg") };
         SongSetup.Set(original, "General", "AudioFilename", "audio.ogg");
         SongSetup.Set(original, "Metadata", "Title", "Song"); SongSetup.Set(original, "Metadata", "Artist", "Artist");
@@ -34,11 +36,25 @@ internal static class FadTests
         Check(ProjectSerializer.Serialize(original) == before, "export leaves live content untouched");
         using (var zip = ZipFile.OpenRead(archive))
         {
+            Check(zip.Entries.All(e => e.FullName is "manifest.json" or "project.catchproj" || e.FullName.EndsWith("/.fa-resource")),
+                "difficulty export contains only native data and container metadata");
             using var reader = new StreamReader(zip.GetEntry("project.catchproj")!.Open());
             string portable = reader.ReadToEnd();
             Check(!portable.Contains(sender) && !portable.Contains(receiver), "package has no sender or receiver absolute paths");
         }
+        string legacy = Path.Combine(root, "legacy.fad");
+        FazArchive.Export(new BeatmapProject { Name = "Song", Difficulties = [incoming] }, legacy, false, false, settings.Workspace);
+        using (var zip = ZipFile.Open(legacy, ZipArchiveMode.Update))
+        {
+            var entry = zip.GetEntry("manifest.json")!;
+            string json;
+            using (var reader = new StreamReader(entry.Open())) json = reader.ReadToEnd();
+            entry.Delete();
+            using var writer = new StreamWriter(zip.CreateEntry("manifest.json").Open());
+            writer.Write(json.Replace("\"FruitsAtelier\"", "\"FruitsAtelierDifficulty\""));
+        }
         Directory.Move(sender, sender + "-unavailable");
+        FadArchive.Export(incoming, Path.Combine(root, "missing-resources.fad"), false, settings.Workspace);
         var local = original.DeepClone(); local.SourcePath = Path.Combine(receiver, "local.osu"); local.AudioPath = Path.Combine(receiver, "local.ogg");
         SongSetup.Set(local, "General", "AudioFilename", "local.ogg");
         SongSetup.Set(local, "Metadata", "Version", "Base"); local.Tracks.Clear(); local.Fruits[0].X = 50;
@@ -46,6 +62,17 @@ internal static class FadTests
         var host = new ProjectDifficulty { Name = "Base", Document = local };
         var project = new BeatmapProject { Name = "Song", Difficulties = [host] };
         using (var package = FadArchive.Prepare(archive, settings))
+        {
+            Check(package.Project.Difficulties.Single().Document.AudioPath is null, "package has no embedded audio path");
+            File.WriteAllText(Path.Combine(receiver, "custom.ogg"), "local sample");
+            var plan = FadArchive.PlanImport(package, project);
+            plan.Resources.Apply();
+            Check(plan.Difficulty.Document.AudioPath == local.AudioPath, "data-only import uses local audio");
+            Check(File.ReadAllText(Path.Combine(receiver, "custom.ogg")) == "local sample"
+                && !File.Exists(Path.Combine(receiver, "bg.jpg")), "data-only import leaves local resources unchanged");
+            File.Delete(Path.Combine(receiver, "custom.ogg"));
+        }
+        using (var package = FadArchive.Prepare(legacy, settings))
         {
             var plan = FadArchive.PlanImport(package, project);
             Check(plan.Difficulty.Id == incoming.Id, "new difficulty keeps identity");

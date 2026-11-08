@@ -234,6 +234,7 @@ public sealed partial class EditorView
     private MapPoint? PlacementGhostPoint()
     {
         if (PointerOverCanvasBackgroundDim) return null;
+        if (!IsOsuCanvas && tool == Tool.Fruit && !FruitPlacementContains(mouseX, mouseY)) return null;
         if (tool is not (Tool.Fruit or Tool.Slider) || !plot.Contains(mouseX, mouseY) || drag != DragKind.None
             || menu >= 0 || contextItems.Count > 0 || editField >= 0 || !IsOsuCanvas && tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is not null) return null;
         if (IsOsuCanvas)
@@ -310,8 +311,12 @@ public sealed partial class EditorView
             c.Text(L.Get("tools.newComboAbbreviation"), p.X + diameter / 2 + 6, p.Y - 8, 11, Gold, 120);
     }
 
+    private bool FruitPlacementContains(float x, float y)
+        => plot.Contains(x, y) && x >= Playfield.X && x <= Playfield.Right;
+
     private void PlaceFruit(float x, float y)
     {
+        if (!FruitPlacementContains(x, y)) return;
         var point = PlacementPoint(x, y);
         var fruit = new Fruit { TimeMs = point.TimeMs, X = point.X };
         if (Edit(L.Get("editor.command.addFruit"), () =>

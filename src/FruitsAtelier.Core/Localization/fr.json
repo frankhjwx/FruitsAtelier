@@ -1095,6 +1095,8 @@
   "timing.red": "Points Timing",
   "timing.green": "Points hérités",
   "timing.offset": "Décalage (ms)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "Jeu de hitsounds",
   "timing.bpm": "BPM",
   "timing.meter": "Compteur",
   "timing.sample": "Échantillon",
@@ -2054,5 +2056,14 @@
   "bookmark.pasteColour": "Coller la couleur",
   "bookmark.jump": "Jump",
   "bookmark.enableIntervals": "Afficher toutes les couleurs d’intervalle",
-  "bookmark.disableIntervals": "Masquer toutes les couleurs d’intervalle"
+  "bookmark.disableIntervals": "Masquer toutes les couleurs d’intervalle",
+  "hitsounding.hint.select": "Select (1): Select and edit unlocked notes or sounds.\nDrag empty space: Marquee select. Ctrl+click: Add/remove selection.\nRight-click: Delete an unlocked note or addition.",
+  "hitsounding.hint.draw": "Draw (2): Click to place a sound or an unlocked Notes circle.\nHover empty Notes space: Snapped placement preview.\nDrag: Marquee select. Right-click: Delete an unlocked note or addition.",
+  "hitsounding.hint.brush": "{0} ({1}): Apply this bank to selected notes or sounds.\nWithout a selection, Draw sets the placement brush; Select is disabled.\nQ: Cycle Soft / Normal / Drum. Locked tracks are protected.",
+  "hitsounding.lockLane": "Lock {0}",
+  "hitsounding.unlockLane": "Unlock {0}",
+  "hitsounding.createNote": "Create note",
+  "hitsounding.resizeNote": "Change note timing",
+  "hitsounding.moveNotes": "Move notes",
+  "hitsounding.noteRhythmMismatch": "Cannot paste notes: the destination rhythm, slider duration or reverse count does not match."
 }

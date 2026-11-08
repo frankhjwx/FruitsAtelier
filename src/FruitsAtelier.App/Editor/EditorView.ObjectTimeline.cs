@@ -463,10 +463,11 @@ public sealed partial class EditorView
         c.Line(objectTimeline.X, objectTimeline.Bottom - 1, objectTimeline.Right, objectTimeline.Bottom - 1, Grid);
         DrawTimelineBookmarks(c, objectTimeline, start, end);
         DrawCollaborationLocks(c, objectTimeline, start, end);
+        DrawTimelineBpmFlags(c, start, end);
         c.Unclip();
     }
 
-    private void DrawTimelineObjects(ICanvas c, Rect viewport, double start, double scale, bool includePlacement)
+    private void DrawTimelineObjects(ICanvas c, Rect viewport, double start, double scale, bool includePlacement, bool previewHitsounding = false)
     {
         RefreshTimelineSources(); timelineObjects.Clear();
         double end = start + viewport.Width / scale;
@@ -480,10 +481,16 @@ public sealed partial class EditorView
         var visibleItems = timelineVisibleMarkers;
         visibleItems.Clear();
         // Cached chronological order also defines painting and hit order; reuse the visible buffer each frame.
-        timelineMarkerRange.Fill(visibleStartMs, visibleEndMs, timelineVisibleIndices);
+        double previewOffset = previewHitsounding && hitsoundingNoteGesture == HitsoundingNoteGesture.Move ? HitsoundingNoteMoveDelta : 0;
+        timelineMarkerRange.Fill(visibleStartMs - Math.Max(0, previewOffset), visibleEndMs - Math.Min(0, previewOffset), timelineVisibleIndices);
         foreach (int i in timelineVisibleIndices)
         {
             var item = timelineMarkers[i];
+            if (previewHitsounding)
+            {
+                item.Start = HitsoundingNotePreviewTime(item.Id, item.Start);
+                item.End = HitsoundingNotePreviewTime(item.Id, item.End);
+            }
             if (item.Id != placement?.Id && item.StackIndex < TimelineStackLimit && item.End >= visibleStartMs && item.Start <= visibleEndMs)
                 visibleItems.Add(item);
         }
@@ -515,7 +522,8 @@ public sealed partial class EditorView
                     segmentIndex < segments.Count && segments[segmentIndex].TimeMs <= end; segmentIndex++)
                 {
                     var segment = segments[segmentIndex];
-                    float from = X(segment.TimeMs), to = X(segment.EndTimeMs);
+                    float from = X(previewHitsounding ? HitsoundingNotePreviewTime(item.Id, segment.TimeMs) : segment.TimeMs);
+                    float to = X(previewHitsounding ? HitsoundingNotePreviewTime(item.Id, segment.EndTimeMs) : segment.EndTimeMs);
                     if (to < viewport.X || from > viewport.Right) continue;
                     c.Fill(new(from, bounds.Y + 3 * markerScale, Math.Max(1, to - from), bounds.Height - 6 * markerScale), color, 2, .7f);
                 }

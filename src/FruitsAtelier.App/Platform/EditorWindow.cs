@@ -199,6 +199,12 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--feedback-bugs-render-check"))
+            {
+                Diagnostics.FeedbackBugRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--timing-clipboard-render-check"))
             {
                 Diagnostics.TimingClipboardRenderCheck.Run(canvas);
@@ -519,7 +525,7 @@ internal sealed partial class EditorWindow : IDisposable
                     Invalidate();
                 }
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
-                if ((view.BrowserFeedbackNeedsRedraw || view.TimingFeedbackNeedsRedraw || view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
+                if ((view.BrowserFeedbackNeedsRedraw || view.TimingFeedbackNeedsRedraw || view.OsuLinkNoticeNeedsRedraw || view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw || view.TimelineDragScrollNeedsRedraw
                     || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.BookmarkToolbarNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.PatternGalleryNeedsRedraw || view.DiscussionNeedsRedraw || view.MapsetVerifierNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw
                     || view.MediaNeedsRedraw || canvas?.MediaNeedsRedraw == true || canvas?.SliderRasterNeedsRedraw == true) && !Native.IsIconic(window)) Invalidate();
                 return 0;

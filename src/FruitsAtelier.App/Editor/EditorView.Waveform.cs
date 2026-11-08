@@ -76,7 +76,9 @@ public sealed partial class EditorView
         {
             float x = r.X + (float)((tick.TimeMs - start) / msPerPixel);
             var style = GridStyle(tick);
-            c.Line(x, gridTop, x, rulerY, style.Color, style.Width, .55f);
+            float width = tick.IsMeasure ? 3 : tick.IsBeat ? 1 : style.Width;
+            float opacity = tick.IsMeasure ? .85f : tick.IsBeat ? .3f : .55f;
+            c.Line(x, gridTop, x, rulerY, style.Color, width, opacity);
         }
         c.Stroke(new(r.X, gridTop, r.Width, rulerY - gridTop), Grid);
         double step = Math.Pow(10, Math.Floor(Math.Log10(waveformSpanMs / 8)));
@@ -85,7 +87,10 @@ public sealed partial class EditorView
         {
             float x = r.X + (float)((tick.TimeMs - start) / msPerPixel);
             var style = GridStyle(tick);
-            c.Line(x, rulerY - style.Height, x, rulerY, style.Color, style.Width, .75f);
+            float height = tick.IsMeasure ? 28 : style.Height;
+            float width = tick.IsMeasure ? 3 : tick.IsBeat ? 1.25f : style.Width;
+            float opacity = tick.IsMeasure ? 1 : tick.IsBeat ? .6f : .75f;
+            c.Line(x, rulerY - height, x, rulerY, style.Color, width, opacity);
         }
         c.Line(r.X, rulerY, r.Right, rulerY, Grid);
         for (double time = Math.Max(0, Math.Ceiling(start / step) * step); time < start + waveformSpanMs; time += step)

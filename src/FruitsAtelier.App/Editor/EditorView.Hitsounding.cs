@@ -7,12 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public bool HitsoundingPageVisible { get; private set; }
-    private static readonly System.Numerics.Vector2[] HitsoundingKiaiStar = Enumerable.Range(0, 11).Select(i =>
-    {
-        float angle = -MathF.PI / 2 + i * MathF.PI / 5;
-        float radius = i % 2 == 0 ? 1 : .42f;
-        return new System.Numerics.Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
-    }).ToArray();
+    private bool hitsoundingDraw;
     private double hitsoundingSpan = 4000;
     private double hitsoundingHeadRatio = .3;
     internal const float HitsoundingTagWidth = 36;
@@ -140,11 +135,10 @@ public sealed partial class EditorView
         objectTimeline = default; zoomSlider = default;
         c.Fill(CanvasToolbarBounds, Panel);
         float toolsX = CanvasToolbarBounds.X + 8;
-        float toolScale = Math.Min(1, Math.Max(0, CanvasToolbarBounds.Width - 174) / 298);
+        float toolScale = Math.Min(1, Math.Max(0, CanvasToolbarBounds.Width - 174) / 290);
         Button(c, new(toolsX, 88, 88 * toolScale, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
         Button(c, new(toolsX + 92 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
-        c.Line(toolsX + 188 * toolScale, 92, toolsX + 188 * toolScale, 112, Grid);
-        Button(c, new(toolsX + 196 * toolScale, 88, 102 * toolScale, 28), L.Get("hitsounding.showText"),
+        Button(c, new(toolsX + 188 * toolScale, 88, 102 * toolScale, 28), L.Get("hitsounding.showText"),
             () => hitsoundingDockWorkspace.ShowHitsoundText = !hitsoundingDockWorkspace.ShowHitsoundText,
             hitsoundingDockWorkspace.ShowHitsoundText, fontSize: 11);
         snapSlider = new(CanvasToolbarBounds.Right - 118, 88, 106, 29);
@@ -155,7 +149,9 @@ public sealed partial class EditorView
         c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, 97, 10, Foreground, 40);
         float right = DockWorkspaceState.Right.Collapsed || DockWorkspaceState.Right.Panels.Count == 0 ? width : rightPanel.X;
         hitsoundingBounds = new(leftPanel.Right + 8, 130, Math.Max(40, right - leftPanel.Right - 16), Math.Max(100, TransportTop - 138));
-        var r = hitsoundingBounds;
+        hitsoundingToolsWidth = Math.Min(84, Math.Max(60, hitsoundingBounds.Width * .13f));
+        var r = new Rect(hitsoundingBounds.X + hitsoundingToolsWidth, hitsoundingBounds.Y,
+            hitsoundingBounds.Width - hitsoundingToolsWidth, hitsoundingBounds.Height);
         float labelWidth = Math.Min(146, r.Width * .32f);
         double start = HitsoundingStart, end = start + hitsoundingSpan;
         float gridX = r.X + labelWidth, gridWidth = Math.Max(10, r.Width - labelWidth);
@@ -170,12 +166,13 @@ public sealed partial class EditorView
             double until = i + 1 < timingLabels.Length ? timingLabels[i + 1].Time : Math.Max(end, TimelineDurationMs);
             if (until < start || until < point.Time) continue;
             float anchor = X(point.Time), left = Math.Max(gridX, anchor), rightEdge = Math.Min(gridX + gridWidth, X(until));
-            hitsoundingTimingBoxes.Add((new(left, r.Y + 53, Math.Max(0, rightEdge - left), 36), anchor,
+            hitsoundingTimingBoxes.Add((new(left, r.Y + 53 + HitsoundingTimingRowHeight, Math.Max(0, rightEdge - left), HitsoundingTimingRowHeight * 3), anchor,
                 point.Red ? 0xE77785u : 0x72C686u, point.Bank, point.Index, point.Point.Volume, point.Point));
         }
-        float top = r.Y + 122;
+        float top = r.Y + 53 + HitsoundingTimingRowHeight * 4 + 33;
         hitsoundingGridBounds = new(gridX, top, gridWidth, Math.Max(7, r.Bottom - top));
         var g = hitsoundingGridBounds; float laneHeight = g.Height / 7;
+        DrawHitsoundingTools(c, new(hitsoundingBounds.X, g.Y, hitsoundingToolsWidth, g.Height));
         c.Fill(r, Chrome(0x191E26, Background), 6); c.StrokeOpacity(r, Grid, 1, 6, .65f); c.Clip(r);
         for (int lane = 0; lane < 7; lane++)
             c.Fill(new(g.X, top + lane * laneHeight, g.Width, laneHeight), Panel, opacity: lane % 2 == 0 ? .5f : .22f);
@@ -197,6 +194,7 @@ public sealed partial class EditorView
             if (tick.IsMeasure) c.Text(Time(tick.TimeMs), x + 3, r.Y, 10, Muted, 82);
         }
         c.Clip(new(g.X, r.Y, g.Width, r.Height));
+        DrawHitsoundingTimingTracks(c, start, end);
         TimingPoint? hoveredTiming = null;
         if (DockContentInputAvailable && menu < 0 && contextItems.Count == 0 && !hitsoundingTimingBox)
         {
@@ -210,47 +208,35 @@ public sealed partial class EditorView
             bool selectedTiming = hitsoundingTimingSelection.Contains(tag.Point);
             bool hovered = hoveredTiming == tag.Point && !selectedTiming && hitsoundingSelectedTiming != tag.Point;
             c.Line(tag.Anchor, tag.Bounds.Bottom + 5, tag.Anchor, g.Y - 1, selectedTiming ? Accent : tag.Color, selectedTiming ? 5 : hovered ? 4 : 3, .95f);
-            c.Fill(tag.Bounds, Panel, 6);
-            c.Fill(tag.Bounds, tag.Color, 6, hovered ? .55f : .35f);
-            c.StrokeOpacity(tag.Bounds, tag.Color, selectedTiming || hitsoundingSelectedTiming == tag.Point ? 2.5f : 1, 6, 1);
-            string bankLabel = tag.Index > 0 ? $"{tag.Bank}:{tag.Index}" : tag.Bank;
-            bool kiai = (tag.Point.Effects & 1) != 0;
-            string volumeLabel = $"{tag.Volume}%";
-            float bankWidth = c.MeasureText(bankLabel, 13, true), volumeWidth = c.MeasureText(volumeLabel, 10, true);
-            c.Clip(tag.Bounds);
-            if (kiai) c.Polyline(HitsoundingKiaiStar, tag.Bounds.X + 12, tag.Bounds.Y + 11, 6, 0xFFFFFF, 1.2f, 1);
-            c.Text(bankLabel, tag.Bounds.X + (kiai ? 23 : 6), tag.Bounds.Y + 2, 13, 0xFFFFFF, bankWidth + 1, true);
-            c.Text(volumeLabel, tag.Bounds.X + 6, tag.Bounds.Y + 20, 10, 0xFFFFFF, volumeWidth + 1, true);
-            c.Unclip();
-        }
-        for (int i = Math.Max(0, timingLow - 1); i < timingLabels.Length && timingLabels[i].Time < end; i++)
-        {
-            if ((timingLabels[i].Point.Effects & 1) == 0) continue;
-            double from = Math.Max(start, timingLabels[i].Time);
-            double to = Math.Min(end, i + 1 < timingLabels.Length ? timingLabels[i + 1].Time : Math.Max(end, TimelineDurationMs));
-            if (to > from) c.Line(X(from), g.Y - 10, X(to), g.Y - 10, 0xD89532, 3);
+            bool selected = selectedTiming || hitsoundingSelectedTiming == tag.Point;
+            if (selected || hovered) c.StrokeOpacity(tag.Bounds, tag.Color, selected ? 2.5f : 1, 3, .9f);
         }
         DrawHitsoundingTimingMarquee(c);
         c.Unclip();
+        string[] timingLaneKeys = ["timing.bpm", "hitsounding.timingSet", "volume.title", "timeline.kiaiIndicator"];
+        for (int lane = 0; lane < timingLaneKeys.Length; lane++)
+            c.Text(L.Get(timingLaneKeys[lane]), r.X + 10, r.Y + 57 + lane * HitsoundingTimingRowHeight, 11, Foreground, labelWidth - 16, true);
         for (int lane = 0; lane < 7; lane++)
         {
             float y = top + lane * laneHeight;
             c.Fill(new(r.X, y, labelWidth, laneHeight), Panel);
             c.Fill(new(r.X + 9, y + (laneHeight - 20) / 2, 3, 20), lane is >= 1 and <= 5 ? Muted : HitsoundingColors[lane], 1.5f);
-            c.Text(L.Get("hitsounding.lane" + lane), r.X + 20, y + (laneHeight - 16) / 2, 12, hitsoundingMuted[lane] ? Muted : Foreground, labelWidth - (lane > 0 ? 54 : 24), true);
+            c.Text(L.Get("hitsounding.lane" + lane), r.X + 20, y + (laneHeight - 16) / 2, 12, hitsoundingMuted[lane] ? Muted : Foreground, labelWidth - 80, true);
+            DrawHitsoundingLock(c, new(r.X + labelWidth - 54, y + (laneHeight - 24) / 2, 24, 24), lane);
             if (lane > 0) DrawHitsoundingMute(c, new(r.X + labelWidth - 28, y + (laneHeight - 24) / 2, 24, 24), lane);
             c.Line(r.X, y, r.Right, y, Grid, opacity: .55f);
         }
         c.Clip(g);
+        DrawHitsoundingLockBackground(c);
         float notesHeight = Math.Min(64, laneHeight);
         var notesViewport = new Rect(g.X, top + (laneHeight - notesHeight) / 2, g.Width, notesHeight);
         c.Clip(notesViewport);
-        DrawTimelineObjects(c, notesViewport, start, g.Width / hitsoundingSpan, includePlacement: false);
+        DrawTimelineObjects(c, notesViewport, start, g.Width / hitsoundingSpan, includePlacement: false, previewHitsounding: true);
         int first = FirstAfter(hitsoundingNotes, start - .001);
         for (int i = first; i < hitsoundingNotes.Length && hitsoundingNotes[i].TimeMs <= end; i++)
         {
             var item = hitsoundingNotes[i];
-            float x = X(item.TimeMs), y = notesViewport.Y + 27 * notesHeight / 64;
+            float x = X(HitsoundingNotePreviewTime(item.SourceId, item.TimeMs)), y = notesViewport.Y + 27 * notesHeight / 64;
             if (item.Kind == CatchObjectKind.Droplet) c.Circle(x, y, Math.Max(2, 4 * notesHeight / 64), Foreground, false, 1.5f);
             if (item.Kind == CatchObjectKind.Droplet)
                 hitsoundingSoundHits.Add((new(x - 5, y - 5, 10, 10), item, 0));
@@ -263,6 +249,7 @@ public sealed partial class EditorView
                 c.Circle(x, y, radius, Foreground, false, 2 * notesHeight / 64, flash);
             }
         }
+        DrawHitsoundingNotePreview(c);
         c.Unclip();
         if (!ReferenceEquals(hitsoundingStoryboardSource, storyboardScene))
         {
@@ -283,7 +270,7 @@ public sealed partial class EditorView
         (Rect Bounds, Hitsound Sound)? selectedAudition = null;
         foreach (var laneTags in hitsoundingTagLanes) DrawTags(laneTags);
         DrawTags(hitsoundingStoryboardTags);
-        if (!hitsoundingErase)
+        if (hitsoundingDraw && !hitsoundingErase)
             foreach (var pending in hitsoundingPaint.Values)
                 if (hitsoundingNoteLookup.TryGetValue((pending.SourceId, pending.EventIndex), out var note))
                 {
@@ -291,15 +278,16 @@ public sealed partial class EditorView
                     c.Fill(new(X(note.TimeMs) - 9, y, 18, 32), HitsoundingBankColor(pending.Sample.AdditionSet), 4, .5f);
                     c.StrokeOpacity(new(X(note.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
                 }
-        if (!hitsoundingHeadDrag && !hitsoundingMarquee && hitsoundingMoveSource is null && hitsoundingGridBounds.Contains(mouseX, mouseY))
+        if (hitsoundingDraw && !hitsoundingPainting && !hitsoundingHeadDrag && !hitsoundingMarquee
+            && hitsoundingMoveSource is null && hitsoundingGridBounds.Contains(mouseX, mouseY))
         {
             int lane = (int)((mouseY - top) / laneHeight);
-            if (lane is >= 2 and <= 4 && HitsoundingPlacementNoteAt(mouseX, mouseY) is { Kind: CatchObjectKind.Fruit } candidate
+            if (lane is >= 2 and <= 4 && !hitsoundingLocked[lane] && HitsoundingPlacementNoteAt(mouseX, mouseY) is { } candidate
                 && (hitsoundingResolver!.Describe(candidate).Additions & (1 << (lane - 1))) == 0)
             {
-                float ghostY = top + (lane + .5f) * laneHeight - 16;
-                c.Fill(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), HitsoundingBankColor(HitsoundingPlacementAdditionBank(candidate)), 4, .5f);
-                c.StrokeOpacity(new(X(candidate.TimeMs) - 9, ghostY, 18, 32), Foreground, 1, 4, .5f);
+                float y = top + (lane + .5f) * laneHeight - 16;
+                c.Fill(new(X(candidate.TimeMs) - 9, y, 18, 32), HitsoundingBankColor(HitsoundingPlacementAdditionBank(candidate)), 4, .5f);
+                c.StrokeOpacity(new(X(candidate.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
             }
         }
         if (hitsoundingMoveActive && hitsoundingMoveSource is { } moving && hitsoundingMoveTarget is { } target)
@@ -395,12 +383,12 @@ public sealed partial class EditorView
                 if (flash > 0) c.StrokeOpacity(box, 0xFFFFFF, 2, Math.Min(4, box.Width / 3), flash);
                 if (tag.Note is { } note)
                 {
-                    hitsoundingSoundHits.Add((box, note, tag.Lane));
+                    if (!hitsoundingLocked[tag.Lane]) hitsoundingSoundHits.Add((box, note, tag.Lane));
                     if (!hitsoundingMarquee && hitsoundingMultiSelection.Contains((note.SourceId, note.EventIndex, tag.Lane))) c.Stroke(box, Foreground, 2, 4);
                 }
                 if (tag.Storyboard is { } sb)
                 {
-                    hitsoundingStoryboardHits.Add((box, sb));
+                    if (!hitsoundingLocked[6]) hitsoundingStoryboardHits.Add((box, sb));
                     if (!hitsoundingMarquee && hitsoundingStoryboardSelection.Contains(sb)) c.Stroke(box, Foreground, 2, 4);
                 }
                 if (hitsoundingDockWorkspace.ShowHitsoundText && HitsoundingPrecise)

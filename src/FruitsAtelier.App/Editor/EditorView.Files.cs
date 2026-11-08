@@ -55,6 +55,8 @@ public sealed partial class EditorView
         ClearFadReview();
         copiedPatternText = null; pendingPatternPaste = null; pendingPatternImport = null;
         objectClipboard = null; clipboardDifficulty = null; ObjectClipboardText = "";
+        hitsoundingNotesClipboard = null; hitsoundingCopiedNotes = []; hitsoundingClipboardContainsNotes = false;
+        hitsoundingNotesSelection = false; Array.Clear(hitsoundingLocked); hitsoundingLocked[0] = true;
         foreach (var difficulty in project.Difficulties) WorkspaceTimingSynchronization.NormalizeDocument(difficulty.Document);
         CancelLegacyDropletRefresh();
         if (libraryOpenTask is { } retiredOpen)

@@ -46,6 +46,7 @@ public sealed partial class EditorView
         {
             if (tags.Length == 0) continue;
             int lane = tags[0].Lane;
+            if (hitsoundingLocked[lane]) continue;
             float y = hitsoundingGridBounds.Y + (lane + .5f) * laneHeight - tagHeight / 2;
             if (y >= r.Bottom || y + tagHeight <= r.Y) continue;
             for (int i = LowerTag(tags, from); i < tags.Length && tags[i].Time <= to; i++)
@@ -70,53 +71,30 @@ public sealed partial class EditorView
                 else hitsoundingMultiSelection.Remove(key);
             }
     }
-    private int HitsoundingPlacementAdditionBank(ConvertedCatchObject note)
-    {
-        if (nextAdditionBank > 0) return nextAdditionBank;
-        return hitsoundingResolver!.Describe(note).AdditionSet;
-    }
-    private void CycleHitsoundingPlacementBank()
-    {
-        if (!hitsoundingGridBounds.Contains(mouseX, mouseY)) return;
-        int lane = (int)((mouseY - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7));
-        if (lane is < 1 or > 4) return;
-        double time = HitsoundingStart + (mouseX - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan;
-        var note = HitsoundingPlacementNoteAt(mouseX, mouseY)
-            ?? new ConvertedCatchObject(Guid.Empty, 0, CatchObjectKind.Fruit, time, 0, 0, 0, 0, true);
-        var sample = hitsoundingResolver!.Describe(note);
-        bool additions = lane > 1;
-        int bank = additions ? nextAdditionBank : nextNormalBank;
-        if (bank == 0) bank = additions ? HitsoundingPlacementAdditionBank(note) : sample.NormalSet;
-        SetSampleBank(additions, bank % 3 + 1);
-    }
+    private int HitsoundingPlacementAdditionBank(ConvertedCatchObject note) => hitsoundingBrush;
     private void CycleHitsoundingSampleSet()
     {
-        var selected = hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4 && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event)))
-            .Select(k => (Note: hitsoundingNoteLookup[(k.Id, k.Event)], k.Lane))
-            .OrderBy(e => e.Note.TimeMs).ThenBy(e => e.Note.SourceId).ThenBy(e => e.Note.EventIndex).ThenBy(e => e.Lane).ToArray();
-        if (selected.Length == 0) { CycleHitsoundingPlacementBank(); return; }
-        var first = selected[0];
-        var sample = hitsoundingResolver!.Describe(first.Note);
-        int bank = (first.Lane == 1 ? sample.NormalSet : sample.AdditionSet) % 3 + 1;
-        var changes = selected.GroupBy(e => (e.Note.SourceId, e.Note.EventIndex)).Select(group =>
+        int bank = hitsoundingBrush;
+        if (hitsoundingNotesSelection)
         {
-            var setting = hitsoundingResolver.EventSettings(group.First().Note);
-            bool normal = group.Any(e => e.Lane == 1), additions = group.Any(e => e.Lane > 1);
-            var resolved = hitsoundingResolver.Describe(group.First().Note);
-            // AdditionSet inherits NormalSet, so retain audible additions when only Normal changes.
-            bool retainAdditions = normal && !additions && resolved.Additions != 0;
-            return setting with
+            var first = hitsoundingNotes.FirstOrDefault(n => objectSelection.Contains(n.SourceId));
+            if (first is not null) bank = hitsoundingResolver!.Describe(first).NormalSet;
+        }
+        else
+        {
+            var first = hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4 && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event)))
+                .OrderBy(k => hitsoundingNoteLookup[(k.Id, k.Event)].TimeMs).ThenBy(k => k.Lane).FirstOrDefault();
+            if (first.Id != Guid.Empty)
             {
-                Sample = setting.Sample with { NormalSet = normal ? bank : setting.Sample.NormalSet,
-                    AdditionSet = additions ? bank : retainAdditions ? resolved.AdditionSet : setting.Sample.AdditionSet },
-                InheritedFields = setting.InheritedFields & ~(normal ? InheritedSampleFields.NormalSet : 0)
-                    & ~(additions || retainAdditions ? InheritedSampleFields.AdditionSet : 0)
-            };
-        }).ToArray();
-        Edit(L.Get("samples.change"), () => { foreach (var setting in changes) SetHitsoundingEvent(setting); });
+                var sample = hitsoundingResolver!.Describe(hitsoundingNoteLookup[(first.Id, first.Event)]);
+                bank = first.Lane == 1 ? sample.NormalSet : sample.AdditionSet;
+            }
+        }
+        SetHitsoundingBrush(bank switch { 2 => 1, 1 => 3, _ => 2 });
     }
     private void CopyHitsoundingSelection()
     {
+        hitsoundingClipboardContainsNotes = false;
         var entries = hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4 && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event)))
             .Select(k => (Note: hitsoundingNoteLookup[(k.Id, k.Event)], k.Lane)).OrderBy(e => e.Note.TimeMs).ToArray();
         hitsoundingClipboard = []; hitsoundingStoryboardClipboard = [];
@@ -179,6 +157,7 @@ public sealed partial class EditorView
         var targets = new List<(HitsoundingCopy Copy, ConvertedCatchObject Note)>();
         foreach (var copy in copied)
         {
+            if (hitsoundingLocked[copy.Lane]) continue;
             double time = targetTime + copy.Offset;
             int first = FirstAfter(hitsoundingNotes, time - 1.001);
             for (int i = first; i < hitsoundingNotes.Length && hitsoundingNotes[i].TimeMs <= time + 1; i++)

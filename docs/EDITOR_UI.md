@@ -431,6 +431,11 @@ The Catch canvas **Slider Path** and **Selection Rect** switches are saved globa
 as soon as they change, including Slider Path changes through the View menu.
 They survive project changes and restarts without changing beatmap content or undo history.
 
+While drawing a Legacy FSlider, double-clicking the last placed control creates a
+red segment boundary even when **Slider Path** is disabled.
+Fruit placement and its preview are limited to the Catch playfield's X=0–512
+bounds; clicking the canvas padding does not place a fruit.
+
 Each difficulty remembers its beat-snap divisor and Anchor Snap setting alongside
 GS (Grid Snap), its grid level, DS (Distance Snap), and Object Snap. Switching
 difficulties or reopening the project restores their individual preferences.
@@ -479,7 +484,9 @@ Their placement time follows the snapped playhead; pointer Y controls only the
 geometric position, including the placement marker in the upper timeline.
 Combo colour also takes precedence over skin slider-track overrides in this view.
 Alt+wheel over the upper object timeline changes its time scale independently of
-osu! canvas zoom.
+osu! canvas zoom. In Mapping, small BPM flags attach to red timing lines at the top
+of the object timeline. Dense labels are suppressed to avoid overlap; hover over
+the flag or its red marker to read the BPM.
 
 Slider bodies retain a white border and a brighter centre with darker edges.
 Static `sliderb.png` and numbered slider-ball animations use the owning skin's
@@ -871,7 +878,9 @@ The time ruler sits just below the waveform envelope. Snap subdivisions extend
 through a rectangular waveform band, using the editor's beat-grid colours. The
 band follows the waveform amplitude range symmetrically around its center, with
 vertical subdivisions only. The waveform is drawn beneath translucent grid and
-marker lines. BPM and playback markers extend just beyond the band. The ruler retains its beat and subdivision tick lengths. The filled envelope uses fixed audio-time sampling
+marker lines. BPM and playback markers extend just beyond the band. White measure
+lines are thicker and brighter than ordinary beat lines, with longer ruler ticks;
+coloured subdivisions retain their existing styles. The filled envelope uses fixed audio-time sampling
 windows while scrolling and reserves vertical space around its peaks.
 The single-column Timing panel places tap controls above
 BPM and edits the active red section's BPM and offset and the difficulty's Slider
@@ -921,7 +930,8 @@ and offsets to integer milliseconds. **Use Current Time** takes the whole-millis
 part of the playback position. The draft is committed by OK as one undo step; Cancel, Escape or the close
 button discards it. Timing, Audio and Style pages edit the selected rows, while
 All, Timing Points and Inherited Points filter the list. Ctrl-click toggles rows;
-Shift-click selects a range. Ctrl+A selects visible rows. Mixed numeric values are
+Shift-click selects a range. Double-click a row to seek to its timestamp while keeping
+the window open. Ctrl+A selects visible rows. Mixed numeric values are
 blank until explicitly replaced. Offset arrows add or subtract from each selected
 row independently, including mixed values. **Shift selected points (ms)** accepts a
 signed amount; **Apply** translates the selected rows while retaining their spacing
@@ -1030,6 +1040,8 @@ Canvas zoom, upper object-timeline scale and Timing waveform scale are remembere
 The arrow to the left of the four tool buttons opens a whole-map **Movement strain** sidebar. Its default left dock is 280 DIP wide at normal window sizes. Time increases upward in its vertical curve, matching the canvas; an amber marker shows the shared playback position. Click or drag in the graph to seek continuously. The left sidebar and Catch Preview can be open together. A very narrow window may compress the sidebars to preserve at least 192 DIP for the central playfield. Sidebar visibility is session display state and does not edit the beatmap.
 
 During playback and seeking, the play line stays at its configured height, initially 25% above the bottom of the drawing area. While paused, drag its leftmost yellow handle vertically to set that height between 5% and 95% of the drawing area. The current time stays unchanged and canvas content scrolls with the line. Playback disables handle dragging and uses the chosen height. The height is saved as a global view preference when the drag finishes and restored after restarting the editor. It is retained across resizing and difficulty switches without editing map content or undo history. Esc or lost capture cancels a drag. Left-button marquee selection on the canvas and object timeline keeps playback scrolling and accepts wheel navigation while held. Space or C can start or pause playback without releasing the selection. The start stays anchored to its original map time while the other end follows the pointer, so the box grows during scrolling even with a stationary pointer. Within 24 DIP of the canvas's top/bottom edge or the object timeline's left/right edge, a dragged selection automatically scrolls toward that edge, gradually increasing to 1200 DIP per second on the canvas or 600 DIP per second on the object timeline. Moving back inside, releasing the button, cancelling, or reaching the map boundary stops automatic scrolling. Objects inside the time range remain selected after they move outside the viewport. Paused middle-button panning is free; canvas wheel navigation preserves the current playhead-to-viewport offset, while playback and other seeking resume following.
+
+Dragging selected objects within 24 DIP of the upper timeline's left or right edge also scrolls time, gradually increasing to 600 DIP per second. The canvas follows, and the objects retain their pointer-relative time offset. Moving away from the edge, releasing, cancelling or reaching the map boundary stops scrolling. The entire object drag remains one undoable edit.
 
 The upper-right corner of the Mapping canvas shows the pointer's playfield X
 coordinate. Selecting an object shows its X coordinate and **Prev / Next** DS

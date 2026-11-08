@@ -62,7 +62,8 @@ internal static class HitsoundingPreciseAuditionTests
         Rect Block(int lane)
         {
             var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100);
-            return ui.Canvas.Outlines.First(o => o.Color == 0x65BF8A && o.Bounds.Y <= label.Y + 8 && o.Bounds.Bottom > label.Y + 8).Bounds;
+            return ui.Canvas.Outlines.First(o => o.Color == 0x65BF8A && o.Bounds.Right >= ui.View.HitsoundingNotesLaneBounds.X
+                && o.Bounds.Y <= label.Y + 8 && o.Bounds.Bottom > label.Y + 8).Bounds;
         }
     }
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

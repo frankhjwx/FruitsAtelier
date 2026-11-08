@@ -1,5 +1,19 @@
 # Building and Testing
 
+## Feedback editing regressions
+
+`App.Tests --placement-bounds-check` checks Catch fruit placement and previews in
+canvas padding at different zoom levels, horizontal pan limits and placement undo.
+`--hidden-path-double-click-check` checks Legacy draft segment boundaries with
+Slider Path visible or hidden, Windows and macOS click sequences, and undo/redo.
+`--timeline-edge-drag-check` checks stationary-pointer scrolling in both directions,
+frame-rate-independent speed, canvas coordination, Mapping/lazer modes, playing/paused transport,
+group spacing, map boundaries, release, cancellation and one-step undo.
+`FruitsAtelier.App --render-check --feedback-bugs-render-check` exercises these
+interactions with native rendering in English and Chinese, two window sizes and
+96/144/192 DPI. F6 row navigation is covered by `--timing-feedback-check` and the
+native `--timing-clipboard-render-check`.
+
 ## Artifact lifetime
 
 Keep task-generated outputs under ignored `artifacts/`. After a feature is
@@ -346,8 +360,8 @@ The native check includes Markdown and image cards; pass
 `--discussions-image-fixture=<absolute-image-path>` to use a local image fixture
 without network access.
 
-`App.Tests --fad-check` verifies portable difficulty packages, local resource
-conflicts, matching, adding difficulties, native merge choices, undo/redo, Library
+`App.Tests --fad-check` verifies data-only difficulty exports, export with missing
+source resources, legacy resource-package imports and local resource conflicts, matching, adding difficulties, native merge choices, undo/redo, Library
 rejection and the FAZ export chooser. `FruitsAtelier.App.exe --render-check
 --fad-render-check` captures the File menu, difficulty context menu, FAZ choices,
 native merge review and Library error in English and Chinese at two window sizes
@@ -1684,7 +1698,8 @@ Windows `FruitsAtelier.App --render-check --timing-sv-render-check` exercises na
 controls and captures both languages, compact/wide windows and 96/144/192 DPI under
 `artifacts/tests/timing-sv-native`.
 
-`App.Tests --timing-feedback-check` also checks the floating F6 window: undimmed
+`App.Tests --timing-feedback-check` includes waveform rendering, subdivision colours,
+zoom and cached audio, and also checks the floating F6 window: undimmed
 editor rendering, title dragging, four-corner proportional scaling down to 50%,
 scaled numeric input, outside selection/deletion and undo, draft application after
 object edits, stale timing rejection and document retirement in English and Chinese.
@@ -1749,6 +1764,12 @@ Precise audition checks cover selection-only Play controls, progress and Stop,
 exclusive switching between timeline and library sounds, and unchanged map history
 and playhead position. Native render checks include the active Precise control.
 
+`App.Tests --timing-presentation-check` covers Mapping BPM flags, the four
+Hitsounding timing tracks, independent merging of equal values, Kiai colours,
+original timing handles, red-point drag prevention, exact ruler seeking while
+playing or paused, and content/conversion reuse
+in English and Chinese at two window sizes.
+
 `App.Tests --hitsounding-panel-check` covers the Snap ruler, actual slider ticks,
 centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,
 default bank labels, timing-tag order, the unified Config dock, library search/imports,
@@ -1757,9 +1778,9 @@ dropdown, divider resize cursors, recursive folder imports, opening the current 
 and live library create/rename/delete notifications. It also checks live Inspector edits,
 undoable volume gestures with live playback and conversion reuse, nearby timing rows,
 new-point drafts, event-specific additions, single-click placement and its undo,
-placement-origin marquee selection without added sounds or history, empty-space selection, Q bank cycling for single and multiple selections,
+placement-origin marquee selection without added sounds or history, empty-space selection, Q/ASD bank changes with single and multiple selections in both modes,
 Normal/addition bank isolation (including inherited Normal banks when placing each addition), selection-aware bank selectors with mixed/Auto values and batch undo, direct right-click deletion,
-placement and selection at the play line, and one-step bank-change undo, playback flashes, normalized narrow waveforms,
+placement and selection at the play line, and one-step bank-change undo through the selectors, playback flashes, normalized narrow waveforms,
 visible interval labels, Kiai span boundaries and timing-drag previews, and play-line bounds. It also checks marquee copy/delete/paste,
 red/green timing-index mismatch confirmation and cancellation, bank and event-index
 override independence, inherited transfer indices following new timing lines in display,
@@ -1771,7 +1792,8 @@ setup and warm pointer/render work with Mapping on the same mixed-object fixture
 including allocations and committed-conversion reuse.
 
 `FruitsAtelier.App.exe --render-check --hitsounding-render-check` renders English
-and Chinese at 980×620 and 1440×900 under `artifacts/tests/hitsounding-native`.
+and Chinese at 980×620 and 1440×900 under `artifacts/tests/hitsounding-native`,
+including Mapping BPM flags and Hitsounding timing tracks.
 Run the object-timeline, docking and hitsound regressions when changing this view,
 because its note rendering, layouts and sample resolution share those boundaries.
 
@@ -1793,3 +1815,8 @@ and stale asynchronous clipboard responses at normal and half window scale.
 `FruitsAtelier.App.exe --render-check --timing-clipboard-render-check` checks the
 one-second popup and its fade, plus copy/paste menus in English and Chinese at
 96/144/192 DPI. Captures go to `artifacts/tests/timing-clipboard-native`.
+
+`App.Tests --hitsounding-notes-check` checks per-track locking, Draw-only Notes
+creation and snapped previews at the canvas centre, marquee selection in both tools, atomic matching/empty/conflicting clipboard
+pastes, slider head/tail timing, reverse shortcuts, undo/redo and cancellation in
+English and Chinese.

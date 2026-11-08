@@ -246,12 +246,14 @@ public sealed partial class EditorView
 
     private bool LegacyDoubleClick(float x, float y)
     {
-        if (!LegacyControlsActive || !plot.Contains(x, y) || SelectedTrack is not { } track) return false;
+        if (!LegacyMode || !plot.Contains(x, y) || SelectedTrack is not { } track) return false;
         if (legacyDraft is { Count: > 1 } && draftTrack != Guid.Empty && Near(legacyDraft[^1].Point, x, y, 8))
         {
             legacyDraft[^1] = legacyDraft[^1] with { Type = SliderCurveType.Linear };
+            UpdateLegacyPreview(x, y);
             return true;
         }
+        if (!LegacyControlsActive) return false;
         var hit = SliderControlEditing.Vertices(track).FirstOrDefault(v => Near(v.Point, x, y, 8));
         if (hit is null || draftTrack != Guid.Empty) return false;
         tool = Tool.Select;

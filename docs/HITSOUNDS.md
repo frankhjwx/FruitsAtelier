@@ -159,15 +159,19 @@ Note-based bank tags show S, N or D above the sample index; default samples omit
 index and centre the letter. The toolbar groups Note based/Precise HS,
 and the HS text toggle with vertical separators. HS text controls sound-tag labels
 in both display modes and is remembered with the Hitsounding layout; it leaves
-Notes numbering, timing labels and waveforms visible. Precise HS retains the bank and non-default index beside the waveform. Timing tags show bank and optional index (for example S:2) above volume; both lines
-are bold, with the bank line three points larger. A short coloured stem marks their timestamp.
-Timing tags fill the interval up to the next timing point. Their left-aligned text stays
-at the visible left edge when the interval begins outside the viewport. An amber line
-below the timing blocks marks Kiai intervals and follows timing edits and drag previews.
-Kiai-enabled timing blocks prefix their sampleset label with a proportionally drawn, outlined five-point star.
+Notes numbering, timing labels and waveforms visible. Precise HS retains the bank and non-default index beside the waveform.
+Four timing tracks above Notes show BPM, Hitsound Set (bank and optional index, for
+example S:2), volume and Kiai. Each track independently merges consecutive equal
+values for display, while preserving the original timing points and their stems.
+Labels stay at the visible left edge; narrow intervals reveal their text on hover.
+Kiai shows only On or Off: On uses the overview timeline's orange and Off uses
+blue-grey. Timing edits and drag previews refresh these intervals. Red timing
+points can be selected but cannot be dragged in Hitsounding.
 
 Clicking a Notes object or an existing sound tag selects its event.
-Selecting a sound does not seek. Clicking empty grid or ruler space clears selection and preserves the playing position.
+Selecting a sound does not seek. Clicking empty grid space clears selection and preserves the playing position.
+Left-click the upper time ruler to seek directly to the corresponding time, while
+retaining the playing or paused state. Dragging the play line still adjusts its viewport position.
 Ctrl-click toggles individual sound tags, Notes events, storyboard sounds, and green timing blocks or handles without replacing the existing selection.
 Clicking the lane-label column does not seek. Dragging empty grid space draws a selection
 rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Its starting
@@ -183,26 +187,56 @@ bank directly and preserve an inherited sample index so later timing edits still
 Explicit nonzero object indices remain explicit. A zero object index, including saved
 event overrides, inherits timing for display, playback and export. Adjustments affect target event
 overrides, including their shared addition bank/index, without rewriting timing intervals.
-Drag an existing Whistle, Finish or Clap tag onto another fruit event to
+In Select mode, drag an existing Whistle, Finish or Clap tag onto another fruit event to
 move that addition, with a half-opacity preview and the same sampleset confirmation.
 Normal and SliderTick cannot be moved. A move is one undo step.
-Click an empty addition slot at an existing fruit event in Whistle, Finish or Clap
-to add that addition; the half-opacity ghost previews the target. Holding and dragging
-from that slot cancels placement and starts marquee selection. Releasing the marquee
-does not add sounds or create content history. Placement and existing-sound selection
-take priority over dragging the play line where they overlap. A placement is one undo step. Right-click removes additions, never Normal.
+Select is the default input mode. Clicking an empty addition slot does not place a
+sound; dragging empty space selects sounds with a marquee. Draw mode previews the
+addition under the pointer: click to place one sound, or drag to marquee-select
+sounds without placing any. A placement is one undo step. Both modes
+retain existing-sound selection, clipboard operations and right-click
+deletion. Placement and existing-sound selection take priority over dragging the play
+line where they overlap. Right-click removes additions, never Normal.
 Sampleset and Additions at the upper left display the authored banks of the selected
 events, using Auto for inherited or mixed values as in Mapping. Changing either
 selector applies that bank to every selected event in one undo step; the other bank
-remains unchanged. With no selected events, the selectors control subsequent placement. Placing Whistle, Finish or Clap uses only Additions
-and preserves the existing Normal bank and its inheritance. Auto additions resolve
-from the existing event, independently of the Sampleset placement default.
-With no sound tags selected, Q cycles the placement
-bank for the lane under the pointer: Sampleset for Normal, Additions for Whistle,
-Finish or Clap. The selector and placement preview reflect the new bank.
-W/E/R toggle the selected event's Whistle/Finish/Clap. Q cycles Normal, Soft and Drum for selected sound tags, using the earliest selected
-event (Normal first for tied lanes) to choose one bank for the selection. Normal tags
-change their normal bank; Whistle, Finish and Clap change their shared addition bank.
+remains unchanged. With no selected events, the selectors retain their independent
+placement defaults; Hitsounding painting uses its own brush instead.
+
+The left tool column offers **Select (1)**, **Draw (2)**, then **Soft (A)**,
+**Normal (S)** and **Drum (D)** brushes. Mode and brush are independent selections. In Select mode, brush buttons and Q/A/S/D are enabled only while notes or sound events are selected; otherwise the buttons are dimmed. Draw mode always enables the brushes.
+**Q** cycles Soft → Normal → Drum, using the earliest selected event's current bank
+when a selection exists. In either mode, Q/A/S/D and the brush buttons
+apply the bank to the selection in one undo step. Selected Normal tags change their
+normal bank; selected addition tags change their shared addition bank. Selected
+Notes parents change both banks on their events. Other sample fields are retained.
+Without a selection, Draw changes only its placement brush. Placing an addition
+uses that bank while preserving Normal. W/E/R toggle Whistle/Finish/Clap on the selected
+event. Text inputs and modified shortcuts retain priority. Hover tips explain each
+tool's shortcut and interaction behavior.
+
+Each track has a **Lock** button beside its label. Locked tracks show a tinted background
+behind their notes, cannot be selected, and reject direct editing and paste. Notes starts
+locked; the other tracks start unlocked. Locks do not mute playback or change history.
+Unlock Notes to edit existing notes in either mode. In Draw, an empty-space hover
+shows a snapped placement preview and a click creates a circle at Mapping
+X=256 (osu! Y=192), drag empty space to marquee-select parents, and Ctrl-click to
+add or remove a parent from the selection. Drag an existing note body to move the
+selection in time. Drag a slider's head or tail to adjust that endpoint while
+retaining the other; Ctrl+plus/minus changes its reverse count as in Mapping.
+Dragging moves the note graphics to their preview positions; release creates one
+undo step and Escape restores the original positions. Right-click a note to delete
+it, or the selected group if that note is selected, with undo support.
+
+Notes selection uses a separate clipboard payload from sound tags. Ctrl+C/X/V
+copies, cuts or pastes complete selected notes. A destination interval with no
+notes receives new copies with relative timing preserved. If existing notes
+intersect the interval, every parent must match the source's relative start/end,
+slider span count and nested event rhythm; a complete match transfers sounds while
+preserving destination geometry. Partial overlap or a rhythm mismatch rejects the
+whole paste with an error. Sound-tag-only copy/paste retains its existing behavior.
+Notes mutations require its track to remain unlocked.
+
 The workspace combines drawing, clicking to select, Ctrl-click selection and empty-space marquee selection. The three additions share one bank
 and index; a vertical connector links active additions belonging to the same event.
 Audible events flash with a white edge and a coloured outer glow for 280 ms as playback crosses their timestamps. Both Notes and sound tags show this feedback.

@@ -1124,6 +1124,8 @@
   "timing.red": "红线",
   "timing.green": "绿线",
   "timing.offset": "偏移 (ms)",
+  "timeline.bpmValue": "{0:0.##} BPM",
+  "hitsounding.timingSet": "音效组",
   "timing.bpm": "BPM",
   "timing.meter": "拍号",
   "timing.sample": "采样",
@@ -2054,5 +2056,14 @@
   "bookmark.pasteColour": "粘贴颜色",
   "bookmark.jump": "Jump",
   "bookmark.enableIntervals": "启用全部区间颜色显示",
-  "bookmark.disableIntervals": "关闭全部区间颜色显示"
+  "bookmark.disableIntervals": "关闭全部区间颜色显示",
+  "hitsounding.hint.select": "选择（1）：选择并编辑未锁定的 note 或音效。\n拖动空白处：框选。Ctrl+单击：添加或取消选择。\n右键：删除未锁定的 note 或附加音效。",
+  "hitsounding.hint.draw": "绘制（2）：单击放置音效，或在解锁的 Notes 轨创建圆圈。\n悬停 Notes 空白处：显示吸附后的预放置 note。\n拖动：框选。右键：删除未锁定的 note 或附加音效。",
+  "hitsounding.hint.brush": "{0}（{1}）：将此音效组应用于选中的 note 或音效。\n未选中时，Draw 设置放置画笔；Select 下不可用。\nQ：循环切换 Soft / Normal / Drum。锁定轨道保持受保护。",
+  "hitsounding.lockLane": "锁定 {0}",
+  "hitsounding.unlockLane": "解锁 {0}",
+  "hitsounding.createNote": "创建音符",
+  "hitsounding.resizeNote": "调整音符时间",
+  "hitsounding.moveNotes": "移动音符",
+  "hitsounding.noteRhythmMismatch": "无法粘贴音符：目标位置的节奏、slider 时长或 reverse 数量不匹配。"
 }

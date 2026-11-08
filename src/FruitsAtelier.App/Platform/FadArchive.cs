@@ -10,7 +10,7 @@ public static class FadArchive
 
     public static void Export(ProjectDifficulty difficulty, string destination, bool compensate, string workspace)
         => FazArchive.ExportPackage(new BeatmapProject { Name = difficulty.Document.Name, Difficulties = [difficulty] },
-            destination, false, compensate, workspace, Format);
+            destination, false, compensate, workspace, Format, includeResources: false);
 
     public static FazPackage Prepare(string path, LibrarySettings settings)
     {

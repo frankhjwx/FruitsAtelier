@@ -12,6 +12,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
     private readonly SqliteConnection db;
     private readonly string catalogPath;
     private readonly bool projectsOnly, favouritesOnly;
+    private readonly bool includeProjectDifficulties;
     private readonly HashSet<string>? creators;
     private readonly string songs;
     private sealed record ProjectListing(IReadOnlyList<LibraryMap> Maps, bool? InSongs, LibraryMap Representative);
@@ -37,6 +38,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
         this.projectsOnly = projectsOnly;
         creators = organization?.Creators is { } names ? new(names, StringComparer.Ordinal) : null;
         favouritesOnly = favourites is not null;
+        includeProjectDifficulties = projectsOnly || favouritesOnly || creators is not null || organization?.DifficultyPaths is null;
         this.songs = songs;
         catalogPath = connection.DataSource;
         connection.Dispose();
@@ -235,7 +237,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
             WorkspaceManifest? manifest = null;
             if (project is not null)
                 lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project, includeSync: false);
-            ProjectListing? details = (projectsOnly || favouritesOnly || creators is not null) && manifest is not null ? ProjectDifficulties(project!, map, manifest) : null;
+            ProjectListing? details = includeProjectDifficulties && manifest is not null ? ProjectDifficulties(project!, map, manifest) : null;
             if (details is not null) { difficultyCount = details.Maps.Count; map = details.Representative; }
             bool? inSongs = string.IsNullOrWhiteSpace(songs) ? null
                 : manifest is not null
@@ -250,7 +252,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
     public IReadOnlyList<LibraryMap> Difficulties(LibrarySetRow set, int start, int count = 64)
     {
         using var attachment = Attach();
-        if ((projectsOnly || favouritesOnly || creators is not null) && set.Map.ProjectPath is { } project)
+        if (includeProjectDifficulties && set.Map.ProjectPath is { } project)
         {
             return ProjectDifficulties(project, set.Map).Maps.Skip(Math.Max(0, start)).Take(Math.Clamp(count, 1, 128)).ToArray();
         }

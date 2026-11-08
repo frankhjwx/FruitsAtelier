@@ -43,6 +43,15 @@ internal static class TimingClipboardRenderCheck
                 clock.Milliseconds = 1000; Paint("expired");
                 if (editor.TimingFeedbackNeedsRedraw) throw new InvalidOperationException("Expired feedback keeps redrawing.");
                 var list = editor.TimingListViewport;
+                double? seek = null;
+                editor.RequestSeek = time => seek = time;
+                editor.PointerDown(list.X + 30, list.Y + 74, 0, false, false);
+                editor.PointerUp(list.X + 30, list.Y + 74, 0); Paint();
+                if (seek is not null) throw new InvalidOperationException("Timing single-click sought playback.");
+                editor.PointerDoubleClick(list.X + 30, list.Y + 74, false, false); Paint();
+                if (seek != 1000 || editor.PlayheadMs != 1000 || !editor.TimingSetupVisible)
+                    throw new InvalidOperationException("Timing double-click did not seek to the row.");
+                editor.KeyDown('A', true, false); Paint();
                 editor.PointerDown(list.X + 30, list.Y + 46, 2, false, false);
                 editor.PointerUp(list.X + 30, list.Y + 46, 2); Paint("selected-menu");
                 editor.KeyDown(27, false, false); Paint();
