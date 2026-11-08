@@ -85,15 +85,15 @@ where a design decision is listed.
 ### Recommended near-term work
 
 F05–F07 and F10 are covered by editing regressions. Remaining proposals include
-timing readability, selection information, difficulty navigation and retry
-bindings; agree on their interaction details before implementation.
+selection information, beat-snap colour customization and retry bindings; agree
+on their interaction details before implementation.
 
 | ID | Task | Complexity | Scope and acceptance considerations |
 | --- | --- | --- | --- |
 | F01 | [x] Distinguish major and minor white beat ticks in the Timing panel. | Low | White measure lines are thicker and brighter than ordinary beat lines, with longer ruler ticks; subdivision colours remain unchanged. |
 | F02 | [x] Show BPM flags on Mapping's upper timeline and four timing tracks in Hitsounding. | Low | Mapping flags attach to red lines, suppress overlapping labels and expose their values on hover. Hitsounding shows BPM, Hitsound Set, volume and Kiai, merging consecutive equal values independently per track. Kiai uses orange On and blue-grey Off; original timing points remain intact and red points cannot be dragged. |
 | F03 | [ ] Show the time difference in milliseconds for two selected notes. | Low | Start with the absolute difference between start timestamps; explicitly define slider-head, tail and child-event selection behavior. This is a measurement, not an automatic ranking-criteria verdict. |
-| F04 | [ ] Add shortcuts for switching difficulties. | Low | Ctrl+Tab and Ctrl+Shift+Tab already traverse displayed tab order. Candidate Ctrl+Alt+Left/Right also reaches the osu! canvas's selected-object horizontal nudge because that handler does not exclude Alt. Any alternative binding needs exact modifier routing, text-focus and active-gesture guards. |
+| F04 | [x] Switch difficulties with the existing keyboard shortcuts. | Low | Ctrl+Tab selects the next difficulty and Ctrl+Shift+Tab selects the previous difficulty in displayed tab order, wrapping at either end. No additional bindings are required. |
 | F05 | [x] Seek to red or green timing points when double-clicking their F6 list rows. | Low–medium | Double-click locates the selected timestamp; single-click only selects, and neither applies the timing draft. |
 | F06 | [x] Prevent fruit placement outside the canvas playfield's left and right boundaries. | Low–medium | Catch canvas padding accepts neither fruit previews nor placement; bounds follow the visible playfield transform. |
 | F07 | [x] Create a red slider anchor with a double-click when Slider Path is disabled. | Low–medium | Legacy draft double-click creates a segment boundary regardless of path visibility, without an extra control point. |
