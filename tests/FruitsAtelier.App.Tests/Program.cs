@@ -88,7 +88,7 @@ if (args.Contains("--canvas-feedback-performance")) { CanvasFeedbackPerformance.
 if (args.Contains("--rotation-preview-performance")) { CanvasFeedbackPerformance.RunRotation(); return 0; }
 if (args.Contains("--timing-sv-performance")) { TimingVelocityTests.Benchmark(); return 0; }
 if (args.Contains("--timing-sv-check")) { TimingVelocityTests.Run(); Console.WriteLine("PASS Timing SV display, locking, editing and persistence"); return 0; }
-if (args.Contains("--timing-feedback-check")) { TimingEditorTests.Run(); TimingFeedbackTests.Run(); TimingClipboardTests.Run(); Console.WriteLine("PASS Timing setup, shortcuts, precision and range selection"); return 0; }
+if (args.Contains("--timing-feedback-check")) { TimingEditorTests.Run(); TimingEditorTests.Waveform(); TimingFeedbackTests.Run(); TimingClipboardTests.Run(); Console.WriteLine("PASS Timing setup, waveform, shortcuts, precision and range selection"); return 0; }
 
 if (args.Contains("--note-snap-check")) { NoteSnapTests.InspectBeatPosition(); Console.WriteLine("PASS nearest note beat snap recognition"); return 0; }
 

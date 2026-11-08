@@ -1698,7 +1698,8 @@ Windows `FruitsAtelier.App --render-check --timing-sv-render-check` exercises na
 controls and captures both languages, compact/wide windows and 96/144/192 DPI under
 `artifacts/tests/timing-sv-native`.
 
-`App.Tests --timing-feedback-check` also checks the floating F6 window: undimmed
+`App.Tests --timing-feedback-check` includes waveform rendering, subdivision colours,
+zoom and cached audio, and also checks the floating F6 window: undimmed
 editor rendering, title dragging, four-corner proportional scaling down to 50%,
 scaled numeric input, outside selection/deletion and undo, draft application after
 object edits, stale timing rejection and document retirement in English and Chinese.
