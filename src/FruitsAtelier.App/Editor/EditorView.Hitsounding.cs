@@ -136,17 +136,17 @@ public sealed partial class EditorView
         c.Fill(CanvasToolbarBounds, Panel);
         float toolsX = CanvasToolbarBounds.X + 8;
         float toolScale = Math.Min(1, Math.Max(0, CanvasToolbarBounds.Width - 174) / 438);
-        Button(c, new(toolsX, 88, 88 * toolScale, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
-        Button(c, new(toolsX + 92 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
-        c.Line(toolsX + 188 * toolScale, 92, toolsX + 188 * toolScale, 112, Grid);
-        Button(c, new(toolsX + 196 * toolScale, 88, 102 * toolScale, 28), L.Get("hitsounding.showText"),
+        Button(c, new(toolsX, 88, 60 * toolScale, 28), L.Get("hitsounding.select"),
+            () => { CancelInteraction(); hitsoundingDraw = false; }, !hitsoundingDraw, fontSize: 11);
+        Button(c, new(toolsX + 64 * toolScale, 88, 60 * toolScale, 28), L.Get("hitsounding.draw"),
+            () => { CancelInteraction(); hitsoundingDraw = true; }, hitsoundingDraw, fontSize: 11);
+        c.Line(toolsX + 132 * toolScale, 92, toolsX + 132 * toolScale, 112, Grid);
+        Button(c, new(toolsX + 140 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.noteBased"), () => hitsoundingDockWorkspace.PreciseHitsounds = false, !HitsoundingPrecise, fontSize: 11);
+        Button(c, new(toolsX + 232 * toolScale, 88, 88 * toolScale, 28), L.Get("hitsounding.precise"), () => hitsoundingDockWorkspace.PreciseHitsounds = true, HitsoundingPrecise, fontSize: 11);
+        c.Line(toolsX + 328 * toolScale, 92, toolsX + 328 * toolScale, 112, Grid);
+        Button(c, new(toolsX + 336 * toolScale, 88, 102 * toolScale, 28), L.Get("hitsounding.showText"),
             () => hitsoundingDockWorkspace.ShowHitsoundText = !hitsoundingDockWorkspace.ShowHitsoundText,
             hitsoundingDockWorkspace.ShowHitsoundText, fontSize: 11);
-        c.Line(toolsX + 306 * toolScale, 92, toolsX + 306 * toolScale, 112, Grid);
-        Button(c, new(toolsX + 314 * toolScale, 88, 60 * toolScale, 28), L.Get("hitsounding.select"),
-            () => { CancelInteraction(); hitsoundingDraw = false; }, !hitsoundingDraw, fontSize: 11);
-        Button(c, new(toolsX + 378 * toolScale, 88, 60 * toolScale, 28), L.Get("hitsounding.draw"),
-            () => { CancelInteraction(); hitsoundingDraw = true; }, hitsoundingDraw, fontSize: 11);
         snapSlider = new(CanvasToolbarBounds.Right - 118, 88, 106, 29);
         c.Text(L.Get("ui.snap"), snapSlider.X - 40, 97, 11, Muted, 40);
         float snapStart = snapSlider.X + 7, snapEnd = snapSlider.Right - 31;

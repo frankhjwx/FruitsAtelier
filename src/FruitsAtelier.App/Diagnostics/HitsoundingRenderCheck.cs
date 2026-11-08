@@ -76,7 +76,7 @@ internal static class HitsoundingRenderCheck
                 {
                     var toolbar = editor.CanvasToolbarBounds;
                     float scale = Math.Min(1, Math.Max(0, toolbar.Width - 174) / 438);
-                    float buttonX = toolbar.X + 8 + 408 * scale;
+                    float buttonX = toolbar.X + 8 + 94 * scale;
                     editor.PointerDown(buttonX, 102, 0, false, false); editor.PointerUp(buttonX, 102, 0);
                     float zero = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 0)).X + 4;
                     float twoSeconds = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 2000)).X + 4;
