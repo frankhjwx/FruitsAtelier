@@ -1,5 +1,18 @@
 # Building and Testing
 
+## Custom keyboard bindings
+
+`App.Tests --keybindings-check` verifies command IDs and descriptions, old-setting
+compatibility, custom chords, removed defaults, independent interfaces and editing
+profiles, recorder ownership, collision cancellation/replacement, persistence and
+English/Chinese layout. The full App suite includes Testplay key recording and
+existing shortcut, Settings, text-input and gameplay regressions.
+
+On Windows, `FruitsAtelier.App --render-check --keybindings-render-check` opens the
+native Settings page through pointer input and captures the list, key recorder and
+conflict dialog in English and Chinese under `artifacts/tests/keybindings-native`.
+Inspect these images for complete rows, keycap labels and modal button spacing.
+
 ## Feedback editing regressions
 
 `App.Tests --placement-bounds-check` checks Catch fruit placement and previews in

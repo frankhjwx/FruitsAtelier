@@ -833,9 +833,9 @@ public sealed partial class EditorView
         {
             Item(L.Get("project.new"), () => RequestNewProject?.Invoke());
             Item(L.Get("difficulty.templateTab"), OpenMapTemplates);
-            Item(L.Get("ui.openMenu"), () => RequestOpen?.Invoke());
-            Item(L.Get("ui.saveMenu"), () => RequestSave?.Invoke());
-            Item(L.Get("ui.exportMenu"), () => RequestExport?.Invoke());
+            Item(ShortcutMenuLabel(L.Get("ui.openMenu"), "open"), () => RequestOpen?.Invoke());
+            Item(ShortcutMenuLabel(L.Get("ui.saveMenu"), "save"), () => RequestSave?.Invoke());
+            Item(ShortcutMenuLabel(L.Get("ui.exportMenu"), "export"), () => RequestExport?.Invoke());
             Item(L.Get("library.exportOsz"), () => RequestOszExport?.Invoke());
             Item(L.Get("faz.export"), () => ShowFazExportChoice());
             Item(L.Get("fad.export"), () => RequestFadExport?.Invoke(activeDifficulty));
@@ -849,20 +849,20 @@ public sealed partial class EditorView
         }
         else if (menu == 1)
         {
-            Item(L.Get("ui.undoMenu"), Undo, history.CanUndo);
-            Item(L.Get("ui.redoMenu"), Redo, history.CanRedo);
+            Item(ShortcutMenuLabel(L.Get("ui.undoMenu"), "undo"), Undo, history.CanUndo);
+            Item(ShortcutMenuLabel(L.Get("ui.redoMenu"), "redo"), Redo, history.CanRedo);
             Item(L.Get("history.menu"), ShowVersionHistory, WorkspaceSession is not null);
-            Item(L.Get("history.revertSave") + "  Ctrl+L", RequestPreviousSave, WorkspaceSession is not null && !VersionHistoryBusy);
+            Item(ShortcutMenuLabel(L.Get("history.revertSave") + "  Ctrl+L", "rollback"), RequestPreviousSave, WorkspaceSession is not null && !VersionHistoryBusy);
             Item(L.Get("history.togglePointCurve"), TogglePointCurve, SelectedTrack is not null && anchorSelection.Count == 1 && draftTrack == Guid.Empty && !notesLocked);
-            Item(L.Get("ui.deleteMenu"), DeleteSelection, selection != Guid.Empty);
-            Item(L.Get("editor.command.reverseSelection") + "  Ctrl+G", ReverseSelection, CanCopySelection && !notesLocked);
-            Item(L.Get("rotation.title") + "  Ctrl+Shift+R", OpenRotation, CanCopySelection && !notesLocked);
+            Item(ShortcutMenuLabel(L.Get("ui.deleteMenu"), "delete"), DeleteSelection, selection != Guid.Empty);
+            Item(ShortcutMenuLabel(L.Get("editor.command.reverseSelection") + "  Ctrl+G", "reverse"), ReverseSelection, CanCopySelection && !notesLocked);
+            Item(ShortcutMenuLabel(L.Get("rotation.title") + "  Ctrl+Shift+R", "rotate"), OpenRotation, CanCopySelection && !notesLocked);
             Item(L.Get("editor.command.reversePath"), ReverseSelectedPath, SelectedTrack is not null && ClipboardInteractionReady && !notesLocked);
             Item(L.Get("ui.splitMenu"), SplitSelected, SelectedTrack is not null && draftTrack == Guid.Empty);
-            Item(L.Get("ui.cutMenu"), () => CutSelection(), CanCopySelection);
-            Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection || CanCopyTimestamp);
-            Item(L.Get("ui.pasteMenu"), RequestClipboardPaste, ClipboardInteractionReady && (CanPasteSelection || RequestPasteObjects is not null));
-            if (CanEditBananas) Item(L.Get("bananaEdit.title") + "  Ctrl+F", OpenBananaEdit, !notesLocked);
+            Item(ShortcutMenuLabel(L.Get("ui.cutMenu"), "cut"), () => CutSelection(), CanCopySelection);
+            Item(ShortcutMenuLabel(L.Get("ui.copyMenu"), "copy"), () => CopySelection(), CanCopySelection || CanCopyTimestamp);
+            Item(ShortcutMenuLabel(L.Get("ui.pasteMenu"), "paste"), RequestClipboardPaste, ClipboardInteractionReady && (CanPasteSelection || RequestPasteObjects is not null));
+            if (CanEditBananas) Item(ShortcutMenuLabel(L.Get("bananaEdit.title") + "  Ctrl+F", "bananaEdit"), OpenBananaEdit, !notesLocked);
             Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), ShowPatternDock, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
@@ -893,10 +893,10 @@ public sealed partial class EditorView
             Item(L.Get("timing.signature"), () => gridLevelMenuOpen = true);
             Item(L.Get("timing.metronome"), () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }, active: metronomeEnabled);
             Separator();
-            Item(L.Get("timing.addRed"), () => AddTimingPoint(false));
-            Item(L.Get("timing.addGreen"), () => AddTimingPoint(true));
+            Item(ShortcutMenuLabel(L.Get("timing.addRed"), "addRed"), () => AddTimingPoint(false));
+            Item(ShortcutMenuLabel(L.Get("timing.addGreen"), "addGreen"), () => AddTimingPoint(true));
             Item(L.Get("timing.reset"), () => OpenTimingCommand("reset"));
-            Item(L.Get("timing.delete"), DeleteCurrentTiming);
+            Item(ShortcutMenuLabel(L.Get("timing.delete"), "deleteTiming"), DeleteCurrentTiming);
             Item(L.Get("timing.resnap"), () => ResnapTimingSection(false));
             Separator();
             Item(L.Get("timing.setup"), OpenTimingSetup);

@@ -227,6 +227,10 @@ internal sealed partial class EditorWindow : IDisposable
             {
                 CheckOsuLinks(); Native.DestroyWindow(hwnd); return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--keybindings-render-check"))
+            {
+                CheckKeybindings(); Native.DestroyWindow(hwnd); return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--editor-theme-render-check"))
             {
                 CheckEditorThemes(); Native.DestroyWindow(hwnd); return 0;
@@ -617,7 +621,7 @@ internal sealed partial class EditorWindow : IDisposable
                     view.KeyDown((int)wParam, Native.Control, Native.Shift);
                     UpdateTitle(); Invalidate(); return 0;
                 }
-                if ((view.CapturingTestplayKey || view.IsTestplaying) && !((int)wParam == 115 && Native.Alt))
+                if (!((int)wParam == 115 && Native.Alt))
                 {
                     view.KeyDown((int)wParam, Native.Control, Native.Shift);
                     UpdateTitle(); Invalidate(); return 0;

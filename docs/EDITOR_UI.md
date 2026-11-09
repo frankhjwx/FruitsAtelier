@@ -1120,6 +1120,41 @@ Video and storyboard visuals follow transport playback; see the shared
 Enable Video/Storyboard preference below.
 Audio, Advanced and preferred-skin controls are not part of Song Setup.
 
+## Custom shortcuts
+
+**Settings → Shortcuts** edits keyboard bindings for Global, Library, Compose,
+Timing, Control points, Hitsounding, Testplay, Patterns and Samples. The list groups
+related commands and shows short descriptions, editable keycaps, an **+** action for
+alternate bindings, and a per-command reset. The standard desktop layout shows at
+least twelve command rows; shorter windows scroll the list while retaining the search,
+interface/mode controls and Apply button. Search matches command names, descriptions
+and displayed keys across all interfaces, retaining their group headings. Clearing
+search returns to the selected interface; selecting an interface clears the search.
+
+**Default** and **lazer** are independent profiles, including their Testplay controls.
+Selecting a profile here does not activate that editing mode. Existing settings retain
+their movement keys as defaults in both profiles until customized.
+
+Click a keycap, press a simultaneous combination, then choose **Use binding**.
+Modifiers, function keys, punctuation and multiple ordinary keys can be combined.
+The recorder consumes received keys without executing editor commands. Use its mouse
+buttons to confirm, cancel or clear a binding; Enter and Esc can themselves be assigned.
+Keys intercepted by the operating system cannot be recorded reliably.
+
+A collision in the same profile and overlapping interface prompts before replacement.
+Global bindings overlap every interface. A shorter simultaneous chord also conflicts
+with a longer chord using the same modifiers and containing those keys. **Replace
+binding** removes the conflicting assignments from the listed commands and assigns
+the new chord. Cancel preserves both. Other profiles and disjoint interfaces remain
+independent. Per-command reset checks collisions too; **Reset this mode** confirms
+before restoring factory bindings across that profile's interfaces.
+
+**Apply** saves and activates the entire settings draft. Category switches retain it;
+closing Settings discards unapplied changes. Shortcut preferences never enter beatmap
+undo history. Text fields and dialogs retain their editing/navigation controls, and
+commands keep their existing selection, drawing and undo guards. Testplay movement
+supports held chords and alternate keys; dash can be held together with movement.
+
 ## Settings
 
 **Settings → Experimental** can enable 1/24, 1/32 and 1/48 snap divisions.
@@ -1274,8 +1309,8 @@ returns to the position where testplay began. Gameplay does not change hit objec
 aspect ratio; it reserves no space for navigation controls. Release Esc before
 pressing it again to navigate from the editor to Library.
 
-In **Library → Settings**, click the left, right or dash binding and press a supported key. See the [user manual](USER_MANUAL.md#testplay) for supported keys and reserved shortcuts. Esc cancels capture; choosing an already assigned
-key swaps the two bindings. **Apply** saves the bindings across restarts.
+Movement and dash controls in **Settings → Testplay** open the shared
+[shortcut editor](#custom-shortcuts). First-time setup retains its single-key movement fields.
 
 ## Object timeline and playback speed
 

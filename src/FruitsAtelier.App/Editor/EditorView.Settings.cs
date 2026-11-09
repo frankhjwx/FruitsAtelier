@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, OsuLinks, Experimental, Updates }
+    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, Shortcuts, OsuLinks, Experimental, Updates }
     // New categories precede the fixed Experimental / Updates tail regardless of enum placement.
     private static readonly SettingsCategory[] SettingsNavigation = Enum.GetValues<SettingsCategory>()
         .Where(category => category is not (SettingsCategory.Experimental or SettingsCategory.Updates))
@@ -59,8 +59,8 @@ public sealed partial class EditorView
     private double settingsHue, settingsSaturation, settingsValue;
     private Rect settingsPalette, settingsHueTrack;
     private int settingsColourDrag;
-    internal Rect SettingsBounds => FirstRunSetupVisible ? new(0, 0, width, height) : new((width - Math.Min(1040, width - 24)) / 2,
-        (height - Math.Min(680, height - 24)) / 2, Math.Min(1040, width - 24), Math.Min(680, height - 24));
+    internal Rect SettingsBounds => FirstRunSetupVisible ? new(0, 0, width, height) : new((width - Math.Min(settingsCategory == SettingsCategory.Shortcuts ? 1200 : 1040, width - 24)) / 2,
+        (height - Math.Min(settingsCategory == SettingsCategory.Shortcuts ? 800 : 680, height - 24)) / 2, Math.Min(settingsCategory == SettingsCategory.Shortcuts ? 1200 : 1040, width - 24), Math.Min(settingsCategory == SettingsCategory.Shortcuts ? 800 : 680, height - 24));
     private float SettingsContentX => SettingsBounds.X + (FirstRunSetupVisible ? 32 : 230);
     private float SettingsTop => SettingsBounds.Y - (FirstRunSetupVisible ? workspaceScroll : 0);
     private float SettingsRight => SettingsBounds.Right;
@@ -124,6 +124,7 @@ public sealed partial class EditorView
 
     private void ResetSettingsDrafts()
     {
+        ResetShortcutDraft();
         draftAudioDiagnostics = LibrarySettings.AudioDiagnostics;
         draftAudioDiagnosticFrames = LibrarySettings.AudioDiagnosticFrames;
         draftAudioDiagnosticProfile = LibrarySettings.AudioDiagnosticProfile;
@@ -168,7 +169,7 @@ public sealed partial class EditorView
 
     private bool SettingsRootsChanged => draftWorkspace != LibrarySettings.Workspace || draftOsuRoot != LibrarySettings.OsuRoot;
 
-    private bool SettingsChanged => draftEnableVideoStoryboard != LibrarySettings.EnableVideoStoryboard || draftMapperUsernames != string.Join("; ", LibrarySettings.MapperUsernames ?? []) ||
+    private bool SettingsChanged => ShortcutsChanged || draftEnableVideoStoryboard != LibrarySettings.EnableVideoStoryboard || draftMapperUsernames != string.Join("; ", LibrarySettings.MapperUsernames ?? []) ||
         draftScanStandardMaps != LibrarySettings.ScanStandardMaps || draftMappingCanvasBackgroundDim != LibrarySettings.MappingCanvasBackgroundDim ||
         draftSettingsColours[4] != LibrarySettings.CanvasGridColour ||
         draftSettingsColours[5] != LibrarySettings.CanvasCentreLineColour ||
@@ -212,6 +213,7 @@ public sealed partial class EditorView
         FinishVolumeDrag();
         workspaceScrollDragging = false;
         librarySettingsOpen = false;
+        CancelShortcutCapture(); shortcutResetMode = false; shortcutPhysicalKeys.Clear();
         settingsColourIndex = -1;
         settingsColourDrag = 0;
         libraryField = bindingCapture = -1;
@@ -234,10 +236,10 @@ public sealed partial class EditorView
         {
             var category = SettingsNavigation[i];
             if (category == SettingsCategory.Updates && RequestUpdateCheck is null) continue;
-            Button(c, new(r.X + 16, r.Y + 78 + i * 48, 182, 38), L.Get(SettingsCategoryKey(category)), () =>
+            Button(c, new(r.X + 16, r.Y + 78 + i * Math.Min(48, (r.Height - 108) / SettingsNavigation.Length), 182, 38), L.Get(SettingsCategoryKey(category)), () =>
             {
                 FinishVolumeDrag(); FinishBackgroundDimDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
-                settingsCategory = category; workspaceScroll = 0;
+                settingsCategory = category; workspaceScroll = 0; CancelShortcutCapture();
                 if (category == SettingsCategory.OsuLinks) { RefreshOsuLinkSettings(); LoadOsuLinkApplications(); }
                 if (category == SettingsCategory.Workspace) { workspaceScroll = 0; StartStorage(); }
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
@@ -247,6 +249,9 @@ public sealed partial class EditorView
         c.Text(L.Get(SettingsCategoryKey(settingsCategory)), SettingsContentX, SettingsTop + 82, 24, Foreground, SettingsContentWidth, true);
         switch (settingsCategory)
         {
+            case SettingsCategory.Shortcuts:
+                DrawShortcutSettings(c);
+                return;
             case SettingsCategory.OsuLinks:
                 DrawOsuLinkSettings(c);
                 float webTop = OsuLinkClearButtonBounds.Bottom + 32;
@@ -453,6 +458,7 @@ public sealed partial class EditorView
             float audioScroll = workspaceScroll;
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
             settings.FirstRunSetupVersion = LibrarySettings.FirstRunSetupVersion;
+            settings.ShortcutBindings = CopyBindings(draftShortcuts);
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
             settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
             settings.TestplaySpeed = draftTestplaySpeed;

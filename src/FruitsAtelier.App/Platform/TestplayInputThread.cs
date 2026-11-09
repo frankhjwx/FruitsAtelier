@@ -103,6 +103,12 @@ internal sealed class TestplayInputThread : IDisposable
                     if (key is 0xA4 or 0xA5) key = 0x12;
                     bool down = (input.Flags & 1) == 0;
                     var physical = (input.Header.Device, input.MakeCode, (ushort)(input.Flags & 6));
+                    if (session.HasChordBindings)
+                    {
+                        if (down) pressed.TryAdd(physical, key); else pressed.Remove(physical);
+                        UpdateAudio(); session.SetKey(key, pressed.ContainsValue(key));
+                        return Native.DefWindowProc(hwnd, message, wParam, lParam);
+                    }
                     if (key == 0x11)
                     {
                         if (down)
@@ -155,6 +161,11 @@ internal sealed class TestplayInputThread : IDisposable
     }
     internal static void InitializeHeldKeys(CatchTestplaySession session, Func<int, bool> down)
     {
+        if (session.HasChordBindings)
+        {
+            for (int key = 1; key < 255; key++) if (down(key)) session.SetKey(ShortcutBinding.Normalize(key), true);
+            return;
+        }
         bool ctrl = down(0x11), alt = down(0x12), shift = down(0x10);
         for (int key = 1; key < 255; key++)
             if (session.UsesKey(key) && down(key)

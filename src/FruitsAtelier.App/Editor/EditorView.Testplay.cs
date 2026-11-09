@@ -145,8 +145,9 @@ public sealed partial class EditorView
                 }
             });
         if (startPaused) testplay.TogglePause();
+        ConfigureTestplayShortcuts(testplay);
         if (RequestRunTestplay is null)
-            foreach (int key in heldEditorKeys) testplay.SetKey(key, true);
+            foreach (int key in testplay.HasChordBindings ? shortcutPhysicalKeys : heldEditorKeys) testplay.SetKey(key, true);
         testplayFrame = testplay.Capture();
         if (AudioReady && !audioAlreadyPlaying)
         {
@@ -278,6 +279,13 @@ public sealed partial class EditorView
 
     public void KeyUp(int virtualKey)
     {
+        ReleaseShortcut(virtualKey);
+        ReleaseShortcutState(virtualKey);
+        if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
+        if (!ErrorVisible && IsTestplaying && testplayDriver is null) AdvanceTestplay();
+    }
+    private void ReleaseShortcutState(int virtualKey)
+    {
         heldEditorKeys.Remove(virtualKey);
         osuToggleKeys.Remove(virtualKey);
         if (virtualKey == 123) screenshotHeld = false;
@@ -293,8 +301,6 @@ public sealed partial class EditorView
         if (virtualKey == 82) testplayRetryHeld = false;
         if (virtualKey == 192) CancelTestplayQuickRetry();
         if (virtualKey == 66) testplayBookmarkHeld = false;
-        if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
-        if (!ErrorVisible && IsTestplaying && testplayDriver is null) AdvanceTestplay();
     }
 
     private void DrawTestplay(ICanvas c)
@@ -504,6 +510,19 @@ public sealed partial class EditorView
         {
             int action = i;
             c.Text(L.Get(labels[i]), SettingsContentX + i * cell, TestplaySettingsTop + 160, SettingsTextSize, Foreground, cell - 8, true);
+            if (!FirstRunSetupVisible)
+            {
+                string id = i == 0 ? "moveLeft" : i == 1 ? "moveRight" : "dash";
+                var command = ShortcutCommands.Single(cmd => cmd.Scope == ShortcutScope.Testplay && cmd.Id == id && cmd.Lazer == draftLazerEditing);
+                string label = string.Join(" / ", CommandBindings(command, true).Select(BindingName));
+                SettingsButton(c, TestplayBindingBounds(i), label.Length == 0 ? L.Get("shortcuts.unassigned") : label, () =>
+                {
+                    settingsCategory = SettingsCategory.Shortcuts; shortcutScope = ShortcutScope.Testplay;
+                    shortcutLazer = draftLazerEditing; shortcutQuery = ""; workspaceScroll = 0;
+                    BeginShortcutCapture(command, CommandBindings(command, true).Length > 0 ? 0 : -1);
+                });
+                continue;
+            }
             SettingsButton(c, TestplayBindingBounds(i), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
                 () => { libraryField = -1; bindingCapture = action; }, bindingCapture == i);
         }

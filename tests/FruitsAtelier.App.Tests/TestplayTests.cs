@@ -757,8 +757,11 @@ internal static class TestplayTests
         Check(old.TestplayLeftKey == 37 && old.TestplayRightKey == 39 && old.TestplayDashKey == 16, "old settings get defaults");
         ui.View.InitializeLibrary(true, loaded); ui.Paint(); ui.ClickText(L.Get("library.settings")); ui.ClickText(L.Get("settings.testplay"));
         ui.ClickText("A"); ui.Key(68); ui.Paint();
-        Check(ui.Canvas.Texts.Any(t => t.Value == "A") && ui.Canvas.Texts.Any(t => t.Value == "D"), "conflicting binding swaps actions");
-        ui.ClickText("Space"); ui.Key(27); Check(!ui.View.CapturingTestplayKey, "Escape cancels key capture");
+        ui.ClickText(L.Get("shortcuts.useBinding"));
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("shortcuts.conflictTitle")), "conflicting binding requires explicit confirmation");
+        ui.ClickText(L.Get("shortcuts.cancel"));
+        Check(!ui.View.CapturingShortcut, "Cancel closes recording without applying a binding");
+        ui.Key(27);
         ui.View.CloseLibrary(); ui.View.LoadDocument(DemoMap.Create()); ui.View.UpdateTransport(1500, 20000, true, true, false, null, null);
         ui.View.StartTestplay(); ui.View.KeyDown(68, false, false); ui.View.KeyDown(32, false, false);
         clock.Advance(100);
@@ -780,48 +783,29 @@ internal static class TestplayTests
         string folder = Path.GetFullPath("artifacts/testplay-extended-settings");
         var ui = new Ui(); ui.View.InitializeLibrary(true, new LibrarySettings { Workspace = folder });
         ui.Paint(); ui.ClickText(L.Get("library.settings")); ui.ClickText(L.Get("settings.testplay"));
-        var draft = typeof(FruitsAtelier.App.Editor.EditorView).GetField("draftTestplayKeys",
+        ui.ClickText(L.Get("settings.shortcuts"));
+        var begin = typeof(FruitsAtelier.App.Editor.EditorView).GetMethod("BeginShortcutCapture",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var commands = FruitsAtelier.App.Editor.EditorView.ShortcutCommands.Where(c => !c.Lazer
+            && c.Scope == FruitsAtelier.App.Editor.EditorView.ShortcutScope.Testplay && c.Group == "movement").ToArray();
+        keys = keys.Concat(new[] { (9, "Tab"), (27, "Esc"), (112, "F1"), (113, "F2"), (114, "F3"), (123, "F12") }).ToArray();
         foreach (var (key, name) in keys)
+        foreach (var command in commands)
         {
-            for (int action = 0; action < 3; action++)
-            {
-                ui.View.PointerDown(ui.View.SettingsBounds.X + 238 + action * 220, ui.View.SettingsBounds.Y + 200, 0, false, false);
-                ui.View.PointerUp(ui.View.SettingsBounds.X + 238 + action * 220, ui.View.SettingsBounds.Y + 200, 0);
-                Check(ui.View.CapturingTestplayKey, "binding field starts capture");
-                ui.Key(key); ui.View.KeyUp(key); ui.Paint();
-                Check(!ui.View.CapturingTestplayKey && ui.Canvas.Texts.Any(t => t.Value == name && t.Y >= ui.View.SettingsBounds.Y + 188 && t.Y < ui.View.SettingsBounds.Y + 218),
-                    $"{name} captures and displays for action {action}");
-                int[] captured = (int[])draft.GetValue(ui.View)!;
-                Check(captured[action] == key && captured.Distinct().Count() == 3, "capture preserves distinct bindings");
-                var settings = new LibrarySettings { Workspace = folder, TestplayLeftKey = captured[0],
-                    TestplayRightKey = captured[1], TestplayDashKey = captured[2] };
-                string path = Path.Combine(folder, "settings.json");
-                settings.Save(path); var loaded = LibrarySettings.Load(path);
-                Check(loaded.TestplayLeftKey == captured[0] && loaded.TestplayRightKey == captured[1] &&
-                    loaded.TestplayDashKey == captured[2], "captured keys survive settings reload");
-                var clock = new ManualTime();
-                var session = new CatchTestplaySession(new CatchTestplay(
-                    [new(Guid.NewGuid(), 0, CatchObjectKind.Fruit, 10000, 256, 256, 256, 0)], 5, 0),
-                    new(0, 1, 0, false), 0, false, false, loaded.TestplayLeftKey, loaded.TestplayRightKey,
-                    loaded.TestplayDashKey, clock, 5, []);
-                if (action == 2) session.SetKey(loaded.TestplayRightKey, true);
-                session.SetKey(key, true); clock.Advance(100); session.SetKey(key, false);
-                double expected = action == 0 ? 206 : action == 1 ? 306 : 356;
-                Near(expected, session.Capture().X);
-                clock.Advance(100); session.Tick();
-                Near(expected + (action == 2 ? 50 : 0), session.Capture().X);
-            }
+            begin.Invoke(ui.View, [command, 0]); ui.Paint();
+            Check(ui.View.CapturingShortcut, "binding field starts chord capture");
+            ui.Key(key); ui.View.KeyUp(key); ui.Paint();
+            Check(ui.View.CapturingShortcut && ui.Canvas.Texts.Any(t => t.Value == name), $"{name} records without executing");
+            ui.ClickText(L.Get("shortcuts.useBinding"));
+            if (ui.Canvas.Texts.Any(t => t.Value == L.Get("shortcuts.conflictTitle"))) ui.ClickText(L.Get("shortcuts.replace"));
+            Check(ui.View.CommandBindings(command, true).Any(b => b.Same(ShortcutBinding.From(key))), "captured key belongs to selected action");
+            string path = Path.Combine(folder, "settings.json"); ui.View.ApplySettings(path); ui.Paint();
+            Check(LibrarySettings.Load(path).ShortcutBindings[command.StorageKey].Any(b => b.Same(ShortcutBinding.From(key))), "binding persists");
         }
-        ui.View.PointerDown(ui.View.SettingsBounds.X + 238, ui.View.SettingsBounds.Y + 200, 0, false, false); ui.View.PointerUp(ui.View.SettingsBounds.X + 238, ui.View.SettingsBounds.Y + 200, 0);
-        int[] before = ((int[])draft.GetValue(ui.View)!).ToArray();
-        foreach (int key in new[] { 0, 9, 112, 113, 114, 123, 91, 92, 173, 255 })
-        {
-            ui.Key(key); ui.View.KeyUp(key);
-            Check(ui.View.CapturingTestplayKey && before.SequenceEqual((int[])draft.GetValue(ui.View)!),
-                "reserved and unsupported keys leave capture pending");
-        }
-        ui.Key(27); Check(!ui.View.CapturingTestplayKey, "Escape cancels capture");
+        begin.Invoke(ui.View, [commands[0], 0]); ui.Paint();
+        foreach (int key in new[] { 0, 255 }) { ui.Key(key); ui.View.KeyUp(key); }
+        Check(ui.View.CapturingShortcut, "invalid key codes leave capture pending");
+        ui.ClickText(L.Get("shortcuts.cancel"));
     }
 
     public static void ComboAndTrails()

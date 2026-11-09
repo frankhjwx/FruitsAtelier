@@ -41,6 +41,13 @@ public sealed partial class EditorView
             if (button == 0 && HeaderNavigationBounds.Contains(x, y)) ShowLibrary();
             return;
         }
+        if (!ErrorVisible && !DiscardConfirmationVisible && (CapturingShortcut || shortcutResetMode))
+        {
+            mouseX = x; mouseY = y;
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         placementCtrl = ctrl;
         if (IsTestplaying) { TestplayPointerDown(x, y, button); return; }
         if (ErrorVisible || DiscardConfirmationVisible)
@@ -971,6 +978,11 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (!ErrorVisible && !DiscardConfirmationVisible && (CapturingShortcut || shortcutResetMode))
+        {
+            if (shortcutConfirming) shortcutConflictScroll = Math.Max(0, shortcutConflictScroll - delta / 120 * 44);
+            return;
+        }
         timingContextRequest++;
         if (ErrorVisible)
         {
@@ -1435,7 +1447,7 @@ public sealed partial class EditorView
             }
             else
             {
-                if (testplayDriver is null) testplay!.SetKey(virtualKey, true);
+                if (testplayDriver is null && !testplay!.HasChordBindings) testplay.SetKey(virtualKey, true);
                 AdvanceTestplay();
             }
             return;
@@ -1752,7 +1764,7 @@ public sealed partial class EditorView
         if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
         if (BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
-        if (IsTestplaying || CapturingTestplayKey) return;
+        if (IsTestplaying || CapturingTestplayKey || CapturingShortcut || shortcutResetMode) return;
         if (languageMenuOpen) return;
         ResetTextCaret();
         if (ErrorVisible || DiscardConfirmationVisible) return;
@@ -1786,7 +1798,7 @@ public sealed partial class EditorView
         FinishMapTemplateDrag(cancel: true);
         CancelRotation();
         rotationDragging = false;
-        heldEditorKeys.Clear();
+        heldEditorKeys.Clear(); shortcutPhysicalKeys.Clear(); shortcutReleases.Clear();
         if (drag == DragKind.SnapDivisor) SaveMapEditingPreferences();
         CancelLegacyDropletRefresh();
         CancelOsuInteraction();
@@ -2142,15 +2154,24 @@ public sealed partial class EditorView
             else if (!RecoveryActive && virtualKey is (27 or 13)) DismissError();
             return;
         }
+        if (CapturingShortcut) { CaptureShortcut(virtualKey, ctrl, shift); return; }
+        if (shortcutResetMode) return;
         if (OsuLinkPickerVisible && !ErrorVisible) { KeyDownCore(virtualKey, ctrl, shift); return; }
+        if (IsTestplaying && testplayDriver is null && testplay!.HasChordBindings)
+            testplay.SetKey(ShortcutBinding.Normalize(virtualKey), true);
+        bool physicalAlt = altHeld, physicalShift = shiftHeld;
+        if (RouteShortcut(ref virtualKey, ref ctrl, ref shift, out bool routedAlt)) return;
+        if (OperatingSystem.IsMacOS() && virtualKey == 8 && !IsEditingText && !LibraryVisible && !IsTestplaying
+            && ActiveShortcutScope is ShortcutScope.Compose or ShortcutScope.Hitsounding or ShortcutScope.TimingPoints) virtualKey = 46;
+        altHeld = routedAlt; shiftHeld = shift;
         bool shortcut = ctrl && !altHeld && (virtualKey is 38 or 40 || virtualKey == 82 && !shift)
             || altHeld && virtualKey is 13 or 37 or 38 or 39 or 40;
         if (!shortcut) heldEditorKeys.Add(virtualKey);
         else heldEditorKeys.Remove(virtualKey);
-        if (!shortcut && testplayDriver is null && TestplayPaused) testplay?.SetKey(virtualKey, true);
+        if (!shortcut && testplayDriver is null && testplay?.HasChordBindings != true && TestplayPaused) testplay?.SetKey(virtualKey, true);
         var document = Document;
         try { KeyDownCore(virtualKey, ctrl, shift); }
-        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
+        finally { altHeld = physicalAlt; shiftHeld = physicalShift; if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
     }
     public void TextInput(char value)
     {

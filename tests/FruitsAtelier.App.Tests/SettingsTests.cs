@@ -242,11 +242,14 @@ static class SettingsTests
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.romanisedOff")) &&
                     ApplyColor() == disabled, "Apply stays in category and resets dirty state");
                 ui.ClickText(L.Get("settings.testplay"));
-                ui.ClickText("Shift"); ui.Key(65);
+                ui.ClickText("Shift"); ui.Key(65); ui.View.KeyUp(65); ui.Paint();
+                ui.ClickText(L.Get("shortcuts.useBinding"));
                 Check(ApplyColor() != disabled, "Binding change enables Apply");
                 ui.View.ApplySettings(path); ui.Paint();
-                Check(ApplyColor() == disabled && LibrarySettings.Load(path).TestplayDashKey == 65,
+                Check(ApplyColor() == disabled && LibrarySettings.Load(path).ShortcutBindings["default/Testplay/dash"][0].Same(ShortcutBinding.From(65)),
                     "Bindings apply and reset dirty state");
+                var testplayNav = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.testplay") && t.X < ui.View.SettingsBounds.X + 214);
+                ui.Click(testplayNav.X + 4, testplayNav.Y + 5);
                 var searchField = typeof(FruitsAtelier.App.Editor.EditorView).GetField("searchTask",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
                 var pendingSearch = new TaskCompletionSource<FruitsAtelier.App.Editor.LibraryBrowser>();
@@ -306,7 +309,8 @@ static class SettingsTests
                     playhead == ui.View.PlayheadMs && viewport == ui.View.ViewStartMs,
                     "Settings blocks background pointer, wheel and keyboard input");
                 ui.ClickText(L.Get("settings.testplay"));
-                ui.ClickText("Shift"); ui.Key(65);
+                ui.ClickText("Shift"); ui.Key(65); ui.View.KeyUp(65); ui.Paint();
+                ui.ClickText(L.Get("shortcuts.useBinding"));
                 ui.ClickText(L.Get("settings.appearance"));
                 ui.ClickText(L.Get("settings.testplay"));
                 Check(ui.Canvas.Texts.Any(t => t.Value == "A"), "Category changes retain draft bindings");

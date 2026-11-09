@@ -10,6 +10,14 @@ public enum ImportSliderConversionMode { Ask, KeepLegacy, ConvertToFSlider }
 
 public sealed class LibrarySettings
 {
+    private Dictionary<string, ShortcutBinding[]> shortcutBindings = [];
+    public Dictionary<string, ShortcutBinding[]> ShortcutBindings
+    {
+        get => shortcutBindings;
+        set => shortcutBindings = (value ?? []).ToDictionary(pair => pair.Key, pair => (pair.Value ?? [])
+            .Where(binding => binding?.Keys is not null).Select(binding => ShortcutBinding.From(binding.Keys))
+            .Where(binding => binding.Keys.Length > 0).ToArray());
+    }
     public List<MapTemplate> MapTemplates { get; set; } = [];
     public bool NewDifficultyUseSource { get; set; }
     public EditorDockLayouts? DockLayouts { get; set; }
