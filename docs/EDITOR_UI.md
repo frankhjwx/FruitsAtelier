@@ -485,7 +485,8 @@ geometric position, including the placement marker in the upper timeline.
 Combo colour also takes precedence over skin slider-track overrides in this view.
 Alt+wheel over the upper object timeline changes its time scale independently of
 osu! canvas zoom. In Mapping, small BPM flags attach to red timing lines at the top
-of the object timeline. Dense labels are suppressed to avoid overlap; hover over
+of the object timeline and clip smoothly at its edges. Labels without room before
+the next red line are suppressed independently of scrolling; hover over
 the flag or its red marker to read the BPM.
 
 Slider bodies retain a white border and a brighter centre with darker edges.
