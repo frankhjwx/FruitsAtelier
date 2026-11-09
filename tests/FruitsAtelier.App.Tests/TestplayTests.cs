@@ -525,6 +525,15 @@ internal static class TestplayTests
         ui.View.LibrarySettings.TestplayStartupDelaySeconds = 1;
         ui.View.StartTestplay(); uiClock.Advance(1000); ui.Paint();
         AssertCatcherInFront();
+        int combo = ui.View.TestplayCombo;
+        ui.View.LibrarySettings.ShowTestplayFruitStack = false; ui.Paint();
+        var hiddenCommands = ui.Canvas.Operations.Where(op => op.Clip is not null).ToArray();
+        var catcher = hiddenCommands.First(op => op.Dot is { Color: 0xB5C9D0 });
+        Check(!hiddenCommands.Any(op => op.Dot is { Filled: true, Color: 0xFFFFFF } && op.Order < catcher.Order)
+            && ui.View.TestplayCombo == combo, "Hidden fruit stack must preserve judgments and hide caught sprites.");
+        ui.View.LibrarySettings.ShowTestplayFruitStack = true; ui.Paint(); AssertCatcherInFront();
+        ui.View.LibrarySettings.ShowTestplayFruitStack = false; ui.View.StopTestplay();
+        ui.View.UpdateTransport(1100, 10000, true, false, false, null, null); ui.Paint(); AssertCatcherInFront();
         void AssertCatcherInFront()
         {
             var commands = ui.Canvas.Operations.Where(op => op.Clip is { } clip &&

@@ -65,7 +65,12 @@ public sealed partial class EditorView
         var coordinateInput = new Rect(panel.Right - 74 * scale, panel.Y + 58 * scale, 64 * scale, 20 * scale);
         XCoordinateFieldBounds = target is not null && !notesLocked && drag == DragKind.None
             ? editingXCoordinate ? coordinateInput : XCoordinateRowBounds : null;
-        if (DistanceEditing && editingXCoordinate)
+        if (PlacementGhostPoint() is null && SelectedObjectGapMs is { } gap)
+        {
+            c.Text(L.Get("distance.selectionGap", gap), panel.X + 10 * scale, panel.Y + 60 * scale,
+                MovementPanelFontSize * scale, Foreground, panel.Width - 20 * scale);
+        }
+        else if (DistanceEditing && editingXCoordinate)
         {
             c.Text(L.Get("coordinate.x"), panel.X + 10 * scale, panel.Y + 60 * scale, MovementPanelFontSize * scale, Muted, panel.Width - 94 * scale);
             c.Fill(coordinateInput, Panel, 3 * scale);

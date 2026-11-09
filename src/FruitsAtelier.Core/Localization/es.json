@@ -1,4 +1,6 @@
 {
+  "distance.selectionGap": "Intervalo entre objetos: {0:0.###} ms",
+  "testplay.showFruitStack": "Pila de frutas en prueba",
   "browser.settings": "Web",
   "osuLinks.webTitle": "Enlaces de osu! & Web",
   "browser.clearData": "Borrar datos locales del usuario y cookies",

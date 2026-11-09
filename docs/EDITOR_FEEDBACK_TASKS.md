@@ -85,19 +85,19 @@ where a design decision is listed.
 ### Recommended near-term work
 
 F05–F07 and F10 are covered by editing regressions. Remaining proposals include
-selection information, beat-snap colour customization and retry bindings; agree
+beat-snap colour customization and retry bindings; agree
 on their interaction details before implementation.
 
 | ID | Task | Complexity | Scope and acceptance considerations |
 | --- | --- | --- | --- |
 | F01 | [x] Distinguish major and minor white beat ticks in the Timing panel. | Low | White measure lines are thicker and brighter than ordinary beat lines, with longer ruler ticks; subdivision colours remain unchanged. |
 | F02 | [x] Show BPM flags on Mapping's upper timeline and four timing tracks in Hitsounding. | Low | Mapping flags attach to red lines, suppress overlapping labels and expose their values on hover. Hitsounding shows BPM, Hitsound Set, volume and Kiai, merging consecutive equal values independently per track. Kiai uses orange On and blue-grey Off; original timing points remain intact and red points cannot be dragged. |
-| F03 | [ ] Show the time difference in milliseconds for two selected notes. | Low | Start with the absolute difference between start timestamps; explicitly define slider-head, tail and child-event selection behavior. This is a measurement, not an automatic ranking-criteria verdict. |
+| F03 | [x] Show the interval between two selected objects in milliseconds. | Low | Catch canvas DS Indicator shows the later start minus the earlier object's complete end, including slider repeats. Overlap is negative; touching objects show zero. Whole-object selection only; no osu canvas readout. Equal-start ties follow timeline source order. |
 | F04 | [x] Switch difficulties with the existing keyboard shortcuts. | Low | Ctrl+Tab selects the next difficulty and Ctrl+Shift+Tab selects the previous difficulty in displayed tab order, wrapping at either end. No additional bindings are required. |
 | F05 | [x] Seek to red or green timing points when double-clicking their F6 list rows. | Low–medium | Double-click locates the selected timestamp; single-click only selects, and neither applies the timing draft. |
 | F06 | [x] Prevent fruit placement outside the canvas playfield's left and right boundaries. | Low–medium | Catch canvas padding accepts neither fruit previews nor placement; bounds follow the visible playfield transform. |
 | F07 | [x] Create a red slider anchor with a double-click when Slider Path is disabled. | Low–medium | Legacy draft double-click creates a segment boundary regardless of path visibility, without an extra control point. |
-| F08 | [ ] Allow disabling caught-fruit stacking in testplay. | Low–medium | Confirm that the request refers to the fruit pile on the catcher; make this a display preference without changing judgments. |
+| F08 | [x] Allow disabling caught-fruit stacking in testplay. | Low–medium | Settings → Appearance places Testplay fruit stack beside Hit lighting. Defaults to on; Apply persists it. Hides caught plate sprites without changing judgments or Catch Preview. |
 | F09 | [ ] Allow custom testplay retry bindings. | Medium | Extend the existing testplay binding UI; define short-press and hold-to-retry assignments, conflict handling and key-release behavior. |
 | F10 | [x] Auto-scroll when dragging objects against the upper timeline's left or right edge. | Medium | Within 24 DIP of an edge, object dragging scrolls at up to 600 DIP/s with the canvas following. Leaving the edge, release, cancellation or the map boundary stops scrolling; the gesture retains one undo step. |
 | F11 | [ ] Allow customization of beat-snap colours. | Medium | Include the hard-to-read 1/16 grey tick, consistent colours across relevant grids, persistence and reset to defaults. |

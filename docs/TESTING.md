@@ -21,6 +21,21 @@ native Settings page through pointer input and captures the default and customiz
 lists, Hitsounding command descriptions, key recorder and conflict dialog in English and Chinese under `artifacts/tests/keybindings-native`.
 Inspect these images for complete rows, keycap labels and modal button spacing.
 
+## Selected object intervals and testplay stacks
+
+`App.Tests --selection-gap-check` verifies Catch-only DS Indicator intervals for
+fruits, repeated FSliders and Legacy sliders, and banana showers, including overlap,
+touching intervals, undo, selection clearing and conversion reuse. It also checks
+stack preference defaults, cancellation, persistence and unchanged judgments,
+with English/Chinese settings layouts. `--movement-overlay-check`,
+`--mapping-canvas-check` and `--cache-lifetime-check` cover the shared panel and caches.
+`--selection-gap-performance` reports cold rendering and warm pointer, rendering
+and gap-lookup CPU time and allocation on a mixed-object map.
+Windows `FruitsAtelier.App --render-check --selection-gap-render-check` exercises
+selection and the Appearance checkbox beside Hit lighting in both languages,
+two window sizes and three DPI scales. Captures go under
+`artifacts/tests/selection-gap/native`.
+
 ## Feedback editing regressions
 
 `App.Tests --placement-bounds-check` checks Catch fruit placement and previews in

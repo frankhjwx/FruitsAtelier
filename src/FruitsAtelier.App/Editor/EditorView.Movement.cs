@@ -15,6 +15,36 @@ public sealed partial class EditorView
     public Rect? MovementOverlayBounds { get; private set; }
     public (CatchMovementRange? Previous, CatchMovementRange? Next) MovementReadout { get; private set; }
 
+    private (object? Sources, Guid First, Guid Second) selectionGapKey;
+    private double? selectionGap;
+
+    internal double? SelectedObjectGapMs
+    {
+        get
+        {
+            if (IsOsuCanvas || objectSelection.Count != 2 || anchorSelection.Count != 0 || distanceObject is not null
+                || timelineFruit is not null || soundEdge is not null || HitsoundingPageVisible || TimingPageVisible)
+                return null;
+            if (!ReferenceEquals(timelineConversion, conversion)) RefreshTimelineSources();
+            var ids = objectSelection.GetEnumerator();
+            ids.MoveNext(); var first = ids.Current;
+            ids.MoveNext(); var second = ids.Current;
+            var key = ((object)timelineSources, first, second);
+            if (selectionGapKey == key) return selectionGap;
+            selectionGapKey = key;
+            selectionGap = null;
+            double? previousEnd = null;
+            // Timeline order breaks equal-start ties by source order and already includes complete repeated durations.
+            foreach (var source in timelineSources)
+            {
+                if (source.Id != first && source.Id != second) continue;
+                if (previousEnd is { } end) { selectionGap = source.Start - end; break; }
+                previousEnd = source.End;
+            }
+            return selectionGap;
+        }
+    }
+
     private bool movementIncludeTinyDroplets;
     private bool movementAnalysis { get => EditingPreferences.MovementAnalysis; set { EditingPreferences.MovementAnalysis = value; SaveMapEditingPreferences(); } }
     public bool MovementIncludesTinyDroplets => movementIncludeTinyDroplets;
@@ -202,9 +232,9 @@ public sealed partial class EditorView
         var indices = movementIndices;
         int first = Array.FindIndex(indices, i => sources.Contains(objects[i].SourceId)
             && (selectedObject is null || objects[i].EventIndex == selectedObject.EventIndex));
-        if (first < 0) return;
+        if (first < 0 && (placement || SelectedObjectGapMs is null)) return;
         int last = selectedObject is not null ? first : Array.FindLastIndex(indices, i => sources.Contains(objects[i].SourceId));
-        MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
+        if (first >= 0) MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
                 movementStates[indices[last]].Movement);
         if (IsOsuCanvas)
         {

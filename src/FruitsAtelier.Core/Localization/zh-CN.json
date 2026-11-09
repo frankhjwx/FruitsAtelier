@@ -1,4 +1,6 @@
 {
+  "distance.selectionGap": "对象间隔：{0:0.###} ms",
+  "testplay.showFruitStack": "试打水果堆叠",
   "browser.settings": "Web",
   "osuLinks.webTitle": "osu! 链接 & Web",
   "browser.clearData": "清除本地用户数据和 Cookie",

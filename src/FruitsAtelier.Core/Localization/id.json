@@ -1,4 +1,6 @@
 {
+  "distance.selectionGap": "Jeda objek: {0:0.###} ms",
+  "testplay.showFruitStack": "Tumpukan buah saat uji main",
   "browser.settings": "Web",
   "osuLinks.webTitle": "Tautan osu! & Web",
   "browser.clearData": "Hapus data pengguna lokal dan cookie",

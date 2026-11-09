@@ -3,6 +3,8 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--selection-gap-performance")) { SelectionGapTests.Performance(); return 0; }
+if (args.Contains("--selection-gap-check")) { SelectionGapTests.Run(); FruitStackSettingsTests.Run(); TestplayTests.LivePlate(); Console.WriteLine("PASS selection gaps and fruit stack preferences"); return 0; }
 if (args.Contains("--settings-modal-check")) { SettingsTests.ModalInput(); SettingsTests.Navigation(); SettingsTests.ApplyState(); SettingsTests.Layout(); KeybindingTests.Run(); return 0; }
 if (args.Contains("--keybindings-check")) { KeybindingTests.Run(); SettingsTests.Navigation(); SettingsTests.ApplyState(); TestplayTests.Bindings(); TestplayTests.ExtendedBindings(); return 0; }
 if (args.Contains("--timing-presentation-check")) { TimingPresentationTests.Run(); return 0; }
@@ -431,6 +433,8 @@ var tests = new (string Name, Action Run)[]
     ("Mapping Snap families and overview volume routing", MappingSessionTests.SnapAndVolume),
     ("Mapping boundary distances, DS equality and pointer exit", MappingSessionTests.DistanceAndHover),
     ("Mapping marquee playback and banana timeline resizing", MappingSessionTests.MarqueeAndBanana),
+    ("Selected object end-to-start gaps in Catch DS Indicator", SelectionGapTests.Run),
+    ("Testplay fruit stack display preferences", FruitStackSettingsTests.Run),
     ("Mapping independent zoom and Combo preferences", MappingSessionTests.Preferences),
     ("Mapping per-difficulty editing preferences survive restart", MappingSessionTests.MapPreferences),
     ("Object snap follows musical ranges and preserves time and preferences", ObjectSnapTests.Run),

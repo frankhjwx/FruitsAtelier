@@ -1,4 +1,6 @@
 {
+  "distance.selectionGap": "Tijd tussen objecten: {0:0.###} ms",
+  "testplay.showFruitStack": "Fruitstapel tijdens testspel",
   "browser.settings": "Web",
   "osuLinks.webTitle": "osu!-koppelingen & Web",
   "browser.clearData": "Lokale gebruikersgegevens en cookies wissen",

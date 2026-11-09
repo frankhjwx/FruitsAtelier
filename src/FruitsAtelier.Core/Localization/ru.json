@@ -1,4 +1,6 @@
 {
+  "distance.selectionGap": "Интервал объектов: {0:0.###} мс",
+  "testplay.showFruitStack": "Стопка фруктов в тестовой игре",
   "browser.settings": "Web",
   "osuLinks.webTitle": "Ссылки osu! & Web",
   "browser.clearData": "Удалить локальные данные пользователя и cookie",

@@ -151,6 +151,7 @@ public sealed class LibrarySettings
         set => playbackLineFromBottom = double.IsFinite(value) ? Math.Clamp(value, .05, .95) : .25;
     }
     public bool ShowTestplayCombo { get; set; } = true;
+    public bool ShowTestplayFruitStack { get; set; } = true;
     public bool ForceBackgroundDim { get; set; }
     public bool EnableVideoStoryboard { get; set; } = true;
     public float CanvasControlsOffsetX { get; set; }

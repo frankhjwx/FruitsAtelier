@@ -41,13 +41,15 @@ public sealed partial class EditorView
     public Rect PreserveSameTimeObjectsToggleBounds { get; private set; }
     private bool draftLazerEditing;
     private CatchHitLightingMode draftCatchHitLighting;
-    internal Rect HitLightingSettingsBounds => new(SettingsContentX, SettingsTop + 476, SettingsContentWidth, SettingsControlHeight);
+    internal Rect HitLightingSettingsBounds => new(SettingsContentX, SettingsTop + 476, (SettingsContentWidth - 12) / 2, SettingsControlHeight);
+    internal Rect TestplayFruitStackBounds => new(HitLightingSettingsBounds.Right + 12, SettingsTop + 476, (SettingsContentWidth - 12) / 2, SettingsControlHeight);
     internal Rect LazerEditingToggleBounds { get; private set; }
     private bool draftReverseCanvasScroll;
     private double draftMovementLabelTimeThresholdMs;
     private double draftTestplayStartupDelaySeconds;
     private double draftTestplaySpeed;
     private bool draftShowTestplayCombo;
+    private bool draftShowTestplayFruitStack;
     private int draftBackgroundDim, draftMappingCanvasBackgroundDim, draftCanvasGridOpacity;
     private bool draftForceBackgroundDim;
     private bool draftEnableVideoStoryboard;
@@ -161,6 +163,7 @@ public sealed partial class EditorView
         draftTestplayStartupDelaySeconds = LibrarySettings.TestplayStartupDelaySeconds;
         draftTestplaySpeed = LibrarySettings.TestplaySpeed;
         draftShowTestplayCombo = LibrarySettings.ShowTestplayCombo;
+        draftShowTestplayFruitStack = LibrarySettings.ShowTestplayFruitStack;
         draftBackgroundDim = LibrarySettings.BackgroundDim;
         draftMappingCanvasBackgroundDim = LibrarySettings.MappingCanvasBackgroundDim;
         draftForceBackgroundDim = LibrarySettings.ForceBackgroundDim;
@@ -178,7 +181,7 @@ public sealed partial class EditorView
         draftAudioDiagnostics != LibrarySettings.AudioDiagnostics ||
         draftAudioDiagnosticFrames != LibrarySettings.AudioDiagnosticFrames ||
         draftAudioDiagnosticProfile != LibrarySettings.AudioDiagnosticProfile ||
-        draftForceBackgroundDim != LibrarySettings.ForceBackgroundDim || draftBackgroundDim != LibrarySettings.BackgroundDim || draftShowTestplayCombo != LibrarySettings.ShowTestplayCombo || draftWorkspace != LibrarySettings.Workspace ||
+        draftForceBackgroundDim != LibrarySettings.ForceBackgroundDim || draftBackgroundDim != LibrarySettings.BackgroundDim || draftShowTestplayCombo != LibrarySettings.ShowTestplayCombo || draftShowTestplayFruitStack != LibrarySettings.ShowTestplayFruitStack || draftWorkspace != LibrarySettings.Workspace ||
         draftOsuRoot != LibrarySettings.OsuRoot ||
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
@@ -342,6 +345,8 @@ public sealed partial class EditorView
                 c.Line(SettingsContentX, SettingsTop + 458, SettingsContentX + SettingsContentWidth, SettingsTop + 458, Grid);
                 SettingsButton(c, HitLightingSettingsBounds, L.Get(HitLightingKey(draftCatchHitLighting)) + " ▾",
                     () => OpenHitLightingMenu(HitLightingSettingsBounds));
+                DrawTestplayCheckbox(c, TestplayFruitStackBounds, L.Get("testplay.showFruitStack"),
+                    draftShowTestplayFruitStack, () => draftShowTestplayFruitStack = !draftShowTestplayFruitStack);
                 break;
             case SettingsCategory.Experimental:
                 float snapToggleTop = SettingsParagraph(c, L.Get("settings.experimentalSnapDivisions"), SettingsTop + 128, SettingsTextSize);
@@ -463,6 +468,7 @@ public sealed partial class EditorView
             settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
             settings.TestplaySpeed = draftTestplaySpeed;
             settings.ShowTestplayCombo = draftShowTestplayCombo;
+            settings.ShowTestplayFruitStack = draftShowTestplayFruitStack;
             settings.BackgroundDim = draftBackgroundDim;
             settings.MappingCanvasBackgroundDim = draftMappingCanvasBackgroundDim;
             settings.CanvasGridColour = draftSettingsColours[4];

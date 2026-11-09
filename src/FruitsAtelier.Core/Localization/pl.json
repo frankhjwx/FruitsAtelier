@@ -1,4 +1,6 @@
 {
+  "distance.selectionGap": "Odstęp między obiektami: {0:0.###} ms",
+  "testplay.showFruitStack": "Stos owoców w grze testowej",
   "browser.settings": "Web",
   "osuLinks.webTitle": "Łącza osu! & Web",
   "browser.clearData": "Usuń lokalne dane użytkownika i pliki cookie",

@@ -1,4 +1,6 @@
 {
+  "distance.selectionGap": "ช่วงห่างวัตถุ: {0:0.###} ms",
+  "testplay.showFruitStack": "กองผลไม้ในการทดสอบเล่น",
   "browser.settings": "Web",
   "osuLinks.webTitle": "ลิงก์ osu! & Web",
   "browser.clearData": "ล้างข้อมูลผู้ใช้ในเครื่องและคุกกี้",

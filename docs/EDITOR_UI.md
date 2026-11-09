@@ -680,6 +680,9 @@ visible time range over 200 ms. It starts at 6000 ms and ranges from 500 to
 and testplay. **Follow mode** enables it in lazer editing and disables it in
 Mapping; **On** and **Off** override that choice. Apply saves the preference;
 closing Settings discards unapplied changes.
+**Testplay fruit stack**, beside Hit lighting, controls caught fruit sprites on the
+testplay catcher. It defaults to on and does not affect judgments or Catch Preview.
+Apply saves the preference; closing Settings discards unapplied changes.
 Keyboard and mouse differences are listed in the
 [shortcut manual](KEY_BINDINGS.md#experimental-lazer-editing).
 
@@ -1645,6 +1648,13 @@ A compact movement panel uses a consistent font size, aligned left/right readout
 **Selection Rect**, immediately right of **Slider Path**, toggles the selected-object bounding box and its move/scale interaction regions. It defaults to on and highlights while enabled. The choice lasts for the editor session and does not change selection, map content or undo history. The shorter Zoom slider leaves room for this button.
 
 Slider Path, Selection Rect and Movement Analysis use equal-width buttons. Long localized labels use a smaller font down to 10 DIP, then wrap onto two lines when needed in the compact toolbar. Wrapping prefers spaces and localized word-break hints. Text fitting measures the enabled button's font so toggling a button retains its layout; results are refreshed when the language or compact layout changes.
+
+With exactly two complete objects selected on the Catch canvas, the DS Indicator's
+bottom row shows **Object gap**: the later object's start minus the earlier object's
+complete end, including all slider repeats. Fruits have zero duration. Overlaps show
+negative values and touching intervals show zero. Equal-start ties follow timeline
+source order. Anchor and child-event selections do not supply this measurement;
+the osu canvas does not show it.
 
 Drag any corner of the floating movement panel to resize it proportionally, including its labels and numeric controls. The opposite corner stays fixed, and the panel remains inside the canvas. Size and position are saved with the workspace layout. The panel’s context menu offers independent **Reset position** and **Reset scale** actions; resetting scale restores 100% while retaining the position, clamped inside the canvas.
 

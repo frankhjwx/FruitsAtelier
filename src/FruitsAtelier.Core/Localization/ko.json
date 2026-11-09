@@ -1,4 +1,6 @@
 {
+  "distance.selectionGap": "오브젝트 간격: {0:0.###} ms",
+  "testplay.showFruitStack": "테스트플레이 과일 더미",
   "browser.settings": "Web",
   "osuLinks.webTitle": "osu! 링크 & Web",
   "browser.clearData": "로컬 사용자 데이터 및 쿠키 삭제",

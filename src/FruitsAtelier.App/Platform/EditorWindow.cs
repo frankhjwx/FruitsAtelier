@@ -205,6 +205,12 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--selection-gap-render-check"))
+            {
+                Diagnostics.SelectionGapRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--timing-clipboard-render-check"))
             {
                 Diagnostics.TimingClipboardRenderCheck.Run(canvas);

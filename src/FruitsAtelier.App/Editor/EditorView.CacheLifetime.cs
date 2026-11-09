@@ -59,6 +59,7 @@ public sealed partial class EditorView
         osuDistanceSource = null; osuDistanceReferences = [];
         osuObjectSnapSource = null; osuObjectSnapTargets = []; EndOsuDragSnap();
         osuDraftPathSource = osuDraftCandidate = null; osuDraftPath = []; osuDraftStrokePath = []; osuDraftInputs = default;
+        selectionGapKey = default; selectionGap = null;
         timelineConversion = null; timelineSources = []; timelineMarkers = [];
         timelineStarts = []; timelineEnds = []; timelinePrefixEnd = [];
         timelineVisibleMarkers.Clear(); timelineObjects.Clear(); timelinePatternEvents.Clear(); timelineEventNumbers.Clear();

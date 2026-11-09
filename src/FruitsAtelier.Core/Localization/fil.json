@@ -1,4 +1,6 @@
 {
+  "distance.selectionGap": "Pagitan ng mga object: {0:0.###} ms",
+  "testplay.showFruitStack": "Salansan ng prutas sa testplay",
   "browser.settings": "Web",
   "osuLinks.webTitle": "Mga link ng osu! & Web",
   "browser.clearData": "Burahin ang lokal na data ng user at cookies",

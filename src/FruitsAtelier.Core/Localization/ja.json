@@ -1,4 +1,6 @@
 {
+  "distance.selectionGap": "オブジェクト間隔: {0:0.###} ms",
+  "testplay.showFruitStack": "テストプレイのフルーツ積み重ね",
   "browser.settings": "Web",
   "osuLinks.webTitle": "osu! リンク & Web",
   "browser.clearData": "ローカルユーザーデータと Cookie を削除",

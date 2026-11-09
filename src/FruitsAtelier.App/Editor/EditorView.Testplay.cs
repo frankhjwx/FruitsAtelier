@@ -331,7 +331,7 @@ public sealed partial class EditorView
         uint tint = frame.HyperDashing ? HyperDashColour : 0xFFFFFF;
         foreach (var trail in frame.Trails)
             DrawCatcherTrail(c, trail, left, fieldWidth, catchY);
-        DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
+        if (LibrarySettings.ShowTestplayFruitStack) DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
         DrawCatcherBody(c, x, catchY, fieldWidth, tint, 1, false, frame.FacingLeft);
         if (frame.Dashing) DrawCatcherBody(c, x, catchY, fieldWidth, 0xFFFFFF, .65f, true, frame.FacingLeft, brighten: true);
         DrawCatchLighting(c, frame.Lighting, playhead, x, fieldWidth, catchY, PreviewCircleSize);
