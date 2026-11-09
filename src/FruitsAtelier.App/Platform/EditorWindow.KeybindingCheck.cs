@@ -32,6 +32,9 @@ internal sealed partial class EditorWindow
                 view.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(17, 16, 'D')];
                 view.OpenSettings(); Paint(); r = view.SettingsBounds;
                 Click(r.X + 40, r.Y + 78 + 6 * 48 + 16); Paint(); Capture(locale + "-modified");
+                r = view.SettingsBounds;
+                Click(r.X + 230 + (r.Width - 262) / 9 * 5.5f, r.Y + 190); Paint();
+                view.Wheel(r.X + 400, r.Y + 400, -12000, false); Paint(); Capture(locale + "-hitsounding");
                 view.LibrarySettings.ShortcutBindings.Remove(command.StorageKey);
                 view.KeyDown(27, false, false); view.KeyUp(27);
             }

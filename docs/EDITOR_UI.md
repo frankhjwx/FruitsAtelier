@@ -1122,7 +1122,7 @@ Audio, Advanced and preferred-skin controls are not part of Song Setup.
 
 ## Custom shortcuts
 
-**Settings → Shortcuts** edits keyboard bindings for Global, Library, Compose,
+**Settings → Key Bindings** edits keyboard bindings for Global, Library, Compose,
 Timing, Control points, Hitsounding, Testplay, Patterns and Samples. The list groups
 related commands and shows short descriptions, editable keycaps, an **+** action for
 alternate bindings, and a per-command reset. Custom keycaps and changed commands’
@@ -1132,7 +1132,7 @@ interface/mode controls and Apply button. Search matches command names, descript
 and displayed keys across all interfaces, retaining their group headings. Clearing
 search returns to the selected interface; selecting an interface clears the search.
 
-**Default** and **lazer** are independent profiles, including their Testplay controls.
+**Default** and **Lazer** are independent profiles, including their Testplay controls.
 Selecting a profile here does not activate that editing mode. Existing settings retain
 their movement keys as defaults in both profiles until customized.
 

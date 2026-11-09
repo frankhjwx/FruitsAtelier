@@ -8,8 +8,15 @@ public sealed partial class EditorView
     internal sealed record ShortcutCommand(ShortcutScope Scope, string Id, string Group, bool Lazer, ShortcutBinding[] Defaults)
     {
         public string StorageKey => $"{(Lazer ? "lazer" : "default")}/{Scope}/{Id}";
-        public string NameKey => "shortcuts.command." + Id;
-        public string DescriptionKey => "shortcuts.description." + Id;
+        // Text follows the dispatched sample bank; storage IDs retain existing user assignments.
+        private string TextId => Id.StartsWith("normal", StringComparison.Ordinal) || Id.StartsWith("addition", StringComparison.Ordinal)
+            ? (Defaults[0].Keys.Contains(17) || Scope == ShortcutScope.Compose && Lazer ? "addition" : "normal")
+                + Id[(Id.StartsWith("normal", StringComparison.Ordinal) ? 6 : 8)..] : Id;
+        public string NameKey => "shortcuts.command." + (Scope == ShortcutScope.Library && Id is "scaleUp" or "scaleDown" ? "Library." + Id : TextId);
+        public string DescriptionKey => "shortcuts.description." + (Id is "copy" or "cut" or "paste" or "selectAll" or "delete"
+            || Scope == ShortcutScope.Library && Id is "scaleUp" or "scaleDown"
+            || Scope == ShortcutScope.Testplay && Id is "faster" or "slower" or "fineFaster" or "fineSlower"
+            ? Scope + "." + Id : TextId);
     }
     internal static readonly ShortcutCommand[] ShortcutCommands = CreateShortcutCommands();
     private static ShortcutCommand[] CreateShortcutCommands()

@@ -10,7 +10,7 @@ existing shortcut, Settings, text-input and gameplay regressions.
 
 On Windows, `FruitsAtelier.App --render-check --keybindings-render-check` opens the
 native Settings page through pointer input and captures the default and customized
-lists, key recorder and conflict dialog in English and Chinese under `artifacts/tests/keybindings-native`.
+lists, Hitsounding command descriptions, key recorder and conflict dialog in English and Chinese under `artifacts/tests/keybindings-native`.
 Inspect these images for complete rows, keycap labels and modal button spacing.
 
 ## Feedback editing regressions

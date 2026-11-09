@@ -18,7 +18,7 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 - Selection-dependent commands require a compatible selection. Lock Notes blocks
   moving, reshaping and deleting existing objects, but allows selection, playback,
   placement, flags and undo/redo.
-- Keyboard command bindings are configurable in **Settings → Shortcuts**, independently for Default and lazer. The tables below describe factory defaults.
+- Keyboard command bindings are configurable in **Settings → Key Bindings**, independently for Default and Lazer. The tables below describe factory defaults.
 
 ## Experimental lazer editing
 
@@ -286,8 +286,8 @@ to Compose before moving selected objects.
 
 Combo visibility is configured in **Settings → Testplay keys** and has no shortcut.
 
-Change movement and dash in **Settings → Shortcuts → Testplay**. Choose Default or
-lazer, click a binding, press a key combination, then **Use binding**. Confirm any
+Change movement and dash in **Settings → Key Bindings → Testplay**. Choose Default or
+Lazer, click a binding, press a key combination, then **Use binding**. Confirm any
 conflicting assignment before replacing it. **Apply** saves the draft. Use the
 recorder's mouse buttons to cancel or clear; Esc and Enter can be assigned too.
 System shortcuts can intercept some combinations. See [Custom shortcuts](EDITOR_UI.md#custom-shortcuts).
