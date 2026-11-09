@@ -92,19 +92,6 @@ public sealed partial class EditorView
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
         }
-        if (librarySettingsOpen)
-        {
-            if (LanguagePointerDown(x, y, button) || BeginSettingsColourDrag(x, y, button)) return;
-            if (contextItems.Count > 0)
-            {
-                if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear();
-                return;
-            }
-            if (BeginWorkspaceScroll(x, y, button) || BeginVolumeDrag(x, y, button) || BeginBackgroundDimDrag(x, y, button)) return;
-            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
-                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
-            return;
-        }
         if (DistanceSnapDialogVisible)
         {
             dsSliderShift = shift;
@@ -856,6 +843,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (librarySettingsOpen) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (ErrorVisible) return;
         if (BrowserToolbarContains(x, y)) return;
         if (PatternNameVisible || GalleryTagsVisible || PatternEditingBusy) return;
@@ -978,6 +966,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (SettingsOwnsInput) { SettingsWheel(x, y, delta); return; }
         if (!ErrorVisible && !DiscardConfirmationVisible && (CapturingShortcut || shortcutResetMode))
         {
             if (shortcutConfirming) shortcutConflictScroll = Math.Max(0, shortcutConflictScroll - delta / 120 * 44);
@@ -2121,6 +2110,7 @@ public sealed partial class EditorView
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
         }
+        if (SettingsOwnsInput) { SettingsPointerDown(x, y, button); return; }
         if (OsuLinkPickerVisible && !ErrorVisible) { PointerDownCore(x, y, button, shift, ctrl); return; }
         var document = Document;
         try { PointerDownCore(x, y, button, shift, ctrl); }
@@ -2129,6 +2119,7 @@ public sealed partial class EditorView
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
         if (ErrorVisible) { mouseX = x; mouseY = y; return; }
+        if (SettingsOwnsInput) { SettingsPointerMove(x, y); return; }
         if (OsuLinkPickerVisible && !ErrorVisible) { mouseX = x; mouseY = y; return; }
         var document = Document;
         try { PointerMoveCore(x, y, shift, ctrl); }
@@ -2137,6 +2128,7 @@ public sealed partial class EditorView
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
         if (ErrorVisible) return;
+        if (SettingsOwnsInput) { SettingsPointerUp(x, y, button); return; }
         if (OsuLinkPickerVisible && !ErrorVisible) return;
         var document = Document;
         try { PointerUpCore(x, y, button, shift); }
@@ -2156,6 +2148,7 @@ public sealed partial class EditorView
         }
         if (CapturingShortcut) { CaptureShortcut(virtualKey, ctrl, shift); return; }
         if (shortcutResetMode) return;
+        if (SettingsOwnsInput) { SettingsKeyDown(virtualKey, ctrl, shift); return; }
         if (OsuLinkPickerVisible && !ErrorVisible) { KeyDownCore(virtualKey, ctrl, shift); return; }
         if (IsTestplaying && testplayDriver is null && testplay!.HasChordBindings)
             testplay.SetKey(ShortcutBinding.Normalize(virtualKey), true);
@@ -2175,6 +2168,12 @@ public sealed partial class EditorView
     }
     public void TextInput(char value)
     {
+        if (SettingsOwnsInput)
+        {
+            if (!CapturingShortcut && !shortcutResetMode && !CapturingTestplayKey && !languageMenuOpen && libraryField >= 0 && !char.IsControl(value))
+            { ResetTextCaret(); LibraryFieldValue = InsertInput("library:" + libraryField, LibraryFieldValue, value.ToString(), 4096); }
+            return;
+        }
         if (ErrorVisible) return;
         if (DiscussionImageVisible) return;
         if (discussionSelectedLayout is not null) return;

@@ -1158,6 +1158,13 @@ supports held chords and alternate keys; dash can be held together with movement
 
 ## Settings
 
+All Settings categories share a 1200 × 800 logical-pixel panel, constrained to
+the available window size. Switching categories preserves its size and position.
+
+Settings is modal: covered controls do not highlight or receive clicks, drags,
+double-clicks, scrolling, text or keyboard commands. Settings controls and its
+child dialogs remain interactive; closing Settings restores the underlying view.
+
 **Settings → Experimental** can enable 1/24, 1/32 and 1/48 snap divisions.
 It also extends upper object-timeline zoom from 1.5 to 16 DIP/ms. Use its +/−
 buttons or Alt+wheel to separate densely spaced circles. Disabling the preference

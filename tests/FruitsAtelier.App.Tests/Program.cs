@@ -3,6 +3,7 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--settings-modal-check")) { SettingsTests.ModalInput(); SettingsTests.Navigation(); SettingsTests.ApplyState(); SettingsTests.Layout(); KeybindingTests.Run(); return 0; }
 if (args.Contains("--keybindings-check")) { KeybindingTests.Run(); SettingsTests.Navigation(); SettingsTests.ApplyState(); TestplayTests.Bindings(); TestplayTests.ExtendedBindings(); return 0; }
 if (args.Contains("--timing-presentation-check")) { TimingPresentationTests.Run(); return 0; }
 if (args.Contains("--placement-bounds-check")) { FeedbackBugTests.PlacementBounds(); return 0; }
@@ -502,6 +503,7 @@ var tests = new (string Name, Action Run)[]
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
     ("Map droplet defaults and compensation target preserve drafts and support history", DropletDerandomizationTests.Run),
     ("Custom shortcut settings preserve scopes, modes and conflicts", KeybindingTests.Run),
+    ("Settings blocks covered hover and input", SettingsTests.ModalInput),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
     ("Experimental snap settings, wheel and Stream/Stack", ExperimentalSnapTests.Run),

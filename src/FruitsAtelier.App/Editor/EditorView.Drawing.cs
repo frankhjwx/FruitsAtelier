@@ -129,7 +129,16 @@ public sealed partial class EditorView
         if (syncPage == "resolve" && syncMerges.TryGetValue(syncDifficulty, out var comparisonMerge) && comparisonMerge.Conflicts.Count > 0
             && syncComparisons.ContainsKey(syncDifficulty)) { DrawSynchronization(c); return; }
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
-        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawLibraryCollectionDialog(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
+        if (LibraryVisible)
+        {
+            var libraryPointer = (X: mouseX, Y: mouseY);
+            if (librarySettingsOpen) mouseX = mouseY = -1;
+            try { DrawLibrary(c); }
+            finally { mouseX = libraryPointer.X; mouseY = libraryPointer.Y; }
+            if (librarySettingsOpen) { DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); }
+            else { DrawUpdateNotice(c); DrawLibraryCollectionDialog(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); }
+            return;
+        }
         LayoutDockPanels();
         plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight + PatternEditingBannerHeight, Math.Max(50, canvas.Width - 198 - DiscussionCanvasReserve), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight - PatternEditingBannerHeight));
         overview = OverviewTimelineCollapsed ? default
@@ -156,7 +165,7 @@ public sealed partial class EditorView
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         var pointer = (X: mouseX, Y: mouseY);
         // Covered controls render as if the pointer were outside the window.
-        if (PatternGalleryPopupContains(mouseX, mouseY) || TimingWindowContains(mouseX, mouseY)) mouseX = mouseY = -1;
+        if (librarySettingsOpen || PatternGalleryPopupContains(mouseX, mouseY) || TimingWindowContains(mouseX, mouseY)) mouseX = mouseY = -1;
         try
         {
             c.Fill(new(0, 0, width, height), Background);
@@ -206,40 +215,44 @@ public sealed partial class EditorView
                 c.Fill(ghost, Surface, 4); c.Stroke(ghost, Accent, radius: 4);
                 c.Text(Path.GetFileName(soundPath), ghost.X + 8, ghost.Y + 7, 11, Foreground, 194);
             }
+            if (!librarySettingsOpen) { mouseX = pointer.X; mouseY = pointer.Y; }
+            if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingMuteTooltip(c);
+            if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingLockTooltip(c);
+            if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingToolTooltip(c);
+            if (HitsoundingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
+                && hitsoundingTimingTooltip is { } timingTip && timingTip.Bounds.Contains(mouseX, mouseY))
+                DrawPaletteTooltip(c, timingTip.Text, timingTip.Bounds, left: false, above: false, centered: true);
+            if (!HitsoundingPageVisible && !TimingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
+                && timelineBpmTooltip is { } bpmTip && bpmTip.Bounds.Contains(mouseX, mouseY))
+                DrawPaletteTooltip(c, bpmTip.Text, bpmTip.Bounds, left: false, above: false, centered: true);
+            DrawPatternGalleryOverlay(c);
+            DrawPatternEditingBanner(c);
+            DrawTimingSetup(c);
+            DrawTimingCopyFeedback(c);
+            if (menu >= 0) DrawMenu(c);
+            if (!librarySettingsOpen) DrawContextMenu(c);
+            if (!librarySettingsOpen) DrawLanguageMenu(c);
+            DrawPanelMenu(c);
+            DrawSliderDialog(c);
+            DrawExportOverlay(c);
+            DrawTimeJump(c);
+            DrawStreamDialog(c);
+            DrawRotation(c);
+            DrawBananaEdit(c);
+            DrawVolumeDialog(c);
+            DrawVolumePopover(c);
+            DrawDistanceSnapDialog(c);
+            DrawSongSetup(c);
+            DrawHitsoundCopier(c);
         }
         finally { mouseX = pointer.X; mouseY = pointer.Y; }
-        if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingMuteTooltip(c);
-        if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingLockTooltip(c);
-        if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingToolTooltip(c);
-        if (HitsoundingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
-            && hitsoundingTimingTooltip is { } timingTip && timingTip.Bounds.Contains(mouseX, mouseY))
-            DrawPaletteTooltip(c, timingTip.Text, timingTip.Bounds, left: false, above: false, centered: true);
-        if (!HitsoundingPageVisible && !TimingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
-            && timelineBpmTooltip is { } bpmTip && bpmTip.Bounds.Contains(mouseX, mouseY))
-            DrawPaletteTooltip(c, bpmTip.Text, bpmTip.Bounds, left: false, above: false, centered: true);
-        DrawPatternGalleryOverlay(c);
-        DrawPatternEditingBanner(c);
-        DrawTimingSetup(c);
-        DrawTimingCopyFeedback(c);
-        if (menu >= 0) DrawMenu(c);
-        if (!librarySettingsOpen) DrawContextMenu(c);
-        if (!librarySettingsOpen) DrawLanguageMenu(c);
-        DrawPanelMenu(c);
-        DrawSliderDialog(c);
-        DrawExportOverlay(c);
-        DrawTimeJump(c);
-        DrawStreamDialog(c);
-        DrawRotation(c);
-        DrawBananaEdit(c);
-        DrawVolumeDialog(c);
-        DrawVolumePopover(c);
-        DrawDistanceSnapDialog(c);
-        DrawSongSetup(c);
-        DrawHitsoundCopier(c);
         DrawSettings(c);
+        if (librarySettingsOpen)
+        {
+            DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c);
+            return;
+        }
         DrawCollaborationReport(c);
-        if (librarySettingsOpen) DrawContextMenu(c);
-        if (librarySettingsOpen) DrawLanguageMenu(c);
         DrawGalleryTags(c);
         DrawPatternNameDialog(c);
         DrawDiscussionImagePreview(c);

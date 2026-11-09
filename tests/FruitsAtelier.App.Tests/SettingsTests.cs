@@ -4,6 +4,63 @@ using L = FruitsAtelier.Localization.Strings;
 
 static class SettingsTests
 {
+    public static void ModalInput()
+    {
+        string language = L.Language;
+        try
+        {
+            L.SetLanguage("en");
+            foreach (bool library in new[] { false, true })
+            {
+                var ui = new Ui(false); ui.Resize(1440, 900);
+                ui.View.LibrarySettings.Workspace = Path.GetFullPath(Path.Combine("artifacts/tests/settings-modal", Guid.NewGuid().ToString("N")));
+                ui.View.LibrarySettings.OsuRoot = "";
+                if (library) { ui.View.MarkSaved(); ui.View.ShowLibrary(); ui.Paint(); }
+                var view = ui.View;
+                var before = view.Document.DeepClone(); double time = view.PlayheadMs, start = view.ViewStartMs;
+                int opens = 0, saves = 0; view.RequestOpen = () => opens++; view.RequestSave = () => saves++;
+                view.OpenSettings(); ui.Paint();
+                var target = ui.Canvas.Texts.First(t => t.Value == L.Get(library ? "library.favourites" : "ui.file"));
+                float x = target.X + 3, y = target.Y + 3;
+                view.PointerMove(-1, -1, false, false); ui.Paint();
+                var idle = ui.Canvas.Fills.Where(f => f.Bounds.Contains(x, y)).ToArray();
+                view.PointerMove(x, y, false, false); ui.Paint();
+                Check(idle.SequenceEqual(ui.Canvas.Fills.Where(f => f.Bounds.Contains(x, y))), "Settings removes covered hover highlights");
+                for (int button = 0; button < 3; button++)
+                { view.PointerDown(x, y, button, false, false); view.PointerMove(x + 25, y + 25, false, false); view.PointerUp(x + 25, y + 25, button); }
+                view.PointerDoubleClick(x, y, false, false);
+                foreach (bool ctrl in new[] { false, true }) view.Wheel(x, y, -120, ctrl, false, true);
+                view.KeyDown('S', true, false); view.KeyUp('S'); view.KeyDown('O', true, true); view.KeyUp('O');
+                view.KeyDown(32, false, false); view.KeyUp(32); view.KeyDown(46, false, false); view.KeyUp(46);
+                view.TextInput('x'); ui.Paint();
+                Check(opens == 0 && saves == 0 && before.ContentEquals(view.Document) && time == view.PlayheadMs && start == view.ViewStartMs,
+                    "Settings consumes underlying clicks, drags, double clicks, wheel, text and keyboard commands");
+                Check(!view.CanDropAudio && !view.CanDropLibraryFiles, "Settings blocks background file drops");
+                var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                if (library) Check(!(bool)view.GetType().GetField("libraryFavouritesOnly", flags)!.GetValue(view)!, "Covered library category stays unchanged");
+                var scan = view.GetType().GetField("scanTask", flags)!;
+                var priorScan = scan.GetValue(view);
+                var rescan = view.GetType().GetField("libraryRescanRequested", flags)!;
+                var priorRescan = rescan.GetValue(view);
+                view.KeyDown(116, false, false); view.KeyUp(116);
+                Check(ReferenceEquals(priorScan, scan.GetValue(view)) && Equals(priorRescan, rescan.GetValue(view)), "F5 cannot refresh the covered library");
+                ui.ClickText(L.Get("settings.shortcuts"));
+                var r = view.SettingsBounds;
+                foreach (string category in new[] { "settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.mappingCanvas", "settings.experimental", "settings.shortcuts" })
+                {
+                    ui.ClickText(L.Get(category));
+                    Check(view.SettingsBounds == r, "Settings categories retain the same bounds");
+                }
+                ui.Click(r.X + 250, r.Y + 135); view.TextInput('u'); ui.Paint();
+                Check(ui.Canvas.Texts.Any(t => t.Value == "u"), "Settings search still accepts text");
+                ui.Key(27); ui.Key(27);
+                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.shortcuts") && t.X > r.X + 214), "Escape closes Settings");
+            }
+        }
+        finally { L.SetLanguage(language); }
+        Console.WriteLine("PASS Settings modal hover, pointer, wheel, keyboard and text isolation");
+    }
+
     public static void Layout()
     {
         string language = L.Language;
@@ -288,6 +345,8 @@ static class SettingsTests
             {
                 L.SetLanguage(locale);
                 var ui = new Ui(false);
+                ui.View.LibrarySettings.Workspace = Path.GetFullPath(Path.Combine("artifacts/tests/settings-modal", Guid.NewGuid().ToString("N")));
+                ui.View.LibrarySettings.OsuRoot = "";
                 ui.Resize(size.Item1, size.Item2);
                 var map = new MapDocument();
                 map.Fruits.Add(new Fruit { TimeMs = 1000, X = 256 });

@@ -38,6 +38,12 @@ internal sealed partial class EditorWindow
                 view.LibrarySettings.ShortcutBindings.Remove(command.StorageKey);
                 view.KeyDown(27, false, false); view.KeyUp(27);
             }
+            L.SetLanguage("en"); view.OpenSettings(); Paint();
+            view.PointerMove(140, 20, false, false); Capture("settings-editor-blocked", true);
+            view.KeyDown(27, false, false); view.KeyUp(27);
+            view.LibrarySettings.Workspace = Path.Combine(folder, "library-workspace"); view.LibrarySettings.OsuRoot = "";
+            view.MarkSaved(); view.ShowLibrary(); Paint(); view.OpenSettings(); Paint();
+            view.PointerMove(70, 214, false, false); Capture("settings-library-blocked", true);
             AppLog.Write("Shortcut native render checks passed: list, chord capture and conflict modal in English and Chinese.");
         }
         finally { L.SetLanguage(language); Native.ShowWindow(hwnd, 0); }
@@ -47,9 +53,9 @@ internal sealed partial class EditorWindow
             nint point = (nint)((long)(ushort)(y * uiDpi / 96) << 16 | (ushort)(x * uiDpi / 96));
             HandleMessage(hwnd, 0x0201, 0, point); HandleMessage(hwnd, 0x0202, 0, point);
         }
-        void Capture(string name)
+        void Capture(string name, bool keepPointer = false)
         {
-            view.PointerMove(0, 0, false, false);
+            if (!keepPointer) view.PointerMove(0, 0, false, false);
             canvas!.Begin(); Native.GetClientRect(hwnd, out var size);
             view.Render(canvas, size.Right * 96 / uiDpi, size.Bottom * 96 / uiDpi);
             canvas.End(capture: () =>

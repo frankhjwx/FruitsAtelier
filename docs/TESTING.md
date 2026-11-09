@@ -1,5 +1,13 @@
 # Building and Testing
 
+## Settings modal input
+
+`App.Tests --settings-modal-check` verifies that Settings blocks background hover,
+clicks, drags, double-clicks, scrolling, file drops and keyboard commands in the
+library and editor. It also checks Settings search input, navigation, Apply and
+layout, plus key recording and conflict dialogs. The keybindings native render
+check captures covered library and editor controls with the pointer over them.
+
 ## Custom keyboard bindings
 
 `App.Tests --keybindings-check` verifies command IDs and descriptions, old-setting

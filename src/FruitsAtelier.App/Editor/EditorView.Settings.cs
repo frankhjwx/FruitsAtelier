@@ -59,8 +59,8 @@ public sealed partial class EditorView
     private double settingsHue, settingsSaturation, settingsValue;
     private Rect settingsPalette, settingsHueTrack;
     private int settingsColourDrag;
-    internal Rect SettingsBounds => FirstRunSetupVisible ? new(0, 0, width, height) : new((width - Math.Min(settingsCategory == SettingsCategory.Shortcuts ? 1200 : 1040, width - 24)) / 2,
-        (height - Math.Min(settingsCategory == SettingsCategory.Shortcuts ? 800 : 680, height - 24)) / 2, Math.Min(settingsCategory == SettingsCategory.Shortcuts ? 1200 : 1040, width - 24), Math.Min(settingsCategory == SettingsCategory.Shortcuts ? 800 : 680, height - 24));
+    internal Rect SettingsBounds => FirstRunSetupVisible ? new(0, 0, width, height) : new((width - Math.Min(1200, width - 24)) / 2,
+        (height - Math.Min(800, height - 24)) / 2, Math.Min(1200, width - 24), Math.Min(800, height - 24));
     private float SettingsContentX => SettingsBounds.X + (FirstRunSetupVisible ? 32 : 230);
     private float SettingsTop => SettingsBounds.Y - (FirstRunSetupVisible ? workspaceScroll : 0);
     private float SettingsRight => SettingsBounds.Right;
