@@ -164,7 +164,6 @@ public sealed partial class EditorView
         c.Text(L.Get("shortcuts.editingMode"), x, top + 224, 13, Foreground, 112, true);
         SettingsButton(c, new(x + 120, top + 216, 82, 30), L.Get("shortcuts.default"), () => { shortcutLazer = false; workspaceScroll = 0; }, !shortcutLazer);
         SettingsButton(c, new(x + 206, top + 216, 82, 30), L.Get("shortcuts.lazer"), () => { shortcutLazer = true; workspaceScroll = 0; }, shortcutLazer);
-        if (w > 550) c.Text(L.Get("shortcuts.separateModes"), x + 306, top + 224, 12, Muted, w - 306);
         float keyX = x + w * .59f;
         c.Fill(new(x, top + 258, w, 28), Surface, 3);
         c.Text(L.Get("shortcuts.commandHeader"), x + 8, top + 263, 13, Foreground, w * .57f, true);
@@ -205,20 +204,20 @@ public sealed partial class EditorView
                     float desired = Math.Max(28, c.MeasureText(text, 11) + 16);
                     if (j > 0 && desired > available)
                     {
-                        ShortcutKeyButton(c, new(Math.Min(bx, x + w - 88), y + 3, 24, 23), "…", () => BeginShortcutCapture(command, index));
+                        ShortcutKeyButton(c, new(Math.Min(bx, x + w - 88), y + 3, 24, 23), "…", () => BeginShortcutCapture(command, index), bindings.Skip(index).Any(b => !command.Defaults.Any(b.Same)));
                         bx = x + w - 58; break;
                     }
                     float bw = Math.Min(desired, available - (j < bindings.Length - 1 ? 29 : 0));
                     if (bw < 24) break;
-                    ShortcutKeyButton(c, new(bx, y + 3, bw, 23), text, () => BeginShortcutCapture(command, index)); bx += bw + 5;
+                    ShortcutKeyButton(c, new(bx, y + 3, bw, 23), text, () => BeginShortcutCapture(command, index), !command.Defaults.Any(bindings[j].Same)); bx += bw + 5;
                 }
                 if (bindings.Length == 0)
                 {
-                    ShortcutKeyButton(c, new(bx, y + 3, Math.Min(100, w * .24f), 23), L.Get("shortcuts.unassigned"), () => BeginShortcutCapture(command, -1));
+                    ShortcutKeyButton(c, new(bx, y + 3, Math.Min(100, w * .24f), 23), L.Get("shortcuts.unassigned"), () => BeginShortcutCapture(command, -1), command.Defaults.Length > 0);
                     bx += Math.Min(100, w * .24f) + 5;
                 }
                 ShortcutKeyButton(c, new(Math.Min(bx, x + w - 58), y + 3, 24, 23), "+", () => BeginShortcutCapture(command, -1));
-                ShortcutKeyButton(c, new(x + w - 28, y + 3, 24, 23), "↶", () => ResetShortcut(command));
+                ShortcutKeyButton(c, new(x + w - 28, y + 3, 24, 23), "↶", () => ResetShortcut(command), bindings.Length != command.Defaults.Length || bindings.Any(b => !command.Defaults.Any(b.Same)));
             }
             y += rowHeight;
         }
@@ -237,10 +236,15 @@ public sealed partial class EditorView
         if (shortcutCapture is not null || shortcutResetMode) DrawShortcutCapture(c);
     }
     private bool shortcutResetMode;
-    private void ShortcutKeyButton(ICanvas c, Rect bounds, string label, Action action)
+    private void ShortcutKeyButton(ICanvas c, Rect bounds, string label, Action action, bool modified = false)
     {
-        c.Fill(bounds, Surface, 3); c.Stroke(bounds, Grid, radius: 3);
-        Button(c, bounds, label, action, fontSize: 11, bold: false, textPadding: 5, textRightPadding: 5);
+        bool hover = contextItems.Count == 0 && bounds.Contains(mouseX, mouseY);
+        c.Fill(bounds, modified ? MixThemeColour(Surface, Gold, hover ? .24f : .12f) : hover ? HoverSurface : Surface, 3);
+        c.Stroke(bounds, modified ? Gold : hover ? Muted : Grid, radius: 3);
+        float textWidth = Math.Min(c.MeasureText(label, 11), Math.Max(0, bounds.Width - 10));
+        c.Text(label, bounds.X + (bounds.Width - textWidth) / 2, bounds.Y + (bounds.Height - 15) / 2,
+            11, modified ? Gold : Foreground, textWidth);
+        hits.Add(new(bounds, action, true));
     }
     private void DrawShortcutCapture(ICanvas c)
     {

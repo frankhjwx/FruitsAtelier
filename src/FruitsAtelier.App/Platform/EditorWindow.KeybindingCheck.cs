@@ -28,6 +28,12 @@ internal sealed partial class EditorWindow
                 Click((w + 550) / 2 - 100, (h + 310) / 2 - 40); Paint(); Capture(locale + "-conflict");
                 Click((w + 550) / 2 - 240, (h + 360) / 2 - 40); Paint();
                 view.KeyDown(27, false, false); view.KeyUp(27);
+                var command = Editor.EditorView.ShortcutCommands.Single(c => c.Id == "select" && c.Scope == Editor.EditorView.ShortcutScope.Compose && !c.Lazer);
+                view.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(17, 16, 'D')];
+                view.OpenSettings(); Paint(); r = view.SettingsBounds;
+                Click(r.X + 40, r.Y + 78 + 6 * 48 + 16); Paint(); Capture(locale + "-modified");
+                view.LibrarySettings.ShortcutBindings.Remove(command.StorageKey);
+                view.KeyDown(27, false, false); view.KeyUp(27);
             }
             AppLog.Write("Shortcut native render checks passed: list, chord capture and conflict modal in English and Chinese.");
         }

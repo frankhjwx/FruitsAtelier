@@ -9,8 +9,8 @@ English/Chinese layout. The full App suite includes Testplay key recording and
 existing shortcut, Settings, text-input and gameplay regressions.
 
 On Windows, `FruitsAtelier.App --render-check --keybindings-render-check` opens the
-native Settings page through pointer input and captures the list, key recorder and
-conflict dialog in English and Chinese under `artifacts/tests/keybindings-native`.
+native Settings page through pointer input and captures the default and customized
+lists, key recorder and conflict dialog in English and Chinese under `artifacts/tests/keybindings-native`.
 Inspect these images for complete rows, keycap labels and modal button spacing.
 
 ## Feedback editing regressions

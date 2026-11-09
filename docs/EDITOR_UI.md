@@ -1125,8 +1125,9 @@ Audio, Advanced and preferred-skin controls are not part of Song Setup.
 **Settings → Shortcuts** edits keyboard bindings for Global, Library, Compose,
 Timing, Control points, Hitsounding, Testplay, Patterns and Samples. The list groups
 related commands and shows short descriptions, editable keycaps, an **+** action for
-alternate bindings, and a per-command reset. The standard desktop layout shows at
-least twelve command rows; shorter windows scroll the list while retaining the search,
+alternate bindings, and a per-command reset. Custom keycaps and changed commands’
+reset icons use gold; restoring factory bindings restores their normal colour.
+The standard desktop layout shows at least twelve command rows; shorter windows scroll the list while retaining the search,
 interface/mode controls and Apply button. Search matches command names, descriptions
 and displayed keys across all interfaces, retaining their group headings. Clearing
 search returns to the selected interface; selecting an interface clears the search.
@@ -1146,7 +1147,7 @@ Global bindings overlap every interface. A shorter simultaneous chord also confl
 with a longer chord using the same modifiers and containing those keys. **Replace
 binding** removes the conflicting assignments from the listed commands and assigns
 the new chord. Cancel preserves both. Other profiles and disjoint interfaces remain
-independent. Per-command reset checks collisions too; **Reset this mode** confirms
+independent. Per-command reset checks collisions too; **Reset** confirms
 before restoring factory bindings across that profile's interfaces.
 
 **Apply** saves and activates the entire settings draft. Category switches retain it;
