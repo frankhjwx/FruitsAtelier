@@ -30,6 +30,18 @@ internal static class SelectionGapTests
                 map.Fruits.Add(new() { TimeMs = end + gap, X = 400 });
                 var ui = new Ui(); ui.LoadDocument(map); ui.Key('A', ctrl: true);
                 AssertGap();
+                if (kind != "banana")
+                {
+                    foreach (bool reverse in new[] { false, true })
+                    {
+                        ui.LoadDocument(map); ui.Key('1');
+                        ui.ClickMap(reverse ? end + gap : 1000, reverse ? 400 : 100);
+                        Check(ui.View.SelectedObjectGapMs is null, "Single-object selection showed a gap.");
+                        ui.ClickMap(reverse ? 1000 : end + gap, reverse ? 100 : 400, ctrl: true);
+                        Check(ui.View.SelectedObjectIds.Count == 2, $"Ctrl-click did not select both {kind} fixture objects: {ui.View.SelectedObjectIds.Count}, reverse={reverse}, gap={gap}.");
+                        AssertGap();
+                    }
+                }
                 var conversion = ui.View.Conversion;
                 var baseline = ui.View.Document.DeepClone();
                 for (int i = 0; i < 5; i++) ui.Paint();

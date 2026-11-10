@@ -20,11 +20,15 @@ internal static class SelectionGapRenderCheck
             {
                 L.SetLanguage(locale);
                 var map = new MapDocument { IsDemo = false, DurationMs = 10000 };
-                map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1250, X = 400 }]);
+                map.Fruits.AddRange([new() { TimeMs = 350, X = 100 }, new() { TimeMs = 450, X = 400 }]);
                 var editor = new EditorView(false); editor.LoadDocument(map);
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
-                Paint(); editor.KeyDown('A', true, false); Paint("gap");
-                if (editor.SelectedObjectGapMs != 250 || editor.MovementOverlayBounds is null)
+                Paint();
+                ClickObject(350, 100, false); ClickObject(450, 400, true); Paint("ctrl-gap");
+                if (editor.SelectedObjectIds.Count != 2 || editor.SelectedObjectGapMs != 100)
+                    throw new InvalidOperationException("Native Ctrl selection interval is missing.");
+                editor.KeyDown('A', true, false); Paint("gap");
+                if (editor.SelectedObjectGapMs != 100 || editor.MovementOverlayBounds is null)
                     throw new InvalidOperationException("Native DS Indicator interval is missing.");
                 editor.ToggleOsuCanvas(); Paint("osu");
                 if (editor.SelectedObjectGapMs is not null) throw new InvalidOperationException("osu canvas shows a selection gap.");
@@ -39,6 +43,13 @@ internal static class SelectionGapRenderCheck
                 editor.ApplySettings(Path.Combine(folder, "settings.json")); Paint();
                 if (editor.LibrarySettings.ShowTestplayFruitStack || editor.IsDirty || !editor.Document.ContentEquals(map))
                     throw new InvalidOperationException("Native stack preference failed or changed map content.");
+                void ClickObject(double time, double x, bool ctrl)
+                {
+                    var field = editor.PlayfieldBounds; var plot = editor.CanvasPlotBounds;
+                    float px = field.X + (float)(x / 512) * field.Width;
+                    float py = plot.Bottom - (float)((time - editor.ViewStartMs) * editor.PixelsPerMs);
+                    editor.PointerDown(px, py, 0, false, ctrl); editor.PointerUp(px, py, 0); Paint();
+                }
                 void Click(float x, float y)
                 { editor.PointerDown(x, y, 0, false, false); editor.PointerUp(x, y, 0); Paint(); }
                 void Paint(string? name = null)

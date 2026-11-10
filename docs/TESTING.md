@@ -25,7 +25,7 @@ Inspect these images for complete rows, keycap labels and modal button spacing.
 
 `App.Tests --selection-gap-check` verifies Catch-only DS Indicator intervals for
 fruits, repeated FSliders and Legacy sliders, and banana showers, including overlap,
-touching intervals, undo, selection clearing and conversion reuse. It also checks
+touching intervals, Ctrl-click selection in either order, undo, selection clearing and conversion reuse. It also checks
 stack preference defaults, cancellation, persistence and unchanged judgments,
 with English/Chinese settings layouts. `--movement-overlay-check`,
 `--mapping-canvas-check` and `--cache-lifetime-check` cover the shared panel and caches.

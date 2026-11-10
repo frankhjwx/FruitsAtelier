@@ -22,8 +22,9 @@ public sealed partial class EditorView
     {
         get
         {
-            if (IsOsuCanvas || objectSelection.Count != 2 || anchorSelection.Count != 0 || distanceObject is not null
-                || timelineFruit is not null || soundEdge is not null || HitsoundingPageVisible || TimingPageVisible)
+            // Event focus only applies to one parent; two selected parents always measure their complete intervals.
+            if (IsOsuCanvas || objectSelection.Count != 2 || anchorSelection.Count != 0
+                || HitsoundingPageVisible || TimingPageVisible)
                 return null;
             if (!ReferenceEquals(timelineConversion, conversion)) RefreshTimelineSources();
             var ids = objectSelection.GetEnumerator();
