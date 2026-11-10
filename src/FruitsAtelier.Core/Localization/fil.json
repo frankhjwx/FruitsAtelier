@@ -2448,5 +2448,17 @@
   "shortcuts.description.Samples.copy": "Copy selected sample files or folders.",
   "shortcuts.description.Samples.cut": "Cut selected sample files or folders.",
   "shortcuts.description.Samples.paste": "Paste copied sample files or folders.",
-  "shortcuts.description.Samples.selectAll": "Select all sample files or folders."
+  "shortcuts.description.Samples.selectAll": "Select all sample files or folders.",
+  "testplay.modsReduction": "Pagbaba ng hirap",
+  "testplay.modsIncrease": "Pagtaas ng hirap",
+  "testplay.modsReset": "I-reset ang lahat ng mod",
+  "testplay.sharedModsHint": "Ginagamit din ng Testplay ang kombinasyong ito.",
+  "testplay.dimLabel": "Pagdidilim ng background",
+  "testplay.mod.easy": "Easy",
+  "testplay.mod.halftime": "Half Time",
+  "testplay.mod.hardrock": "Hard Rock",
+  "testplay.mod.doubletime": "Double Time",
+  "testplay.mod.hidden": "Hidden",
+  "testplay.mod.flashlight": "Flashlight",
+  "testplay.showCombo": "Ipakita ang combo"
 }

@@ -1856,3 +1856,18 @@ one-second popup and its fade, plus copy/paste menus in English and Chinese at
 creation and snapped previews at the canvas centre, marquee selection in both tools, atomic matching/empty/conflicting clipboard
 pastes, slider head/tail timing, reverse shortcuts, undo/redo and cancellation in
 English and Chinese.
+
+
+## Testplay mod combinations
+
+`App.Tests --testplay-mods-check` checks shared Preview/Testplay selection,
+mutual exclusions, AR/CS, configured clock rate, settings persistence, content
+isolation, Hidden fade timing, and dock layout restoration.
+`Audio.Tests --mod-speed-check` checks both pitch-preserving custom speed and
+DT/HT pitch-adjusted output frequency and duration using in-memory PCM.
+
+`FruitsAtelier.App --testplay-render-check` also renders text mod controls and
+Hidden/Flashlight gameplay at compact and wide sizes in English and Chinese,
+and checks native Flashlight mask pixels. Set `FRUITS_TEST_SKIN` to a skin
+directory to inspect its real HUD mod artwork. The check does not save that skin
+preference. Output remains under `artifacts/tests/testplay-native/`.

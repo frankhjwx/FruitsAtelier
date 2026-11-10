@@ -89,13 +89,13 @@ public sealed partial class EditorView
         ResetHitsounds();
         testplayReturnSpeed = PlaybackSpeed;
         bool restartAudio = AudioReady && AudioPlaying
-            && (testplayStart < testplayReturnPosition || PlaybackSpeed != LibrarySettings.TestplaySpeed);
+            && (testplayStart < testplayReturnPosition || PlaybackSpeed != ConfiguredTestplaySpeed);
         if (restartAudio)
         {
             if (RequestPausePlayback is not null) RequestPausePlayback();
             else RequestTogglePlayback?.Invoke();
         }
-        SetPlaybackSpeed(LibrarySettings.TestplaySpeed);
+        SetPlaybackSpeed(ConfiguredTestplaySpeed);
         playhead = testplayStart;
         FollowPlayhead();
         BeginTestplay(session, audioAlreadyPlaying: AudioPlaying && !restartAudio);
@@ -103,6 +103,7 @@ public sealed partial class EditorView
 
     private void BeginTestplay(CatchTestplay session, bool audioAlreadyPlaying, bool startPaused = false)
     {
+        flashlightTime = double.NaN;
         storyboardTestplay = storyboardTemplate?.Fork(testplayStart);
         storyboardTriggerVersion = -1; storyboardFrameTime = double.NaN;
         storyboardSamplePosition = testplayStart - .001; storyboardSamplesThrough = null;
@@ -320,24 +321,26 @@ public sealed partial class EditorView
         {
             var item = previewObjects[i];
             DrawCatchObject(c, item, left + (float)item.X * fieldWidth / 512,
-                catchY - (float)((item.TimeMs - playhead) * speed), fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true, approachRate: TestplayApproachRate);
+                catchY - (float)((item.TimeMs - playhead) * speed), fieldWidth, opacity: HiddenMod ? CatchModRules.HiddenOpacity(item.TimeMs - playhead, TestplayApproachRate) : 1, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true, approachRate: TestplayApproachRate);
         }
         foreach (var item in frame.MissedObjects)
             DrawCatchObject(c, item, left + (float)item.X * fieldWidth / 512,
                 catchY + (float)((playhead - item.TimeMs) * speed), fieldWidth,
-                (float)Math.Clamp(1 - (playhead - item.TimeMs) / CatchTestplay.MissLifetimeMs, 0, 1),
+                HiddenMod ? 0 : (float)Math.Clamp(1 - (playhead - item.TimeMs) / CatchTestplay.MissLifetimeMs, 0, 1),
                 circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true, approachRate: TestplayApproachRate);
         float x = left + (float)frame.X * fieldWidth / 512;
         uint tint = frame.HyperDashing ? HyperDashColour : 0xFFFFFF;
         foreach (var trail in frame.Trails)
             DrawCatcherTrail(c, trail, left, fieldWidth, catchY);
-        if (LibrarySettings.ShowTestplayFruitStack) DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
+        if (!HiddenMod && LibrarySettings.ShowTestplayFruitStack) DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
         DrawCatcherBody(c, x, catchY, fieldWidth, tint, 1, false, frame.FacingLeft);
         if (frame.Dashing) DrawCatcherBody(c, x, catchY, fieldWidth, 0xFFFFFF, .65f, true, frame.FacingLeft, brighten: true);
         DrawCatchLighting(c, frame.Lighting, playhead, x, fieldWidth, catchY, PreviewCircleSize);
         if (LibrarySettings.ShowTestplayCombo) DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
         c.Unclip();
         DrawStoryboardOverlay(c, new(0, 0, width, height), CurrentBackgroundDim);
+        if (FlashlightMod) DrawCatchFlashlight(c, new(0, 0, width, height), x, catchY, fieldWidth, frame.Combo, playhead, true);
+        DrawTestplayModIcons(c, stage);
         DrawTestplayInformation(c, frame);
         if (testplayAutoNotice is { } notice)
         {

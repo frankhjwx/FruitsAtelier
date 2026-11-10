@@ -69,6 +69,7 @@ public interface ICanvas
     long MediaGeneration => 0;
     void CachedPreview(object key, Rect bounds, Action<ICanvas, Rect> draw) => draw(this, bounds);
     void DimBackground(Rect bounds, uint color, float opacity) => Fill(bounds, color, opacity: opacity);
+    void Flashlight(Rect bounds, float x, float y, float radius) { }
     void Clip(Rect r);
     void Unclip();
 }

@@ -50,11 +50,11 @@ internal static class PreviewSidebarTests
         void CheckStandardViewport()
         {
             var viewport = ui.View.PreviewViewport;
-            var mode = ui.Canvas.Texts.Single(t => t.Value == L.Get("preview.mode"));
+            var mode = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.sharedModsHint"));
             var resolution = ui.Canvas.Texts.Single(t => t.Value == L.Get("preview.resolution"));
             Check(mode.Y < resolution.Y && resolution.Y < viewport.Y, "option labels stay above centred preview");
             Near(ui.Canvas.Clips.Last().X + ui.Canvas.Clips.Last().Width / 2, viewport.X + viewport.Width / 2);
-            float availableTop = resolution.Y - 81 + 107;
+            float availableTop = resolution.Y - 132 + 187;
             float availableBottom = ui.View.PreviewResizeBounds.Bottom - 20;
             Near((availableTop + availableBottom) / 2, viewport.Y + viewport.Height / 2);
             Check(!ui.Canvas.Outlines.Any(o => o.Bounds == viewport || o.Color == 0x2B3442), "standard preview has no viewport or internal field outline");
@@ -143,13 +143,13 @@ internal static class PreviewSidebarTests
         float closedWidth = ui.View.CanvasPlotBounds.Width;
         ui.OpenPreview();
         Check(ui.View.CatchPreviewVisible && ui.View.CanvasPlotBounds.Width < closedWidth, "drawer occupies canvas space");
-        ui.ClickText(L.Get("preview.easy"));
+        ui.ClickText(L.Get("testplay.mod.easy"));
         Near(4, ui.View.PreviewApproachRate); Near(2.5, ui.View.PreviewCircleSize);
         Check(ui.Canvas.Texts.Any(text => text.Value == L.Get("ui.previewStats", "4", "2.5", "EZ")), "Easy stats");
-        ui.ClickText(L.Get("preview.hardRock"));
+        ui.ClickText(L.Get("testplay.mod.hardrock"));
         Near(10, ui.View.PreviewApproachRate); Near(6.5, ui.View.PreviewCircleSize);
         Check(ui.Canvas.Texts.Any(text => text.Value == L.Get("ui.previewStats", "10", "6.5", "HR")), "Hard Rock stats use the gameplay AR cap");
-        ui.ClickText(L.Get("preview.normal"));
+        ui.ClickText(L.Get("testplay.mod.hardrock"));
         Near(8, ui.View.PreviewApproachRate); Near(5, ui.View.PreviewCircleSize);
         float before = ui.View.CanvasPlotBounds.Width;
         var resize = ui.View.PreviewResizeBounds;

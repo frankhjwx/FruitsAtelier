@@ -662,7 +662,7 @@ public sealed partial class EditorView
         else if (CurrentStarRatingFailed) c.Text("!", r.Right - 10, r.Y + 23, 10, Error, 10, true);
         DrawPreviewMods(c, r);
         DrawPreviewDisplayModes(c, r);
-        float optionsHeight = r.Width < 260 ? 200 : 107;
+        float optionsHeight = 187;
         Rect stage = new(r.X, r.Y + optionsHeight, r.Width, Math.Max(12, r.Height - optionsHeight - 6));
         if (previewDisplayMode != 2)
         {
@@ -688,17 +688,18 @@ public sealed partial class EditorView
             c.Stroke(new(stage.X + 9, referenceTop, referenceWidth, referenceHeight), Chrome(0x2B3442, Grid));
         double scrollSpeed = CatchScrollTiming.PixelsPerMs(PreviewApproachRate, fieldWidth);
         double visibleAhead = (catchY - stage.Y + CatchSize.FruitDiameter(PreviewCircleSize) * fieldWidth / 512 * 1.2) / scrollSpeed;
-        DrawPreviewPlate(c, fieldLeft, fieldWidth, catchY);
+        if (!HiddenMod) DrawPreviewPlate(c, fieldLeft, fieldWidth, catchY);
         DrawPreviewCatcher(c, fieldLeft, fieldWidth, catchY);
         foreach (var item in PreviewObjectsInRange(LazerPresentationTime, LazerPresentationTime + visibleAhead))
         {
             double remaining = item.TimeMs - LazerPresentationTime;
             if (remaining < 0) continue;
             float y = catchY - (float)(remaining * scrollSpeed);
-            DrawCatchObject(c, item, fieldLeft + (float)(item.X / 512) * fieldWidth, y, fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
+            DrawCatchObject(c, item, fieldLeft + (float)(item.X / 512) * fieldWidth, y, fieldWidth, opacity: HiddenMod ? CatchModRules.HiddenOpacity(remaining, PreviewApproachRate) : 1, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
         }
         c.Unclip();
         DrawStoryboardOverlay(c, stage, LibrarySettings.BackgroundDim / 100f);
+        if (FlashlightMod) DrawCatchFlashlight(c, stage, fieldLeft + (float)PreviewCatcherX * fieldWidth / 512, catchY, fieldWidth, PreviewComboAt(LazerPresentationTime), LazerPresentationTime, false);
     }
 
     private void DrawKiaiBadge(ICanvas c)

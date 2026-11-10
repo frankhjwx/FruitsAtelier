@@ -467,6 +467,7 @@ public sealed partial class EditorView
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
             settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
             settings.TestplaySpeed = draftTestplaySpeed;
+            settings.TestplayMods = LibrarySettings.TestplayMods;
             settings.ShowTestplayCombo = draftShowTestplayCombo;
             settings.ShowTestplayFruitStack = draftShowTestplayFruitStack;
             settings.BackgroundDim = draftBackgroundDim;

@@ -2448,5 +2448,17 @@
   "shortcuts.description.Samples.copy": "Copy selected sample files or folders.",
   "shortcuts.description.Samples.cut": "Cut selected sample files or folders.",
   "shortcuts.description.Samples.paste": "Paste copied sample files or folders.",
-  "shortcuts.description.Samples.selectAll": "Select all sample files or folders."
+  "shortcuts.description.Samples.selectAll": "Select all sample files or folders.",
+  "testplay.modsReduction": "Pengurangan kesulitan",
+  "testplay.modsIncrease": "Peningkatan kesulitan",
+  "testplay.modsReset": "Atur ulang semua mod",
+  "testplay.sharedModsHint": "Testplay juga memakai kombinasi mod ini.",
+  "testplay.dimLabel": "Peredupan latar",
+  "testplay.mod.easy": "Easy",
+  "testplay.mod.halftime": "Half Time",
+  "testplay.mod.hardrock": "Hard Rock",
+  "testplay.mod.doubletime": "Double Time",
+  "testplay.mod.hidden": "Hidden",
+  "testplay.mod.flashlight": "Flashlight",
+  "testplay.showCombo": "Tampilkan kombo"
 }

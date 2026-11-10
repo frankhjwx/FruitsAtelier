@@ -147,6 +147,25 @@ internal sealed partial class MacCanvas(DrawingContext context, ImageCache image
         using var state = context.PushOpacity(opacity);
         context.DrawRectangle(Brush(color), null, Convert(r), radius, radius);
     }
+    private readonly RadialGradientBrush flashlightBrush = CreateFlashlightBrush();
+    private static RadialGradientBrush CreateFlashlightBrush()
+    {
+        var brush = new RadialGradientBrush { SpreadMethod = GradientSpreadMethod.Pad };
+        brush.GradientStops.Add(new GradientStop(Color.FromArgb(0, 0, 0, 0), 0));
+        for (int i = 0; i <= 32; i++)
+        {
+            double t = i / 32d;
+            brush.GradientStops.Add(new GradientStop(Color.FromArgb((byte)Math.Round(255 * t * t * (3 - 2 * t)), 0, 0, 0), (1 + .4 * t) / 1.4));
+        }
+        return brush;
+    }
+    public void Flashlight(R bounds, float x, float y, float radius)
+    {
+        if (radius <= 0) return;
+        flashlightBrush.Center = flashlightBrush.GradientOrigin = new RelativePoint(x - bounds.X, y - bounds.Y, RelativeUnit.Absolute);
+        flashlightBrush.RadiusX = flashlightBrush.RadiusY = new RelativeScalar(radius * 1.4, RelativeUnit.Absolute);
+        context.DrawRectangle(flashlightBrush, null, Convert(bounds));
+    }
     public void Stroke(R r, uint color, float width = 1, float radius = 0)
         => StrokeOpacity(r, color, width, radius, 1);
     public void StrokeOpacity(R r, uint color, float width, float radius, float opacity)

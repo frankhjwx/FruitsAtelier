@@ -2448,5 +2448,17 @@
   "shortcuts.description.Samples.copy": "复制选中的音效文件或文件夹。",
   "shortcuts.description.Samples.cut": "剪切选中的音效文件或文件夹。",
   "shortcuts.description.Samples.paste": "粘贴已复制的音效文件或文件夹。",
-  "shortcuts.description.Samples.selectAll": "全选音效文件或文件夹。"
+  "shortcuts.description.Samples.selectAll": "全选音效文件或文件夹。",
+  "testplay.modsReduction": "降低难度",
+  "testplay.modsIncrease": "增加难度",
+  "testplay.modsReset": "重置全部 Mod",
+  "testplay.sharedModsHint": "Testplay 也会使用此 Mod 组合。",
+  "testplay.dimLabel": "背景暗化",
+  "testplay.mod.easy": "Easy",
+  "testplay.mod.halftime": "Half Time",
+  "testplay.mod.hardrock": "Hard Rock",
+  "testplay.mod.doubletime": "Double Time",
+  "testplay.mod.hidden": "Hidden",
+  "testplay.mod.flashlight": "Flashlight",
+  "testplay.showCombo": "显示连击数"
 }

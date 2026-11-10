@@ -84,6 +84,7 @@ public sealed class CatchSkin
                 LoadTexture($"fruit-{name}");
                 LoadTexture($"fruit-{name}-overlay");
             }
+            foreach (string mod in new[] { "easy", "hardrock", "hidden", "doubletime", "halftime", "flashlight" }) LoadTexture("selection-mod-" + mod);
             LoadTexture("reversearrow");
             foreach (string component in new[] { "approachcircle", "sliderb", "sliderfollowcircle", "sliderscorepoint", "spinner-background", "spinner-circle", "spinner-bottom", "spinner-top", "spinner-middle", "spinner-middle2", "spinner-approachcircle" }) LoadTexture(component);
             for (int frame = 0; frame < 4096; frame++)

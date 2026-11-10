@@ -417,9 +417,9 @@ Choose **4:3**, **16:9** or **Fit** in the preview controls. Fit uses the availa
 
 These choices change the preview layout, not the map's coordinates. To change the authoring view, use canvas Zoom.
 
-### NM, Easy and Hard Rock
+### Shared Testplay mods
 
-Select **NM**, **Easy** or **Hard Rock** to inspect the corresponding difficulty and position rules. The effective **AR** controls falling speed; slider SV does not set the preview's falling speed.
+Choose **Easy**, **Half Time**, **Hard Rock**, **Double Time**, **Hidden** and **Flashlight** in Preview or the **Testplay** tab. Both selectors share one combination; deselect all buttons for NM. Easy/Hard Rock and Half Time/Double Time are mutually exclusive. The effective **AR** controls falling speed; slider SV does not set the preview's falling speed. See [Catch rendering](CATCH_RENDERING.md#shared-testplay-mods) for the effects and shared settings.
 
 Preview mods do not rewrite the saved AR, CS or authored objects. Testplay starts with the selected preview mod. The Movement strain graph continues to show the normal-mode calculation.
 

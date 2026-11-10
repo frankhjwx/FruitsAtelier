@@ -271,6 +271,27 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
         if (radius > 0) context!.FillRoundedRectangle(new RoundedRectangle(new System.Drawing.RectangleF(r.X, r.Y, r.Width, r.Height), radius, radius), Brush(color, opacity));
         else context!.FillRectangle(Convert(r), Brush(color, opacity));
     }
+    private ID2D1RadialGradientBrush? flashlightBrush;
+    public void Flashlight(Rect bounds, float x, float y, float radius)
+    {
+        if (radius <= 0) return;
+        if (flashlightBrush is null)
+        {
+            var stops = new GradientStop[34];
+            stops[0] = new() { Position = 0, Color = new Color4(0, 0, 0, 0) };
+            for (int i = 0; i <= 32; i++)
+            {
+                float t = i / 32f;
+                stops[i + 1] = new() { Position = (1 + .4f * t) / 1.4f, Color = new Color4(0, 0, 0, t * t * (3 - 2 * t)) };
+            }
+            using var collection = context!.CreateGradientStopCollection(stops, Gamma.StandardRgb, ExtendMode.Clamp);
+            flashlightBrush = context.CreateRadialGradientBrush(new RadialGradientBrushProperties
+                { Center = new(x, y), RadiusX = radius * 1.4f, RadiusY = radius * 1.4f }, collection);
+        }
+        flashlightBrush.Center = new(x, y);
+        flashlightBrush.RadiusX = flashlightBrush.RadiusY = radius * 1.4f;
+        context!.FillRectangle(Convert(bounds), flashlightBrush);
+    }
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0)
         => StrokeOpacity(r, color, width, radius, 1);
     public void StrokeOpacity(Rect r, uint color, float width, float radius, float opacity)
@@ -707,6 +728,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
         imagingFactory?.Dispose(); imagingFactory = null;
         foreach (var format in formats.Values) format.Dispose(); formats.Clear();
         formatOrder.Clear();
+        flashlightBrush?.Dispose(); flashlightBrush = null;
         solidBrush?.Dispose(); solidBrush = null;
         roundPathStroke?.Dispose(); roundPathStroke = null;
         if (context is not null) context.Target = null;

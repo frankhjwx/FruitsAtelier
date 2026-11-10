@@ -3,6 +3,7 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--testplay-mods-check")) { TestplayModTests.Run(); PreviewSidebarTests.Sidebar(); TestplayStartupDelayTests.IndependentSpeed(); DockPersistenceTests.Run(); InspectorPanelsTests.Run(); TestplayTests.LivePlate(); DockingTests.Run(); PreviewSidebarTests.DisplayModesAndOverscan(); return 0; }
 if (args.Contains("--selection-gap-performance")) { SelectionGapTests.Performance(); return 0; }
 if (args.Contains("--selection-gap-check")) { SelectionGapTests.Run(); FruitStackSettingsTests.Run(); TestplayTests.LivePlate(); Console.WriteLine("PASS selection gaps and fruit stack preferences"); return 0; }
 if (args.Contains("--settings-modal-check")) { SettingsTests.ModalInput(); SettingsTests.Navigation(); SettingsTests.ApplyState(); SettingsTests.Layout(); KeybindingTests.Run(); return 0; }
@@ -480,6 +481,7 @@ var tests = new (string Name, Action Run)[]
     ("Completing an FSlider replaces same-time fruits across coordinates and undoes atomically", SliderHeadReplacementTests.OnCompletion),
     ("Final stream fruit accepts lower-half hit and box movement translates the stream", StreamFruitDragTests.Run),
     ("Stream middle fruits edit isolated samples and endpoints drag with undo and cancellation", StreamFruitDragTests.EditEvents),
+    ("Shared Testplay and Preview mod combinations", TestplayModTests.Run),
     ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup explicitly synchronizes metadata, colours and design", SongSynchronizationTests.Run),

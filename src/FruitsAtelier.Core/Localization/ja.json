@@ -2448,5 +2448,17 @@
   "shortcuts.description.Samples.copy": "Copy selected sample files or folders.",
   "shortcuts.description.Samples.cut": "Cut selected sample files or folders.",
   "shortcuts.description.Samples.paste": "Paste copied sample files or folders.",
-  "shortcuts.description.Samples.selectAll": "Select all sample files or folders."
+  "shortcuts.description.Samples.selectAll": "Select all sample files or folders.",
+  "testplay.modsReduction": "難易度低下",
+  "testplay.modsIncrease": "難易度上昇",
+  "testplay.modsReset": "すべての Mod をリセット",
+  "testplay.sharedModsHint": "Testplay にもこの Mod の組み合わせが適用されます。",
+  "testplay.dimLabel": "背景の暗さ",
+  "testplay.mod.easy": "Easy",
+  "testplay.mod.halftime": "Half Time",
+  "testplay.mod.hardrock": "Hard Rock",
+  "testplay.mod.doubletime": "Double Time",
+  "testplay.mod.hidden": "Hidden",
+  "testplay.mod.flashlight": "Flashlight",
+  "testplay.showCombo": "コンボを表示"
 }

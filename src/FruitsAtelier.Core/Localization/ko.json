@@ -2448,5 +2448,17 @@
   "shortcuts.description.Samples.copy": "Copy selected sample files or folders.",
   "shortcuts.description.Samples.cut": "Cut selected sample files or folders.",
   "shortcuts.description.Samples.paste": "Paste copied sample files or folders.",
-  "shortcuts.description.Samples.selectAll": "Select all sample files or folders."
+  "shortcuts.description.Samples.selectAll": "Select all sample files or folders.",
+  "testplay.modsReduction": "난이도 감소",
+  "testplay.modsIncrease": "난이도 증가",
+  "testplay.modsReset": "모든 모드 초기화",
+  "testplay.sharedModsHint": "Testplay에도 이 모드 조합이 적용됩니다.",
+  "testplay.dimLabel": "배경 어둡게",
+  "testplay.mod.easy": "Easy",
+  "testplay.mod.halftime": "Half Time",
+  "testplay.mod.hardrock": "Hard Rock",
+  "testplay.mod.doubletime": "Double Time",
+  "testplay.mod.hidden": "Hidden",
+  "testplay.mod.flashlight": "Flashlight",
+  "testplay.showCombo": "콤보 표시"
 }

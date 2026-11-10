@@ -191,6 +191,8 @@ public sealed class LibrarySettings
     public int TestplayDashKey { get; set; } = 16;
     private double testplayStartupDelaySeconds = 1;
     private double testplaySpeed = 1;
+    private CatchMods testplayMods;
+    public CatchMods TestplayMods { get => testplayMods; set => testplayMods = CatchModRules.Normalize(value); }
     public double TestplaySpeed
     {
         get => testplaySpeed;

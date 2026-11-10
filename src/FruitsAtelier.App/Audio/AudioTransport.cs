@@ -18,7 +18,7 @@ public sealed class AudioTransport : IDisposable
 {
     private enum CommandKind { Load, Play, Pause, Seek, Speed, Refresh, Barrier }
     private sealed record Command(CommandKind Kind, long LoadVersion, string? Path = null, double Position = 0,
-        long SeekVersion = 0, long IntentVersion = 0, TaskCompletionSource<bool>? Completion = null)
+        long SeekVersion = 0, long IntentVersion = 0, TaskCompletionSource<bool>? Completion = null, bool AdjustPitch = false)
     {
         public long Id { get; } = Interlocked.Increment(ref nextCommandId);
         public double QueuedMs { get; } = AudioDiagnosticLog.NowMs;
@@ -96,6 +96,7 @@ public sealed class AudioTransport : IDisposable
     private long intentVersion, appliedIntentVersion;
     private double requestedPosition, basePosition, duration;
     private double playbackSpeed = 1, requestedSpeed = 1;
+    private bool adjustPitch, requestedAdjustPitch;
     public double PlaybackSpeed => Volatile.Read(ref playbackSpeed);
     private bool playIntent, resumeFadeIn;
     private bool requestedPlaying;
@@ -250,11 +251,11 @@ public sealed class AudioTransport : IDisposable
         }
     }
 
-    public void SetPlaybackSpeed(double speed)
+    public void SetPlaybackSpeed(double speed, bool shiftPitch = false)
     {
         if (!double.IsFinite(speed) || speed < .1 || speed > 1.5) return;
         lock (stateLock)
-            if (disposed == 0) { requestedSpeed = speed; Enqueue(new(CommandKind.Speed, loadVersion, Position: speed)); }
+            if (disposed == 0) { requestedSpeed = speed; requestedAdjustPitch = shiftPitch; Enqueue(new(CommandKind.Speed, loadVersion, Position: speed, AdjustPitch: shiftPitch)); }
     }
 
     public Task WaitForCommandsAsync()
@@ -319,9 +320,9 @@ public sealed class AudioTransport : IDisposable
                                 Interlocked.Exchange(ref appliedIntentVersion, command.IntentVersion);
                                 break;
                             case CommandKind.Speed:
-                                if (playbackSpeed == command.Position) break;
+                                if (playbackSpeed == command.Position && adjustPitch == command.AdjustPitch) break;
                                 double position = output is null ? basePosition : DevicePosition();
-                                playbackSpeed = command.Position;
+                                playbackSpeed = command.Position; adjustPitch = command.AdjustPitch;
                                 if (reader is not null)
                                 {
                                     await ResetOutputAsync(position, publishStopped: false);
@@ -402,7 +403,7 @@ public sealed class AudioTransport : IDisposable
         if (!double.IsFinite(duration) || duration <= 0) throw new InvalidDataException(L.Get("audio.noDuration"));
         if (reader.WaveFormat.Channels is < 1 or > 2) throw new NotSupportedException(L.Get("audio.channels"));
         basePosition = 0;
-        lock (stateLock) playbackSpeed = requestedSpeed;
+        lock (stateLock) { playbackSpeed = requestedSpeed; adjustPitch = requestedAdjustPitch; }
         output = CreateOutput();
         lock (stateLock)
             if (loadedVersion == loadVersion) appliedSeekVersion = seekVersion;
@@ -424,7 +425,7 @@ public sealed class AudioTransport : IDisposable
     {
         ISampleProvider samples = reader!.ToSampleProvider();
         TempoSampleProvider? tempo = null;
-        if (playbackSpeed != 1) samples = tempo = new TempoSampleProvider(samples, playbackSpeed, diagnostics.Enabled);
+        if (playbackSpeed != 1) samples = tempo = new TempoSampleProvider(samples, playbackSpeed, diagnostics.Enabled, adjustPitch);
         // Supply preparation at output rate so tempo processing cannot shift the first music frame.
         if (basePosition < 0) samples = new PreRollSampleProvider(samples, -basePosition / playbackSpeed);
         samples = new PlaybackGain(samples, () => SongVolume);

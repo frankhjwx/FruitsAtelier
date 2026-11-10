@@ -1070,6 +1070,7 @@ public sealed partial class EditorView
             return;
         }
         if (WheelDockTabs(x, y, delta)) return;
+        if (WheelTestplayTab(x, y, delta)) return;
         if (WheelBookmarkPanel(x, y, delta)) return;
         if (WheelDiscussions(x, y, delta)) return;
         if (MapsetVerifierVisible && DockContentInputAvailable && verifierBounds.Contains(x, y))

@@ -8,7 +8,7 @@ public sealed partial class EditorView
 {
     private bool catchPreviewVisible => PanelVisible(DockPanel.Preview);
     private const float MinimumPreviewWidth = 344;
-    private int previewMod { get => DockWorkspaceState.PreviewMod; set => DockWorkspaceState.PreviewMod = value; }
+    private int previewMod => LibrarySettings.TestplayMods.HasFlag(CatchMods.HardRock) ? 2 : LibrarySettings.TestplayMods.HasFlag(CatchMods.Easy) ? 1 : 0;
     private int previewDisplayMode { get => DockWorkspaceState.PreviewDisplayMode; set => DockWorkspaceState.PreviewDisplayMode = value; }
     private CatchAutoPreview? previewAutoplay;
     private CatchPlatePreview? previewPlate;
@@ -38,19 +38,18 @@ public sealed partial class EditorView
             return (previewMod switch { 1 => session.EasyStars, 2 => session.HardRockStars, _ => session.Stars }) ?? 0;
         }
     }
-    private string PreviewModName => previewMod switch { 1 => "EZ", 2 => "HR", _ => "NM" };
+    private string PreviewModName => SelectedModNames;
     private void DrawPreviewMods(ICanvas c, Rect r)
     {
-        string[] keys = ["preview.normal", "preview.easy", "preview.hardRock"];
-        bool narrow = r.Width < 260;
-        c.Text(L.Get("preview.mode"), r.X, r.Y + (narrow ? 43 : 50), 10, Muted, narrow ? r.Width : 65);
-        float start = r.X + (narrow ? 0 : 66), buttonWidth = narrow ? r.Width : (r.Width - 66) / 3;
-        for (int i = 0; i < keys.Length; i++)
+        for (int i = 0; i < TestplayModChoices.Length; i++)
         {
-            int mod = i;
-            Button(c, new(start + (narrow ? 0 : i * buttonWidth), r.Y + (narrow ? 60 + i * 28 : 43), buttonWidth - 3, 26), L.Get(keys[i]), () => previewMod = mod, previewMod == mod);
+            int column = i < 2 ? i : i - 2;
+            float cell = r.Width / 4;
+            DrawModChoice(c, new(r.X + column * cell, r.Y + 43 + (i < 2 ? 0 : 31), cell - 3, 28), i);
         }
+        c.Text(L.Get("testplay.sharedModsHint"), r.X, r.Y + 108, 10, Muted, r.Width);
     }
+
     private IReadOnlyList<ConvertedCatchObject> PreviewObjects()
     {
         if (!ReferenceEquals(previewSource, conversion) || cachedPreviewMod != previewMod)
@@ -59,7 +58,8 @@ public sealed partial class EditorView
             previewObjects = previewMod == 2
                 ? playableExport?.PlayableHardRockObjects ?? CatchPreviewMods.HardRock(Document, conversion!)
                 : playableObjects;
-            previewMaximumCombo = previewObjects.Count(item => item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet);
+            previewComboTimes = previewObjects.Where(item => item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet).Select(item => item.TimeMs).ToArray();
+            previewMaximumCombo = previewComboTimes.Length;
             previewMaximumDroplets = previewObjects.Count(item => item.Kind == CatchObjectKind.TinyDroplet);
             previewDrainTime = PreviewDrainTime();
             previewHyperdash = HyperDashCalculator.GetHyperDashStarts(previewObjects, PreviewCircleSize);
@@ -109,13 +109,12 @@ public sealed partial class EditorView
     private void DrawPreviewDisplayModes(ICanvas c, Rect r)
     {
         string[] keys = ["preview.ratio43", "preview.ratio169", "preview.fit"];
-        bool narrow = r.Width < 260;
-        c.Text(L.Get("preview.resolution"), r.X, r.Y + (narrow ? 150 : 81), 10, Muted, narrow ? r.Width : 65);
-        float start = r.X + (narrow ? 0 : 66), buttonWidth = narrow ? r.Width / 3 : (r.Width - 66) / 3;
+        c.Text(L.Get("preview.resolution"), r.X, r.Y + 132, 10, Muted, r.Width);
+        float start = r.X, buttonWidth = r.Width / 3;
         for (int i = 0; i < keys.Length; i++)
         {
             int mode = i;
-            Button(c, new(start + i * buttonWidth, r.Y + (narrow ? 167 : 74), buttonWidth - 3, 26), L.Get(keys[i]), () => previewDisplayMode = mode, previewDisplayMode == mode);
+            Button(c, new(start + i * buttonWidth, r.Y + 149, buttonWidth - 3, 26), L.Get(keys[i]), () => previewDisplayMode = mode, previewDisplayMode == mode);
         }
     }
     private static readonly HashSet<(Guid SourceId, int EventIndex)> NoHyperdash = [];

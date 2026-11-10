@@ -2448,5 +2448,17 @@
   "shortcuts.description.Samples.copy": "Copy selected sample files or folders.",
   "shortcuts.description.Samples.cut": "Cut selected sample files or folders.",
   "shortcuts.description.Samples.paste": "Paste copied sample files or folders.",
-  "shortcuts.description.Samples.selectAll": "Select all sample files or folders."
+  "shortcuts.description.Samples.selectAll": "Select all sample files or folders.",
+  "testplay.modsReduction": "Réduction de la difficulté",
+  "testplay.modsIncrease": "Augmentation de la difficulté",
+  "testplay.modsReset": "Réinitialiser les mods",
+  "testplay.sharedModsHint": "Testplay utilise aussi cette combinaison de mods.",
+  "testplay.dimLabel": "Assombrissement du fond",
+  "testplay.mod.easy": "Easy",
+  "testplay.mod.halftime": "Half Time",
+  "testplay.mod.hardrock": "Hard Rock",
+  "testplay.mod.doubletime": "Double Time",
+  "testplay.mod.hidden": "Hidden",
+  "testplay.mod.flashlight": "Flashlight",
+  "testplay.showCombo": "Afficher le combo"
 }

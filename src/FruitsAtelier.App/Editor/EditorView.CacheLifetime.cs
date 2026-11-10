@@ -63,7 +63,7 @@ public sealed partial class EditorView
         timelineConversion = null; timelineSources = []; timelineMarkers = [];
         timelineStarts = []; timelineEnds = []; timelinePrefixEnd = [];
         timelineVisibleMarkers.Clear(); timelineObjects.Clear(); timelinePatternEvents.Clear(); timelineEventNumbers.Clear();
-        previewSource = null; previewObjects = []; previewAutoplay = null; previewPlate = null;
+        previewSource = null; previewObjects = []; previewComboTimes = []; previewAutoplay = null; previewPlate = null;
         previewLighting = []; previewHyperdash.Clear(); previewComboEnds.Clear();
         hitsoundConversion = null; hitsoundDocument = null; resolvedHitsounds = []; hitsoundEvents = [];
         distanceConversion = null; distanceReferences = [];

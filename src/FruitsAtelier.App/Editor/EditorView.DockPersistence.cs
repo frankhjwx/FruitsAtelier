@@ -8,7 +8,7 @@ public sealed partial class EditorView
     private string savedDockLayout = "";
     internal EditorDockLayouts CaptureDockLayouts() => new()
     {
-        Version = 2, Mapping = Capture(mappingDockWorkspace), Timing = Capture(timingDockWorkspace), Hitsounding = Capture(hitsoundingDockWorkspace)
+        Version = 3, Mapping = Capture(mappingDockWorkspace), Timing = Capture(timingDockWorkspace), Hitsounding = Capture(hitsoundingDockWorkspace)
     };
     private static DockWorkspaceLayout Capture(DockWorkspace workspace) => new()
     {
@@ -34,9 +34,16 @@ public sealed partial class EditorView
     }
     internal void RestoreDockLayouts()
     {
-        if (LibrarySettings.DockLayouts is { Version: 1 or 2 } layouts)
+        if (LibrarySettings.DockLayouts is { Version: 1 or 2 or 3 } layouts)
         {
             Restore(mappingDockWorkspace, layouts.Mapping);
+            if (layouts.Version < 3)
+            {
+                if (!mappingDockWorkspace.Left.Panels.Contains(DockPanel.Testplay) && !mappingDockWorkspace.Right.Panels.Contains(DockPanel.Testplay))
+                    mappingDockWorkspace.Right.Panels.Add(DockPanel.Testplay);
+                if (LibrarySettings.TestplayMods == CatchMods.None)
+                    LibrarySettings.TestplayMods = layouts.Mapping?.PreviewMod switch { 1 => CatchMods.Easy, 2 => CatchMods.HardRock, _ => CatchMods.None };
+            }
             Restore(timingDockWorkspace, layouts.Timing);
             Restore(hitsoundingDockWorkspace, layouts.Hitsounding, hitsounding: true);
             if (layouts.Mapping?.Left?.Active == "OsuWeb" || layouts.Mapping?.Right?.Active == "OsuWeb")

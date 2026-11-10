@@ -184,7 +184,8 @@ internal sealed partial class MacWindow : Window
             finally { setupAudio?.Pause(); }
         };
         View.RequestTogglePlayback = TogglePlayback;
-        View.RequestPlaybackSpeed = speed => { View.ResetHitsounds(); audio.SetPlaybackSpeed(speed); View.StartHitsounds(audio.State.PositionMs); PollAudio(); };
+        View.RequestPlaybackSpeed = speed => { View.ResetHitsounds(); audio.SetPlaybackSpeed(speed, View.PlaybackAdjustPitch); View.StartHitsounds(audio.State.PositionMs); PollAudio(); };
+        audio.SetPlaybackSpeed(View.PlaybackSpeed, View.PlaybackAdjustPitch);
         View.RequestSeek = time => { audio.Seek(time); PollAudio(); };
         timer.Tick += (_, _) =>
         {

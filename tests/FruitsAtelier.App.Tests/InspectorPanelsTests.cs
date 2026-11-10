@@ -74,7 +74,7 @@ internal static class InspectorPanelsTests
                 ui.View.PointerUp(ui.Width - 180, resize.Y + 60, 0); ui.Paint();
                 var leftArrow = ui.Canvas.Texts.First(t => t.Value == "‹" && t.X > ui.Width / 2 && t.Y < ui.View.RandomDockViewport.Y);
                 ui.Click(leftArrow.X + 2, leftArrow.Y + 2);
-                for (int i = 0; i < 6 && ui.View.DockTabBounds(EditorView.DockPanel.Preview).Width == 0; i++)
+                for (int i = 0; i < 32 && ui.View.DockTabBounds(EditorView.DockPanel.Preview).Width == 0; i++)
                 { ui.Click(leftArrow.X + 2, leftArrow.Y + 2); }
                 Check(ui.View.DockTabBounds(EditorView.DockPanel.Preview).Width > 0, "Dock arrow reveals overflowing tabs");
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.title")), "Dock titles retain full text");

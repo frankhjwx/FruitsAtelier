@@ -63,6 +63,7 @@ public sealed partial class EditorView
         ConfigurePatternGallery(Path.Combine(LibrarySettings.Workspace, "Patterns"));
         RestoreMapEditingPreferences();
         RestoreDockLayouts();
+        SetPlaybackSpeed(CatchModRules.ClockRate(LibrarySettings.TestplayMods));
         playbackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
         canvasZoom = LibrarySettings.CanvasZoom;
         canvasTimeZoom = LibrarySettings.CanvasTimeZoom;
