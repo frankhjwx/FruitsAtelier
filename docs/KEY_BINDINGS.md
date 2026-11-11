@@ -20,6 +20,11 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
   placement, flags and undo/redo.
 - Keyboard command bindings are configurable in **Settings → Key Bindings**, independently for Default and Lazer. The tables below describe factory defaults.
 
+## Hitsounding
+
+In the Hitsounding workspace, **5** adds an inherited timing point at the playhead. The binding can be changed in Settings.
+See [Hitsounding controls](HITSOUNDS.md) for selection, volume ramps and timing drafts.
+
 ## Experimental lazer editing
 
 Enable **Settings → Experimental → lazer editing**, then Apply, to use these

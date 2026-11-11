@@ -45,6 +45,8 @@ public sealed partial class EditorView
     }
     private Rect timingVolumeTrack;
     private TimingEntry[]? timingVolumeStart;
+    private float timingVolumeStartX;
+    private bool timingVolumeMoved;
     internal IReadOnlyList<(string Key, Rect Bounds, string Value, Action<double> Apply)> TimingFields => timingFields;
     internal Rect TimingSliderVelocityLinkBounds { get; private set; }
     private sealed record SliderMultiplierValidation(double Value, OsuWriteResult? Output, string? Error);
@@ -498,7 +500,13 @@ public sealed partial class EditorView
     private void BeginTimingVolumeDrag(Rect track)
     {
         if (!CommitTimingField()) return;
-        timingVolumeTrack = track; timingVolumeStart = TimingSnapshot(); UpdateTimingVolume(mouseX);
+        timingVolumeTrack = track; timingVolumeStart = TimingSnapshot();
+        timingVolumeStartX = mouseX; timingVolumeMoved = false;
+        var selected = timingEntries.Where(e => timingSelected.Contains(e.Id) && (!showTimingSv || !timingSvLocked || !e.SvOnly)).ToArray();
+        if (selected.Length == 0) return;
+        float thumb = track.X + track.Width * selected[0].Point.Volume / 100;
+        if (Math.Abs(mouseX - thumb) > 6)
+            foreach (var entry in selected) entry.Point.Volume = Math.Clamp(entry.Point.Volume + Math.Sign(mouseX - thumb) * 5, 0, 100);
     }
 
     private void UpdateTimingScroll(float y)
@@ -510,6 +518,8 @@ public sealed partial class EditorView
 
     private void UpdateTimingVolume(float x)
     {
+        timingVolumeMoved |= Math.Abs(x - timingVolumeStartX) >= ContentDragThreshold;
+        if (!timingVolumeMoved) return;
         int volume = (int)Math.Clamp(Math.Round((x - timingVolumeTrack.X) / timingVolumeTrack.Width * 100), 0, 100);
         foreach (var entry in timingEntries.Where(e => timingSelected.Contains(e.Id) && (!showTimingSv || !timingSvLocked || !e.SvOnly))) entry.Point.Volume = volume;
     }

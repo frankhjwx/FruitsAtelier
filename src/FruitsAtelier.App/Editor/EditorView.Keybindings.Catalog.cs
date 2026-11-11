@@ -105,6 +105,7 @@ public sealed partial class EditorView
         Add(ShortcutScope.Hitsounding, "paste", "editing", "both", ShortcutBinding.From(17, 86));
         Add(ShortcutScope.Hitsounding, "selectAll", "editing", "both", ShortcutBinding.From(17, 65));
         Add(ShortcutScope.Hitsounding, "delete", "editing", "both", ShortcutBinding.From(46));
+        Add(ShortcutScope.Hitsounding, "addGreen", "timing", "both", ShortcutBinding.From(53));
         Add(ShortcutScope.Hitsounding, "play", "playback", "both", ShortcutBinding.From(32));
         Add(ShortcutScope.Hitsounding, "previousBeat", "playback", "both", ShortcutBinding.From(37));
         Add(ShortcutScope.Hitsounding, "nextBeat", "playback", "both", ShortcutBinding.From(39));

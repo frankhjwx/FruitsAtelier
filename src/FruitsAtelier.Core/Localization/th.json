@@ -2460,5 +2460,8 @@
   "testplay.mod.doubletime": "Double Time",
   "testplay.mod.hidden": "Hidden",
   "testplay.mod.flashlight": "Flashlight",
-  "testplay.showCombo": "แสดงคอมโบ"
+  "testplay.showCombo": "แสดงคอมโบ",
+  "hitsounding.applyAffecting": "ใช้กับจุดไทมิงที่มีผลอยู่",
+  "hitsounding.rampInterval": "ช่วงจังหวะ: 1 /",
+  "hitsounding.generateRamp": "สร้างการเปลี่ยนระดับเสียงแบบค่อยเป็นค่อยไป"
 }

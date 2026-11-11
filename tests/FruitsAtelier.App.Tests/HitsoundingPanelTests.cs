@@ -1202,7 +1202,7 @@ internal static class HitsoundingPanelTests
             Console.WriteLine($"{mode}: pointer p95={input[94]:F4}ms; render p50={render[49]:F3}ms p95={render[94]:F3}ms; allocation p50={memory[49]}B (recording canvas, native GPU excluded)");
         }
     }
-    private static FruitsAtelier.App.Rendering.Rect[] LaneBlocks(Ui ui, int lane)
+    internal static FruitsAtelier.App.Rendering.Rect[] LaneBlocks(Ui ui, int lane)
     {
         var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100 && t.Y >= ui.View.HitsoundingNotesLaneBounds.Y && t.X >= ui.View.HitsoundingNotesLaneBounds.X - 146);
         return ui.Canvas.Outlines.Where(o => o.Color is 0x65BF8A or 0xE0B55F or 0xDC747B

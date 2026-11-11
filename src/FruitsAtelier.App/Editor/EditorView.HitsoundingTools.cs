@@ -12,6 +12,31 @@ public sealed partial class EditorView
     private readonly Rect[] hitsoundingToolButtons = new Rect[5];
     internal Rect HitsoundingToolBounds(int index) => hitsoundingToolButtons[index];
     internal int HitsoundingBrush => hitsoundingBrush;
+    internal int HitsoundingDisplayedBank
+    {
+        get
+        {
+            int bank = 0;
+            bool selected = false;
+            foreach (var key in hitsoundingMultiSelection)
+            {
+                if (key.Lane is < 1 or > 4 || !hitsoundingNoteLookup.TryGetValue((key.Id, key.Event), out var note)) continue;
+                var sample = hitsoundingResolver!.Describe(note);
+                int value = key.Lane == 1 ? sample.NormalSet : sample.AdditionSet;
+                if (selected && bank != value) return 0;
+                bank = value; selected = true;
+            }
+            if (hitsoundingNotesSelection)
+                foreach (var id in objectSelection)
+                foreach (var note in hitsoundingParentNotes.GetValueOrDefault(id) ?? [])
+                {
+                    var sample = hitsoundingResolver!.Describe(note);
+                    if (selected && bank != sample.NormalSet || sample.Additions != 0 && sample.NormalSet != sample.AdditionSet) return 0;
+                    bank = sample.NormalSet; selected = true;
+                }
+            return selected ? bank : hitsoundingBrush;
+        }
+    }
     internal bool HitsoundingDraw => hitsoundingDraw;
     internal bool HitsoundingBrushEnabled => hitsoundingDraw || hitsoundingMultiSelection.Count > 0
         || hitsoundingNotesSelection && objectSelection.Count > 0;
@@ -60,6 +85,7 @@ public sealed partial class EditorView
         string[] keys = ["hitsounding.select", "hitsounding.draw", "timing.soft", "timing.normal", "timing.drum"];
         string[] shortcuts = ["1", "2", "A", "S", "D"];
         int[] banks = [0, 0, 2, 1, 3];
+        int displayedBank = HitsoundingDisplayedBank;
         for (int i = 0; i < names.Length; i++)
         {
             int index = i;
@@ -67,7 +93,7 @@ public sealed partial class EditorView
             var box = new Rect(x, y, size, size - 2);
             hitsoundingToolButtons[i] = box;
             bool enabled = i < 2 || HitsoundingBrushEnabled;
-            bool active = enabled && (i < 2 ? hitsoundingDraw == (i == 1) : hitsoundingBrush == banks[i]);
+            bool active = enabled && (i < 2 ? hitsoundingDraw == (i == 1) : displayedBank == banks[i]);
             uint color = !enabled ? Muted : i < 2 ? Accent : HitsoundingBankColor(banks[i]);
             if (i == 0)
                 c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", "select.png"), box, opacity: active ? 1 : .45f);

@@ -1261,7 +1261,7 @@ public sealed partial class EditorView
 
     private void SeekByWheel(double delta, int surface)
     {
-        int stepDivisor = AudioPlaying && !HitsoundingPageVisible ? 1 : divisor;
+        int stepDivisor = AudioPlaying ? 1 : divisor;
         if (double.IsNaN(wheelPlayhead) || (!AudioPlaying && wheelPlayhead != playhead)
             || wheelDivisor != stepDivisor || wheelSurface != surface) wheelRemainder = 0;
         double ticks = delta + wheelRemainder;
@@ -1582,6 +1582,7 @@ public sealed partial class EditorView
             }
             else if (HitsoundingNotesKey(virtualKey, ctrl, shift)) { }
             else if (!ctrl && !altHeld && !shift && virtualKey is 49 or 50) SetHitsoundingTool(virtualKey == 50);
+            else if (!ctrl && !altHeld && !shift && virtualKey == 53) AddHitsoundingInheritedPoint(playhead);
             else if (!ctrl && !altHeld && !shift && virtualKey is 65 or 83 or 68) SetHitsoundingBrush(virtualKey == 65 ? 2 : virtualKey == 83 ? 1 : 3);
             else if (altHeld && virtualKey is 81 or 87 or 69 or 82) SetSampleBank(ctrl, virtualKey switch { 81 => 0, 87 => 1, 69 => 2, _ => 3 });
             else if (ctrl && virtualKey == 90) { if (shift) Redo(); else Undo(); }

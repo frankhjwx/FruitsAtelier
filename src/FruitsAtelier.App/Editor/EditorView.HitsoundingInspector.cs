@@ -32,9 +32,13 @@ public sealed partial class EditorView
     private TimingHelperPoint[] timingHelperPoints = [];
     private TimingHelperPoint? timingHelperVolumeDrag;
     private Rect timingHelperVolumeTrack;
+    private float timingHelperVolumeStartX;
+    private bool timingHelperVolumeMoved;
     private void MoveTimingHelperVolume(float x)
     {
         if (timingHelperVolumeDrag is not { } entry) return;
+        timingHelperVolumeMoved |= Math.Abs(x - timingHelperVolumeStartX) >= ContentDragThreshold;
+        if (!timingHelperVolumeMoved) return;
         int volume = (int)Math.Round(Math.Clamp((x - timingHelperVolumeTrack.X) / Math.Max(1, timingHelperVolumeTrack.Width), 0, 1) * 100);
         if (entry.Volume == volume) return;
         entry.Volume = volume;
@@ -86,7 +90,8 @@ public sealed partial class EditorView
         RefreshHitsoundingInspector();
         hitsoundingInspectorBounds = r;
         var nearby = TimingHelperNearbyRange();
-        float contentHeight = timingHelperPoints.Length > 0 ? 122 + timingHelperPoints.Sum(d => d.Source.Uninherited ? 410 : 336) : 418;
+        bool ramp = TimingHelperRampEndpoints() is not null;
+        float contentHeight = (timingHelperPoints.Length > 0 ? 122 + timingHelperPoints.Sum(d => d.Source.Uninherited ? 410 : 336) : 470) + (ramp ? 110 : 0);
         float nearbyHeight = nearby.Count > 0 ? 30 + nearby.Count * 20 : 0;
         float editorHeight = Math.Max(0, r.Height - nearbyHeight - 8);
         var nearbyBounds = TimingHelperNearbyBounds = new Rect(r.X + 10, r.Y + editorHeight + 8, Math.Max(0, r.Width - 20), nearbyHeight);
@@ -97,6 +102,7 @@ public sealed partial class EditorView
         c.Clip(r);
         float y = r.Y + 8 - hitsoundingInspectorScroll, x = r.X + 10, w = Math.Max(0, r.Width - 20);
         DrawTimingHelperHeader(c, new(x, y, w, 148)); y += 158;
+        if (ramp) DrawTimingHelperRamp(c, x, ref y, w);
         if (timingHelperPoints.Length > 0)
         {
             foreach (var entry in timingHelperPoints)
@@ -120,8 +126,12 @@ public sealed partial class EditorView
             }
             y += 38;
             Field(c, x, ref y, w, L.Get("hitsounding.index"), inspectorIndex, v => { inspectorIndex = ValidHsIndex(v); }, 80);
+            fields[^1] = fields[^1] with { Preference = true };
             Field(c, x, ref y, w, L.Get("hitsounding.volume"), inspectorVolume, v => { inspectorVolume = (int)Math.Clamp(Math.Round(v), 0, 100); }, 80);
+            fields[^1] = fields[^1] with { Preference = true };
             Button(c, new(x, y + 4, w, 48), L.Get("hitsounding.applyTiming"), ApplyHitsoundingTiming, fontSize: 10);
+            Button(c, new(x, y + 56, w, 40), L.Get("hitsounding.applyAffecting"), ApplyHitsoundingAffectingTiming,
+                enabled: overviewTiming.Any(p => p.TimeMs <= inspectorTime), fontSize: 10);
         }
         c.Unclip();
         for (int i = firstHit; i < hits.Count; i++)
@@ -206,7 +216,10 @@ public sealed partial class EditorView
             if (!CommitField()) return;
             EnsureConversion(); GetHitsoundConversion();
             history.Begin(L.Get("timing.edit"));
-            timingHelperVolumeDrag = entry; timingHelperVolumeTrack = slider; MoveTimingHelperVolume(mouseX);
+            timingHelperVolumeDrag = entry; timingHelperVolumeTrack = slider;
+            timingHelperVolumeStartX = mouseX; timingHelperVolumeMoved = false;
+            float thumb = slider.X + slider.Width * entry.Volume / 100;
+            if (Math.Abs(mouseX - thumb) > 6) entry.Volume = Math.Clamp(entry.Volume + Math.Sign(mouseX - thumb) * 5, 0, 100);
         }, true));
         string[] sounds = ["hitnormal", "hitfinish", "hitwhistle", "hitclap"];
         for (int i = 0; i < sounds.Length; i++)
@@ -251,6 +264,16 @@ public sealed partial class EditorView
             Meter = state.Meter, SampleSet = inspectorBank, SampleIndex = inspectorIndex, Volume = inspectorVolume,
             Effects = active?.Effects ?? 0 };
         Edit(L.Get("hitsounding.applyTiming"), () => Document.TimingPoints.Add(point));
+    }
+    private void ApplyHitsoundingAffectingTiming()
+    {
+        if (!CommitField()) return;
+        var point = overviewTiming.LastOrDefault(p => p.TimeMs <= inspectorTime);
+        if (point is null) return;
+        Edit(L.Get("hitsounding.applyAffecting"), () =>
+        {
+            point.SampleSet = inspectorBank; point.SampleIndex = inspectorIndex; point.Volume = inspectorVolume;
+        });
     }
     private void SetHitsoundingEvent(EventHitsound setting)
     {

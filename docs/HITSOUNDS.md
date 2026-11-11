@@ -256,10 +256,10 @@ area starts at the same vertical position, and the nearby list stays anchored be
 At an exact timestamp with existing timing points, the helper
 shows each point in a separate section divided by horizontal rules. Offset, bank, sample index, volume and the Kiai toggle edit the existing point directly; BPM and meter controls appear only for red points. Numeric inputs take effect on Enter or focus loss. Toggling Kiai preserves the point's other effect flags.
 Sample indices use Default, Custom 1 and Custom choices, with the custom index input on the Custom row. Existing-point volume uses one row for its label, slider, numeric input and percent suffix; Hit, Finish, Whistle and Clap buttons preview the current sample settings.
-Volume updates while dragging, with one undo step for the complete gesture. The helper does not display or edit SV; sound edits preserve the green line's beat length.
+Clicking the volume track changes the value by five percentage points toward the pointer. Dragging and numeric input retain one-percent precision. Volume updates while dragging, with one undo step for the complete gesture. The helper does not display or edit SV; sound edits preserve the green line's beat length.
 Only timestamps without a point show effective timing information and **Apply as new
 inherited timing point**, which inserts a green line while preserving effective SV.
-Settings for a new inherited point remain drafts until insertion. Existing-point edits support undo and mark the map as modified; saving remains explicit.
+At these timestamps, **Apply to affecting timing line** writes the draft bank, index and volume to the latest active timing point without moving it or adding another point. Values remain drafts until either Apply button is clicked. Existing-point edits support undo and mark the map as modified; saving remains explicit.
 A separator and **Nearby Timing Points** title introduce up to seven nearby timing points in chronological order, showing timestamp, timing/sample information and volume. The current point is highlighted, retaining red for red points; others fade with distance. The wheel only scrolls the visible rows, leaving the playhead and selection unchanged. Clicking a row selects that point in the helper and recenters the list without moving the playhead or canvas. The initial view prefers three points on each side, filling from the other side at map boundaries; it has no separate scrollbar.
 The Hitsounding dock menu provides Config, Timing Helper, Song Setup and Preview independently
 of Mapping.
@@ -337,7 +337,22 @@ to edit it in Timing Helper, opening the panel when needed. Green points also
 offer Delete. The Delete key and context-menu Delete remove all selected green
 points in one undoable edit. Right-clicking a selected block or handle preserves
 the group; right-clicking an unselected point selects that point instead.
+Press **5** in Hitsounding to add an inherited point at the playhead. This binding is configurable in Settings.
+Ctrl-select exactly two green points to reveal **Generate volume ramp** in Timing Helper.
+Choose a beat interval of 1/1, 1/2 or 1/4, or enter a custom denominator (1–192).
+Generation follows musical beat intervals across BPM changes and interpolates volume
+linearly in time between the unchanged endpoints. Existing interior points receive
+the interpolated volume; their other properties are preserved. Missing green points
+inherit the active timing properties. The complete operation is one undo step.
 Timing Helper's sample bank choices are Soft, Normal and Drum.
+The left-hand sample-bank tools highlight the resolved bank of selected sounds;
+mixed banks have no highlighted choice. With no selection, they show the drawing bank.
+While playing, timeline wheel navigation advances by full beats, matching Mapping;
+paused navigation follows the selected Snap subdivision.
+After copying sounds or Notes while paused, selecting a different target without seeking
+makes its first timestamp the paste destination. Otherwise, paste starts at the playhead. Matching Notes allow
+one millisecond of rounding difference and do not treat a preceding slider ending
+at the destination as part of the target rhythm.
 
 ## Maintenance
 

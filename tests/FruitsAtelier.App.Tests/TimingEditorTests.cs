@@ -148,7 +148,7 @@ internal static class TimingEditorTests
             var slider = ui.Canvas.Lines.Single(l => Math.Abs(l.Y1 - volume.Y - 7.5f) < .01 && l.Width == 2
                 && l.X1 > small.X && l.X2 < volume.X);
             float volumeX = slider.X1 + (slider.X2 - slider.X1) * .25f;
-            ui.View.PointerDown(volumeX, slider.Y1, 0, false, false); ui.Paint();
+            ui.View.PointerDown(volumeX + 10, slider.Y1, 0, false, false); ui.Paint();
             ui.View.PointerMove(volumeX, slider.Y1, false, false); ui.Paint();
             ui.View.PointerUp(volumeX, slider.Y1, 0); ui.Paint();
             Check(ui.View.TimingFields.Single(f => f.Key == "volume").Value == "25", "Half-size volume dragging uses scaled coordinates across frames");

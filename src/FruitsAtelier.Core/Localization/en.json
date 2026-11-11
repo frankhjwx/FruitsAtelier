@@ -2460,5 +2460,8 @@
   "testplay.mod.doubletime": "Double Time",
   "testplay.mod.hidden": "Hidden",
   "testplay.mod.flashlight": "Flashlight",
-  "testplay.showCombo": "Show combo"
+  "testplay.showCombo": "Show combo",
+  "hitsounding.applyAffecting": "Apply to affecting timing line",
+  "hitsounding.rampInterval": "Beat interval: 1 /",
+  "hitsounding.generateRamp": "Generate volume ramp"
 }

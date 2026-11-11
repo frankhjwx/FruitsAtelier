@@ -1784,6 +1784,8 @@ menus and inspector at narrow and ordinary window sizes under
 
 ## Hitsounding workspace checks
 
+`App.Tests --hitsounding-feedback-check` covers the inherited-point shortcut, deferred affecting-line application, five-percent slider clicks and precise dragging, two-point volume ramps with tempo changes and undo, selection bank highlighting, and selected-target sound paste. It is included in the Hitsounding panel check.
+
 `App.Tests --hitsound-library-files-check` covers real right-button context menus,
 relative paths, multi-selection, file operations, one-second drag navigation,
 exclusive audition progress and scrollbar dragging in English and Chinese.

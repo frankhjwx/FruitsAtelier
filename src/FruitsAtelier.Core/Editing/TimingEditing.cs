@@ -27,6 +27,44 @@ public static class TimingEditing
         return point;
     }
 
+    public static void GenerateVolumeRamp(MapDocument map, TimingPoint start, TimingPoint end, int divisor)
+    {
+        if (start.Uninherited || end.Uninherited || !map.TimingPoints.Contains(start) || !map.TimingPoints.Contains(end)
+            || start.TimeMs >= end.TimeMs || divisor is < 1 or > 192) throw new ArgumentException(L.Get("timing.range"));
+        var timing = new TimingMap.Lookup(map, applyMultiplierOverride: false);
+        var ordered = map.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        var times = new SortedSet<double>();
+        double position = start.TimeMs;
+        for (int count = 0; position < end.TimeMs; count++)
+        {
+            if (count >= 10000) throw new ArgumentException(L.Get("timing.range"));
+            double next = timing.OffsetBeats(position, 1d / divisor);
+            if (next <= position || !double.IsFinite(next)) throw new ArgumentException(L.Get("timing.range"));
+            position = next;
+            double timestamp = Math.Truncate(position + 1e-7);
+            if (timestamp > start.TimeMs && timestamp < end.TimeMs) times.Add(timestamp);
+        }
+        int startVolume = start.Volume, endVolume = end.Volume;
+        int Volume(double time) => (int)Math.Round(startVolume + (endVolume - startVolume) * (time - start.TimeMs) / (end.TimeMs - start.TimeMs));
+        var greens = ordered.Where(p => !p.Uninherited).Select(p => p.TimeMs).ToHashSet();
+        var added = new List<TimingPoint>();
+        int active = -1, order = ordered.Select(p => p.SourceOrder).Where(v => v < int.MaxValue).DefaultIfEmpty(-1).Max();
+        foreach (double time in times)
+        {
+            if (greens.Contains(time)) continue;
+            while (active + 1 < ordered.Length && ordered[active + 1].TimeMs <= time) active++;
+            var point = active >= 0 ? Copy(ordered[active]) : new TimingPoint();
+            var state = timing.At(time);
+            point.BeatLengthMs = point.Uninherited ? -100 : point.BeatLengthMs;
+            point.TimeMs = time; point.Uninherited = false;
+            point.Meter = state.Meter; point.Volume = Volume(time); point.OriginalLine = null; point.SourceOrder = ++order;
+            added.Add(point);
+        }
+        foreach (var point in ordered)
+            if (point.TimeMs > start.TimeMs && point.TimeMs < end.TimeMs) point.Volume = Volume(point.TimeMs);
+        map.TimingPoints.AddRange(added);
+    }
+
     public static void Apply(MapDocument map, IReadOnlyList<TimingPoint> points,
         IReadOnlyList<(TimingPoint Before, TimingPoint After)> changes, TimingApplyOptions options)
     {

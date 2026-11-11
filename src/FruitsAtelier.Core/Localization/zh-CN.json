@@ -2460,5 +2460,8 @@
   "testplay.mod.doubletime": "Double Time",
   "testplay.mod.hidden": "Hidden",
   "testplay.mod.flashlight": "Flashlight",
-  "testplay.showCombo": "显示连击数"
+  "testplay.showCombo": "显示连击数",
+  "hitsounding.applyAffecting": "应用到当前生效时间线",
+  "hitsounding.rampInterval": "节拍间隔：1 /",
+  "hitsounding.generateRamp": "生成渐变音量"
 }

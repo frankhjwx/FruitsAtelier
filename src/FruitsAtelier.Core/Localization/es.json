@@ -2460,5 +2460,8 @@
   "testplay.mod.doubletime": "Double Time",
   "testplay.mod.hidden": "Hidden",
   "testplay.mod.flashlight": "Flashlight",
-  "testplay.showCombo": "Mostrar combo"
+  "testplay.showCombo": "Mostrar combo",
+  "hitsounding.applyAffecting": "Aplicar al punto de tiempo activo",
+  "hitsounding.rampInterval": "Intervalo de pulsos: 1 /",
+  "hitsounding.generateRamp": "Generar cambio gradual de volumen"
 }

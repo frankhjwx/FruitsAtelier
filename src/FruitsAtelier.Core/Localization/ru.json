@@ -2460,5 +2460,8 @@
   "testplay.mod.doubletime": "Double Time",
   "testplay.mod.hidden": "Hidden",
   "testplay.mod.flashlight": "Flashlight",
-  "testplay.showCombo": "Показывать комбо"
+  "testplay.showCombo": "Показывать комбо",
+  "hitsounding.applyAffecting": "Применить к действующей точке тайминга",
+  "hitsounding.rampInterval": "Интервал в долях: 1 /",
+  "hitsounding.generateRamp": "Создать плавное изменение громкости"
 }

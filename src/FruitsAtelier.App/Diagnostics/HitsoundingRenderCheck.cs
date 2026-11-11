@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-volume-ramp" })
             {
                 if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
@@ -147,6 +147,17 @@ internal static class HitsoundingRenderCheck
                     editor.PointerDown(handle.X + 4, handle.Y + 10, 0, false, false);
                     editor.PointerUp(handle.X + 4, handle.Y + 10, 0);
                     editor.Render(canvas, size.Item1, size.Item2);
+                }
+                if (scenario == "-volume-ramp")
+                {
+                    foreach (double time in new[] { 2000d, 3000d })
+                    {
+                        var point = editor.Document.TimingPoints.First(p => p.TimeMs == time);
+                        var handle = editor.HitsoundingTimingHandleBounds(point);
+                        editor.PointerDown(handle.X + 4, handle.Y + 10, 0, false, true);
+                        editor.PointerUp(handle.X + 4, handle.Y + 10, 0);
+                        editor.Render(canvas, size.Item1, size.Item2);
+                    }
                 }
                 if (scenario is "-green-drag" or "-green-menu")
                 {
