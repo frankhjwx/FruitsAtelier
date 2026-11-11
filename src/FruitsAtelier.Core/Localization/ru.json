@@ -781,6 +781,7 @@
   "library.scanning": "Сканирование песен…",
   "library.scanProgress": "Сканировано: файлы {0}\nКарты захвата: {1}\nПропущенные ошибки: {2}",
   "library.indexed": "{0} трудности проиндексированы",
+  "library.ratingProgress": "Расчёт звёзд…\n{0}/{1} сложностей",
   "library.export": "Экспортировать .osu",
   "library.title": "Библиотека",
   "library.settings": "Настройки",

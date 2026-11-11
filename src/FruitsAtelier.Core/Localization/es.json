@@ -781,6 +781,7 @@
   "library.scanning": "Escaneando canciones…",
   "library.scanProgress": "Escaneado: archivos {0}\nMapas capturados: {1}\nErrores omitidos: {2}",
   "library.indexed": "Dificultades {0} indexadas",
+  "library.ratingProgress": "Calculando estrellas…\n{0}/{1} dificultades",
   "library.export": "Exportar .osu",
   "library.title": "Biblioteca",
   "library.settings": "Configuración",

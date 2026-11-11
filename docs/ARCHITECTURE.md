@@ -235,6 +235,12 @@ osu! features outside the supported sprite/animation and trigger playback path.
 
 `Core/Workspace` provides project-directory transactions, SQLite indexing, metadata scanning, resource-reference diagnostics, and explicit export plans. Shared `EditorView.Library` implements the library/settings pages, and `EditorView.Export` draws the modal export overlay above the editor; platform hosts handle folder selection, audio changes, and resource export. Library scanning and star calculations run in the background. The UI reads committed maps during scanning and completed star results. See [Workspace](WORKSPACE.md).
 
+Full scans visit the selected source directory first and commit that directory before
+continuing through other sets. In unfiltered All Songs, startup previews with missing
+difficulty rows can read just the selected project manifest or source headers on an
+independent worker, without waiting for catalog indexing or the workspace gate.
+The indexed result remains authoritative for membership and ordering.
+
 Library loading remains active until completed worker results have been published
 by the UI pump, including startup indexing and browser page/detail updates.
 The browser publishes difficulty metadata pages independently of star calculations,

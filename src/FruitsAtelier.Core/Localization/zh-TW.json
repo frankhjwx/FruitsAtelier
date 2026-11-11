@@ -781,6 +781,7 @@
   "library.scanning": "掃描歌曲...",
   "library.scanProgress": "已掃描：{0} 檔案\n擷取圖：{1}\n跳過的錯誤：{2}",
   "library.indexed": "{0} 困難指數",
+  "library.ratingProgress": "正在計算星級…\n{0}/{1} 個難度",
   "library.export": "出口.osu",
   "library.title": "圖書館",
   "library.settings": "設定",

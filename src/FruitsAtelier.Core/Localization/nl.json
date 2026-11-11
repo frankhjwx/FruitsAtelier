@@ -781,6 +781,7 @@
   "library.scanning": "Nummers scannen…",
   "library.scanProgress": "Gescand: {0}-bestanden\nCatch-kaarten: {1}\nOvergeslagen fouten: {2}",
   "library.indexed": "{0}-problemen geïndexeerd",
+  "library.ratingProgress": "Sterren berekenen…\n{0}/{1} moeilijkheden",
   "library.export": ".osu exporteren",
   "library.title": "Bibliotheek",
   "library.settings": "Instellingen",

@@ -810,6 +810,7 @@
   "library.scanning": "正在扫描 Songs…",
   "library.scanProgress": "已扫描：{0} 个文件\nCatch 谱面：{1}\n异常跳过：{2}",
   "library.indexed": "已索引 {0} 个难度",
+  "library.ratingProgress": "正在计算星级…\n{0}/{1} 个难度",
   "library.export": "导出 .osu",
   "library.title": "曲库",
   "library.settings": "设置",

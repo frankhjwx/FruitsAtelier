@@ -164,7 +164,7 @@ internal static class LibraryPersistentCacheTests
             typeof(EditorView).GetField("libraryStartupTask", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(view, blockedStartup.Task);
             canvas.Clear(); view.Render(canvas, 980, 620);
             Check(view.LibrarySetTotal == 1 && canvas.Texts.Any(t => t.Value == "Cached") && canvas.Texts.Any(t => t.Value == "Hard"), "First frame contains cached cards while database initialization is blocked");
-            Check(!canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.scanning")), "Warm startup never replaces cached cards with a full-page loading message");
+            Check(!canvas.Texts.Any(t => t.X >= 200 && t.Value == FruitsAtelier.Localization.Strings.Get("library.scanning")), "Warm startup never replaces cached cards with a full-page loading message");
             Check(((Task)Field(view, "libraryStartupTask")!).IsCompleted == false, "Cached cards do not wait for database initialization");
             Console.WriteLine($"Warm first frame with blocked database: {timer.Elapsed.TotalMilliseconds:0.00} ms");
             typeof(EditorView).GetField("libraryStartupTask", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(view, originalStartup);

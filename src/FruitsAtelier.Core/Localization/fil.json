@@ -781,6 +781,7 @@
   "library.scanning": "Ini-scan ang mga Kanta...",
   "library.scanProgress": "Na-scan: {0} file\nMahuli ang mga mapa: {1}\nMga nilaktawan na error: {2}",
   "library.indexed": "{0} mga paghihirap na na-index",
+  "library.ratingProgress": "Kinakalkula ang stars…\n{0}/{1} difficulty",
   "library.export": "I-export ang .osu",
   "library.title": "Aklatan",
   "library.settings": "Mga setting",

@@ -781,6 +781,7 @@
   "library.scanning": "Balayage des chansons…",
   "library.scanProgress": "Numérisé : fichiers {0}\nCartes de capture : {1}\nErreurs ignorées : {2}",
   "library.indexed": "Difficultés {0} indexées",
+  "library.ratingProgress": "Calcul des étoiles…\n{0}/{1} difficultés",
   "library.export": "Exporter .osu",
   "library.title": "Bibliothèque",
   "library.settings": "Paramètres",

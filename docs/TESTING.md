@@ -1797,7 +1797,9 @@ Windows renderer, operates the default multiplier input and captures settings,
 menus and inspector at narrow and ordinary window sizes under
 `artifacts/tests/slider-bpm/native`.
 
-`App.Tests --library-rating-order-check` checks same-frame project selection names, retained rows across browser replacement, obsolete rating cancellation on selection changes, metadata visibility and scrolling while cold star calculations are blocked, descending star order across difficulty pages, unknown ratings, stable ties, reused calculations and persisted preview order.
+`App.Tests --library-cold-existing-check` scans the currently selected Songs directory into a new temporary index, pauses the full scan before completion, and verifies names and drawing, including a cards-only startup preview. It reads source files without modifying them.
+
+`App.Tests --library-rating-order-check` checks cold indexing with a deliberately blocked full scan, cards-only preview hydration, visible scan and star-calculation progress while workers are blocked, same-frame project selection names, retained rows across browser replacement, obsolete rating cancellation on selection changes, metadata visibility and scrolling while cold star calculations are blocked, descending star order across difficulty pages, unknown ratings, stable ties, reused calculations and persisted preview order.
 
 ## Hitsounding workspace checks
 

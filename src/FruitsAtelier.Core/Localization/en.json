@@ -810,6 +810,7 @@
   "library.scanning": "Scanning Songs…",
   "library.scanProgress": "Scanned: {0} files\nCatch maps: {1}\nSkipped errors: {2}",
   "library.indexed": "{0} difficulties indexed",
+  "library.ratingProgress": "Calculating stars…\n{0}/{1} difficulties",
   "library.export": "Export .osu",
   "library.title": "Library",
   "library.settings": "Settings",

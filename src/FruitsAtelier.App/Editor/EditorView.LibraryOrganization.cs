@@ -132,11 +132,11 @@ public sealed partial class EditorView
         contextBounds = new(Math.Min(bounds.X, width - 240), Math.Min(bounds.Bottom, height - ContextMenuHeight), 240, ContextMenuHeight);
     }
 
-    private void DrawLibraryCollections(ICanvas c)
+    private void DrawLibraryCollections(ICanvas c, float bottom)
     {
         Button(c, new(16, 226, 158, 36), L.Get("library.recentVisited"), () => SwitchLibraryCategory(false, recent: true), libraryRecentOnly);
         c.Line(24, 272, 166, 272, Grid, 1);
-        collectionsBounds = new(16, 282, 158, Math.Max(0, height - 437));
+        collectionsBounds = new(16, 282, 158, Math.Max(0, bottom - 282));
         collectionRows.Clear();
         var imported = osuCollections is { Available: true } ? osuCollections.Collections : [];
         float faHeight = SectionHeight(libraryMemory.Collections.Count);

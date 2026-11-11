@@ -781,6 +781,7 @@
   "library.scanning": "노래 스캔 중…",
   "library.scanProgress": "스캔됨: {0} 파일\n캐치 맵: {1}\n건너뛴 오류: {2}",
   "library.indexed": "{0} 난이도 색인화됨",
+  "library.ratingProgress": "별 난이도 계산 중…\n{0}/{1} 난이도",
   "library.export": ".osu 내보내기",
   "library.title": "도서관",
   "library.settings": "설정",

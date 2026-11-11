@@ -781,6 +781,7 @@
   "library.scanning": "กำลังสแกนเพลง...",
   "library.scanProgress": "สแกนแล้ว: ไฟล์ {0}\nCatch map: {1}\nSkipped error: {2}",
   "library.indexed": "ดัชนีความยากลำบากของ {0}",
+  "library.ratingProgress": "กำลังคำนวณดาว…\n{0}/{1} ระดับความยาก",
   "library.export": "ส่งออก .osu",
   "library.title": "ห้องสมุด",
   "library.settings": "การตั้งค่า",

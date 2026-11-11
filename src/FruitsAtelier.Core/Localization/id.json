@@ -781,6 +781,7 @@
   "library.scanning": "Memindai Lagu…",
   "library.scanProgress": "Dipindai: file {0}\nTangkap peta: {1}\nKesalahan yang dilewati: {2}",
   "library.indexed": "Kesulitan {0} diindeks",
+  "library.ratingProgress": "Menghitung bintang…\n{0}/{1} kesulitan",
   "library.export": "Ekspor .osu",
   "library.title": "Perpustakaan",
   "library.settings": "Pengaturan",

@@ -781,6 +781,7 @@
   "library.scanning": "曲をスキャン中…",
   "library.scanProgress": "スキャンされた: {0} ファイル\nキャッチ マップ: {1}\nスキップされたエラー: {2}",
   "library.indexed": "{0} の難易度がインデックス化されました",
+  "library.ratingProgress": "難易度を計算中…\n{0}/{1} 譜面",
   "library.export": ".osuをエクスポート",
   "library.title": "図書館",
   "library.settings": "設定",

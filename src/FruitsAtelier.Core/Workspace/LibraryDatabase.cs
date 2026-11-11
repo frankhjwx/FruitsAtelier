@@ -369,7 +369,7 @@ public sealed class LibraryDatabase
         => ScanDirectories(null, cancellation, progress);
 
     public LibraryScan ScanDirectories(IEnumerable<string>? changedDirectories, CancellationToken cancellation = default,
-        Action<LibraryScanProgress>? progress = null, bool scanStandardMaps = true)
+        Action<LibraryScanProgress>? progress = null, bool scanStandardMaps = true, string? priorityDirectory = null)
     {
         if (!scanStandardMaps)
         {
@@ -388,7 +388,7 @@ public sealed class LibraryDatabase
         if (songs.Length > 0) roots.Add(songs);
         string[]? changed = changedDirectories?.Select(Path.GetFullPath).Distinct(WorkspaceSynchronization.Paths).ToArray();
         int count = 0; var errors = new List<string>();
-        foreach (string root in roots.Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (string root in roots.Distinct(StringComparer.OrdinalIgnoreCase).OrderByDescending(root => priorityDirectory is not null && WorkspaceProject.Within(root, priorityDirectory)))
         {
             cancellation.ThrowIfCancellationRequested();
             if (!Directory.Exists(root))
@@ -401,12 +401,12 @@ public sealed class LibraryDatabase
                 .Where(p => !changed.Any(parent => !WorkspaceSynchronization.Paths.Equals(p, parent) && WorkspaceProject.Within(parent, p))).ToArray();
             foreach (string scope in scopes)
             {
-                var result = ScanRoot(root, cancellation, Report, scope, scanStandardMaps); count += result.Count; errors.AddRange(result.Errors);
+                var result = ScanRoot(root, cancellation, Report, scope, scanStandardMaps, priorityDirectory); count += result.Count; errors.AddRange(result.Errors);
             }
         }
         ReindexProjects(); return new(count, errors);
     }
-    private LibraryScan ScanRoot(string root, CancellationToken cancellation, Action<bool, bool> report, string scope, bool scanStandardMaps)
+    private LibraryScan ScanRoot(string root, CancellationToken cancellation, Action<bool, bool> report, string scope, bool scanStandardMaps, string? priorityDirectory = null)
     {
         using var db = Open();
         int count = 0;
@@ -457,7 +457,7 @@ public sealed class LibraryDatabase
             {
                 WorkspaceProject.RejectLinks(directory);
                 var folder = new DirectoryInfo(directory);
-                foreach (var child in folder.EnumerateDirectories())
+                foreach (var child in folder.EnumerateDirectories().OrderBy(child => priorityDirectory is not null && WorkspaceProject.Within(child.FullName, priorityDirectory) ? 1 : 0))
                     if ((child.Attributes & FileAttributes.ReparsePoint) == 0) directories.Push(child.FullName);
                 files = folder.EnumerateFiles().Where(p => p.Extension.Equals(".osu", StringComparison.OrdinalIgnoreCase)).ToArray();
                 scannedDirectories.Add(directory);
@@ -492,6 +492,7 @@ public sealed class LibraryDatabase
                 catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException) { seen.Add(file); failed = true; errors.Add(file + ": " + e.Message); }
                 finally { if (accepted) count++; report(accepted, failed); }
             }
+            if (priorityDirectory is not null && WorkspaceSynchronization.Paths.Equals(directory, priorityDirectory)) Flush();
         }
         // Errors in another set must not retain deleted files in directories enumerated successfully.
         foreach (var path in cached.Keys.Where(p => !seen.Contains(p)))

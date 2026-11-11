@@ -781,6 +781,7 @@
   "library.scanning": "Skanowanie utworów…",
   "library.scanProgress": "Zeskanowane: pliki {0}\nMapy połowowe: {1}\nPominięte błędy: {2}",
   "library.indexed": "Indeksowane trudności {0}",
+  "library.ratingProgress": "Obliczanie gwiazdek…\n{0}/{1} trudności",
   "library.export": "Eksportuj .osu",
   "library.title": "Biblioteka",
   "library.settings": "Ustawienia",

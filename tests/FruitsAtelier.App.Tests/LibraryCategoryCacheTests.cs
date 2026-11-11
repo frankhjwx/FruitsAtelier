@@ -75,7 +75,7 @@ internal static class LibraryCategoryCacheTests
             Switch(category); canvas.Clear(); view.Render(canvas, 1440, 900);
             CheckContents(category);
             Check(Field(view, "libraryBrowser") is LibraryBrowser { IsPreview: true }, "Switching after restart uses the page's saved cache without a database query");
-            Check(!canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("library.scanning")), "Cached pages do not show a full-page loading message");
+            Check(!canvas.Texts.Any(t => t.X >= 200 && t.Value == FruitsAtelier.Localization.Strings.Get("library.scanning")), "Cached pages do not show a full-page loading message");
         }
         Set(view, "osuCollections", catalog);
         foreach (var category in categories)
