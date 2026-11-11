@@ -176,6 +176,7 @@ public sealed partial class EditorView
     }
     public void CloseLibrary()
     {
+        libraryBrowser?.SuspendRatings();
         CloseCollectionDialog();
         if (LibraryVisible && !exportPage) { RememberLibraryPosition(); SaveLibraryMemory(); }
         LibraryVisible = !HasEditorProject; exportPage = resourcePage = false; librarySettingsOpen = false; updatesPage = false;
@@ -423,6 +424,7 @@ public sealed partial class EditorView
                     || runningSearchSelection != selectedLibraryGroup || runningSearchScroll != libraryScroll)
                 { result.Retire(); searchTask = null; searchTaskQuery = "\0"; return; }
                 float fraction = libraryScroll - (int)libraryScroll;
+                result.RetainDetails(libraryBrowser);
                 libraryBrowser?.Retire(); libraryBrowser = result;
                 libraryBrowserQuery = runningSearchQuery;
                 if (result.TopIndex >= 0 && !libraryPointerActive) libraryScroll = result.OffsetOf(result.TopIndex) + fraction;

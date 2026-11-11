@@ -16,6 +16,7 @@ internal static class LibraryDifficultyOrderTests
                 File.WriteAllText(Path.Combine(directory, $"{i:D3}.osu"), $"osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Song\nArtist:Artist\nCreator:Mapper\nVersion:Diff {i:D3}\n[HitObjects]\n");
             var database = new LibraryDatabase(Path.Combine(root, "Workspace"), songs); database.Scan();
             browser = LibraryBrowser.Create(database, "", false, null, null, 0);
+            Check(browser.Detail(0) is not null, "The selected set publishes names with its first browser result");
             using var ratingStarted = new ManualResetEventSlim();
             using var releaseRating = new ManualResetEventSlim();
             browser.RequestDetails(0, _ =>
@@ -59,6 +60,35 @@ internal static class LibraryDifficultyOrderTests
             browser.RequestDetails(0, _ => 5);
             Wait();
             Check(browser.Detail(0)?.Difficulty == "Diff 000", "Equal ratings use a stable difficulty-name tie break");
+            browser.Retire();
+            string workspace = Path.Combine(root, "Projects");
+            for (int i = 0; i < 2; i++)
+                WorkspaceProject.Create(workspace, BeatmapProject.FromDocuments([
+                    MyMapsTests.Document("Project " + i, "Mapper"), MyMapsTests.Document("Project " + i, "Mapper")]), "");
+            var projects = new LibraryDatabase(workspace, ""); projects.Scan();
+            browser = LibraryBrowser.Create(projects, "", true, null, null, 0);
+            var next = browser.Get(1)!;
+            int oldCalls = 0;
+            ratingStarted.Reset(); releaseRating.Reset();
+            browser.RequestDetails(0, _ => { Interlocked.Increment(ref oldCalls); ratingStarted.Set(); releaseRating.Wait(TimeSpan.FromSeconds(10)); return 3; });
+            try
+            {
+                Check(ratingStarted.Wait(TimeSpan.FromSeconds(5)), "Initial project rating starts");
+                browser.Select(next);
+                Check(browser.Detail(0)?.ProjectPath == next.Map.ProjectPath && browser.Detail(1) is not null,
+                    "Selecting a project shows its names in the same frame without pumping or waiting");
+                var replacement = LibraryBrowser.Create(projects, "", true, next.Key, null, 0);
+                replacement.RetainDetails(browser);
+                Check(replacement.Detail(1) is not null, "Refreshing a browser retains visible difficulty names");
+                replacement.Retire();
+            }
+            finally { releaseRating.Set(); }
+            Wait();
+            Check(oldCalls == 1, "Selection change stops the previous set before its next difficulty");
+            int newCalls = 0;
+            browser.RequestDetails(0, map => { Check(map.ProjectPath == next.Map.ProjectPath, "Only the selected project is rated"); newCalls++; return 4; });
+            Wait();
+            Check(newCalls == 2, "The newly selected project receives rating work");
             Console.WriteLine("PASS Library difficulty star order, cross-page ranking, unknown values and cached previews");
         }
         finally

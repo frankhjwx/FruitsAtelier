@@ -226,7 +226,13 @@ Library loading remains active until completed worker results have been publishe
 by the UI pump, including startup indexing and browser page/detail updates.
 The browser publishes difficulty metadata pages independently of star calculations,
 so names and scrolling remain available with a cold rating cache. Rating work runs
-outside the snapshot gate. The browser prepares the selected set’s complete difficulty order on a worker,
+outside the snapshot gate. Project cards carry at most 128 already-read difficulty
+metadata rows, allowing selection to publish their names in the same frame. The
+initial selected detail page is prepared with the browser result, and replacement
+browsers retain visible rows while reconciling. Rating results publish incrementally;
+selection, category changes and leaving the library invalidate the old work epoch.
+The worker starts at the requested detail page and stops before the next difficulty
+when its selection is obsolete. The browser prepares the selected set’s complete difficulty order on a worker,
 using the persistent star cache, then serves bounded detail pages in descending
 star order. That set’s ranking is retained across page changes and invalidated by
 reference discovery or a new browser snapshot. Selection changes and retirement

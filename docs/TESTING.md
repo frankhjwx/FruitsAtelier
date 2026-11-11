@@ -1782,7 +1782,7 @@ Windows renderer, operates the default multiplier input and captures settings,
 menus and inspector at narrow and ordinary window sizes under
 `artifacts/tests/slider-bpm/native`.
 
-`App.Tests --library-rating-order-check` checks metadata visibility and scrolling while cold star calculations are blocked, descending star order across difficulty pages, unknown ratings, stable ties, reused calculations and persisted preview order.
+`App.Tests --library-rating-order-check` checks same-frame project selection names, retained rows across browser replacement, obsolete rating cancellation on selection changes, metadata visibility and scrolling while cold star calculations are blocked, descending star order across difficulty pages, unknown ratings, stable ties, reused calculations and persisted preview order.
 
 ## Hitsounding workspace checks
 

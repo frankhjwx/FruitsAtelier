@@ -117,6 +117,7 @@ public sealed partial class EditorView
         SaveLibraryPreviewOnLeave();
         libraryClickedCard = null;
         RememberLibraryPosition();
+        libraryBrowser?.SuspendRatings();
         libraryCategoryBrowsers[LibraryPreviewCategory] = (libraryBrowser, libraryBrowserQuery);
         libraryMyMapsOnly = projects; libraryFavouritesOnly = favourites; libraryRecentOnly = recent; libraryCollection = collection; RestoreLibraryPosition();
         var cached = libraryCategoryBrowsers.GetValueOrDefault(LibraryPreviewCategory);
