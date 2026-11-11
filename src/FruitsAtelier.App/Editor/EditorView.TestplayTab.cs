@@ -66,8 +66,6 @@ public sealed partial class EditorView
         float y = bounds.Y - testplayTabScroll, x = bounds.X, w = bounds.Width;
         int firstHit = hits.Count;
         c.Clip(bounds);
-        Button(c, new(x, y, w, 30), L.Get("testplay.start"), StartTestplay);
-        y += 40;
         c.Text(L.Get("testplay.modsReduction"), x, y, 14, 0x66CC66, w); y += 25;
         for (int i = 0; i < 2; i++) DrawModChoice(c, new(x + i * (w / 4), y, w / 4 - 4, 32), i);
         y += 44;
@@ -80,22 +78,37 @@ public sealed partial class EditorView
             LibrarySettings.TestplayMods = CatchMods.None; testplayApproachRates.Clear();
             SetPlaybackSpeed(1); RequestViewPreference?.Invoke();
         });
-        y += 40;
+        y += 44;
+        c.Line(x, y, x + w, y, Grid);
+        y += 20;
+        c.Text(L.Get("testplay.keyBindingSettings"), x, y, 15, Foreground, w, true);
+        y += 30;
         string[] keyLabels = ["testplay.left", "testplay.right", "testplay.dash"];
         string[] commands = ["moveLeft", "moveRight", "dash"];
+        float keyLabelWidth = keyLabels.Max(key => c.MeasureText(L.Get(key), 13, true)) + 16;
+        bool keyColumns = w >= Math.Max(480, keyLabelWidth * 3 + 24);
+        float keyTop = y, keyCell = (w - 16) / 3;
         for (int i = 0; i < 3; i++)
         {
             string id = commands[i];
             var command = ShortcutCommands.Single(cmd => cmd.Scope == ShortcutScope.Testplay && cmd.Id == id && cmd.Lazer == LibrarySettings.LazerEditing);
-            c.Text(L.Get(keyLabels[i]), x, y + 7, 12, Foreground, w * .35f);
-            Button(c, new(x + w * .35f, y, w * .65f, 28), string.Join(" / ", CommandBindings(command, false).Select(BindingName)), () =>
+            bool stacked = keyColumns || w < keyLabelWidth + 90;
+            float keyX = keyColumns ? x + i * (keyCell + 8) : x;
+            float rowWidth = keyColumns ? keyCell : w;
+            c.Text(L.Get(keyLabels[i]), keyX, y + (stacked ? 0 : 8), 13, Foreground,
+                stacked ? rowWidth : keyLabelWidth - 12, true);
+            var keyBounds = stacked ? new Rect(keyX, y + 24, rowWidth, 32)
+                : new Rect(keyX + keyLabelWidth, y, rowWidth - keyLabelWidth, 32);
+            Button(c, keyBounds, string.Join(" / ", CommandBindings(command, false).Select(BindingName)), () =>
             {
                 OpenSettings(); settingsCategory = SettingsCategory.Shortcuts;
                 shortcutScope = ShortcutScope.Testplay; shortcutLazer = draftLazerEditing; shortcutQuery = ""; workspaceScroll = 0;
                 BeginShortcutCapture(command, CommandBindings(command, true).Length > 0 ? 0 : -1);
             });
-            y += 36;
+            if (!keyColumns) y += stacked ? 68 : 42;
         }
+        if (keyColumns) y = keyTop + 68;
+        y += 12;
         Step("testplay.startupDelay", L.Get("testplay.startupDelayValue", LibrarySettings.TestplayStartupDelaySeconds),
             d => LibrarySettings.TestplayStartupDelaySeconds += d * .5);
         bool rateMod = (LibrarySettings.TestplayMods & (CatchMods.DoubleTime | CatchMods.HalfTime)) != 0;
@@ -122,11 +135,21 @@ public sealed partial class EditorView
 
         void Step(string key, string value, Action<int> change, bool enabled = true)
         {
-            c.Text(L.Get(key), x, y, 12, Foreground, w); y += 20;
-            c.Text(value, x + 34, y + 6, 12, Foreground, w - 68);
-            Button(c, new(x, y, 26, 28), "‹", () => { change(-1); RequestViewPreference?.Invoke(); }, enabled: enabled);
-            Button(c, new(x + w - 26, y, 26, 28), "›", () => { change(1); RequestViewPreference?.Invoke(); }, enabled: enabled);
-            y += 36;
+            string label = L.Get(key);
+            bool inline = w >= 440 && c.MeasureText(label, 13, true) <= w * .45f - 12;
+            float controlX = inline ? x + w * .45f : x;
+            float controlWidth = w - (controlX - x);
+            c.Text(label, x, y + (inline ? 8 : 0), 13, Foreground, inline ? w * .45f - 12 : w, true);
+            if (!inline) y += 24;
+            var valueBounds = new Rect(controlX + 32, y, controlWidth - 64, 32);
+            c.Fill(valueBounds, Surface, 4);
+            c.Stroke(valueBounds, Grid, radius: 4);
+            float valueWidth = c.MeasureText(value, 13);
+            c.Text(value, valueBounds.X + (valueBounds.Width - valueWidth) / 2, valueBounds.Y + 8,
+                13, enabled ? Foreground : Muted, valueBounds.Width);
+            Button(c, new(controlX, y, 28, 32), "‹", () => { change(-1); RequestViewPreference?.Invoke(); }, enabled: enabled);
+            Button(c, new(controlX + controlWidth - 28, y, 28, 32), "›", () => { change(1); RequestViewPreference?.Invoke(); }, enabled: enabled);
+            y += 44;
         }
         void Toggle(string key, bool value, Action change)
         {

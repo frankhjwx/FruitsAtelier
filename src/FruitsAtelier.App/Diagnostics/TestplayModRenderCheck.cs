@@ -33,8 +33,20 @@ internal static class TestplayModRenderCheck
                 view.ToggleTestplayMod(CatchMods.HardRock);
                 view.ToggleTestplayMod(CatchMods.Hidden);
                 view.OpenTestplayTab();
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+                if (size.Item1 >= 1440)
+                {
+                    var resize = view.DockResizeBounds(false);
+                    view.PointerDown(resize.X + 4, resize.Y + 60, 0, false, false);
+                    view.PointerMove(size.Item1 - 560, resize.Y + 60, false, false);
+                    view.PointerUp(size.Item1 - 560, resize.Y + 60, 0);
+                }
                 string prefix = Path.Combine(folder, $"mods-{locale}-{size.Item1}");
                 TestplayRenderCheck.Capture(canvas, view, size.Item1, size.Item2, prefix + "-tab.bmp");
+                view.Wheel(size.Item1 - 80, 350, -12000, false);
+                TestplayRenderCheck.Capture(canvas, view, size.Item1, size.Item2, prefix + "-settings.bmp");
+                view.Wheel(size.Item1 - 80, 350, 12000, false);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
                 var previewTab = view.DockTabBounds(EditorView.DockPanel.Preview);
                 view.PointerDown(previewTab.X + 5, previewTab.Y + 5, 0, false, false);
                 view.PointerUp(previewTab.X + 5, previewTab.Y + 5, 0);

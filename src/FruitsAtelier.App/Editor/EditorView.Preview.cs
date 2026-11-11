@@ -48,6 +48,7 @@ public sealed partial class EditorView
             DrawModChoice(c, new(r.X + column * cell, r.Y + 43 + (i < 2 ? 0 : 31), cell - 3, 28), i);
         }
         c.Text(L.Get("testplay.sharedModsHint"), r.X, r.Y + 108, 10, Muted, r.Width);
+        c.Line(r.X, r.Y + 123, r.Right, r.Y + 123, Grid);
     }
 
     private IReadOnlyList<ConvertedCatchObject> PreviewObjects()
