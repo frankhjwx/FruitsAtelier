@@ -41,6 +41,7 @@ internal static class MediaPanelTests
                 ui.View.LibrarySettings.Workspace = root;
                 ui.View.ShowMediaPanel(); ui.Paint();
                 Check(ui.Canvas.Texts.Count(t => t.Value == L.Get("media.unbound")) == 2, "Empty bindings displayed");
+                Check(ui.View.MediaOffsetBounds.Width == 0 && !ui.Canvas.Texts.Any(t => t.Value == L.Get("media.clear")), "Empty cards omit offset and unbind controls");
                 Check(ui.View.CanDropFile(video), "Video accepted in mapping");
                 ui.View.DropLibraryFiles([image]); Wait(ui);
                 var bg = BeatmapMedia.Read(ui.View.Document).Background!;
@@ -68,7 +69,13 @@ internal static class MediaPanelTests
                 Check(Directory.GetFiles(second).Length == resourceCount, "Repeated sync reuses identical resources");
                 var pixels = Fixture();
                 ui.View.DecodePaletteImage = _ => pixels;
-                ui.ClickText(L.Get("media.palette")); ui.Click(ui.View.MediaGenerateBounds.X + 10, ui.View.MediaGenerateBounds.Y + 10); Wait(ui);
+                ui.ClickText(L.Get("media.palette"));
+                var plus = ui.Canvas.Texts.Single(t => t.Value == "+" && t.X >= ui.View.MediaPanelViewport.X);
+                ui.Click(plus.X + 3, plus.Y + 3);
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("media.colourCount", 5)), "Palette count increment");
+                var minus = ui.Canvas.Texts.Single(t => t.Value == "−" && t.X >= ui.View.MediaPanelViewport.X);
+                ui.Click(minus.X + 3, minus.Y + 3);
+                ui.Click(ui.View.MediaGenerateBounds.X + 10, ui.View.MediaGenerateBounds.Y + 10); Wait(ui);
                 ui.Click(ui.View.MediaApplyBounds.X + 10, ui.View.MediaApplyBounds.Y + 10);
                 Check(SongSetup.Colours(ui.View.Document).Length == 4, "Default palette applies");
                 ui.Key('Z', ctrl: true); Check(SongSetup.Colours(ui.View.Document).Length == 0, "Palette undo");

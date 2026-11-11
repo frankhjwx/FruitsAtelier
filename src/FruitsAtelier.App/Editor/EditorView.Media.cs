@@ -18,7 +18,7 @@ public sealed partial class EditorView
     private uint[] mediaPalette = [];
     private int mediaTab, mediaColourCount = 4;
     private string mediaOffsetText = "", mediaPanelError = "";
-    private bool mediaOffsetEditing;
+    private bool mediaOffsetEditing, mediaLibraryExpanded;
     private float mediaPanelScroll;
     private Rect mediaPanelBounds;
     private MapDocument? mediaPanelSnapshot;
@@ -66,109 +66,192 @@ public sealed partial class EditorView
         string? directory = StoryboardMediaDirectory(Document);
         if (directory != mediaFilesDirectory && mediaFilesTask is null) RefreshMediaFiles();
         mediaPanelScroll = Math.Clamp(mediaPanelScroll, 0, Math.Max(0, mediaPanelContentHeight - bounds.Height));
-        float y = bounds.Y - mediaPanelScroll;
-        int firstHit = hits.Count;
-        c.Clip(bounds);
         float half = (bounds.Width - 6) / 2;
-        Button(c, new(bounds.X, y, half, 32), L.Get("media.files"), () => { if (CommitMediaOffset()) { mediaTab = 0; mediaPanelScroll = 0; } }, mediaTab == 0, fontSize: 12);
-        Button(c, new(bounds.X + half + 6, y, half, 32), L.Get("media.palette"), () => { if (CommitMediaOffset()) { mediaTab = 1; mediaPanelScroll = 0; } }, mediaTab == 1, fontSize: 12);
-        y += 44;
+        c.Clip(bounds);
+        float tabFont = bounds.Width < 220 ? 10 : 12;
+        Button(c, new(bounds.X, bounds.Y, half, 30), L.Get("media.files"), () => SwitchTab(0), mediaTab == 0, fontSize: tabFont, textPadding: 5, textRightPadding: 3);
+        Button(c, new(bounds.X + half + 6, bounds.Y, half, 30), L.Get("media.palette"), () => SwitchTab(1), mediaTab == 1, fontSize: tabFont, textPadding: 5, textRightPadding: 3);
+        c.Unclip();
+        var content = new Rect(bounds.X, bounds.Y + 42, bounds.Width, Math.Max(0, bounds.Height - 42));
+        float y = content.Y - mediaPanelScroll;
+        int firstHit = hits.Count;
+        MediaOffsetBounds = MediaGenerateBounds = MediaApplyBounds = MediaSyncBounds = default;
+        c.Clip(content);
         if (mediaTab == 0)
         {
             Slot(false, mediaPanelValues.Background, mediaBackgroundExists);
             Slot(true, mediaPanelValues.Video, mediaVideoExists);
-            c.Text(L.Get("media.offset"), bounds.X, y, 12, Muted, bounds.Width); y += 24;
-            var field = new Rect(bounds.X, y, bounds.Width, 32);
-            MediaOffsetBounds = field;
-            c.Fill(field, Surface, 4);
-            DrawInputText(c, new(field.X + 8, field.Y + 7, field.Width - 16, 20),
-                MediaOffsetFocused ? mediaOffsetText : mediaPanelValues.OffsetMs.ToString(CultureInfo.InvariantCulture), 13, MediaOffsetFocused, "media:offset");
-            hits.Add(new(field, () =>
+            if (mediaPanelValues.Video is not null)
             {
-                if (mediaPanelValues.Video is null || !CommitField()) return;
-                mediaOffsetOwner = history; mediaOffsetEditing = true;
-                mediaOffsetText = BeatmapMedia.Read(Document).OffsetMs.ToString(CultureInfo.InvariantCulture);
-                SelectInput("media:offset", mediaOffsetText);
-            }, mediaPanelValues.Video is not null && !MediaEditingBusy));
-            y += 44;
-            MediaSyncBounds = WrappedButton(L.Get("media.sync"), SynchronizeMedia, difficulties.Count > 1 && !SynchronizationBusy && !MediaEditingBusy);
-            foreach (var line in WrapSyncText(c, L.Get("media.dropHint"), bounds.Width))
-            { c.Text(line.Text, bounds.X, y, 12, Muted, bounds.Width); y += 18; }
-            y += 16;
-            Button(c, new(bounds.X, y, bounds.Width, 30), L.Get("media.folderFiles"), RefreshMediaFiles, enabled: mediaFilesTask is null, fontSize: 12); y += 40;
-            foreach (string file in mediaFilesDirectory == directory ? mediaFiles : [])
+                c.Text(L.Get("media.offset"), bounds.X, y, 12, Muted, bounds.Width); y += 21;
+                var field = new Rect(bounds.X, y, bounds.Width, 30);
+                MediaOffsetBounds = field;
+                c.Fill(field, Surface, 4);
+                DrawInputText(c, new(field.X + 8, field.Y + 6, field.Width - 16, 20),
+                    MediaOffsetFocused ? mediaOffsetText : mediaPanelValues.OffsetMs.ToString(CultureInfo.InvariantCulture), 13, MediaOffsetFocused, "media:offset");
+                hits.Add(new(field, () =>
+                {
+                    if (!CommitField()) return;
+                    mediaOffsetOwner = history; mediaOffsetEditing = true;
+                    mediaOffsetText = BeatmapMedia.Read(Document).OffsetMs.ToString(CultureInfo.InvariantCulture);
+                    SelectInput("media:offset", mediaOffsetText);
+                }, !MediaEditingBusy));
+                y += 37; Hint("media.offsetHelp"); y += 10;
+            }
+            c.Line(bounds.X, y, bounds.Right, y, Grid); y += 14;
+            MediaSyncBounds = ActionButton(L.Get("media.sync"), SynchronizeMedia,
+                difficulties.Count > 1 && !SynchronizationBusy && !MediaEditingBusy, false);
+            y += 4;
+            var library = new Rect(bounds.X, y, bounds.Width, 30);
+            Button(c, library, (mediaLibraryExpanded ? "− " : "+ ") + L.Get("media.library", mediaFiles.Length),
+                () => mediaLibraryExpanded = !mediaLibraryExpanded, fontSize: 12);
+            y += 40;
+            if (mediaLibraryExpanded)
             {
-                if (y + 60 < bounds.Y || y > bounds.Bottom) { y += 60; continue; }
-                string name = Path.GetRelativePath(directory!, file);
-                bool bound = MediaFileVersion.SamePath(file, MediaPath(mediaPanelValues.Background)) || MediaFileVersion.SamePath(file, MediaPath(mediaPanelValues.Video));
-                c.Text(name, bounds.X, y, 12, Foreground, bounds.Width); y += 20;
-                Button(c, new(bounds.X, y, bounds.Width, 28), L.Get(bound ? "media.bound" : "media.bind"),
-                    () => ImportMediaFile(file, IsBeatmapVideo(file)), active: bound, enabled: !bound && !MediaEditingBusy, fontSize: 12); y += 40;
+                Hint("media.libraryHelp");
+                Button(c, new(bounds.X, y, bounds.Width, 26), L.Get("media.folderFiles"), RefreshMediaFiles, enabled: mediaFilesTask is null, fontSize: 11); y += 34;
+                foreach (string file in mediaFilesDirectory == directory ? mediaFiles : [])
+                {
+                    if (y + 58 < content.Y || y > content.Bottom) { y += 58; continue; }
+                    bool bound = MediaFileVersion.SamePath(file, MediaPath(mediaPanelValues.Background)) || MediaFileVersion.SamePath(file, MediaPath(mediaPanelValues.Video));
+                    c.Text(Path.GetRelativePath(directory!, file), bounds.X + 8, y, 12, Foreground, bounds.Width - 16); y += 20;
+                    if (bound) c.Text(L.Get("media.bound"), bounds.X + 8, y + 4, 11, Accent, bounds.Width - 16);
+                    else Button(c, new(bounds.X, y, bounds.Width, 26), L.Get("media.bind"), () => ImportMediaFile(file, IsBeatmapVideo(file)), enabled: !MediaEditingBusy, fontSize: 11);
+                    y += 38;
+                }
             }
         }
         else
         {
-            c.Text(L.Get("media.colourCount", mediaColourCount), bounds.X, y, 12, Foreground, bounds.Width); y += 26;
-            for (int n = 3; n <= 8; n++)
+            Heading("media.paletteTitle");
+            Hint("media.paletteIntro"); y += 4;
+            Preview(88);
+            c.Text(mediaPanelValues.Background ?? L.Get("media.noBackground"), bounds.X, y, 11, Muted, bounds.Width); y += 28;
+            if (!mediaBackgroundExists)
             {
-                int count = n; float cell = (bounds.Width - 25) / 6;
-                Button(c, new(bounds.X + (n - 3) * (cell + 5), y, cell, 30), n.ToString(),
-                    () => { mediaColourCount = count; mediaPalette = []; }, mediaColourCount == n, enabled: !MediaPaletteBusy, fontSize: 12);
+                ActionButton(L.Get("media.choose"), () => ChooseMedia(false), RequestMediaFile is not null && !MediaEditingBusy, true);
             }
+            bool narrow = bounds.Width < 220;
+            c.Text(L.Get("media.colourCount", mediaColourCount), bounds.X, y + 8, 12, Foreground, narrow ? bounds.Width : bounds.Width - 78);
+            if (narrow) y += 29;
+            Button(c, new(bounds.Right - 70, y, 32, 30), "−", () => ChangeCount(-1), enabled: mediaColourCount > 3 && !MediaPaletteBusy, fontSize: 14);
+            Button(c, new(bounds.Right - 32, y, 32, 30), "+", () => ChangeCount(1), enabled: mediaColourCount < 8 && !MediaPaletteBusy, fontSize: 14);
             y += 42;
-            MediaGenerateBounds = WrappedButton(L.Get(MediaPaletteBusy ? "media.generating" : "media.generate"), GenerateMediaPalette,
-                mediaBackgroundExists && !MediaPaletteBusy && DecodePaletteImage is not null);
-            bool current = ReferenceEquals(mediaPaletteOwner, history) && mediaPalettePath == MediaPath(mediaPanelValues.Background);
-            if (current && mediaPalette.Length > 0)
+            bool current = ReferenceEquals(mediaPaletteOwner, history) && mediaPalettePath == MediaPath(mediaPanelValues.Background) && mediaPalette.Length > 0;
+            MediaGenerateBounds = ActionButton(L.Get(MediaPaletteBusy ? "media.generating" : "media.generate"), GenerateMediaPalette,
+                mediaBackgroundExists && !MediaPaletteBusy && DecodePaletteImage is not null, !current);
+            y += 6;
+            if (current)
             {
+                Heading("media.result");
                 for (int i = 0; i < mediaPalette.Length; i++)
                 {
                     uint colour = mediaPalette[i];
-                    var swatch = new Rect(bounds.X + i % 2 * (half + 6), y + i / 2 * 40, half, 32);
-                    c.Fill(swatch, colour, 4);
-                    c.Text($"#{colour:X6}", swatch.X + 8, swatch.Y + 8, 12, BackgroundPalette.PerceivedBrightness(colour) > 145 ? 0x101010u : 0xFFFFFFu, swatch.Width - 16);
+                    var swatch = new Rect(bounds.X + i % 2 * (half + 6), y + i / 2 * 50, half, 42);
+                    c.Fill(swatch, colour, 5);
+                    c.Text($"#{colour:X6}", swatch.X + 8, swatch.Y + 14, 11, BackgroundPalette.PerceivedBrightness(colour) > 145 ? 0x101010u : 0xFFFFFFu, swatch.Width - 16);
                 }
-                y += (mediaPalette.Length + 1) / 2 * 40 + 8;
-                MediaApplyBounds = WrappedButton(L.Get("media.apply"), ApplyMediaPalette, !MediaPaletteBusy);
+                y += (mediaPalette.Length + 1) / 2 * 50 + 4;
+                MediaApplyBounds = ActionButton(L.Get("media.apply"), ApplyMediaPalette, !MediaPaletteBusy, true);
+                Hint("media.applyHelp");
             }
-            foreach (var line in WrapSyncText(c, L.Get("media.paletteHint"), bounds.Width))
-            { c.Text(line.Text, bounds.X, y, 12, Muted, bounds.Width); y += 18; }
+            else
+            {
+                for (int i = 0; i < mediaColourCount; i++)
+                    c.Fill(new(bounds.X + i * (bounds.Width + 4) / mediaColourCount, y, (bounds.Width + 4) / mediaColourCount - 4, 28), Surface, 4);
+                y += 38; Hint("media.previewHelp");
+            }
+            y += 12; Hint("media.readability");
         }
-        c.Text(MediaEditingBusy ? L.Get("media.copying") : mediaPanelError, bounds.X, y + 12, 12, MediaEditingBusy ? Muted : Error, bounds.Width);
-        mediaPanelContentHeight = y + 44 - (bounds.Y - mediaPanelScroll);
+        if (MediaEditingBusy || mediaPanelError.Length > 0)
+        {
+            y += 10;
+            foreach (var line in WrapSyncText(c, MediaEditingBusy ? L.Get("media.copying") : mediaPanelError, bounds.Width))
+            { c.Text(line.Text, bounds.X, y, 12, MediaEditingBusy ? Muted : Error, bounds.Width); y += 18; }
+        }
+        mediaPanelContentHeight = y + 12 - (bounds.Y - mediaPanelScroll);
         c.Unclip();
         for (int i = hits.Count - 1; i >= firstHit; i--)
-            if (hits[i].Bounds.Y < bounds.Y || hits[i].Bounds.Bottom > bounds.Bottom) hits.RemoveAt(i);
+            if (hits[i].Bounds.Y < content.Y || hits[i].Bounds.Bottom > content.Bottom) hits.RemoveAt(i);
         if (mediaPanelContentHeight > bounds.Height)
         {
-            float thumb = Math.Max(20, bounds.Height * bounds.Height / mediaPanelContentHeight);
-            c.Fill(new(bounds.Right + 5, bounds.Y + mediaPanelScroll / (mediaPanelContentHeight - bounds.Height) * (bounds.Height - thumb), 3, thumb), Muted, 1);
+            float thumb = Math.Max(20, content.Height * content.Height / (mediaPanelContentHeight - 42));
+            c.Fill(new(bounds.Right + 5, content.Y + mediaPanelScroll / (mediaPanelContentHeight - bounds.Height) * (content.Height - thumb), 3, thumb), Muted, 1);
         }
 
-        Rect WrappedButton(string label, Action action, bool enabled)
+        void SwitchTab(int tab) { if (CommitMediaOffset()) { mediaTab = tab; mediaPanelScroll = 0; } }
+        void ChangeCount(int delta) { mediaColourCount += delta; mediaPalette = []; }
+        void Heading(string key)
         {
-            var lines = WrapSyncText(c, label, bounds.Width - 18);
-            float height = Math.Max(34, lines.Length * 18 + 12);
-            var button = new Rect(bounds.X, y, bounds.Width, height);
-            Button(c, button, "", action, enabled: enabled);
-            for (int i = 0; i < lines.Length; i++) c.Text(lines[i].Text, bounds.X + 9, y + 6 + i * 18, 12, enabled ? Foreground : Muted, bounds.Width - 18);
-            y += height + 14;
-            return button;
+            foreach (var line in WrapSyncText(c, L.Get(key), bounds.Width))
+            { c.Text(line.Text, bounds.X, y, 13, Foreground, bounds.Width, true); y += 18; }
+            y += 6;
         }
-
+        void Hint(string key)
+        {
+            foreach (var line in WrapSyncText(c, L.Get(key), bounds.Width))
+            { c.Text(line.Text, bounds.X, y, 11, Muted, bounds.Width); y += 17; }
+        }
+        void Preview(float height)
+        {
+            var rect = new Rect(bounds.X, y, bounds.Width, height);
+            c.Fill(rect, Surface, 5);
+            if (mediaBackgroundExists && MediaPath(mediaPanelValues.Background) is { } path) c.Thumbnail(path, rect);
+            else
+            {
+                c.Stroke(rect, Grid, 1, 5);
+                c.Text(L.Get("media.noBackground"), rect.X + 12, rect.Y + height / 2 - 7, 12, Muted, rect.Width - 24);
+            }
+            y += height + 8;
+        }
+        Rect ActionButton(string label, Action action, bool enabled, bool primary)
+        {
+            var lines = WrapSyncText(c, label, bounds.Width - 20);
+            float height = Math.Max(32, lines.Length * 17 + 12);
+            var rect = new Rect(bounds.X, y, bounds.Width, height);
+            if (primary && enabled)
+            {
+                c.Fill(rect, Accent, 5);
+                if (contextItems.Count == 0 && rect.Contains(mouseX, mouseY)) c.Stroke(rect, Foreground, 1, 5);
+                hits.Add(new(rect, action, true));
+            }
+            else Button(c, rect, "", action, enabled: enabled);
+            for (int i = 0; i < lines.Length; i++) c.Text(lines[i].Text, bounds.X + 10, y + 6 + i * 17, 12,
+                !enabled ? Muted : primary ? (BackgroundPalette.PerceivedBrightness(Accent) > 145 ? 0x101010u : 0xFFFFFFu) : Foreground, bounds.Width - 20, primary);
+            y += height + 10;
+            return rect;
+        }
         void Slot(bool video, string? name, bool exists)
         {
-            c.Text(L.Get(video ? "media.video" : "media.background"), bounds.X, y, 13, Foreground, bounds.Width, true); y += 24;
-            c.Text(name ?? L.Get("media.unbound"), bounds.X, y, 12, name is null || exists ? Muted : Error, bounds.Width); y += 24;
-            if (name is not null && !exists) { c.Text(L.Get("media.missing"), bounds.X, y, 12, Error, bounds.Width); y += 22; }
-            Button(c, new(bounds.X, y, half, 30), L.Get("media.choose"), () => ChooseMedia(video), enabled: !MediaEditingBusy && RequestMediaFile is not null, fontSize: 12);
-            Button(c, new(bounds.X + half + 6, y, half, 30), L.Get("media.clear"), () =>
+            Heading(video ? "media.video" : "media.background");
+            if (!video && name is not null) Preview(100);
+            if (name is null)
             {
-                if (!CommitField()) return;
-                var value = BeatmapMedia.Read(Document);
-                SetMedia(video ? value with { Video = null, OffsetMs = 0 } : value with { Background = null });
-            }, enabled: name is not null && !MediaEditingBusy, fontSize: 12);
-            y += 46;
+                var card = new Rect(bounds.X, y, bounds.Width, 80);
+                c.Fill(card, Surface, 5); c.Stroke(card, Grid, 1, 5);
+                if (!MediaEditingBusy && RequestMediaFile is not null && contextItems.Count == 0 && card.Contains(mouseX, mouseY)) c.Stroke(card, Accent, 1, 5);
+                c.Text(L.Get("media.unbound"), card.X + 12, y + 10, 11, Muted, card.Width - 24);
+                c.Text(L.Get("media.choose"), card.X + 12, y + 30, 13, Accent, card.Width - 24, true);
+                c.Text(L.Get("media.dropShort"), card.X + 12, y + 55, 11, Muted, card.Width - 24);
+                hits.Add(new(card, () => ChooseMedia(video), !MediaEditingBusy && RequestMediaFile is not null));
+                y += 92;
+            }
+            else
+            {
+                c.Text(name, bounds.X, y, 12, exists ? Foreground : Error, bounds.Width); y += 21;
+                if (!exists) { c.Text(L.Get("media.missing"), bounds.X, y, 11, Error, bounds.Width); y += 20; }
+                Button(c, new(bounds.X, y, half, 27), L.Get("media.choose"), () => ChooseMedia(video), enabled: !MediaEditingBusy && RequestMediaFile is not null, fontSize: 11);
+                var clear = new Rect(bounds.X + half + 6, y, half, 27);
+                if (!MediaEditingBusy && contextItems.Count == 0 && clear.Contains(mouseX, mouseY)) c.Fill(clear, HoverSurface, 4);
+                c.Text(L.Get("media.clear"), clear.X + 8, y + 6, 11, Muted, clear.Width - 16);
+                hits.Add(new(clear, () =>
+                {
+                    if (!CommitField()) return;
+                    var value = BeatmapMedia.Read(Document);
+                    SetMedia(video ? value with { Video = null, OffsetMs = 0 } : value with { Background = null });
+                }, !MediaEditingBusy));
+                y += 39;
+            }
         }
     }
 

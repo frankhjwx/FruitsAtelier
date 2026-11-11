@@ -29,9 +29,14 @@ internal static class MediaPanelRenderCheck
                 Wait(); view.ShowMediaPanel(); Paint("unbound");
                 view.DropLibraryFiles([image]); Wait(); Paint("background");
                 var panel = view.MediaPanelViewport;
-                Click(panel.Right - panel.Width / 4, panel.Y + 16); Paint();
+                Click(panel.Right - panel.Width / 4, panel.Y + 16); Paint("palette-empty");
                 Click(view.MediaGenerateBounds.X + 12, view.MediaGenerateBounds.Y + 12); Wait(); Paint("palette");
                 if (view.MediaApplyBounds.Width <= 0) throw new InvalidOperationException("Native palette did not finish generating");
+                if (view.MediaApplyBounds.Bottom > panel.Bottom)
+                {
+                    view.Wheel(panel.X + 10, panel.Y + 60, -120 * (view.MediaApplyBounds.Bottom - panel.Bottom + 16) / 36, false);
+                    Paint("palette-scrolled");
+                }
                 Click(view.MediaApplyBounds.X + 12, view.MediaApplyBounds.Y + 12);
                 if (SongSetup.Colours(view.Document).Length != 4) throw new InvalidOperationException("Native palette application failed");
                 var resize = view.DockResizeBounds(false);

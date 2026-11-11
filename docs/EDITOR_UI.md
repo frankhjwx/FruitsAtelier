@@ -5,7 +5,10 @@
 Open **Media** in the Mapping dock, or restore it from **Layout**. The Files page
 shows the current background and video, including unassigned and missing-file
 states. Use **Choose file**, drop a file onto the Media tab or mapping panel, or
-assign an existing file from **Refresh folder media**. The folder list includes
+assign an existing file from the expandable **Mapset files** section. Backgrounds
+have a thumbnail preview; empty media cards accept a click to choose a file or a
+file drop. **Unbind** is available only for assigned media, and the video offset
+appears after a video is assigned. The folder list includes
 up to 1,000 image/video files and marks those assigned to the active difficulty.
 Unbinding retains the file so it remains available for other difficulties and undo.
 
@@ -24,7 +27,9 @@ Filename collisions receive a numbered suffix; existing files are not overwritte
 Media copying runs in a worker, with content/file operations held until completion.
 Saving/exporting remains an explicit operation.
 
-The **Colour palette** page samples the current BG locally and proposes **3–8
+The **Colour palette** page previews the source background. Use the minus/plus
+controls to choose a colour count, generate a preview, then apply the suggested
+colours. The page samples the current BG locally and proposes **3–8
 combo colours**, defaulting to four. Generate, inspect the swatches, then choose
 **Apply to current Colours** to replace only the active difficulty's combo colours
 in one undo step. Changing the BG invalidates the proposal. Low-colour images use
