@@ -16,6 +16,28 @@ internal static class LibraryDifficultyOrderTests
                 File.WriteAllText(Path.Combine(directory, $"{i:D3}.osu"), $"osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Song\nArtist:Artist\nCreator:Mapper\nVersion:Diff {i:D3}\n[HitObjects]\n");
             var database = new LibraryDatabase(Path.Combine(root, "Workspace"), songs); database.Scan();
             browser = LibraryBrowser.Create(database, "", false, null, null, 0);
+            using var ratingStarted = new ManualResetEventSlim();
+            using var releaseRating = new ManualResetEventSlim();
+            browser.RequestDetails(0, _ =>
+            {
+                ratingStarted.Set();
+                if (!releaseRating.Wait(TimeSpan.FromSeconds(10))) throw new Exception("Rating gate timed out");
+                return 5;
+            });
+            try
+            {
+                Check(ratingStarted.Wait(TimeSpan.FromSeconds(5)), "Cold rating worker starts");
+                WaitForRow(0);
+                Check(browser.Detail(0) is not null, "Difficulty names appear before cold ratings finish");
+                browser.RequestDetails(128);
+                WaitForRow(128);
+                Check(browser.Detail(139) is not null, "Scrolling loads metadata while the rating worker is blocked");
+            }
+            finally { releaseRating.Set(); }
+            Wait();
+            Check(browser.Detail(128) is not null, "Rating completion retains the current detail page");
+            browser.Retire();
+            browser = LibraryBrowser.Create(database, "", false, null, null, 0);
             int calls = 0;
             browser.RequestDetails(0, map => { calls++; int value = int.Parse(Path.GetFileNameWithoutExtension(map.Path)); return value == 0 ? null : value / 10d; });
             Wait();
@@ -46,6 +68,15 @@ internal static class LibraryDifficultyOrderTests
             {
                 try { Directory.Delete(root, true); break; }
                 catch (IOException) when (retry < 19) { Thread.Sleep(25); }
+            }
+        }
+        void WaitForRow(int index)
+        {
+            var clock = Stopwatch.StartNew();
+            while (browser!.Detail(index) is null)
+            {
+                if (clock.Elapsed.TotalSeconds > 2) throw new Exception("Metadata waited for cold star calculations");
+                browser.Pump(); Thread.Sleep(5);
             }
         }
         void Wait()

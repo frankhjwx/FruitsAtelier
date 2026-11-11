@@ -224,7 +224,9 @@ osu! features outside the supported sprite/animation and trigger playback path.
 
 Library loading remains active until completed worker results have been published
 by the UI pump, including startup indexing and browser page/detail updates.
-The browser prepares the selected set’s complete difficulty order on a worker,
+The browser publishes difficulty metadata pages independently of star calculations,
+so names and scrolling remain available with a cold rating cache. Rating work runs
+outside the snapshot gate. The browser prepares the selected set’s complete difficulty order on a worker,
 using the persistent star cache, then serves bounded detail pages in descending
 star order. That set’s ranking is retained across page changes and invalidated by
 reference discovery or a new browser snapshot. Selection changes and retirement

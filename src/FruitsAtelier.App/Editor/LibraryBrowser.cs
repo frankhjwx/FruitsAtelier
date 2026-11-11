@@ -23,7 +23,9 @@ internal sealed class LibraryBrowser
     private Task<(int Start, IReadOnlyList<LibrarySetRow> Rows)>? pageTask;
     private sealed record RankedDetails(string Key, LibraryMap[] Maps, Dictionary<string, double?> Ratings);
     private RankedDetails? rankedDetails;
-    private Task<(string Key, int Start, IReadOnlyList<LibraryMap> Rows, RankedDetails? Ranking)>? detailTask;
+    private Task<(string Key, int Start, IReadOnlyList<LibraryMap> Rows)>? detailTask;
+    private Task<(long Revision, RankedDetails Ranking)>? rankingTask;
+    private int requestedDetailStart;
     private Task<(long Revision, List<(int Start, IReadOnlyList<LibrarySetRow> Rows)> Pages)>? discoveryTask;
     private long discoveryRevision;
     private string? detailKey;
@@ -33,7 +35,7 @@ internal sealed class LibraryBrowser
     public int SetCount { get; }
     public int TopIndex { get; private set; }
     public LibrarySetRow? Selected { get; private set; }
-    public bool Loading => pageTask is not null || detailTask is not null || discoveryTask is not null;
+    public bool Loading => pageTask is not null || detailTask is not null || rankingTask is not null || discoveryTask is not null;
     public int CachedRows => pages.Values.Sum(page => page.Count);
     public string? Error { get; private set; }
 
@@ -105,7 +107,7 @@ internal sealed class LibraryBrowser
     {
         if (snapshot is null || database is null) throw new InvalidOperationException();
         retiringForReorder = true;
-        var pending = new Task?[] { pageTask, detailTask, discoveryTask }.OfType<Task>().ToArray();
+        var pending = new Task?[] { pageTask, detailTask, rankingTask, discoveryTask }.OfType<Task>().ToArray();
         return reorderTask = Task.Run(async () =>
         {
             try { await Task.WhenAll(pending); }
@@ -166,11 +168,31 @@ internal sealed class LibraryBrowser
             {
                 var page = detailTask.GetAwaiter().GetResult();
                 if (Selected?.Key == page.Key)
-                { detailKey = page.Key; detailStart = page.Start; details = page.Rows; rankedDetails = page.Ranking; ContentRevision++; }
+                {
+                    detailKey = page.Key; detailStart = page.Start;
+                    details = rankedDetails is { } ranked && ranked.Key == page.Key
+                        ? ranked.Maps.Skip(page.Start).Take(128).ToArray() : page.Rows;
+                    ContentRevision++;
+                }
             }
             catch (OperationCanceledException) { }
             catch (Exception e) { Error = e.Message; }
             detailTask = null;
+        }
+        if (rankingTask is { IsCompleted: true })
+        {
+            try
+            {
+                var result = rankingTask.GetAwaiter().GetResult();
+                if (Selected?.Key == result.Ranking.Key && snapshot.DiscoveryRevision == result.Revision)
+                {
+                    rankedDetails = result.Ranking; detailKey = rankedDetails.Key; detailStart = requestedDetailStart;
+                    details = rankedDetails.Maps.Skip(detailStart).Take(128).ToArray(); ContentRevision++;
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception e) { Error = e.Message; }
+            rankingTask = null;
         }
         if (discoveryTask is { IsCompleted: true })
         {
@@ -216,41 +238,45 @@ internal sealed class LibraryBrowser
     }
     public void RequestDetails(int first, Func<LibraryMap, double?>? calculateRating = null)
     {
-        if (snapshot is null || retired || retiringForReorder || Selected is not { } set || detailTask is not null) return;
-        int start = Math.Max(0, first) / PageSize * PageSize;
-        if (detailKey == set.Key && detailStart == start) return;
+        if (snapshot is null || retired || retiringForReorder || Selected is not { } set) return;
+        int start = requestedDetailStart = Math.Max(0, first) / PageSize * PageSize;
         if (rankedDetails is { } cached && cached.Key == set.Key)
         {
-            detailKey = set.Key; detailStart = start; details = cached.Maps.Skip(start).Take(128).ToArray(); ContentRevision++;
+            if (detailKey != set.Key || detailStart != start)
+            { detailKey = set.Key; detailStart = start; details = cached.Maps.Skip(start).Take(128).ToArray(); ContentRevision++; }
             return;
         }
-        detailTask = Task.Run(() =>
+        if (detailTask is null && (detailKey != set.Key || detailStart != start))
+            detailTask = Task.Run(() => { lock (gate) return (set.Key, start, snapshot.Difficulties(set, start, 128)); });
+        if (calculateRating is null || rankingTask is not null) return;
+        long revision = snapshot.DiscoveryRevision;
+        rankingTask = Task.Run(() =>
         {
+            var maps = new List<LibraryMap>();
             lock (gate)
-            {
-                if (calculateRating is null) return (set.Key, start, snapshot.Difficulties(set, start, 128), (RankedDetails?)null);
-                var maps = new List<LibraryMap>();
-                var ratings = new Dictionary<string, double?>(WorkspaceSynchronization.Paths);
                 for (int offset = 0; offset < set.Count; offset += 128)
-                    foreach (var map in snapshot.Difficulties(set, offset, 128))
-                    {
-                        if (retired || retiringForReorder || Selected?.Key != set.Key) throw new OperationCanceledException();
-                        maps.Add(map); ratings[map.Path] = calculateRating(map);
-                    }
-                var sorted = maps.OrderByDescending(m => ratings[m.Path] ?? double.NegativeInfinity)
-                    .ThenBy(m => m.Difficulty, StringComparer.OrdinalIgnoreCase).ThenBy(m => m.Path, StringComparer.OrdinalIgnoreCase).ToArray();
-                var ranking = new RankedDetails(set.Key, sorted, ratings);
-                return (set.Key, start, (IReadOnlyList<LibraryMap>)sorted.Skip(start).Take(128).ToArray(), ranking);
+                    maps.AddRange(snapshot.Difficulties(set, offset, 128));
+            var ratings = new Dictionary<string, double?>(WorkspaceSynchronization.Paths);
+            // Rating work must not hold the snapshot gate: metadata pages remain usable while stars are cold.
+            foreach (var map in maps)
+            {
+                if (retired || retiringForReorder || Selected?.Key != set.Key || snapshot.DiscoveryRevision != revision)
+                    throw new OperationCanceledException();
+                ratings[map.Path] = calculateRating(map);
             }
+            var sorted = maps.OrderByDescending(m => ratings[m.Path] ?? double.NegativeInfinity)
+                .ThenBy(m => m.Difficulty, StringComparer.OrdinalIgnoreCase).ThenBy(m => m.Path, StringComparer.OrdinalIgnoreCase).ToArray();
+            return (revision, new RankedDetails(set.Key, sorted, ratings));
         });
     }
+
     public void Retire()
     {
         if (retired) return;
         retired = true;
         if (transferred || snapshot is null) return;
         if (reorderTask is null) snapshot.CancelReferenceDiscovery();
-        var pending = new Task?[] { pageTask, detailTask, discoveryTask, reorderTask }.OfType<Task>().ToArray();
+        var pending = new Task?[] { pageTask, detailTask, rankingTask, discoveryTask, reorderTask }.OfType<Task>().ToArray();
         _ = Task.Run(async () =>
         {
             try { await Task.WhenAll(pending); }

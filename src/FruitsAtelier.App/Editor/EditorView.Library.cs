@@ -628,7 +628,7 @@ public sealed partial class EditorView
                 { string oldest = libraryRatings.Keys.First(); libraryRatings.Remove(oldest); libraryRatingsToRefresh.Remove(oldest); }
                 libraryRatings[diff.Path] = rankedStars; libraryRatingsToRefresh.Remove(diff.Path);
             }
-            if (diff.Mode == 2 && (!libraryRatings.ContainsKey(diff.Path) || libraryRatingsToRefresh.Contains(diff.Path)) && (diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
+            if (libraryBrowser.IsPreview && diff.Mode == 2 && (!libraryRatings.ContainsKey(diff.Path) || libraryRatingsToRefresh.Contains(diff.Path)) && (diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
                 || diff.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))) pending.Add(diff);
             float y = 334 + (i - libraryDiffScroll) * 40;
             var row = new Rect(x - 4, y - 5, 296, 38);
