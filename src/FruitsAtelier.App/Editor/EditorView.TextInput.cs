@@ -86,6 +86,7 @@ public sealed partial class EditorView
         }
         if (RotationVisible) { RotationText(text); return; }
         if (NotesFocused) { InsertNotes(text); return; }
+        if (MediaOffsetFocused) { MediaOffsetText(text); return; }
         if (BookmarkPanelFocused) { BookmarkText(text); return; }
         if (RandomDockFocused) { RandomDockText(text); return; }
         if (PatternDockEditing && patternDockKind == 2 && bananaEditField >= 0) { BananaEditText(text); return; }

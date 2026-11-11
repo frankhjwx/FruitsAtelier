@@ -64,33 +64,7 @@ public sealed partial class EditorView
         replaceBackgroundConfirmation = true;
     }
 
-    private void ImportBackgroundImage(string path)
-    {
-        if (Document.SourcePath is null && Document.AudioPath is null && WorkspaceSession is null)
-        {
-            BeginWorkspaceSave(saved => { if (saved) ImportBackgroundImage(path); });
-            return;
-        }
-        try
-        {
-            string? origin = Document.SourcePath ?? Document.AudioPath;
-            string directory = origin is null ? WorkspaceSession!.Directory : Path.GetDirectoryName(Path.GetFullPath(origin))!;
-            string name = Path.GetFileName(path);
-            string target = Path.Combine(directory, name);
-            if (!string.Equals(Path.GetFullPath(path), target, StringComparison.OrdinalIgnoreCase))
-            {
-                string stem = Path.GetFileNameWithoutExtension(name), extension = Path.GetExtension(name);
-                for (int suffix = 1; File.Exists(target); suffix++)
-                    target = Path.Combine(directory, $"{stem} ({suffix}){extension}");
-                File.Copy(path, target, overwrite: false);
-            }
-            name = Path.GetFileName(target);
-            Edit(L.Get("background.replace"), () => OsuTimeline.SetBackgroundFilename(Document, name));
-            RefreshBeatmapBackground();
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
-        { ShowError(e.Message); }
-    }
+    private void ImportBackgroundImage(string path) => ImportMediaFile(path, false);
 
     // osu! UserDimContainer/BreakTracker, 48c4800e (MIT, Core/Gameplay/LICENSE.osu.txt).
     private bool InTestplayBreak => playhead < testplayGameplayStart ||

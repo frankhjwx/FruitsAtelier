@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping, PatternGallery, Discussion, MapsetVerifier, HitsoundingConfig, HitsoundingInspector, Bookmarks, Testplay }
+    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod, CollaborationMapping, PatternGallery, Discussion, MapsetVerifier, HitsoundingConfig, HitsoundingInspector, Bookmarks, Testplay, Media }
     private sealed class DockGroup(DockPanel panel, float width)
     {
         public readonly List<DockPanel> Panels = [panel];
@@ -21,7 +21,7 @@ public sealed partial class EditorView
         public readonly DockGroup Left = new(DockPanel.MovementStrain, DifficultyCurveWidth);
         public readonly DockGroup Right = CreateRightDock();
         private static DockGroup CreateRightDock()
-        { var group = new DockGroup(DockPanel.Preview, 360); group.Panels.AddRange([DockPanel.Testplay, DockPanel.Notes, DockPanel.SongSetup, DockPanel.PatternGallery, DockPanel.Discussion]); return group; }
+        { var group = new DockGroup(DockPanel.Preview, 360); group.Panels.AddRange([DockPanel.Testplay, DockPanel.Notes, DockPanel.SongSetup, DockPanel.Media, DockPanel.PatternGallery, DockPanel.Discussion]); return group; }
         public (float X, float Y)? MovementPosition;
         public float MovementScale = 1;
         public int PreviewMod, PreviewDisplayMode;
@@ -112,7 +112,7 @@ public sealed partial class EditorView
     private static string DockTitle(DockPanel panel) => L.Get(panel switch
     {
         DockPanel.HitsoundingConfig => "hitsounding.config", DockPanel.HitsoundingInspector => "hitsounding.inspector", DockPanel.MapsetVerifier => "mv.title", DockPanel.Discussion => "discussion.title", DockPanel.PatternGallery => "dock.gallery", DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
-        DockPanel.Testplay => "settings.testplay", DockPanel.Bookmarks => "bookmark.title", DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title", DockPanel.CollaborationMapping => "collab.title",
+        DockPanel.Media => "media.title", DockPanel.Testplay => "settings.testplay", DockPanel.Bookmarks => "bookmark.title", DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title", DockPanel.CollaborationMapping => "collab.title",
         DockPanel.RandomizeDroplets => "randomize.title", DockPanel.SliderInspector => "inspector.title", _ => "difficulty.curve.title"
     });
 
@@ -151,6 +151,7 @@ public sealed partial class EditorView
         state.Right.Panels.Add(DockPanel.Testplay);
         state.Right.Panels.Add(DockPanel.Notes);
         state.Right.Panels.Add(DockPanel.SongSetup);
+        state.Right.Panels.Add(DockPanel.Media);
         state.Right.Panels.Add(DockPanel.PatternGallery);
         state.Right.Panels.Add(DockPanel.Discussion);
     }
@@ -307,6 +308,8 @@ public sealed partial class EditorView
                         DrawRandomDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.SliderInspector)
                         DrawSliderInspector(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                    else if (group.Active == DockPanel.Media)
+                        DrawMediaPanel(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.SongSetup)
                         DrawSongDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                     else if (group.Active == DockPanel.CollaborationMapping)

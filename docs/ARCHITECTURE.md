@@ -58,6 +58,19 @@ their source image version changes.
 
 ## Video and storyboard playback
 
+`EditorView.Media` owns file binding and the background palette proposal. Media
+copies and directory enumeration run on workers; publication checks the initiating
+history. The file inventory belongs to one resource directory and refreshes on
+directory changes, imports or an explicit refresh. Painting visits visible inventory
+rows. Palette decoding and bounded Oklab clustering run on a detached worker and
+publish only for the same history, BG path and file version. Applying rechecks the
+file version. No palette generation occurs on pointer movement or repaint.
+`BeatmapMedia` changes only background/video Events; unchanged event types and
+video placement survive offset edits. Cross-difficulty synchronization rebases
+these fields through the existing related-history mechanism. Resource-only
+projects use the existing `.fa-resource` marker convention outside snapshot
+directories, so workspace publication cannot remove media.
+
 `Core/Storyboards` derives immutable sprites, commands, animation frames, samples and
 video references from retained `.osu` sections and the shared mapset `.osb`.
 Commands use binary searches per property; loops calculate their iteration from

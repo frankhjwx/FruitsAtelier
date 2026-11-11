@@ -1,5 +1,45 @@
 # Editing Controls
 
+## Media
+
+Open **Media** in the Mapping dock, or restore it from **Layout**. The Files page
+shows the current background and video, including unassigned and missing-file
+states. Use **Choose file**, drop a file onto the Media tab or mapping panel, or
+assign an existing file from **Refresh folder media**. The folder list includes
+up to 1,000 image/video files and marks those assigned to the active difficulty.
+Unbinding retains the file so it remains available for other difficulties and undo.
+
+Newly assigned videos start at **0 ms**. Enter a signed integer in **Video offset**;
+Enter commits and Escape cancels the edit. Positive values delay the video start.
+**Sync media to all other difficulties** copies the current BG, video and offset
+to the other difficulties in the open project, including unassigned states. It
+copies media when their resource directories differ. Undo in the initiating
+difficulty restores the synchronized bindings; subsequent local media edits take
+precedence. Storyboard commands, breaks and combo colours remain independent.
+
+Imports use the mapset's existing FA resource directory or linked Songs folder.
+Projects without either use `Workspace/Resources/Media-*`; existing presentation
+and sample resources are copied there when opening a map from an external folder.
+Filename collisions receive a numbered suffix; existing files are not overwritten.
+Media copying runs in a worker, with content/file operations held until completion.
+Saving/exporting remains an explicit operation.
+
+The **Colour palette** page samples the current BG locally and proposes **3–8
+combo colours**, defaulting to four. Generate, inspect the swatches, then choose
+**Apply to current Colours** to replace only the active difficulty's combo colours
+in one undo step. Changing the BG invalidates the proposal. Low-colour images use
+lightness variants of their own hues; grayscale images remain grayscale.
+
+The generator uses Oklab clustering, image coverage and colour separation. It
+adjusts candidate lightness relative to the average background and constrains HSL
+lightness on a 0–255 scale to **60–210**, plus HSP perceived brightness to **60–225**.
+These are conservative generation choices, not new Ranking Criteria thresholds.
+The [osu!catch RC](https://osu.ppy.sh/wiki/en/Ranking_criteria/osu!catch#general)
+advises against luminosity around 50 or lower, and around 220 or higher when Kiai
+is used. It also requires combo colours to remain distinguishable from BG, video
+and storyboard. Static BG sampling cannot verify every gameplay frame; preview
+the colours during gameplay, especially with video, storyboard and Kiai.
+
 ## Error recovery
 
 An unexpected rendering or window polling failure pauses the editor on a recovery

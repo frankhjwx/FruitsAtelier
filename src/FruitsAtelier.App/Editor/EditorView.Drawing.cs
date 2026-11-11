@@ -79,6 +79,7 @@ public sealed partial class EditorView
         }
         historyCompressionPaused = !LibraryVisible || SyncInteractionActive || AudioPlaying || SynchronizationBusy;
         storageMaintenancePaused = historyCompressionPaused || WorkspaceSession is not null;
+        PumpMediaPanel();
         PumpWorkspaceSave();
         PumpSynchronizationWait();
         PumpAudioProject();

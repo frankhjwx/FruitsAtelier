@@ -6,6 +6,15 @@ licenses. The project license does not replace their notices or grant additional
 rights to those resources. Community-tool acknowledgements are listed in the
 [README credits](README.md#credits).
 
+## Background palette colour space
+
+`BackgroundPalette` uses the linear-sRGB/Oklab transforms published by Björn
+Ottosson in [A perceptual color space for image processing](https://bottosson.github.io/posts/oklab/),
+using the **2021-01-25 matrix revision**. The author makes the conversion code
+available in the public domain (with an optional MIT alternative). FA uses the
+public-domain grant; clustering, candidate selection and brightness constraints
+are implemented by FruitsAtelier.
+
 ## Automatic Catch breaks
 
 `OsuTimeline.ReconcileBreaksCore` adapts the Catch gap eligibility, recovery and

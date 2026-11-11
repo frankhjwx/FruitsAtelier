@@ -50,7 +50,7 @@ public sealed partial class EditorView
     private long storyboardTriggerVersion = -1;
     private bool mediaPlayPending, mediaTestplayPending;
     private string? mediaReportedError;
-    public bool MediaNeedsRedraw => difficultyPauseTask is not null || storyboardResourcesReleasePending || mediaOpening || mediaPlayPending || mediaTestplayPending
+    public bool MediaNeedsRedraw => mediaFilesTask is { IsCompleted: true } || mediaEditTask is { IsCompleted: true } || mediaPaletteTask is { IsCompleted: true } || difficultyPauseTask is not null || storyboardResourcesReleasePending || mediaOpening || mediaPlayPending || mediaTestplayPending
         || storyboardLoad is { IsCompleted: true } || storyboardGameplayLoad is { IsCompleted: true };
 
     private bool storyboardResourcesReleasePending;

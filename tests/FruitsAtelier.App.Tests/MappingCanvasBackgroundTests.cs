@@ -21,9 +21,10 @@ static class MappingCanvasBackgroundTests
                 events.Lines.Add("// preserved events"); events.Lines.Add("2,5000,7000");
                 document.OriginalSections.Add(events);
                 var ui = new Ui(false); ui.LoadDocument(document); ui.Resize(1440, 900);
+                ui.View.LibrarySettings.Workspace = root;
                 ui.Canvas.AcceptBackgrounds = true;
                 Check(ui.View.CanDropFile(image), "Editor rejected an image drop.");
-                ui.View.DropLibraryFiles([image]); ui.Paint();
+                ui.View.DropLibraryFiles([image]); MediaPanelTests.Wait(ui);
                 Check(!ui.View.DiscardConfirmationVisible, "First background required replacement confirmation.");
                 string first = OsuTimeline.BackgroundFilename(ui.View.Document)!;
                 Check(first != "background.png" && File.ReadAllText(old) == "old image", "Name collision overwrote the old image.");
@@ -42,7 +43,7 @@ static class MappingCanvasBackgroundTests
                 Check(ui.View.DiscardConfirmationVisible, "Replacement omitted confirmation.");
                 ui.Key(27);
                 Check(OsuTimeline.BackgroundFilename(ui.View.Document) == first, "Cancel replaced the background.");
-                ui.View.DropLibraryFiles([image]); ui.Paint(); ui.ClickText(L.Get("background.replace"));
+                ui.View.DropLibraryFiles([image]); ui.Paint(); ui.ClickText(L.Get("background.replace")); MediaPanelTests.Wait(ui);
                 string second = OsuTimeline.BackgroundFilename(ui.View.Document)!;
                 Check(second != first && File.Exists(Path.Combine(map, first)), "Replacement removed the old image.");
                 ui.Key('Z', ctrl: true);
@@ -82,7 +83,8 @@ static class MappingCanvasBackgroundTests
             local.View.SaveWorkspace();
             var session = WorkspaceProject.Open(local.View.WorkspaceSession!.Directory);
             local.View.LoadWorkspace(session); local.Canvas.AcceptBackgrounds = true; local.PaintUntilReady();
-            Check(local.Canvas.Images.Any(t => t.Path == Path.Combine(session.Directory, "background.png")), "Local map lost its background after reopening.");
+            Check(File.Exists(Path.Combine(Path.GetDirectoryName(local.View.Document.SourcePath!)!, "background.png")), "Local background file was lost on save.");
+            Check(local.Canvas.Images.Any(t => t.Path == Path.Combine(Path.GetDirectoryName(local.View.Document.SourcePath!)!, "background.png")), "Local map lost its background after reopening.");
         }
         finally { L.SetLanguage(language); }
     }

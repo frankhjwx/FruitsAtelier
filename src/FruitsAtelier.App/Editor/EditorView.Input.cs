@@ -1071,6 +1071,8 @@ public sealed partial class EditorView
         }
         if (WheelDockTabs(x, y, delta)) return;
         if (WheelTestplayTab(x, y, delta)) return;
+        if (DockContentInputAvailable && PanelVisible(DockPanel.Media) && mediaPanelBounds.Contains(x, y))
+        { mediaPanelScroll = Math.Clamp(mediaPanelScroll - delta / 120 * 36, 0, Math.Max(0, mediaPanelContentHeight - mediaPanelBounds.Height)); return; }
         if (WheelBookmarkPanel(x, y, delta)) return;
         if (WheelDiscussions(x, y, delta)) return;
         if (MapsetVerifierVisible && DockContentInputAvailable && verifierBounds.Contains(x, y))
@@ -1469,6 +1471,8 @@ public sealed partial class EditorView
         if (BananaEditVisible) { BananaEditKey(virtualKey, ctrl, shift); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
         if (PatternDockKey(virtualKey, ctrl, shift)) return;
+        if (MediaOffsetFocused && !(ctrl && virtualKey == 'S'))
+        { MediaOffsetKey(virtualKey, ctrl, shift); return; }
         if (BookmarkPanelFocused && !(ctrl && virtualKey == 'S'))
         { BookmarkKey(virtualKey, ctrl, shift); return; }
         if (BookmarkPanelAvailable && bookmarkColourTime is not null && virtualKey == 27)
@@ -1745,6 +1749,7 @@ public sealed partial class EditorView
             return;
         }
         if (NotesFocused && !char.IsControl(value)) { InsertNotes(value.ToString()); return; }
+        if (MediaOffsetFocused && !char.IsControl(value)) { MediaOffsetText(value.ToString()); return; }
         if (BookmarkPanelFocused && !char.IsControl(value)) { BookmarkText(value.ToString()); return; }
         if (RandomDockFocused && !char.IsControl(value)) { RandomDockText(value.ToString()); return; }
         if (SongDockFocused && !char.IsControl(value)) { PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }
@@ -2028,7 +2033,7 @@ public sealed partial class EditorView
 
     private bool CommitField()
     {
-        if (!CommitBookmarkText()) return false;
+        if (!CommitMediaOffset() || !CommitBookmarkText()) return false;
         if (editField < 0 || editField >= fields.Count) { editField = -1; return true; }
         var field = fields[editField];
         if (field.Timestamp && replaceText && editBuffer == Time(field.Value)) { editField = -1; fieldError = ""; return true; }

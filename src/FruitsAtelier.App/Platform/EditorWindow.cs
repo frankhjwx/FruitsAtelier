@@ -178,6 +178,12 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--media-panel-render-check"))
+            {
+                Diagnostics.MediaPanelRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--workspace-save-render-check"))
             {
                 view.RequestViewPreference = null;

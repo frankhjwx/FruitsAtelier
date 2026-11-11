@@ -159,6 +159,7 @@ internal static class DockingTests
                 ui.View.PointerDown(strainTab.X + 10, strainTab.Y + 10, 2, false, false); ui.Paint();
                 ui.ClickText(L.Get("dock.closeTab"));
                 ui.ClickText(L.Get("dock.layout")); ui.ClickText("✓ " + L.Get("song.title"));
+                ui.ClickText(L.Get("dock.layout")); ui.ClickText("✓ " + L.Get("media.title"));
                 Check(!ui.View.CatchPreviewVisible && !ui.View.DifficultyCurveVisible
                     && ui.View.DockResizeBounds(true).Width == 0 && ui.View.DockResizeBounds(false).Width == 0,
                     "Closing the last tabs clears both dock hit targets");

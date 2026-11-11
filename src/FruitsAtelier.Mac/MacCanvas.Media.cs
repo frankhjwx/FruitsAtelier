@@ -56,7 +56,7 @@ internal sealed partial class ImageCache
         storyboardBytes -= (long)oldest.Value.Bitmap.PixelSize.Width * oldest.Value.Bitmap.PixelSize.Height * 4;
         oldest.Value.Bitmap.Dispose(); storyboardTextures.Remove(oldest.Key); storyboardTextureVersions.Remove(oldest.Key); return true;
     }
-    private static unsafe StoryboardImageCache.Pixels? DecodeStoryboard(string path)
+    internal static unsafe StoryboardImageCache.Pixels? DecodeStoryboard(string path)
     {
         var file = new FileInfo(path);
         if (!file.Exists || file.Length > 64 * 1024 * 1024) return null;

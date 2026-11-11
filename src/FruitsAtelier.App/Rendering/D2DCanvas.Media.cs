@@ -97,7 +97,7 @@ public sealed partial class D2DCanvas
         storyboardTextureBytes -= (long)oldest.Value.Width * oldest.Value.Height * 4;
         return true;
     }
-    private static StoryboardImageCache.Pixels? DecodeStoryboardImage(string path)
+    internal static StoryboardImageCache.Pixels? DecodeStoryboardImage(string path)
     {
         var info = new FileInfo(path);
         if (!info.Exists || info.Length > 64 * 1024 * 1024) return null;

@@ -45,6 +45,9 @@ internal sealed partial class EditorWindow
                 displayOverride = Environment.GetEnvironmentVariable("FRUITSATELIER_DISPLAY_PROFILE")
             });
         }
+        view.DecodePaletteImage = Rendering.D2DCanvas.DecodeStoryboardImage;
+        view.RequestMediaFile = (video, answer) => answer(MapFileDialog.Select(hwnd, false, L.Get("media.choose"),
+            L.Get(video ? "media.video" : "media.background") + "\0" + (video ? "*.mp4;*.avi;*.flv;*.mov;*.wmv;*.m4v;*.mpg;*.mpeg;*.mkv;*.webm" : "*.jpg;*.jpeg;*.png;*.bmp") + "\0\0"));
         view.RequestSyncFile = answer => answer(MapFileDialog.Select(hwnd, false, L.Get("sync.chooseFile"), MapFileDialog.OsuFilter));
         view.RequestSyncAudio = answer => answer(MapFileDialog.Select(hwnd, false, L.Get("sync.chooseAudio"), MapFileDialog.AudioFilter));
         view.RequestPausePlayback = () => audio.Pause();

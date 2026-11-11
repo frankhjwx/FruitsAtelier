@@ -3,6 +3,8 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--media-panel-check")) { MediaPanelTests.Run(); return 0; }
+if (args.Contains("--media-panel-performance")) { MediaPanelTests.Performance(); return 0; }
 if (args.Contains("--testplay-mods-check")) { TestplayModTests.Run(); PreviewSidebarTests.Sidebar(); TestplayStartupDelayTests.IndependentSpeed(); DockPersistenceTests.Run(); InspectorPanelsTests.Run(); TestplayTests.LivePlate(); DockingTests.Run(); PreviewSidebarTests.DisplayModesAndOverscan(); return 0; }
 if (args.Contains("--selection-gap-performance")) { SelectionGapTests.Performance(); return 0; }
 if (args.Contains("--selection-gap-check")) { SelectionGapTests.Run(); FruitStackSettingsTests.Run(); TestplayTests.LivePlate(); Console.WriteLine("PASS selection gaps and fruit stack preferences"); return 0; }
@@ -520,6 +522,7 @@ var tests = new (string Name, Action Run)[]
     ("Settings layout preserves labels and aligns controls in narrow windows", SettingsTests.Layout),
     ("Canvas background dim control fades, captures dragging and remains independent of zoom", CanvasBackgroundDimControlTests.Run),
     ("Mapping canvas X-axis grid colours and opacity preserve horizontal lines and content", CanvasGridSettingsTests.Run),
+    ("Media imports, synchronization and background palettes", MediaPanelTests.Run),
     ("Mapping canvas backgrounds, image replacement and preferences", MappingCanvasBackgroundTests.Run),
     ("Mapping Canvas indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Stack canvas edits individual fruits horizontally", StackDockTests.ManualFruits),
