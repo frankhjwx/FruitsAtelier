@@ -2462,6 +2462,8 @@
   "testplay.mod.flashlight": "Flashlight",
   "testplay.showCombo": "Показывать комбо",
   "hitsounding.applyAffecting": "Применить к действующей точке тайминга",
-  "hitsounding.rampInterval": "Интервал в долях: 1 /",
-  "hitsounding.generateRamp": "Создать плавное изменение громкости"
+  "hitsounding.rampInterval": "Интервал в долях:",
+  "hitsounding.generateRamp": "Создать плавное изменение громкости",
+  "hitsounding.rampTitle": "Плавное изменение громкости",
+  "hitsounding.generate": "Создать"
 }

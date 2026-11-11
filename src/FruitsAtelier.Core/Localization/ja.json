@@ -2462,6 +2462,8 @@
   "testplay.mod.flashlight": "Flashlight",
   "testplay.showCombo": "コンボを表示",
   "hitsounding.applyAffecting": "適用中のタイミングポイントに反映",
-  "hitsounding.rampInterval": "拍の間隔：1 /",
-  "hitsounding.generateRamp": "音量グラデーションを生成"
+  "hitsounding.rampInterval": "拍の間隔：",
+  "hitsounding.generateRamp": "音量グラデーションを生成",
+  "hitsounding.rampTitle": "音量グラデーション生成",
+  "hitsounding.generate": "生成"
 }

@@ -2462,6 +2462,8 @@
   "testplay.mod.flashlight": "Flashlight",
   "testplay.showCombo": "Mostrar combo",
   "hitsounding.applyAffecting": "Aplicar al punto de tiempo activo",
-  "hitsounding.rampInterval": "Intervalo de pulsos: 1 /",
-  "hitsounding.generateRamp": "Generar cambio gradual de volumen"
+  "hitsounding.rampInterval": "Intervalo de pulsos:",
+  "hitsounding.generateRamp": "Generar cambio gradual de volumen",
+  "hitsounding.rampTitle": "Generación de volumen gradual",
+  "hitsounding.generate": "Generar"
 }

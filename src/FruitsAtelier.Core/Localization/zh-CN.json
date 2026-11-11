@@ -2462,6 +2462,8 @@
   "testplay.mod.flashlight": "Flashlight",
   "testplay.showCombo": "显示连击数",
   "hitsounding.applyAffecting": "应用到当前生效时间线",
-  "hitsounding.rampInterval": "节拍间隔：1 /",
-  "hitsounding.generateRamp": "生成渐变音量"
+  "hitsounding.rampInterval": "节拍间隔：",
+  "hitsounding.generateRamp": "生成渐变音量",
+  "hitsounding.rampTitle": "渐变音量生成",
+  "hitsounding.generate": "生成"
 }

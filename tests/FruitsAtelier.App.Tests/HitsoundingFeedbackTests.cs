@@ -23,13 +23,17 @@ internal static class HitsoundingFeedbackTests
                 ui.View.PointerDown(bounds.X + 4, bounds.Y + 10, 0, false, true);
                 ui.View.PointerUp(bounds.X + 4, bounds.Y + 10, 0); ui.Paint();
             }
-            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.generateRamp")), "Two green points reveal the volume ramp controls");
-            ui.ClickText("1/2");
+            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.rampTitle")), "Two green points reveal the volume ramp controls");
+            Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.offset")), "Multi-selection hides the offset field");
+            ui.ClickText("1/1 ▾"); ui.ClickText("1/2");
             Check(baseline.ContentEquals(ui.View.Document), "Choosing an interval does not edit content");
-            ui.ClickText(L.Get("hitsounding.generateRamp"));
+            ui.ClickText(L.Get("hitsounding.generate"));
             Check(ui.View.Document.TimingPoints.Count == 10 && ui.View.Document.TimingPoints.Single(p => p.TimeMs == 1500).Volume == 50,
                 "Half-beat ramp generates interior lines with linear volume");
             Check(ui.View.Document.TimingPoints.Single(p => p.TimeMs == 1500).BeatLengthMs == baseline.TimingPoints[1].BeatLengthMs, "Ramp preserves active SV");
+            Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.rampTitle")), "Generated multi-selection no longer offers another ramp");
+            ui.Key(46); Check(ui.View.Document.TimingPoints.Count == 1, "All generated lines and both endpoints remain selected together");
+            ui.Key(90, ctrl: true); Check(ui.View.Document.TimingPoints.Count == 10, "Deleting the generated selection is one undo step");
             ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Ramp is one undo step");
             ui.Key(89, ctrl: true); Check(ui.View.Document.TimingPoints.Count == 10, "Ramp supports redo");
             ui.Key(90, ctrl: true);
@@ -76,9 +80,43 @@ internal static class HitsoundingFeedbackTests
             ui.View.Wheel(source.X + 3, source.Y + 3, -120, false, false, false); ui.Paint();
             Check(ui.View.PlayheadMs == 1500, "Playing wheel uses a full beat even at 1/16 Snap");
         }
+        TimingHelperLayout();
         RampTempoBoundary();
         RoundedNotes();
         Console.WriteLine("PASS hitsounding feedback shortcuts, draft apply, volume precision, ramp and selected-target clipboard");
+    }
+    private static void TimingHelperLayout()
+    {
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            L.SetLanguage(language);
+            var map = new MapDocument { DurationMs = 8000, BeatLengthMs = 500 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500 });
+            foreach (int time in new[] { 500, 1000, 1500 })
+                map.TimingPoints.Add(new() { TimeMs = time, BeatLengthMs = -100, Uninherited = false, Volume = time / 25 });
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 620); ui.View.ShowHitsoundingPage(); ui.Paint();
+            var baseline = ui.View.Document.DeepClone();
+            var (track, thumb) = ui.View.TimingHelperScrollbar;
+            Check(thumb.Height > 40 && thumb.Height < track.Height, "Scrollbar thumb reflects the visible content proportion");
+            var nearby = ui.View.TimingHelperNearbyBounds;
+            float x = thumb.X + thumb.Width / 2, y = thumb.Y + thumb.Height / 2;
+            ui.View.PointerDown(x, y, 0, false, false); Check(ui.View.WantsCapture, "Timing Helper scrollbar captures a drag");
+            ui.View.PointerMove(x, track.Bottom + 100, false, false); ui.Paint();
+            ui.View.PointerUp(x, track.Bottom + 100, 0); ui.Paint();
+            Check(Math.Abs(ui.View.TimingHelperScrollbar.Thumb.Bottom - track.Bottom) < .01 && !ui.View.WantsCapture,
+                "Dragging reaches the bottom and releases capture");
+            Check(ui.View.TimingHelperNearbyBounds == nearby && baseline.ContentEquals(ui.View.Document), "Scrolling leaves nearby timing and document content unchanged");
+            foreach (int time in new[] { 500, 1500 })
+            {
+                var handle = ui.View.HitsoundingTimingHandleBounds(ui.View.Document.TimingPoints.Single(p => p.TimeMs == time));
+                ui.View.PointerDown(handle.X + 4, handle.Y + 10, 0, false, true);
+                ui.View.PointerUp(handle.X + 4, handle.Y + 10, 0); ui.Paint();
+            }
+            Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("hitsounding.rampTitle")), "Nonadjacent green points cannot generate a ramp");
+            Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.offset")), "Nonadjacent multi-selection also hides Offset");
+            ui.Resize(1440, 1600);
+            Check(ui.View.TimingHelperScrollbar.Track.Height == 0, "No scrollbar appears when the content fits");
+        }
     }
     private static void RoundedNotes()
     {

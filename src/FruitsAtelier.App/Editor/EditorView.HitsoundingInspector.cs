@@ -56,6 +56,15 @@ public sealed partial class EditorView
     private int inspectorBank, inspectorIndex, inspectorVolume;
     private Rect hitsoundingInspectorBounds;
     private float hitsoundingInspectorScroll, hitsoundingInspectorScrollMaximum;
+    private bool timingHelperScrolling;
+    private float timingHelperScrollGrab;
+    internal (Rect Track, Rect Thumb) TimingHelperScrollbar { get; private set; }
+    private void MoveTimingHelperScroll(float y)
+    {
+        var (track, thumb) = TimingHelperScrollbar;
+        float travel = track.Height - thumb.Height;
+        hitsoundingInspectorScroll = travel <= 0 ? 0 : Math.Clamp((y - track.Y - timingHelperScrollGrab) / travel, 0, 1) * hitsoundingInspectorScrollMaximum;
+    }
     private ConvertedCatchObject? HitsoundingSelectedNote => hitsoundingSelected is { } selected
         ? hitsoundingNoteLookup.GetValueOrDefault((selected.Id, selected.Event)) : null;
     private bool HitsoundingHeadHovered(float x, float y) => HitsoundingPageVisible && hitsoundingBounds.Contains(x, y)
@@ -91,7 +100,9 @@ public sealed partial class EditorView
         hitsoundingInspectorBounds = r;
         var nearby = TimingHelperNearbyRange();
         bool ramp = TimingHelperRampEndpoints() is not null;
-        float contentHeight = (timingHelperPoints.Length > 0 ? 122 + timingHelperPoints.Sum(d => d.Source.Uninherited ? 410 : 336) : 470) + (ramp ? 110 : 0);
+        bool multiple = hitsoundingTimingSelection.Count > 1;
+        float contentHeight = 186 + (ramp ? 76 : 0) + (timingHelperPoints.Length > 0
+            ? timingHelperPoints.Sum(d => (d.Source.Uninherited ? 366 : 292) - (multiple ? 37 : 0)) + (timingHelperPoints.Length - 1) * 44 : 226);
         float nearbyHeight = nearby.Count > 0 ? 30 + nearby.Count * 20 : 0;
         float editorHeight = Math.Max(0, r.Height - nearbyHeight - 8);
         var nearbyBounds = TimingHelperNearbyBounds = new Rect(r.X + 10, r.Y + editorHeight + 8, Math.Max(0, r.Width - 20), nearbyHeight);
@@ -102,6 +113,8 @@ public sealed partial class EditorView
         c.Clip(r);
         float y = r.Y + 8 - hitsoundingInspectorScroll, x = r.X + 10, w = Math.Max(0, r.Width - 20);
         DrawTimingHelperHeader(c, new(x, y, w, 148)); y += 158;
+        c.Line(x, y, x + w, y, Grid); y += 12;
+        TimingHelperRampControls = default;
         if (ramp) DrawTimingHelperRamp(c, x, ref y, w);
         if (timingHelperPoints.Length > 0)
         {
@@ -142,7 +155,22 @@ public sealed partial class EditorView
         for (int i = firstField; i < fields.Count; i++)
             if (fields[i].Bounds.Y < r.Y || fields[i].Bounds.Bottom > r.Bottom) fields[i] = fields[i] with { Bounds = default };
         if (hitsoundingInspectorScrollMaximum > 0)
-            c.Fill(new(r.Right - 3, r.Y + hitsoundingInspectorScroll / hitsoundingInspectorScrollMaximum * (r.Height - 40), 3, 40), Muted, 1.5f);
+        {
+            var track = new Rect(r.Right - 8, r.Y, 8, r.Height);
+            float thumbHeight = Math.Min(r.Height, Math.Max(24, r.Height * r.Height / contentHeight));
+            var thumb = new Rect(track.X, r.Y + hitsoundingInspectorScroll / hitsoundingInspectorScrollMaximum * (r.Height - thumbHeight), track.Width, thumbHeight);
+            TimingHelperScrollbar = (track, thumb);
+            c.Fill(track, Surface, 4);
+            c.Fill(new(thumb.X + 1, thumb.Y, thumb.Width - 2, thumb.Height), timingHelperScrolling ? Accent : Muted, 3);
+            hits.Add(new(track, () =>
+            {
+                if (!CommitField()) return;
+                timingHelperScrolling = true;
+                timingHelperScrollGrab = thumb.Contains(mouseX, mouseY) ? mouseY - thumb.Y : thumb.Height / 2;
+                MoveTimingHelperScroll(mouseY);
+            }, true));
+        }
+        else TimingHelperScrollbar = default;
         DrawTimingHelperNearby(c, nearbyBounds, nearby);
     }
     private void DrawTimingHelperHeader(ICanvas c, Rect r)
@@ -176,7 +204,8 @@ public sealed partial class EditorView
     private void DrawTimingHelperPoint(ICanvas c, float x, ref float y, float w, TimingHelperPoint entry)
     {
         bool red = entry.Source.Uninherited;
-        Field(c, x, ref y, w, L.Get("timing.offset"), entry.Time, v => { if (!double.IsFinite(v)) throw new ArgumentException(L.Get("timing.range")); entry.Time = v; }, 100);
+        if (hitsoundingTimingSelection.Count <= 1)
+            Field(c, x, ref y, w, L.Get("timing.offset"), entry.Time, v => { if (!double.IsFinite(v)) throw new ArgumentException(L.Get("timing.range")); entry.Time = v; }, 100);
         if (red) Field(c, x, ref y, w, L.Get("timing.bpm"), 60000 / entry.BeatLength,
             v => { if (!double.IsFinite(v) || v <= 0 || v > 10000) throw new ArgumentException(L.Get("timing.range")); entry.BeatLength = 60000 / v; }, 100);
         if (red) Field(c, x, ref y, w, L.Get("timing.meter"), entry.Meter, v => { if (v < 1 || v > 32 || v != Math.Truncate(v)) throw new ArgumentException(L.Get("timing.range")); entry.Meter = (int)v; }, 100);

@@ -21,7 +21,9 @@ internal sealed class LibraryBrowser
     private readonly Dictionary<int, IReadOnlyList<LibrarySetRow>> pages = [];
     private readonly Queue<int> pageOrder = [];
     private Task<(int Start, IReadOnlyList<LibrarySetRow> Rows)>? pageTask;
-    private Task<(string Key, int Start, IReadOnlyList<LibraryMap> Rows)>? detailTask;
+    private sealed record RankedDetails(string Key, LibraryMap[] Maps, Dictionary<string, double?> Ratings);
+    private RankedDetails? rankedDetails;
+    private Task<(string Key, int Start, IReadOnlyList<LibraryMap> Rows, RankedDetails? Ranking)>? detailTask;
     private Task<(long Revision, List<(int Start, IReadOnlyList<LibrarySetRow> Rows)> Pages)>? discoveryTask;
     private long discoveryRevision;
     private string? detailKey;
@@ -160,7 +162,13 @@ internal sealed class LibraryBrowser
         }
         if (detailTask is { IsCompleted: true })
         {
-            try { var page = detailTask.GetAwaiter().GetResult(); detailKey = page.Key; detailStart = page.Start; details = page.Rows; ContentRevision++; }
+            try
+            {
+                var page = detailTask.GetAwaiter().GetResult();
+                if (Selected?.Key == page.Key)
+                { detailKey = page.Key; detailStart = page.Start; details = page.Rows; rankedDetails = page.Ranking; ContentRevision++; }
+            }
+            catch (OperationCanceledException) { }
             catch (Exception e) { Error = e.Message; }
             detailTask = null;
         }
@@ -171,7 +179,7 @@ internal sealed class LibraryBrowser
                 var update = discoveryTask.GetAwaiter().GetResult(); discoveryRevision = update.Revision;
                 foreach (var page in update.Pages) pages[page.Start] = page.Rows;
                 if (Selected is { } selected) Selected = Get(selected.Index) ?? selected;
-                detailKey = null; details = []; ContentRevision++;
+                detailKey = null; details = []; rankedDetails = null; ContentRevision++;
             }
             catch (Exception e) { Error = e.Message; discoveryRevision = snapshot.DiscoveryRevision; }
             discoveryTask = null;
@@ -201,12 +209,40 @@ internal sealed class LibraryBrowser
     }
     public LibraryMap? Detail(int index)
         => Selected?.Key == detailKey && index >= detailStart && index < detailStart + details.Count ? details[index - detailStart] : null;
-    public void RequestDetails(int first)
+    public bool TryGetDetailRating(string path, out double? stars)
+    {
+        stars = null;
+        return Selected?.Key == rankedDetails?.Key && rankedDetails is not null && rankedDetails.Ratings.TryGetValue(path, out stars);
+    }
+    public void RequestDetails(int first, Func<LibraryMap, double?>? calculateRating = null)
     {
         if (snapshot is null || retired || retiringForReorder || Selected is not { } set || detailTask is not null) return;
         int start = Math.Max(0, first) / PageSize * PageSize;
         if (detailKey == set.Key && detailStart == start) return;
-        detailTask = Task.Run(() => { lock (gate) return (set.Key, start, snapshot.Difficulties(set, start, 128)); });
+        if (rankedDetails is { } cached && cached.Key == set.Key)
+        {
+            detailKey = set.Key; detailStart = start; details = cached.Maps.Skip(start).Take(128).ToArray(); ContentRevision++;
+            return;
+        }
+        detailTask = Task.Run(() =>
+        {
+            lock (gate)
+            {
+                if (calculateRating is null) return (set.Key, start, snapshot.Difficulties(set, start, 128), (RankedDetails?)null);
+                var maps = new List<LibraryMap>();
+                var ratings = new Dictionary<string, double?>(WorkspaceSynchronization.Paths);
+                for (int offset = 0; offset < set.Count; offset += 128)
+                    foreach (var map in snapshot.Difficulties(set, offset, 128))
+                    {
+                        if (retired || retiringForReorder || Selected?.Key != set.Key) throw new OperationCanceledException();
+                        maps.Add(map); ratings[map.Path] = calculateRating(map);
+                    }
+                var sorted = maps.OrderByDescending(m => ratings[m.Path] ?? double.NegativeInfinity)
+                    .ThenBy(m => m.Difficulty, StringComparer.OrdinalIgnoreCase).ThenBy(m => m.Path, StringComparer.OrdinalIgnoreCase).ToArray();
+                var ranking = new RankedDetails(set.Key, sorted, ratings);
+                return (set.Key, start, (IReadOnlyList<LibraryMap>)sorted.Skip(start).Take(128).ToArray(), ranking);
+            }
+        });
     }
     public void Retire()
     {

@@ -32,6 +32,7 @@ public sealed partial class EditorView
         hitsoundingSelected = null; hitsoundingPaint.Clear(); hitsoundingPainting = hitsoundingHeadDrag = false; hitsoundingStoryboardSource = null; hitsoundingStoryboardTags = [];
         hitsoundingConversion = null; hitsoundingTagLanes = []; hitsoundingNotes = []; hitsoundingMapFiles.Clear();
         hitsoundingParentNotes.Clear();
+        timingHelperScrolling = false; TimingHelperScrollbar = default;
         hitsoundingResolver = null; hitsoundPlaybackResolver = null; inspectorConversion = null; hitsoundingNoteLookup.Clear(); hitsoundingAudibleNotes.Clear();
         hitsoundingMapPaths.Clear(); hitsoundingFallbackFiles.Clear();
         hitsoundingAdditionLinks = []; hitsoundingAdditionTimes = []; hitsoundingRedPoints = []; hitsoundingGreenPoints = [];

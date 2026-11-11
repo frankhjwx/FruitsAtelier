@@ -2462,6 +2462,8 @@
   "testplay.mod.flashlight": "Flashlight",
   "testplay.showCombo": "콤보 표시",
   "hitsounding.applyAffecting": "현재 적용 중인 타이밍 포인트에 적용",
-  "hitsounding.rampInterval": "박자 간격: 1 /",
-  "hitsounding.generateRamp": "점진적 볼륨 생성"
+  "hitsounding.rampInterval": "박자 간격:",
+  "hitsounding.generateRamp": "점진적 볼륨 생성",
+  "hitsounding.rampTitle": "점진적 볼륨 생성",
+  "hitsounding.generate": "생성"
 }

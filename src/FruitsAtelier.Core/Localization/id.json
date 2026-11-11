@@ -2462,6 +2462,8 @@
   "testplay.mod.flashlight": "Flashlight",
   "testplay.showCombo": "Tampilkan kombo",
   "hitsounding.applyAffecting": "Terapkan ke titik timing aktif",
-  "hitsounding.rampInterval": "Interval ketukan: 1 /",
-  "hitsounding.generateRamp": "Buat perubahan volume bertahap"
+  "hitsounding.rampInterval": "Interval ketukan:",
+  "hitsounding.generateRamp": "Buat perubahan volume bertahap",
+  "hitsounding.rampTitle": "Perubahan volume bertahap",
+  "hitsounding.generate": "Buat"
 }

@@ -616,12 +616,18 @@ public sealed partial class EditorView
         Button(c, new(x, 272, 288, 38), L.Get(map.ProjectPath is null ? "library.start" : "library.continue"), () => OpenSelectedLibraryMap(map));
         int count = LibraryVisibleDifficulties;
         libraryDiffScroll = Math.Clamp(libraryDiffScroll, 0, Math.Max(0, group.Count - count));
-        libraryBrowser!.RequestDetails(libraryDiffScroll);
+        libraryBrowser!.RequestDetails(libraryDiffScroll, CalculateLibraryRating);
         var pending = new List<LibraryMap>();
         for (int i = libraryDiffScroll; i < Math.Min(group.Count, libraryDiffScroll + count); i++)
         {
             var diff = libraryBrowser.Detail(i);
             if (diff is null) continue;
+            if (libraryBrowser.TryGetDetailRating(diff.Path, out var rankedStars))
+            {
+                if (!libraryRatings.ContainsKey(diff.Path) && libraryRatings.Count >= 512)
+                { string oldest = libraryRatings.Keys.First(); libraryRatings.Remove(oldest); libraryRatingsToRefresh.Remove(oldest); }
+                libraryRatings[diff.Path] = rankedStars; libraryRatingsToRefresh.Remove(diff.Path);
+            }
             if (diff.Mode == 2 && (!libraryRatings.ContainsKey(diff.Path) || libraryRatingsToRefresh.Contains(diff.Path)) && (diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
                 || diff.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))) pending.Add(diff);
             float y = 334 + (i - libraryDiffScroll) * 40;
@@ -646,29 +652,33 @@ public sealed partial class EditorView
                 ratingTask = Task.Run(() =>
                 {
                     var result = new Dictionary<string, double?>();
-                    foreach (var entry in pending)
-                    {
-                        try
-                        {
-                            var fingerprint = ratingCache.Fingerprint(entry.Path);
-                            var cached = ratingCache.Read(entry.Path);
-                            if (cached is { Length: 8 } && BitConverter.ToDouble(cached) is var cachedStars && double.IsFinite(cachedStars) && cachedStars >= 0)
-                            { if (ratingCache.Fingerprint(entry.Path) == fingerprint) result[entry.Path] = cachedStars; continue; }
-                            bool project = entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase);
-                            var d = project ? ProjectSerializer.ReadFile(entry.Path) : OsuBeatmapReader.ReadFile(entry.Path);
-                            var converted = CatchStreamConverter.Convert(d);
-                            var exported = project && converted.Success ? OsuBeatmapWriter.Serialize(d) : null;
-                            var objects = converted.Success ? CatchDifficultyObjects.Create(exported?.ReadBack ?? d) : converted.Objects;
-                            result[entry.Path] = converted.Success ? CatchDifficultyCalculator.Calculate(objects, d.CircleSize).StarRating : null;
-                            if (ratingCache.Fingerprint(entry.Path) != fingerprint) { result.Remove(entry.Path); continue; }
-                            if (result[entry.Path] is { } stars) ratingCache.Write(entry.Path, fingerprint, BitConverter.GetBytes(stars));
-                        }
-                        catch (Exception) { result[entry.Path] = null; }
-                    }
+                    foreach (var entry in pending) result[entry.Path] = CalculateLibraryRating(entry);
                     return (revision, result);
                 });
             }
         }
+    }
+    private static double? CalculateLibraryRating(LibraryMap entry)
+    {
+        if (entry.Mode != 2 || !(entry.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
+            || entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))) return null;
+        try
+        {
+            var fingerprint = ratingCache.Fingerprint(entry.Path);
+            var cached = ratingCache.Read(entry.Path);
+            if (cached is { Length: 8 } && BitConverter.ToDouble(cached) is var cachedStars && double.IsFinite(cachedStars) && cachedStars >= 0)
+                return ratingCache.Fingerprint(entry.Path) == fingerprint ? cachedStars : null;
+            bool project = entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase);
+            var document = project ? ProjectSerializer.ReadFile(entry.Path) : OsuBeatmapReader.ReadFile(entry.Path);
+            var converted = CatchStreamConverter.Convert(document);
+            var exported = project && converted.Success ? OsuBeatmapWriter.Serialize(document) : null;
+            var objects = converted.Success ? CatchDifficultyObjects.Create(exported?.ReadBack ?? document) : converted.Objects;
+            double? stars = converted.Success ? CatchDifficultyCalculator.Calculate(objects, document.CircleSize).StarRating : null;
+            if (ratingCache.Fingerprint(entry.Path) != fingerprint) return null;
+            if (stars is { } value) ratingCache.Write(entry.Path, fingerprint, BitConverter.GetBytes(value));
+            return stars;
+        }
+        catch (Exception) { return null; }
     }
     private void LibraryTextField(ICanvas c, int index, string label, string value, float y)
     {

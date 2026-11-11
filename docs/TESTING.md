@@ -1782,9 +1782,11 @@ Windows renderer, operates the default multiplier input and captures settings,
 menus and inspector at narrow and ordinary window sizes under
 `artifacts/tests/slider-bpm/native`.
 
+`App.Tests --library-rating-order-check` checks descending star order across difficulty pages, unknown ratings, stable ties, reused calculations and persisted preview order.
+
 ## Hitsounding workspace checks
 
-`App.Tests --hitsounding-feedback-check` covers the inherited-point shortcut, deferred affecting-line application, five-percent slider clicks and precise dragging, two-point volume ramps with tempo changes and undo, selection bank highlighting, and selected-target sound paste. It is included in the Hitsounding panel check.
+`App.Tests --hitsounding-feedback-check` covers the inherited-point shortcut, deferred affecting-line application, five-percent slider clicks and precise dragging, adjacent two-point volume ramps with tempo changes and undo, the compact interval dropdown and generated group selection, multi-selection Offset visibility, proportional scrollbar input, selection bank highlighting, and selected-target sound paste. It is included in the Hitsounding panel check.
 
 `App.Tests --hitsound-library-files-check` covers real right-button context menus,
 relative paths, multi-selection, file operations, one-second drag navigation,

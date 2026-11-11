@@ -2462,6 +2462,8 @@
   "testplay.mod.flashlight": "Flashlight",
   "testplay.showCombo": "Show combo",
   "hitsounding.applyAffecting": "Apply to affecting timing line",
-  "hitsounding.rampInterval": "Beat interval: 1 /",
-  "hitsounding.generateRamp": "Generate volume ramp"
+  "hitsounding.rampInterval": "Beat interval:",
+  "hitsounding.generateRamp": "Generate volume ramp",
+  "hitsounding.rampTitle": "Volume Ramp Generation",
+  "hitsounding.generate": "Generate"
 }

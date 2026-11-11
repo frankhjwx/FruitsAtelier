@@ -224,6 +224,11 @@ osu! features outside the supported sprite/animation and trigger playback path.
 
 Library loading remains active until completed worker results have been published
 by the UI pump, including startup indexing and browser page/detail updates.
+The browser prepares the selected set’s complete difficulty order on a worker,
+using the persistent star cache, then serves bounded detail pages in descending
+star order. That set’s ranking is retained across page changes and invalidated by
+reference discovery or a new browser snapshot. Selection changes and retirement
+stop obsolete ranking work before its next difficulty; stale results are not published.
 
 Opening a library project runs on a background worker on both platforms. The library
 shows a loading overlay and blocks further content operations until the result is

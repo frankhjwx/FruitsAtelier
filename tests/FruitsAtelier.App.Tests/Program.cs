@@ -19,6 +19,7 @@ if (args.Contains("--timing-precision-check")) { TimingEditorTests.Run(); Synchr
 if (args.Contains("--clipboard-hitsound-check")) { ClipboardTests.EventHitsoundsSurvivePaste(); Console.WriteLine("PASS clipboard event hitsounds, inheritance and history on both canvases"); return 0; }
 if (args.Contains("--hitsounding-performance")) { HitsoundingPanelTests.Performance(); return 0; }
 if (args.Contains("--hitsounding-notes-check")) { HitsoundingNotesTests.Run(); return 0; }
+if (args.Contains("--library-rating-order-check")) { LibraryDifficultyOrderTests.Run(); return 0; }
 if (args.Contains("--hitsounding-feedback-check")) { HitsoundingFeedbackTests.Run(); return 0; }
 if (args.Contains("--hitsounding-panel-check")) { HitsoundingFeedbackTests.Run(); HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); HitsoundingPanelTests.DrawModes(); HitsoundingPanelTests.SampleSetCycling(); HitsoundingPanelTests.PlacementBanksAndHeadPriority(); HitsoundingPanelTests.PlacementBankIsolation(); HitsoundingPanelTests.SelectedBankSelectors(); HitsoundingPanelTests.KiaiStrip(); HitsoundingPanelTests.SpinnerEndSamples(); HitsoundingPanelTests.CrossDifficultyClipboard(); HitsoundingPanelTests.SelectionAndTiming(); HitsoundingPanelTests.LengthAndMove(); HitsoundingPanelTests.TransferTimingIndex(); HitsoundingPanelTests.TransferIndexInheritance(); HitsoundingPanelTests.StoryboardEditing(); HitsoundingPanelTests.PlayingSelectionAndSettings(); HitsoundingPanelTests.NearbyTiming(); HitsoundingPanelTests.CtrlSelection(); HitsoundingTimingDragTests.Run(); return 0; }
 if (args.Contains("--difficulty-import-check")) { DifficultyImportTests.Run(); Console.WriteLine("PASS difficulty imports use project resources and preserve metadata"); return 0; }
@@ -362,6 +363,7 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Library difficulty rows use descending star order", LibraryDifficultyOrderTests.Run),
     ("Hitsounding feedback preserves drafts, ramps, selection and clipboard", HitsoundingFeedbackTests.Run),
     ("Mapping BPM flags and Hitsounding timing tracks preserve content and red positions", TimingPresentationTests.Run),
     ("Fruit placement ignores canvas padding", FeedbackBugTests.PlacementBounds),

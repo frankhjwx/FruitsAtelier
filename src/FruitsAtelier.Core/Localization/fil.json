@@ -2462,6 +2462,8 @@
   "testplay.mod.flashlight": "Flashlight",
   "testplay.showCombo": "Ipakita ang combo",
   "hitsounding.applyAffecting": "Ilapat sa aktibong timing point",
-  "hitsounding.rampInterval": "Agwat ng beat: 1 /",
-  "hitsounding.generateRamp": "Bumuo ng unti-unting pagbabago ng volume"
+  "hitsounding.rampInterval": "Agwat ng beat:",
+  "hitsounding.generateRamp": "Bumuo ng unti-unting pagbabago ng volume",
+  "hitsounding.rampTitle": "Unti-unting pagbabago ng volume",
+  "hitsounding.generate": "Bumuo"
 }

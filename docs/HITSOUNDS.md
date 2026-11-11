@@ -261,6 +261,9 @@ Only timestamps without a point show effective timing information and **Apply as
 inherited timing point**, which inserts a green line while preserving effective SV.
 At these timestamps, **Apply to affecting timing line** writes the draft bank, index and volume to the latest active timing point without moving it or adding another point. Values remain drafts until either Apply button is clicked. Existing-point edits support undo and mark the map as modified; saving remains explicit.
 A separator and **Nearby Timing Points** title introduce up to seven nearby timing points in chronological order, showing timestamp, timing/sample information and volume. The current point is highlighted, retaining red for red points; others fade with distance. The wheel only scrolls the visible rows, leaving the playhead and selection unchanged. Clicking a row selects that point in the helper and recenters the list without moving the playhead or canvas. The initial view prefers three points on each side, filling from the other side at map boundaries; it has no separate scrollbar.
+The parameter scrollbar reflects the visible proportion of its content. Drag its thumb
+or click its track to scroll; the nearby list stays anchored. The scrollbar disappears
+when all parameters fit.
 The Hitsounding dock menu provides Config, Timing Helper, Song Setup and Preview independently
 of Mapping.
 Restoring Hitsounding as the active panel on editor startup loads its sound library immediately, without requiring pointer input.
@@ -338,12 +341,16 @@ offer Delete. The Delete key and context-menu Delete remove all selected green
 points in one undoable edit. Right-clicking a selected block or handle preserves
 the group; right-clicking an unselected point selects that point instead.
 Press **5** in Hitsounding to add an inherited point at the playhead. This binding is configurable in Settings.
-Ctrl-select exactly two green points to reveal **Generate volume ramp** in Timing Helper.
-Choose a beat interval of 1/1, 1/2 or 1/4, or enter a custom denominator (1–192).
+Ctrl-select exactly two adjacent green points to reveal **Volume Ramp Generation** in Timing Helper.
+No other green point may lie between them. Choose the beat interval from the dropdown
+and click **Generate** on the same row; available intervals follow the Snap division choices.
+The section has separators above and below it. When it is absent, the separator
+between the context card and timing parameters remains. Multi-selection hides Offset.
 Generation follows musical beat intervals across BPM changes and interpolates volume
 linearly in time between the unchanged endpoints. Existing interior points receive
 the interpolated volume; their other properties are preserved. Missing green points
-inherit the active timing properties. The complete operation is one undo step.
+inherit the active timing properties. Generation selects both endpoints and every
+generated green point together. The complete operation is one undo step.
 Timing Helper's sample bank choices are Soft, Normal and Drum.
 The left-hand sample-bank tools highlight the resolved bank of selected sounds;
 mixed banks have no highlighted choice. With no selection, they show the drawing bank.
