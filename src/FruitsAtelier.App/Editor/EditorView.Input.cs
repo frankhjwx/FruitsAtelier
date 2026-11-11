@@ -41,6 +41,13 @@ public sealed partial class EditorView
             if (button == 0 && HeaderNavigationBounds.Contains(x, y)) ShowLibrary();
             return;
         }
+        if (!ErrorVisible && !DiscardConfirmationVisible && (CapturingShortcut || shortcutResetMode))
+        {
+            mouseX = x; mouseY = y;
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         placementCtrl = ctrl;
         if (IsTestplaying) { TestplayPointerDown(x, y, button); return; }
         if (ErrorVisible || DiscardConfirmationVisible)
@@ -81,19 +88,6 @@ public sealed partial class EditorView
         }
         if (BananaEditVisible)
         {
-            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
-                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
-            return;
-        }
-        if (librarySettingsOpen)
-        {
-            if (LanguagePointerDown(x, y, button) || BeginSettingsColourDrag(x, y, button)) return;
-            if (contextItems.Count > 0)
-            {
-                if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear();
-                return;
-            }
-            if (BeginWorkspaceScroll(x, y, button) || BeginVolumeDrag(x, y, button) || BeginBackgroundDimDrag(x, y, button)) return;
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
@@ -849,6 +843,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (librarySettingsOpen) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (ErrorVisible) return;
         if (BrowserToolbarContains(x, y)) return;
         if (PatternNameVisible || GalleryTagsVisible || PatternEditingBusy) return;
@@ -971,6 +966,12 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (SettingsOwnsInput) { SettingsWheel(x, y, delta); return; }
+        if (!ErrorVisible && !DiscardConfirmationVisible && (CapturingShortcut || shortcutResetMode))
+        {
+            if (shortcutConfirming) shortcutConflictScroll = Math.Max(0, shortcutConflictScroll - delta / 120 * 44);
+            return;
+        }
         timingContextRequest++;
         if (ErrorVisible)
         {
@@ -1069,6 +1070,7 @@ public sealed partial class EditorView
             return;
         }
         if (WheelDockTabs(x, y, delta)) return;
+        if (WheelTestplayTab(x, y, delta)) return;
         if (WheelBookmarkPanel(x, y, delta)) return;
         if (WheelDiscussions(x, y, delta)) return;
         if (MapsetVerifierVisible && DockContentInputAvailable && verifierBounds.Contains(x, y))
@@ -1435,7 +1437,7 @@ public sealed partial class EditorView
             }
             else
             {
-                if (testplayDriver is null) testplay!.SetKey(virtualKey, true);
+                if (testplayDriver is null && !testplay!.HasChordBindings) testplay.SetKey(virtualKey, true);
                 AdvanceTestplay();
             }
             return;
@@ -1752,7 +1754,7 @@ public sealed partial class EditorView
         if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
         if (BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
-        if (IsTestplaying || CapturingTestplayKey) return;
+        if (IsTestplaying || CapturingTestplayKey || CapturingShortcut || shortcutResetMode) return;
         if (languageMenuOpen) return;
         ResetTextCaret();
         if (ErrorVisible || DiscardConfirmationVisible) return;
@@ -1786,7 +1788,7 @@ public sealed partial class EditorView
         FinishMapTemplateDrag(cancel: true);
         CancelRotation();
         rotationDragging = false;
-        heldEditorKeys.Clear();
+        heldEditorKeys.Clear(); shortcutPhysicalKeys.Clear(); shortcutReleases.Clear();
         if (drag == DragKind.SnapDivisor) SaveMapEditingPreferences();
         CancelLegacyDropletRefresh();
         CancelOsuInteraction();
@@ -2109,6 +2111,7 @@ public sealed partial class EditorView
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
         }
+        if (SettingsOwnsInput) { SettingsPointerDown(x, y, button); return; }
         if (OsuLinkPickerVisible && !ErrorVisible) { PointerDownCore(x, y, button, shift, ctrl); return; }
         var document = Document;
         try { PointerDownCore(x, y, button, shift, ctrl); }
@@ -2117,6 +2120,7 @@ public sealed partial class EditorView
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
         if (ErrorVisible) { mouseX = x; mouseY = y; return; }
+        if (SettingsOwnsInput) { SettingsPointerMove(x, y); return; }
         if (OsuLinkPickerVisible && !ErrorVisible) { mouseX = x; mouseY = y; return; }
         var document = Document;
         try { PointerMoveCore(x, y, shift, ctrl); }
@@ -2125,6 +2129,7 @@ public sealed partial class EditorView
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
         if (ErrorVisible) return;
+        if (SettingsOwnsInput) { SettingsPointerUp(x, y, button); return; }
         if (OsuLinkPickerVisible && !ErrorVisible) return;
         var document = Document;
         try { PointerUpCore(x, y, button, shift); }
@@ -2142,18 +2147,34 @@ public sealed partial class EditorView
             else if (!RecoveryActive && virtualKey is (27 or 13)) DismissError();
             return;
         }
+        if (CapturingShortcut) { CaptureShortcut(virtualKey, ctrl, shift); return; }
+        if (shortcutResetMode) return;
+        if (SettingsOwnsInput) { SettingsKeyDown(virtualKey, ctrl, shift); return; }
         if (OsuLinkPickerVisible && !ErrorVisible) { KeyDownCore(virtualKey, ctrl, shift); return; }
+        if (IsTestplaying && testplayDriver is null && testplay!.HasChordBindings)
+            testplay.SetKey(ShortcutBinding.Normalize(virtualKey), true);
+        bool physicalAlt = altHeld, physicalShift = shiftHeld;
+        if (RouteShortcut(ref virtualKey, ref ctrl, ref shift, out bool routedAlt)) return;
+        if (OperatingSystem.IsMacOS() && virtualKey == 8 && !IsEditingText && !LibraryVisible && !IsTestplaying
+            && ActiveShortcutScope is ShortcutScope.Compose or ShortcutScope.Hitsounding or ShortcutScope.TimingPoints) virtualKey = 46;
+        altHeld = routedAlt; shiftHeld = shift;
         bool shortcut = ctrl && !altHeld && (virtualKey is 38 or 40 || virtualKey == 82 && !shift)
             || altHeld && virtualKey is 13 or 37 or 38 or 39 or 40;
         if (!shortcut) heldEditorKeys.Add(virtualKey);
         else heldEditorKeys.Remove(virtualKey);
-        if (!shortcut && testplayDriver is null && TestplayPaused) testplay?.SetKey(virtualKey, true);
+        if (!shortcut && testplayDriver is null && testplay?.HasChordBindings != true && TestplayPaused) testplay?.SetKey(virtualKey, true);
         var document = Document;
         try { KeyDownCore(virtualKey, ctrl, shift); }
-        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
+        finally { altHeld = physicalAlt; shiftHeld = physicalShift; if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
     }
     public void TextInput(char value)
     {
+        if (SettingsOwnsInput)
+        {
+            if (!CapturingShortcut && !shortcutResetMode && !CapturingTestplayKey && !languageMenuOpen && libraryField >= 0 && !char.IsControl(value))
+            { ResetTextCaret(); LibraryFieldValue = InsertInput("library:" + libraryField, LibraryFieldValue, value.ToString(), 4096); }
+            return;
+        }
         if (ErrorVisible) return;
         if (DiscussionImageVisible) return;
         if (discussionSelectedLayout is not null) return;

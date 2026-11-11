@@ -376,3 +376,13 @@ Dependency license metadata/texts are under `mapset-verifier/licenses/`.
 The adapter and launcher sources in `tools/MapsetVerifier.Host/` and
 `tools/MapsetVerifier.Launcher/` are GPL-3.0. The editor uses
 standalone file/JSON communication and retains its own source license.
+
+
+## Catch Hidden and Flashlight
+
+The shared Preview/Testplay Hidden fade timing and Flashlight radius, combo factors
+and transition speed adapt `CatchModHidden.cs` and `CatchModFlashlight.cs` from
+[ppy/osu revision 48c4800e3ae4ee752452cdff83bd3787ccf3105f](https://github.com/ppy/osu/tree/48c4800e3ae4ee752452cdff83bd3787ccf3105f).
+The MIT notice is retained in `src/FruitsAtelier.Core/Gameplay/LICENSE.osu.txt`.
+The Windows and macOS renderers implement the circular smoothstep mask using
+native radial gradients. Mod artwork is read from the user's configured skins.

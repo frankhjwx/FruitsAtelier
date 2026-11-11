@@ -10,6 +10,14 @@ public enum ImportSliderConversionMode { Ask, KeepLegacy, ConvertToFSlider }
 
 public sealed class LibrarySettings
 {
+    private Dictionary<string, ShortcutBinding[]> shortcutBindings = [];
+    public Dictionary<string, ShortcutBinding[]> ShortcutBindings
+    {
+        get => shortcutBindings;
+        set => shortcutBindings = (value ?? []).ToDictionary(pair => pair.Key, pair => (pair.Value ?? [])
+            .Where(binding => binding?.Keys is not null).Select(binding => ShortcutBinding.From(binding.Keys))
+            .Where(binding => binding.Keys.Length > 0).ToArray());
+    }
     public List<MapTemplate> MapTemplates { get; set; } = [];
     public bool NewDifficultyUseSource { get; set; }
     public EditorDockLayouts? DockLayouts { get; set; }
@@ -143,6 +151,7 @@ public sealed class LibrarySettings
         set => playbackLineFromBottom = double.IsFinite(value) ? Math.Clamp(value, .05, .95) : .25;
     }
     public bool ShowTestplayCombo { get; set; } = true;
+    public bool ShowTestplayFruitStack { get; set; } = true;
     public bool ForceBackgroundDim { get; set; }
     public bool EnableVideoStoryboard { get; set; } = true;
     public float CanvasControlsOffsetX { get; set; }
@@ -182,6 +191,8 @@ public sealed class LibrarySettings
     public int TestplayDashKey { get; set; } = 16;
     private double testplayStartupDelaySeconds = 1;
     private double testplaySpeed = 1;
+    private CatchMods testplayMods;
+    public CatchMods TestplayMods { get => testplayMods; set => testplayMods = CatchModRules.Normalize(value); }
     public double TestplaySpeed
     {
         get => testplaySpeed;

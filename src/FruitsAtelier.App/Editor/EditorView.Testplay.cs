@@ -89,13 +89,13 @@ public sealed partial class EditorView
         ResetHitsounds();
         testplayReturnSpeed = PlaybackSpeed;
         bool restartAudio = AudioReady && AudioPlaying
-            && (testplayStart < testplayReturnPosition || PlaybackSpeed != LibrarySettings.TestplaySpeed);
+            && (testplayStart < testplayReturnPosition || PlaybackSpeed != ConfiguredTestplaySpeed);
         if (restartAudio)
         {
             if (RequestPausePlayback is not null) RequestPausePlayback();
             else RequestTogglePlayback?.Invoke();
         }
-        SetPlaybackSpeed(LibrarySettings.TestplaySpeed);
+        SetPlaybackSpeed(ConfiguredTestplaySpeed);
         playhead = testplayStart;
         FollowPlayhead();
         BeginTestplay(session, audioAlreadyPlaying: AudioPlaying && !restartAudio);
@@ -103,6 +103,7 @@ public sealed partial class EditorView
 
     private void BeginTestplay(CatchTestplay session, bool audioAlreadyPlaying, bool startPaused = false)
     {
+        flashlightTime = double.NaN;
         storyboardTestplay = storyboardTemplate?.Fork(testplayStart);
         storyboardTriggerVersion = -1; storyboardFrameTime = double.NaN;
         storyboardSamplePosition = testplayStart - .001; storyboardSamplesThrough = null;
@@ -145,8 +146,9 @@ public sealed partial class EditorView
                 }
             });
         if (startPaused) testplay.TogglePause();
+        ConfigureTestplayShortcuts(testplay);
         if (RequestRunTestplay is null)
-            foreach (int key in heldEditorKeys) testplay.SetKey(key, true);
+            foreach (int key in testplay.HasChordBindings ? shortcutPhysicalKeys : heldEditorKeys) testplay.SetKey(key, true);
         testplayFrame = testplay.Capture();
         if (AudioReady && !audioAlreadyPlaying)
         {
@@ -278,6 +280,13 @@ public sealed partial class EditorView
 
     public void KeyUp(int virtualKey)
     {
+        ReleaseShortcut(virtualKey);
+        ReleaseShortcutState(virtualKey);
+        if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
+        if (!ErrorVisible && IsTestplaying && testplayDriver is null) AdvanceTestplay();
+    }
+    private void ReleaseShortcutState(int virtualKey)
+    {
         heldEditorKeys.Remove(virtualKey);
         osuToggleKeys.Remove(virtualKey);
         if (virtualKey == 123) screenshotHeld = false;
@@ -293,8 +302,6 @@ public sealed partial class EditorView
         if (virtualKey == 82) testplayRetryHeld = false;
         if (virtualKey == 192) CancelTestplayQuickRetry();
         if (virtualKey == 66) testplayBookmarkHeld = false;
-        if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
-        if (!ErrorVisible && IsTestplaying && testplayDriver is null) AdvanceTestplay();
     }
 
     private void DrawTestplay(ICanvas c)
@@ -314,24 +321,26 @@ public sealed partial class EditorView
         {
             var item = previewObjects[i];
             DrawCatchObject(c, item, left + (float)item.X * fieldWidth / 512,
-                catchY - (float)((item.TimeMs - playhead) * speed), fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true, approachRate: TestplayApproachRate);
+                catchY - (float)((item.TimeMs - playhead) * speed), fieldWidth, opacity: HiddenMod ? CatchModRules.HiddenOpacity(item.TimeMs - playhead, TestplayApproachRate) : 1, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true, approachRate: TestplayApproachRate);
         }
         foreach (var item in frame.MissedObjects)
             DrawCatchObject(c, item, left + (float)item.X * fieldWidth / 512,
                 catchY + (float)((playhead - item.TimeMs) * speed), fieldWidth,
-                (float)Math.Clamp(1 - (playhead - item.TimeMs) / CatchTestplay.MissLifetimeMs, 0, 1),
+                HiddenMod ? 0 : (float)Math.Clamp(1 - (playhead - item.TimeMs) / CatchTestplay.MissLifetimeMs, 0, 1),
                 circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true, approachRate: TestplayApproachRate);
         float x = left + (float)frame.X * fieldWidth / 512;
         uint tint = frame.HyperDashing ? HyperDashColour : 0xFFFFFF;
         foreach (var trail in frame.Trails)
             DrawCatcherTrail(c, trail, left, fieldWidth, catchY);
-        DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
+        if (!HiddenMod && LibrarySettings.ShowTestplayFruitStack) DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
         DrawCatcherBody(c, x, catchY, fieldWidth, tint, 1, false, frame.FacingLeft);
         if (frame.Dashing) DrawCatcherBody(c, x, catchY, fieldWidth, 0xFFFFFF, .65f, true, frame.FacingLeft, brighten: true);
         DrawCatchLighting(c, frame.Lighting, playhead, x, fieldWidth, catchY, PreviewCircleSize);
         if (LibrarySettings.ShowTestplayCombo) DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
         c.Unclip();
         DrawStoryboardOverlay(c, new(0, 0, width, height), CurrentBackgroundDim);
+        if (FlashlightMod) DrawCatchFlashlight(c, new(0, 0, width, height), x, catchY, fieldWidth, frame.Combo, playhead, true);
+        DrawTestplayModIcons(c, stage);
         DrawTestplayInformation(c, frame);
         if (testplayAutoNotice is { } notice)
         {
@@ -504,6 +513,19 @@ public sealed partial class EditorView
         {
             int action = i;
             c.Text(L.Get(labels[i]), SettingsContentX + i * cell, TestplaySettingsTop + 160, SettingsTextSize, Foreground, cell - 8, true);
+            if (!FirstRunSetupVisible)
+            {
+                string id = i == 0 ? "moveLeft" : i == 1 ? "moveRight" : "dash";
+                var command = ShortcutCommands.Single(cmd => cmd.Scope == ShortcutScope.Testplay && cmd.Id == id && cmd.Lazer == draftLazerEditing);
+                string label = string.Join(" / ", CommandBindings(command, true).Select(BindingName));
+                SettingsButton(c, TestplayBindingBounds(i), label.Length == 0 ? L.Get("shortcuts.unassigned") : label, () =>
+                {
+                    settingsCategory = SettingsCategory.Shortcuts; shortcutScope = ShortcutScope.Testplay;
+                    shortcutLazer = draftLazerEditing; shortcutQuery = ""; workspaceScroll = 0;
+                    BeginShortcutCapture(command, CommandBindings(command, true).Length > 0 ? 0 : -1);
+                });
+                continue;
+            }
             SettingsButton(c, TestplayBindingBounds(i), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
                 () => { libraryField = -1; bindingCapture = action; }, bindingCapture == i);
         }

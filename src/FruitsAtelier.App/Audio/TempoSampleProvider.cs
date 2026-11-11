@@ -15,11 +15,11 @@ internal sealed class TempoSampleProvider : ISampleProvider
     private int silentFrames, longestSilentFrames;
     public WaveFormat WaveFormat => source.WaveFormat;
 
-    public TempoSampleProvider(ISampleProvider source, double speed, bool diagnostics = false)
+    public TempoSampleProvider(ISampleProvider source, double speed, bool diagnostics = false, bool adjustPitch = false)
     {
         this.source = source;
         this.diagnostics = diagnostics;
-        processor = new() { SampleRate = source.WaveFormat.SampleRate, Channels = source.WaveFormat.Channels, Tempo = speed };
+        processor = new() { SampleRate = source.WaveFormat.SampleRate, Channels = source.WaveFormat.Channels, Tempo = adjustPitch ? 1 : speed, Rate = adjustPitch ? speed : 1 };
         // Shorter overlapping sequences reduce the choppy texture at extreme slowdown.
         if (speed <= .25)
         {

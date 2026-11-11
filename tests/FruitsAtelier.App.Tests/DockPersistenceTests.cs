@@ -40,7 +40,7 @@ internal static class DockPersistenceTests
         reopened.ClickText(L.Get("dock.layout")); reopened.ClickText(L.Get("dock.resetLayout"));
         var reset = reopened.View.LibrarySettings.DockLayouts!;
         Check(reset.Mapping!.Left!.Panels!.SequenceEqual(["MovementStrain"])
-            && reset.Mapping.Right!.Panels!.SequenceEqual(["Preview", "Notes", "SongSetup", "PatternGallery", "Discussion"]), "Reset replaces remembered layout with defaults");
+            && reset.Mapping.Right!.Panels!.SequenceEqual(["Preview", "Testplay", "Notes", "SongSetup", "PatternGallery", "Discussion"]), "Reset replaces remembered layout with defaults");
         var oldSettings = JsonSerializer.Deserialize<LibrarySettings>("{}")!;
         Check(oldSettings.DockLayouts is null, "Existing settings need no migration");
         reopened.View.LibrarySettings.DockLayouts = new()
@@ -56,7 +56,7 @@ internal static class DockPersistenceTests
         reopened.View.RestoreDockLayouts(); reopened.Paint();
         var sanitized = reopened.View.CaptureDockLayouts();
         Check(sanitized.Mapping!.Left!.Panels!.SequenceEqual(["Preview"])
-            && sanitized.Mapping.Right!.Panels!.SequenceEqual(["Notes"])
+            && sanitized.Mapping.Right!.Panels!.SequenceEqual(["Notes", "Testplay"])
             && sanitized.Mapping.Right.Active == "Notes" && float.IsFinite(sanitized.Mapping.Right.Width), "Unknown, duplicate and invalid entries normalize safely");
         Check(sanitized.Timing!.Left!.Panels!.Length == 0 && sanitized.Timing.Right!.Panels!.Length == 0, "Empty groups remain empty and workspaces remain independent");
     }

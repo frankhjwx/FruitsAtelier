@@ -43,6 +43,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Repeated output failure stays unavailable until an explicit reload", () => OutputRecoveryTests.RepeatedFailure(wave)),
     ("EOF replay does not reuse an output waiting for its stopped callback", () => OutputRecoveryTests.EndBeforeCallback(wave))
 };
+if (args.Contains("--mod-speed-check")) { PlaybackSpeedTests.PitchAndDuration(); PlaybackSpeedTests.PitchAndDuration(adjustPitch: true); Console.WriteLine("PASS tempo and DT/HT pitch/duration"); return 0; }
 if (args.Contains("--diagnostic-check"))
 {
     await AudioDiagnosticTests.Run(wave, directory);

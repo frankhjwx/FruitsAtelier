@@ -205,6 +205,12 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--selection-gap-render-check"))
+            {
+                Diagnostics.SelectionGapRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--timing-clipboard-render-check"))
             {
                 Diagnostics.TimingClipboardRenderCheck.Run(canvas);
@@ -226,6 +232,10 @@ internal sealed partial class EditorWindow : IDisposable
             if (Environment.GetCommandLineArgs().Contains("--osu-link-render-check"))
             {
                 CheckOsuLinks(); Native.DestroyWindow(hwnd); return 0;
+            }
+            if (Environment.GetCommandLineArgs().Contains("--keybindings-render-check"))
+            {
+                CheckKeybindings(); Native.DestroyWindow(hwnd); return 0;
             }
             if (Environment.GetCommandLineArgs().Contains("--editor-theme-render-check"))
             {
@@ -617,7 +627,7 @@ internal sealed partial class EditorWindow : IDisposable
                     view.KeyDown((int)wParam, Native.Control, Native.Shift);
                     UpdateTitle(); Invalidate(); return 0;
                 }
-                if ((view.CapturingTestplayKey || view.IsTestplaying) && !((int)wParam == 115 && Native.Alt))
+                if (!((int)wParam == 115 && Native.Alt))
                 {
                     view.KeyDown((int)wParam, Native.Control, Native.Shift);
                     UpdateTitle(); Invalidate(); return 0;

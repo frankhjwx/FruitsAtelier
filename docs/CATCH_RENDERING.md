@@ -1,6 +1,6 @@
 # Catch Rendering and Conversion
 
-Both views use actual conversion results, AR fall scaling, CS sizes, and skin rendering, with multiple timing points, standalone fruits, imported L/B/P/C sliders, mixed linear/Bezier tracks with repeats, and banana showers. The canvas uses the map's original settings. Catch Preview is a collapsed-by-default, resizable right sidebar with mutually exclusive NM, Easy and Hard Rock modes. The real audio transport drives current time; without audio, explicitly indicated manual positioning remains available.
+Both views use actual conversion results, AR fall scaling, CS sizes, and skin rendering, with multiple timing points, standalone fruits, imported L/B/P/C sliders, mixed linear/Bezier tracks with repeats, and banana showers. The canvas uses the map's original settings. Catch Preview is a collapsed-by-default, resizable right sidebar with the shared Testplay mod combination described below. The real audio transport drives current time; without audio, explicitly indicated manual positioning remains available.
 
 Easy multiplies AR and CS by 0.5. Hard Rock multiplies AR by 1.4 and CS by 1.3, capped at 10. Hard Rock's preview replays complete-parent RNG ordering, including standalone-fruit offsets, slider droplet draws and banana draws, against the exported osu read-back geometry. Each mode recalculates hyperdash indicators with its effective CS. Preview results are cached by conversion result and mode, and only the current time window is drawn. These controls do not edit, save or export modified beatmap settings.
 
@@ -256,3 +256,36 @@ and restores the starting playhead on exit. See [Editing controls](EDITOR_UI.md#
 ## Layers
 
 Main-canvas curves render above actual objects, at 100% opacity when selected and 50% otherwise. Hiding curves retains objects. Legacy overlays use the original path; FSliders draw their authored mixed segments rather than connecting random tiny positions as a substitute track.
+
+
+## Shared Testplay mods
+
+The Testplay tab exposes the same movement bindings, lead-in, speed, combo,
+background, video/storyboard and dim preferences as Settings, plus the fruit-stack
+preference. Changes in the tab apply immediately and persist as user preferences.
+The panel scrolls independently without modifying beatmap content.
+
+Preview and Testplay share one mod combination. Both selectors use text buttons:
+Easy and Half Time on the first row; Hard Rock, Double Time, Hidden and Flashlight
+on the second. Easy/Hard Rock and Double Time/Half Time are mutually exclusive.
+Preview explicitly indicates that Testplay uses the same combination.
+
+Easy halves AR and CS; Hard Rock multiplies AR by 1.4 and CS by 1.3, caps both at
+10, and uses the existing HR object-position conversion. Double Time and Half
+Time select 1.5x and 0.75x playback, including pitch adjustment. These rate mods
+override the custom Testplay speed. Without a rate mod, Testplay uses its saved
+custom speed. Leaving Testplay restores the editor transport speed.
+
+Hidden fades objects between 60% and 44% of their remaining preempt and hides
+caught fruit stacks. Flashlight follows the catcher with a 203.125-field-unit
+radius, a smooth edge extending to 1.4 times the radius, and radius factors of
+0.885 at 100 combo and 0.770 at 200 combo. Breaks expand the radius to 1.538.
+Both effects also appear in Preview.
+
+Only the playing Testplay HUD draws mod artwork. It loads the skin's
+`selection-mod-easy`, `selection-mod-halftime`, `selection-mod-hardrock`,
+`selection-mod-doubletime`, `selection-mod-hidden` and
+`selection-mod-flashlight` PNGs, preferring `@2x` and using the configured
+fallback skin. HUD textures retain their aspect ratio and full logical dimensions;
+the gameplay reference height scales them to the window, with a right-edge HUD
+anchor. Missing artwork is omitted rather than replaced with a fabricated icon.

@@ -12,23 +12,24 @@ public sealed partial class EditorView
         timelineBpmTooltip = null;
         int lo = 0, hi = timelineBpmPoints.Length;
         while (lo < hi) { int mid = (lo + hi) / 2; if (timelineBpmPoints[mid].TimeMs < start) lo = mid + 1; else hi = mid; }
-        float previousRight = objectTimeline.X;
-        for (int i = lo; i < timelineBpmPoints.Length && timelineBpmPoints[i].TimeMs <= end; i++)
+        for (int i = Math.Max(0, lo - 1); i < timelineBpmPoints.Length && timelineBpmPoints[i].TimeMs <= end; i++)
         {
             var point = timelineBpmPoints[i];
             float x = objectTimeline.X + (float)((point.TimeMs - start) * objectTimelineScale);
             string label = L.Get("timeline.bpmValue", 60000 / TimingMap.EffectiveBeatLength(point.BeatLengthMs));
             float labelWidth = c.MeasureText(label, 10, true) + 10;
             var flag = new Rect(x, objectTimeline.Y + 1, labelWidth, 16);
-            bool fits = x >= previousRight && flag.Right <= objectTimeline.Right;
+            // Reserve space up to the next red line, independently of viewport clipping.
+            bool fits = i + 1 == timelineBpmPoints.Length ||
+                (timelineBpmPoints[i + 1].TimeMs - point.TimeMs) * objectTimelineScale >= labelWidth + 3;
+            if (flag.Right <= objectTimeline.X) continue;
             var hit = fits ? flag : new Rect(x - 3, flag.Y, 6, flag.Height);
-            if (DockContentInputAvailable && hit.Contains(mouseX, mouseY)) timelineBpmTooltip = (hit, label);
+            if (DockContentInputAvailable && objectTimeline.Contains(mouseX, mouseY) && hit.Contains(mouseX, mouseY)) timelineBpmTooltip = (hit, label);
             if (!fits) continue;
             c.Fill(flag, Panel, 2);
             c.Fill(flag, 0xE77785, 2, .25f);
             c.Line(x, flag.Y, x, flag.Bottom + 4, 0xE77785, 2);
             c.Text(label, x + 5, flag.Y + 2, 10, Foreground, labelWidth - 10, true);
-            previousRight = flag.Right + 3;
         }
     }
 

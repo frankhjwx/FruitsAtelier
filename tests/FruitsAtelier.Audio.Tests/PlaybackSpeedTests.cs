@@ -40,14 +40,14 @@ internal static class PlaybackSpeedTests
         if (!session.Ended) throw new Exception("An actual transport stop must still end testplay");
     }
 
-    public static void PitchAndDuration()
+    public static void PitchAndDuration(bool adjustPitch = false)
     {
         foreach (int sampleRate in new[] { 44100, 48000 })
         foreach (int channels in new[] { 1, 2 })
-        foreach (double speed in new[] { .1, .25, .2501, .5, .75, 1.5 })
+        foreach (double speed in (adjustPitch ? new[] { .75, 1.5 } : new[] { .1, .25, .2501, .5, .75, 1.5 }))
         {
             var source = new Tone(sampleRate, channels);
-            var tempo = new TempoSampleProvider(source, speed);
+            var tempo = new TempoSampleProvider(source, speed, adjustPitch: adjustPitch);
             var settings = JsonSerializer.SerializeToElement(tempo.Snapshot());
             var defaults = new SoundTouchProcessor { SampleRate = sampleRate, Channels = channels, Tempo = speed };
             foreach (var (name, setting, lowSpeedValue) in new[] {
@@ -83,7 +83,7 @@ internal static class PlaybackSpeedTests
                 int crossings = 0;
                 for (int i = sampleRate / 4; i < sampleRate * 3 / 4; i++)
                     if (result[i * channels + channel] <= 0 && result[(i + 1) * channels + channel] > 0) crossings++;
-                if (Math.Abs(crossings * 2 - (440 + 220 * channel)) > 3)
+                if (Math.Abs(crossings * 2 - (440 + 220 * channel) * (adjustPitch ? speed : 1)) > 3)
                     throw new Exception($"Pitch changed at {speed}: {crossings} Hz");
             }
             if (buffer.Take(3).Concat(buffer.TakeLast(3)).Any(v => v != 0)) throw new Exception("Tempo overwrote the buffer boundary");

@@ -25,6 +25,7 @@ internal static class TestplayRenderCheck
         var cases = new List<object>();
         try
         {
+            TestplayModRenderCheck.Run(canvas, folder);
             foreach (int dpi in new[] { 96, 144, 192 })
             foreach (var size in new[] { (1440, 900), (980, 620), (600, 900) })
             foreach (string locale in new[] { "en", "zh-CN" })

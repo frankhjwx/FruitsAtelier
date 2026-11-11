@@ -129,7 +129,16 @@ public sealed partial class EditorView
         if (syncPage == "resolve" && syncMerges.TryGetValue(syncDifficulty, out var comparisonMerge) && comparisonMerge.Conflicts.Count > 0
             && syncComparisons.ContainsKey(syncDifficulty)) { DrawSynchronization(c); return; }
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
-        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawLibraryCollectionDialog(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
+        if (LibraryVisible)
+        {
+            var libraryPointer = (X: mouseX, Y: mouseY);
+            if (librarySettingsOpen) mouseX = mouseY = -1;
+            try { DrawLibrary(c); }
+            finally { mouseX = libraryPointer.X; mouseY = libraryPointer.Y; }
+            if (librarySettingsOpen) { DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); }
+            else { DrawUpdateNotice(c); DrawLibraryCollectionDialog(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); }
+            return;
+        }
         LayoutDockPanels();
         plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight + PatternEditingBannerHeight, Math.Max(50, canvas.Width - 198 - DiscussionCanvasReserve), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight - PatternEditingBannerHeight));
         overview = OverviewTimelineCollapsed ? default
@@ -156,7 +165,7 @@ public sealed partial class EditorView
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         var pointer = (X: mouseX, Y: mouseY);
         // Covered controls render as if the pointer were outside the window.
-        if (PatternGalleryPopupContains(mouseX, mouseY) || TimingWindowContains(mouseX, mouseY)) mouseX = mouseY = -1;
+        if (librarySettingsOpen || PatternGalleryPopupContains(mouseX, mouseY) || TimingWindowContains(mouseX, mouseY)) mouseX = mouseY = -1;
         try
         {
             c.Fill(new(0, 0, width, height), Background);
@@ -206,40 +215,44 @@ public sealed partial class EditorView
                 c.Fill(ghost, Surface, 4); c.Stroke(ghost, Accent, radius: 4);
                 c.Text(Path.GetFileName(soundPath), ghost.X + 8, ghost.Y + 7, 11, Foreground, 194);
             }
+            if (!librarySettingsOpen) { mouseX = pointer.X; mouseY = pointer.Y; }
+            if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingMuteTooltip(c);
+            if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingLockTooltip(c);
+            if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingToolTooltip(c);
+            if (HitsoundingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
+                && hitsoundingTimingTooltip is { } timingTip && timingTip.Bounds.Contains(mouseX, mouseY))
+                DrawPaletteTooltip(c, timingTip.Text, timingTip.Bounds, left: false, above: false, centered: true);
+            if (!HitsoundingPageVisible && !TimingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
+                && timelineBpmTooltip is { } bpmTip && bpmTip.Bounds.Contains(mouseX, mouseY))
+                DrawPaletteTooltip(c, bpmTip.Text, bpmTip.Bounds, left: false, above: false, centered: true);
+            DrawPatternGalleryOverlay(c);
+            DrawPatternEditingBanner(c);
+            DrawTimingSetup(c);
+            DrawTimingCopyFeedback(c);
+            if (menu >= 0) DrawMenu(c);
+            if (!librarySettingsOpen) DrawContextMenu(c);
+            if (!librarySettingsOpen) DrawLanguageMenu(c);
+            DrawPanelMenu(c);
+            DrawSliderDialog(c);
+            DrawExportOverlay(c);
+            DrawTimeJump(c);
+            DrawStreamDialog(c);
+            DrawRotation(c);
+            DrawBananaEdit(c);
+            DrawVolumeDialog(c);
+            DrawVolumePopover(c);
+            DrawDistanceSnapDialog(c);
+            DrawSongSetup(c);
+            DrawHitsoundCopier(c);
         }
         finally { mouseX = pointer.X; mouseY = pointer.Y; }
-        if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingMuteTooltip(c);
-        if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingLockTooltip(c);
-        if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingToolTooltip(c);
-        if (HitsoundingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
-            && hitsoundingTimingTooltip is { } timingTip && timingTip.Bounds.Contains(mouseX, mouseY))
-            DrawPaletteTooltip(c, timingTip.Text, timingTip.Bounds, left: false, above: false, centered: true);
-        if (!HitsoundingPageVisible && !TimingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
-            && timelineBpmTooltip is { } bpmTip && bpmTip.Bounds.Contains(mouseX, mouseY))
-            DrawPaletteTooltip(c, bpmTip.Text, bpmTip.Bounds, left: false, above: false, centered: true);
-        DrawPatternGalleryOverlay(c);
-        DrawPatternEditingBanner(c);
-        DrawTimingSetup(c);
-        DrawTimingCopyFeedback(c);
-        if (menu >= 0) DrawMenu(c);
-        if (!librarySettingsOpen) DrawContextMenu(c);
-        if (!librarySettingsOpen) DrawLanguageMenu(c);
-        DrawPanelMenu(c);
-        DrawSliderDialog(c);
-        DrawExportOverlay(c);
-        DrawTimeJump(c);
-        DrawStreamDialog(c);
-        DrawRotation(c);
-        DrawBananaEdit(c);
-        DrawVolumeDialog(c);
-        DrawVolumePopover(c);
-        DrawDistanceSnapDialog(c);
-        DrawSongSetup(c);
-        DrawHitsoundCopier(c);
         DrawSettings(c);
+        if (librarySettingsOpen)
+        {
+            DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c);
+            return;
+        }
         DrawCollaborationReport(c);
-        if (librarySettingsOpen) DrawContextMenu(c);
-        if (librarySettingsOpen) DrawLanguageMenu(c);
         DrawGalleryTags(c);
         DrawPatternNameDialog(c);
         DrawDiscussionImagePreview(c);
@@ -649,7 +662,7 @@ public sealed partial class EditorView
         else if (CurrentStarRatingFailed) c.Text("!", r.Right - 10, r.Y + 23, 10, Error, 10, true);
         DrawPreviewMods(c, r);
         DrawPreviewDisplayModes(c, r);
-        float optionsHeight = r.Width < 260 ? 200 : 107;
+        float optionsHeight = 187;
         Rect stage = new(r.X, r.Y + optionsHeight, r.Width, Math.Max(12, r.Height - optionsHeight - 6));
         if (previewDisplayMode != 2)
         {
@@ -675,17 +688,18 @@ public sealed partial class EditorView
             c.Stroke(new(stage.X + 9, referenceTop, referenceWidth, referenceHeight), Chrome(0x2B3442, Grid));
         double scrollSpeed = CatchScrollTiming.PixelsPerMs(PreviewApproachRate, fieldWidth);
         double visibleAhead = (catchY - stage.Y + CatchSize.FruitDiameter(PreviewCircleSize) * fieldWidth / 512 * 1.2) / scrollSpeed;
-        DrawPreviewPlate(c, fieldLeft, fieldWidth, catchY);
+        if (!HiddenMod) DrawPreviewPlate(c, fieldLeft, fieldWidth, catchY);
         DrawPreviewCatcher(c, fieldLeft, fieldWidth, catchY);
         foreach (var item in PreviewObjectsInRange(LazerPresentationTime, LazerPresentationTime + visibleAhead))
         {
             double remaining = item.TimeMs - LazerPresentationTime;
             if (remaining < 0) continue;
             float y = catchY - (float)(remaining * scrollSpeed);
-            DrawCatchObject(c, item, fieldLeft + (float)(item.X / 512) * fieldWidth, y, fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
+            DrawCatchObject(c, item, fieldLeft + (float)(item.X / 512) * fieldWidth, y, fieldWidth, opacity: HiddenMod ? CatchModRules.HiddenOpacity(remaining, PreviewApproachRate) : 1, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
         }
         c.Unclip();
         DrawStoryboardOverlay(c, stage, LibrarySettings.BackgroundDim / 100f);
+        if (FlashlightMod) DrawCatchFlashlight(c, stage, fieldLeft + (float)PreviewCatcherX * fieldWidth / 512, catchY, fieldWidth, PreviewComboAt(LazerPresentationTime), LazerPresentationTime, false);
     }
 
     private void DrawKiaiBadge(ICanvas c)
@@ -833,9 +847,9 @@ public sealed partial class EditorView
         {
             Item(L.Get("project.new"), () => RequestNewProject?.Invoke());
             Item(L.Get("difficulty.templateTab"), OpenMapTemplates);
-            Item(L.Get("ui.openMenu"), () => RequestOpen?.Invoke());
-            Item(L.Get("ui.saveMenu"), () => RequestSave?.Invoke());
-            Item(L.Get("ui.exportMenu"), () => RequestExport?.Invoke());
+            Item(ShortcutMenuLabel(L.Get("ui.openMenu"), "open"), () => RequestOpen?.Invoke());
+            Item(ShortcutMenuLabel(L.Get("ui.saveMenu"), "save"), () => RequestSave?.Invoke());
+            Item(ShortcutMenuLabel(L.Get("ui.exportMenu"), "export"), () => RequestExport?.Invoke());
             Item(L.Get("library.exportOsz"), () => RequestOszExport?.Invoke());
             Item(L.Get("faz.export"), () => ShowFazExportChoice());
             Item(L.Get("fad.export"), () => RequestFadExport?.Invoke(activeDifficulty));
@@ -849,20 +863,20 @@ public sealed partial class EditorView
         }
         else if (menu == 1)
         {
-            Item(L.Get("ui.undoMenu"), Undo, history.CanUndo);
-            Item(L.Get("ui.redoMenu"), Redo, history.CanRedo);
+            Item(ShortcutMenuLabel(L.Get("ui.undoMenu"), "undo"), Undo, history.CanUndo);
+            Item(ShortcutMenuLabel(L.Get("ui.redoMenu"), "redo"), Redo, history.CanRedo);
             Item(L.Get("history.menu"), ShowVersionHistory, WorkspaceSession is not null);
-            Item(L.Get("history.revertSave") + "  Ctrl+L", RequestPreviousSave, WorkspaceSession is not null && !VersionHistoryBusy);
+            Item(ShortcutMenuLabel(L.Get("history.revertSave") + "  Ctrl+L", "rollback"), RequestPreviousSave, WorkspaceSession is not null && !VersionHistoryBusy);
             Item(L.Get("history.togglePointCurve"), TogglePointCurve, SelectedTrack is not null && anchorSelection.Count == 1 && draftTrack == Guid.Empty && !notesLocked);
-            Item(L.Get("ui.deleteMenu"), DeleteSelection, selection != Guid.Empty);
-            Item(L.Get("editor.command.reverseSelection") + "  Ctrl+G", ReverseSelection, CanCopySelection && !notesLocked);
-            Item(L.Get("rotation.title") + "  Ctrl+Shift+R", OpenRotation, CanCopySelection && !notesLocked);
+            Item(ShortcutMenuLabel(L.Get("ui.deleteMenu"), "delete"), DeleteSelection, selection != Guid.Empty);
+            Item(ShortcutMenuLabel(L.Get("editor.command.reverseSelection") + "  Ctrl+G", "reverse"), ReverseSelection, CanCopySelection && !notesLocked);
+            Item(ShortcutMenuLabel(L.Get("rotation.title") + "  Ctrl+Shift+R", "rotate"), OpenRotation, CanCopySelection && !notesLocked);
             Item(L.Get("editor.command.reversePath"), ReverseSelectedPath, SelectedTrack is not null && ClipboardInteractionReady && !notesLocked);
             Item(L.Get("ui.splitMenu"), SplitSelected, SelectedTrack is not null && draftTrack == Guid.Empty);
-            Item(L.Get("ui.cutMenu"), () => CutSelection(), CanCopySelection);
-            Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection || CanCopyTimestamp);
-            Item(L.Get("ui.pasteMenu"), RequestClipboardPaste, ClipboardInteractionReady && (CanPasteSelection || RequestPasteObjects is not null));
-            if (CanEditBananas) Item(L.Get("bananaEdit.title") + "  Ctrl+F", OpenBananaEdit, !notesLocked);
+            Item(ShortcutMenuLabel(L.Get("ui.cutMenu"), "cut"), () => CutSelection(), CanCopySelection);
+            Item(ShortcutMenuLabel(L.Get("ui.copyMenu"), "copy"), () => CopySelection(), CanCopySelection || CanCopyTimestamp);
+            Item(ShortcutMenuLabel(L.Get("ui.pasteMenu"), "paste"), RequestClipboardPaste, ClipboardInteractionReady && (CanPasteSelection || RequestPasteObjects is not null));
+            if (CanEditBananas) Item(ShortcutMenuLabel(L.Get("bananaEdit.title") + "  Ctrl+F", "bananaEdit"), OpenBananaEdit, !notesLocked);
             Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), ShowPatternDock, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
@@ -893,10 +907,10 @@ public sealed partial class EditorView
             Item(L.Get("timing.signature"), () => gridLevelMenuOpen = true);
             Item(L.Get("timing.metronome"), () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }, active: metronomeEnabled);
             Separator();
-            Item(L.Get("timing.addRed"), () => AddTimingPoint(false));
-            Item(L.Get("timing.addGreen"), () => AddTimingPoint(true));
+            Item(ShortcutMenuLabel(L.Get("timing.addRed"), "addRed"), () => AddTimingPoint(false));
+            Item(ShortcutMenuLabel(L.Get("timing.addGreen"), "addGreen"), () => AddTimingPoint(true));
             Item(L.Get("timing.reset"), () => OpenTimingCommand("reset"));
-            Item(L.Get("timing.delete"), DeleteCurrentTiming);
+            Item(ShortcutMenuLabel(L.Get("timing.delete"), "deleteTiming"), DeleteCurrentTiming);
             Item(L.Get("timing.resnap"), () => ResnapTimingSection(false));
             Separator();
             Item(L.Get("timing.setup"), OpenTimingSetup);

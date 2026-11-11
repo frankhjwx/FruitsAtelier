@@ -3,6 +3,11 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--testplay-mods-check")) { TestplayModTests.Run(); PreviewSidebarTests.Sidebar(); TestplayStartupDelayTests.IndependentSpeed(); DockPersistenceTests.Run(); InspectorPanelsTests.Run(); TestplayTests.LivePlate(); DockingTests.Run(); PreviewSidebarTests.DisplayModesAndOverscan(); return 0; }
+if (args.Contains("--selection-gap-performance")) { SelectionGapTests.Performance(); return 0; }
+if (args.Contains("--selection-gap-check")) { SelectionGapTests.Run(); FruitStackSettingsTests.Run(); TestplayTests.LivePlate(); Console.WriteLine("PASS selection gaps and fruit stack preferences"); return 0; }
+if (args.Contains("--settings-modal-check")) { SettingsTests.ModalInput(); SettingsTests.Navigation(); SettingsTests.ApplyState(); SettingsTests.Layout(); KeybindingTests.Run(); return 0; }
+if (args.Contains("--keybindings-check")) { KeybindingTests.Run(); SettingsTests.Navigation(); SettingsTests.ApplyState(); TestplayTests.Bindings(); TestplayTests.ExtendedBindings(); return 0; }
 if (args.Contains("--timing-presentation-check")) { TimingPresentationTests.Run(); return 0; }
 if (args.Contains("--placement-bounds-check")) { FeedbackBugTests.PlacementBounds(); return 0; }
 if (args.Contains("--hidden-path-double-click-check")) { FeedbackBugTests.HiddenPathDoubleClick(); return 0; }
@@ -429,6 +434,8 @@ var tests = new (string Name, Action Run)[]
     ("Mapping Snap families and overview volume routing", MappingSessionTests.SnapAndVolume),
     ("Mapping boundary distances, DS equality and pointer exit", MappingSessionTests.DistanceAndHover),
     ("Mapping marquee playback and banana timeline resizing", MappingSessionTests.MarqueeAndBanana),
+    ("Selected object end-to-start gaps in Catch DS Indicator", SelectionGapTests.Run),
+    ("Testplay fruit stack display preferences", FruitStackSettingsTests.Run),
     ("Mapping independent zoom and Combo preferences", MappingSessionTests.Preferences),
     ("Mapping per-difficulty editing preferences survive restart", MappingSessionTests.MapPreferences),
     ("Object snap follows musical ranges and preserves time and preferences", ObjectSnapTests.Run),
@@ -474,6 +481,7 @@ var tests = new (string Name, Action Run)[]
     ("Completing an FSlider replaces same-time fruits across coordinates and undoes atomically", SliderHeadReplacementTests.OnCompletion),
     ("Final stream fruit accepts lower-half hit and box movement translates the stream", StreamFruitDragTests.Run),
     ("Stream middle fruits edit isolated samples and endpoints drag with undo and cancellation", StreamFruitDragTests.EditEvents),
+    ("Shared Testplay and Preview mod combinations", TestplayModTests.Run),
     ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup explicitly synchronizes metadata, colours and design", SongSynchronizationTests.Run),
@@ -500,6 +508,8 @@ var tests = new (string Name, Action Run)[]
     ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
     ("Map droplet defaults and compensation target preserve drafts and support history", DropletDerandomizationTests.Run),
+    ("Custom shortcut settings preserve scopes, modes and conflicts", KeybindingTests.Run),
+    ("Settings blocks covered hover and input", SettingsTests.ModalInput),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
     ("Experimental snap settings, wheel and Stream/Stack", ExperimentalSnapTests.Run),

@@ -13,6 +13,7 @@ internal static class TimingPresentationTests
             foreach (var size in new[] { (980, 620), (1440, 900) })
             {
                 L.SetLanguage(locale);
+                MappingFlagEdges(size.Item1, size.Item2);
                 var map = new MapDocument { DurationMs = 20000 };
                 map.TimingPoints.AddRange([
                     new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 1, Volume = 60 },
@@ -61,6 +62,33 @@ internal static class TimingPresentationTests
         }
         finally { L.SetLanguage(language); }
         MergedTracks();
+    }
+
+    private static void MappingFlagEdges(int width, int height)
+    {
+        var map = new MapDocument { DurationMs = 30000 };
+        map.TimingPoints.Add(new() { TimeMs = 10000, BeatLengthMs = 500 });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(width, height); ui.Paint();
+        var original = ui.View.Document.DeepClone();
+        var conversion = ui.View.Conversion;
+        var timeline = ui.View.ObjectTimelineBounds;
+        double scale = ui.View.ObjectTimelinePixelsPerMs;
+        string label = L.Get("timeline.bpmValue", 120d);
+        float labelWidth = ((FruitsAtelier.App.Rendering.ICanvas)ui.Canvas).MeasureText(label, 10, true) + 10;
+        foreach (float offset in new[] { -labelWidth - 1, -labelWidth + 1, -1, 0, 1,
+                     timeline.Width - labelWidth - 1, timeline.Width - labelWidth + 1, timeline.Width - 1 })
+        {
+            ui.View.UpdateTransport(10000 + (timeline.Width / 2 - offset) / scale, 30000, true, false, false, null, null);
+            ui.Paint();
+            var flags = ui.Canvas.Texts.Where(t => t.Value == label && t.Y >= timeline.Y && t.Y < timeline.Bottom).ToArray();
+            Check(flags.Length == (offset + labelWidth > 0 ? 1 : 0),
+                "BPM flags must draw while partially visible at either viewport edge");
+            if (flags.Length > 0)
+                Check(Math.Abs(flags[0].X - timeline.X - offset - 5) < .01,
+                    "Clipped BPM flags must keep their red-line anchor without jumping");
+        }
+        Check(original.ContentEquals(ui.View.Document) && ReferenceEquals(conversion, ui.View.Conversion),
+            "BPM edge scrolling must preserve content and reuse conversion");
     }
 
     private static void MergedTracks()

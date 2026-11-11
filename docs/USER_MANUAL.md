@@ -148,7 +148,11 @@ On Windows, try General's Display mode if sound and picture seem delayed. Audio 
 
 ### Testplay preferences
 
-In **Testplay**, change movement and dash bindings, lead-in (0–5 seconds), starting speed, combo count and background dim. Click a binding and press a key; Escape cancels capture. Reusing a bound key swaps the assignments. Apply saves the draft.
+In **Testplay**, change lead-in (0–5 seconds), starting speed, combo count and background dim.
+Movement and dash buttons open **Shortcuts**, where each interface and Default/lazer
+profile has its own bindings. Record a combination, choose **Use binding**, and confirm
+any replacement. Apply saves the draft. [Custom shortcuts](EDITOR_UI.md#custom-shortcuts)
+describes search, alternate bindings, clearing and resets.
 
 **Dim Background** makes preview and Testplay backgrounds completely black. Turning it off restores the chosen dim percentage.
 
@@ -413,9 +417,9 @@ Choose **4:3**, **16:9** or **Fit** in the preview controls. Fit uses the availa
 
 These choices change the preview layout, not the map's coordinates. To change the authoring view, use canvas Zoom.
 
-### NM, Easy and Hard Rock
+### Shared Testplay mods
 
-Select **NM**, **Easy** or **Hard Rock** to inspect the corresponding difficulty and position rules. The effective **AR** controls falling speed; slider SV does not set the preview's falling speed.
+Choose **Easy**, **Half Time**, **Hard Rock**, **Double Time**, **Hidden** and **Flashlight** in Preview or the **Testplay** tab. Both selectors share one combination; deselect all buttons for NM. Easy/Hard Rock and Half Time/Double Time are mutually exclusive. The effective **AR** controls falling speed; slider SV does not set the preview's falling speed. See [Catch rendering](CATCH_RENDERING.md#shared-testplay-mods) for the effects and shared settings.
 
 Preview mods do not rewrite the saved AR, CS or authored objects. Testplay starts with the selected preview mod. The Movement strain graph continues to show the normal-mode calculation.
 
@@ -1185,7 +1189,7 @@ and proposed additions, see the compatibility review.
 - Selection-dependent commands require a compatible selection. Lock Notes blocks
   moving, reshaping and deleting existing objects, but allows selection, playback,
   placement, flags and undo/redo.
-- Only testplay movement and dash bindings are configurable in Settings.
+- Keyboard command bindings are configurable in **Settings → Key Bindings**, independently for Default and Lazer. The tables below describe factory defaults.
 
 ### Experimental lazer editing
 
@@ -1455,12 +1459,11 @@ to Compose before moving selected objects.
 
 Combo visibility is configured in **Settings → Testplay keys** and has no shortcut.
 
-Change movement and dash in **Settings → Testplay keys**: click a binding, press
-the new key, then Apply. Esc cancels capture; reusing an assigned key swaps the
-two assignments. Esc, Tab, F1–F3 and F12 are reserved. Supported keys include letters,
-digits, arrows/navigation keys, modifiers, keypad keys, punctuation, F4–F11 and F13–F24.
-OS/media keys are not supported. System shortcuts can intercept some combinations.
-Prefer bindings that do not overlap Ctrl+P, Ctrl+B, Ctrl+R, Ctrl+Up/Down or Alt+arrows while held.
+Change movement and dash in **Settings → Key Bindings → Testplay**. Choose Default or
+Lazer, click a binding, press a key combination, then **Use binding**. Confirm any
+conflicting assignment before replacing it. **Apply** saves the draft. Use the
+recorder's mouse buttons to cancel or clear; Esc and Enter can be assigned too.
+System shortcuts can intercept some combinations. See [Custom shortcuts](EDITOR_UI.md#custom-shortcuts).
 
 ### Text fields, Library and other dialogs
 

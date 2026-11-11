@@ -225,10 +225,7 @@ internal static class DifficultyTabTests
             foreach (int mod in new[] { 0, 1, 2 })
             {
                 canvas.Clear(); view.Render(canvas, 1440, 900);
-                string key = mod switch { 1 => "preview.easy", 2 => "preview.hardRock", _ => "preview.normal" };
-                var button = canvas.Texts.Single(t => t.Value == L.Get(key));
-                view.PointerDown(button.X + 2, button.Y + 2, 0, false, false);
-                view.PointerUp(button.X + 2, button.Y + 2, 0);
+                view.LibrarySettings.TestplayMods = mod switch { 1 => CatchMods.Easy, 2 => CatchMods.HardRock, _ => CatchMods.None };
                 canvas.Clear(); view.Render(canvas, 1440, 900);
                 var exported = OsuBeatmapWriter.Serialize(view.Document);
                 var objects = CatchDifficultyObjects.Create(exported.ReadBack, hardRock: mod == 2);

@@ -79,7 +79,7 @@ public sealed class MacAudio : IDisposable
             lock (gate)
             {
                 if (disposed || token.IsCancellationRequested) return;
-                player = candidate; Rate(player, (float)playbackSpeed); candidate = 0; cachePath = temporary; temporary = null; loading = false;
+                player = candidate; Rate(player, (float)playbackSpeed, adjustPitch ? 1 : 0); candidate = 0; cachePath = temporary; temporary = null; loading = false;
             }
         }
         catch (OperationCanceledException) { }
@@ -110,7 +110,7 @@ public sealed class MacAudio : IDisposable
                 var message = new StringBuilder(2048);
                 nint replacement = Open(cachePath ?? path!, message, message.Capacity);
                 if (replacement == 0) { error = L.Get("files.failed", message.ToString()); return; }
-                Close(player); player = replacement; Volume(player, muted ? 0 : outputVolume); Rate(player, (float)playbackSpeed);
+                Close(player); player = replacement; Volume(player, muted ? 0 : outputVolume); Rate(player, (float)playbackSpeed, adjustPitch ? 1 : 0);
             }
             StartPlayback();
             if (!playbackRequested) error = L.Get("mac.audioPlayFailed");
@@ -126,18 +126,19 @@ public sealed class MacAudio : IDisposable
             if (pending) Rearm(player, playbackMapStart / 1000);
         }
     }
-    public void SetPlaybackSpeed(double speed)
+    private bool adjustPitch;
+    public void SetPlaybackSpeed(double speed, bool shiftPitch = false)
     {
         if (!double.IsFinite(speed) || speed < .1 || speed > 1.5) return;
         lock (gate)
         {
-            if (speed == playbackSpeed) return;
+            if (speed == playbackSpeed && shiftPitch == adjustPitch) return;
             bool resume = State.IsPlaying;
             double position = State.PositionMs;
             Pause();
-            playbackSpeed = speed;
+            playbackSpeed = speed; adjustPitch = shiftPitch;
             if (player == 0) return;
-            Rate(player, (float)speed);
+            Rate(player, (float)speed, adjustPitch ? 1 : 0);
             Rearm(player, position / 1000);
             if (resume) StartPlayback();
         }
@@ -193,7 +194,7 @@ public sealed class MacAudio : IDisposable
     }
     [DllImport("FruitsAtelierAudio", EntryPoint="fa_audio_host_time")] private static extern double HostTime();
     [DllImport("FruitsAtelierAudio", EntryPoint="fa_audio_rearm")] private static extern int Rearm(nint player, double position);
-    [DllImport("FruitsAtelierAudio", EntryPoint="fa_audio_rate")] private static extern void Rate(nint player, float rate);
+    [DllImport("FruitsAtelierAudio", EntryPoint="fa_audio_rate")] private static extern void Rate(nint player, float rate, int adjustPitch);
     private const string Library = "FruitsAtelierAudio";
     [DllImport(Library, EntryPoint="fa_audio_open")] private static extern nint Open([MarshalAs(UnmanagedType.LPUTF8Str)] string path, StringBuilder error, int capacity);
     [DllImport(Library, EntryPoint="fa_audio_close")] private static extern void Close(nint handle);

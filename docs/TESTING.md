@@ -1,5 +1,41 @@
 # Building and Testing
 
+## Settings modal input
+
+`App.Tests --settings-modal-check` verifies that Settings blocks background hover,
+clicks, drags, double-clicks, scrolling, file drops and keyboard commands in the
+library and editor. It also checks Settings search input, navigation, Apply and
+layout, plus key recording and conflict dialogs. The keybindings native render
+check captures covered library and editor controls with the pointer over them.
+
+## Custom keyboard bindings
+
+`App.Tests --keybindings-check` verifies command IDs and descriptions, old-setting
+compatibility, custom chords, removed defaults, independent interfaces and editing
+profiles, recorder ownership, collision cancellation/replacement, persistence and
+English/Chinese layout. The full App suite includes Testplay key recording and
+existing shortcut, Settings, text-input and gameplay regressions.
+
+On Windows, `FruitsAtelier.App --render-check --keybindings-render-check` opens the
+native Settings page through pointer input and captures the default and customized
+lists, Hitsounding command descriptions, key recorder and conflict dialog in English and Chinese under `artifacts/tests/keybindings-native`.
+Inspect these images for complete rows, keycap labels and modal button spacing.
+
+## Selected object intervals and testplay stacks
+
+`App.Tests --selection-gap-check` verifies Catch-only DS Indicator intervals for
+fruits, repeated FSliders and Legacy sliders, and banana showers, including overlap,
+touching intervals, Ctrl-click selection in either order, undo, selection clearing and conversion reuse. It also checks
+stack preference defaults, cancellation, persistence and unchanged judgments,
+with English/Chinese settings layouts. `--movement-overlay-check`,
+`--mapping-canvas-check` and `--cache-lifetime-check` cover the shared panel and caches.
+`--selection-gap-performance` reports cold rendering and warm pointer, rendering
+and gap-lookup CPU time and allocation on a mixed-object map.
+Windows `FruitsAtelier.App --render-check --selection-gap-render-check` exercises
+selection and the Appearance checkbox beside Hit lighting in both languages,
+two window sizes and three DPI scales. Captures go under
+`artifacts/tests/selection-gap/native`.
+
 ## Feedback editing regressions
 
 `App.Tests --placement-bounds-check` checks Catch fruit placement and previews in
@@ -1820,3 +1856,18 @@ one-second popup and its fade, plus copy/paste menus in English and Chinese at
 creation and snapped previews at the canvas centre, marquee selection in both tools, atomic matching/empty/conflicting clipboard
 pastes, slider head/tail timing, reverse shortcuts, undo/redo and cancellation in
 English and Chinese.
+
+
+## Testplay mod combinations
+
+`App.Tests --testplay-mods-check` checks shared Preview/Testplay selection,
+mutual exclusions, AR/CS, configured clock rate, settings persistence, content
+isolation, Hidden fade timing, and dock layout restoration.
+`Audio.Tests --mod-speed-check` checks both pitch-preserving custom speed and
+DT/HT pitch-adjusted output frequency and duration using in-memory PCM.
+
+`FruitsAtelier.App --testplay-render-check` also renders text mod controls and
+Hidden/Flashlight gameplay at compact and wide sizes in English and Chinese,
+and checks native Flashlight mask pixels. Set `FRUITS_TEST_SKIN` to a skin
+directory to inspect its real HUD mod artwork. The check does not save that skin
+preference. Output remains under `artifacts/tests/testplay-native/`.

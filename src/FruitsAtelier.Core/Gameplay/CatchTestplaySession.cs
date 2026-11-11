@@ -44,7 +44,36 @@ public sealed class CatchTestplaySession
     public double X { get { lock (gate) return game.X; } }
     public int Combo { get { lock (gate) return game.Combo; } }
     public double TransportPosition { get { lock (gate) return time - outputLead; } }
-    public bool UsesKey(int key) => key is not (114 or 123) && (key == left || key == right || key == dash);
+    private ShortcutBinding[][]? movementBindings;
+    private ShortcutBinding[] commandBindings = [];
+    public bool HasChordBindings => movementBindings is not null;
+    public bool UsesKey(int key) => HasChordBindings ? key is > 0 and < 255 : key is not (114 or 123) && (key == left || key == right || key == dash);
+    public void ConfigureBindings(ShortcutBinding[] leftBindings, ShortcutBinding[] rightBindings,
+        ShortcutBinding[] dashBindings, ShortcutBinding[] commands)
+    {
+        lock (gate)
+        {
+            movementBindings = [leftBindings, rightBindings, dashBindings]; commandBindings = commands; keys.Clear();
+        }
+    }
+    private bool MovementHeld(int index, int legacyKey)
+    {
+        if (movementBindings is null) return keys.Contains(legacyKey);
+        foreach (var binding in movementBindings[index])
+        {
+            if (!binding.Held(keys, exactModifiers: false)) continue;
+            bool blocked = false;
+            foreach (var command in commandBindings)
+            {
+                if (!command.Held(keys)) continue;
+                foreach (int key in command.Keys)
+                    if (!ShortcutBinding.Modifier(key) && binding.Keys.Contains(key)) { blocked = true; break; }
+                if (blocked) break;
+            }
+            if (!blocked) return true;
+        }
+        return false;
+    }
     private double Realtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
 
     public CatchTestplaySession(CatchTestplay game, CatchTestplayClock clock, double start, bool withAudio,
@@ -156,6 +185,7 @@ public sealed class CatchTestplaySession
     }
     public void SetKey(int key, bool down)
     {
+        key = ShortcutBinding.Normalize(key);
         if (!UsesKey(key)) return;
         lock (gate)
         {
@@ -164,8 +194,8 @@ public sealed class CatchTestplaySession
             Advance();
             if (down)
             {
-                if (!paused && !awaitingResume) autoplay = false;
                 keys.Add(key);
+                if (!paused && !awaitingResume && (!HasChordBindings || MovementHeld(0, left) || MovementHeld(1, right) || MovementHeld(2, dash))) autoplay = false;
             }
             else keys.Remove(key);
         }
@@ -179,7 +209,7 @@ public sealed class CatchTestplaySession
     {
         if (ended || paused || awaitingResume || WithAudio && !audioStarted || !clock.IsRunning) return;
         time = clock.At(Realtime);
-        game.Advance(time, keys.Contains(left), keys.Contains(right), keys.Contains(dash), autoplay);
+        game.Advance(time, MovementHeld(0, left), MovementHeld(1, right), MovementHeld(2, dash), autoplay);
         advanced?.Invoke(time);
         plate.Prune(time);
         int expiredLighting = 0;
@@ -194,7 +224,7 @@ public sealed class CatchTestplaySession
         {
             var frame = new CatchTestplayFrame(time, game.X, game.Combo, game.FacingLeft, game.HyperDashing,
                 ended, error, game.JudgedCount, game.MissedObjects.ToArray(), game.Trails.ToArray(), comboChanges.ToArray(),
-                plate.At(time, game.X).ToArray(), autoplay, keys.Contains(dash), game.Hit300, game.Hit100, game.Hit50, game.Misses)
+                plate.At(time, game.X).ToArray(), autoplay, MovementHeld(2, dash), game.Hit300, game.Hit100, game.Hit50, game.Misses)
             { Lighting = lighting.ToArray() };
             comboChanges.Clear();
             return frame;

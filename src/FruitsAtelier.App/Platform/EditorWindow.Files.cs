@@ -144,7 +144,8 @@ internal sealed partial class EditorWindow
             else { view.PrimeScheduledHitsounds(audio.PositionMs >= audio.DurationMs - 1 ? 0 : audio.PositionMs); audio.Play(); }
             PollAudio();
         };
-        view.RequestPlaybackSpeed = speed => audio.SetPlaybackSpeed(speed);
+        view.RequestPlaybackSpeed = speed => audio.SetPlaybackSpeed(speed, view.PlaybackAdjustPitch);
+        audio.SetPlaybackSpeed(view.PlaybackSpeed, view.PlaybackAdjustPitch);
         view.RequestSeek = time =>
         {
             if (!audio.CanPlay) return;

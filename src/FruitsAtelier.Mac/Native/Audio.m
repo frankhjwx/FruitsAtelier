@@ -115,7 +115,9 @@ int fa_audio_rearm(void *handle, double seconds) {
     fa_audio_seek(handle, seconds);
     return 1;
 }
-void fa_audio_rate(void *handle, float rate) {
+void fa_audio_rate(void *handle, float rate, int adjustPitch) {
     FAMusic *music = (__bridge FAMusic *)handle;
-    music.tempo.rate = rate; music.tempo.bypass = rate == 1;
+    music.tempo.rate = rate;
+    music.tempo.pitch = adjustPitch ? 1200 * log2f(rate) : 0;
+    music.tempo.bypass = rate == 1;
 }

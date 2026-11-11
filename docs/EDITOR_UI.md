@@ -485,7 +485,8 @@ geometric position, including the placement marker in the upper timeline.
 Combo colour also takes precedence over skin slider-track overrides in this view.
 Alt+wheel over the upper object timeline changes its time scale independently of
 osu! canvas zoom. In Mapping, small BPM flags attach to red timing lines at the top
-of the object timeline. Dense labels are suppressed to avoid overlap; hover over
+of the object timeline and clip smoothly at its edges. Labels without room before
+the next red line are suppressed independently of scrolling; hover over
 the flag or its red marker to read the BPM.
 
 Slider bodies retain a white border and a brighter centre with darker edges.
@@ -679,6 +680,9 @@ visible time range over 200 ms. It starts at 6000 ms and ranges from 500 to
 and testplay. **Follow mode** enables it in lazer editing and disables it in
 Mapping; **On** and **Off** override that choice. Apply saves the preference;
 closing Settings discards unapplied changes.
+**Testplay fruit stack**, beside Hit lighting, controls caught fruit sprites on the
+testplay catcher. It defaults to on and does not affect judgments or Catch Preview.
+Apply saves the preference; closing Settings discards unapplied changes.
 Keyboard and mouse differences are listed in the
 [shortcut manual](KEY_BINDINGS.md#experimental-lazer-editing).
 
@@ -1120,7 +1124,50 @@ Video and storyboard visuals follow transport playback; see the shared
 Enable Video/Storyboard preference below.
 Audio, Advanced and preferred-skin controls are not part of Song Setup.
 
+## Custom shortcuts
+
+**Settings → Key Bindings** edits keyboard bindings for Global, Library, Compose,
+Timing, Control points, Hitsounding, Testplay, Patterns and Samples. The list groups
+related commands and shows short descriptions, editable keycaps, an **+** action for
+alternate bindings, and a per-command reset. Custom keycaps and changed commands’
+reset icons use gold; restoring factory bindings restores their normal colour.
+The standard desktop layout shows at least twelve command rows; shorter windows scroll the list while retaining the search,
+interface/mode controls and Apply button. Search matches command names, descriptions
+and displayed keys across all interfaces, retaining their group headings. Clearing
+search returns to the selected interface; selecting an interface clears the search.
+
+**Default** and **Lazer** are independent profiles, including their Testplay controls.
+Selecting a profile here does not activate that editing mode. Existing settings retain
+their movement keys as defaults in both profiles until customized.
+
+Click a keycap, press a simultaneous combination, then choose **Use binding**.
+Modifiers, function keys, punctuation and multiple ordinary keys can be combined.
+The recorder consumes received keys without executing editor commands. Use its mouse
+buttons to confirm, cancel or clear a binding; Enter and Esc can themselves be assigned.
+Keys intercepted by the operating system cannot be recorded reliably.
+
+A collision in the same profile and overlapping interface prompts before replacement.
+Global bindings overlap every interface. A shorter simultaneous chord also conflicts
+with a longer chord using the same modifiers and containing those keys. **Replace
+binding** removes the conflicting assignments from the listed commands and assigns
+the new chord. Cancel preserves both. Other profiles and disjoint interfaces remain
+independent. Per-command reset checks collisions too; **Reset** confirms
+before restoring factory bindings across that profile's interfaces.
+
+**Apply** saves and activates the entire settings draft. Category switches retain it;
+closing Settings discards unapplied changes. Shortcut preferences never enter beatmap
+undo history. Text fields and dialogs retain their editing/navigation controls, and
+commands keep their existing selection, drawing and undo guards. Testplay movement
+supports held chords and alternate keys; dash can be held together with movement.
+
 ## Settings
+
+All Settings categories share a 1200 × 800 logical-pixel panel, constrained to
+the available window size. Switching categories preserves its size and position.
+
+Settings is modal: covered controls do not highlight or receive clicks, drags,
+double-clicks, scrolling, text or keyboard commands. Settings controls and its
+child dialogs remain interactive; closing Settings restores the underlying view.
 
 **Settings → Experimental** can enable 1/24, 1/32 and 1/48 snap divisions.
 It also extends upper object-timeline zoom from 1.5 to 16 DIP/ms. Use its +/−
@@ -1274,8 +1321,8 @@ returns to the position where testplay began. Gameplay does not change hit objec
 aspect ratio; it reserves no space for navigation controls. Release Esc before
 pressing it again to navigate from the editor to Library.
 
-In **Library → Settings**, click the left, right or dash binding and press a supported key. See the [user manual](USER_MANUAL.md#testplay) for supported keys and reserved shortcuts. Esc cancels capture; choosing an already assigned
-key swaps the two bindings. **Apply** saves the bindings across restarts.
+Movement and dash controls in **Settings → Testplay** open the shared
+[shortcut editor](#custom-shortcuts). First-time setup retains its single-key movement fields.
 
 ## Object timeline and playback speed
 
@@ -1601,6 +1648,13 @@ A compact movement panel uses a consistent font size, aligned left/right readout
 **Selection Rect**, immediately right of **Slider Path**, toggles the selected-object bounding box and its move/scale interaction regions. It defaults to on and highlights while enabled. The choice lasts for the editor session and does not change selection, map content or undo history. The shorter Zoom slider leaves room for this button.
 
 Slider Path, Selection Rect and Movement Analysis use equal-width buttons. Long localized labels use a smaller font down to 10 DIP, then wrap onto two lines when needed in the compact toolbar. Wrapping prefers spaces and localized word-break hints. Text fitting measures the enabled button's font so toggling a button retains its layout; results are refreshed when the language or compact layout changes.
+
+With exactly two complete objects selected on the Catch canvas, the DS Indicator's
+bottom row shows **Object gap**: the later object's start minus the earlier object's
+complete end, including all slider repeats. Fruits have zero duration. Overlaps show
+negative values and touching intervals show zero. Equal-start ties follow timeline
+source order. Anchor and child-event selections do not supply this measurement;
+the osu canvas does not show it.
 
 Drag any corner of the floating movement panel to resize it proportionally, including its labels and numeric controls. The opposite corner stays fixed, and the panel remains inside the canvas. Size and position are saved with the workspace layout. The panel’s context menu offers independent **Reset position** and **Reset scale** actions; resetting scale restores 100% while retaining the position, clamped inside the canvas.
 

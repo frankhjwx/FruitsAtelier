@@ -258,12 +258,14 @@ public sealed partial class EditorView
         drag = DragKind.None;
     }
 
+    private bool playbackPitchAdjusted;
+    public bool PlaybackAdjustPitch => (LibrarySettings.TestplayMods & (CatchMods.DoubleTime | CatchMods.HalfTime)) != 0;
     public void SetPlaybackSpeed(double speed)
     {
-        if (!double.IsFinite(speed) || speed < .1 || speed > 1.5 || speed == PlaybackSpeed) return;
+        if (!double.IsFinite(speed) || speed < .1 || speed > 1.5 || speed == PlaybackSpeed && playbackPitchAdjusted == PlaybackAdjustPitch) return;
         testplay?.SetPlaybackSpeed(speed);
         ResetHitsounds();
-        PlaybackSpeed = speed;
+        PlaybackSpeed = speed; playbackPitchAdjusted = PlaybackAdjustPitch;
         RequestPlaybackSpeed?.Invoke(speed);
     }
 

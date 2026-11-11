@@ -63,6 +63,7 @@ public sealed partial class EditorView
         ConfigurePatternGallery(Path.Combine(LibrarySettings.Workspace, "Patterns"));
         RestoreMapEditingPreferences();
         RestoreDockLayouts();
+        SetPlaybackSpeed(CatchModRules.ClockRate(LibrarySettings.TestplayMods));
         playbackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
         canvasZoom = LibrarySettings.CanvasZoom;
         canvasTimeZoom = LibrarySettings.CanvasTimeZoom;
@@ -728,7 +729,7 @@ public sealed partial class EditorView
         if (key == 27 && settingsColourIndex >= 0) { CancelSettingsColourPicker(); return; }
         if (key == 27) FinishVolumeDrag();
         if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else if (librarySettingsOpen) CloseSettings(); else resourcePage = false; return; }
-        if (key == 116) { if (!FirstRunSetupVisible) StartLibraryScan(); return; }
+        if (key == 116 && !librarySettingsOpen) { if (!FirstRunSetupVisible) StartLibraryScan(); return; }
         if (!librarySettingsOpen && ctrl && key == 70) { libraryField = 2; SelectInput("library:2", libraryQuery); return; }
         if (key == 13 && libraryField < 0 && !librarySettingsOpen && !resourcePage && libraryBrowser?.Selected?.Map is { } map)
         { OpenSelectedLibraryMap(map); return; }
@@ -745,7 +746,7 @@ public sealed partial class EditorView
     }
     private string LibraryFieldValue
     {
-        get => libraryField switch { 0 => draftWorkspace, 1 => draftOsuRoot, 2 => libraryQuery, 3 => exportName, 4 => draftDefaultSkin, 5 => settingsColourHex, 6 => collectionDialogText, 7 => draftMapperUsernames, _ => "" };
-        set { switch (libraryField) { case 7: draftMapperUsernames = value; break; case 0: draftWorkspace = value; break; case 1: draftOsuRoot = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; case 4: draftDefaultSkin = value; break; case 6: collectionDialogText = value; collectionDialogScroll = 0; collectionDialogError = ""; break; case 5: settingsColourHex = value; settingsColourError = ""; break; } }
+        get => libraryField switch { 0 => draftWorkspace, 1 => draftOsuRoot, 2 => libraryQuery, 3 => exportName, 4 => draftDefaultSkin, 5 => settingsColourHex, 6 => collectionDialogText, 8 => shortcutQuery, 7 => draftMapperUsernames, _ => "" };
+        set { switch (libraryField) { case 8: shortcutQuery = value; workspaceScroll = 0; break; case 7: draftMapperUsernames = value; break; case 0: draftWorkspace = value; break; case 1: draftOsuRoot = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; case 4: draftDefaultSkin = value; break; case 6: collectionDialogText = value; collectionDialogScroll = 0; collectionDialogError = ""; break; case 5: settingsColourHex = value; settingsColourError = ""; break; } }
     }
 }
