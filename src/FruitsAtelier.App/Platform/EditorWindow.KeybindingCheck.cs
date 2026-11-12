@@ -37,6 +37,13 @@ internal sealed partial class EditorWindow
                 view.Wheel(r.X + 400, r.Y + 400, -12000, false); Paint(); Capture(locale + "-hitsounding");
                 view.LibrarySettings.ShortcutBindings.Remove(command.StorageKey);
                 view.KeyDown(27, false, false); view.KeyUp(27);
+                Paint();
+                var tool = view.ToolButtonBounds[0];
+                view.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(17, 16, 'U'), ShortcutBinding.From('J')];
+                view.PointerMove(tool.X + 10, tool.Y + 10, false, false); Capture(locale + "-tool-bound", true);
+                view.LibrarySettings.ShortcutBindings[command.StorageKey] = [];
+                Capture(locale + "-tool-unbound", true);
+                view.LibrarySettings.ShortcutBindings.Remove(command.StorageKey);
             }
             L.SetLanguage("en"); view.OpenSettings(); Paint();
             view.PointerMove(140, 20, false, false); Capture("settings-editor-blocked", true);

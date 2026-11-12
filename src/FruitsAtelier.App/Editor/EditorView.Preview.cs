@@ -221,9 +221,9 @@ public sealed partial class EditorView
         if (!objectSelection.Contains(id)) SelectObjects([id]);
         RefreshSliderInspector();
         menu = -1; contextItems.Clear();
-        contextItems.Add(new(L.Get("editor.command.cut"), () => CutSelection(), Shortcut: "Ctrl+X"));
-        contextItems.Add(new(L.Get("editor.command.copy"), () => CopySelection(), Shortcut: "Ctrl+C"));
-        contextItems.Add(new(L.Get("editor.command.delete"), DeleteSelectedObjects, Shortcut: "Delete"));
+        contextItems.Add(new(L.Get("editor.command.cut"), () => CutSelection(), Shortcut: ShortcutKeys("cut", ShortcutScope.Compose)));
+        contextItems.Add(new(L.Get("editor.command.copy"), () => CopySelection(), Shortcut: ShortcutKeys("copy", ShortcutScope.Compose)));
+        contextItems.Add(new(L.Get("editor.command.delete"), DeleteSelectedObjects, Shortcut: ShortcutKeys("delete", ShortcutScope.Compose)));
         if (IsLazerEditing && plot.Contains(x, y) && SelectedTrack is { } selected && selected.Id == id && !notesLocked)
         {
             var target = MapAt(x, y, true, clampX: false);

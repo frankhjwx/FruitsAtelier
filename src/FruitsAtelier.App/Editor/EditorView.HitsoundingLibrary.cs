@@ -157,13 +157,13 @@ public sealed partial class EditorView
             try { HitsoundLibraryFiles.Validate(root, folder, allowRoot: true); Directory.CreateDirectory(folder); RequestOpenExternalPath?.Invoke(folder); }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException) { ShowError(error.Message); }
         }, hitsoundingLibraryDirectory is not null));
-        contextItems.Add(new(L.Get("hitsounding.newFolder"), () => BeginHitsoundingName(), available, "Ctrl+Shift+N"));
-        contextItems.Add(new(L.Get("hitsounding.rename"), () => BeginHitsoundingName(hitsoundingLibrarySelection.Single()), available && hitsoundingLibrarySelection.Count == 1, "F2"));
+        contextItems.Add(new(L.Get("hitsounding.newFolder"), () => BeginHitsoundingName(), available, ShortcutKeys("sampleNewFolder", ShortcutScope.Samples)));
+        contextItems.Add(new(L.Get("hitsounding.rename"), () => BeginHitsoundingName(hitsoundingLibrarySelection.Single()), available && hitsoundingLibrarySelection.Count == 1, ShortcutKeys("sampleRename", ShortcutScope.Samples)));
         AddContextSeparator();
-        contextItems.Add(new(L.Get("hitsounding.copyFiles"), () => CopyHitsoundingFiles(false), selected && available, "Ctrl+C"));
-        contextItems.Add(new(L.Get("hitsounding.cutFiles"), () => CopyHitsoundingFiles(true), selected && available, "Ctrl+X"));
-        contextItems.Add(new(L.Get("hitsounding.pasteFiles"), PasteHitsoundingFiles, available && hitsoundingFileClipboard.Length > 0 && WorkspaceSynchronization.Paths.Equals(hitsoundingClipboardRoot, hitsoundingLibraryRoot), "Ctrl+V"));
-        contextItems.Add(new(L.Get("hitsounding.deleteFiles"), DeleteHitsoundingFiles, selected && available && RequestRecycleHitsoundingFiles is not null, "Delete"));
+        contextItems.Add(new(L.Get("hitsounding.copyFiles"), () => CopyHitsoundingFiles(false), selected && available, ShortcutKeys("copy", ShortcutScope.Samples)));
+        contextItems.Add(new(L.Get("hitsounding.cutFiles"), () => CopyHitsoundingFiles(true), selected && available, ShortcutKeys("cut", ShortcutScope.Samples)));
+        contextItems.Add(new(L.Get("hitsounding.pasteFiles"), PasteHitsoundingFiles, available && hitsoundingFileClipboard.Length > 0 && WorkspaceSynchronization.Paths.Equals(hitsoundingClipboardRoot, hitsoundingLibraryRoot), ShortcutKeys("paste", ShortcutScope.Samples)));
+        contextItems.Add(new(L.Get("hitsounding.deleteFiles"), DeleteHitsoundingFiles, selected && available && RequestRecycleHitsoundingFiles is not null, ShortcutKeys("sampleDelete", ShortcutScope.Samples)));
         contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 280)), Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 280, ContextMenuHeight);
     }
 

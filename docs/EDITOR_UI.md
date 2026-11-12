@@ -1176,6 +1176,12 @@ Audio, Advanced and preferred-skin controls are not part of Song Setup.
 
 ## Custom shortcuts
 
+Shortcut hints and menu key labels follow the active editing profile and saved bindings.
+Tool keycaps show the first binding; hover hints list all bindings. Clearing a binding
+hides its keycap and shortcut suffix while retaining the function and mouse instructions.
+The shortcut settings page shows unassigned commands explicitly.
+
+
 **Settings → Key Bindings** edits keyboard bindings for Global, Library, Compose,
 Timing, Control points, Hitsounding, Testplay, Patterns and Samples. The list groups
 related commands and shows short descriptions, editable keycaps, an **+** action for

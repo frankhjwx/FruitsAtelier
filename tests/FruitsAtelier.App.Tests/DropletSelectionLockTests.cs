@@ -101,13 +101,13 @@ internal static class DropletSelectionLockTests
                         ui.View.PointerMove(b.X + b.Width / 2, b.Y + b.Height / 2, false, false); ui.Paint();
                         string key = i switch { 0 => "tools.hint.select", 1 => "tools.hint.fruit",
                             2 => mode == SliderEditingMode.OsuLegacy ? "tools.hint.sliderLegacy" : "tools.hint.sliderPen", _ => "tools.hint.banana" };
-                        Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get(key).Split('\n')[0]), "Missing tool operation hint.");
+                        Check(string.Join(" ", ui.Canvas.Texts.Select(t => t.Value)).Contains(Strings.Get(key).Split('\n')[0]), "Missing tool operation hint.");
                         if (i == 2) Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ui.osuLegacyMode")), "Tooltip hid slider mode controls.");
                     }
                 }
                 var ds = ui.View.AssistButtonBounds[5];
                 ui.View.PointerMove(ds.X + ds.Width / 2, ds.Y + 10, false, false); ui.Paint();
-                Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("assist.hint.5").Split('\n')[0]), "Missing distance snap hint.");
+                Check(string.Join(" ", ui.Canvas.Texts.Select(t => t.Value)).Contains(Strings.Get("assist.hint.5").Split('\n')[0]), "Missing distance snap hint.");
                 ui.ClickText(Strings.Get("ds.configure"));
                 Check(ui.View.DistanceSnapDialogVisible, "Distance snap tooltip blocked Configure DS.");
             }

@@ -68,7 +68,7 @@ public sealed partial class EditorView
         }
         for (int i = 0; i < toolButtons.Count; i++)
             if (toolButtons[i].Contains(mouseX, mouseY))
-                DrawPaletteTooltip(c, L.Get(IsOsuCanvas ? i switch
+                DrawPaletteTooltip(c, ShortcutHint(L.Get(IsOsuCanvas ? i switch
                 {
                     0 => "osu.hint.select", 1 => "osu.hint.circle", 2 => "osu.sliderDraft", _ => "osu.hint.spinner"
                 } : IsLazerEditing && i < 3 ? i switch
@@ -80,7 +80,7 @@ public sealed partial class EditorView
                     0 => "tools.hint.select", 1 => "tools.hint.fruit",
                     2 => LegacyMode ? "tools.hint.sliderLegacy" : "tools.hint.sliderPen",
                     _ => "tools.hint.banana"
-                }), toolButtons[i], left: false, above: i == 2);
+                }), i switch { 0 => "select", 1 => "fruit", 2 => "slider", _ => "banana" }, ShortcutScope.Compose), toolButtons[i], left: false, above: i == 2);
     }
 
     private void DrawMappingCanvasSelector(ICanvas c, float top)

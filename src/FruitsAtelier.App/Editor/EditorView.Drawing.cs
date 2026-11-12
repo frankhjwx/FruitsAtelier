@@ -882,7 +882,7 @@ public sealed partial class EditorView
             Item(ShortcutMenuLabel(L.Get("ui.copyMenu"), "copy"), () => CopySelection(), CanCopySelection || CanCopyTimestamp);
             Item(ShortcutMenuLabel(L.Get("ui.pasteMenu"), "paste"), RequestClipboardPaste, ClipboardInteractionReady && (CanPasteSelection || RequestPasteObjects is not null));
             if (CanEditBananas) Item(ShortcutMenuLabel(L.Get("bananaEdit.title") + "  Ctrl+F", "bananaEdit"), OpenBananaEdit, !notesLocked);
-            Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), ShowPatternDock, CanConvertStream && !notesLocked);
+            Item(ShortcutMenuLabel(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), "pattern"), ShowPatternDock, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
             Item(L.Get("randomize.title"), ShowRandomDock, ClipboardInteractionReady);

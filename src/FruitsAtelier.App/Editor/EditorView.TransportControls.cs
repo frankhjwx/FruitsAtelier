@@ -41,7 +41,7 @@ public sealed partial class EditorView
             hits.Add(new(r, actions[i], enabled[i]));
             if (hover)
             {
-                string hint = L.Get(hints[i]);
+                string hint = i == 3 ? ShortcutHint(L.Get(hints[i]), "testplay") : L.Get(hints[i]);
                 float w = Math.Max(r.Width, c.MeasureText(hint, 11) + 16);
                 float x = Math.Max(8, r.X + (r.Width - w) / 2);
                 c.Fill(new(x, overview.Y - 25, w, 22), Chrome(0x111923, Background), 4);

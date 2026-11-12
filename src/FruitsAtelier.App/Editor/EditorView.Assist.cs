@@ -296,6 +296,7 @@ public sealed partial class EditorView
                 ? L.Get("assist.edge", edge.Edge + 1) : L.Get(hints[hovered]);
             if (UsesSpeedDistanceSnap && hovered is 4 or 5)
                 tip = L.Get(hovered == 4 ? "assist.lazerGridHint" : "assist.lazerDistanceHint");
+            tip = ShortcutHint(tip, hovered switch { 0 => "combo", 1 => "whistle", 2 => "finishSound", 3 => "clap", 4 => "grid", 5 => "distance", _ => "lock" }, ShortcutScope.Compose);
             DrawPaletteTooltip(c, tip, assistButtons[hovered], left: true, above: hovered is 5 or 6);
         }
         uint Dim(uint color, float opacity)
