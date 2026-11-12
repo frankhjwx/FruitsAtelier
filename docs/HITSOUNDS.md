@@ -172,7 +172,7 @@ Clicking a Notes object or an existing sound tag selects its event.
 Selecting a sound does not seek. Clicking empty grid space clears selection and preserves the playing position.
 Left-click the upper time ruler to seek directly to the corresponding time, while
 retaining the playing or paused state. Dragging the play line still adjusts its viewport position.
-Ctrl-click toggles individual sound tags, Notes events, storyboard sounds, and green timing blocks or handles without replacing the existing selection.
+Ctrl-click toggles individual sound tags, Notes events, storyboard sounds, and red or green timing blocks or handles without replacing the existing selection.
 Clicking the lane-label column does not seek. Dragging empty grid space draws a selection
 rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Its starting
 time follows the scrolling timeline during playback while the opposite edge stays

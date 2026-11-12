@@ -5,13 +5,13 @@ The first table defines the accepted editor feedback scope. The [feedback backlo
 | ID | Outcome | Acceptance |
 | --- | --- | --- |
 | E01 | Refresh New Combo numbering and grouping on the first edit. | Canvas, object timeline, preview, testplay and export agree; undo and redo restore grouping. |
-| E02 | Replace fruit circles coincident with a completed new slider head. | Match both time and X exactly; preserve other fruits; use one undo transaction. |
+| E02 | Replace fruit circles coincident with a completed new slider head. | Match the completed head timestamp across X positions; preserve fruits at other times; use one undo transaction. |
 | E03 | Align existing editor commands and tool keys with the accepted shortcut map. | All four number keys finish valid drafts or cancel insufficient drafts, then select their tool. Pressing 3 prepares another slider. Shift+1–9 adjusts Snap during drafting. Modifier combinations do not fall through to unrelated commands. |
 | E04 | Drag the visible lower half of a slider-stream endpoint. | Hit testing respects overlapping stream sprites; selecting and dragging an endpoint retains the slider parent and supports undo. |
 | E05 | Preserve playback time on empty canvas clicks. | Clear selection without seeking, both paused and playing; retain explicit time controls and box selection. |
 | E06 | Limit Ctrl+M to 1/3, 1/4, 1/6 and 1/8. | Enter at 1/3 from another divisor; direct Snap controls retain all subdivisions. |
 | E07 | Separate wheel snapping, seeking and zoom. | Ctrl doubles/halves Snap within the current supported family; Shift seeks four times as far; Alt zooms canvas; Alt zooms the upper timeline; Ctrl+Alt cycles tools on canvas/upper timeline. |
-| E08 | Start testplay with a lead-in. | Persistent 0–5 second setting, default 1; immediately begin from the selected position minus the lead-in, clamped to zero, and return to the selected position on exit. |
+| E08 | Start testplay with a lead-in. | Persistent 0–5 second setting, default 1; immediately begin from the selected position minus the lead-in, including silent negative preparation time, and return to the selected position on exit. |
 | E09 | Expose Master, Music and Effect as vertical volume bars. | Left-to-right channel order; mouse and Alt arrows; 120 ms fade-in, 300 ms idle delay, 150 ms fade-out; hover/drag/held adjustment stays visible; changes persist without committing drafts. |
 | E10 | Show bookmarks on the left canvas axis and in the canvas. | Distinct red timing and blue bookmark ticks/lines, nonoverlapping labels and clustered hover details; dense display does not merge stored entries. |
 | E11 | Use blue canvas time labels. | Ordinary time labels remain distinct from red timing labels and lines. |
@@ -76,16 +76,16 @@ where a design decision is listed.
 
 | Feedback | Current capability | Remaining follow-up |
 | --- | --- | --- |
-| Shortcut documentation | The [shortcut manual](KEY_BINDINGS.md) lists keyboard and mouse controls. | Review discoverability; global rebinding is F28 below. |
+| Shortcut documentation | The [shortcut manual](KEY_BINDINGS.md) lists keyboard and mouse controls. | Settings → Key Bindings supports independent Default/Lazer profiles and updates visible shortcut hints; see F28. |
 | Right-click a break to remove it | Right-clicking a break in the bottom overview removes it. | Confirm whether the request concerns the upper timeline; add equivalent access there if needed. |
 | Retain objects when creating a difficulty | **Create from a difficulty or template → From difficulty** copies objects, timing, hitsounds and settings. See [creating difficulties](EDITOR_UI.md#creating-difficulties-and-map-templates). | Review whether this option is sufficiently discoverable. |
-| Testplay retry shortcut | Ctrl+R and a held backtick retry the session. | Custom retry bindings remain open under F09. |
+| Testplay retry shortcut | Ctrl+R and a held backtick retry the session. | Both retry commands can be rebound in Settings → Key Bindings; see F09. |
 | Difficulty graph | Movement strain already plots normal-mode strain over time. | This does not resolve the request for a defined SR graph; see F29. |
 
 ### Recommended near-term work
 
 F05–F07 and F10 are covered by editing regressions. Remaining proposals include
-beat-snap colour customization and retry bindings; agree
+beat-snap colour customization; agree
 on their interaction details before implementation.
 
 | ID | Task | Complexity | Scope and acceptance considerations |
@@ -98,7 +98,7 @@ on their interaction details before implementation.
 | F06 | [x] Prevent fruit placement outside the canvas playfield's left and right boundaries. | Low–medium | Catch canvas padding accepts neither fruit previews nor placement; bounds follow the visible playfield transform. |
 | F07 | [x] Create a red slider anchor with a double-click when Slider Path is disabled. | Low–medium | Legacy draft double-click creates a segment boundary regardless of path visibility, without an extra control point. |
 | F08 | [x] Allow disabling caught-fruit stacking in testplay. | Low–medium | Settings → Appearance places Testplay fruit stack beside Hit lighting. Defaults to on; Apply persists it. Hides caught plate sprites without changing judgments or Catch Preview. |
-| F09 | [ ] Allow custom testplay retry bindings. | Medium | Extend the existing testplay binding UI; define short-press and hold-to-retry assignments, conflict handling and key-release behavior. |
+| F09 | [x] Allow custom testplay retry bindings. | Medium | Settings → Key Bindings exposes Retry and Hold to retry for each profile, with conflict handling and release cancellation. |
 | F10 | [x] Auto-scroll when dragging objects against the upper timeline's left or right edge. | Medium | Within 24 DIP of an edge, object dragging scrolls at up to 600 DIP/s with the canvas following. Leaving the edge, release, cancellation or the map boundary stops scrolling; the gesture retains one undo step. |
 | F11 | [ ] Allow customization of beat-snap colours. | Medium | Include the hard-to-read 1/16 grey tick, consistent colours across relevant grids, persistence and reset to defaults. |
 | F12 | [ ] Add basic map statistics. | Medium | Include total and per-type object counts, maximum combo and hyperdash count. Distinguish source objects from converted Catch events; reuse available difficulty results. PP is a separate task, F30. |
@@ -117,7 +117,7 @@ work. Resolve their display and session-state contracts before implementation.
 | F17 | [ ] Show following points in testplay. | Medium; meaning unconfirmed | Obtain a concrete visual definition: object-to-object connectors, upcoming landing positions or skin followpoints. Define behavior across combos, breaks and mods. |
 | F18 | [ ] Add quick-action buttons for selected objects. | Medium | Choose a small set of frequent actions, placement and occlusion rules; retain the context menu for advanced actions. |
 | F19 | [ ] Display an audio waveform alongside the mapping canvas. | Medium | Reuse existing waveform decoding and caching. Consider an optional narrow side strip with opacity control; preserve alignment under zoom and BPM changes to support offset and snap inspection. |
-| F20 | [ ] Suggest combo colours from the background palette. | Medium | Define palette size, readability against the background and interaction with skin overrides. Present selectable candidates before one undoable application. |
+| F20 | [x] Suggest combo colours from the background palette. | Medium | Media → Colour palette proposes 3–8 colours from the current background, previews swatches, and applies them to the current difficulty in one undo step. See [Media](EDITOR_UI.md#media) for brightness limits and gameplay review. |
 | F21 | [ ] Seek within testplay using a duration timeline. | Medium–high | Define judgments, combo, catcher state, audio and storyboard behavior after seeking. Consider restarting practice at the target with a short lead-in; decide which position Retry subsequently uses. |
 | F22 | [ ] Drag red timing lines directly on the canvas with precise adjustment. | Medium–high | Decide whether dragging changes only timing offsets or also preserves object beat positions by moving objects. Consider a timing-only first version with explicit handles, a precision modifier, cancellation and one undo step. |
 
@@ -130,7 +130,7 @@ work. Resolve their display and session-state contracts before implementation.
 | F25 | [ ] Compare rhythm timelines across difficulties. | Medium–high | Start with read-only rows on a shared time axis and click-to-locate. Distinguish intentional omissions in lower difficulties from inconsistent snapping; avoid labeling every difference as an error. |
 | F26 | [ ] Gradually increase or decrease spacing in wiggles and repeated groups such as doubles or triplets. | High | Define horizontal versus temporal spacing, group boundaries and which centre or endpoints stay fixed. Reuse Stack width envelopes where applicable; arbitrary selections need grouping, boundary and preview rules. |
 | F27 | [ ] Add slider shape transformations, including curved-to-sharp conversion. | High | Specify what remains invariant: duration, endpoints, path length, tick timing or Catch positions. Handle FSliders and Legacy Sliders explicitly. Start with a defined polyline transformation and preview before broadening the tool set. |
-| F28 | [ ] Make editor shortcuts globally customizable. | High | Define command identities, context-sensitive conflicts, modifiers, platform differences, persistence, defaults and synchronized shortcut hints. Keep F09 independently deliverable. |
+| F28 | [x] Make editor shortcuts globally customizable. | High | Settings → Key Bindings provides command groups, search, alternate bindings, conflicts, clearing and resets, with separate Default/Lazer profiles and synchronized tool/menu hints. |
 | F29 | [ ] Add an actual difficulty/SR graph comparable to the requested MV view. | High; definition dependent | Decide between strain, independently rated sections and rolling-window star ratings. Define window size, boundaries, mods and cross-map scales; do not relabel strain as SR. |
 | F30 | [ ] Add advanced performance statistics including maximum PP. | High; algorithm dependent | Specify algorithm revision, mods, accuracy and FC/SS assumptions. Assess reusable calculation support separately from the basic statistics in F12. |
 | F31 | [ ] View multiple difficulties together for comparison or contest review. | High | Choose between rhythm rows, a read-only reference overlay and multiple fully editable canvases. Prefer a read-only first scope; coordinate navigation and scaling. F25 may satisfy the initial rhythm-comparison use case. |
@@ -139,9 +139,9 @@ work. Resolve their display and session-state contracts before implementation.
 ### Suggested delivery sequence
 
 1. Reproduce and fix editing defects; improve tick hierarchy, BPM labels, time-difference readouts and difficulty navigation.
-2. Improve practice and inspection through retry rebinding, scoped testplay seeking, canvas waveforms and basic statistics.
+2. Improve practice and inspection through scoped testplay seeking, canvas waveforms and basic statistics.
 3. Agree on content-editing semantics for NC patterns, spacing gradients, slider transformations and timing-line dragging.
-4. Plan multi-difficulty comparison, global shortcut customization and SR/PP analysis as separate features.
+4. Plan multi-difficulty comparison and SR/PP analysis as separate features.
 
 Use [editing performance](EDITING_PERFORMANCE.md) for interactive paths and
 [building and testing](TESTING.md) for validation. Update the owning user-facing

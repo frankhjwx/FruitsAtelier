@@ -5,15 +5,15 @@
 - [README](README.md): startup instructions and documentation index.
 - [Architecture](docs/ARCHITECTURE.md): modules and platform boundaries.
 - Before changing interactive editing or its derived data, read [Editing performance](docs/EDITING_PERFORMANCE.md) and follow its hot-path and verification requirements.
-- [Windows releases](docs/RELEASING.md): branch, tag, package, and publication workflow.
+- [Windows releases](docs/RELEASING.md): branch, tag, package, and publication workflow, including the mandatory AI execution policy and pre-release documentation review.
 - After publishing a GitHub release, provide a copyable Discord Markdown announcement of at most 2,000 characters using the format in [Windows releases](docs/RELEASING.md#discord-announcement).
 - Depending on the change, read [Editing Controls](docs/EDITOR_UI.md), [Data Model](docs/PROJECT_MODEL.md), [File Format](docs/STABLE_FORMAT.md), or [Localization Maintenance](docs/LOCALIZATION.md).
 
 ## Code Conventions
 
 - Use C# 12 / .NET 10. SDK and NuGet versions are pinned in project configuration and lock files.
-- Windows uses Win32 / DirectX / WASAPI; macOS uses Avalonia / AVAudioPlayer. Account for both platforms when changing shared editor code, and keep Core free of platform dependencies.
-- `.catchproj` stores anchors, handles, and imported source context; converted paths and preview objects are derived from this data. Preserve compatibility with older projects when changing the persistence model.
+- Windows uses Win32 / DirectX / WASAPI; macOS uses Avalonia / AVAudioEngine with AVAudioPlayerNode. Account for both platforms when changing shared editor code, and keep Core free of platform dependencies.
+- Workspace `.catchdiff` documents and compatible `.catchproj` files store anchors, handles, and imported source context; converted paths and preview objects are derived from this data. Preserve compatibility with older projects when changing the persistence model.
 - The editor's Y coordinate represents time; an exported slider's geometric Y is a path coordinate. Keep beat snapping separate from SliderTickRate.
 - Apply content changes through editing transactions and undo history. Selection, viewport, and language settings must not modify beatmap content.
 - Read GUI text and domain diagnostics from localization tables. Maintain matching Chinese and English keys and placeholders. Switching languages must not rewrite existing object names or file contents.
@@ -30,5 +30,5 @@
 - Store build artifacts, test logs, and screenshots in `artifacts/`; do not commit them to Git. Follow [Artifact lifetime](docs/TESTING.md#artifact-lifetime) after validation and commit.
 - Write documentation for project readers: describe current behavior, usage, and design details needed for maintenance. Keep conversational prompt responses, progress reports, temporary acceptance-build paths, and one-off test counts in tasks or PRs.
 - Maintain each rule in its relevant document and link to it elsewhere. Update documentation when behavior changes and remove obsolete conclusions.
-- Use English as the baseline for project documentation and AI-facing instructions. Maintain technical and AI documentation in English; preserve README.zh-CN.md as the translated user entry point, alongside localization resources and translation-specific examples.
+- Use English as the baseline for project documentation and AI-facing instructions. Maintain technical and AI documentation in English; maintain README.zh-CN.md, README.ja.md, and README.ko.md as aligned translated user entry points, alongside localization resources and translation-specific examples.
 - Do not start subagents automatically. Use them only when the user explicitly requests parallel agent work.

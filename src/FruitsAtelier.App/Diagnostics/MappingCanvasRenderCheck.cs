@@ -201,6 +201,15 @@ internal static class MappingCanvasRenderCheck
                 var view = new EditorView(loadDemo: false);
                 view.LoadDocument(document);
                 view.LibrarySettings.MappingCanvasBackgroundDim = 0;
+                var preparation = System.Diagnostics.Stopwatch.StartNew();
+                do
+                {
+                    canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+                    if (preparation.Elapsed.TotalSeconds > 10)
+                        throw new TimeoutException("Background fixture preparation did not complete.");
+                    if (view.LibraryOpening) Thread.Sleep(5);
+                }
+                while (view.LibraryOpening);
                 int decodes = 0;
                 for (int frame = 0; frame < 4; frame++)
                 {

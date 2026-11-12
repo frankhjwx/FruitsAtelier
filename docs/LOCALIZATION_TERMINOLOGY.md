@@ -30,7 +30,7 @@ not the finish hitsound.
   be translated, but retain the abbreviation beside the description.
 - Keep the `Banana` tool name in English, including its compact label and help heading.
 - Keep movement mode keywords `Stand`, `Walk`, `Dash`, and `HDash` in English.
-- Keep preview mod identifiers `NM`, `Easy`, and `Hard Rock` in English.
+- Keep preview/testplay mod identifiers `NM`, `Easy`, `Hard Rock`, `Half Time`, `Double Time`, `Hidden`, and `Flashlight` in English.
 - Compact object badges, tool identifiers, parameter labels, and pattern tabs
   retain English identifiers. Translate surrounding instructions and messages.
 - Preserve keyboard key names, shortcuts, extensions, protocol and file-format

@@ -1,8 +1,8 @@
 # Shortcut compatibility review
 
-This reference compares FruitsAtelier 0.9.0 with the
-[official osu!stable default shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts),
-not lazer or a user's customized bindings. Scope includes shared keyboard
+This reference compares FruitsAtelier factory defaults in the Default profile with the
+[official osu!stable default shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts).
+The Lazer profile and user-customized bindings are documented separately in the shortcut manual. Scope includes shared keyboard
 dispatch, mouse modifiers, text fields, modal dialogs, Library, testplay, and
 Windows/macOS input adapters.
 
@@ -98,7 +98,7 @@ Sources: [shortcut operations](../src/FruitsAtelier.App/Editor/EditorView.Shortc
 | Ctrl+Shift+I sample import | Needs an import dialog, asset copying/name policy and persistence; also conflicts with control insertion. |
 | Ctrl+Shift+S scaling | Define separate X/time scaling, pivot, range validation and slider-handle/repeat behavior. |
 | Alt / Alt+Shift+wheel DS adjustment | DS uses multiple simultaneous presets. Choose which preset or aggregate is adjusted; existing Alt+wheel zoom would need a migration. |
-| Ctrl-modified slider-velocity precision | Add editable SV first and define how it interacts with time-based FSliders and export. |
+| Ctrl-modified slider-velocity precision | Per-slider SV is editable in the Inspector. Any additional precision modifier must preserve explicit/automatic SV behavior and export constraints. |
 
 ### No matching feature today
 

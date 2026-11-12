@@ -8,7 +8,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 [Website](https://fruitsatelier.himiko.moe/) · [Download](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**Current version: 1.4.3**
+**Current version: 1.4.4**
 
 ![FruitsAtelier's editing canvas, object timeline, and Catch preview](assets/screenshots/twin-bloom.png)
 
@@ -16,12 +16,15 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 ## Make your next Catch beatmap
 
-- **Start from your library.** Browse and search osu!stable Songs, import folders or `.osz` archives, and resume saved projects. Work on multiple difficulties in tabs and view star ratings.
+- **Start from your library.** Browse and search osu!stable Songs, import folders or `.osz` archives, and resume saved projects. Work on multiple difficulties in tabs; Library names stay visible while stars calculate in the background, then sort by descending rating.
 - **Shape patterns directly.** Place fruits and banana showers on a vertical canvas where horizontal position is Catch placement and vertical position is time. Pan and zoom, then move, duplicate, flip, and delete selections with undo and redo.
 - **Tune timing and hitsounds.** Edit red and green timing points, tap tempo, resnap objects, and hear the beat metronome. Set new combos and hitsounds, including individual slider edges. Hitsound Copier (Beta) copies samples from another difficulty, with a preview before applying.
-- **Listen, preview, and testplay.** Play MP3, OGG, and WAV with hitsounds at 10%, 25%, 50%, 75%, 100%, or 150% speed. Preview NM, Easy, and Hard Rock; testplay from the current position with configurable movement keys, dash, combo feedback, and optional autoplay.
+- **Listen, preview, and testplay.** Play MP3, OGG, and WAV with hitsounds at 10%, 25%, 50%, 75%, 100%, or 150% speed. Share difficulty, visibility and speed mods between Preview and Testplay; testplay from the current position with configurable movement keys, dash, combo feedback, and optional autoplay.
 - **Use your own skin and language.** Load osu!stable skins or import `.osk` files. The interface supports English, Simplified Chinese, Traditional Chinese, Japanese, Korean, Russian, Spanish, French, Polish, Dutch, Filipino, Indonesian, and Thai.
 - **Keep editing, then export.** Save projects to retain editable sliders and difficulty data. Export `.osu` difficulties or `.osz` sets, and synchronize linked difficulties with osu!stable. Review conflicting external changes and restore saved difficulty snapshots from Version history.
+- **Manage media and colours.** Use the Media dock to assign backgrounds and videos, set video offsets, and synchronize media across difficulties. Browse the mapset root or opt into subfolders, and generate a previewable 3–8-colour combo palette from the background.
+- **Work in Hitsounding.** Edit sound tracks, copy red/green timing selections between difficulties, and generate beat-spaced volume ramps between compatible green points.
+- **Customize your controls.** Switch Catch/osu!Legacy with the Mapping Canvas selector and configure keyboard commands in Settings → Key Bindings, with separate Default/Lazer profiles and matching tool hints.
 
 ## Tools built for Catch
 
