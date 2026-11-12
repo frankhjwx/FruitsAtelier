@@ -5,11 +5,14 @@
 Open **Media** in the Mapping dock, or restore it from **Layout**. The Files page
 shows the current background and video, including unassigned and missing-file
 states. Use **Choose file**, drop a file onto the Media tab or mapping panel, or
-assign an existing file from the expandable **Mapset files** section. Backgrounds
+assign an existing file from the expandable **Choose other existing media** section. Backgrounds
 have a thumbnail preview; empty media cards accept a click to choose a file or a
 file drop. **Unbind** is available only for assigned media, and the video offset
 appears after a video is assigned. The folder list includes
-up to 1,000 image/video files and marks those assigned to the active difficulty.
+up to 1,000 image/video files, shows only media not assigned to the active difficulty,
+and hides the section when there are no alternatives. Image thumbnails and video
+icons identify each item; use **Use as background** or **Use as video** to assign it.
+The list refreshes automatically while the Media panel is visible.
 Unbinding retains the file so it remains available for other difficulties and undo.
 
 Newly assigned videos start at **0 ms**. Enter a signed integer in **Video offset**;

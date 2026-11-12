@@ -26,7 +26,9 @@ public sealed partial class EditorView
     private bool mediaBackgroundExists, mediaVideoExists;
     private Task<string[]>? mediaFilesTask;
     private string? mediaFilesDirectory, mediaFilesRequestedDirectory;
-    private string[] mediaFiles = [];
+    private string[] mediaFiles = [], mediaAvailableFiles = [];
+    private bool mediaChoicesDirty = true;
+    private long mediaFilesRefreshAt;
     private float mediaPanelContentHeight = 600;
     private bool MediaOffsetFocused => mediaOffsetEditing && ReferenceEquals(mediaOffsetOwner, history)
         && DockContentInputAvailable && PanelVisible(DockPanel.Media);
@@ -37,6 +39,8 @@ public sealed partial class EditorView
     internal Rect MediaSyncBounds { get; private set; }
     internal Rect MediaGenerateBounds { get; private set; }
     internal Rect MediaApplyBounds { get; private set; }
+    internal Rect MediaLibraryBounds { get; private set; }
+    internal bool MediaFilesBusy => mediaFilesTask is not null;
     public static bool IsBeatmapVideo(string path) => Path.GetExtension(path).ToLowerInvariant() is ".mp4" or ".avi" or ".flv" or ".mov" or ".wmv" or ".m4v" or ".mpg" or ".mpeg" or ".mkv" or ".webm";
 
     internal void ShowMediaPanel()
@@ -57,6 +61,7 @@ public sealed partial class EditorView
     {
         if (!ReferenceEquals(mediaPanelSnapshot, convertedSnapshot))
         {
+            mediaChoicesDirty = true;
             mediaPanelSnapshot = convertedSnapshot; mediaPanelValues = BeatmapMedia.Read(Document);
             mediaBackgroundExists = File.Exists(MediaPath(mediaPanelValues.Background));
             mediaVideoExists = File.Exists(MediaPath(mediaPanelValues.Video));
@@ -64,7 +69,14 @@ public sealed partial class EditorView
         }
         mediaPanelBounds = bounds;
         string? directory = StoryboardMediaDirectory(Document);
-        if (directory != mediaFilesDirectory && mediaFilesTask is null) RefreshMediaFiles();
+        if (mediaFilesTask is null && (directory != mediaFilesDirectory || Environment.TickCount64 >= mediaFilesRefreshAt)) RefreshMediaFiles();
+        if (mediaChoicesDirty)
+        {
+            string? background = MediaPath(mediaPanelValues.Background), video = MediaPath(mediaPanelValues.Video);
+            mediaAvailableFiles = mediaFilesDirectory == directory
+                ? mediaFiles.Where(file => !MediaFileVersion.SamePath(file, background) && !MediaFileVersion.SamePath(file, video)).ToArray() : [];
+            mediaChoicesDirty = false;
+        }
         mediaPanelScroll = Math.Clamp(mediaPanelScroll, 0, Math.Max(0, mediaPanelContentHeight - bounds.Height));
         float half = (bounds.Width - 6) / 2;
         c.Clip(bounds);
@@ -75,7 +87,7 @@ public sealed partial class EditorView
         var content = new Rect(bounds.X, bounds.Y + 42, bounds.Width, Math.Max(0, bounds.Height - 42));
         float y = content.Y - mediaPanelScroll;
         int firstHit = hits.Count;
-        MediaOffsetBounds = MediaGenerateBounds = MediaApplyBounds = MediaSyncBounds = default;
+        MediaOffsetBounds = MediaGenerateBounds = MediaApplyBounds = MediaSyncBounds = MediaLibraryBounds = default;
         c.Clip(content);
         if (mediaTab == 0)
         {
@@ -102,22 +114,30 @@ public sealed partial class EditorView
             MediaSyncBounds = ActionButton(L.Get("media.sync"), SynchronizeMedia,
                 difficulties.Count > 1 && !SynchronizationBusy && !MediaEditingBusy, false);
             y += 4;
-            var library = new Rect(bounds.X, y, bounds.Width, 30);
-            Button(c, library, (mediaLibraryExpanded ? "− " : "+ ") + L.Get("media.library", mediaFiles.Length),
-                () => mediaLibraryExpanded = !mediaLibraryExpanded, fontSize: 12);
-            y += 40;
-            if (mediaLibraryExpanded)
+            if (mediaAvailableFiles.Length > 0)
             {
-                Hint("media.libraryHelp");
-                Button(c, new(bounds.X, y, bounds.Width, 26), L.Get("media.folderFiles"), RefreshMediaFiles, enabled: mediaFilesTask is null, fontSize: 11); y += 34;
-                foreach (string file in mediaFilesDirectory == directory ? mediaFiles : [])
+                MediaLibraryBounds = ActionButton((mediaLibraryExpanded ? "▾ " : "▸ ") + L.Get("media.library", mediaAvailableFiles.Length),
+                    () => mediaLibraryExpanded = !mediaLibraryExpanded, true, false);
+                if (mediaLibraryExpanded)
+                foreach (string file in mediaAvailableFiles)
                 {
-                    if (y + 58 < content.Y || y > content.Bottom) { y += 58; continue; }
-                    bool bound = MediaFileVersion.SamePath(file, MediaPath(mediaPanelValues.Background)) || MediaFileVersion.SamePath(file, MediaPath(mediaPanelValues.Video));
-                    c.Text(Path.GetRelativePath(directory!, file), bounds.X + 8, y, 12, Foreground, bounds.Width - 16); y += 20;
-                    if (bound) c.Text(L.Get("media.bound"), bounds.X + 8, y + 4, 11, Accent, bounds.Width - 16);
-                    else Button(c, new(bounds.X, y, bounds.Width, 26), L.Get("media.bind"), () => ImportMediaFile(file, IsBeatmapVideo(file)), enabled: !MediaEditingBusy, fontSize: 11);
-                    y += 38;
+                    bool video = IsBeatmapVideo(file);
+                    string label = L.Get(video ? "media.useVideo" : "media.useBackground");
+                    float rowHeight = 56 + Math.Max(32, WrapSyncText(c, label, bounds.Width - 20).Length * 17 + 12);
+                    if (y + rowHeight < content.Y || y > content.Bottom) { y += rowHeight; continue; }
+                    var thumbnail = new Rect(bounds.X, y, 48, 40);
+                    c.Fill(thumbnail, Surface, 4);
+                    if (video)
+                    {
+                        c.Line(thumbnail.X + 19, y + 12, thumbnail.X + 30, y + 20, Muted, 2);
+                        c.Line(thumbnail.X + 30, y + 20, thumbnail.X + 19, y + 28, Muted, 2);
+                        c.Line(thumbnail.X + 19, y + 28, thumbnail.X + 19, y + 12, Muted, 2);
+                    }
+                    else c.Thumbnail(file, thumbnail);
+                    c.Text(Path.GetRelativePath(directory!, file), bounds.X + 58, y + 12, 12, Foreground, bounds.Width - 58);
+                    y += 46;
+                    ActionButton(label,
+                        () => ImportMediaFile(file, video), !MediaEditingBusy, false);
                 }
             }
         }
@@ -153,7 +173,6 @@ public sealed partial class EditorView
                 }
                 y += (mediaPalette.Length + 1) / 2 * 50 + 4;
                 MediaApplyBounds = ActionButton(L.Get("media.apply"), ApplyMediaPalette, !MediaPaletteBusy, true);
-                Hint("media.applyHelp");
             }
             else
             {
@@ -161,7 +180,6 @@ public sealed partial class EditorView
                     c.Fill(new(bounds.X + i * (bounds.Width + 4) / mediaColourCount, y, (bounds.Width + 4) / mediaColourCount - 4, 28), Surface, 4);
                 y += 38; Hint("media.previewHelp");
             }
-            y += 12; Hint("media.readability");
         }
         if (MediaEditingBusy || mediaPanelError.Length > 0)
         {
@@ -463,7 +481,7 @@ public sealed partial class EditorView
     {
         if (mediaFilesTask is { IsCompleted: true } files)
         {
-            mediaFilesTask = null; mediaFilesDirectory = mediaFilesRequestedDirectory;
+            mediaFilesTask = null; mediaFilesDirectory = mediaFilesRequestedDirectory; mediaChoicesDirty = true;
             try { mediaFiles = files.GetAwaiter().GetResult(); }
             catch (Exception e) { mediaFiles = []; mediaPanelError = e.Message; }
         }
@@ -491,6 +509,7 @@ public sealed partial class EditorView
     {
         if (mediaFilesTask is not null) return;
         mediaPanelSnapshot = null;
+        mediaFilesRefreshAt = Environment.TickCount64 + 5000;
         string? directory = StoryboardMediaDirectory(Document);
         mediaFilesRequestedDirectory = directory;
         mediaFilesTask = Task.Run(() => directory is null || !Directory.Exists(directory) ? []

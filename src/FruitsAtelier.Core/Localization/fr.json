@@ -2494,8 +2494,7 @@
   "media.bound": "Assigned to this difficulty",
   "media.bind": "Assign to this difficulty",
   "media.oneFile": "Drop one image or video file at a time.",
-  "media.library": "Mapset files ({0})",
-  "media.libraryHelp": "Choose an existing file to use in this difficulty.",
+  "media.library": "Choose other existing media ({0})",
   "media.dropShort": "or drop a file here",
   "media.offsetHelp": "Positive values start the video later.",
   "media.paletteTitle": "Colours from your background",
@@ -2503,6 +2502,6 @@
   "media.noBackground": "Add a background to begin",
   "media.result": "Suggested combo colours",
   "media.previewHelp": "Generate to preview your colours here.",
-  "media.applyHelp": "Replaces this difficulty’s colours. You can undo it.",
-  "media.readability": "Brightness is adjusted for readability. Check the colours in gameplay before ranking."
+  "media.useBackground": "Use as background",
+  "media.useVideo": "Use as video"
 }

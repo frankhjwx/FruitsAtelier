@@ -29,6 +29,12 @@ internal static class MediaPanelRenderCheck
                 Wait(); view.ShowMediaPanel(); Paint("unbound");
                 view.DropLibraryFiles([image]); Wait(); Paint("background");
                 var panel = view.MediaPanelViewport;
+                if (view.MediaLibraryBounds.Width > 0)
+                {
+                    view.Wheel(panel.X + 10, panel.Y + 60, -2400, false); Paint();
+                    Click(view.MediaLibraryBounds.X + 12, view.MediaLibraryBounds.Y + 12);
+                    view.Wheel(panel.X + 10, panel.Y + 60, -240, false); Paint("existing-media");
+                }
                 Click(panel.Right - panel.Width / 4, panel.Y + 16); Paint("palette-empty");
                 Click(view.MediaGenerateBounds.X + 12, view.MediaGenerateBounds.Y + 12); Wait(); Paint("palette");
                 if (view.MediaApplyBounds.Width <= 0) throw new InvalidOperationException("Native palette did not finish generating");
@@ -48,7 +54,7 @@ internal static class MediaPanelRenderCheck
                 {
                     var timer = System.Diagnostics.Stopwatch.StartNew();
                     do { Paint(); Thread.Sleep(5); if (timer.Elapsed.TotalSeconds > 20) throw new TimeoutException("Media panel native preparation timed out"); }
-                    while (view.MediaEditingBusy || view.MediaPaletteBusy || view.LibraryOpening);
+                    while (view.MediaEditingBusy || view.MediaPaletteBusy || view.MediaFilesBusy || view.LibraryOpening);
                 }
                 void Paint(string? name = null)
                 {

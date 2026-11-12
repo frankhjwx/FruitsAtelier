@@ -90,6 +90,28 @@ internal static class MediaPanelTests
                     Check(colours.SequenceEqual(BackgroundPalette.Generate(pixels, count)), "Deterministic palette");
                 }
             }
+            string choices = Path.Combine(root, "choices");
+            Directory.CreateDirectory(choices);
+            File.WriteAllText(Path.Combine(choices, "current.png"), "image");
+            var choiceMap = new MapDocument { IsDemo = false, SourcePath = Path.Combine(choices, "map.osu") };
+            new BeatmapMedia("current.png", null, 0).Apply(choiceMap);
+            var choiceUi = new Ui(false); choiceUi.LoadDocument(choiceMap); choiceUi.Resize(1440, 900);
+            choiceUi.View.LibrarySettings.Workspace = root;
+            choiceUi.View.ShowMediaPanel(); choiceUi.Paint();
+            while (choiceUi.View.MediaFilesBusy) { Thread.Sleep(10); choiceUi.Paint(); }
+            Check(choiceUi.View.MediaLibraryBounds.Width == 0, "No alternatives section when only bound media exist");
+            File.WriteAllText(Path.Combine(choices, "other.png"), "other");
+            var choiceTimer = System.Diagnostics.Stopwatch.StartNew();
+            string choiceLabel = "▸ " + L.Get("media.library", 1);
+            while (!choiceUi.Canvas.Texts.Any(t => t.Value == choiceLabel))
+            {
+                Thread.Sleep(10); choiceUi.Paint();
+                if (choiceTimer.Elapsed.TotalSeconds > 12) throw new TimeoutException("Existing media did not refresh automatically");
+            }
+            choiceUi.ClickText(choiceLabel);
+            Check(choiceUi.Canvas.Texts.Count(t => t.Value == "current.png") == 1, "Bound image is not duplicated in alternatives");
+            choiceUi.ClickText(L.Get("media.useBackground")); Wait(choiceUi);
+            Check(BeatmapMedia.Read(choiceUi.View.Document).Background == "other.png", "Existing image assigned through explicit action");
             var gray = new StoryboardImageCache.Pixels(1, 1, [0, 0, 0, 255]);
             var grayColours = BackgroundPalette.Generate(gray, 8);
             Check(grayColours.Length == 8 && grayColours.All(c => (c >> 16 & 255) == (c >> 8 & 255) && (c & 255) == (c >> 8 & 255)), "Gray source remains gray");

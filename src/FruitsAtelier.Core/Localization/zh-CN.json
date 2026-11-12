@@ -2494,8 +2494,7 @@
   "media.bound": "当前难度已绑定",
   "media.bind": "绑定到当前难度",
   "media.oneFile": "一次请只拖入一个图片或视频文件。",
-  "media.library": "谱面文件库（{0}）",
-  "media.libraryHelp": "选择已有文件，用于当前难度。",
+  "media.library": "选择其他已有媒体（{0}）",
   "media.dropShort": "也可拖入文件",
   "media.offsetHelp": "正数使视频延后开始。",
   "media.paletteTitle": "从背景提取配色",
@@ -2503,6 +2502,6 @@
   "media.noBackground": "先添加一张背景图片",
   "media.result": "推荐组合色",
   "media.previewHelp": "生成后，在这里预览推荐颜色。",
-  "media.applyHelp": "替换当前难度的颜色，可撤销。",
-  "media.readability": "已调整亮度以改善辨识度。提交 Ranked 前请在游戏中检查配色。"
+  "media.useBackground": "设为背景",
+  "media.useVideo": "设为视频"
 }
