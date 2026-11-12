@@ -33,6 +33,17 @@ internal static class MediaPanelRenderCheck
                 {
                     view.Wheel(panel.X + 10, panel.Y + 60, -2400, false); Paint();
                     Click(view.MediaLibraryBounds.X + 12, view.MediaLibraryBounds.Y + 12);
+                    var thumb = view.MediaScrollThumb;
+                    var track = view.MediaScrollTrack;
+                    if (thumb.Height > 0)
+                    {
+                        view.PointerDown(thumb.X + 5, thumb.Y + 2, 0, false, false);
+                        view.PointerMove(track.X + 5, track.Bottom, false, false); Paint();
+                        view.PointerUp(track.X + 5, track.Bottom, 0); Paint("media-scroll-bottom");
+                        if (Math.Abs(view.MediaScrollThumb.Bottom - track.Bottom) > 1)
+                            throw new InvalidOperationException("Native media scrollbar drag did not reach bottom");
+                        Click(track.X + 5, track.Y + 1);
+                    }
                     view.Wheel(panel.X + 10, panel.Y + 60, -240, false); Paint("existing-media");
                 }
                 Click(panel.Right - panel.Width / 4, panel.Y + 16); Paint("palette-empty");

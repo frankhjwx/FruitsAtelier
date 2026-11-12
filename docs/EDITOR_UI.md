@@ -12,7 +12,10 @@ appears after a video is assigned. The folder list includes
 up to 1,000 image/video files, shows only media not assigned to the active difficulty,
 and hides the section when there are no alternatives. Image thumbnails and video
 icons identify each item; use **Use as background** or **Use as video** to assign it.
-The list refreshes automatically while the Media panel is visible.
+The list defaults to the beatmap root directory. Enable **Include subfolders**
+to also list nested media; this session-only option starts off. The list refreshes
+automatically while the Media panel is visible. Drag the right scrollbar thumb
+or click its track to navigate long lists.
 Unbinding retains the file so it remains available for other difficulties and undo.
 
 Newly assigned videos start at **0 ms**. Enter a signed integer in **Video offset**;

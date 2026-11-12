@@ -2,7 +2,8 @@
 
 ## Media panel
 
-`App.Tests --media-panel-check` covers collision-safe imports, signed video
+`App.Tests --media-panel-check` covers root-only media discovery, opt-in subfolder
+discovery, scrollbar dragging and track clicks, collision-safe imports, signed video
 offsets, resource copying across difficulty directories, related-history undo,
 preserved storyboard/media placement, project and osu roundtrips, workspace-only
 resource persistence, deterministic 3–8 colour palettes, grayscale and extreme

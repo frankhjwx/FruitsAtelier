@@ -2507,5 +2507,6 @@
   "media.previewHelp": "生成后，在这里预览推荐颜色。",
   "media.useBackground": "设为背景",
   "media.useVideo": "设为视频",
-  "shortcuts.hint": "{0}（{1}）"
+  "shortcuts.hint": "{0}（{1}）",
+  "media.includeSubfolders": "包含子文件夹"
 }

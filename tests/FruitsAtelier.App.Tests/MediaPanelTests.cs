@@ -92,6 +92,8 @@ internal static class MediaPanelTests
             }
             string choices = Path.Combine(root, "choices");
             Directory.CreateDirectory(choices);
+            Directory.CreateDirectory(Path.Combine(choices, "sb"));
+            File.WriteAllText(Path.Combine(choices, "sb", "nested.png"), "nested");
             File.WriteAllText(Path.Combine(choices, "current.png"), "image");
             var choiceMap = new MapDocument { IsDemo = false, SourcePath = Path.Combine(choices, "map.osu") };
             new BeatmapMedia("current.png", null, 0).Apply(choiceMap);
@@ -112,6 +114,21 @@ internal static class MediaPanelTests
             Check(choiceUi.Canvas.Texts.Count(t => t.Value == "current.png") == 1, "Bound image is not duplicated in alternatives");
             choiceUi.ClickText(L.Get("media.useBackground")); Wait(choiceUi);
             Check(BeatmapMedia.Read(choiceUi.View.Document).Background == "other.png", "Existing image assigned through explicit action");
+            choiceUi.ClickText(L.Get("media.includeSubfolders"));
+            while (choiceUi.View.MediaFilesBusy) { Thread.Sleep(10); choiceUi.Paint(); }
+            Check(choiceUi.Canvas.Texts.Any(t => t.Value == "▾ " + L.Get("media.library", 2)), "Opt-in includes subfolder image");
+            var thumb = choiceUi.View.MediaScrollThumb;
+            var track = choiceUi.View.MediaScrollTrack;
+            Check(thumb.Height > 0, "Media list has scrollbar");
+            choiceUi.View.PointerDown(thumb.X + 5, thumb.Y + 3, 0, false, false);
+            choiceUi.View.PointerMove(track.X - 20, track.Bottom, false, false); choiceUi.Paint();
+            choiceUi.View.PointerUp(track.X - 20, track.Bottom, 0); choiceUi.Paint();
+            Check(choiceUi.View.MediaScrollThumb.Y > thumb.Y, "Thumb drag scrolls even outside track");
+            choiceUi.Click(track.X + 5, track.Y + 1);
+            Check(Math.Abs(choiceUi.View.MediaScrollThumb.Y - track.Y) < 1, "Track click returns to start");
+            choiceUi.ClickText(L.Get("media.includeSubfolders"));
+            while (choiceUi.View.MediaFilesBusy) { Thread.Sleep(10); choiceUi.Paint(); }
+            Check(choiceUi.Canvas.Texts.Any(t => t.Value == "▾ " + L.Get("media.library", 1)), "Disabling subfolders restores root-only list");
             var gray = new StoryboardImageCache.Pixels(1, 1, [0, 0, 0, 255]);
             var grayColours = BackgroundPalette.Generate(gray, 8);
             Check(grayColours.Length == 8 && grayColours.All(c => (c >> 16 & 255) == (c >> 8 & 255) && (c & 255) == (c >> 8 & 255)), "Gray source remains gray");

@@ -20,6 +20,10 @@ public sealed partial class EditorView
     private string mediaOffsetText = "", mediaPanelError = "";
     private bool mediaOffsetEditing, mediaLibraryExpanded;
     private float mediaPanelScroll;
+    private bool mediaScrollbarDragging, mediaIncludeSubfolders, mediaFilesRequestedSubfolders;
+    private float mediaScrollbarGrab;
+    internal Rect MediaScrollTrack { get; private set; }
+    internal Rect MediaScrollThumb { get; private set; }
     private Rect mediaPanelBounds;
     private MapDocument? mediaPanelSnapshot;
     private BeatmapMedia mediaPanelValues;
@@ -114,6 +118,17 @@ public sealed partial class EditorView
             MediaSyncBounds = ActionButton(L.Get("media.sync"), SynchronizeMedia,
                 difficulties.Count > 1 && !SynchronizationBusy && !MediaEditingBusy, false);
             y += 4;
+            var toggleLines = WrapSyncText(c, L.Get("media.includeSubfolders"), bounds.Width - 62);
+            var toggle = new Rect(bounds.X, y, bounds.Width, Math.Max(32, toggleLines.Length * 17 + 12));
+            ToggleSwitch(c, toggle, "", mediaIncludeSubfolders, () =>
+            {
+                mediaIncludeSubfolders = !mediaIncludeSubfolders;
+                mediaFilesDirectory = null; mediaAvailableFiles = []; mediaChoicesDirty = true;
+                mediaFilesRefreshAt = 0;
+                RefreshMediaFiles();
+            });
+            for (int i = 0; i < toggleLines.Length; i++) c.Text(toggleLines[i].Text, bounds.X, y + 6 + i * 17, 12, Foreground, bounds.Width - 62);
+            y += toggle.Height + 10;
             if (mediaAvailableFiles.Length > 0)
             {
                 MediaLibraryBounds = ActionButton((mediaLibraryExpanded ? "▾ " : "▸ ") + L.Get("media.library", mediaAvailableFiles.Length),
@@ -191,10 +206,13 @@ public sealed partial class EditorView
         c.Unclip();
         for (int i = hits.Count - 1; i >= firstHit; i--)
             if (hits[i].Bounds.Y < content.Y || hits[i].Bounds.Bottom > content.Bottom) hits.RemoveAt(i);
+        MediaScrollTrack = MediaScrollThumb = default;
         if (mediaPanelContentHeight > bounds.Height)
         {
             float thumb = Math.Max(20, content.Height * content.Height / (mediaPanelContentHeight - 42));
-            c.Fill(new(bounds.Right + 5, content.Y + mediaPanelScroll / (mediaPanelContentHeight - bounds.Height) * (content.Height - thumb), 3, thumb), Muted, 1);
+            MediaScrollTrack = new(bounds.Right + 1, content.Y, 11, content.Height);
+            MediaScrollThumb = new(bounds.Right + 1, content.Y + mediaPanelScroll / (mediaPanelContentHeight - bounds.Height) * (content.Height - thumb), 11, thumb);
+            c.Fill(new(bounds.Right + 5, MediaScrollThumb.Y, 3, thumb), mediaScrollbarDragging || MediaScrollTrack.Contains(mouseX, mouseY) ? Accent : Muted, 1);
         }
 
         void SwitchTab(int tab) { if (CommitMediaOffset()) { mediaTab = tab; mediaPanelScroll = 0; } }
@@ -282,6 +300,25 @@ public sealed partial class EditorView
             if (path is not null && ReferenceEquals(owner, history) && CanDropBackground)
                 ImportMediaFile(path, video);
         });
+    }
+
+    private bool MediaScrollbarPointerDown(float x, float y, int button)
+    {
+        if (button != 0 || !DockContentInputAvailable || !PanelVisible(DockPanel.Media)
+            || menu >= 0 || contextItems.Count != 0 || MediaScrollTrack.Height <= 0 || !MediaScrollTrack.Contains(x, y)) return false;
+        if (!CommitField()) return true;
+        mediaScrollbarGrab = MediaScrollThumb.Contains(x, y) ? y - MediaScrollThumb.Y : MediaScrollThumb.Height / 2;
+        mediaScrollbarDragging = true;
+        MoveMediaScrollbar(y);
+        return true;
+    }
+
+    private void MoveMediaScrollbar(float y)
+    {
+        float travel = MediaScrollTrack.Height - MediaScrollThumb.Height;
+        if (travel <= 0) return;
+        mediaPanelScroll = Math.Clamp((y - MediaScrollTrack.Y - mediaScrollbarGrab) / travel, 0, 1)
+            * Math.Max(0, mediaPanelContentHeight - mediaPanelBounds.Height);
     }
 
     private void SetMedia(BeatmapMedia value)
@@ -484,6 +521,8 @@ public sealed partial class EditorView
             mediaFilesTask = null; mediaFilesDirectory = mediaFilesRequestedDirectory; mediaChoicesDirty = true;
             try { mediaFiles = files.GetAwaiter().GetResult(); }
             catch (Exception e) { mediaFiles = []; mediaPanelError = e.Message; }
+            if (mediaFilesRequestedSubfolders != mediaIncludeSubfolders)
+            { mediaFiles = []; mediaFilesDirectory = null; mediaFilesRefreshAt = 0; }
         }
         if (mediaEditTask is { IsCompleted: true } edit)
         {
@@ -512,8 +551,9 @@ public sealed partial class EditorView
         mediaFilesRefreshAt = Environment.TickCount64 + 5000;
         string? directory = StoryboardMediaDirectory(Document);
         mediaFilesRequestedDirectory = directory;
+        bool includeSubfolders = mediaFilesRequestedSubfolders = mediaIncludeSubfolders;
         mediaFilesTask = Task.Run(() => directory is null || !Directory.Exists(directory) ? []
-            : Directory.EnumerateFiles(directory, "*", new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = true })
+            : Directory.EnumerateFiles(directory, "*", new EnumerationOptions { RecurseSubdirectories = includeSubfolders, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = true })
                 .Where(p => IsBackgroundImage(p) || IsBeatmapVideo(p)).Take(1000).Order(StringComparer.OrdinalIgnoreCase).ToArray());
     }
 }

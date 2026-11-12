@@ -2507,5 +2507,6 @@
   "media.previewHelp": "Generate to preview your colours here.",
   "media.useBackground": "設為背景",
   "media.useVideo": "設為影片",
-  "shortcuts.hint": "{0}（{1}）"
+  "shortcuts.hint": "{0}（{1}）",
+  "media.includeSubfolders": "包含子資料夾"
 }

@@ -2507,5 +2507,6 @@
   "media.previewHelp": "Generate to preview your colours here.",
   "media.useBackground": "Use as background",
   "media.useVideo": "Use as video",
-  "shortcuts.hint": "{0} ({1})"
+  "shortcuts.hint": "{0} ({1})",
+  "media.includeSubfolders": "Include subfolders"
 }
