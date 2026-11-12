@@ -10,7 +10,8 @@ have a thumbnail preview; empty media cards accept a click to choose a file or a
 file drop. **Unbind** is available only for assigned media, and the video offset
 appears after a video is assigned. The folder list includes
 up to 1,000 image/video files, shows only media not assigned to the active difficulty,
-and hides the section when there are no alternatives. Image thumbnails and video
+and keeps the chooser visible with a zero count when there are no alternatives.
+A divider separates media selection from difficulty synchronization. Image thumbnails and video
 icons identify each item; use **Use as background** or **Use as video** to assign it.
 The list defaults to the beatmap root directory. Enable **Include subfolders**
 to also list nested media; this session-only option starts off. The list refreshes

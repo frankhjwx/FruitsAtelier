@@ -101,7 +101,7 @@ internal static class MediaPanelTests
             choiceUi.View.LibrarySettings.Workspace = root;
             choiceUi.View.ShowMediaPanel(); choiceUi.Paint();
             while (choiceUi.View.MediaFilesBusy) { Thread.Sleep(10); choiceUi.Paint(); }
-            Check(choiceUi.View.MediaLibraryBounds.Width == 0, "No alternatives section when only bound media exist");
+            Check(choiceUi.View.MediaLibraryBounds.Width > 0 && choiceUi.Canvas.Texts.Any(t => t.Value == "▸ " + L.Get("media.library", 0)), "Empty alternatives section remains visible with zero count");
             File.WriteAllText(Path.Combine(choices, "other.png"), "other");
             var choiceTimer = System.Diagnostics.Stopwatch.StartNew();
             string choiceLabel = "▸ " + L.Get("media.library", 1);

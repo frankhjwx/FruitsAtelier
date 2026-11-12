@@ -118,7 +118,8 @@ public sealed partial class EditorView
             MediaSyncBounds = ActionButton(L.Get("media.sync"), SynchronizeMedia,
                 difficulties.Count > 1 && !SynchronizationBusy && !MediaEditingBusy, false);
             y += 4;
-            var toggleLines = WrapSyncText(c, L.Get("media.includeSubfolders"), bounds.Width - 62);
+            c.Line(bounds.X, y, bounds.Right, y, Grid); y += 14;
+            var toggleLines = WrapSyncText(c, L.Get("media.includeSubfolders"), bounds.Width - 82);
             var toggle = new Rect(bounds.X, y, bounds.Width, Math.Max(32, toggleLines.Length * 17 + 12));
             ToggleSwitch(c, toggle, "", mediaIncludeSubfolders, () =>
             {
@@ -127,33 +128,30 @@ public sealed partial class EditorView
                 mediaFilesRefreshAt = 0;
                 RefreshMediaFiles();
             });
-            for (int i = 0; i < toggleLines.Length; i++) c.Text(toggleLines[i].Text, bounds.X, y + 6 + i * 17, 12, Foreground, bounds.Width - 62);
+            for (int i = 0; i < toggleLines.Length; i++) c.Text(toggleLines[i].Text, bounds.X + 10, y + 6 + i * 17, 12, Foreground, bounds.Width - 82);
             y += toggle.Height + 10;
-            if (mediaAvailableFiles.Length > 0)
+            MediaLibraryBounds = ActionButton((mediaLibraryExpanded ? "▾ " : "▸ ") + L.Get("media.library", mediaAvailableFiles.Length),
+                () => mediaLibraryExpanded = !mediaLibraryExpanded, true, false);
+            if (mediaLibraryExpanded)
+            foreach (string file in mediaAvailableFiles)
             {
-                MediaLibraryBounds = ActionButton((mediaLibraryExpanded ? "▾ " : "▸ ") + L.Get("media.library", mediaAvailableFiles.Length),
-                    () => mediaLibraryExpanded = !mediaLibraryExpanded, true, false);
-                if (mediaLibraryExpanded)
-                foreach (string file in mediaAvailableFiles)
+                bool video = IsBeatmapVideo(file);
+                string label = L.Get(video ? "media.useVideo" : "media.useBackground");
+                float rowHeight = 56 + Math.Max(32, WrapSyncText(c, label, bounds.Width - 20).Length * 17 + 12);
+                if (y + rowHeight < content.Y || y > content.Bottom) { y += rowHeight; continue; }
+                var thumbnail = new Rect(bounds.X + 10, y, 48, 40);
+                c.Fill(thumbnail, Surface, 4);
+                if (video)
                 {
-                    bool video = IsBeatmapVideo(file);
-                    string label = L.Get(video ? "media.useVideo" : "media.useBackground");
-                    float rowHeight = 56 + Math.Max(32, WrapSyncText(c, label, bounds.Width - 20).Length * 17 + 12);
-                    if (y + rowHeight < content.Y || y > content.Bottom) { y += rowHeight; continue; }
-                    var thumbnail = new Rect(bounds.X, y, 48, 40);
-                    c.Fill(thumbnail, Surface, 4);
-                    if (video)
-                    {
-                        c.Line(thumbnail.X + 19, y + 12, thumbnail.X + 30, y + 20, Muted, 2);
-                        c.Line(thumbnail.X + 30, y + 20, thumbnail.X + 19, y + 28, Muted, 2);
-                        c.Line(thumbnail.X + 19, y + 28, thumbnail.X + 19, y + 12, Muted, 2);
-                    }
-                    else c.Thumbnail(file, thumbnail);
-                    c.Text(Path.GetRelativePath(directory!, file), bounds.X + 58, y + 12, 12, Foreground, bounds.Width - 58);
-                    y += 46;
-                    ActionButton(label,
-                        () => ImportMediaFile(file, video), !MediaEditingBusy, false);
+                    c.Line(thumbnail.X + 19, y + 12, thumbnail.X + 30, y + 20, Muted, 2);
+                    c.Line(thumbnail.X + 30, y + 20, thumbnail.X + 19, y + 28, Muted, 2);
+                    c.Line(thumbnail.X + 19, y + 28, thumbnail.X + 19, y + 12, Muted, 2);
                 }
+                else c.Thumbnail(file, thumbnail);
+                c.Text(Path.GetRelativePath(directory!, file), bounds.X + 68, y + 12, 12, Foreground, bounds.Width - 78);
+                y += 46;
+                ActionButton(label,
+                    () => ImportMediaFile(file, video), !MediaEditingBusy, false);
             }
         }
         else
@@ -161,7 +159,7 @@ public sealed partial class EditorView
             Heading("media.paletteTitle");
             Hint("media.paletteIntro"); y += 4;
             Preview(88);
-            c.Text(mediaPanelValues.Background ?? L.Get("media.noBackground"), bounds.X, y, 11, Muted, bounds.Width); y += 28;
+            c.Text(mediaPanelValues.Background ?? L.Get("media.noBackground"), bounds.X + 10, y, 11, Muted, bounds.Width - 20); y += 28;
             if (!mediaBackgroundExists)
             {
                 ActionButton(L.Get("media.choose"), () => ChooseMedia(false), RequestMediaFile is not null && !MediaEditingBusy, true);
@@ -274,7 +272,7 @@ public sealed partial class EditorView
             }
             else
             {
-                c.Text(name, bounds.X, y, 12, exists ? Foreground : Error, bounds.Width); y += 21;
+                c.Text(name, bounds.X + 10, y, 12, exists ? Foreground : Error, bounds.Width - 20); y += 21;
                 if (!exists) { c.Text(L.Get("media.missing"), bounds.X, y, 11, Error, bounds.Width); y += 20; }
                 Button(c, new(bounds.X, y, half, 27), L.Get("media.choose"), () => ChooseMedia(video), enabled: !MediaEditingBusy && RequestMediaFile is not null, fontSize: 11);
                 var clear = new Rect(bounds.X + half + 6, y, half, 27);
