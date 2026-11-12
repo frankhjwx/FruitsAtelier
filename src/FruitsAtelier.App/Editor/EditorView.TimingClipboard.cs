@@ -48,9 +48,9 @@ public sealed partial class EditorView
         try { paste = TimingEditing.Parse(text).Length > 0; }
         catch (ArgumentException) { paste = false; }
         contextItems.Clear(); menu = -1;
-        if (timingContextTarget.Copy) contextItems.Add(new(L.Get("editor.command.copy"), CopyTimingSelection, Shortcut: "Ctrl+C"));
+        if (timingContextTarget.Copy) contextItems.Add(new(L.Get("editor.command.copy"), CopyTimingSelection, Shortcut: ShortcutKeys("copy", ShortcutScope.TimingPoints)));
         int session = timingContextTarget.Session;
-        if (paste) contextItems.Add(new(L.Get("editor.command.paste"), () => PasteTimingText(text, session), Shortcut: "Ctrl+V"));
+        if (paste) contextItems.Add(new(L.Get("editor.command.paste"), () => PasteTimingText(text, session), Shortcut: ShortcutKeys("paste", ShortcutScope.TimingPoints)));
         timingContextMenu = contextItems.Count > 0;
         contextBounds = new(Math.Clamp(timingContextTarget.X, 0, Math.Max(0, width - 240)),
             Math.Clamp(timingContextTarget.Y, 0, Math.Max(0, height - ContextMenuHeight)), 240, ContextMenuHeight);

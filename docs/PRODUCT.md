@@ -25,14 +25,18 @@ See [Editing Controls](EDITOR_UI.md) for shortcuts, selection, and control-point
 | `.osu` | Read v7–v14 and stable-compatible lazer v128, Mode=0 or Mode=2; export Catch Mode=2, retaining v7 for v7 maps and v14 otherwise |
 | `.catchproj` | Compatible editor project format containing nodes, handles, timing, imported context, and resource references |
 | `.catchdiff` | Workspace project manifest and separate difficulty documents; see [Workspace](WORKSPACE.md) |
+| `.faz` / `.fad` | Portable editable project / difficulty archives; see [Project archives](PROJECT_ARCHIVES.md) |
+| `.fpt` | Portable Pattern Gallery package |
 | `.osk` | Import Catch skin images and configuration |
 
 Projects reference audio by path. Preserve the relative resource locations when moving a project. Exporting `.osu` quantizes times and path coordinates and reports read-back results; save the editor project to retain editable data.
 
 ## Current scope
 
-Supported features include multiple timing points, inherited SV, beat snapping, batch object operations, undo/redo, English and Chinese interfaces, and MP3 / OGG / WAV playback and seeking. The preview uses AR, CS, and the selected skin to display objects and hyperdash markers.
+Supported features include multiple timing points, inherited SV, beat snapping, batch object operations, undo/redo, 13 interface languages, and MP3 / OGG / WAV playback and seeking. The preview uses AR, CS, and the selected skin to display objects and hyperdash markers.
 
-Song playback supports 10%, 25%, 50%, 75%, 100%, and 150% speed while preserving pitch; hitsounds keep their original speed. Testplay starts at the playhead and supports movement, dash, combo feedback, pause and autoplay. Preview and testplay animate fruit and banana sprites and catcher effects; the editing canvas uses static sprites. Slider-to-stream conversion retains editable geometry and exports individual fruits.
+Song playback supports 10%, 25%, 50%, 75%, 100%, and 150% speed while preserving pitch; hitsounds keep their original speed. Preview and Testplay share difficulty, visibility and speed mods. DT/HT adjust music pitch with the clock rate; ordinary speed changes preserve pitch. Testplay starts from the selected position with its configured lead-in and supports movement, dash, combo feedback, pause and autoplay. Preview and testplay animate fruit and banana sprites and catcher effects; the editing canvas uses static sprites. Slider-to-stream conversion retains editable geometry and exports individual fruits.
+
+The Media dock assigns backgrounds/videos, synchronizes media between difficulties, and generates background-based combo-colour palettes. Hitsounding provides per-track editing, cross-difficulty timing-point paste and beat-spaced volume ramps. Library names remain visible while background star calculations complete. Keyboard commands are configurable separately for Default and Lazer profiles.
 
 Video and storyboard playback follows the song transport, including storyboard samples and gameplay triggers. Timing editing and bookmarks are described in the editing controls guide. See the [user manual](USER_MANUAL.md) for a concise feature guide and keyboard reference.

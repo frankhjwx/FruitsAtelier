@@ -7,11 +7,31 @@ static class KeybindingTests
     public static void Run()
     {
         string language = L.Language;
-        try { L.SetLanguage("en"); Catalog(); Routing(); Settings(); GameplayChords(); }
+        try { L.SetLanguage("en"); Catalog(); Routing(); Settings(); GameplayChords(); Hints(); DropletSelectionLockTests.Tooltips(); }
         finally { L.SetLanguage(language); }
         Console.WriteLine("PASS shortcut catalog, routing, contexts, profiles, capture, conflicts, persistence and layout");
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
+    private static void Hints()
+    {
+        var ui = new Ui(false); var view = ui.View;
+        foreach (string locale in new[] { "en", "zh-CN" })
+        foreach (bool lazer in new[] { false, true })
+        {
+            L.SetLanguage(locale); view.LibrarySettings.LazerEditing = lazer;
+            var command = Command("hitWhistle", EditorView.ShortcutScope.Hitsounding, lazer);
+            string body = L.Get("hitsounding.hint.brush", L.Get("timing.soft"));
+            view.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(17, 'U'), ShortcutBinding.From('J')];
+            string hint = view.ShortcutHint(body, command.Id, command.Scope);
+            Check(hint.Contains("Ctrl + U / J") && hint.EndsWith(body[body.IndexOf('\n')..]), "hint shows all bindings and preserves mouse instructions");
+            Check(view.ShortcutKeys(command.Id, command.Scope, first: true) == "Ctrl + U", "button keycap shows first configured chord");
+            view.LibrarySettings.ShortcutBindings[command.StorageKey] = [];
+            Check(view.ShortcutHint(body, command.Id, command.Scope) == body, "unbound hint retains only its description, without empty parentheses");
+            Check(view.ShortcutKeys(command.Id, command.Scope) == "", "unbound button and menu have no shortcut text");
+            view.LibrarySettings.ShortcutBindings.Remove(command.StorageKey);
+            Check(view.ShortcutKeys(command.Id, command.Scope) == "A", "restoring defaults restores the hint");
+        }
+    }
     private static EditorView.ShortcutCommand Command(string id, EditorView.ShortcutScope scope = EditorView.ShortcutScope.Compose, bool lazer = false)
         => EditorView.ShortcutCommands.Single(c => c.Id == id && c.Scope == scope && c.Lazer == lazer);
     private static void Bind(EditorView view, string id, params int[] keys) => view.LibrarySettings.ShortcutBindings[Command(id).StorageKey] = [ShortcutBinding.From(keys)];

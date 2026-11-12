@@ -1,5 +1,21 @@
 # Building and Testing
 
+## Media panel
+
+`App.Tests --media-panel-check` covers root-only media discovery, opt-in subfolder
+discovery, scrollbar dragging and track clicks, collision-safe imports, signed video
+offsets, resource copying across difficulty directories, related-history undo,
+preserved storyboard/media placement, project and osu roundtrips, workspace-only
+resource persistence, deterministic 3–8 colour palettes, grayscale and extreme
+colour inputs, and the generator's HSL/HSP brightness margins. Run
+`--mapping-canvas-check`, `--song-dock-check` and `--testplay-mods-check` for the
+shared background, Colours and docking boundaries.
+
+`FruitsAtelier.App --render-check --media-panel-render-check` exercises native
+background dropping, palette generation/application and narrow dock layouts in
+English and Chinese at 96/144/192 DPI. Captures are stored under
+`artifacts/tests/media-panel/native`. Inspect text wrapping and swatch separation.
+
 ## Settings modal input
 
 `App.Tests --settings-modal-check` verifies that Settings blocks background hover,
@@ -448,7 +464,10 @@ the remaining cases. Capture both output streams when retaining test logs.
 `App.Tests --window-preferences-check` checks canvas switch persistence, settings
 compatibility, window preference serialization, per-difficulty GS/DS, grid level,
 Anchor Snap and beat-snap restoration, and temporary beat-grid isolation. It also
-checks that snap slider movement defers saving until release. On Windows,
+checks that snap slider movement defers saving until release. Settings application
+checks compare every serialized preference after an unrelated change and reload,
+including canvas controls, locks, docking, window state and legacy Songs paths,
+and verify cancellation and failed-save isolation in English and Chinese. On Windows,
 `FruitsAtelier.App.exe --render-check --window-preferences-render-check` launches
 native windows and checks normal/maximized restoration after minimized and
 fullscreen states, setup isolation and work-area clamping.
@@ -1782,7 +1801,13 @@ Windows renderer, operates the default multiplier input and captures settings,
 menus and inspector at narrow and ordinary window sizes under
 `artifacts/tests/slider-bpm/native`.
 
+`App.Tests --library-cold-existing-check` scans the currently selected Songs directory into a new temporary index, pauses the full scan before completion, and verifies names and drawing, including a cards-only startup preview. It reads source files without modifying them.
+
+`App.Tests --library-rating-order-check` checks cold indexing with a deliberately blocked full scan, cards-only preview hydration, visible scan and star-calculation progress while workers are blocked, same-frame project selection names, retained rows across browser replacement, obsolete rating cancellation on selection changes, metadata visibility and scrolling while cold star calculations are blocked, descending star order across difficulty pages, unknown ratings, stable ties, reused calculations and persisted preview order.
+
 ## Hitsounding workspace checks
+
+`App.Tests --hitsounding-feedback-check` covers the inherited-point shortcut, deferred affecting-line application, five-percent slider clicks and precise dragging, adjacent two-point volume ramps with tempo changes and undo, the compact interval dropdown and generated group selection, multi-selection Offset visibility, proportional scrollbar input, selection bank highlighting, and selected-target sound paste. It is included in the Hitsounding panel check.
 
 `App.Tests --hitsound-library-files-check` covers real right-button context menus,
 relative paths, multi-selection, file operations, one-second drag navigation,

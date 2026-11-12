@@ -45,6 +45,8 @@ public sealed partial class EditorView
     private readonly List<(Rect Bounds, LibraryMap Map)> libraryCards = [];
     private Dictionary<string, double?> libraryRatings = [];
     private long libraryRatingRevision;
+    private int libraryRatingCompleted, libraryRatingTotal;
+    private string? libraryRatingKey;
     private string? selectedLibraryGroup;
     private bool librarySettingsOpen, libraryMyMapsOnly, exportPage, resourcePage;
     private int libraryField = -1, libraryDiffScroll;
@@ -176,6 +178,7 @@ public sealed partial class EditorView
     }
     public void CloseLibrary()
     {
+        libraryBrowser?.SuspendRatings();
         CloseCollectionDialog();
         if (LibraryVisible && !exportPage) { RememberLibraryPosition(); SaveLibraryMemory(); }
         LibraryVisible = !HasEditorProject; exportPage = resourcePage = false; librarySettingsOpen = false; updatesPage = false;
@@ -350,6 +353,7 @@ public sealed partial class EditorView
             libraryPendingDirectories.Clear();
             string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
             bool scanStandardMaps = LibrarySettings.ScanStandardMaps;
+            string? priorityDirectory = libraryBrowser?.Selected?.Map.Directory ?? selectedLibraryGroup;
             var existing = indexedWorkspace == workspace && indexedSongs == songs ? libraryDatabase : null;
             Volatile.Write(ref scanningDatabase, null);
             searchedLibraryRevision = -1;
@@ -360,7 +364,7 @@ public sealed partial class EditorView
                 Platform.FazArchive.Recover(new LibrarySettings { Workspace = workspace, Songs = songs });
                 var db = existing ?? new LibraryDatabase(workspace, songs);
                 Volatile.Write(ref scanningDatabase, db);
-                return (db, db.ScanDirectories(directories, progress: p => Volatile.Write(ref libraryScanProgress, p), scanStandardMaps: scanStandardMaps));
+                return (db, db.ScanDirectories(directories, progress: p => Volatile.Write(ref libraryScanProgress, p), scanStandardMaps: scanStandardMaps, priorityDirectory: priorityDirectory));
             });
             indexedWorkspace = workspace; indexedSongs = songs;
             libraryNotice = L.Get("library.scanning");
@@ -423,6 +427,7 @@ public sealed partial class EditorView
                     || runningSearchSelection != selectedLibraryGroup || runningSearchScroll != libraryScroll)
                 { result.Retire(); searchTask = null; searchTaskQuery = "\0"; return; }
                 float fraction = libraryScroll - (int)libraryScroll;
+                result.RetainDetails(libraryBrowser);
                 libraryBrowser?.Retire(); libraryBrowser = result;
                 libraryBrowserQuery = runningSearchQuery;
                 if (result.TopIndex >= 0 && !libraryPointerActive) libraryScroll = result.OffsetOf(result.TopIndex) + fraction;
@@ -508,10 +513,23 @@ public sealed partial class EditorView
         Button(c, new(16, 88, 158, 36), L.Get("library.all"), () => SwitchLibraryCategory(false), !LibraryUsesProjects && libraryCollection is null);
         Button(c, new(16, 134, 158, 36), L.Get("library.myMaps"), () => SwitchLibraryCategory(true), libraryMyMapsOnly && !libraryFavouritesOnly);
         Button(c, new(16, 180, 158, 36), L.Get("library.favourites"), () => SwitchLibraryCategory(false, true), libraryFavouritesOnly);
-        DrawLibraryCollections(c);
-        var noticeLines = libraryNotice.Split('\n');
-        for (int i = 0; i < noticeLines.Length; i++) c.Text(noticeLines[i], 16, height - 96 + i * 19, 12, Muted, 158);
-        if (SkinName is { } skinName) c.Text(L.Get("skin.selector", skinName), 16, height - 126, 12, Muted, 158);
+        string notice = libraryNotice;
+        if (scanTask is not null || libraryStartupTask is not null || libraryStartupScan)
+        {
+            notice = L.Get("library.scanning");
+            if (scanTask is not null && Volatile.Read(ref libraryScanProgress) is { } progress)
+                notice += "\n" + L.Get("library.scanProgress", progress.Files, progress.Indexed, progress.Errors);
+        }
+        var ratingProgress = libraryBrowser?.RatingProgress;
+        if (ratingProgress is null && ratingTask is not null && libraryRatingKey == libraryBrowser?.Selected?.Key)
+            ratingProgress = (Volatile.Read(ref libraryRatingCompleted), libraryRatingTotal);
+        if (ratingProgress is { } stars)
+            notice += (notice.Length > 0 ? "\n" : "") + L.Get("library.ratingProgress", stars.Completed, stars.Total);
+        var noticeLines = notice.Split('\n');
+        float noticeY = height - Math.Max(96, noticeLines.Length * 19 + 48);
+        DrawLibraryCollections(c, Math.Min(height - 155, noticeY - 40));
+        for (int i = 0; i < noticeLines.Length; i++) c.Text(noticeLines[i], 16, noticeY + i * 19, 12, Muted, 158);
+        if (SkinName is { } skinName) c.Text(L.Get("skin.selector", skinName), 16, noticeY - 30, 12, Muted, 158);
         float listWidth = width - 558;
         var queryRect = new Rect(214, 84, width - 238, 40);
         c.Fill(queryRect, Surface, 6); c.Stroke(queryRect, libraryField == 2 ? Accent : Grid, radius: 6);
@@ -616,13 +634,20 @@ public sealed partial class EditorView
         Button(c, new(x, 272, 288, 38), L.Get(map.ProjectPath is null ? "library.start" : "library.continue"), () => OpenSelectedLibraryMap(map));
         int count = LibraryVisibleDifficulties;
         libraryDiffScroll = Math.Clamp(libraryDiffScroll, 0, Math.Max(0, group.Count - count));
-        libraryBrowser!.RequestDetails(libraryDiffScroll);
+        libraryBrowser!.RequestDetails(libraryDiffScroll, CalculateLibraryRating, LibrarySettings.ScanStandardMaps,
+            !LibraryUsesProjects && libraryCollection is null && string.IsNullOrWhiteSpace(libraryQuery));
         var pending = new List<LibraryMap>();
         for (int i = libraryDiffScroll; i < Math.Min(group.Count, libraryDiffScroll + count); i++)
         {
             var diff = libraryBrowser.Detail(i);
             if (diff is null) continue;
-            if (diff.Mode == 2 && (!libraryRatings.ContainsKey(diff.Path) || libraryRatingsToRefresh.Contains(diff.Path)) && (diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
+            if (libraryBrowser.TryGetDetailRating(diff.Path, out var rankedStars))
+            {
+                if (!libraryRatings.ContainsKey(diff.Path) && libraryRatings.Count >= 512)
+                { string oldest = libraryRatings.Keys.First(); libraryRatings.Remove(oldest); libraryRatingsToRefresh.Remove(oldest); }
+                libraryRatings[diff.Path] = rankedStars; libraryRatingsToRefresh.Remove(diff.Path);
+            }
+            if (libraryBrowser.IsPreview && diff.Mode == 2 && (!libraryRatings.ContainsKey(diff.Path) || libraryRatingsToRefresh.Contains(diff.Path)) && (diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
                 || diff.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))) pending.Add(diff);
             float y = 334 + (i - libraryDiffScroll) * 40;
             var row = new Rect(x - 4, y - 5, 296, 38);
@@ -643,32 +668,37 @@ public sealed partial class EditorView
             if (pending.Count > 0)
             {
                 long revision = libraryRatingRevision;
+                libraryRatingKey = libraryBrowser?.Selected?.Key; libraryRatingCompleted = 0; libraryRatingTotal = pending.Count;
                 ratingTask = Task.Run(() =>
                 {
                     var result = new Dictionary<string, double?>();
-                    foreach (var entry in pending)
-                    {
-                        try
-                        {
-                            var fingerprint = ratingCache.Fingerprint(entry.Path);
-                            var cached = ratingCache.Read(entry.Path);
-                            if (cached is { Length: 8 } && BitConverter.ToDouble(cached) is var cachedStars && double.IsFinite(cachedStars) && cachedStars >= 0)
-                            { if (ratingCache.Fingerprint(entry.Path) == fingerprint) result[entry.Path] = cachedStars; continue; }
-                            bool project = entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase);
-                            var d = project ? ProjectSerializer.ReadFile(entry.Path) : OsuBeatmapReader.ReadFile(entry.Path);
-                            var converted = CatchStreamConverter.Convert(d);
-                            var exported = project && converted.Success ? OsuBeatmapWriter.Serialize(d) : null;
-                            var objects = converted.Success ? CatchDifficultyObjects.Create(exported?.ReadBack ?? d) : converted.Objects;
-                            result[entry.Path] = converted.Success ? CatchDifficultyCalculator.Calculate(objects, d.CircleSize).StarRating : null;
-                            if (ratingCache.Fingerprint(entry.Path) != fingerprint) { result.Remove(entry.Path); continue; }
-                            if (result[entry.Path] is { } stars) ratingCache.Write(entry.Path, fingerprint, BitConverter.GetBytes(stars));
-                        }
-                        catch (Exception) { result[entry.Path] = null; }
-                    }
+                    foreach (var entry in pending) { result[entry.Path] = CalculateLibraryRating(entry); Interlocked.Increment(ref libraryRatingCompleted); }
                     return (revision, result);
                 });
             }
         }
+    }
+    private static double? CalculateLibraryRating(LibraryMap entry)
+    {
+        if (entry.Mode != 2 || !(entry.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
+            || entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))) return null;
+        try
+        {
+            var fingerprint = ratingCache.Fingerprint(entry.Path);
+            var cached = ratingCache.Read(entry.Path);
+            if (cached is { Length: 8 } && BitConverter.ToDouble(cached) is var cachedStars && double.IsFinite(cachedStars) && cachedStars >= 0)
+                return ratingCache.Fingerprint(entry.Path) == fingerprint ? cachedStars : null;
+            bool project = entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase);
+            var document = project ? ProjectSerializer.ReadFile(entry.Path) : OsuBeatmapReader.ReadFile(entry.Path);
+            var converted = CatchStreamConverter.Convert(document);
+            var exported = project && converted.Success ? OsuBeatmapWriter.Serialize(document) : null;
+            var objects = converted.Success ? CatchDifficultyObjects.Create(exported?.ReadBack ?? document) : converted.Objects;
+            double? stars = converted.Success ? CatchDifficultyCalculator.Calculate(objects, document.CircleSize).StarRating : null;
+            if (ratingCache.Fingerprint(entry.Path) != fingerprint) return null;
+            if (stars is { } value) ratingCache.Write(entry.Path, fingerprint, BitConverter.GetBytes(value));
+            return stars;
+        }
+        catch (Exception) { return null; }
     }
     private void LibraryTextField(ICanvas c, int index, string label, string value, float y)
     {

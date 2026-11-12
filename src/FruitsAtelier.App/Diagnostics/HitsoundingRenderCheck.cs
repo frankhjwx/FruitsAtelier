@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
             {
                 if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
@@ -33,6 +33,7 @@ internal static class HitsoundingRenderCheck
                     map.TimingPoints.Add(new() { TimeMs = time, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = 0, Volume = time % 100 == 0 ? 60 : 5 });
                 foreach (int index in new[] { 12, 123 })
                     map.TimingPoints.Add(new() { TimeMs = index == 12 ? 3000 : 3500, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = index, Volume = 80 });
+                if (scenario.StartsWith("-volume-ramp", StringComparison.Ordinal)) map.TimingPoints.Single(p => p.TimeMs == 3000).SampleIndex = 0;
                 map.Fruits.AddRange(Enumerable.Range(0, 20).Select(i => new Fruit { TimeMs = i * 250, X = 256,
                     OriginalLine = $"256,192,{i * 250},1,{(i % 4 == 0 ? 4 : i % 3 == 0 ? 8 : i % 2 == 0 ? 2 : 0)},0:0:0:0:" }));
                 if (scenario == "-notes-preview") map.Fruits.RemoveAll(f => f.TimeMs == 750);
@@ -146,6 +147,31 @@ internal static class HitsoundingRenderCheck
                     var handle = editor.HitsoundingTimingHandleBounds(point);
                     editor.PointerDown(handle.X + 4, handle.Y + 10, 0, false, false);
                     editor.PointerUp(handle.X + 4, handle.Y + 10, 0);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
+                if (scenario.StartsWith("-volume-ramp", StringComparison.Ordinal))
+                {
+                    foreach (double time in new[] { 2250d, 3000d })
+                    {
+                        var point = editor.Document.TimingPoints.First(p => p.TimeMs == time);
+                        var handle = editor.HitsoundingTimingHandleBounds(point);
+                        editor.PointerDown(handle.X + 4, handle.Y + 10, 0, false, true);
+                        editor.PointerUp(handle.X + 4, handle.Y + 10, 0);
+                        editor.Render(canvas, size.Item1, size.Item2);
+                    }
+                }
+                if (scenario.StartsWith("-volume-ramp", StringComparison.Ordinal) && size.Item2 < 700)
+                {
+                    var scroll = editor.TimingHelperScrollbar.Track;
+                    editor.Wheel(scroll.X - 12, scroll.Y + 10, -360, false, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
+                if (scenario is "-volume-ramp-menu" or "-volume-ramp-generated")
+                {
+                    var controls = editor.TimingHelperRampControls;
+                    var button = scenario == "-volume-ramp-menu" ? controls.Interval : controls.Generate;
+                    editor.PointerDown(button.X + button.Width / 2, button.Y + 10, 0, false, false);
+                    editor.PointerUp(button.X + button.Width / 2, button.Y + 10, 0);
                     editor.Render(canvas, size.Item1, size.Item2);
                 }
                 if (scenario is "-green-drag" or "-green-menu")

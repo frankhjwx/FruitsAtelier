@@ -12,6 +12,31 @@ public sealed partial class EditorView
     private readonly Rect[] hitsoundingToolButtons = new Rect[5];
     internal Rect HitsoundingToolBounds(int index) => hitsoundingToolButtons[index];
     internal int HitsoundingBrush => hitsoundingBrush;
+    internal int HitsoundingDisplayedBank
+    {
+        get
+        {
+            int bank = 0;
+            bool selected = false;
+            foreach (var key in hitsoundingMultiSelection)
+            {
+                if (key.Lane is < 1 or > 4 || !hitsoundingNoteLookup.TryGetValue((key.Id, key.Event), out var note)) continue;
+                var sample = hitsoundingResolver!.Describe(note);
+                int value = key.Lane == 1 ? sample.NormalSet : sample.AdditionSet;
+                if (selected && bank != value) return 0;
+                bank = value; selected = true;
+            }
+            if (hitsoundingNotesSelection)
+                foreach (var id in objectSelection)
+                foreach (var note in hitsoundingParentNotes.GetValueOrDefault(id) ?? [])
+                {
+                    var sample = hitsoundingResolver!.Describe(note);
+                    if (selected && bank != sample.NormalSet || sample.Additions != 0 && sample.NormalSet != sample.AdditionSet) return 0;
+                    bank = sample.NormalSet; selected = true;
+                }
+            return selected ? bank : hitsoundingBrush;
+        }
+    }
     internal bool HitsoundingDraw => hitsoundingDraw;
     internal bool HitsoundingBrushEnabled => hitsoundingDraw || hitsoundingMultiSelection.Count > 0
         || hitsoundingNotesSelection && objectSelection.Count > 0;
@@ -58,8 +83,9 @@ public sealed partial class EditorView
         float x = bounds.X + (bounds.Width - size) / 2, y = bounds.Y + Math.Max(padding, (bounds.Height - total) / 2);
         string[] names = ["select", "draw", "soft", "normal", "drum"];
         string[] keys = ["hitsounding.select", "hitsounding.draw", "timing.soft", "timing.normal", "timing.drum"];
-        string[] shortcuts = ["1", "2", "A", "S", "D"];
+        string[] commands = ["hitSelect", "hitDraw", "hitWhistle", "hitNormal", "hitFinish"];
         int[] banks = [0, 0, 2, 1, 3];
+        int displayedBank = HitsoundingDisplayedBank;
         for (int i = 0; i < names.Length; i++)
         {
             int index = i;
@@ -67,7 +93,7 @@ public sealed partial class EditorView
             var box = new Rect(x, y, size, size - 2);
             hitsoundingToolButtons[i] = box;
             bool enabled = i < 2 || HitsoundingBrushEnabled;
-            bool active = enabled && (i < 2 ? hitsoundingDraw == (i == 1) : hitsoundingBrush == banks[i]);
+            bool active = enabled && (i < 2 ? hitsoundingDraw == (i == 1) : displayedBank == banks[i]);
             uint color = !enabled ? Muted : i < 2 ? Accent : HitsoundingBankColor(banks[i]);
             if (i == 0)
                 c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", "select.png"), box, opacity: active ? 1 : .45f);
@@ -78,7 +104,9 @@ public sealed partial class EditorView
                 c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "hitsounding", names[i] + ".png"),
                     new(x + size * .22f, y + 3, size * .56f, size * .56f), opacity: !enabled ? .18f : active ? 1 : .55f);
             }
-            c.Text(shortcuts[i], x + 5, y + 4, 10, color, 14, true);
+            string shortcut = ShortcutKeys(commands[i], ShortcutScope.Hitsounding, first: true);
+            float keyFont = Math.Min(10, (size - 10) / Math.Max(1, c.MeasureText(shortcut, 10, true)) * 10);
+            if (shortcut.Length > 0) c.Text(shortcut, x + 5, y + 4, keyFont, color, size - 10, true);
             string label = L.Get(keys[i]);
             float font = Math.Clamp(size * .17f, 8, 11);
             c.Text(label, x + Math.Max(2, (size - c.MeasureText(label, font, true)) / 2), y + size * .73f,
@@ -95,7 +123,11 @@ public sealed partial class EditorView
             var bounds = hitsoundingToolButtons[i];
             if (!bounds.Contains(mouseX, mouseY)) continue;
             string text = i < 2 ? L.Get(i == 0 ? "hitsounding.hint.select" : "hitsounding.hint.draw")
-                : L.Get("hitsounding.hint.brush", L.Get(i == 2 ? "timing.soft" : i == 3 ? "timing.normal" : "timing.drum"), i == 2 ? "A" : i == 3 ? "S" : "D");
+                : L.Get("hitsounding.hint.brush", L.Get(i == 2 ? "timing.soft" : i == 3 ? "timing.normal" : "timing.drum"));
+            string command = i switch { 0 => "hitSelect", 1 => "hitDraw", 2 => "hitWhistle", 3 => "hitNormal", _ => "hitFinish" };
+            text = ShortcutHint(text, command, ShortcutScope.Hitsounding);
+            if (i >= 2 && ShortcutKeys("cycleSamples", ShortcutScope.Hitsounding).Length > 0)
+                text += "\n" + ShortcutHint(L.Get("shortcuts.description.cycleSamples"), "cycleSamples", ShortcutScope.Hitsounding);
             DrawPaletteTooltip(c, text, bounds, left: false, above: false);
         }
     }

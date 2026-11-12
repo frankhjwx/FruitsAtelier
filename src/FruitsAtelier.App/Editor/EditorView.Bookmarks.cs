@@ -137,7 +137,8 @@ public sealed partial class EditorView
         }
         if (hovered >= 0)
         {
-            string hint = L.Get(hints[hovered]);
+            string hint = hovered < 4 ? ShortcutHint(L.Get(hints[hovered]), hovered switch
+            { 0 => "bookmark", 1 => "removeBookmark", 2 => "bookmarkLeft", _ => "bookmarkRight" }) : L.Get(hints[hovered]);
             float w = Math.Min(BookmarkToolbarArea.Width, Math.Min(360, c.MeasureText(hint, 11) + 16));
             float x = Math.Clamp(mouseX - w / 2, BookmarkToolbarArea.X, BookmarkToolbarArea.Right - w);
             float y = panel.Y - 27 >= BookmarkToolbarArea.Y ? panel.Y - 27 : panel.Bottom + 4;

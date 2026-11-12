@@ -172,7 +172,7 @@ Clicking a Notes object or an existing sound tag selects its event.
 Selecting a sound does not seek. Clicking empty grid space clears selection and preserves the playing position.
 Left-click the upper time ruler to seek directly to the corresponding time, while
 retaining the playing or paused state. Dragging the play line still adjusts its viewport position.
-Ctrl-click toggles individual sound tags, Notes events, storyboard sounds, and green timing blocks or handles without replacing the existing selection.
+Ctrl-click toggles individual sound tags, Notes events, storyboard sounds, and red or green timing blocks or handles without replacing the existing selection.
 Clicking the lane-label column does not seek. Dragging empty grid space draws a selection
 rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Its starting
 time follows the scrolling timeline during playback while the opposite edge stays
@@ -217,7 +217,7 @@ tool's shortcut and interaction behavior.
 
 Each track has a **Lock** button beside its label. Locked tracks show a tinted background
 behind their notes, cannot be selected, and reject direct editing and paste. Notes starts
-locked; the other tracks start unlocked. Locks do not mute playback or change history.
+locked; the other tracks start unlocked. Lock buttons are teal when unlocked and pale red when locked. Locks do not mute playback or change history.
 Unlock Notes to edit existing notes in either mode. In Draw, an empty-space hover
 shows a snapped placement preview and a click creates a circle at Mapping
 X=256 (osu! Y=192), drag empty space to marquee-select parents, and Ctrl-click to
@@ -256,11 +256,14 @@ area starts at the same vertical position, and the nearby list stays anchored be
 At an exact timestamp with existing timing points, the helper
 shows each point in a separate section divided by horizontal rules. Offset, bank, sample index, volume and the Kiai toggle edit the existing point directly; BPM and meter controls appear only for red points. Numeric inputs take effect on Enter or focus loss. Toggling Kiai preserves the point's other effect flags.
 Sample indices use Default, Custom 1 and Custom choices, with the custom index input on the Custom row. Existing-point volume uses one row for its label, slider, numeric input and percent suffix; Hit, Finish, Whistle and Clap buttons preview the current sample settings.
-Volume updates while dragging, with one undo step for the complete gesture. The helper does not display or edit SV; sound edits preserve the green line's beat length.
+Clicking the volume track changes the value by five percentage points toward the pointer. Dragging and numeric input retain one-percent precision. Volume updates while dragging, with one undo step for the complete gesture. The helper does not display or edit SV; sound edits preserve the green line's beat length.
 Only timestamps without a point show effective timing information and **Apply as new
 inherited timing point**, which inserts a green line while preserving effective SV.
-Settings for a new inherited point remain drafts until insertion. Existing-point edits support undo and mark the map as modified; saving remains explicit.
+At these timestamps, **Apply to affecting timing line** writes the draft bank, index and volume to the latest active timing point without moving it or adding another point. Values remain drafts until either Apply button is clicked. Existing-point edits support undo and mark the map as modified; saving remains explicit.
 A separator and **Nearby Timing Points** title introduce up to seven nearby timing points in chronological order, showing timestamp, timing/sample information and volume. The current point is highlighted, retaining red for red points; others fade with distance. The wheel only scrolls the visible rows, leaving the playhead and selection unchanged. Clicking a row selects that point in the helper and recenters the list without moving the playhead or canvas. The initial view prefers three points on each side, filling from the other side at map boundaries; it has no separate scrollbar.
+The parameter scrollbar reflects the visible proportion of its content. Drag its thumb
+or click its track to scroll; the nearby list stays anchored. The scrollbar disappears
+when all parameters fit.
 The Hitsounding dock menu provides Config, Timing Helper, Song Setup and Preview independently
 of Mapping.
 Restoring Hitsounding as the active panel on editor startup loads its sound library immediately, without requiring pointer input.
@@ -319,7 +322,7 @@ does not create or edit sample indices. Audio rows provide audition controls and
 filters the current folder by name. Long lists scroll within their own section.
 View and library navigation do not edit beatmap objects.
 
-Each sound track has a mute button. Muting greys its entire row and suppresses that
+Each sound track has a mute button, highlighted green while audible and grey while muted. Muting greys its entire row and suppresses that
 track only during Hitsounding playback; Mapping and Testplay ignore these session
 settings. Note-based sound labels use a fixed font size when **HS text** is enabled
 and hide when the block is too narrow. Equal-width blocks with the same number of
@@ -328,8 +331,8 @@ or sample bank. Other blocks entering the viewport do not affect this decision.
 
 Drag green timing handles horizontally to move inherited points to the nearest
 Snap. Marquee-select handles to move several green points together, preserving
-their relative offsets while snapping the grabbed point. Red points cannot be
-dragged or included in this selection. Timing intervals update during the preview;
+their relative offsets while snapping the grabbed point. A selection containing
+red points cannot be dragged. Timing intervals update during the preview;
 release commits one undoable edit, and Escape cancels it. Right-click empty space
 in the handle strip to create an inherited point at the nearest Snap using the
 same parameter inheritance as Timing Panel. Right-click a timing block or handle
@@ -337,7 +340,32 @@ to edit it in Timing Helper, opening the panel when needed. Green points also
 offer Delete. The Delete key and context-menu Delete remove all selected green
 points in one undoable edit. Right-clicking a selected block or handle preserves
 the group; right-clicking an unselected point selects that point instead.
+Ctrl-select or box-select red and green timing points, then press **Ctrl+C** to copy
+the selection. **Ctrl+V** in another difficulty pastes at the original timestamps,
+replacing all destination timing points at those timestamps. Other timestamps are
+unchanged, pasted points remain selected, and the paste is one undo step.
+Press **5** in Hitsounding to add an inherited point at the playhead. This binding is configurable in Settings.
+Ctrl-select exactly two adjacent green points to reveal **Volume Ramp Generation** in Timing Helper.
+No other green point may lie between them. The endpoints must have different volumes
+and matching SV, meter, sample bank, sample index and effects. Choose the beat interval from the dropdown
+and click **Generate** on the same row; available intervals follow the Snap division choices.
+The section has separators above and below it. When it is absent, the separator
+between the context card and timing parameters remains. Multi-selection hides Offset.
+Generation follows musical beat intervals across BPM changes and interpolates volume
+linearly in time between the unchanged endpoints. Volumes are rounded to integers;
+an intermediate line is omitted when its rounded volume matches the preceding line. Existing interior points receive
+the interpolated volume; their other properties are preserved. Missing green points
+inherit the active timing properties. Generation selects both endpoints and every
+generated green point together. The complete operation is one undo step.
 Timing Helper's sample bank choices are Soft, Normal and Drum.
+The left-hand sample-bank tools highlight the resolved bank of selected sounds;
+mixed banks have no highlighted choice. With no selection, they show the drawing bank.
+While playing, timeline wheel navigation advances by full beats, matching Mapping;
+paused navigation follows the selected Snap subdivision.
+After copying sounds or Notes while paused, selecting a different target without seeking
+makes its first timestamp the paste destination. Otherwise, paste starts at the playhead. Matching Notes allow
+one millisecond of rounding difference and do not treat a preceding slider ending
+at the destination as part of the target rhythm.
 
 ## Maintenance
 

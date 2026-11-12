@@ -26,6 +26,7 @@ public sealed partial class EditorView
     private HitsoundingTimingLabel[] hitsoundingTimingLabels = [];
     private ConvertedCatchObject[] hitsoundingNotes = [];
     private Dictionary<(Guid, int), ConvertedCatchObject> hitsoundingNoteLookup = [];
+    private Dictionary<Guid, ConvertedCatchObject[]> hitsoundingParentNotes = [];
     private HashSet<(Guid, int)> hitsoundingAudibleNotes = [];
     private (double Time, int First, int Last)[] hitsoundingAdditionLinks = [];
     private double[] hitsoundingAdditionTimes = [];
@@ -73,6 +74,7 @@ public sealed partial class EditorView
         var tags = new List<SoundTag>();
         hitsoundingNotes = hitsoundEvents.Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.Banana).ToArray();
         hitsoundingNoteLookup = hitsoundingNotes.ToDictionary(n => (n.SourceId, n.EventIndex));
+        hitsoundingParentNotes = hitsoundingNotes.GroupBy(n => n.SourceId).ToDictionary(g => g.Key, g => g.ToArray());
         if (hitsoundingSelected is { } selected && !hitsoundingNoteLookup.ContainsKey((selected.Id, selected.Event))) hitsoundingSelected = null;
         hitsoundingRedPoints = overviewTiming.Where(p => p.Uninherited).ToArray();
         hitsoundingGreenPoints = overviewTiming.Where(p => !p.Uninherited).ToArray();

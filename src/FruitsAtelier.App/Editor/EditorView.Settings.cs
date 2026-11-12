@@ -461,7 +461,11 @@ public sealed partial class EditorView
         {
             bool restartAudio = persist && AudioDiagnosticSettingsChanged && RequestAudioDiagnosticRestart is not null;
             float audioScroll = workspaceScroll;
-            var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
+            var settings = LibrarySettings.ShallowCopy();
+            settings.Workspace = draftWorkspace;
+            // Assigning OsuRoot clears the legacy standalone Songs directory.
+            if (draftOsuRoot != LibrarySettings.OsuRoot) settings.OsuRoot = draftOsuRoot;
+            settings.DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin);
             settings.FirstRunSetupVersion = LibrarySettings.FirstRunSetupVersion;
             settings.ShortcutBindings = CopyBindings(draftShortcuts);
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];

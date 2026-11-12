@@ -13,17 +13,20 @@ public sealed partial class EditorView
     public bool NextFruitNewCombo => nextFruitNewCombo;
     private readonly List<Rect> toolButtons = [];
     public IReadOnlyList<Rect> ToolButtonBounds => toolButtons;
+    internal Rect MappingCanvasSelectorBounds { get; private set; }
 
     private void DrawToolPalette(ICanvas c)
     {
         toolButtons.Clear();
         float paletteHeight = plot.Height + PatternEditingBannerHeight;
-        float size = Math.Min(96, Math.Max(0, paletteHeight - 100) / 4);
-        float top = plot.Y - PatternEditingBannerHeight + (paletteHeight - size * 4 - 100) / 2;
-        top += 100;
-        const float selectorsHeight = 93;
+        float size = Math.Min(96, Math.Max(0, paletteHeight - 164) / 4);
+        float top = plot.Y - PatternEditingBannerHeight + (paletteHeight - size * 4 - 164) / 2;
+        top += 164;
+        const float selectorsHeight = 157;
         float toolbarBottom = canvas.Y + 38;
-        DrawSampleBankSelectors(c, toolbarBottom + (top - toolbarBottom - selectorsHeight) / 2 + 20);
+        float selectorsTop = toolbarBottom + (top - toolbarBottom - selectorsHeight) / 2 + 20;
+        DrawMappingCanvasSelector(c, selectorsTop);
+        DrawSampleBankSelectors(c, selectorsTop + 64);
         for (int i = 0; i < 4; i++)
         {
             var mode = (Tool)i;
@@ -65,7 +68,7 @@ public sealed partial class EditorView
         }
         for (int i = 0; i < toolButtons.Count; i++)
             if (toolButtons[i].Contains(mouseX, mouseY))
-                DrawPaletteTooltip(c, L.Get(IsOsuCanvas ? i switch
+                DrawPaletteTooltip(c, ShortcutHint(L.Get(IsOsuCanvas ? i switch
                 {
                     0 => "osu.hint.select", 1 => "osu.hint.circle", 2 => "osu.sliderDraft", _ => "osu.hint.spinner"
                 } : IsLazerEditing && i < 3 ? i switch
@@ -77,7 +80,24 @@ public sealed partial class EditorView
                     0 => "tools.hint.select", 1 => "tools.hint.fruit",
                     2 => LegacyMode ? "tools.hint.sliderLegacy" : "tools.hint.sliderPen",
                     _ => "tools.hint.banana"
-                }), toolButtons[i], left: false, above: i == 2);
+                }), i switch { 0 => "select", 1 => "fruit", 2 => "slider", _ => "banana" }, ShortcutScope.Compose), toolButtons[i], left: false, above: i == 2);
+    }
+
+    private void DrawMappingCanvasSelector(ICanvas c, float top)
+    {
+        var bounds = new Rect(leftPanel.Right + 6, top + 17, 96, 28);
+        MappingCanvasSelectorBounds = bounds;
+        c.Text(L.Get("settings.mappingCanvas"), bounds.X, top, 11, Foreground, bounds.Width, true);
+        c.Fill(bounds, Panel, 4);
+        c.Stroke(bounds, Grid, 1, 4);
+        Button(c, bounds, L.Get(IsOsuCanvas ? "mappingCanvas.legacy" : "mappingCanvas.catch") + " ▾", () =>
+        {
+            contextItems.Clear();
+            foreach (bool osu in new[] { true, false })
+                contextItems.Add(new((IsOsuCanvas == osu ? "✓ " : "") + L.Get(osu ? "mappingCanvas.legacy" : "mappingCanvas.catch"),
+                    () => { if (IsOsuCanvas != osu) ToggleOsuCanvas(); }));
+            contextBounds = new(bounds.X, Math.Min(bounds.Bottom, height - ContextMenuHeight - 8), 140, ContextMenuHeight);
+        });
     }
 
     private void DrawPaletteTooltip(ICanvas c, string text, Rect button, bool left, bool above, bool centered = false)

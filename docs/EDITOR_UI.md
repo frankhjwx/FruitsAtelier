@@ -1,5 +1,57 @@
 # Editing Controls
 
+## Media
+
+Open **Media** in the Mapping dock, or restore it from **Layout**. The Files page
+shows the current background and video, including unassigned and missing-file
+states. Use **Choose file**, drop a file onto the Media tab or mapping panel, or
+assign an existing file from the expandable **Choose other existing media** section. Backgrounds
+have a thumbnail preview; empty media cards accept a click to choose a file or a
+file drop. **Unbind** is available only for assigned media, and the video offset
+appears after a video is assigned. The folder list includes
+up to 1,000 image/video files, shows only media not assigned to the active difficulty,
+and keeps the chooser visible with a zero count when there are no alternatives.
+A divider separates media selection from difficulty synchronization. Image thumbnails and video
+icons identify each item; use **Use as background** or **Use as video** to assign it.
+The list defaults to the beatmap root directory. Enable **Include subfolders**
+to also list nested media; this session-only option starts off. The list refreshes
+automatically while the Media panel is visible. Drag the right scrollbar thumb
+or click its track to navigate long lists.
+Unbinding retains the file so it remains available for other difficulties and undo.
+
+Newly assigned videos start at **0 ms**. Enter a signed integer in **Video offset**;
+Enter commits and Escape cancels the edit. Positive values delay the video start.
+**Sync media to all other difficulties** copies the current BG, video and offset
+to the other difficulties in the open project, including unassigned states. It
+copies media when their resource directories differ. Undo in the initiating
+difficulty restores the synchronized bindings; subsequent local media edits take
+precedence. Storyboard commands, breaks and combo colours remain independent.
+
+Imports use the mapset's existing FA resource directory or linked Songs folder.
+Projects without either use `Workspace/Resources/Media-*`; existing presentation
+and sample resources are copied there when opening a map from an external folder.
+Filename collisions receive a numbered suffix; existing files are not overwritten.
+Media copying runs in a worker, with content/file operations held until completion.
+Saving/exporting remains an explicit operation.
+
+The **Colour palette** page previews the source background. Use the minus/plus
+controls to choose a colour count, generate a preview, then apply the suggested
+colours. The page samples the current BG locally and proposes **3–8
+combo colours**, defaulting to four. Generate, inspect the swatches, then choose
+**Apply to current Colours** to replace only the active difficulty's combo colours
+in one undo step. Changing the BG invalidates the proposal. Low-colour images use
+lightness variants of their own hues; grayscale images remain grayscale.
+
+The generator uses Oklab clustering, image coverage and colour separation. It
+adjusts candidate lightness relative to the average background and constrains HSL
+lightness on a 0–255 scale to **60–210**, plus HSP perceived brightness to **60–225**.
+These are conservative generation choices, not new Ranking Criteria thresholds.
+The [osu!catch RC](https://osu.ppy.sh/wiki/en/Ranking_criteria/osu!catch#general)
+advises against luminosity around 50 or lower, and around 220 or higher when Kiai
+is used. It also requires combo colours to remain distinguishable from BG, video
+and storyboard. Static BG sampling cannot verify every gameplay frame; preview
+the colours during gameplay, especially with video, storyboard and Kiai.
+
 ## Error recovery
 
 An unexpected rendering or window polling failure pauses the editor on a recovery
@@ -47,6 +99,8 @@ On Windows 11, the native title bar uses the same background and text colours as
 the editor header, including during preview.
 
 Settings combines protocol handling and browser data controls in **osu! Links & Web**.
+Applying settings preserves unrelated editor preferences, including canvas visibility
+and selection locks, default slider SV, overlay positions, dock layouts and window state.
 New settings categories appear before the fixed **Experimental**, **Application updates**
 navigation tail; Experimental stays second to last when application updates are available.
 
@@ -1126,6 +1180,12 @@ Audio, Advanced and preferred-skin controls are not part of Song Setup.
 
 ## Custom shortcuts
 
+Shortcut hints and menu key labels follow the active editing profile and saved bindings.
+Tool keycaps show the first binding; hover hints list all bindings. Clearing a binding
+hides its keycap and shortcut suffix while retaining the function and mouse instructions.
+The shortcut settings page shows unassigned commands explicitly.
+
+
 **Settings → Key Bindings** edits keyboard bindings for Global, Library, Compose,
 Timing, Control points, Hitsounding, Testplay, Patterns and Samples. The list groups
 related commands and shows short descriptions, editable keycaps, an **+** action for
@@ -1341,7 +1401,7 @@ edit; Esc or lost capture restores the gesture's starting content.
 
 In the upper object timeline, clicking a slider head, tail, or reverse marker selects that edge for Whistle, Finish, and Clap edits. Only the selected edge marker is highlighted. Clicking the slider body selects the whole slider for sound edits. Head/body movement and tail repeat resizing retain their existing drag behavior.
 
-The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and bookmarks (blue by default) extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 80% opacity and colors tuned against osu!legacy. Hovering over the overview starts fading in a bookmark toolbar after 0.25 seconds and reaches full opacity at 0.5 seconds, initially above its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar stays visible while moving from the overview to its controls, and its tooltip appears above it. The toolbar uses an ImageGen-created background texture. The time display and separate Play, Pause, Stop, and Testplay controls sit to the left of the overview; Stop pauses audio and seeks to the start. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right seeks to the previous/next bookmark; Ctrl+Shift+Left/Right moves selected objects one X unit. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
+The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and bookmarks (blue by default) extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 80% opacity and colors tuned against osu!legacy. Hovering over the overview starts fading in a bookmark toolbar after 0.25 seconds and reaches full opacity at 0.5 seconds, initially above its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar stays visible while moving from the overview to its controls, and its tooltip appears above it. The toolbar uses an ImageGen-created background texture. The time display and separate Play, Pause, Stop, and Testplay controls sit to the left of the overview; Stop pauses audio and seeks to the start. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right nudges a Compose selection by one X unit, or seeks to the previous/next bookmark without a selection; Ctrl+Shift+Left/Right nudges selected objects by the horizontal grid step. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
 
 Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow line and bookmarks as lower lines using each bookmark's colour (blue by default). Preview lines draw before timing points, the playhead and bookmarks, so overlapping markers remain visible. Red and green timing points meet the overview center line and also appear on the upper object timeline. Short overview spans retain a minimum two-DIP width. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, bookmark-coloured labels, and ordinary time labels in the default muted color. Red timing and bookmark-coloured lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. Double-click an upper timeline object to select it and seek to its start without editing content. During a slider endpoint or timeline-tail drag, wheel navigation, Ctrl+wheel Snap, Alt+wheel zoom and Space/C playback remain available; release commits one edit and Esc restores its starting content. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. Drag the handle on the left of the bookmark toolbar to move it horizontally within the editor at its fixed height above the overview; its horizontal position is saved as a view preference. Initially it is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
 
@@ -1491,7 +1551,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Ctrl+D | Clone selected parents one measure after the last selected start; Legacy Slider copies retain their type and follow the current difficulty's Droplet Settings |
 | Ctrl+A | Select all objects |
 | Ctrl+H | Flip selected parents horizontally around X=256 |
-| Ctrl+Left / Right | Seek to the previous / next bookmark |
+| Ctrl+Left / Right | Nudge a Compose selection by one X unit; otherwise seek to the previous / next bookmark |
 | Ctrl+Shift+Left / Right | Move selected parents by one X unit |
 | J / K | Move selected parents backward / forward by one beat subdivision |
 | Ctrl+1 / 2 / 3 / 4 | Set grid size to 4 / 8 / 16 / 32 |
@@ -1684,7 +1744,7 @@ In **pen tool mode**, press B or 3 to clear selection and start drawing. Click t
 
 Select an FSlider and click its controls, or double-click its track, to edit anchors in **Select**. Clicking an interior control on an already selected complete track also enters editing; visible slider fruits use the selection rules below. Drag anchors and handles directly on the canvas. Interior anchor dragging is free by default. Enable **View → Snap interior anchors** to snap interior anchor times to the selected beat subdivision. Head and tail anchors follow beat Snap. Invalid snapped endpoint moves keep their previous time rather than clamping between grid lines. Handles remain free, and the option does not change placement or whole-object snapping. Anchor times remain increasing; anchors and handles may extend beyond the playfield. Moving a pen draft anchor preserves its handle vectors, and the whole draft remains one undo step. Curve handles may extend before the start or after the end; the curve must define an unambiguous forward branch inside the slider time interval. Generated events still undergo normal conversion validation.
 
-In Select mode, the first click selects the whole slider; the second click on a head, tail or repeat selects that fruit with an individual outer ring. Dragging that selected fruit inside the selection box edits the fruit instead of moving the whole slider. Horizontal dragging changes its X while preserving its time. Dragging a selected FSlider fruit at a base-path endpoint vertically edits that red anchor in time and X, with endpoint beat snapping and a single undo step. This works in both editing modes, including paths with only two red anchors; the opposite endpoint stays fixed. Other slider events keep their time during dragging; repeated traversals share the same endpoint geometry. Legacy Sliders remain read-only in the Catch canvas until explicitly converted to FSliders. Clicking outside a selected child returns to whole-slider selection; a subsequent outside click clears it. Dragging the body selects and moves the whole slider. In anchor edit mode, dragging an anchor changes that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+Shift+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
+In Select mode, the first click selects the whole slider; the second click on a head, tail or repeat selects that fruit with an individual outer ring. Dragging that selected fruit inside the selection box edits the fruit instead of moving the whole slider. Horizontal dragging changes its X while preserving its time. Dragging a selected FSlider fruit at a base-path endpoint vertically edits that red anchor in time and X, with endpoint beat snapping and a single undo step. This works in both editing modes, including paths with only two red anchors; the opposite endpoint stays fixed. Other slider events keep their time during dragging; repeated traversals share the same endpoint geometry. Legacy Sliders remain read-only in the Catch canvas until explicitly converted to FSliders. Clicking outside a selected child returns to whole-slider selection; a subsequent outside click clears it. Dragging the body selects and moves the whole slider. In anchor edit mode, dragging an anchor changes that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+Shift+I inserts on the curve under the pointer; Ctrl+L opens confirmation to restore the previous saved version. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
 
 Selecting or double-clicking a Legacy Slider in Catch preserves its representation. Editing requires the explicit Convert to FSlider action; the conversion and subsequent edits have separate undo steps. Legacy geometry can instead be edited directly in the osu! canvas. B / 3 selects the current canvas's slider tool.
 
@@ -1737,7 +1797,7 @@ Left-click a start point, move the pointer to preview the endpoint, and left-cli
 
 A single selected slider exposes controls in Select mode as well as the Slider tool. Anchors and handles draw above Movement Analysis connections, objects and distance labels in both editing modes. For a completed slider, drag a control, Ctrl-click an existing control to turn it into a straight segment boundary, or box-select controls. Ctrl-click between the slider's first and last times to insert a control at the pointer's position; the time interval determines its place in the control polygon. Insertion can change shape. Right-click a straight point to return it to a curved control; right-click a curved control to delete it. Delete removes selected controls directly. Double-click an interior point to toggle its segment boundary. Removing a boundary merges its adjacent control polygons; removing endpoints changes the time range. Fewer than two remaining controls deletes the slider. Each edit is undoable. Segment boundary times remain ordered. Bezier controls may extend beyond the endpoint times, provided the curve does not reverse time inside the segment interval. A circular preview or drag that would reverse time or leave the playfield falls back to Bezier; moving back during the same gesture can restore the arc. Explicit circular-arc commands still reject invalid geometry.
 
-Use Ctrl+Shift+I for insertion and Ctrl+L to toggle the selected point between straight and curved. A circular arc requires exactly three points. Existing Bezier segments retain their type when their point count decreases; changing tools never implicitly turns a three-point Bezier into an arc. A line receiving its first internal control becomes an arc using the current map AR. Ordinary control dragging uses the interior-anchor snap setting; endpoint moves use the global snap setting.
+Use Ctrl+Shift+I for insertion, Ctrl+click to make an existing point straight, and right-click to restore a straight point to curved. A circular arc requires exactly three points. Existing Bezier segments retain their type when their point count decreases; changing tools never implicitly turns a three-point Bezier into an arc. A line receiving its first internal control becomes an arc using the current map AR. Ordinary control dragging uses the interior-anchor snap setting; endpoint moves use the global snap setting.
 
 Circular arcs retain a reference ratio derived from the map AR at creation (`440 / preemptMs` in playfield units per millisecond). Changing map AR or viewport zoom stretches their appearance without changing time–X coordinates. The reference excludes window width and DPI. Editing an existing arc preserves this reference; explicitly choosing a new circular arc uses the current map AR.
 
@@ -2113,6 +2173,13 @@ Select **All target Diffs** to copy to every difficulty in the current project, 
 F12 copies the current window content, including open dialogs and testplay, as an image on the system clipboard. Capture runs independently of content editing and undo history. Windows reads the completed render target before presentation; macOS renders the editor at the window's display scale and supplies native PNG clipboard data. The shortcut fires once per press and rearms on release or focus cancellation.
 
 ## Mapping Canvas background
+
+Above Sampleset and Additions, the **Mapping Canvas** selector switches between
+**osu!Legacy** (two-dimensional circle and Legacy Slider editing) and **Catch**
+(horizontal position versus time, including FSlider editing). Hover over its
+heading or selector for an explanation. Switching uses the same action as Tab:
+it cancels the current interaction and clears selection without converting objects
+or changing beatmap content.
 
 The main mapping canvas displays the current difficulty's background across its
 drawing area, upper object timeline and left tool palette. The image fits this

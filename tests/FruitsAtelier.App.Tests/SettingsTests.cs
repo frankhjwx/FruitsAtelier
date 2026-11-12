@@ -48,7 +48,7 @@ static class SettingsTests
                 var r = view.SettingsBounds;
                 foreach (string category in new[] { "settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.mappingCanvas", "settings.experimental", "settings.shortcuts" })
                 {
-                    ui.ClickText(L.Get(category));
+                    ui.ClickSettingsCategory(category);
                     Check(view.SettingsBounds == r, "Settings categories retain the same bounds");
                 }
                 ui.Click(r.X + 250, r.Y + 135); view.TextInput('u'); ui.Paint();
@@ -91,9 +91,8 @@ static class SettingsTests
                     && ui.Canvas.Texts.Any(t => t.Value == L.Get("osuLinks.fallback")), "merged page exposes protocol and browser controls together");
                 foreach (string category in new[] { "settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "update.title" })
                 {
-                    var navigation = ui.Canvas.Texts.Single(t => t.Value == L.Get(category) && t.X < ui.View.SettingsBounds.X + 230);
-                    ui.Click(navigation.X + 2, navigation.Y + 2);
-                    var page = ui.Canvas.Texts.Single(t => t.Value == L.Get(category) && t.X >= ui.View.SettingsBounds.X + 230);
+                    ui.ClickSettingsCategory(category);
+                    var page = ui.Canvas.Texts.Last(t => t.Value == L.Get(category) && t.X >= ui.View.SettingsBounds.X + 230);
                     Check(page.Size == 24 && page.Bold, "page headings share their typography");
                     var apply = ui.Canvas.Texts.Single(t => t.Value == L.Get("library.apply"));
                     Check(apply.Size == 13 && !apply.Bold, "actions keep a regular body weight");
@@ -186,7 +185,7 @@ static class SettingsTests
                 map.Fruits.Add(new Fruit { TimeMs = time, X = x });
             ui.LoadDocument(map);
             var original = ui.View.Document.DeepClone();
-            ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas"));
+            ui.View.OpenSettings(); ui.Paint(); ui.ClickSettingsCategory("settings.mappingCanvas");
             Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.indicatorColours")), "Mapping Canvas omitted indicator colours.");
             Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("ui.language") || t.Value == L.Get("settings.romanisedLabel")),
                 "Language and metadata display belong to General.");
@@ -249,7 +248,7 @@ static class SettingsTests
                     $"Distance Snap reference did not use custom indicator colour {colour:X6}.");
             ui.Key(27);
             Check(original.ContentEquals(ui.View.Document), "Changing indicator colours edited the beatmap.");
-            ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas"));
+            ui.View.OpenSettings(); ui.Paint(); ui.ClickSettingsCategory("settings.mappingCanvas");
             ui.ClickText(L.Get("settings.indicatorReset"));
             ui.View.ApplySettings(path);
             saved = LibrarySettings.Load(path);
@@ -265,11 +264,13 @@ static class SettingsTests
     public static void ApplyState()
     {
         string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "settings-" + Guid.NewGuid()));
+        var views = new List<Ui>();
         try
         {
             foreach (bool fromLibrary in new[] { false, true })
             {
                 var ui = new Ui(false);
+                views.Add(ui);
                 ui.View.LibrarySettings.Workspace = root;
                 ui.View.LibrarySettings.PlaybackLineFromBottom = .6;
                 if (fromLibrary)
@@ -307,6 +308,7 @@ static class SettingsTests
                     "Bindings apply and reset dirty state");
                 var testplayNav = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.testplay") && t.X < ui.View.SettingsBounds.X + 214);
                 ui.Click(testplayNav.X + 4, testplayNav.Y + 5);
+                WaitForLibrary(ui);
                 var searchField = typeof(FruitsAtelier.App.Editor.EditorView).GetField("searchTask",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
                 var pendingSearch = new TaskCompletionSource<FruitsAtelier.App.Editor.LibraryBrowser>();
@@ -332,7 +334,27 @@ static class SettingsTests
                 Check(ui.View.LibraryVisible == fromLibrary, "Apply preserves return destination");
             }
         }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+        finally
+        {
+            foreach (var ui in views)
+            {
+                ui.View.StopFileMonitoring();
+                WaitForLibrary(ui);
+                ui.View.CompleteLibraryCacheWrites();
+            }
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+        static void WaitForLibrary(Ui ui)
+        {
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            do
+            {
+                ui.Paint();
+                Check(timer.Elapsed.TotalSeconds < 30, "Settings fixture library work did not complete");
+                if (ui.View.LibraryLoading) Thread.Sleep(10);
+            }
+            while (ui.View.LibraryLoading);
+        }
     }
 
     public static void Navigation()

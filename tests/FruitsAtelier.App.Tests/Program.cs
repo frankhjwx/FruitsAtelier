@@ -3,6 +3,8 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--media-panel-check")) { MediaPanelTests.Run(); return 0; }
+if (args.Contains("--media-panel-performance")) { MediaPanelTests.Performance(); return 0; }
 if (args.Contains("--testplay-mods-check")) { TestplayModTests.Run(); PreviewSidebarTests.Sidebar(); TestplayStartupDelayTests.IndependentSpeed(); DockPersistenceTests.Run(); InspectorPanelsTests.Run(); TestplayTests.LivePlate(); DockingTests.Run(); PreviewSidebarTests.DisplayModesAndOverscan(); return 0; }
 if (args.Contains("--selection-gap-performance")) { SelectionGapTests.Performance(); return 0; }
 if (args.Contains("--selection-gap-check")) { SelectionGapTests.Run(); FruitStackSettingsTests.Run(); TestplayTests.LivePlate(); Console.WriteLine("PASS selection gaps and fruit stack preferences"); return 0; }
@@ -19,7 +21,10 @@ if (args.Contains("--timing-precision-check")) { TimingEditorTests.Run(); Synchr
 if (args.Contains("--clipboard-hitsound-check")) { ClipboardTests.EventHitsoundsSurvivePaste(); Console.WriteLine("PASS clipboard event hitsounds, inheritance and history on both canvases"); return 0; }
 if (args.Contains("--hitsounding-performance")) { HitsoundingPanelTests.Performance(); return 0; }
 if (args.Contains("--hitsounding-notes-check")) { HitsoundingNotesTests.Run(); return 0; }
-if (args.Contains("--hitsounding-panel-check")) { HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); HitsoundingPanelTests.DrawModes(); HitsoundingPanelTests.SampleSetCycling(); HitsoundingPanelTests.PlacementBanksAndHeadPriority(); HitsoundingPanelTests.PlacementBankIsolation(); HitsoundingPanelTests.SelectedBankSelectors(); HitsoundingPanelTests.KiaiStrip(); HitsoundingPanelTests.SpinnerEndSamples(); HitsoundingPanelTests.CrossDifficultyClipboard(); HitsoundingPanelTests.SelectionAndTiming(); HitsoundingPanelTests.LengthAndMove(); HitsoundingPanelTests.TransferTimingIndex(); HitsoundingPanelTests.TransferIndexInheritance(); HitsoundingPanelTests.StoryboardEditing(); HitsoundingPanelTests.PlayingSelectionAndSettings(); HitsoundingPanelTests.NearbyTiming(); HitsoundingPanelTests.CtrlSelection(); HitsoundingTimingDragTests.Run(); return 0; }
+if (args.Contains("--library-cold-existing-check")) { LibraryDifficultyOrderTests.ColdExisting(); return 0; }
+if (args.Contains("--library-rating-order-check")) { LibraryDifficultyOrderTests.Run(); return 0; }
+if (args.Contains("--hitsounding-feedback-check")) { HitsoundingFeedbackTests.Run(); return 0; }
+if (args.Contains("--hitsounding-panel-check")) { HitsoundingFeedbackTests.Run(); HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); HitsoundingPanelTests.DrawModes(); HitsoundingPanelTests.SampleSetCycling(); HitsoundingPanelTests.PlacementBanksAndHeadPriority(); HitsoundingPanelTests.PlacementBankIsolation(); HitsoundingPanelTests.SelectedBankSelectors(); HitsoundingPanelTests.KiaiStrip(); HitsoundingPanelTests.SpinnerEndSamples(); HitsoundingPanelTests.CrossDifficultyClipboard(); HitsoundingPanelTests.SelectionAndTiming(); HitsoundingPanelTests.LengthAndMove(); HitsoundingPanelTests.TransferTimingIndex(); HitsoundingPanelTests.TransferIndexInheritance(); HitsoundingPanelTests.StoryboardEditing(); HitsoundingPanelTests.PlayingSelectionAndSettings(); HitsoundingPanelTests.NearbyTiming(); HitsoundingPanelTests.CtrlSelection(); HitsoundingTimingDragTests.Run(); return 0; }
 if (args.Contains("--difficulty-import-check")) { DifficultyImportTests.Run(); Console.WriteLine("PASS difficulty imports use project resources and preserve metadata"); return 0; }
 if (args.Contains("--slider-bpm-performance")) { SliderBpmTests.Performance(); return 0; }
 if (args.Contains("--slider-bpm-check")) { SliderBpmTests.Run(); Console.WriteLine("PASS slider BPM controls"); return 0; }
@@ -361,6 +366,8 @@ if (args.Contains("--lazer-editing-check"))
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Library difficulty rows use descending star order", LibraryDifficultyOrderTests.Run),
+    ("Hitsounding feedback preserves drafts, ramps, selection and clipboard", HitsoundingFeedbackTests.Run),
     ("Mapping BPM flags and Hitsounding timing tracks preserve content and red positions", TimingPresentationTests.Run),
     ("Fruit placement ignores canvas padding", FeedbackBugTests.PlacementBounds),
     ("Draft double-click creates boundaries with hidden slider paths", FeedbackBugTests.HiddenPathDoubleClick),
@@ -516,6 +523,7 @@ var tests = new (string Name, Action Run)[]
     ("Settings layout preserves labels and aligns controls in narrow windows", SettingsTests.Layout),
     ("Canvas background dim control fades, captures dragging and remains independent of zoom", CanvasBackgroundDimControlTests.Run),
     ("Mapping canvas X-axis grid colours and opacity preserve horizontal lines and content", CanvasGridSettingsTests.Run),
+    ("Media imports, synchronization and background palettes", MediaPanelTests.Run),
     ("Mapping canvas backgrounds, image replacement and preferences", MappingCanvasBackgroundTests.Run),
     ("Mapping Canvas indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Stack canvas edits individual fruits horizontally", StackDockTests.ManualFruits),
@@ -1563,6 +1571,14 @@ sealed class Ui
             ClickText(FruitsAtelier.Localization.Strings.Get("ui.view"));
         string visible = text.Split("  ", 2)[0];
         var label = Canvas.Texts.Single(t => t.Value == (Canvas.Texts.Any(t => t.Value == text) ? text : visible));
+        Click(label.X + 4, label.Y + 5);
+    }
+    public void ClickSettingsCategory(string key)
+    {
+        var bounds = View.SettingsBounds;
+        // The modal is drawn after the covered editor, which can contain the same label.
+        var label = Canvas.Texts.Last(t => t.Value == FruitsAtelier.Localization.Strings.Get(key)
+            && t.X >= bounds.X + 16 && t.X < bounds.X + 198 && t.Y >= bounds.Y + 78 && t.Y < bounds.Bottom);
         Click(label.X + 4, label.Y + 5);
     }
     public void ClickObjectAction(string text)

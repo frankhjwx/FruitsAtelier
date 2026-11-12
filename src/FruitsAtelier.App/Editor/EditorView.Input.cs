@@ -185,6 +185,7 @@ public sealed partial class EditorView
         if (CollaborationPointer(x, y, button)) return;
         if (DiscussionPointerDown(x, y, button)) return;
         if (VerifierPointerDown(x, y, button)) return;
+        if (MediaScrollbarPointerDown(x, y, button)) return;
         if (NotesPointer(x, y, button, shift)) return;
         if (PatternDockPointer(x, y, button)) return;
         if (CanvasScalePointerDown(x, y, button)) return;
@@ -522,6 +523,7 @@ public sealed partial class EditorView
         if (discussionQuoteDrag is not null) { MoveDiscussionQuoteScrollbar(y); return; }
         if (discussionScrollbarDragging) { MoveDiscussionScrollbar(y); return; }
         if (verifierScrollbarDragging) { mouseX = x; mouseY = y; MoveVerifierScrollbar(y); return; }
+        if (mediaScrollbarDragging) { mouseX = x; mouseY = y; MoveMediaScrollbar(y); return; }
         if (GalleryTagsVisible) { mouseX = x; mouseY = y; if (!PatternNameVisible) { if (MoveGalleryTagOrder(x, y)) return; if (textSelecting && GalleryTagTextFocused) MoveInputSelection(x); else MoveGalleryTagColour(x, y); } return; }
         if (PatternGalleryPointerMove(x, y)) return;
         if (templatePointer) { mouseX = x; mouseY = y; MoveMapTemplate(x, y); return; }
@@ -698,6 +700,7 @@ public sealed partial class EditorView
         if (discussionQuoteDrag is not null) { MoveDiscussionQuoteScrollbar(y); discussionQuoteDrag = null; return; }
         if (discussionScrollbarDragging) { MoveDiscussionScrollbar(y); discussionScrollbarDragging = false; return; }
         if (verifierScrollbarDragging && button == 0) { MoveVerifierScrollbar(y); verifierScrollbarDragging = false; return; }
+        if (mediaScrollbarDragging && button == 0) { MoveMediaScrollbar(y); mediaScrollbarDragging = false; return; }
         if (GalleryTagsVisible) { if (button == 0) { if (EndGalleryTagOrder(x, y)) return; if (!PatternNameVisible) MoveGalleryTagColour(x, y); galleryTagDrag = 0; textSelecting = false; } return; }
         if (PatternGalleryPointerUp(x, y, button)) return;
         if (templatePointer && button == 0)
@@ -1071,6 +1074,8 @@ public sealed partial class EditorView
         }
         if (WheelDockTabs(x, y, delta)) return;
         if (WheelTestplayTab(x, y, delta)) return;
+        if (DockContentInputAvailable && PanelVisible(DockPanel.Media) && mediaPanelBounds.Contains(x, y))
+        { mediaPanelScroll = Math.Clamp(mediaPanelScroll - delta / 120 * 36, 0, Math.Max(0, mediaPanelContentHeight - mediaPanelBounds.Height)); return; }
         if (WheelBookmarkPanel(x, y, delta)) return;
         if (WheelDiscussions(x, y, delta)) return;
         if (MapsetVerifierVisible && DockContentInputAvailable && verifierBounds.Contains(x, y))
@@ -1261,7 +1266,7 @@ public sealed partial class EditorView
 
     private void SeekByWheel(double delta, int surface)
     {
-        int stepDivisor = AudioPlaying && !HitsoundingPageVisible ? 1 : divisor;
+        int stepDivisor = AudioPlaying ? 1 : divisor;
         if (double.IsNaN(wheelPlayhead) || (!AudioPlaying && wheelPlayhead != playhead)
             || wheelDivisor != stepDivisor || wheelSurface != surface) wheelRemainder = 0;
         double ticks = delta + wheelRemainder;
@@ -1469,6 +1474,8 @@ public sealed partial class EditorView
         if (BananaEditVisible) { BananaEditKey(virtualKey, ctrl, shift); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
         if (PatternDockKey(virtualKey, ctrl, shift)) return;
+        if (MediaOffsetFocused && !(ctrl && virtualKey == 'S'))
+        { MediaOffsetKey(virtualKey, ctrl, shift); return; }
         if (BookmarkPanelFocused && !(ctrl && virtualKey == 'S'))
         { BookmarkKey(virtualKey, ctrl, shift); return; }
         if (BookmarkPanelAvailable && bookmarkColourTime is not null && virtualKey == 27)
@@ -1576,12 +1583,14 @@ public sealed partial class EditorView
         {
             if (virtualKey == 27)
             {
-                if (hitsoundingNoteGesture != HitsoundingNoteGesture.None || timingHelperVolumeDrag is not null || hitsoundingTimingDrag is not null || hitsoundingTimingBox || hitsoundingHeadDrag || hitsoundingPainting || hitsoundingMarquee || hitsoundingMoveSource is not null || hitsoundingStoryboardMove is not null || hitsoundingDragFile is not null || hitsoundingSplitDrag is not null) CancelInteraction();
+                if (timingHelperScrolling || hitsoundingNoteGesture != HitsoundingNoteGesture.None || timingHelperVolumeDrag is not null || hitsoundingTimingDrag is not null || hitsoundingTimingBox || hitsoundingHeadDrag || hitsoundingPainting || hitsoundingMarquee || hitsoundingMoveSource is not null || hitsoundingStoryboardMove is not null || hitsoundingDragFile is not null || hitsoundingSplitDrag is not null) CancelInteraction();
                 else if (panelMenuOpen || menu >= 0 || contextItems.Count > 0) { panelMenuOpen = false; menu = -1; contextItems.Clear(); }
                 else ShowLibrary();
             }
+            else if (HitsoundingTimingClipboardKey(virtualKey, ctrl, shift)) { }
             else if (HitsoundingNotesKey(virtualKey, ctrl, shift)) { }
             else if (!ctrl && !altHeld && !shift && virtualKey is 49 or 50) SetHitsoundingTool(virtualKey == 50);
+            else if (!ctrl && !altHeld && !shift && virtualKey == 53) AddHitsoundingInheritedPoint(playhead);
             else if (!ctrl && !altHeld && !shift && virtualKey is 65 or 83 or 68) SetHitsoundingBrush(virtualKey == 65 ? 2 : virtualKey == 83 ? 1 : 3);
             else if (altHeld && virtualKey is 81 or 87 or 69 or 82) SetSampleBank(ctrl, virtualKey switch { 81 => 0, 87 => 1, 69 => 2, _ => 3 });
             else if (ctrl && virtualKey == 90) { if (shift) Redo(); else Undo(); }
@@ -1744,6 +1753,7 @@ public sealed partial class EditorView
             return;
         }
         if (NotesFocused && !char.IsControl(value)) { InsertNotes(value.ToString()); return; }
+        if (MediaOffsetFocused && !char.IsControl(value)) { MediaOffsetText(value.ToString()); return; }
         if (BookmarkPanelFocused && !char.IsControl(value)) { BookmarkText(value.ToString()); return; }
         if (RandomDockFocused && !char.IsControl(value)) { RandomDockText(value.ToString()); return; }
         if (SongDockFocused && !char.IsControl(value)) { PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }
@@ -1776,6 +1786,7 @@ public sealed partial class EditorView
     {
         CancelHitsoundingTimingPointer();
         FinishTimingHelperVolume(cancel: true);
+        timingHelperScrolling = false;
         hitsoundingDragFile = null; hitsoundingSplitDrag = null; hitsoundingSetDragging = false; timingHelperVolumeDrag = null;
         hitsoundingLibraryPressed = hitsoundingLibraryDragging = hitsoundingLibraryBox = false;
         hitsoundingLibraryFocused = hitsoundingNaming = hitsoundingLibraryScrollbarDragging = false;
@@ -1783,6 +1794,7 @@ public sealed partial class EditorView
         ClearDiscussionTextSelection();
         discussionScrollbarDragging = false; discussionQuoteDrag = null;
         verifierScrollbarDragging = false;
+        mediaScrollbarDragging = false;
         CancelPatternGalleryInteraction();
         CancelGalleryTagOrder();
         FinishMapTemplateDrag(cancel: true);
@@ -2026,7 +2038,7 @@ public sealed partial class EditorView
 
     private bool CommitField()
     {
-        if (!CommitBookmarkText()) return false;
+        if (!CommitMediaOffset() || !CommitBookmarkText()) return false;
         if (editField < 0 || editField >= fields.Count) { editField = -1; return true; }
         var field = fields[editField];
         if (field.Timestamp && replaceText && editBuffer == Time(field.Value)) { editField = -1; fieldError = ""; return true; }

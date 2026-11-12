@@ -64,7 +64,7 @@ static class CanvasGridSettingsTests
                     && saved.CanvasGridOpacity == 40, "Reset did not restore the default grid.");
                 Check(saved.StandIndicatorColour == defaults.StandIndicatorColour, "Grid reset changed indicator colours.");
 
-                void Open() { ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas")); }
+                void Open() { ui.View.OpenSettings(); ui.Paint(); ui.ClickSettingsCategory("settings.mappingCanvas"); }
                 void Colour(string key, string value)
                 {
                     ui.ClickText(L.Get(key));

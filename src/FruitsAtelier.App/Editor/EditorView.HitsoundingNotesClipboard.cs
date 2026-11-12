@@ -8,6 +8,7 @@ public sealed partial class EditorView
     private MapDocument? hitsoundingNotesClipboard;
     private Guid? hitsoundingNotesClipboardDifficulty;
     private bool hitsoundingClipboardContainsNotes;
+    private double hitsoundingNotesClipboardPlayhead;
     private sealed record HitsoundingCopiedNote(Guid Id, double Start, double End, int Spans, bool Banana,
         (double Time, CatchObjectKind Kind, EventHitsound Sound)[] Events);
     private HitsoundingCopiedNote[] hitsoundingCopiedNotes = [];
@@ -23,7 +24,9 @@ public sealed partial class EditorView
         hitsoundingCopiedNotes = timelineSources.Where(s => ids.Contains(s.Id)).OrderBy(s => s.Start).ThenBy(s => s.SourceOrder)
             .Select(s => new HitsoundingCopiedNote(s.Id, s.Start, s.End, s.Spans, s.IsBanana, events.GetValueOrDefault(s.Id) ?? [])).ToArray();
         hitsoundingNotesClipboard = snapshot;
+        hitsoundingNotesClipboardPlayhead = playhead;
         hitsoundingNotesClipboardDifficulty = difficulties[activeDifficulty].Id;
+        hitsoundingTimingClipboard = [];
         hitsoundingClipboardContainsNotes = true;
         StatusMessage = L.Get("editor.status.objectsCopied", hitsoundingCopiedNotes.Length);
     }
@@ -33,9 +36,11 @@ public sealed partial class EditorView
         if (!hitsoundingAllowNotes || notesLocked || hitsoundingNoteGesture != HitsoundingNoteGesture.None) return;
         if (hitsoundingNotesClipboard is null || hitsoundingCopiedNotes.Length == 0) return;
         RefreshTimelineSources();
-        double offset = playhead - hitsoundingCopiedNotes[0].Start;
-        double from = playhead, to = hitsoundingCopiedNotes.Max(n => n.End) + offset;
-        var targets = timelineSources.Where(s => s.End >= from - .5 && s.Start <= to + .5).OrderBy(s => s.Start).ThenBy(s => s.SourceOrder).ToArray();
+        double destination = !AudioPlaying && playhead == hitsoundingNotesClipboardPlayhead && hitsoundingNotesSelection && objectSelection.Count > 0 && !hitsoundingCopiedNotes.Any(n => objectSelection.Contains(n.Id))
+            ? timelineSources.Where(s => objectSelection.Contains(s.Id)).Select(s => s.Start).DefaultIfEmpty(playhead).Min() : playhead;
+        double offset = destination - hitsoundingCopiedNotes[0].Start;
+        double from = destination, to = hitsoundingCopiedNotes.Max(n => n.End) + offset;
+        var targets = timelineSources.Where(s => (s.Start >= from - 1 || s.End > from + 1) && s.Start <= to + 1).OrderBy(s => s.Start).ThenBy(s => s.SourceOrder).ToArray();
         if (targets.Length == 0)
         {
             var previous = objectClipboard; var previousDifficulty = clipboardDifficulty;
@@ -57,7 +62,7 @@ public sealed partial class EditorView
         for (int i = 0; matches && i < targets.Length; i++)
         {
             var source = hitsoundingCopiedNotes[i]; var target = targets[i];
-            matches = Math.Abs(source.Start + offset - target.Start) <= .5 && Math.Abs(source.End + offset - target.End) <= .5
+            matches = Math.Abs(source.Start + offset - target.Start) <= 1 && Math.Abs(source.End + offset - target.End) <= 1
                 && source.Spans == target.Spans && source.Banana == target.IsBanana;
             var events = targetEvents.GetValueOrDefault(target.Id) ?? [];
             matches &= events.Length == source.Events.Length;

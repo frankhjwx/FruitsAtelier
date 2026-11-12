@@ -135,6 +135,9 @@ internal sealed partial class MacWindow : Window
                 { await audio.LoadAsync(null); await audio.LoadAsync(View.Document.AudioPath); audio.Seek(View.PlayheadMs); PollAudio(); }
             }
         });
+        View.DecodePaletteImage = ImageCache.DecodeStoryboard;
+        View.RequestMediaFile = (video, answer) => RunFile(async () => answer(await Pick(L.Get("media.choose"),
+            video ? ["*.mp4", "*.avi", "*.flv", "*.mov", "*.wmv", "*.m4v", "*.mpg", "*.mpeg", "*.mkv", "*.webm"] : ["*.jpg", "*.jpeg", "*.png", "*.bmp"])));
         View.RequestSyncFile = answer => RunFile(async () => answer(await Pick(L.Get("sync.chooseFile"), ["*.osu"])));
         View.RequestSyncAudio = answer => RunFile(async () => answer(await Pick(L.Get("sync.chooseAudio"), ["*.mp3", "*.ogg", "*.wav"])));
         View.CanReuseDifficultyAudio = path => audio.CanReuse(path);

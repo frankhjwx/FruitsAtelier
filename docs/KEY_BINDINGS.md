@@ -4,7 +4,7 @@ In Compose, Tab toggles the Catch and osu! canvases. Text fields,
 dialogs, Ctrl+Tab difficulty switching and Testplay retain their own Tab actions.
 See [osu! canvas](EDITOR_UI.md#osu-canvas) for native slider controls and distance spacing.
 
-This reference describes FruitsAtelier v1.3.0. Bindings depend on the active page,
+This reference describes the current factory-default bindings. Bindings depend on the active page,
 focused field, selected object and drawing state. For differences from osu!stable
 and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 
@@ -19,6 +19,11 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
   moving, reshaping and deleting existing objects, but allows selection, playback,
   placement, flags and undo/redo.
 - Keyboard command bindings are configurable in **Settings → Key Bindings**, independently for Default and Lazer. The tables below describe factory defaults.
+
+## Hitsounding
+
+In the Hitsounding workspace, **5** adds an inherited timing point at the playhead. The binding can be changed in Settings.
+See [Hitsounding controls](HITSOUNDS.md) for selection, volume ramps and timing drafts.
 
 ## Experimental lazer editing
 

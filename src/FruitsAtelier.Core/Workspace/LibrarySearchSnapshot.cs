@@ -3,7 +3,8 @@ using System.Text.Json;
 
 namespace FruitsAtelier.Core;
 
-public sealed record LibrarySetRow(int Index, string Key, LibraryMap Map, int Count, bool? InSongs = null, int MissingCount = 0, string? Header = null);
+public sealed record LibrarySetRow(int Index, string Key, LibraryMap Map, int Count, bool? InSongs = null, int MissingCount = 0, string? Header = null,
+    [property: System.Text.Json.Serialization.JsonIgnore] IReadOnlyList<LibraryMap>? DifficultyPreview = null);
 
 // A disk-backed result index keeps random scrolling independent of library size.
 // Callers serialize access on a worker; no query or disposal belongs on the UI thread.
@@ -243,7 +244,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
                 : manifest is not null
                     ? WorkspaceProject.HasExistingSongsFile(manifest, songs)
                     : ExistsInSongs(map.Path);
-            rows.Add(new(reader.GetInt32(0), reader.GetString(1), map, difficultyCount, details?.InSongs ?? inSongs, details?.Maps.Count(d => d.ExternalMissing) ?? 0));
+            rows.Add(new(reader.GetInt32(0), reader.GetString(1), map, difficultyCount, details?.InSongs ?? inSongs, details?.Maps.Count(d => d.ExternalMissing) ?? 0, DifficultyPreview: details?.Maps.Take(128).ToArray()));
         }
         return rows;
     }

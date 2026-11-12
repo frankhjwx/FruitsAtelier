@@ -58,6 +58,19 @@ their source image version changes.
 
 ## Video and storyboard playback
 
+`EditorView.Media` owns file binding and the background palette proposal. Media
+copies and directory enumeration run on workers; publication checks the initiating
+history. The file inventory belongs to one resource directory and refreshes on
+directory changes, imports or an explicit refresh. Painting visits visible inventory
+rows. Palette decoding and bounded Oklab clustering run on a detached worker and
+publish only for the same history, BG path and file version. Applying rechecks the
+file version. No palette generation occurs on pointer movement or repaint.
+`BeatmapMedia` changes only background/video Events; unchanged event types and
+video placement survive offset edits. Cross-difficulty synchronization rebases
+these fields through the existing related-history mechanism. Resource-only
+projects use the existing `.fa-resource` marker convention outside snapshot
+directories, so workspace publication cannot remove media.
+
 `Core/Storyboards` derives immutable sprites, commands, animation frames, samples and
 video references from retained `.osu` sections and the shared mapset `.osb`.
 Commands use binary searches per property; loops calculate their iteration from
@@ -222,8 +235,27 @@ osu! features outside the supported sprite/animation and trigger playback path.
 
 `Core/Workspace` provides project-directory transactions, SQLite indexing, metadata scanning, resource-reference diagnostics, and explicit export plans. Shared `EditorView.Library` implements the library/settings pages, and `EditorView.Export` draws the modal export overlay above the editor; platform hosts handle folder selection, audio changes, and resource export. Library scanning and star calculations run in the background. The UI reads committed maps during scanning and completed star results. See [Workspace](WORKSPACE.md).
 
+Full scans visit the selected source directory first and commit that directory before
+continuing through other sets. In unfiltered All Songs, startup previews with missing
+difficulty rows can read just the selected project manifest or source headers on an
+independent worker, without waiting for catalog indexing or the workspace gate.
+The indexed result remains authoritative for membership and ordering.
+
 Library loading remains active until completed worker results have been published
 by the UI pump, including startup indexing and browser page/detail updates.
+The browser publishes difficulty metadata pages independently of star calculations,
+so names and scrolling remain available with a cold rating cache. Rating work runs
+outside the snapshot gate. Project cards carry at most 128 already-read difficulty
+metadata rows, allowing selection to publish their names in the same frame. The
+initial selected detail page is prepared with the browser result, and replacement
+browsers retain visible rows while reconciling. Rating results publish incrementally;
+selection, category changes and leaving the library invalidate the old work epoch.
+The worker starts at the requested detail page and stops before the next difficulty
+when its selection is obsolete. The browser prepares the selected set’s complete difficulty order on a worker,
+using the persistent star cache, then serves bounded detail pages in descending
+star order. That set’s ranking is retained across page changes and invalidated by
+reference discovery or a new browser snapshot. Selection changes and retirement
+stop obsolete ranking work before its next difficulty; stale results are not published.
 
 Opening a library project runs on a background worker on both platforms. The library
 shows a loading overlay and blocks further content operations until the result is
@@ -321,9 +353,9 @@ Skin archives are limited to 256 MiB, selected files to 16 MiB each and 64 MiB t
 Window shutdown stops testplay and releases music, setup preview and hitsound
 outputs before waiting for browser shutdown or filesystem cleanup on both platforms.
 
-Windows `AudioTransport` serializes load, play, pause, and seek operations on a worker; the UI reads immutable state snapshots. MP3 decoding fills a bounded PCM cache continuously. Pause holds the published position captured when requested and rebuilds output at that source frame; later seeks take precedence. Seek and EOF replay also rebuild output. SoundTouch.Net 2.3.2 changes music tempo while preserving pitch; timestamped hitsounds are mixed afterward at their original sample speed. Device elapsed time is multiplied by tempo to recover map time. Changing speed rebuilds output at its consumed position. See the [Windows audio reference](../src/FruitsAtelier.App/Audio/REFERENCE.md).
+Windows `AudioTransport` serializes load, play, pause, and seek operations on a worker; the UI reads immutable state snapshots. MP3 decoding fills a bounded PCM cache continuously. Pause holds the published position captured when requested and rebuilds output at that source frame; later seeks take precedence. Seek and EOF replay also rebuild output. SoundTouch.Net 2.3.2 preserves pitch for ordinary tempo changes and changes playback rate for DT/HT; timestamped hitsounds are mixed afterward at their original sample speed. Device elapsed time is multiplied by tempo to recover map time. Changing speed rebuilds output at its consumed position. See the [Windows audio reference](../src/FruitsAtelier.App/Audio/REFERENCE.md).
 
-Mac schedules an AVAudioPlayerNode through `Native/Audio.m`; AVAudioUnitTimePitch changes music tempo with pitch fixed at zero. Map position uses the output render timestamp, scheduled start, source position and tempo. The time-pitch unit is bypassed at 100%. NVorbis first decodes OGG into capacity-limited PCM WAV. Stale load results are discarded, and replay after EOF rebuilds the player. Hitsounds preload project PCM on a worker and submit timestamps to a persistent native mixer; see [Hitsounds](HITSOUNDS.md). See [Running on macOS](MACOS.md).
+Mac schedules an AVAudioPlayerNode through `Native/Audio.m`; AVAudioUnitTimePitch preserves pitch for ordinary tempo changes and adjusts it with the clock rate for DT/HT. Map position uses the output render timestamp, scheduled start, source position and tempo. The time-pitch unit is bypassed at 100%. NVorbis first decodes OGG into capacity-limited PCM WAV. Stale load results are discarded, and replay after EOF rebuilds the player. Hitsounds preload project PCM on a worker and submit timestamps to a persistent native mixer; see [Hitsounds](HITSOUNDS.md). See [Running on macOS](MACOS.md).
 
 Preview hitsound scheduling, sample resolution, and platform playback are documented in [Hitsounds](HITSOUNDS.md).
 

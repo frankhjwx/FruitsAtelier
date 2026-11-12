@@ -21,7 +21,7 @@ public sealed partial class EditorView
     public static bool IsBackgroundImage(string path) => Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".bmp";
 
     public bool CanDropFile(string path) => HitsoundingPageVisible && !LibraryVisible && CanDropAudio && Directory.Exists(path)
-        || CanDropBackground && IsBackgroundImage(path)
+        || CanDropBackground && (IsBackgroundImage(path) || IsBeatmapVideo(path))
         || CanDropPatterns && IsPatternArchive(path)
         || CanDropAudio && Platform.FadArchive.IsPackage(path)
         || CanDropAudio && Platform.FazArchive.IsPackage(path)
@@ -60,11 +60,15 @@ public sealed partial class EditorView
             if (PrepareFileOperation()) RequestFazOpen?.Invoke(files[0]);
             return;
         }
-        var images = files.Where(IsBackgroundImage).ToArray();
+        var images = files.Where(p => IsBackgroundImage(p) || IsBeatmapVideo(p)).ToArray();
         if (CanDropBackground && images.Length > 0)
         {
-            if (files.Length != 1) { ShowError(FruitsAtelier.Localization.Strings.Get("background.oneFile")); return; }
-            if (PrepareFileOperation()) DropBackgroundImage(images[0]);
+            if (files.Length != 1) { ShowError(FruitsAtelier.Localization.Strings.Get("media.oneFile")); return; }
+            if (PrepareFileOperation())
+            {
+                if (IsBeatmapVideo(images[0])) ImportMediaFile(images[0], true);
+                else DropBackgroundImage(images[0]);
+            }
             return;
         }
         var audio = files.Where(Platform.LibraryOperations.IsProjectAudio).ToArray();

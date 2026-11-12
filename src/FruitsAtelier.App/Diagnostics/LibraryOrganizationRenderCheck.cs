@@ -46,7 +46,7 @@ internal static class LibraryOrganizationRenderCheck
                 try
                 {
                     canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
-                    view.InitializeLibrary(true, settings); Wait(6); Capture("groups");
+                    view.InitializeLibrary(true, settings); Capture("loading"); Wait(6); Capture("groups"); CaptureProgress();
                     Invoke("ToggleLibraryGroup", "A"); Wait(6); Capture("expanded");
                     for (int attempt = 0; attempt < 200; attempt++)
                     {
@@ -115,6 +115,23 @@ internal static class LibraryOrganizationRenderCheck
                     Capture("category-restart-" + name); Wait(count);
                 }
 
+                void CaptureProgress()
+                {
+                    string[] names = ["scanTask", "libraryScanProgress", "ratingTask", "libraryRatingKey", "libraryRatingCompleted", "libraryRatingTotal", "libraryNotice"];
+                    var fields = names.Select(name => typeof(EditorView).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!).ToArray();
+                    var saved = fields.Select(field => field.GetValue(view)).ToArray();
+                    var browser = (LibraryBrowser?)typeof(EditorView).GetField("libraryBrowser", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view);
+                    try
+                    {
+                        fields[0].SetValue(view, new TaskCompletionSource<(LibraryDatabase, LibraryScan)>().Task);
+                        fields[1].SetValue(view, new LibraryScanProgress(6454, 6210, 0));
+                        fields[2].SetValue(view, new TaskCompletionSource<(long, Dictionary<string, double?>)>().Task);
+                        fields[3].SetValue(view, browser?.Selected?.Key);
+                        fields[4].SetValue(view, 12); fields[5].SetValue(view, 33);
+                        Capture("background-progress");
+                    }
+                    finally { for (int i = 0; i < fields.Length; i++) fields[i].SetValue(view, saved[i]); }
+                }
                 void ClickOrder(string field)
                 {
                     var bounds = (Rect)typeof(EditorView).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(view)!;

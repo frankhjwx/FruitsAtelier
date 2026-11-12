@@ -53,7 +53,10 @@ internal static class HitsoundingTimingDragTests
 
         float from = Handle(1000).X + 4 - scale * 200, to = Handle(2500).X + 4 + scale * 100;
         ui.View.PointerDown(from, y, 0, false, false); ui.View.PointerMove(to, y, false, false); ui.View.PointerUp(to, y, 0); ui.Paint();
-        Check(ui.Canvas.Lines.Count(l => l.Width == 5 && l.Y1 >= start.Y) == 2, "Marquee selects green lines and excludes red lines");
+        Check(ui.Canvas.Lines.Count(l => l.Width == 5 && l.Y1 >= start.Y) == 3, "Marquee selects both green and red lines");
+        var redHandle = Handle(2000);
+        ui.View.PointerDown(redHandle.X + 4, y, 0, false, true);
+        ui.View.PointerUp(redHandle.X + 4, y, 0); ui.Paint();
         start = Handle(1000); x = start.X + 4;
         conversion = ui.View.Conversion;
         ui.View.PointerDown(x, y, 0, false, false); ui.View.PointerMove(x + scale * 1030, y, false, false); ui.Paint();
@@ -94,7 +97,7 @@ internal static class HitsoundingTimingDragTests
                     ui.View.PointerDown(first.X - 15, selectY, 0, false, false);
                     ui.View.PointerMove(last.X + 20, selectY, false, false);
                     ui.View.PointerUp(last.X + 20, selectY, 0); ui.Paint();
-                    Check(ui.Canvas.Lines.Count(l => l.Width == 5 && l.Y1 >= first.Y) == 2, "Deletion fixture selects two green points");
+                    Check(ui.Canvas.Lines.Count(l => l.Width == 5 && l.Y1 >= first.Y) == 3, "Deletion fixture selects two green points and one red point");
                     if (action == "keyboard") ui.Key(46);
                     else
                     {

@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Platform;
 public static class BeatmapResources
 {
     private static readonly HashSet<string> extensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".mp3", ".ogg", ".wav", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp" };
+        { ".mp3", ".ogg", ".wav", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".mp4", ".avi", ".flv", ".mov", ".wmv", ".m4v", ".mpg", ".mpeg", ".mkv", ".webm" };
 
     public static void Copy(MapDocument document, string destinationDirectory, MapDocument exportedDocument)
     {
@@ -25,7 +25,8 @@ public static class BeatmapResources
             plan.Add(audioTarget, Path.GetFullPath(document.AudioPath));
         }
 
-        string? sourceDirectory = document.SourcePath is null ? null : Path.GetDirectoryName(Path.GetFullPath(document.SourcePath));
+        string? origin = document.SourcePath ?? document.AudioPath;
+        string? sourceDirectory = origin is null ? null : Path.GetDirectoryName(Path.GetFullPath(origin));
         if (sourceDirectory is not null && Directory.Exists(sourceDirectory))
         {
             RejectLinks(sourceDirectory);

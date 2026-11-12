@@ -15,6 +15,8 @@ public sealed partial class EditorView
     private (float X, float Y) hitsoundingMarqueeStart, hitsoundingMarqueeEnd;
     private sealed record HitsoundingCopy(double Offset, int Lane, HitSampleSettings Sample, int TimingIndex, bool InheritIndex);
     private HitsoundingCopy[] hitsoundingClipboard = [];
+    private readonly HashSet<(Guid Id, int Event)> hitsoundingClipboardSources = [];
+    private double hitsoundingClipboardPlayhead;
     private double hitsoundingMarqueeStartTime;
     private bool hitsoundingMarqueeMoved;
     private void SyncHitsoundingNoteSelection(ConvertedCatchObject? preferred = null)
@@ -94,10 +96,14 @@ public sealed partial class EditorView
     }
     private void CopyHitsoundingSelection()
     {
+        hitsoundingTimingClipboard = [];
         hitsoundingClipboardContainsNotes = false;
         var entries = hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4 && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event)))
             .Select(k => (Note: hitsoundingNoteLookup[(k.Id, k.Event)], k.Lane)).OrderBy(e => e.Note.TimeMs).ToArray();
         hitsoundingClipboard = []; hitsoundingStoryboardClipboard = [];
+        hitsoundingClipboardSources.Clear();
+        hitsoundingClipboardPlayhead = playhead;
+        hitsoundingClipboardSources.UnionWith(entries.Select(e => (e.Note.SourceId, e.Note.EventIndex)));
         if (entries.Length == 0 && hitsoundingStoryboardSelection.Count == 0) return;
         double start = Math.Min(entries.FirstOrDefault().Note?.TimeMs ?? double.PositiveInfinity, hitsoundingStoryboardSelection.Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min());
         hitsoundingStoryboardClipboard = hitsoundingStoryboardSelection.Select(s => s with { TimeMs = s.TimeMs - start }).ToArray();
@@ -146,9 +152,11 @@ public sealed partial class EditorView
     private void PasteHitsoundingSelection()
     {
         if (!CommitField()) return;
-        var samples = hitsoundingStoryboardClipboard.Select(s => s with { TimeMs = s.TimeMs + playhead }).ToArray();
+        double destination = !AudioPlaying && playhead == hitsoundingClipboardPlayhead && hitsoundingMultiSelection.Count > 0 && !hitsoundingMultiSelection.Any(k => hitsoundingClipboardSources.Contains((k.Id, k.Event)))
+            ? hitsoundingMultiSelection.Select(k => hitsoundingNoteLookup.GetValueOrDefault((k.Id, k.Event))?.TimeMs ?? playhead).Min() : playhead;
+        var samples = hitsoundingStoryboardClipboard.Select(s => s with { TimeMs = s.TimeMs + destination }).ToArray();
         if (hitsoundingClipboard.Length == 0) { if (samples.Length > 0) EditHitsoundingStoryboard([], samples); return; }
-        TransferHitsounding(hitsoundingClipboard, playhead, storyboard: samples);
+        TransferHitsounding(hitsoundingClipboard, destination, storyboard: samples);
     }
     private int HitsoundingTimingIndex(double time) => hitsoundingResolver!.Describe(
         new(Guid.Empty, 0, CatchObjectKind.Fruit, time, 0, 0, 0, 0, true)).Index;

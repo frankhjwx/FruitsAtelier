@@ -79,6 +79,7 @@ public sealed partial class EditorView
         }
         historyCompressionPaused = !LibraryVisible || SyncInteractionActive || AudioPlaying || SynchronizationBusy;
         storageMaintenancePaused = historyCompressionPaused || WorkspaceSession is not null;
+        PumpMediaPanel();
         PumpWorkspaceSave();
         PumpSynchronizationWait();
         PumpAudioProject();
@@ -216,6 +217,10 @@ public sealed partial class EditorView
                 c.Text(Path.GetFileName(soundPath), ghost.X + 8, ghost.Y + 7, 11, Foreground, 194);
             }
             if (!librarySettingsOpen) { mouseX = pointer.X; mouseY = pointer.Y; }
+            if (!TimingPageVisible && !HitsoundingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
+                && new Rect(MappingCanvasSelectorBounds.X, MappingCanvasSelectorBounds.Y - 17,
+                    MappingCanvasSelectorBounds.Width, MappingCanvasSelectorBounds.Height + 17).Contains(mouseX, mouseY))
+                DrawPaletteTooltip(c, L.Get("mappingCanvas.hint"), MappingCanvasSelectorBounds, left: false, above: false);
             if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingMuteTooltip(c);
             if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingLockTooltip(c);
             if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingToolTooltip(c);
@@ -877,7 +882,7 @@ public sealed partial class EditorView
             Item(ShortcutMenuLabel(L.Get("ui.copyMenu"), "copy"), () => CopySelection(), CanCopySelection || CanCopyTimestamp);
             Item(ShortcutMenuLabel(L.Get("ui.pasteMenu"), "paste"), RequestClipboardPaste, ClipboardInteractionReady && (CanPasteSelection || RequestPasteObjects is not null));
             if (CanEditBananas) Item(ShortcutMenuLabel(L.Get("bananaEdit.title") + "  Ctrl+F", "bananaEdit"), OpenBananaEdit, !notesLocked);
-            Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), ShowPatternDock, CanConvertStream && !notesLocked);
+            Item(ShortcutMenuLabel(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), "pattern"), ShowPatternDock, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
             Item(L.Get("randomize.title"), ShowRandomDock, ClipboardInteractionReady);

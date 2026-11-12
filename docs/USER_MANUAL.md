@@ -1,10 +1,10 @@
 # FruitsAtelier
 
-User Manual | Version 1.3.0
+User Manual | Version 1.4.4
 
 ## Using this manual
 
-This manual describes FruitsAtelier v1.3.0. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
+This manual describes FruitsAtelier v1.4.4. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
 
 ### Choose an editing canvas
 
@@ -39,6 +39,10 @@ Fruits Atelier edits osu!catch beatmaps. Keep the application, your editable wor
 
 Windows 10/11 x64 and DirectX 11 are required. Windows N installations need the Media Feature Pack for MP3 playback. macOS source-build instructions are linked from the Download page.
 
+### Acknowledgements and community use
+
+Before setup or opening a map, read the English-only startup acknowledgements and select the agreement checkbox to continue. The notice explains the independent hobby project, AI-assisted development, user-directed and non-LLM beatmap editing, and privacy. It also states the project's requirement not to promote use of Fruits Atelier in beatmap descriptions or on osu! forums. Cancel exits the application. Confirmation is stored locally; a revised notice requires confirmation again.
+
 ### Complete first-launch setup
 
 The setup guide covers folders, language, skin, sound levels, droplet defaults and Testplay. Back and Next retain your draft choices. **Finish** saves them; exiting an unfinished guide discards that draft.
@@ -51,7 +55,7 @@ Choose a **Workspace folder** outside the application folder. Optionally choose 
 - To start with music, drop one MP3, OGG or WAV into the Library or editor. Fill in title, artist, mapper and difficulty name, then choose **Create**.
 - When **Also create in osu! Songs** is selected, the new difficulty is linked to a Songs copy. Clear it to keep the project local to FA.
 
-Open a saved project from **My projects**. For a guided introduction, start with Meet the Editor.
+Open a saved project from **My Maps**. For a guided introduction, start with Meet the Editor.
 
 ### Keep the editable project
 
@@ -59,7 +63,7 @@ FA workspace files retain editing controls that an exported `.osu` cannot. Keep 
 
 ## Library and projects
 
-The Library is the entry point for maps and saved FA projects. **All songs** lists indexed Catch sets; **My projects** lists your editable workspace projects.
+The Library is the entry point for maps and saved FA projects. **All songs** lists indexed Catch sets; **My Maps** lists your editable workspace projects.
 
 ### Find and open a map
 
@@ -96,13 +100,15 @@ Changing the workspace path in Settings opens another workspace; it does not mov
 
 Use Difficulty templates and Library organization for FA collections, read-only osu! collections, mapper filtering, difficulty copies and saved templates. Portable projects documents FAZ/FAD import choices; they are distinct from OSZ/OSU import.
 
+Difficulty names remain visible while star ratings calculate in the background. The selected set is prioritized; completed ordering places higher Catch stars first and unavailable ratings last. The lower-left status shows scan and rating progress.
+
 ## Interface and navigation
 
 ### Panels and tools
 
-Use Layout to arrange dock panels, including Preview, Song Setup, Inspector, Notes and diagnostics. Mapping and Timing keep separate layouts. Tool keys 1–4 select Select, Fruit, Slider and Banana Shower. Their representation follows the canvas.
+Use Layout to arrange dock panels, including Preview, Song Setup, Inspector, Notes and diagnostics. Mapping, Timing and Hitsounding keep separate layouts. Tool keys 1–4 select Select, Fruit, Slider and Banana Shower. Their representation follows the canvas.
 
-Press Tab in Compose to switch between Catch time–X editing and osu! geometric editing. Settings → Experimental offers the alternate lazer Catch presentation. Editing canvases explains their different coordinates and editing rules.
+Use the Mapping Canvas selector above Sampleset, or press Tab in Compose, to switch between Catch time–X editing and osu!Legacy geometric editing. Settings → Experimental offers the alternate lazer Catch presentation. Editing canvases explains their different coordinates and editing rules.
 
 ### Seek and zoom
 
@@ -155,6 +161,10 @@ any replacement. Apply saves the draft. [Custom shortcuts](EDITOR_UI.md#custom-s
 describes search, alternate bindings, clearing and resets.
 
 **Dim Background** makes preview and Testplay backgrounds completely black. Turning it off restores the chosen dim percentage.
+
+### Keyboard bindings
+
+Open **Settings → Key Bindings** to search commands, record alternate bindings, resolve conflicts, clear assignments, or reset a command. Default and Lazer profiles are independent. Tool hints and menu labels show the saved bindings; the keyboard tables list factory defaults. Settings blocks input to covered editor and Library controls. Apply preserves unrelated editor preferences.
 
 ### General and updates
 
@@ -278,9 +288,9 @@ The Details header shows the current **AR**, **CS** and **DPB** as readouts. Cha
 
 ### Background and media
 
-Mapping Canvas settings control its dim level and X-axis grid colours/opacity independently of Catch Preview/Testplay. Drop a background image to replace its Events reference after confirmation; the old file remains on disk and the content change supports undo.
+Mapping Canvas settings control its dim level and X-axis grid colours/opacity independently of Catch Preview/Testplay. Drop a background image to assign it through the Media workflow, confirming replacement when one is already assigned; the old file remains on disk and the content change supports undo.
 
-the shared Enable Video/Storyboard preference controls visuals across mapping, preview and Testplay. Static backgrounds and storyboard samples are separate. See Video and storyboard.
+The shared Enable Video/Storyboard preference controls visuals across mapping, preview and Testplay. Static backgrounds and storyboard samples are separate. See Video and storyboard.
 
 ## Object timeline and song overview
 
@@ -431,7 +441,7 @@ Use the transport's playback speed and volume controls to slow a section or adju
 
 ### Canvas and media context
 
-Preview shows playable Catch output while editing either Catch or osu! geometry. Changing canvas does not convert the difficulty. enabled video/storyboard visuals follow the same transport; preview/testplay dim is separate from Mapping Canvas dim. See Video and storyboard.
+Preview shows playable Catch output while editing either Catch or osu! geometry. Changing canvas does not convert the difficulty. Enabled video/storyboard visuals follow the same transport; preview/testplay dim is separate from Mapping Canvas dim. See Video and storyboard.
 
 ## Movement strain
 
@@ -875,7 +885,7 @@ Disabling custom colours removes the map's combo overrides, allowing skin fallba
 
 ### Design
 
-Design stores countdown speed and offset, widescreen storyboard support, letterboxing in breaks and the flashing-light warning. These values are preserved on export. Countdown settings are retained for export. video and storyboard visuals are rendered during transport playback; see Video and storyboard.
+Design stores countdown speed and offset, widescreen storyboard support, letterboxing in breaks and the flashing-light warning. These values are preserved on export. Countdown settings are retained for export. Video and storyboard visuals are rendered during transport playback; see Video and storyboard.
 
 ### Randomize droplets
 
@@ -1048,7 +1058,7 @@ Seek to the section and press **F5**. Testplay uses the selected preview mod. **
 | F1 | Return to the editor at the selected start |
 | F2 | Return at the current Testplay position |
 
-Change movement and dash bindings in Settings. The pause menu's Continue, Retry and Back also accept Up/Down and Enter.
+Change movement, dash, retry and hold-to-retry bindings in Settings → Key Bindings. The pause menu's Continue, Retry and Back also accept Up/Down and Enter.
 
 ### Autoplay and bookmarks
 
@@ -1145,6 +1155,26 @@ Checking and export preserve those offsets until you apply a correction. The sep
 
 Use AiMod for FA's Catch-specific checks and Mapset Verifier for its mapset/difficulty checks. Inspect both and then Testplay. Resource checks remain available when video and storyboard visuals are disabled. If the engine or a required resource is unavailable, the panel shows the error so you can correct it and refresh.
 
+## Media and background palettes
+
+Open **Media** in the Mapping dock or restore it from **Layout**. On Files, choose or drop a background/video, or expand **Choose other existing media**. The list shows unassigned media in the mapset root; **Include subfolders** opts into nested files for this session. The chooser remains visible when empty. Drag the scrollbar or click its track to navigate a long list.
+
+**Unbind** removes the assignment while retaining the file. Videos start at 0 ms; enter a signed **Video offset**, then Enter to commit or Escape to cancel. **Sync media to all other difficulties** copies the current background, video and offset, including unassigned states, with undo support. File imports avoid overwriting existing resources. Save/export remains explicit.
+
+On **Colour palette**, choose 3–8 colours and generate a proposal from the current background. Inspect the swatches, then **Apply to current Colours** in one undo step. Changing the background invalidates the proposal. Check the colours during gameplay, especially with video, storyboard and Kiai; a static background sample cannot guarantee readability in every frame.
+
+## Hitsounding workspace
+
+Switch to Hitsounding for sound tracks and **Timing Helper**. Audible tracks use green mute controls; muted tracks use grey. Lock controls are teal when unlocked and pale red when locked. Locks protect editing and do not mute sound.
+
+Select red and green timing points with Ctrl-click or a marquee. **Ctrl+C**, then **Ctrl+V** in another difficulty, pastes at the original timestamps and replaces timing points at those timestamps in one undo step. Other timestamps remain unchanged. **5** adds an inherited point at the playhead. A selection containing red points cannot be dragged.
+
+At a time without a timing point, edit the draft and choose **Apply to affecting timing line** or insert a new inherited point. Volume track clicks step by five percentage points; dragging and numeric input retain one-percent precision.
+
+Select exactly two adjacent green points with different volumes and matching SV, meter, sample bank/index and effects to show **Volume Ramp Generation**. Choose a beat interval and Generate. The endpoints stay unchanged, intermediate volume follows time across BPM changes, and the operation supports one-step undo.
+
+For sound/Notes paste while paused, selecting a new target after copying makes its first timestamp the destination; otherwise paste starts at the playhead. See [Hitsounding controls](HITSOUNDS.md#hitsounding-workspace) for track editing and clipboard details.
+
 ## Video and storyboard playback
 
 ### Example and resources
@@ -1173,11 +1203,11 @@ See Testplay to play the scene, or Portable projects to share the project with i
 
 In Compose, Tab toggles the Catch and osu! canvases. Text fields,
 dialogs, Ctrl+Tab difficulty switching and Testplay retain their own Tab actions.
-See osu! canvas for native slider controls and distance spacing.
+See [osu! canvas](EDITOR_UI.md#osu-canvas) for native slider controls and distance spacing.
 
-This reference describes FruitsAtelier v1.3.0. Bindings depend on the active page,
+This reference describes the current factory-default bindings. Bindings depend on the active page,
 focused field, selected object and drawing state. For differences from osu!stable
-and proposed additions, see the compatibility review.
+and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 
 ### Reading the tables
 
@@ -1190,6 +1220,11 @@ and proposed additions, see the compatibility review.
   moving, reshaping and deleting existing objects, but allows selection, playback,
   placement, flags and undo/redo.
 - Keyboard command bindings are configurable in **Settings → Key Bindings**, independently for Default and Lazer. The tables below describe factory defaults.
+
+### Hitsounding
+
+In the Hitsounding workspace, **5** adds an inherited timing point at the playhead. The binding can be changed in Settings.
+See [Hitsounding controls](HITSOUNDS.md) for selection, volume ramps and timing drafts.
 
 ### Experimental lazer editing
 
@@ -1299,7 +1334,7 @@ change. Other shortcuts may be blocked until the draft or drag ends.
 
 | Keys | Action |
 | --- | --- |
-| Space / C | Play / pause. Available while holding a canvas or upper-timeline marquee. With beat snapping enabled, pausing aligns to the nearest current Snap grid line; see pause behavior. |
+| Space / C | Play / pause. Available while holding a canvas or upper-timeline marquee. With beat snapping enabled, pausing aligns to the nearest current Snap grid line; see [pause behavior](EDITOR_UI.md#playback-pause-snapping). |
 | X | Seek to song start and play. |
 | Home | Seek to song start without forcing playback. |
 | Z | Seek to the first object's start; if already at or before it, seek to zero. |
@@ -1307,7 +1342,6 @@ change. Other shortcuts may be blocked until the draft or drag ends.
 | Left / Right | Seek earlier / later by one full beat during playback. While paused, move to the preceding / following Snap grid line, including timing boundaries. |
 | Shift+Left / Shift+Right | Seek four full beats during playback. While paused, move four Snap grid lines in the chosen direction. |
 | Up / Down | Next / previous timing point, including inherited points. |
-| Ctrl+Plus / Ctrl+Minus | Temporarily increase / decrease AR by 0.1 (0–10). Main keyboard and numpad are supported. The current AR appears on the left (white for the original value, orange for a changed value). Each difficulty keeps its own value for subsequent testplays until the editor closes, without changing the map. |
 | Ctrl+Up / Ctrl+Down | Increase / decrease speed by 25 percentage points, within 10%–150%. |
 | Ctrl+Shift+Up / Ctrl+Shift+Down | Increase / decrease speed by 5 percentage points. |
 | Ctrl+B | Add a bookmark at the playhead. |
@@ -1338,7 +1372,7 @@ open it. Enter seeks; Esc cancels. Volume shortcuts also work during testplay.
 | Ctrl+Q/W/E/R | Set the additions sampleset to Auto / Normal / Soft / Drum for the selection or placement state, in both editing modes. |
 
 The standard Snap choices are 1/1–1/9, 1/12 and 1/16. The last two are accessible from
-the Snap slider or Ctrl+wheel. Settings → Experimental
+the Snap slider or Ctrl+wheel. [Settings → Experimental](EDITOR_UI.md#settings)
 adds 1/24, 1/32 and 1/48; Ctrl+wheel can reach them within their doubling/halving
 families. Beat snapping is independent of Slider Tick Rate.
 
@@ -1404,7 +1438,7 @@ Slider endpoint and timeline-tail drags accept ordinary wheel navigation, Ctrl+w
 
 Ctrl+Shift+wheel has no current canvas zoom binding. Alt+wheel over the canvas
 changes zoom rather than DS presets. For right-click drafting, deletion and
-double-click slider editing, see Editing Controls.
+double-click slider editing, see [Editing Controls](EDITOR_UI.md#fsliders).
 
 ### Timing page and F6 dialog
 
@@ -1447,8 +1481,7 @@ to Compose before moving selected objects.
 | F3 | During autoplay, toggle speed between 1.0x and 1.5x. |
 | Ctrl+Up / Ctrl+Down | During autoplay, increase / decrease speed by 25 percentage points, within 10%–150%. Works while paused too. |
 | Ctrl+Shift+Up / Ctrl+Shift+Down | During autoplay, increase / decrease speed by 5 percentage points. |
-| Ctrl+P | Pause without a menu or resume immediately, without a countdown. |
-| Esc | Open the pause menu; resume a Ctrl+P pause immediately. |
+| Esc / Ctrl+P | Open the pause menu / resume the session. |
 | Space | Skip the opening empty time while Skip is available; clicking Skip also works. |
 | Up / Down, Enter (pause menu) | Select Continue, Retry or Back, then activate it. |
 | Ctrl+B / Ctrl+Shift+B | Add a bookmark / remove the nearest within two seconds at the live position. |
@@ -1498,11 +1531,11 @@ undo/redo. Dialogs consume background editing keys. Some Compose page/file keys
 are processed before its numeric-field handler, so explicitly commit the field
 before invoking those commands.
 
-Unlocking canvas Zoom shows two persistent toolbar sliders, X above Y, each up to 200%. Object drawing and hit regions are capped at 100%. See canvas scaling.
+Unlocking canvas Zoom shows two persistent toolbar sliders, X above Y, each up to 200%. Object drawing and hit regions are capped at 100%. See [canvas scaling](EDITOR_UI.md#workspace).
 
 ### References
 
-- User manual
-- Editing controls and mouse gestures
-- Shortcut compatibility review and possible additions
+- [User manual](USER_MANUAL.md)
+- [Editing controls and mouse gestures](EDITOR_UI.md)
+- [Shortcut compatibility review and possible additions](KEY_BINDINGS_REVIEW.md)
 - [osu!stable default shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts)

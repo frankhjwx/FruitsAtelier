@@ -30,7 +30,7 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 
 ```powershell
 ./scripts/Publish-Windows.ps1
-./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.4.3-win-x64.zip
+./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.4.4-win-x64.zip
 ```
 
 Publication requires Python 3 to prepare the pinned [Mapset Verifier engine](MAPSET_VERIFIER.md).
@@ -42,7 +42,7 @@ source, adapter, launcher, build script and dependency locks.
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
 `releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`
-(currently 1.4.3); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
+(currently 1.4.4); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the
@@ -121,6 +121,18 @@ The homepage is not part of the update path.
 
 ## GitHub Release
 
+### Mandatory AI release execution policy
+
+AI agents MUST NOT use computer use for any release task. This prohibition includes
+interactive browser or desktop GUI automation and computer-use
+tools or skills, including for verification and publication recovery. Use Git,
+command-line scripts, GitHub APIs, and CI workflows for release preparation,
+validation, publication, and download verification. If a required step cannot be
+completed through these interfaces, report the specific blocker; do not fall back
+to computer use or bypass a required check. Repository test executables invoked
+from the CLI, including native render and input regression checks, remain required
+where applicable; they do not authorize interactive GUI automation.
+
 The release source is the **merge commit of the release PR on `main`**. Development
 continues on `dev`; merge `main` back into `dev` after each release PR so `dev`
 contains the published history. Use a merge commit for `dev` → `main` PRs to retain
@@ -129,7 +141,8 @@ against an up-to-date base. Do not bypass protection or force-push either branch
 A package built locally from `dev` is a preflight check; the tag workflow builds
 the published artifacts.
 
-1. On `dev`, commit and push the reviewed changes. Set `Directory.Build.props` to
+1. Complete the [pre-release documentation review](#pre-release-documentation-review).
+   On `dev`, commit and push the reviewed changes. Set `Directory.Build.props` to
    the release version, update the version shown in all four READMEs and this guide,
    and add user-facing notes at `docs/releases/vMAJOR.MINOR.PATCH.md` (use the full
    tag for prereleases). Keep both release lock files committed. Run the relevant
@@ -215,6 +228,24 @@ the published artifacts.
    announcing in-app update availability. Fetch again and verify
    `git merge-base --is-ancestor origin/main origin/dev` succeeds; if `main`
    advanced, repeat the synchronization before handing off on `dev`.
+
+### Pre-release documentation review
+
+Before every release, inventory and review all repository AI instructions and
+maintainer documentation against the final release source, including `AGENTS.md`,
+`docs/`, module references under `src/`, and tooling/asset/website READMEs. Check
+commands, paths, versions, platform boundaries, implemented versus proposed
+features, test requirements, and links. Correct stale statements in their owning
+documents and link to those rules from other entry points. Keep historical release
+notes, pinned upstream comparisons, and retained third-party license text intact.
+
+Update `README.md` and its Chinese, Japanese, and Korean translations together:
+cover current features and setup, not only the version number. Update the user
+manual and shortcut reference when the shipped behavior changes. Reconcile
+feedback/backlog entries with implemented features. Verify documentation claims
+against the final diff and current implementation, and summarize the reviewed
+scope and validation in the release PR. If functionality changes after review,
+review the affected documentation again before merging and tagging.
 
 ### CI validation and reuse
 

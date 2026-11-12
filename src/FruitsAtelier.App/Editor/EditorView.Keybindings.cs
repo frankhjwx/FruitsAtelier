@@ -56,12 +56,26 @@ public sealed partial class EditorView
             17 when OperatingSystem.IsMacOS() => "Cmd", 18 when OperatingSystem.IsMacOS() => "Option", _ => KeyName(k) }));
     private string ShortcutContext(ShortcutCommand command) => L.Get("shortcuts.context",
         L.Get("shortcuts.scope." + command.Scope), L.Get(command.Lazer ? "shortcuts.lazer" : "shortcuts.default"));
+    internal string ShortcutKeys(string id, ShortcutScope? scope = null, bool first = false)
+    {
+        var command = ShortcutCommands.FirstOrDefault(c => c.Scope == (scope ?? ActiveShortcutScope)
+            && c.Id == id && c.Lazer == LibrarySettings.LazerEditing);
+        if (command is null) return "";
+        var bindings = CommandBindings(command);
+        return string.Join(" / ", (first ? bindings.Take(1) : bindings).Select(BindingName));
+    }
+    internal string ShortcutHint(string label, string id, ShortcutScope? scope = null)
+    {
+        string keys = ShortcutKeys(id, scope);
+        if (keys.Length == 0) return label;
+        int end = label.IndexOf('\n');
+        return end < 0 ? L.Get("shortcuts.hint", label, keys)
+            : L.Get("shortcuts.hint", label[..end], keys) + label[end..];
+    }
     private string ShortcutMenuLabel(string label, string id)
     {
-        var command = ShortcutCommands.FirstOrDefault(c => c.Scope == ActiveShortcutScope && c.Id == id && c.Lazer == LibrarySettings.LazerEditing);
-        if (command is null || !LibrarySettings.ShortcutBindings.ContainsKey(command.StorageKey)) return label;
         string title = label.Split("  ", 2)[0].TrimEnd();
-        string keys = string.Join(" / ", CommandBindings(command).Select(BindingName));
+        string keys = ShortcutKeys(id);
         return keys.Length == 0 ? title : title + "  " + keys;
     }
     private void ResetShortcutDraft()

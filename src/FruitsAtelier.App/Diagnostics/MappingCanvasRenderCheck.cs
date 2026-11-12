@@ -39,6 +39,7 @@ internal static class MappingCanvasRenderCheck
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
                 var clock = new Clock();
                 var view = new EditorView(timeProvider: clock);
+                view.LibrarySettings.Workspace = folder;
                 view.Document.SourcePath = Path.Combine(folder, "map.osu");
                 view.LibrarySettings.MappingCanvasBackgroundDim = 40;
                 view.LibrarySettings.CanvasGridColour = 0x66DDFF;
@@ -46,6 +47,12 @@ internal static class MappingCanvasRenderCheck
                 view.LibrarySettings.CanvasGridOpacity = 65;
                 view.LibrarySettings.MovementLabelTimeThresholdMs = LibrarySettings.DefaultMovementLabelTimeThresholdMs;
                 view.DropLibraryFiles([image]);
+                var mediaWait = System.Diagnostics.Stopwatch.StartNew();
+                while (view.MediaEditingBusy)
+                {
+                    Paint(); Thread.Sleep(5);
+                    if (mediaWait.Elapsed.TotalSeconds > 10) throw new TimeoutException("Background import did not complete.");
+                }
                 var original = view.Document.DeepClone();
                 if (!settingsOnly)
                 {
@@ -194,6 +201,15 @@ internal static class MappingCanvasRenderCheck
                 var view = new EditorView(loadDemo: false);
                 view.LoadDocument(document);
                 view.LibrarySettings.MappingCanvasBackgroundDim = 0;
+                var preparation = System.Diagnostics.Stopwatch.StartNew();
+                do
+                {
+                    canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+                    if (preparation.Elapsed.TotalSeconds > 10)
+                        throw new TimeoutException("Background fixture preparation did not complete.");
+                    if (view.LibraryOpening) Thread.Sleep(5);
+                }
+                while (view.LibraryOpening);
                 int decodes = 0;
                 for (int frame = 0; frame < 4; frame++)
                 {
