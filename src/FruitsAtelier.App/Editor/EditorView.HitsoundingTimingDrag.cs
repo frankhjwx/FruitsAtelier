@@ -28,7 +28,15 @@ public sealed partial class EditorView
         if (bpm.Point is not null)
         {
             if (!CommitField()) return true;
-            SelectHitsoundingTimingPoint(bpm.Point);
+            if (button == 0 && ctrl)
+            {
+                bool remove = hitsoundingTimingSelection.Contains(bpm.Point);
+                var previous = hitsoundingTimingSelection.ToArray();
+                SelectHitsoundingTimingPoint(bpm.Point);
+                hitsoundingTimingSelection.UnionWith(previous);
+                if (remove) hitsoundingTimingSelection.Remove(bpm.Point);
+            }
+            else SelectHitsoundingTimingPoint(bpm.Point);
             if (button == 2)
             {
                 contextItems.Clear();
@@ -64,12 +72,11 @@ public sealed partial class EditorView
         {
             hitsoundingSelectedTiming = point; hitsoundingSelected = null; hitsoundingNotesSelection = false;
             hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); SelectObjects([]);
-            if (point.Uninherited) { hitsoundingTimingSelection.Clear(); return true; }
             if (ctrl) { if (!hitsoundingTimingSelection.Add(point)) hitsoundingTimingSelection.Remove(point); }
             else if (!shift && !hitsoundingTimingSelection.Contains(point)) hitsoundingTimingSelection.Clear();
             if (!ctrl) hitsoundingTimingSelection.Add(point);
             if (!hitsoundingTimingSelection.Contains(point)) hitsoundingSelectedTiming = hitsoundingTimingSelection.LastOrDefault();
-            if (!strip) return true;
+            if (!strip || hitsoundingTimingSelection.Any(p => p.Uninherited)) return true;
             if (!hitsoundingTimingSelection.Contains(point)) return true;
             hitsoundingTimingDrag = point; hitsoundingTimingOffset = point.TimeMs - hitsoundingTimingStartTime;
             hitsoundingTimingMoving = hitsoundingTimingLabels.Where(t => hitsoundingTimingSelection.Contains(t.Point)).ToArray();
@@ -101,7 +108,7 @@ public sealed partial class EditorView
             int lo = 0, hi = hitsoundingTimingLabels.Length;
             while (lo < hi) { int mid = (lo + hi) / 2; if (hitsoundingTimingLabels[mid].Time < from) lo = mid + 1; else hi = mid; }
             for (int i = lo; i < hitsoundingTimingLabels.Length && hitsoundingTimingLabels[i].Time <= to; i++)
-                if (!hitsoundingTimingLabels[i].Red) hitsoundingTimingSelection.Add(hitsoundingTimingLabels[i].Point);
+                hitsoundingTimingSelection.Add(hitsoundingTimingLabels[i].Point);
             return true;
         }
         double target = SnapTiming().Snap(hitsoundingTimingEndTime + hitsoundingTimingOffset, divisor);
@@ -165,7 +172,7 @@ public sealed partial class EditorView
         hitsoundingSelectedTiming = point; hitsoundingSelected = null; hitsoundingNotesSelection = false;
         hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); SelectObjects([]);
         if (!preserveSelection || !hitsoundingTimingSelection.Contains(point)) hitsoundingTimingSelection.Clear();
-        if (!point.Uninherited) hitsoundingTimingSelection.Add(point);
+        hitsoundingTimingSelection.Add(point);
     }
 
     private void OpenHitsoundingTimingHelper(TimingPoint point)

@@ -12,7 +12,7 @@ internal static class HitsoundingFeedbackTests
             map.TimingPoints.AddRange([
                 new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, Volume = 80 },
                 new() { TimeMs = 500, BeatLengthMs = -50, Uninherited = false, Volume = 20, SampleSet = 2, SourceOrder = 1 },
-                new() { TimeMs = 2500, BeatLengthMs = -100, Uninherited = false, Volume = 80, SampleSet = 3, SourceOrder = 2 }]);
+                new() { TimeMs = 2500, BeatLengthMs = -50, Uninherited = false, Volume = 80, SampleSet = 2, SourceOrder = 2 }]);
             foreach (int time in new[] { 1000, 1250, 2000, 2250 })
                 map.Fruits.Add(new() { TimeMs = time, X = 256, OriginalLine = $"256,192,{time},1,{(time < 1500 ? 2 : 0)},{(time < 1500 ? 2 : 3)}:2:0:0:" });
             var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 1600); ui.View.ShowHitsoundingPage(); ui.Paint();
@@ -82,6 +82,8 @@ internal static class HitsoundingFeedbackTests
         }
         TimingHelperLayout();
         RampTempoBoundary();
+        RampConstraints();
+        TimingClipboard();
         RoundedNotes();
         Console.WriteLine("PASS hitsounding feedback shortcuts, draft apply, volume precision, ramp and selected-target clipboard");
     }
@@ -147,7 +149,7 @@ internal static class HitsoundingFeedbackTests
             new() { TimeMs = 0, BeatLengthMs = 500 },
             new() { TimeMs = 0, Uninherited = false, BeatLengthMs = -50, Volume = 80 },
             new() { TimeMs = 375, BeatLengthMs = 250, SampleSet = 3, SampleIndex = 7, Effects = 9 },
-            new() { TimeMs = 1000, Uninherited = false, BeatLengthMs = -100, Volume = 20 }]);
+            new() { TimeMs = 1000, Uninherited = false, BeatLengthMs = -50, Volume = 20 }]);
         TimingEditing.GenerateVolumeRamp(map, map.TimingPoints[1], map.TimingPoints[3], 1);
         Check(map.TimingPoints.Any(p => p.TimeMs == 437 && !p.Uninherited && p.SampleIndex == 7 && p.Effects == 9),
             "Ramp preserves beat spacing across a mid-beat tempo change and inherits non-volume fields");
@@ -156,6 +158,65 @@ internal static class HitsoundingFeedbackTests
         TimingEditing.GenerateVolumeRamp(map, map.TimingPoints[1], map.TimingPoints[3], 1);
         Check(map.TimingPoints.Count == count, "Regenerating a ramp does not duplicate green lines");
         Check(ProjectSerializer.Read(ProjectSerializer.Serialize(map)).ContentEquals(map), "Ramp survives project persistence");
+    }
+    private static void RampConstraints()
+    {
+        var start = new TimingPoint { TimeMs = 0, Uninherited = false, BeatLengthMs = -50, Volume = 20 };
+        var end = TimingEditing.Copy(start); end.TimeMs = 4000; end.Volume = 22;
+        foreach (Action<TimingPoint> change in new Action<TimingPoint>[] { p => p.Volume = 20, p => p.BeatLengthMs = -100,
+            p => p.Meter = 3, p => p.SampleSet = 2, p => p.SampleIndex = 7, p => p.Effects = 8, p => p.Uninherited = true })
+        {
+            var invalid = TimingEditing.Copy(end); change(invalid);
+            Check(!TimingEditing.CanGenerateVolumeRamp(start, invalid), "Ramp rejects equal volume or mismatched non-volume properties");
+            var rejected = new MapDocument(); rejected.TimingPoints.AddRange([start, invalid]);
+            var before = rejected.DeepClone();
+            try { TimingEditing.GenerateVolumeRamp(rejected, start, invalid, 4); throw new Exception("Invalid ramp accepted"); }
+            catch (ArgumentException) { Check(before.ContentEquals(rejected), "Invalid ramp leaves content unchanged"); }
+        }
+        foreach (bool descending in new[] { false, true })
+        {
+            var a = TimingEditing.Copy(start); var b = TimingEditing.Copy(end);
+            if (descending) { a.Volume = 22; b.Volume = 20; }
+            var map = new MapDocument { BeatLengthMs = 500 }; map.TimingPoints.AddRange([new() { TimeMs = -500, BeatLengthMs = 500 }, a, b]);
+            TimingEditing.GenerateVolumeRamp(map, a, b, 4);
+            var added = map.TimingPoints.Where(p => !p.Uninherited && p != a && p != b).OrderBy(p => p.TimeMs).ToArray();
+            Check(added.Length == 2 && added[0].Volume == 21 && added[1].Volume == b.Volume,
+                "Small increasing/decreasing ramps emit only integer volume changes");
+            Check(added[0].TimeMs == 1125 && added[1].TimeMs == 3000, "Duplicate rounded values retain the first differing beat position");
+        }
+    }
+    private static void TimingClipboard()
+    {
+        var source = new MapDocument { Name = "Source", DurationMs = 8000 };
+        source.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
+            new() { TimeMs = 500, BeatLengthMs = 400, Volume = 60 },
+            new() { TimeMs = 1000, Uninherited = false, BeatLengthMs = -50, SampleSet = 2, SampleIndex = 7, Volume = 37, Effects = 1 }]);
+        var target = new MapDocument { Name = "Target", DurationMs = 8000 };
+        target.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 600 },
+            new() { TimeMs = 500, Uninherited = false, BeatLengthMs = -100, Volume = 90 },
+            new() { TimeMs = 1000, BeatLengthMs = 300 },
+            new() { TimeMs = 1000, Uninherited = false, BeatLengthMs = -100 },
+            new() { TimeMs = 1500, Uninherited = false, BeatLengthMs = -75, Volume = 45 }]);
+        var ui = new Ui(false); ui.View.LoadProject(BeatmapProject.FromDocuments([source, target]));
+        ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
+        foreach (double time in new[] { 500d, 1000d })
+        {
+            var bounds = ui.View.HitsoundingTimingHandleBounds(ui.View.Document.TimingPoints.Single(p => p.TimeMs == time));
+            ui.View.PointerDown(bounds.X + 4, bounds.Y + 10, 0, false, true); ui.View.PointerUp(bounds.X + 4, bounds.Y + 10, 0); ui.Paint();
+        }
+        var sourceBefore = ui.View.Document.DeepClone(); ui.Key(67, ctrl: true);
+        Check(ui.View.SwitchDifficulty(1), "Timing clipboard switches to destination difficulty");
+        ui.View.ShowHitsoundingPage(); ui.Paint(); var targetBefore = ui.View.Document.DeepClone();
+        ui.View.UpdateTransport(3000, 8000, true, false, false, null, null); ui.Key(86, ctrl: true);
+        Check(ui.View.Document.TimingPoints.Count == 4 && ui.View.Document.TimingPoints.Single(p => p.TimeMs == 500).BeatLengthMs == 400,
+            "Mixed red/green paste replaces every collision at the original timestamp");
+        var green = ui.View.Document.TimingPoints.Single(p => p.TimeMs == 1000);
+        Check(!green.Uninherited && green.Volume == 37 && green.SampleIndex == 7 && green.Effects == 1,
+            "Green timing properties survive cross-difficulty paste");
+        Check(ui.View.Document.TimingPoints.Single(p => p.TimeMs == 1500).Volume == 45, "Unrelated destination points remain intact");
+        ui.Key(90, ctrl: true); Check(targetBefore.ContentEquals(ui.View.Document), "Timing paste undoes in one step");
+        ui.Key(89, ctrl: true); Check(ui.View.Document.TimingPoints.Count == 4, "Timing paste supports redo");
+        ui.View.SwitchDifficulty(0); Check(sourceBefore.ContentEquals(ui.View.Document), "Copy/paste preserves source difficulty");
     }
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
 }

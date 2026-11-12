@@ -331,8 +331,8 @@ or sample bank. Other blocks entering the viewport do not affect this decision.
 
 Drag green timing handles horizontally to move inherited points to the nearest
 Snap. Marquee-select handles to move several green points together, preserving
-their relative offsets while snapping the grabbed point. Red points cannot be
-dragged or included in this selection. Timing intervals update during the preview;
+their relative offsets while snapping the grabbed point. A selection containing
+red points cannot be dragged. Timing intervals update during the preview;
 release commits one undoable edit, and Escape cancels it. Right-click empty space
 in the handle strip to create an inherited point at the nearest Snap using the
 same parameter inheritance as Timing Panel. Right-click a timing block or handle
@@ -340,14 +340,20 @@ to edit it in Timing Helper, opening the panel when needed. Green points also
 offer Delete. The Delete key and context-menu Delete remove all selected green
 points in one undoable edit. Right-clicking a selected block or handle preserves
 the group; right-clicking an unselected point selects that point instead.
+Ctrl-select or box-select red and green timing points, then press **Ctrl+C** to copy
+the selection. **Ctrl+V** in another difficulty pastes at the original timestamps,
+replacing all destination timing points at those timestamps. Other timestamps are
+unchanged, pasted points remain selected, and the paste is one undo step.
 Press **5** in Hitsounding to add an inherited point at the playhead. This binding is configurable in Settings.
 Ctrl-select exactly two adjacent green points to reveal **Volume Ramp Generation** in Timing Helper.
-No other green point may lie between them. Choose the beat interval from the dropdown
+No other green point may lie between them. The endpoints must have different volumes
+and matching SV, meter, sample bank, sample index and effects. Choose the beat interval from the dropdown
 and click **Generate** on the same row; available intervals follow the Snap division choices.
 The section has separators above and below it. When it is absent, the separator
 between the context card and timing parameters remains. Multi-selection hides Offset.
 Generation follows musical beat intervals across BPM changes and interpolates volume
-linearly in time between the unchanged endpoints. Existing interior points receive
+linearly in time between the unchanged endpoints. Volumes are rounded to integers;
+an intermediate line is omitted when its rounded volume matches the preceding line. Existing interior points receive
 the interpolated volume; their other properties are preserved. Missing green points
 inherit the active timing properties. Generation selects both endpoints and every
 generated green point together. The complete operation is one undo step.

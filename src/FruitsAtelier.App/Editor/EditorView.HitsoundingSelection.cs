@@ -96,6 +96,7 @@ public sealed partial class EditorView
     }
     private void CopyHitsoundingSelection()
     {
+        hitsoundingTimingClipboard = [];
         hitsoundingClipboardContainsNotes = false;
         var entries = hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4 && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event)))
             .Select(k => (Note: hitsoundingNoteLookup[(k.Id, k.Event)], k.Lane)).OrderBy(e => e.Note.TimeMs).ToArray();

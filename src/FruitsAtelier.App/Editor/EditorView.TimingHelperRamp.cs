@@ -13,7 +13,7 @@ public sealed partial class EditorView
         if (hitsoundingTimingSelection.Count != 2) return null;
         var points = hitsoundingTimingSelection.OrderBy(p => p.TimeMs).ToArray();
         int first = Array.IndexOf(hitsoundingGreenPoints, points[0]);
-        return first < 0 || first + 1 >= hitsoundingGreenPoints.Length || !ReferenceEquals(hitsoundingGreenPoints[first + 1], points[1]) || points[0].TimeMs >= points[1].TimeMs
+        return first < 0 || first + 1 >= hitsoundingGreenPoints.Length || !ReferenceEquals(hitsoundingGreenPoints[first + 1], points[1]) || !TimingEditing.CanGenerateVolumeRamp(points[0], points[1])
             ? null : (points[0], points[1]);
     }
     private void DrawTimingHelperRamp(ICanvas c, float x, ref float y, float w)

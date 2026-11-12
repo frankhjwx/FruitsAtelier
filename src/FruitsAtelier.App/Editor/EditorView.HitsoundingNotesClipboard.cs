@@ -26,6 +26,7 @@ public sealed partial class EditorView
         hitsoundingNotesClipboard = snapshot;
         hitsoundingNotesClipboardPlayhead = playhead;
         hitsoundingNotesClipboardDifficulty = difficulties[activeDifficulty].Id;
+        hitsoundingTimingClipboard = [];
         hitsoundingClipboardContainsNotes = true;
         StatusMessage = L.Get("editor.status.objectsCopied", hitsoundingCopiedNotes.Length);
     }

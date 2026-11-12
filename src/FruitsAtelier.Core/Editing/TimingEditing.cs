@@ -27,9 +27,14 @@ public static class TimingEditing
         return point;
     }
 
+    public static bool CanGenerateVolumeRamp(TimingPoint start, TimingPoint end)
+        => !start.Uninherited && !end.Uninherited && start.TimeMs < end.TimeMs && start.Volume != end.Volume
+            && start.BeatLengthMs.Equals(end.BeatLengthMs) && start.Meter == end.Meter
+            && start.SampleSet == end.SampleSet && start.SampleIndex == end.SampleIndex && start.Effects == end.Effects;
+
     public static void GenerateVolumeRamp(MapDocument map, TimingPoint start, TimingPoint end, int divisor)
     {
-        if (start.Uninherited || end.Uninherited || !map.TimingPoints.Contains(start) || !map.TimingPoints.Contains(end)
+        if (!CanGenerateVolumeRamp(start, end) || !map.TimingPoints.Contains(start) || !map.TimingPoints.Contains(end)
             || start.TimeMs >= end.TimeMs || divisor is < 1 or > 192) throw new ArgumentException(L.Get("timing.range"));
         var timing = new TimingMap.Lookup(map, applyMultiplierOverride: false);
         var ordered = map.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
@@ -49,15 +54,23 @@ public static class TimingEditing
         var greens = ordered.Where(p => !p.Uninherited).Select(p => p.TimeMs).ToHashSet();
         var added = new List<TimingPoint>();
         int active = -1, order = ordered.Select(p => p.SourceOrder).Where(v => v < int.MaxValue).DefaultIfEmpty(-1).Max();
+        int previousVolume = start.Volume;
         foreach (double time in times)
         {
             if (greens.Contains(time)) continue;
-            while (active + 1 < ordered.Length && ordered[active + 1].TimeMs <= time) active++;
+            while (active + 1 < ordered.Length && ordered[active + 1].TimeMs <= time)
+            {
+                active++;
+                previousVolume = ordered[active].TimeMs > start.TimeMs ? Volume(ordered[active].TimeMs) : ordered[active].Volume;
+            }
+            int volume = Volume(time);
+            if (volume == previousVolume) continue;
+            previousVolume = volume;
             var point = active >= 0 ? Copy(ordered[active]) : new TimingPoint();
             var state = timing.At(time);
             point.BeatLengthMs = point.Uninherited ? -100 : point.BeatLengthMs;
             point.TimeMs = time; point.Uninherited = false;
-            point.Meter = state.Meter; point.Volume = Volume(time); point.OriginalLine = null; point.SourceOrder = ++order;
+            point.Meter = state.Meter; point.Volume = volume; point.OriginalLine = null; point.SourceOrder = ++order;
             added.Add(point);
         }
         foreach (var point in ordered)

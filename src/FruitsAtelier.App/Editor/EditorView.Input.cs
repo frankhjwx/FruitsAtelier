@@ -1584,6 +1584,7 @@ public sealed partial class EditorView
                 else if (panelMenuOpen || menu >= 0 || contextItems.Count > 0) { panelMenuOpen = false; menu = -1; contextItems.Clear(); }
                 else ShowLibrary();
             }
+            else if (HitsoundingTimingClipboardKey(virtualKey, ctrl, shift)) { }
             else if (HitsoundingNotesKey(virtualKey, ctrl, shift)) { }
             else if (!ctrl && !altHeld && !shift && virtualKey is 49 or 50) SetHitsoundingTool(virtualKey == 50);
             else if (!ctrl && !altHeld && !shift && virtualKey == 53) AddHitsoundingInheritedPoint(playhead);

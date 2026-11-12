@@ -33,6 +33,7 @@ internal static class HitsoundingRenderCheck
                     map.TimingPoints.Add(new() { TimeMs = time, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = 0, Volume = time % 100 == 0 ? 60 : 5 });
                 foreach (int index in new[] { 12, 123 })
                     map.TimingPoints.Add(new() { TimeMs = index == 12 ? 3000 : 3500, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, SampleIndex = index, Volume = 80 });
+                if (scenario.StartsWith("-volume-ramp", StringComparison.Ordinal)) map.TimingPoints.Single(p => p.TimeMs == 3000).SampleIndex = 0;
                 map.Fruits.AddRange(Enumerable.Range(0, 20).Select(i => new Fruit { TimeMs = i * 250, X = 256,
                     OriginalLine = $"256,192,{i * 250},1,{(i % 4 == 0 ? 4 : i % 3 == 0 ? 8 : i % 2 == 0 ? 2 : 0)},0:0:0:0:" }));
                 if (scenario == "-notes-preview") map.Fruits.RemoveAll(f => f.TimeMs == 750);
