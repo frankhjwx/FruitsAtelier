@@ -56,11 +56,11 @@ static class MappingCanvasBackgroundTests
                 var snapshot = ui.View.Document.DeepClone();
                 ui.View.LibrarySettings.Workspace = root;
                 ui.View.LibrarySettings.BackgroundDim = 35;
-                ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas"));
+                ui.View.OpenSettings(); ui.Paint(); ui.ClickSettingsCategory("settings.mappingCanvas");
                 var minus = ui.Canvas.Texts.Where(t => t.Value == "−" && t.X > ui.View.SettingsBounds.X + 230).OrderBy(t => t.Y).First();
                 ui.Click(minus.X + 2, minus.Y + 2);
                 Check(ui.View.LibrarySettings.MappingCanvasBackgroundDim == 90, "Draft applied before Apply.");
-                ui.Key(27); ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas"));
+                ui.Key(27); ui.View.OpenSettings(); ui.Paint(); ui.ClickSettingsCategory("settings.mappingCanvas");
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.backgroundDim", 90)), "Cancel retained a draft.");
                 var dim = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.backgroundDim", 90));
                 ui.View.PointerDown(dim.X + dim.MaxWidth / 2, dim.Y + 5, 0, false, false);

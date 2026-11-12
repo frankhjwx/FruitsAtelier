@@ -95,6 +95,8 @@ On Windows 11, the native title bar uses the same background and text colours as
 the editor header, including during preview.
 
 Settings combines protocol handling and browser data controls in **osu! Links & Web**.
+Applying settings preserves unrelated editor preferences, including canvas visibility
+and selection locks, default slider SV, overlay positions, dock layouts and window state.
 New settings categories appear before the fixed **Experimental**, **Application updates**
 navigation tail; Experimental stays second to last when application updates are available.
 

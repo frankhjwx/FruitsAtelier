@@ -1573,6 +1573,14 @@ sealed class Ui
         var label = Canvas.Texts.Single(t => t.Value == (Canvas.Texts.Any(t => t.Value == text) ? text : visible));
         Click(label.X + 4, label.Y + 5);
     }
+    public void ClickSettingsCategory(string key)
+    {
+        var bounds = View.SettingsBounds;
+        // The modal is drawn after the covered editor, which can contain the same label.
+        var label = Canvas.Texts.Last(t => t.Value == FruitsAtelier.Localization.Strings.Get(key)
+            && t.X >= bounds.X + 16 && t.X < bounds.X + 198 && t.Y >= bounds.Y + 78 && t.Y < bounds.Bottom);
+        Click(label.X + 4, label.Y + 5);
+    }
     public void ClickObjectAction(string text)
     {
         var label = Canvas.Texts.Last(t => t.Value == text);

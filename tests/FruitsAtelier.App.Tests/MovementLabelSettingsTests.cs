@@ -62,7 +62,7 @@ static class MovementLabelSettingsTests
                 void Open()
                 {
                     ui.Resize(760, 580);
-                    ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas"));
+                    ui.View.OpenSettings(); ui.Paint(); ui.ClickSettingsCategory("settings.mappingCanvas");
                     ui.View.Wheel(ui.View.SettingsBounds.X + 300, ui.View.SettingsBounds.Y + 200, -1200, false); ui.Paint();
                 }
                 void Choose(double from, double to)

@@ -18,6 +18,7 @@ internal static class WindowPreferenceTests
             L.SetLanguage("en");
             Snaps(root);
             Panels(root);
+            ApplyPreservesPreferences(root);
             var ui = new Ui();
             ui.View.LibrarySettings.Workspace = root;
             ui.View.RequestViewPreference = () => ui.View.LibrarySettings.Save(path);
@@ -45,6 +46,69 @@ internal static class WindowPreferenceTests
                 && !new EditorWindowPreferences { Width = 1200, Height = -1 }.HasValidSize(), "Invalid window dimensions were accepted.");
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void ApplyPreservesPreferences(string root)
+    {
+        foreach (string locale in new[] { "en", "zh-CN" })
+        foreach (bool legacySongs in new[] { false, true })
+        {
+            L.SetLanguage(locale);
+            var ui = new Ui(false);
+            var settings = ui.View.LibrarySettings;
+            settings.Workspace = Path.Combine(root, "apply-workspace");
+            settings.OsuRoot = "";
+            if (legacySongs)
+            {
+                settings.Songs = Path.Combine(root, "legacy-maps");
+                Directory.CreateDirectory(settings.Songs);
+            }
+            settings.ShowSliderPaths = false;
+            settings.ShowSelectionRect = false;
+            settings.LockDropletSelection = false;
+            settings.LockSlidersToCanvas = true;
+            settings.OsuSliderDefaultSv = 2.5;
+            settings.DiscussionWebMode = true;
+            settings.ShowCanvasDiscussionAnnotations = false;
+            settings.CanvasControlsOffsetX = 35;
+            settings.CanvasControlsOffsetY = -20;
+            settings.CanvasControlsScale = .5f;
+            settings.BookmarkToolbarOffsetX = 40;
+            settings.WindowsWindow = new() { Width = 1234, Height = 789, Maximized = true };
+            settings.MacWindow = new() { Width = 1100, Height = 700 };
+            settings.DockLayouts = ui.View.CaptureDockLayouts();
+            settings.DockLayouts.Mapping!.Right!.Width = 345;
+            ui.View.RestoreDockLayouts();
+            var document = ui.View.Document.DeepClone();
+            var conversion = ui.View.Conversion;
+            string baseline = System.Text.Json.JsonSerializer.Serialize(settings);
+            string path = Path.Combine(root, $"apply-{locale}-{legacySongs}.json");
+            ui.View.OpenSettings();
+            ui.Paint(); ui.ClickText(L.Get("settings.romanisedOn"));
+            ui.View.ApplySettings(root);
+            AssertSettings(ui.View.LibrarySettings, baseline, "Failed save");
+            ui.View.ApplySettings(path);
+            var expected = System.Text.Json.Nodes.JsonNode.Parse(baseline)!;
+            expected[nameof(LibrarySettings.RomanisedMetadata)] = false;
+            baseline = expected.ToJsonString();
+            AssertSettings(ui.View.LibrarySettings, baseline, "Apply");
+            AssertSettings(LibrarySettings.Load(path), baseline, "Reload");
+            ui.Key(27);
+            ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.romanisedOff")); ui.Key(27);
+            AssertSettings(ui.View.LibrarySettings, baseline, "Cancel");
+            Check(document.ContentEquals(ui.View.Document) && !ui.View.IsDirty && ReferenceEquals(conversion, ui.View.Conversion),
+                "Applying preferences changed content or rebuilt conversion.");
+        }
+        L.SetLanguage("en");
+
+        static void AssertSettings(LibrarySettings actual, string expected, string operation)
+        {
+            var before = System.Text.Json.Nodes.JsonNode.Parse(expected)!.AsObject();
+            var after = System.Text.Json.Nodes.JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(actual))!.AsObject();
+            foreach (var property in before)
+                Check(System.Text.Json.Nodes.JsonNode.DeepEquals(property.Value, after[property.Key]),
+                    $"{operation} changed preference {property.Key}.");
+        }
     }
 
     private static void Panels(string root)

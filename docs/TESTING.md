@@ -463,7 +463,10 @@ the remaining cases. Capture both output streams when retaining test logs.
 `App.Tests --window-preferences-check` checks canvas switch persistence, settings
 compatibility, window preference serialization, per-difficulty GS/DS, grid level,
 Anchor Snap and beat-snap restoration, and temporary beat-grid isolation. It also
-checks that snap slider movement defers saving until release. On Windows,
+checks that snap slider movement defers saving until release. Settings application
+checks compare every serialized preference after an unrelated change and reload,
+including canvas controls, locks, docking, window state and legacy Songs paths,
+and verify cancellation and failed-save isolation in English and Chinese. On Windows,
 `FruitsAtelier.App.exe --render-check --window-preferences-render-check` launches
 native windows and checks normal/maximized restoration after minimized and
 fullscreen states, setup isolation and work-area clamping.

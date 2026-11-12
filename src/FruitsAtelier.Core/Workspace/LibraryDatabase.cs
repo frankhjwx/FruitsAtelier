@@ -225,6 +225,8 @@ public sealed class LibrarySettings
     [System.Text.Json.Serialization.JsonIgnore]
     public string Skins => string.IsNullOrWhiteSpace(OsuRoot) ? "" : Path.Combine(OsuRoot, "Skins");
     public static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FruitsAtelier", "library.json");
+    // Settings drafts replace changed collections; unchanged preference data stays shared.
+    public LibrarySettings ShallowCopy() => (LibrarySettings)MemberwiseClone();
     public static LibrarySettings Load(string? path = null) => File.Exists(path ?? SettingsPath)
         ? JsonSerializer.Deserialize<LibrarySettings>(File.ReadAllText(path ?? SettingsPath)) ?? new()
         : new();
