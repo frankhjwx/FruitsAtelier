@@ -13,7 +13,7 @@ public sealed partial class EditorView
     {
         float x = box.X + box.Width / 2, y = box.Y + box.Height / 2;
         c.Stroke(new(x - 4, y - 8, 8, 9), color, 1.5f, 4);
-        if (!locked) c.Fill(new(x, y - 5, 6, 6), Surface);
+        if (!locked) c.Fill(new(x, y - 5, 6, 6), SelectedSurface);
         c.Fill(new(x - 7, y - 1, 14, 10), color, 2);
         c.Line(x, y + 2, x, y + 6, Panel, 2);
     }
@@ -21,8 +21,11 @@ public sealed partial class EditorView
     private void DrawHitsoundingLock(ICanvas c, Rect bounds, int lane)
     {
         hitsoundingLockButtons[lane] = bounds;
-        c.Fill(bounds, hitsoundingLocked[lane] ? SelectedSurface : Surface, 4);
-        DrawHitsoundingLockIcon(c, bounds, hitsoundingLocked[lane] ? Accent : Muted, hitsoundingLocked[lane]);
+        bool locked = hitsoundingLocked[lane];
+        const uint lockedColor = 0xE89A9A;
+        c.Fill(bounds, locked ? Surface : SelectedSurface, 4);
+        if (locked) c.Fill(bounds, lockedColor, 4, .18f);
+        DrawHitsoundingLockIcon(c, bounds, locked ? lockedColor : Accent, locked);
         hits.Add(new(bounds, () =>
         {
             CancelInteraction();

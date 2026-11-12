@@ -217,7 +217,7 @@ tool's shortcut and interaction behavior.
 
 Each track has a **Lock** button beside its label. Locked tracks show a tinted background
 behind their notes, cannot be selected, and reject direct editing and paste. Notes starts
-locked; the other tracks start unlocked. Locks do not mute playback or change history.
+locked; the other tracks start unlocked. Lock buttons are teal when unlocked and pale red when locked. Locks do not mute playback or change history.
 Unlock Notes to edit existing notes in either mode. In Draw, an empty-space hover
 shows a snapped placement preview and a click creates a circle at Mapping
 X=256 (osu! Y=192), drag empty space to marquee-select parents, and Ctrl-click to
