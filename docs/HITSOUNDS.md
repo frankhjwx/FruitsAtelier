@@ -322,7 +322,7 @@ does not create or edit sample indices. Audio rows provide audition controls and
 filters the current folder by name. Long lists scroll within their own section.
 View and library navigation do not edit beatmap objects.
 
-Each sound track has a mute button. Muting greys its entire row and suppresses that
+Each sound track has a mute button, highlighted green while audible and grey while muted. Muting greys its entire row and suppresses that
 track only during Hitsounding playback; Mapping and Testplay ignore these session
 settings. Note-based sound labels use a fixed font size when **HS text** is enabled
 and hide when the block is too narrow. Equal-width blocks with the same number of

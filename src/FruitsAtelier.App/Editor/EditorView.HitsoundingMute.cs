@@ -17,9 +17,9 @@ public sealed partial class EditorView
     {
         hitsoundingMuteButtons[lane] = bounds;
         bool muted = hitsoundingMuted[lane], hover = bounds.Contains(mouseX, mouseY);
-        c.Fill(bounds, muted ? SelectedSurface : hover ? HoverSurface : Surface, 4);
-        if (muted) c.StrokeOpacity(bounds, Accent, 1, 4, .7f);
-        uint color = muted ? Accent : Muted;
+        c.Fill(bounds, !muted ? SelectedSurface : hover ? HoverSurface : Surface, 4);
+        if (!muted) c.StrokeOpacity(bounds, Accent, 1, 4, .7f);
+        uint color = muted ? Muted : Accent;
         float x = bounds.X + 5, y = bounds.Y + 12;
         c.Fill(new(x, y - 3, 4, 6), color, 1);
         c.Line(x + 4, y - 3, x + 9, y - 7, color, 1.5f);

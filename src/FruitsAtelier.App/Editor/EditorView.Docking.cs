@@ -195,7 +195,8 @@ public sealed partial class EditorView
         float available = AvailableDockWidth;
         bool leftOpen = !state.Left.Collapsed && state.Left.Panels.Count > 0;
         bool rightOpen = TimingPageVisible || !state.Right.Collapsed && state.Right.Panels.Count > 0;
-        float leftWidth = leftOpen ? Math.Clamp(state.Left.Width, MinimumDockWidth, MaximumDockWidth) : 24;
+        float closedLeftWidth = state.Left.Panels.Count > 0 ? 24 : 0;
+        float leftWidth = leftOpen ? Math.Clamp(state.Left.Width, MinimumDockWidth, MaximumDockWidth) : closedLeftWidth;
         float rightWidth = rightOpen ? TimingPageVisible
             ? Math.Min(Math.Max(MinimumPreviewWidth, state.Right.Width), Math.Max(0, available - leftWidth))
             : Math.Clamp(state.Right.Width, MinimumDockWidth, MaximumDockWidth) : 0;
@@ -204,11 +205,11 @@ public sealed partial class EditorView
             if (dockResizeLeft)
             {
                 rightWidth = rightOpen ? Math.Max(MinimumDockWidth, available - leftWidth) : 0;
-                leftWidth = leftOpen ? Math.Max(MinimumDockWidth, Math.Min(leftWidth, available - rightWidth)) : 24;
+                leftWidth = leftOpen ? Math.Max(MinimumDockWidth, Math.Min(leftWidth, available - rightWidth)) : closedLeftWidth;
             }
             else
             {
-                leftWidth = leftOpen ? Math.Max(MinimumDockWidth, available - rightWidth) : 24;
+                leftWidth = leftOpen ? Math.Max(MinimumDockWidth, available - rightWidth) : closedLeftWidth;
                 rightWidth = rightOpen ? Math.Max(MinimumDockWidth, Math.Min(rightWidth, available - leftWidth)) : 0;
             }
         }
@@ -431,7 +432,7 @@ public sealed partial class EditorView
         var group = dockResizeLeft ? DockWorkspaceState.Left : DockWorkspaceState.Right;
         var other = dockResizeLeft ? DockWorkspaceState.Right : DockWorkspaceState.Left;
         bool otherOpen = !other.Collapsed && other.Panels.Count > 0;
-        float otherMinimum = otherOpen ? MinimumDockWidth : dockResizeLeft ? 0 : 24;
+        float otherMinimum = otherOpen ? MinimumDockWidth : dockResizeLeft || other.Panels.Count == 0 ? 0 : 24;
         float maximum = Math.Max(MinimumDockWidth, Math.Min(MaximumDockWidth, AvailableDockWidth - otherMinimum));
         group.Width = Math.Clamp(dockResizeLeft ? x : width - x, MinimumDockWidth, maximum);
         if (otherOpen) other.Width = Math.Max(MinimumDockWidth, Math.Min(other.Width, AvailableDockWidth - group.Width));
