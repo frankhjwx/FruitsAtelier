@@ -105,18 +105,53 @@ release; drafts and prereleases are excluded. Run with `--update-locks` on the
 build script when accepting a changed pin, for `win-x64`, `osx-arm64` and `osx-x64`.
 `Run-Editor.cmd` and ordinary builds neither select a newer version nor perform
 upstream update checks. An offline session can continue using the existing pin.
-The updater uses `GH_TOKEN`, then `GITHUB_TOKEN`, when set. Otherwise it uses an
-authenticated GitHub CLI (`gh auth login --hostname github.com`) if available,
-without extracting or saving its token. With neither credential source it makes
-anonymous requests, which share GitHub's 60-request hourly quota for the public
-outbound IP. Exhausted anonymous quotas report the limit and UTC reset time;
-authenticated CLI failures are reported without retrying anonymously. Git credentials
-used for pushing do not automatically authenticate Python's HTTP requests.
 The upstream check requires network access to `api.github.com`, and a changed pin
 also downloads its source from `codeload.github.com`. Engine preparation can also
 download source archives and restore NuGet dependencies. For AI runs in restricted
 environments, follow the first-invocation network-permission rule in
 [AGENTS.md](../AGENTS.md#validation-and-documentation).
+
+### GitHub authentication and troubleshooting
+
+The updater uses `GH_TOKEN`, then `GITHUB_TOKEN`, when set. Otherwise it uses an
+authenticated GitHub CLI (`gh auth login --hostname github.com`) if available,
+without extracting or saving its token. With neither credential source it makes
+anonymous requests, which share GitHub's 60-request hourly quota for the public
+outbound IP. Git credentials used for pushing and network execution permissions
+do not automatically authenticate Python's HTTP requests.
+
+Before declaring an upstream check unavailable:
+
+1. Run the repository updater with the required network execution permissions.
+   Reuse its authentication handling instead of replacing it with an anonymous
+   HTTP request.
+2. If authentication needs diagnosis, check only whether `GH_TOKEN` or
+   `GITHUB_TOKEN` is set, and use `gh auth status --hostname github.com` without
+   `--show-token`. An explicit environment token takes precedence over stored CLI
+   credentials; an expired token needs correction, not an anonymous retry.
+3. Diagnose the actual response. HTTP 403 with `X-RateLimit-Remaining: 0`
+   indicates an exhausted quota; inspect `X-RateLimit-Limit` and
+   `X-RateLimit-Reset`. The updater reports anonymous quota limits and UTC reset
+   times. Do not assume every 403 is rate limiting or infer which client consumed
+   a shared IP's quota. Connection timeouts are separate network failures.
+4. When needed, compare authenticated access using
+   `gh api --hostname github.com --include repos/Naxesss/MapsetVerifier/releases/latest`.
+   A successful release query is diagnostic only: rerun the full updater to verify
+   the release tag's immutable commit. Retain the existing pin and report the
+   specific remaining failure if the complete check cannot succeed. Authenticated
+   CLI failures must not fall back to anonymous requests.
+
+Treat tokens as secrets. Only send them as authentication to GitHub's intended
+API host, `api.github.com`, over HTTPS. Never include token values in URLs,
+command-line arguments, logs, exception details, documentation, commits, chat,
+screenshots, or third-party requests. Do not dump environment variables, run
+`gh auth token`, enable credential-bearing HTTP debug traces, or export stored
+CLI credentials to diagnose this check. Use `gh api` to keep stored credentials
+inside the CLI. The updater's source-archive download from `codeload.github.com`
+does not receive an Authorization header. Tests use synthetic token values only.
+
+See GitHub's [REST API rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)
+and the CLI's [authentication environment variables](https://cli.github.com/manual/gh_help_environment).
 
 ## GitHub update PRs
 
