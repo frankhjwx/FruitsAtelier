@@ -62,7 +62,7 @@
   "ds.objectSnapTip": "Al mover objetos o un slider completo, ajusta la primera o la última fruta y desplaza toda la selección. Alinea X con frutas cercanas sin cambiar el tiempo de colocación. Busca antes y después según los pulsos configurados (intervalos de 1/1 Snap) y los cambios de BPM. Al colocar, tiene prioridad sobre la cuadrícula y el ajuste por distancia. Al arrastrar objetos completos con DS activo, gana la posición más cercana entre objetos, DS y alineación colineal. Aplicar guarda esta preferencia por dificultad.",
   "mappingCanvas.legacy": "osu!Legacy",
   "mappingCanvas.catch": "Catch",
-  "mappingCanvas.hint": "Cambia el lienzo de edición. osu!Legacy edita círculos y rutas de Legacy Slider en dos dimensiones. Catch edita la posición horizontal respecto al tiempo, incluidos los FSlider. Cambiar cancela la acción actual y la selección, sin convertir objetos ni modificar el mapa.",
+  "mappingCanvas.hint": "osu!Legacy: círculos 2D y Legacy Slider.\nCatch: posición/tiempo y FSlider.\nTab: cambiar lienzo.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

@@ -4,17 +4,50 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
+from datetime import datetime, timezone
+from functools import cache
+import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
+@cache
+def github_cli_authenticated():
+    return bool(shutil.which("gh")) and subprocess.run(
+        ["gh", "auth", "status", "--hostname", "github.com"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30).returncode == 0
+
+
 def github(path):
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if not token and github_cli_authenticated():
+        result = subprocess.run(
+            ["gh", "api", "--hostname", "github.com", path],
+            capture_output=True, encoding="utf-8", timeout=60)
+        if result.returncode:
+            raise RuntimeError("Authenticated GitHub CLI request failed: " + result.stderr.strip())
+        return json.loads(result.stdout)
     headers = {"Accept": "application/vnd.github+json", "User-Agent": "FruitsAtelier-upstream"}
-    if os.environ.get("GITHUB_TOKEN"):
-        headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
-    with urllib.request.urlopen(urllib.request.Request("https://api.github.com/" + path, headers=headers), timeout=60) as response:
-        return json.load(response)
+    if token:
+        headers["Authorization"] = "Bearer " + token
+    try:
+        with urllib.request.urlopen(urllib.request.Request("https://api.github.com/" + path, headers=headers), timeout=60) as response:
+            return json.load(response)
+    except urllib.error.HTTPError as error:
+        mode = "authenticated" if token else "unauthenticated"
+        detail = f"GitHub {mode} request failed: HTTP {error.code}."
+        if error.headers.get("X-RateLimit-Remaining") == "0":
+            detail += f" API quota exhausted (limit {error.headers.get('X-RateLimit-Limit', 'unknown')})."
+            reset = error.headers.get("X-RateLimit-Reset", "")
+            if reset.isdigit():
+                detail += " Resets at " + datetime.fromtimestamp(int(reset), timezone.utc).isoformat() + "."
+        if not token:
+            detail += " Set GH_TOKEN/GITHUB_TOKEN or sign in with gh auth login --hostname github.com."
+        error.close()
+        raise RuntimeError(detail) from None
 
 
 def main():

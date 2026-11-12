@@ -62,7 +62,7 @@
   "ds.objectSnapTip": "Saat memindahkan objek atau seluruh slider, snap buah pertama atau terakhir dan geser seluruh pilihan bersama. Menyelaraskan X ke buah terdekat tanpa mengubah waktu penempatan. Mencari ke kedua arah sesuai jumlah ketuk (interval 1/1 Snap) serta perubahan BPM. Saat penempatan, diprioritaskan atas snap kisi dan jarak. Saat menyeret objek utuh dengan DS aktif, pilih posisi terdekat dari objek, DS, atau kolinear. Terapkan menyimpan preferensi ini per tingkat kesulitan.",
   "mappingCanvas.legacy": "osu!Legacy",
   "mappingCanvas.catch": "Catch",
-  "mappingCanvas.hint": "Ganti kanvas penyuntingan. osu!Legacy menyunting lingkaran dan jalur Legacy Slider dalam dua dimensi. Catch menggunakan posisi horizontal dan waktu, termasuk FSlider. Pergantian membatalkan tindakan dan pilihan saat ini tanpa mengonversi objek atau mengubah isi beatmap.",
+  "mappingCanvas.hint": "osu!Legacy: lingkaran 2D dan Legacy Slider.\nCatch: posisi/waktu dan FSlider.\nTab: ganti kanvas.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Otomatis",

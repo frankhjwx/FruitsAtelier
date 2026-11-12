@@ -62,7 +62,7 @@
   "ds.objectSnapTip": "Bij het verplaatsen van objecten of een hele slider lijnt de eerste of laatste vrucht uit en verschuift de hele selectie samen. Lijnt X uit op nabije vruchten en behoudt de plaatsingstijd. Zoekt eerder en later binnen het ingestelde aantal tellen (1/1 Snap-intervallen), met BPM-wijzigingen. Bij plaatsing heeft dit voorrang op raster- en afstandsuitlijning. Bij het verslepen van hele objecten met DS actief wint de dichtstbijzijnde object-, DS- of collineaire positie. Toepassen bewaart deze voorkeur per moeilijkheid.",
   "mappingCanvas.legacy": "osu!Legacy",
   "mappingCanvas.catch": "Catch",
-  "mappingCanvas.hint": "Wissel van bewerkingscanvas. osu!Legacy bewerkt cirkels en Legacy Slider-paden in twee dimensies. Catch gebruikt horizontale positie en tijd, ook voor FSliders. Wisselen annuleert de huidige handeling en selectie, zonder objecten om te zetten of de beatmap te wijzigen.",
+  "mappingCanvas.hint": "osu!Legacy: 2D-cirkels en Legacy Sliders.\nCatch: positie/tijd en FSliders.\nTab: wissel canvas.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

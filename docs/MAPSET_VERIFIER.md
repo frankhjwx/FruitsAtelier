@@ -105,6 +105,13 @@ release; drafts and prereleases are excluded. Run with `--update-locks` on the
 build script when accepting a changed pin, for `win-x64`, `osx-arm64` and `osx-x64`.
 `Run-Editor.cmd` and ordinary builds neither select a newer version nor perform
 upstream update checks. An offline session can continue using the existing pin.
+The updater uses `GH_TOKEN`, then `GITHUB_TOKEN`, when set. Otherwise it uses an
+authenticated GitHub CLI (`gh auth login --hostname github.com`) if available,
+without extracting or saving its token. With neither credential source it makes
+anonymous requests, which share GitHub's 60-request hourly quota for the public
+outbound IP. Exhausted anonymous quotas report the limit and UTC reset time;
+authenticated CLI failures are reported without retrying anonymously. Git credentials
+used for pushing do not automatically authenticate Python's HTTP requests.
 The upstream check requires network access to `api.github.com`, and a changed pin
 also downloads its source from `codeload.github.com`. Engine preparation can also
 download source archives and restore NuGet dependencies. For AI runs in restricted

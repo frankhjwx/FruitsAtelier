@@ -62,7 +62,7 @@
   "ds.objectSnapTip": "Kapag inililipat ang mga object o buong slider, itinatapat ang una o huling prutas at sabay na inililipat ang napili. Itinatapat ang X sa malapit na prutas nang hindi binabago ang oras ng paglalagay. Naghahanap bago at pagkatapos ayon sa bilang ng beat (mga pagitan ng 1/1 Snap) at BPM. Sa paglalagay, nauuna sa grid at distance snap. Kapag buong object ang hinihila habang aktibo ang DS, pinipili ang pinakamalapit na posisyon mula sa object, DS, o collinear snap. I-save gamit ang Apply para sa bawat difficulty.",
   "mappingCanvas.legacy": "osu!Legacy",
   "mappingCanvas.catch": "Catch",
-  "mappingCanvas.hint": "Palitan ang canvas sa pag-edit. Ine-edit ng osu!Legacy ang mga circle at Legacy Slider path sa dalawang dimensyon. Gumagamit ang Catch ng pahalang na posisyon at oras, kasama ang FSlider. Kinakansela ng paglipat ang kasalukuyang aksyon at seleksyon nang hindi kino-convert ang mga object o binabago ang beatmap.",
+  "mappingCanvas.hint": "osu!Legacy: mga 2D circle at Legacy Slider.\nCatch: posisyon/oras at FSlider.\nTab: palitan ang canvas.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

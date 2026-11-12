@@ -62,7 +62,7 @@
   "ds.objectSnapTip": "Przy przesuwaniu obiektów lub całego slidera przyciąga pierwszy albo ostatni owoc i przesuwa całe zaznaczenie razem. Wyrównuje X do pobliskich owoców bez zmiany czasu umieszczenia. Szuka w obu kierunkach o ustawioną liczbę uderzeń (odstępy 1/1 Snap), uwzględniając BPM. Przy umieszczaniu ma pierwszeństwo przed siatką i przyciąganiem według odległości. Podczas przesuwania całych obiektów z aktywnym DS wygrywa najbliższa pozycja obiektu, DS lub współliniowa. Zastosuj zapisuje ustawienie dla poziomu trudności.",
   "mappingCanvas.legacy": "osu!Legacy",
   "mappingCanvas.catch": "Catch",
-  "mappingCanvas.hint": "Przełącza obszar edycji. osu!Legacy edytuje kółka i ścieżki Legacy Slider w dwóch wymiarach. Catch używa pozycji poziomej i czasu, także dla FSlider. Przełączenie anuluje bieżącą czynność i zaznaczenie, bez konwersji obiektów ani zmiany mapy.",
+  "mappingCanvas.hint": "osu!Legacy: kółka 2D i Legacy Slider.\nCatch: pozycja/czas i FSlider.\nTab: przełącz obszar edycji.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",
