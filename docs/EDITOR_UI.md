@@ -2162,6 +2162,13 @@ F12 copies the current window content, including open dialogs and testplay, as a
 
 ## Mapping Canvas background
 
+Above Sampleset and Additions, the **Mapping Canvas** selector switches between
+**osu!Legacy** (two-dimensional circle and Legacy Slider editing) and **Catch**
+(horizontal position versus time, including FSlider editing). Hover over its
+heading or selector for an explanation. Switching uses the same action as Tab:
+it cancels the current interaction and clears selection without converting objects
+or changing beatmap content.
+
 The main mapping canvas displays the current difficulty's background across its
 drawing area, upper object timeline and left tool palette. The image fits this
 combined area independently of zoom and scrolling. **Settings → Mapping

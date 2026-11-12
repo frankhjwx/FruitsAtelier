@@ -217,6 +217,10 @@ public sealed partial class EditorView
                 c.Text(Path.GetFileName(soundPath), ghost.X + 8, ghost.Y + 7, 11, Foreground, 194);
             }
             if (!librarySettingsOpen) { mouseX = pointer.X; mouseY = pointer.Y; }
+            if (!TimingPageVisible && !HitsoundingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
+                && new Rect(MappingCanvasSelectorBounds.X, MappingCanvasSelectorBounds.Y - 17,
+                    MappingCanvasSelectorBounds.Width, MappingCanvasSelectorBounds.Height + 17).Contains(mouseX, mouseY))
+                DrawPaletteTooltip(c, L.Get("mappingCanvas.hint"), MappingCanvasSelectorBounds, left: false, above: false);
             if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingMuteTooltip(c);
             if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingLockTooltip(c);
             if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingToolTooltip(c);

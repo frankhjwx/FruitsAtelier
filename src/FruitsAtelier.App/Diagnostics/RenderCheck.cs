@@ -20,7 +20,7 @@ internal static class RenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 FruitsAtelier.Localization.Strings.SetLanguage(locale); Paint();
-                foreach (var selector in new[] { view.SamplesetBounds, view.AdditionsBounds })
+                foreach (var selector in new[] { view.MappingCanvasSelectorBounds, view.SamplesetBounds, view.AdditionsBounds })
                 {
                     if (selector.Bottom > view.ToolButtonBounds[0].Y)
                         throw new InvalidOperationException("Sample selector overlaps the tool palette.");
@@ -32,7 +32,7 @@ internal static class RenderCheck
                         var frame = canvas.CapturePixels();
                         string directory = System.IO.Path.GetFullPath("artifacts/tests/sample-banks");
                         Directory.CreateDirectory(directory);
-                        string name = selector == view.SamplesetBounds ? "sampleset" : "additions";
+                        string name = selector == view.MappingCanvasSelectorBounds ? "mapping-canvas" : selector == view.SamplesetBounds ? "sampleset" : "additions";
                         using var writer = new BinaryWriter(File.Create(System.IO.Path.Combine(directory, $"{name}-{locale}-{frame.Width}x{frame.Height}.bmp")));
                         writer.Write((ushort)0x4D42); writer.Write(54 + frame.Pixels.Length); writer.Write(0); writer.Write(54);
                         writer.Write(40); writer.Write(frame.Width); writer.Write(-frame.Height);
@@ -40,6 +40,19 @@ internal static class RenderCheck
                         writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(frame.Pixels);
                     });
                     view.KeyDown(27, false, false); Paint();
+                }
+                foreach (bool osu in new[] { true, false })
+                {
+                    var selector = view.MappingCanvasSelectorBounds;
+                    if (selector.Bottom + 16 > view.SamplesetBounds.Y - 17)
+                        throw new InvalidOperationException("Mapping canvas selector needs separation from sample banks.");
+                    view.PointerDown(selector.X + 12, selector.Y + 12, 0, false, false);
+                    view.PointerUp(selector.X + 12, selector.Y + 12, 0); Paint();
+                    float rowY = selector.Bottom + 18 + (osu ? 0 : 32);
+                    view.PointerDown(selector.X + 12, rowY, 0, false, false);
+                    view.PointerUp(selector.X + 12, rowY, 0); Paint();
+                    if (view.IsOsuCanvas != osu) throw new InvalidOperationException("Mapping canvas selector did not switch canvases.");
+                    view.PointerMove(selector.X + 12, selector.Y + 12, false, false); Paint();
                 }
                 foreach (var button in view.ToolButtonBounds.ToArray())
                 {
