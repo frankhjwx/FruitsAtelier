@@ -100,12 +100,15 @@ static class LibraryImportTests
         Check(settings.RomanisedMetadata && JsonSerializer.Deserialize<LibrarySettings>("{}")!.RomanisedMetadata,
             "New and older settings default to romanised metadata");
         var ui = new Ui(false); ui.View.InitializeLibrary(true, settings); ui.Resize(980, 620);
-        for (int i = 0; i < 300; i++)
+        var loading = System.Diagnostics.Stopwatch.StartNew();
+        while (true)
         {
             ui.Paint();
             if (!ui.View.LibraryLoading && ui.View.LibrarySetTotal == 1) break;
+            Check(loading.Elapsed.TotalSeconds < 30, "Metadata library did not finish loading: " + string.Join(" | ", ui.Canvas.Texts.Select(t => t.Value)));
             Thread.Sleep(10);
         }
+        ui.Paint();
         Check(ui.Canvas.Texts.Count(t => t.Value == "Romanised title") == 2, "Romanised title appears in card and details");
         Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("library.notInSongs")), "Songs cards have no presence badge");
         Check(ui.Canvas.Fills.Any(f => f.Bounds.Height == 78 && f.Color == 0x304445), "Selected Songs card uses the standard selection background");

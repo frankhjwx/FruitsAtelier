@@ -264,11 +264,13 @@ static class SettingsTests
     public static void ApplyState()
     {
         string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "settings-" + Guid.NewGuid()));
+        var views = new List<Ui>();
         try
         {
             foreach (bool fromLibrary in new[] { false, true })
             {
                 var ui = new Ui(false);
+                views.Add(ui);
                 ui.View.LibrarySettings.Workspace = root;
                 ui.View.LibrarySettings.PlaybackLineFromBottom = .6;
                 if (fromLibrary)
@@ -306,6 +308,7 @@ static class SettingsTests
                     "Bindings apply and reset dirty state");
                 var testplayNav = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.testplay") && t.X < ui.View.SettingsBounds.X + 214);
                 ui.Click(testplayNav.X + 4, testplayNav.Y + 5);
+                WaitForLibrary(ui);
                 var searchField = typeof(FruitsAtelier.App.Editor.EditorView).GetField("searchTask",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
                 var pendingSearch = new TaskCompletionSource<FruitsAtelier.App.Editor.LibraryBrowser>();
@@ -331,7 +334,27 @@ static class SettingsTests
                 Check(ui.View.LibraryVisible == fromLibrary, "Apply preserves return destination");
             }
         }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+        finally
+        {
+            foreach (var ui in views)
+            {
+                ui.View.StopFileMonitoring();
+                WaitForLibrary(ui);
+                ui.View.CompleteLibraryCacheWrites();
+            }
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+        static void WaitForLibrary(Ui ui)
+        {
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            do
+            {
+                ui.Paint();
+                Check(timer.Elapsed.TotalSeconds < 30, "Settings fixture library work did not complete");
+                if (ui.View.LibraryLoading) Thread.Sleep(10);
+            }
+            while (ui.View.LibraryLoading);
+        }
     }
 
     public static void Navigation()

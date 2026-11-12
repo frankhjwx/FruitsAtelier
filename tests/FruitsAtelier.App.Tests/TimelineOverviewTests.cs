@@ -415,7 +415,7 @@ internal static class TimelineOverviewTests
             Check(File.Exists(ui.Canvas.Images.Single(i => i.Bounds == first).Path), "Generated toolbar asset was not packaged");
             ui.View.PointerMove(first.X + 37, first.Y + 17, false, false); ui.Paint();
             Check(ui.Canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("shortcuts.hint",
-                FruitsAtelier.Localization.Strings.Get("timeline.bookmark.addHint"), "Ctrl+B")), "Bookmark tooltip missing");
+                FruitsAtelier.Localization.Strings.Get("timeline.bookmark.addHint"), OperatingSystem.IsMacOS() ? "Cmd + B" : "Ctrl + B")), "Bookmark tooltip missing");
             ui.View.PointerMove(area.Right - 10, area.Y + 10, false, false); ui.Paint();
             var second = ui.Canvas.Images.Single(i => i.Path.EndsWith("toolbar-panel.png", StringComparison.Ordinal)).Bounds;
             Check(first == second, "Bookmark toolbar followed the mouse");
