@@ -1039,8 +1039,9 @@ focus to the editor. Object edits and timing drafts use separate undo histories.
 If timing or base SV changes in the editor, reopen the window before applying its
 draft. Switching difficulties closes the window.
 
-Red points expose offset, BPM and meter. Green points expose offset, samples,
-volume and Kiai. The inheritance checkbox changes point type; it protects the
+Red points expose offset, BPM and meter. Both red and green points support samples,
+volume and Kiai, including mixed selections. Kiai changes the selected points without
+adding inherited points. The inheritance checkbox changes point type; it protects the
 first red point. Audio supports Normal/Soft/Drum banks, default or numbered custom
 samples, a volume slider, and four sample audition buttons. Default and Custom 1
 lock the sample-index input; selecting Custom enables it. Each audition button

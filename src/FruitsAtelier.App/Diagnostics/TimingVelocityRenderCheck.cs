@@ -48,6 +48,18 @@ internal static class TimingVelocityRenderCheck
                 Click(view.TimingFields.Single(f => f.Key == "page.bpm").Bounds);
                 view.KeyDown(9, false, false); Paint("unchanged-bpm");
                 if (view.IsDirty || !view.Document.ContentEquals(beforeFocus)) throw new InvalidOperationException("Unchanged BPM focus rewrote timing precision.");
+                view.OpenTimingSetup(); view.KeyDown(36, false, false); Paint();
+                var kiaiWindow = view.TimingSetupBounds;
+                float scale = kiaiWindow.Width / Math.Min(1000, width - 24);
+                float leftWidth = Math.Clamp(kiaiWindow.Width / scale * .39f, 280, 360);
+                Click(new(kiaiWindow.X + (16 + 2 * leftWidth / 3) * scale, kiaiWindow.Y + 52 * scale, 20, 20));
+                Paint();
+                Click(new(kiaiWindow.X + 28 * scale, kiaiWindow.Y + 112 * scale, 20, 20));
+                Paint("red-kiai");
+                view.KeyDown(13, false, false); Paint();
+                if (view.Document.TimingPoints.Count != 1 || !view.Document.TimingPoints[0].Uninherited
+                    || view.Document.TimingPoints[0].Effects != 1)
+                    throw new InvalidOperationException("Red Kiai toggle did not update the existing red point.");
                 view.NewProject();
 
                 void Click(Rect bounds)
