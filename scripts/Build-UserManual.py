@@ -39,7 +39,7 @@ def footer(canvas, doc):
     canvas.line(42, 39, A4[0] - 42, 39)
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(MUTED)
-    canvas.drawString(42, 26, "FRUITSATELIER  /  USER MANUAL  /  1.3.0")
+    canvas.drawString(42, 26, "FRUITSATELIER  /  USER MANUAL  /  1.4.5")
     canvas.drawRightString(A4[0] - 42, 26, str(doc.page))
 
 story = []

@@ -11,7 +11,7 @@ public sealed partial class EditorView
     public Action<bool, Action<string?>>? RequestMediaFile { get; set; }
     internal Func<string, StoryboardImageCache.Pixels?>? DecodePaletteImage { get; set; }
     private Task<Action>? mediaEditTask;
-    private Task<uint[]>? mediaPaletteTask;
+    private Task<(uint[] Colours, StoryboardImageCache.Pixels? Pixels)>? mediaPaletteTask;
     private EditorHistory? mediaPaletteOwner, mediaOffsetOwner;
     private string? mediaPalettePath;
     private MediaFileVersion mediaPaletteVersion;
@@ -25,7 +25,7 @@ public sealed partial class EditorView
     internal Rect MediaScrollTrack { get; private set; }
     internal Rect MediaScrollThumb { get; private set; }
     private Rect mediaPanelBounds;
-    private MapDocument? mediaPanelSnapshot;
+    private MapDocument? mediaPanelSnapshot, mediaPaletteCheckedSnapshot;
     private BeatmapMedia mediaPanelValues;
     private bool mediaBackgroundExists, mediaVideoExists;
     private Task<string[]>? mediaFilesTask;
@@ -42,6 +42,7 @@ public sealed partial class EditorView
     internal Rect MediaPanelViewport => mediaPanelBounds;
     internal Rect MediaSyncBounds { get; private set; }
     internal Rect MediaGenerateBounds { get; private set; }
+    internal Rect MediaRefineBounds { get; private set; }
     internal Rect MediaApplyBounds { get; private set; }
     internal Rect MediaLibraryBounds { get; private set; }
     internal bool MediaFilesBusy => mediaFilesTask is not null;
@@ -91,7 +92,7 @@ public sealed partial class EditorView
         var content = new Rect(bounds.X, bounds.Y + 42, bounds.Width, Math.Max(0, bounds.Height - 42));
         float y = content.Y - mediaPanelScroll;
         int firstHit = hits.Count;
-        MediaOffsetBounds = MediaGenerateBounds = MediaApplyBounds = MediaSyncBounds = MediaLibraryBounds = default;
+        MediaRefineBounds = MediaOffsetBounds = MediaGenerateBounds = MediaApplyBounds = MediaSyncBounds = MediaLibraryBounds = default;
         c.Clip(content);
         if (mediaTab == 0)
         {
@@ -176,6 +177,7 @@ public sealed partial class EditorView
             y += 6;
             if (current)
             {
+                MediaRefineBounds = ActionButton(L.Get("media.refine"), OpenMediaRefinement, !MediaPaletteBusy, false);
                 Heading("media.result");
                 for (int i = 0; i < mediaPalette.Length; i++)
                 {
@@ -214,7 +216,7 @@ public sealed partial class EditorView
         }
 
         void SwitchTab(int tab) { if (CommitMediaOffset()) { mediaTab = tab; mediaPanelScroll = 0; } }
-        void ChangeCount(int delta) { mediaColourCount += delta; mediaPalette = []; }
+        void ChangeCount(int delta) { mediaColourCount += delta; mediaPalette = []; mediaPalettePixels = null; mediaRecommendations = []; }
         void Heading(string key)
         {
             foreach (var line in WrapSyncText(c, L.Get(key), bounds.Width))
@@ -501,8 +503,12 @@ public sealed partial class EditorView
     {
         if (MediaPaletteBusy || DecodePaletteImage is not { } decode || MediaPath(BeatmapMedia.Read(Document).Background) is not { } path) return;
         mediaPaletteOwner = history; mediaPalettePath = path; mediaPaletteVersion = MediaFileVersion.Read(path);
-        mediaPalette = []; mediaPanelError = ""; int count = mediaColourCount;
-        mediaPaletteTask = Task.Run(() => decode(path) is { } pixels ? BackgroundPalette.Generate(pixels, count) : []);
+        mediaPalette = []; mediaPalettePixels = null; mediaPanelError = ""; int count = mediaColourCount;
+        mediaPaletteTask = Task.Run(() =>
+        {
+            var pixels = decode(path);
+            return (pixels is null ? Array.Empty<uint>() : BackgroundPalette.Generate(pixels, count), pixels);
+        });
     }
     private void ApplyMediaPalette()
     {
@@ -514,6 +520,16 @@ public sealed partial class EditorView
     }
     private void PumpMediaPanel()
     {
+        if (mediaPalettePixels is not null && (!ReferenceEquals(mediaPaletteOwner, history)
+            || !ReferenceEquals(mediaPaletteCheckedSnapshot, convertedSnapshot)))
+        {
+            mediaPaletteCheckedSnapshot = convertedSnapshot;
+            if (!ReferenceEquals(mediaPaletteOwner, history)
+                || mediaPalettePath != MediaPath(BeatmapMedia.Read(Document).Background))
+            {
+                CloseMediaRefinement(false); mediaPalettePixels = null; mediaPalette = []; mediaRecommendations = [];
+            }
+        }
         if (mediaFilesTask is { IsCompleted: true } files)
         {
             mediaFilesTask = null; mediaFilesDirectory = mediaFilesRequestedDirectory; mediaChoicesDirty = true;
@@ -536,7 +552,7 @@ public sealed partial class EditorView
                 var result = palette.GetAwaiter().GetResult();
                 if (ReferenceEquals(mediaPaletteOwner, history) && mediaPalettePath == MediaPath(BeatmapMedia.Read(Document).Background)
                     && mediaPaletteVersion == MediaFileVersion.Read(mediaPalettePath!))
-                { mediaPalette = result; if (result.Length == 0) mediaPanelError = L.Get("media.noColours"); }
+                { mediaPalette = result.Colours; mediaRecommendations = (uint[])result.Colours.Clone(); mediaPalettePixels = result.Pixels; if (mediaPalette.Length == 0) mediaPanelError = L.Get("media.noColours"); }
             }
             catch (Exception e) { mediaPanelError = e.Message; }
         }

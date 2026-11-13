@@ -42,6 +42,24 @@ combo colours**, defaulting to four. Generate, inspect the swatches, then choose
 in one undo step. Changing the BG invalidates the proposal. Low-colour images use
 lightness variants of their own hues; grayscale images remain grayscale.
 
+After generation, **Fine-tune colours** opens a modal image picker. Select a
+swatch, then click the image or drag its circular marker to sample a pixel.
+While pressed, a circular magnifier shows the surrounding 11×11 source pixels
+and outlines the centre sample. Release hides the magnifier; near image edges,
+the lens stays within the image area and marks unavailable pixels with a checkerboard.
+**Restore recommendations** restores the generated colours. **Keep changes**
+updates the palette preview; Cancel, the close button or Esc discards that
+session's adjustments. **Apply to current Colours** commits the preview in one
+undo step. The modal blocks underlying pointer, wheel, keyboard and file-drop
+interaction, including the embedded browser. Manual picks preserve the sampled
+RGB colour rather than applying the generator's brightness adjustment.
+Each swatch displays luminance using HSL lightness on a 0–255 scale. Values of
+50 or lower and values above 220 are red. The upper limit applies to every
+palette. These warnings support reviewing the RC's luminosity guidelines.
+Keeping a palette with warnings opens a second modal:
+confirm to keep it, or cancel/Esc to continue refining. It does not apply colours
+to the beatmap until **Apply to current Colours** is used.
+
 The generator uses Oklab clustering, image coverage and colour separation. It
 adjusts candidate lightness relative to the average background and constrains HSL
 lightness on a 0–255 scale to **60–210**, plus HSP perceived brightness to **60–225**.

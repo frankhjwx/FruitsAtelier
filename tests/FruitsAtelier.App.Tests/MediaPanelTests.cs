@@ -20,6 +20,10 @@ internal static class MediaPanelTests
     }
     internal static void Run()
     {
+        Check(BackgroundPalette.OutsideLuminosityGuideline(0x323232), "Dark warning includes 50");
+        Check(!BackgroundPalette.OutsideLuminosityGuideline(0x333333), "Dark warning excludes 51");
+        Check(!BackgroundPalette.OutsideLuminosityGuideline(0xDCDCDC)
+            && BackgroundPalette.OutsideLuminosityGuideline(0xDCDCDD), "Bright warning starts strictly above 220");
         string root = Path.GetFullPath(Path.Combine("artifacts/tests/media-panel", Guid.NewGuid().ToString("N")));
         string input = Path.Combine(root, "input"), first = Path.Combine(root, "map"), second = Path.Combine(root, "other");
         Directory.CreateDirectory(input); Directory.CreateDirectory(first); Directory.CreateDirectory(second);
@@ -76,9 +80,75 @@ internal static class MediaPanelTests
                 var minus = ui.Canvas.Texts.Single(t => t.Value == "−" && t.X >= ui.View.MediaPanelViewport.X);
                 ui.Click(minus.X + 3, minus.Y + 3);
                 ui.Click(ui.View.MediaGenerateBounds.X + 10, ui.View.MediaGenerateBounds.Y + 10); Wait(ui);
+                var proposed = ui.Canvas.Texts.Where(t => t.Value.StartsWith("#")).Select(t => t.Value).ToArray();
+                ui.ClickText(L.Get("media.refine"));
+                Check(ui.View.MediaRefinementVisible, "Refinement opens after generation");
+                Check(!ui.View.CanDropFile(image) && !ui.View.CanDropFile(video) && !ui.View.PrepareFileOperation(), "Modal rejects media drops and file operations");
+                var before = ProjectSerializer.Serialize(ui.View.Document);
+                ui.Key('Z', ctrl: true); ui.Key('S', ctrl: true); ui.Key(46); ui.Key(32);
+                ui.View.PointerDoubleClick(ui.Plot.X + 30, ui.Plot.Y + 40, false, false);
+                ui.View.Wheel(ui.Plot.X + 30, ui.Plot.Y + 40, 120, false);
+                ui.View.DropLibraryFiles([video]);
+                ui.Click(5, 5);
+                Check(ProjectSerializer.Serialize(ui.View.Document) == before && ui.View.MediaRefinementVisible, "Modal blocks underlying editing and navigation");
+                var pick = ui.View.MediaRefinementImageBounds;
+                ui.View.PointerDown(pick.X + pick.Width * .45f, pick.Y + pick.Height * .45f, 0, false, false);
+                ui.Paint();
+                Check(ui.Canvas.Circles.Any(c => !c.Filled && c.Radius == 33 && c.Color == 0xFFFFFF), "Pressed picker shows magnified neighbourhood");
+                ui.View.PointerMove(pick.Right - 1, pick.Bottom - 1, false, false);
+                ui.Paint();
+                var lens = ui.Canvas.Circles.Single(c => !c.Filled && c.Radius == 33 && c.Color == 0xFFFFFF);
+                Check(lens.X + lens.Radius <= pick.Right && lens.Y + lens.Radius <= pick.Bottom,
+                    "Edge magnifier stays inside square fixture preview");
+                ui.View.PointerUp(pick.Right - 1, pick.Bottom - 1, 0); ui.Paint();
+                Check(!ui.Canvas.Circles.Any(c => !c.Filled && c.Radius == 33 && c.Color == 0xFFFFFF), "Release hides magnifier");
+                Check(ProjectSerializer.Serialize(ui.View.Document) == before, "Picking only changes draft");
+                Check(ui.Canvas.Texts.Any(t => t.Value.EndsWith("#00FFFF")), "Dragging samples the exact bottom-right RGB pixel");
+                ui.ClickText(L.Get("media.resetRefinement"));
+                Check(proposed.All(colour => ui.Canvas.Texts.Any(t => t.Value.EndsWith(colour))), "Reset restores original recommendations");
+                ui.Key(27);
+                Check(!ui.View.MediaRefinementVisible, "Escape cancels refinement");
+                Check(proposed.SequenceEqual(ui.Canvas.Texts.Where(t => t.Value.StartsWith("#")).Select(t => t.Value)), "Cancel retains proposal");
+                ui.ClickText(L.Get("media.refine"));
+                pick = ui.View.MediaRefinementImageBounds;
+                ui.View.PointerDown(pick.X + pick.Width * .5f, pick.Y + pick.Height * .5f, 0, false, false);
+                ui.View.PointerMove(pick.Right - 1, pick.Bottom - 1, false, false);
+                ui.View.PointerUp(pick.Right - 1, pick.Bottom - 1, 0); ui.Paint();
+                ui.ClickText(L.Get("media.keepRefinement"));
+                Check(!ui.View.MediaRefinementVisible && ProjectSerializer.Serialize(ui.View.Document) == before, "Confirm retains preview without content edit");
                 ui.Click(ui.View.MediaApplyBounds.X + 10, ui.View.MediaApplyBounds.Y + 10);
-                Check(SongSetup.Colours(ui.View.Document).Length == 4, "Default palette applies");
+                Check(SongSetup.Colours(ui.View.Document).Length == 4 && SongSetup.Colours(ui.View.Document).Contains(0x00FFFFu), "Adjusted palette applies exact sampled colour");
                 ui.Key('Z', ctrl: true); Check(SongSetup.Colours(ui.View.Document).Length == 0, "Palette undo");
+                var darkPixels = new StoryboardImageCache.Pixels(64, 64, Enumerable.Range(0, 64 * 64 * 4).Select(i => (byte)(i % 4 == 3 ? 255 : 20)).ToArray());
+                ui.View.DecodePaletteImage = _ => darkPixels;
+                ui.Click(ui.View.MediaGenerateBounds.X + 10, ui.View.MediaGenerateBounds.Y + 10); Wait(ui);
+                ui.ClickText(L.Get("media.refine"));
+                pick = ui.View.MediaRefinementImageBounds;
+                ui.Click(pick.X + pick.Width / 2, pick.Y + pick.Height / 2);
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("media.luminance", 20d) && t.Color == 0xFF6666), "Low luminance is marked red");
+                ui.ClickText(L.Get("media.keepRefinement"));
+                Check(ui.View.MediaPaletteConfirmationVisible, "Out-of-range colours require confirmation");
+                ui.Click(pick.X + 3, pick.Y + 3);
+                Check(ui.View.MediaPaletteConfirmationVisible, "Confirmation blocks underlying picker");
+                ui.Key(27);
+                Check(ui.View.MediaRefinementVisible && !ui.View.MediaPaletteConfirmationVisible, "Escape returns to refinement");
+                ui.ClickText(L.Get("media.keepRefinement"));
+                ui.ClickText(L.Get("media.usePalette"));
+                Check(!ui.View.MediaRefinementVisible && SongSetup.Colours(ui.View.Document).Length == 0, "Confirmed warning keeps preview without applying content");
+                ui.View.DecodePaletteImage = _ => new StoryboardImageCache.Pixels(64, 64, Enumerable.Repeat((byte)255, 64 * 64 * 4).ToArray());
+                ui.Click(ui.View.MediaGenerateBounds.X + 10, ui.View.MediaGenerateBounds.Y + 10); Wait(ui);
+                ui.ClickText(L.Get("media.refine"));
+                pick = ui.View.MediaRefinementImageBounds;
+                ui.Click(pick.X + pick.Width / 2, pick.Y + pick.Height / 2);
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("media.luminance", 255d) && t.Color == 0xFF6666), "Bright colour is red without Kiai");
+                ui.ClickText(L.Get("media.keepRefinement"));
+                Check(ui.View.MediaPaletteConfirmationVisible, "Bright colour requires confirmation without Kiai");
+                ui.Key(27); ui.Key(27);
+                ui.ClickText(L.Get("media.refine"));
+                File.AppendAllText(Path.Combine(first, bg), "changed");
+                ui.ClickText(L.Get("media.keepRefinement"));
+                Check(!ui.View.MediaRefinementVisible && ui.View.MediaApplyBounds.Width == 0
+                    && SongSetup.Colours(ui.View.Document).Length == 0, "Changed image invalidates draft on confirmation");
                 Check(BeatmapMedia.Read(ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document))) == BeatmapMedia.Read(ui.View.Document), "Project media roundtrip");
                 Check(BeatmapMedia.Read(OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack) == BeatmapMedia.Read(ui.View.Document), "Osu media roundtrip");
                 foreach (int count in Enumerable.Range(3, 6))

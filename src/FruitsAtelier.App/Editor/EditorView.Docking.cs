@@ -34,7 +34,7 @@ public sealed partial class EditorView
     private DockWorkspace DockWorkspaceState => HitsoundingPageVisible ? hitsoundingDockWorkspace : TimingPageVisible ? timingDockWorkspace : mappingDockWorkspace;
     private DockGroup PanelGroup(DockPanel panel) => DockWorkspaceState.Left.Panels.Contains(panel)
         ? DockWorkspaceState.Left : DockWorkspaceState.Right;
-    private bool DockContentInputAvailable => !librarySettingsOpen && !RotationVisible && !CollaborationReportVisible
+    private bool DockContentInputAvailable => !MediaRefinementVisible && !librarySettingsOpen && !RotationVisible && !CollaborationReportVisible
         && !SynchronizationVisible && pendingLanguage is null && !languageMenuOpen && !DiscussionImageVisible && !GalleryTagsVisible && !PatternNameVisible && !ErrorVisible && !DiscardConfirmationVisible && !LibraryVisible
         && !ExportVisible && !SongSetupVisible && !SliderDialogVisible && !TimeJumpVisible && !TimingModal
         && !BananaEditVisible && !StreamDialogVisible && !MergeDialogVisible && !VolumeDialogVisible

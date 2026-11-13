@@ -846,6 +846,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (MediaRefinementVisible) return;
         if (librarySettingsOpen) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (ErrorVisible) return;
         if (BrowserToolbarContains(x, y)) return;
@@ -969,6 +970,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (MediaRefinementVisible) return;
         if (SettingsOwnsInput) { SettingsWheel(x, y, delta); return; }
         if (!ErrorVisible && !DiscardConfirmationVisible && (CapturingShortcut || shortcutResetMode))
         {
@@ -1794,7 +1796,7 @@ public sealed partial class EditorView
         ClearDiscussionTextSelection();
         discussionScrollbarDragging = false; discussionQuoteDrag = null;
         verifierScrollbarDragging = false;
-        mediaScrollbarDragging = false;
+        mediaScrollbarDragging = false; mediaPickDragging = false;
         CancelPatternGalleryInteraction();
         CancelGalleryTagOrder();
         FinishMapTemplateDrag(cancel: true);
@@ -2114,6 +2116,7 @@ public sealed partial class EditorView
     }
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
+        if (MediaRefinementVisible && !ErrorVisible) { MediaRefinementPointerDown(x, y, button); return; }
         timingContextRequest++;
         if (preparingError) return;
         if (ErrorVisible)
@@ -2131,6 +2134,7 @@ public sealed partial class EditorView
     }
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (MediaRefinementVisible && !ErrorVisible) { mouseX = x; mouseY = y; if (mediaPickDragging) PickMediaColour(x, y); return; }
         if (ErrorVisible) { mouseX = x; mouseY = y; return; }
         if (SettingsOwnsInput) { SettingsPointerMove(x, y); return; }
         if (OsuLinkPickerVisible && !ErrorVisible) { mouseX = x; mouseY = y; return; }
@@ -2140,6 +2144,7 @@ public sealed partial class EditorView
     }
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (MediaRefinementVisible) { if (button == 0) mediaPickDragging = false; return; }
         if (ErrorVisible) return;
         if (SettingsOwnsInput) { SettingsPointerUp(x, y, button); return; }
         if (OsuLinkPickerVisible && !ErrorVisible) return;
@@ -2149,6 +2154,16 @@ public sealed partial class EditorView
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (MediaRefinementVisible && !ErrorVisible)
+        {
+            if (virtualKey == 27)
+            {
+                if (MediaPaletteConfirmationVisible)
+                { MediaPaletteConfirmationVisible = false; mediaRefinementHits.Clear(); hits.Clear(); }
+                else CloseMediaRefinement(false);
+            }
+            return;
+        }
         timingContextRequest++;
         if (preparingError) return;
         if (ErrorVisible)
@@ -2181,6 +2196,7 @@ public sealed partial class EditorView
     }
     public void TextInput(char value)
     {
+        if (MediaRefinementVisible) return;
         if (SettingsOwnsInput)
         {
             if (!CapturingShortcut && !shortcutResetMode && !CapturingTestplayKey && !languageMenuOpen && libraryField >= 0 && !char.IsControl(value))

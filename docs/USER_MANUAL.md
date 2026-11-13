@@ -1,10 +1,10 @@
 # FruitsAtelier
 
-User Manual | Version 1.4.4
+User Manual | Version 1.4.5
 
 ## Using this manual
 
-This manual describes FruitsAtelier v1.4.4. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
+This manual describes FruitsAtelier v1.4.5. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
 
 ### Choose an editing canvas
 
@@ -1161,7 +1161,7 @@ Open **Media** in the Mapping dock or restore it from **Layout**. On Files, choo
 
 **Unbind** removes the assignment while retaining the file. Videos start at 0 ms; enter a signed **Video offset**, then Enter to commit or Escape to cancel. **Sync media to all other difficulties** copies the current background, video and offset, including unassigned states, with undo support. File imports avoid overwriting existing resources. Save/export remains explicit.
 
-On **Colour palette**, choose 3–8 colours and generate a proposal from the current background. Inspect the swatches, then **Apply to current Colours** in one undo step. Changing the background invalidates the proposal. Check the colours during gameplay, especially with video, storyboard and Kiai; a static background sample cannot guarantee readability in every frame.
+On **Colour palette**, choose 3–8 colours and generate a proposal from the current background. Use **Fine-tune colours** to select a swatch and pick a colour from the image by clicking or dragging its marker. Hold the mouse button to show a magnifier around the sampled pixel. Each swatch shows its luminance; values of 50 or lower or above 220 are highlighted in red and require confirmation when keeping the palette. **Restore recommendations** resets the preview to the generated colours. **Keep changes** retains the adjusted preview; Cancel or Esc discards the adjustments. Inspect the swatches, then **Apply to current Colours** in one undo step. Changing the background invalidates the proposal. Check the colours during gameplay, especially with video, storyboard and Kiai; a static background sample cannot guarantee readability in every frame.
 
 ## Hitsounding workspace
 
@@ -1521,6 +1521,7 @@ System shortcuts can intercept some combinations. See [Custom shortcuts](EDITOR_
 | DS configuration: Enter / Esc in base field | Leave base-field editing. Use Apply or Cancel for the dialog draft. |
 | DS configuration: Esc outside base field | Cancel an active drag first; otherwise close the dialog. |
 | Volume settings dialog: Esc | Close the dialog. |
+| Media colour refinement: Esc | Discard the current refinement; in its luminance confirmation, return to refining. |
 | Error dialog: Enter / Esc | Dismiss the error. |
 | Unsaved-change confirmation: Enter / Esc | Cancel the pending operation; does not choose Save or Discard. |
 | Slider import/conversion panel: Esc | Decline import conversion, cancel a running conversion, or dismiss its errors, as applicable. |

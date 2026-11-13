@@ -388,7 +388,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation(bool allowDifficultySave = false)
     {
-        if (MediaEditingBusy || !CommitMediaOffset()) return false;
+        if (MediaRefinementVisible || MediaEditingBusy || !CommitMediaOffset()) return false;
         if (ErrorVisible) return false;
         if (MapTemplatesVisible || addDifficultyConfirmation) return false;
         if (CollaborationBusy) return false;

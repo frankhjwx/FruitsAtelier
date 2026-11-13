@@ -320,6 +320,7 @@ System shortcuts can intercept some combinations. See [Custom shortcuts](EDITOR_
 | DS configuration: Enter / Esc in base field | Leave base-field editing. Use Apply or Cancel for the dialog draft. |
 | DS configuration: Esc outside base field | Cancel an active drag first; otherwise close the dialog. |
 | Volume settings dialog: Esc | Close the dialog. |
+| Media colour refinement: Esc | Discard the current refinement; in its luminance confirmation, return to refining. |
 | Error dialog: Enter / Esc | Dismiss the error. |
 | Unsaved-change confirmation: Enter / Esc | Cancel the pending operation; does not choose Save or Discard. |
 | Slider import/conversion panel: Esc | Decline import conversion, cancel a running conversion, or dismiss its errors, as applicable. |
