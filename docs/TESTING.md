@@ -7,12 +7,13 @@ discovery, scrollbar dragging and track clicks, collision-safe imports, signed v
 offsets, resource copying across difficulty directories, related-history undo,
 preserved storyboard/media placement, project and osu roundtrips, workspace-only
 resource persistence, deterministic 3–8 colour palettes, grayscale and extreme
-colour inputs, and the generator's HSL/HSP brightness margins. Run
+colour inputs, the generator's HSL/HSP brightness margins, modal image picking,
+draft confirmation/cancellation and underlying keyboard, pointer and drop isolation. Run
 `--mapping-canvas-check`, `--song-dock-check` and `--testplay-mods-check` for the
 shared background, Colours and docking boundaries.
 
 `FruitsAtelier.App --render-check --media-panel-render-check` exercises native
-background dropping, palette generation/application and narrow dock layouts in
+background dropping, palette generation/application, refinement and narrow dock layouts in
 English and Chinese at 96/144/192 DPI. Captures are stored under
 `artifacts/tests/media-panel/native`. Inspect text wrapping and swatch separation.
 

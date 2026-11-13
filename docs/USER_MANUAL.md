@@ -1161,7 +1161,7 @@ Open **Media** in the Mapping dock or restore it from **Layout**. On Files, choo
 
 **Unbind** removes the assignment while retaining the file. Videos start at 0 ms; enter a signed **Video offset**, then Enter to commit or Escape to cancel. **Sync media to all other difficulties** copies the current background, video and offset, including unassigned states, with undo support. File imports avoid overwriting existing resources. Save/export remains explicit.
 
-On **Colour palette**, choose 3–8 colours and generate a proposal from the current background. Inspect the swatches, then **Apply to current Colours** in one undo step. Changing the background invalidates the proposal. Check the colours during gameplay, especially with video, storyboard and Kiai; a static background sample cannot guarantee readability in every frame.
+On **Colour palette**, choose 3–8 colours and generate a proposal from the current background. Use **Fine-tune colours** to select a swatch and pick a colour from the image by clicking or dragging its marker. **Keep changes** retains the adjusted preview; Cancel or Esc discards the adjustments. Inspect the swatches, then **Apply to current Colours** in one undo step. Changing the background invalidates the proposal. Check the colours during gameplay, especially with video, storyboard and Kiai; a static background sample cannot guarantee readability in every frame.
 
 ## Hitsounding workspace
 

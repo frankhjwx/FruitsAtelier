@@ -42,6 +42,15 @@ combo colours**, defaulting to four. Generate, inspect the swatches, then choose
 in one undo step. Changing the BG invalidates the proposal. Low-colour images use
 lightness variants of their own hues; grayscale images remain grayscale.
 
+After generation, **Fine-tune colours** opens a modal image picker. Select a
+swatch, then click the image or drag its circular marker to sample a pixel.
+**Restore recommendations** restores the generated colours. **Keep changes**
+updates the palette preview; Cancel, the close button or Esc discards that
+session's adjustments. **Apply to current Colours** commits the preview in one
+undo step. The modal blocks underlying pointer, wheel, keyboard and file-drop
+interaction, including the embedded browser. Manual picks preserve the sampled
+RGB colour rather than applying the generator's brightness adjustment.
+
 The generator uses Oklab clustering, image coverage and colour separation. It
 adjusts candidate lightness relative to the average background and constrains HSL
 lightness on a 0–255 scale to **60–210**, plus HSP perceived brightness to **60–225**.

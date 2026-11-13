@@ -64,7 +64,10 @@ history. The file inventory belongs to one resource directory and refreshes on
 directory changes, imports or an explicit refresh. Painting visits visible inventory
 rows. Palette decoding and bounded Oklab clustering run on a detached worker and
 publish only for the same history, BG path and file version. Applying rechecks the
-file version. No palette generation occurs on pointer movement or repaint.
+file version. The published proposal retains its decoded pixels for modal refinement. Pointer
+sampling reads one pixel from that snapshot; draft confirmation rechecks source
+ownership and file version. Background or history replacement retires the pixels
+and closes refinement. No palette generation occurs on pointer movement or repaint.
 `BeatmapMedia` changes only background/video Events; unchanged event types and
 video placement survive offset edits. Cross-difficulty synchronization rebases
 these fields through the existing related-history mechanism. Resource-only

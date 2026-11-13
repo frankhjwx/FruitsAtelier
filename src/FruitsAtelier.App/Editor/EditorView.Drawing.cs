@@ -166,7 +166,7 @@ public sealed partial class EditorView
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         var pointer = (X: mouseX, Y: mouseY);
         // Covered controls render as if the pointer were outside the window.
-        if (librarySettingsOpen || PatternGalleryPopupContains(mouseX, mouseY) || TimingWindowContains(mouseX, mouseY)) mouseX = mouseY = -1;
+        if (MediaRefinementVisible || librarySettingsOpen || PatternGalleryPopupContains(mouseX, mouseY) || TimingWindowContains(mouseX, mouseY)) mouseX = mouseY = -1;
         try
         {
             c.Fill(new(0, 0, width, height), Background);
@@ -216,7 +216,7 @@ public sealed partial class EditorView
                 c.Fill(ghost, Surface, 4); c.Stroke(ghost, Accent, radius: 4);
                 c.Text(Path.GetFileName(soundPath), ghost.X + 8, ghost.Y + 7, 11, Foreground, 194);
             }
-            if (!librarySettingsOpen) { mouseX = pointer.X; mouseY = pointer.Y; }
+            if (!MediaRefinementVisible && !librarySettingsOpen) { mouseX = pointer.X; mouseY = pointer.Y; }
             if (!TimingPageVisible && !HitsoundingPageVisible && DockContentInputAvailable && menu < 0 && contextItems.Count == 0
                 && new Rect(MappingCanvasSelectorBounds.X, MappingCanvasSelectorBounds.Y - 17,
                     MappingCanvasSelectorBounds.Width, MappingCanvasSelectorBounds.Height + 17).Contains(mouseX, mouseY))
@@ -257,6 +257,7 @@ public sealed partial class EditorView
             DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c);
             return;
         }
+        if (MediaRefinementVisible) { DrawMediaRefinement(c); return; }
         DrawCollaborationReport(c);
         DrawGalleryTags(c);
         DrawPatternNameDialog(c);

@@ -48,6 +48,11 @@ internal static class MediaPanelRenderCheck
                 }
                 Click(panel.Right - panel.Width / 4, panel.Y + 16); Paint("palette-empty");
                 Click(view.MediaGenerateBounds.X + 12, view.MediaGenerateBounds.Y + 12); Wait(); Paint("palette");
+                Click(view.MediaRefineBounds.X + 12, view.MediaRefineBounds.Y + 12); Paint("refinement");
+                if (!view.MediaRefinementVisible) throw new InvalidOperationException("Native refinement did not open");
+                var pick = view.MediaRefinementImageBounds;
+                Click(pick.X + pick.Width * .6f, pick.Y + pick.Height * .5f); Paint("refinement-picked");
+                view.KeyDown(27, false, false); Paint();
                 if (view.MediaApplyBounds.Width <= 0) throw new InvalidOperationException("Native palette did not finish generating");
                 if (view.MediaApplyBounds.Bottom > panel.Bottom)
                 {
