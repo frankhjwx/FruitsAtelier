@@ -12,6 +12,12 @@ internal static class BackgroundPalette
         double r = colour >> 16 & 255, g = colour >> 8 & 255, b = colour & 255;
         return (Math.Max(r, Math.Max(g, b)) + Math.Min(r, Math.Min(g, b))) / 2;
     }
+    internal static bool OutsideLuminosityGuideline(uint colour)
+    {
+        double luminosity = Luminosity(colour);
+        return luminosity <= 50 || luminosity > 220;
+    }
+
     internal static double PerceivedBrightness(uint colour)
     {
         double r = colour >> 16 & 255, g = colour >> 8 & 255, b = colour & 255;

@@ -2154,7 +2154,16 @@ public sealed partial class EditorView
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
-        if (MediaRefinementVisible && !ErrorVisible) { if (virtualKey == 27) CloseMediaRefinement(false); return; }
+        if (MediaRefinementVisible && !ErrorVisible)
+        {
+            if (virtualKey == 27)
+            {
+                if (MediaPaletteConfirmationVisible)
+                { MediaPaletteConfirmationVisible = false; mediaRefinementHits.Clear(); hits.Clear(); }
+                else CloseMediaRefinement(false);
+            }
+            return;
+        }
         timingContextRequest++;
         if (preparingError) return;
         if (ErrorVisible)

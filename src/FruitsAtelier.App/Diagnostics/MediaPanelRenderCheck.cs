@@ -12,7 +12,21 @@ internal static class MediaPanelRenderCheck
         string language = L.Language;
         string folder = Path.GetFullPath("artifacts/tests/media-panel/native");
         Directory.CreateDirectory(folder);
-        string image = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png");
+        string image = Path.Combine(folder, "palette-source.bmp");
+        using (var writer = new BinaryWriter(File.Create(image)))
+        {
+            const int w = 128, h = 96, bytes = w * h * 4;
+            writer.Write((ushort)0x4D42); writer.Write(54 + bytes); writer.Write(0); writer.Write(54);
+            writer.Write(40); writer.Write(w); writer.Write(-h); writer.Write((ushort)1); writer.Write((ushort)32);
+            writer.Write(0); writer.Write(bytes); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0);
+            for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                writer.Write((byte)(x * 255 / (w - 1)));
+                writer.Write((byte)(y * 255 / (h - 1)));
+                writer.Write((byte)(x * 255 / (w - 1))); writer.Write((byte)255);
+            }
+        }
         try
         {
             foreach (string locale in new[] { "en", "zh-CN" })
@@ -51,7 +65,14 @@ internal static class MediaPanelRenderCheck
                 Click(view.MediaRefineBounds.X + 12, view.MediaRefineBounds.Y + 12); Paint("refinement");
                 if (!view.MediaRefinementVisible) throw new InvalidOperationException("Native refinement did not open");
                 var pick = view.MediaRefinementImageBounds;
-                Click(pick.X + pick.Width * .6f, pick.Y + pick.Height * .5f); Paint("refinement-picked");
+                view.PointerDown(pick.X + pick.Width * .6f, pick.Y + pick.Height * .5f, 0, false, false); Paint("refinement-magnifier");
+                view.PointerMove(pick.Right - 1, pick.Bottom - 1, false, false); Paint("refinement-magnifier-edge");
+                view.PointerUp(pick.Right - 1, pick.Bottom - 1, 0); Paint("refinement-picked");
+                float modalRight = (size.Item1 + Math.Min(1000, size.Item1 - 32)) / 2f;
+                float modalBottom = (size.Item2 + Math.Min(660, size.Item2 - 32)) / 2f;
+                Click(modalRight - 112, modalBottom - 40); Paint("refinement-confirmation");
+                if (!view.MediaPaletteConfirmationVisible) throw new InvalidOperationException("Bright palette did not require confirmation");
+                view.KeyDown(27, false, false); Paint();
                 view.KeyDown(27, false, false); Paint();
                 if (view.MediaApplyBounds.Width <= 0) throw new InvalidOperationException("Native palette did not finish generating");
                 if (view.MediaApplyBounds.Bottom > panel.Bottom)

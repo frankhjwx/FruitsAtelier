@@ -8,7 +8,8 @@ offsets, resource copying across difficulty directories, related-history undo,
 preserved storyboard/media placement, project and osu roundtrips, workspace-only
 resource persistence, deterministic 3–8 colour palettes, grayscale and extreme
 colour inputs, the generator's HSL/HSP brightness margins, modal image picking,
-draft confirmation/cancellation and underlying keyboard, pointer and drop isolation. Run
+draft confirmation/cancellation, magnifier press/release and image edges, luminance
+warning boundaries and nested confirmation, and underlying keyboard, pointer and drop isolation. Run
 `--mapping-canvas-check`, `--song-dock-check` and `--testplay-mods-check` for the
 shared background, Colours and docking boundaries.
 
