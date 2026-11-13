@@ -1,6 +1,6 @@
 # Features and Files
 
-FruitsAtelier edits osu!catch beatmaps on a time鈥揦 canvas and previews object placement alongside music. The application has separate Windows and macOS desktop hosts.
+FruitsAtelier edits osu!catch beatmaps on a time–X canvas and previews object placement alongside music. The application has separate Windows and macOS desktop hosts.
 
 ## Editable objects
 
