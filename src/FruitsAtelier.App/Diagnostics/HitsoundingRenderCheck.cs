@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-edge-drag", "-pan-zoom", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-audition-failed", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-edge-drag", "-pan-zoom", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-audition-failed", "-auto-banks", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
             {
                 if (scenario.StartsWith("-audition", StringComparison.Ordinal) && (!precise || size.Item2 < 900)) continue;
                 L.SetLanguage(locale);
@@ -184,6 +184,26 @@ internal static class HitsoundingRenderCheck
                     editor.Render(canvas, size.Item1, size.Item2);
                     if (editor.ErrorVisible || !editor.PrepareFileOperation()) throw new InvalidOperationException("Audition failure blocked the editor.");
                     if (scenario == "-audition-failed" && !editor.StatusMessage.Contains("custom.wav")) throw new InvalidOperationException("Failed audition did not report its nonblocking feedback.");
+                }
+                if (scenario == "-auto-banks")
+                {
+                    float zero = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 0)).X + 4;
+                    float twoSeconds = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 2000)).X + 4;
+                    var lane = editor.HitsoundingMuteBounds(3);
+                    float x = (zero + twoSeconds) / 2 + 4, y = lane.Y + 12;
+                    editor.PointerDown(x, y, 0, false, false); editor.PointerUp(x, y, 0);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                    foreach (bool additions in new[] { false, true })
+                    {
+                        var bounds = additions ? editor.AdditionsBounds : editor.SamplesetBounds;
+                        editor.PointerDown(bounds.X + 10, bounds.Y + 10, 0, false, false); editor.PointerUp(bounds.X + 10, bounds.Y + 10, 0);
+                        editor.Render(canvas, size.Item1, size.Item2);
+                        editor.PointerDown(bounds.X + 10, bounds.Bottom + 20, 0, false, false); editor.PointerUp(bounds.X + 10, bounds.Bottom + 20, 0);
+                        editor.Render(canvas, size.Item1, size.Item2);
+                    }
+                    var saved = ProjectSerializer.Read(ProjectSerializer.Serialize(editor.Document));
+                    if (saved.HitsoundOverrides.Count == 0 || saved.HitsoundOverrides.Any(s => !s.InheritedFields.HasFlag(InheritedSampleFields.NormalSet | InheritedSampleFields.AdditionSet)))
+                        throw new InvalidOperationException("Auto bank selection did not retain saveable inheritance.");
                 }
                 if (scenario == "-green-hover")
                 {

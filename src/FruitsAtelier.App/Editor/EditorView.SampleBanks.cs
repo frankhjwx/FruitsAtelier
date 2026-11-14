@@ -111,7 +111,7 @@ public sealed partial class EditorView
                 sample = sample with { AdditionSet = hitsoundingResolver.Describe(note!).AdditionSet };
                 inherited &= ~InheritedSampleFields.AdditionSet;
             }
-            return setting with { Sample = additions ? sample with { AdditionSet = bank } : sample with { NormalSet = bank },
+            return setting with { Sample = additions ? sample with { AdditionSet = Math.Max(1, bank) } : sample with { NormalSet = Math.Max(1, bank) },
                 InheritedFields = inherited };
         }).ToArray();
         Edit(L.Get("samples.change"), () => { foreach (var change in changes) SetHitsoundingEvent(change); });

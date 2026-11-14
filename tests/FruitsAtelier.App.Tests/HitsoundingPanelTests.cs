@@ -333,6 +333,21 @@ internal static class HitsoundingPanelTests
         Check(ui.View.Document.HitsoundOverrides.All(h => h.InheritedFields.HasFlag(InheritedSampleFields.AdditionSet)), "Auto restores inheritance on all selected events");
         ui.Key(90, ctrl: true); Display(true, "timing.drum");
         ui.Key(89, ctrl: true); Display(true, "samples.auto");
+        Choose(false, "samples.auto"); Choose(true, "samples.auto");
+        var inherited = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document));
+        inherited.TimingPoints[0].SampleSet = 1;
+        var inheritedEvents = CatchStreamConverter.Convert(inherited).Objects;
+        var resolver = new HitsoundResolver(inherited, inheritedEvents, inspectResources: false);
+        Check(inheritedEvents.All(n => resolver.Describe(n) is { NormalSet: 1, AdditionSet: 1 }), "Saved Auto banks follow later timing changes");
+        _ = OsuBeatmapWriter.Serialize(inherited);
+        ui.Key(90, ctrl: true); _ = ProjectSerializer.Serialize(ui.View.Document);
+        ui.Key(89, ctrl: true); _ = ProjectSerializer.Serialize(ui.View.Document);
+        string workspace = Path.GetFullPath(Path.Combine("artifacts/tests/hitsounding-auto-save", Guid.NewGuid().ToString("N")));
+        ui.View.LibrarySettings.Workspace = workspace; ui.View.LibrarySettings.OsuRoot = "";
+        Check(ui.View.SaveWorkspace(), "Auto banks save through the workspace save operation");
+        var reopened = WorkspaceProject.Open(ui.View.WorkspaceSession!.Directory).Project.Difficulties.Single().Document;
+        Check(reopened.HitsoundOverrides.SequenceEqual(ui.View.Document.HitsoundOverrides), "Workspace reopening retains Auto bank overrides");
+        _ = OsuBeatmapWriter.Serialize(reopened);
         var normal = LaneBlocks(ui, 1)[0]; ui.Click(normal.X + normal.Width / 2, normal.Y - 10);
         Display(false, "timing.normal"); Display(true, "timing.soft");
         Select(2, 0); Select(3, 1, true); Choose(true, "timing.normal");
@@ -355,6 +370,7 @@ internal static class HitsoundingPanelTests
             ui.Click(bounds.X + 10, bounds.Y + 10);
             var text = ui.Canvas.Texts.Where(t => t.Value.TrimStart('✓', ' ') == L.Get(key) && t.X >= bounds.X && t.X < bounds.Right && t.Y >= bounds.Bottom).OrderBy(t => t.Y).First();
             ui.Click(text.X + 5, text.Y + 5);
+            Check(ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)).ContentEquals(ui.View.Document), "Bank selector edits remain saveable with inheritance intact");
         }
     }
     public static void KiaiStrip()

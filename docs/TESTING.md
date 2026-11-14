@@ -1813,8 +1813,10 @@ menus and inspector at narrow and ordinary window sizes under
 
 Hitsounding panel checks include missing and locked slot resources, recovery from
 a deleted library directory, and synchronous/asynchronous audition failures without
-modal interruption. The native Hitsounding render check captures failed audition
-feedback. `Core.Tests --hitsound-copier` checks replacement across competing
+modal interruption. Selected bank checks roundtrip every selector edit and verify
+Auto inheritance after workspace save/reopen, timing changes, undo/redo and export.
+The native Hitsounding render check verifies Auto selection persistence and captures
+failed audition feedback. `Core.Tests --hitsound-copier` checks replacement across competing
 extensions, external modifications, locked files, no-op assignment and save/export
 with event overrides. `Audio.Tests --hitsound-check` verifies silent handling of
 missing, malformed, locked and oversized custom samples without starting an
