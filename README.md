@@ -8,7 +8,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 [Website](https://fruitsatelier.himiko.moe/) · [Download](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**Current version: 1.4.5**
+**Current version: 1.4.6**
 
 ![FruitsAtelier's editing canvas, object timeline, and Catch preview](assets/screenshots/twin-bloom.png)
 
@@ -23,7 +23,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 - **Use your own skin and language.** Load osu!stable skins or import `.osk` files. The interface supports English, Simplified Chinese, Traditional Chinese, Japanese, Korean, Russian, Spanish, French, Polish, Dutch, Filipino, Indonesian, and Thai.
 - **Keep editing, then export.** Save projects to retain editable sliders and difficulty data. Export `.osu` difficulties or `.osz` sets, and synchronize linked difficulties with osu!stable. Review conflicting external changes and restore saved difficulty snapshots from Version history.
 - **Manage media and colours.** Use the Media dock to assign backgrounds and videos, set video offsets, and synchronize media across difficulties. Browse the mapset root or opt into subfolders, and generate a previewable 3–8-colour combo palette from the background. Fine-tune it by picking colours from the image with a magnifier, and review luminance warnings before keeping your changes.
-- **Work in Hitsounding.** Edit sound tracks, copy red/green timing selections between difficulties, and generate beat-spaced volume ramps between compatible green points.
+- **Work in Hitsounding.** Edit sound tracks, copy red/green timing selections between difficulties, and generate beat-spaced volume ramps between compatible green points. Kiai supports red and mixed red/green timing selections. Sound selection can start in a locked track and includes only unlocked tracks.
 - **Customize your controls.** Switch Catch/osu!Legacy with the Mapping Canvas selector and configure keyboard commands in Settings → Key Bindings, with separate Default/Lazer profiles and matching tool hints.
 
 ## Tools built for Catch
