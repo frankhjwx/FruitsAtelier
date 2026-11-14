@@ -519,7 +519,7 @@ public sealed partial class EditorView
         var setting = hitsoundingResolver!.EventSettings(note);
         var original = setting;
         int additions = hitsoundingErase ? setting.Sample.Additions & ~flag : setting.Sample.Additions | flag;
-        if (!hitsoundingErase)
+        if (!hitsoundingErase && (setting.Sample.Additions & 14) == 0)
             setting = setting with { Sample = setting.Sample with { AdditionSet = Math.Max(1, nextAdditionBank) },
                 InheritedFields = nextAdditionBank == 0 ? setting.InheritedFields | InheritedSampleFields.AdditionSet
                     : setting.InheritedFields & ~InheritedSampleFields.AdditionSet };

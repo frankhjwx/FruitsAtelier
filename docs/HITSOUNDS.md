@@ -214,8 +214,9 @@ selector applies that bank to every selected event in one undo step; the other b
 remains unchanged. With no selected events, the selectors retain their independent
 placement defaults. Draw creates Notes with these banks. Auto Sampleset inherits
 the timing at the note, and Auto Additions follows its Normal bank. Placing an
-addition on an existing note uses the Additions default and preserves that note's
-Normal bank. Inherited banks and sample indices continue to follow timing edits.
+addition on a note that already has Whistle, Finish or Clap preserves its shared
+Additions bank and inheritance. The first addition uses the Additions default.
+Both cases preserve the note's Normal bank. Inherited banks and sample indices continue to follow timing edits.
 
 Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum; Ctrl+Q/W/E/R sets Additions
 in the same order. Both editing profiles use these defaults, including during Draw

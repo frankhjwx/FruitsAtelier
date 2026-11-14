@@ -343,24 +343,36 @@ internal static class HitsoundingPanelTests
     {
         foreach (int lane in new[] { 2, 3, 4 })
         foreach (bool inheritedNormal in new[] { false, true })
+        foreach (int existing in new[] { 0, 2, 4, 8, 6, 10, 12 })
+        foreach (int bank in new[] { 0, 3 })
         {
+            int flag = 1 << (lane - 1);
+            if ((existing & flag) != 0) continue;
             var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
             map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2 });
             map.Fruits.Add(new() { TimeMs = 1000, X = 256,
-                OriginalLine = $"256,192,1000,1,0,{(inheritedNormal ? 0 : 1)}:0:0:0:" });
+                OriginalLine = $"256,192,1000,1,{existing},{(inheritedNormal ? 0 : 1)}:{bank}:0:0:" });
             var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint(); ui.ClickText(L.Get("hitsounding.draw"));
             var baseline = ui.View.Document.DeepClone();
             Choose(ui.View.SamplesetBounds, "timing.drum");
             Choose(ui.View.AdditionsBounds, "timing.soft");
             var normal = LaneBlocks(ui, 1).Single();
             var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100 && t.Y >= ui.View.HitsoundingNotesLaneBounds.Y && t.X >= ui.View.HitsoundingNotesLaneBounds.X - 146);
+            int expectedBank = existing == 0 ? 2 : bank == 0 ? inheritedNormal ? 2 : 1 : bank;
+            ui.View.PointerMove(normal.X + normal.Width / 2, label.Y + 8, false, false); ui.Paint();
+            uint expectedColor = expectedBank == 2 ? 0x65BF8Au : expectedBank == 3 ? 0xDC747Bu : 0xE0B55Fu;
+            Check(ui.Canvas.PaintCalls.Any(p => p.Color == expectedColor && p.FillBounds is { Width: 18, Height: 32 } && p.Opacity == .5f),
+                "Placement preview follows the existing addition bank before selector defaults");
             ui.Click(normal.X + normal.Width / 2, label.Y + 8);
             var setting = ui.View.Document.HitsoundOverrides.Single();
             Check(setting.Sample.NormalSet == (inheritedNormal ? 2 : 1)
                 && setting.InheritedFields.HasFlag(InheritedSampleFields.NormalSet) == inheritedNormal,
                 "Addition placement preserves both the existing Normal bank and its inheritance");
-            Check(setting.Sample.AdditionSet == 2 && setting.Sample.Additions == 1 << (lane - 1),
-                "Whistle, Finish and Clap placement uses the Additions selector");
+            Check(setting.Sample.AdditionSet == expectedBank && setting.Sample.Additions == (existing | flag)
+                && setting.InheritedFields.HasFlag(InheritedSampleFields.AdditionSet) == (existing != 0 && bank == 0),
+                "Existing additions retain their shared bank and inheritance; the first addition uses the selector");
+            var reopened = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document));
+            Check(reopened.ContentEquals(ui.View.Document), "Placement priority survives project roundtrip");
             ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Isolated placement is one undo step");
             ui.Key(89, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Single() == setting, "Redo retains bank isolation");
             void Choose(FruitsAtelier.App.Rendering.Rect bounds, string key)
