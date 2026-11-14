@@ -1855,7 +1855,8 @@ covers consecutive SB group nudges with source-line retention.
 Native Hitsounding captures include edge-scroll previews and bounded-zoom panning,
 alongside the Select/Draw tool controls at both window sizes.
 
-`App.Tests --hitsounding-panel-check` covers the Snap ruler, actual slider ticks,
+`App.Tests --hitsounding-panel-check` covers Draw selector defaults across timing changes,
+selection-only bank keys, unbound addition toggles and custom bindings, the Snap ruler, actual slider ticks,
 centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,
 default bank labels, timing-tag order, the unified Config dock, library search/imports,
 slot drag/drop, and resource undo/redo. Config checks include the eight-row SampleSet
@@ -1876,7 +1877,8 @@ confirmation/cancellation and one-step move undo are also covered. `--hitsoundin
 setup and warm pointer/render work with Mapping on the same mixed-object fixture,
 including allocations and committed-conversion reuse.
 
-`FruitsAtelier.App.exe --render-check --hitsounding-render-check` renders English
+`FruitsAtelier.App.exe --render-check --hitsounding-render-check` includes selector
+shortcut hover hints and renders English
 and Chinese at 980×620 and 1440×900 under `artifacts/tests/hitsounding-native`,
 including Mapping BPM flags and Hitsounding timing tracks.
 Run the object-timeline, docking and hitsound regressions when changing this view,

@@ -520,7 +520,9 @@ public sealed partial class EditorView
         var original = setting;
         int additions = hitsoundingErase ? setting.Sample.Additions & ~flag : setting.Sample.Additions | flag;
         if (!hitsoundingErase)
-            setting = setting with { Sample = setting.Sample with { AdditionSet = hitsoundingBrush }, InheritedFields = setting.InheritedFields & ~InheritedSampleFields.AdditionSet };
+            setting = setting with { Sample = setting.Sample with { AdditionSet = Math.Max(1, nextAdditionBank) },
+                InheritedFields = nextAdditionBank == 0 ? setting.InheritedFields | InheritedSampleFields.AdditionSet
+                    : setting.InheritedFields & ~InheritedSampleFields.AdditionSet };
         setting = setting with { Sample = setting.Sample with { Additions = additions } };
         if (setting != original) hitsoundingPaint[key] = setting;
     }

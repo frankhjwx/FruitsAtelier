@@ -77,7 +77,8 @@ public sealed partial class EditorView
                 else hitsoundingMultiSelection.Remove(key);
             }
     }
-    private int HitsoundingPlacementAdditionBank(ConvertedCatchObject note) => hitsoundingBrush;
+    private int HitsoundingPlacementAdditionBank(ConvertedCatchObject note) => nextAdditionBank != 0
+        ? nextAdditionBank : hitsoundingResolver!.Describe(note).NormalSet;
     private void CycleHitsoundingSampleSet()
     {
         int bank = hitsoundingBrush;

@@ -212,18 +212,27 @@ Sampleset and Additions at the upper left display the authored banks of the sele
 events, using Auto for inherited or mixed values as in Mapping. Changing either
 selector applies that bank to every selected event in one undo step; the other bank
 remains unchanged. With no selected events, the selectors retain their independent
-placement defaults; Hitsounding painting uses its own brush instead.
+placement defaults. Draw creates Notes with these banks. Auto Sampleset inherits
+the timing at the note, and Auto Additions follows its Normal bank. Placing an
+addition on an existing note uses the Additions default and preserves that note's
+Normal bank. Inherited banks and sample indices continue to follow timing edits.
+
+Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum; Ctrl+Q/W/E/R sets Additions
+in the same order. Both editing profiles use these defaults, including during Draw
+placement. Key bindings can customize them. Hover over either selector to see
+the four shortcuts for the active profile and custom bindings.
 
 The left tool column offers **Select (1)**, **Draw (2)**, then **Soft (A)**,
-**Normal (S)** and **Drum (D)** brushes. Mode and brush are independent selections. In Select mode, brush buttons and Q/A/S/D are enabled only while notes or sound events are selected; otherwise the buttons are dimmed. Draw mode always enables the brushes.
+**Normal (S)** and **Drum (D)** bank buttons. In both Select and Draw, these buttons
+and Q/A/S/D are enabled only while notes or sound events are selected; otherwise
+the buttons are dimmed and the shortcuts have no effect.
 **Q** cycles Soft → Normal → Drum, using the earliest selected event's current bank
 when a selection exists. In either mode, Q/A/S/D and the brush buttons
 apply the bank to the selection in one undo step. Selected Normal tags change their
 normal bank; selected addition tags change their shared addition bank. Selected
 Notes parents change both banks on their events. Other sample fields are retained.
-Without a selection, Draw changes only its placement brush. Placing an addition
-uses that bank while preserving Normal. W/E/R toggle Whistle/Finish/Clap on the selected
-event. Text inputs and modified shortcuts retain priority. Hover tips explain each
+Whistle/Finish/Clap toggle commands have no default keys in Hitsounding; assign
+them in Key bindings to toggle additions on selected events. Text inputs and modified shortcuts retain priority. Hover tips explain each
 tool's shortcut and interaction behavior.
 
 Each track has a **Lock** button beside its label. Locked tracks show a pale red background

@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-edge-drag", "-pan-zoom", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-audition-failed", "-auto-banks", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-edge-drag", "-pan-zoom", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-audition-failed", "-auto-banks", "-sampleset-hint", "-additions-hint", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
             {
                 if (scenario.StartsWith("-audition", StringComparison.Ordinal) && (!precise || size.Item2 < 900)) continue;
                 L.SetLanguage(locale);
@@ -78,6 +78,12 @@ internal static class HitsoundingRenderCheck
                 {
                     int index = Array.IndexOf(new[] { "select", "draw", "soft", "normal", "drum" }, scenario[6..]);
                     var button = editor.HitsoundingToolBounds(index);
+                    editor.PointerMove(button.X + button.Width / 2, button.Y + button.Height / 2, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
+                if (scenario is "-sampleset-hint" or "-additions-hint")
+                {
+                    var button = scenario == "-sampleset-hint" ? editor.SamplesetBounds : editor.AdditionsBounds;
                     editor.PointerMove(button.X + button.Width / 2, button.Y + button.Height / 2, false, false);
                     editor.Render(canvas, size.Item1, size.Item2);
                 }

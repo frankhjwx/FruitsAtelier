@@ -38,7 +38,7 @@ public sealed partial class EditorView
         }
     }
     internal bool HitsoundingDraw => hitsoundingDraw;
-    internal bool HitsoundingBrushEnabled => hitsoundingDraw || hitsoundingMultiSelection.Count > 0
+    internal bool HitsoundingBrushEnabled => hitsoundingMultiSelection.Any(k => k.Lane is >= 1 and <= 4)
         || hitsoundingNotesSelection && objectSelection.Count > 0;
     private void SetHitsoundingTool(bool draw)
     {

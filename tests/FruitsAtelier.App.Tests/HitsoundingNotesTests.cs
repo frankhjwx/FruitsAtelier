@@ -24,7 +24,7 @@ internal static class HitsoundingNotesTests
             ui.View.UpdateTransport(2000, 12000, true, false, false, null, null); ui.Paint();
             var baseline = ui.View.Document.DeepClone();
             ui.Key(draw ? 50 : 49);
-            Check(ui.View.HitsoundingBrushEnabled == draw, "Empty Select disables brushes while Draw enables them");
+            Check(!ui.View.HitsoundingBrushEnabled, "Both tools disable bank buttons without a selection");
             if (!draw)
             {
                 ui.Key(68); ui.Key(81);

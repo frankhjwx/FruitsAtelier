@@ -63,7 +63,7 @@ internal static class HitsoundingFeedbackTests
             ui.Key(50); ui.Key(68); ui.Key(49);
             var source = HitsoundingPanelTests.LaneBlocks(ui, 2)[0];
             ui.Click(source.X + source.Width / 2, source.Y + source.Height / 2);
-            Check(ui.View.HitsoundingDisplayedBank == 2 && ui.View.HitsoundingBrush == 3, "Selection highlights its actual bank while retaining the drawing brush");
+            Check(ui.View.HitsoundingDisplayedBank == 2 && ui.View.HitsoundingBrush == 2, "Unselected D has no effect and selection highlights its actual bank");
             ui.Key(67, ctrl: true);
             var target = HitsoundingPanelTests.LaneBlocks(ui, 1)[2];
             ui.Click(target.X + target.Width / 2, target.Y + target.Height / 2);

@@ -4,6 +4,75 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class HitsoundingPanelTests
 {
+    private static void DrawSampleDefaults()
+    {
+        foreach (bool lazer in new[] { false, true })
+        foreach (int normalBank in new[] { 0, 1, 2, 3 })
+        foreach (int additionBank in new[] { 0, 1, 2, 3 })
+        {
+            var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 2 });
+            map.TimingPoints.Add(new() { TimeMs = 2000, BeatLengthMs = -100, Uninherited = false, SampleSet = 3, SampleIndex = 4 });
+            map.Fruits.Add(new() { TimeMs = 1000, X = 256 }); map.Fruits.Add(new() { TimeMs = 2500, X = 256 });
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900);
+            ui.View.LibrarySettings.LazerEditing = lazer; ui.View.ShowHitsoundingPage(); ui.Paint();
+            ui.Key(50);
+            int[] keys = [81, 87, 69, 82];
+            ui.Key(keys[normalBank], shift: true); ui.Key(keys[additionBank], ctrl: true);
+            var before = ui.View.Document.DeepClone();
+            foreach (int key in new[] { 81, 65, 83, 68 }) ui.Key(key);
+            Check(!ui.View.HitsoundingBrushEnabled && before.ContentEquals(ui.View.Document), "Unselected Draw ignores Q/A/S/D");
+            if (normalBank == 0 && additionBank == 0)
+            {
+                ui.Key(49); var selected = LaneBlocks(ui, 1)[0];
+                ui.Click(selected.X + selected.Width / 2, selected.Y + 10);
+                foreach (int key in new[] { 87, 69, 82 }) ui.Key(key);
+                Check(before.ContentEquals(ui.View.Document), "Unbound W/E/R leave selected sounds unchanged");
+                var command = EditorView.ShortcutCommands.Single(c => c.Scope == EditorView.ShortcutScope.Hitsounding
+                    && c.Lazer == lazer && c.Id == "hitToggleWhistle");
+                Check(ui.View.CommandBindings(command).Length == 0, "Addition toggle has no default binding");
+                ui.View.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(74)];
+                ui.Key(74);
+                Check(!before.ContentEquals(ui.View.Document), "Custom addition toggle binding executes");
+                ui.Key(90, ctrl: true);
+                ui.View.LibrarySettings.ShortcutBindings.Remove(command.StorageKey);
+                ui.Key(50);
+            }
+            var first = LaneBlocks(ui, 1)[0]; var second = LaneBlocks(ui, 1)[1];
+            var noteLock = ui.View.HitsoundingLockBounds(0); ui.Click(noteLock.X + 10, noteLock.Y + 10);
+            float x = first.X + first.Width / 2 + (second.X - first.X) / 3;
+            var notes = ui.View.HitsoundingNotesLaneBounds;
+            ui.Click(x, notes.Y + notes.Height / 2);
+            var created = ui.View.Document.Fruits.Single(f => f.TimeMs == 1500);
+            var converted = CatchStreamConverter.Convert(ui.View.Document).Objects;
+            var resolver = new HitsoundResolver(ui.View.Document, converted, inspectResources: false);
+            var sample = resolver.Describe(converted.Single(n => n.SourceId == created.Id));
+            int expectedNormal = normalBank == 0 ? 2 : normalBank;
+            Check(sample.NormalSet == expectedNormal && sample.AdditionSet == (additionBank == 0 ? expectedNormal : additionBank)
+                && sample.Index == 2, "New Notes use both selector defaults and timing index");
+            ui.Key(90, ctrl: true); Check(before.ContentEquals(ui.View.Document), "Note placement remains one undo step");
+            foreach (int index in new[] { 0, 1 })
+            {
+                var block = LaneBlocks(ui, 1)[index];
+                var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane2") && t.X > 340 && t.X < 1100);
+                ui.Click(block.X + block.Width / 2, label.Y + 8);
+            }
+            converted = CatchStreamConverter.Convert(ui.View.Document).Objects;
+            resolver = new(ui.View.Document, converted, inspectResources: false);
+            foreach (var note in converted)
+            {
+                int timingBank = note.TimeMs < 2000 ? 2 : 3;
+                sample = resolver.Describe(note);
+                Check(sample.NormalSet == timingBank && sample.AdditionSet == (additionBank == 0 ? timingBank : additionBank)
+                    && sample.Index == (note.TimeMs < 2000 ? 2 : 4) && sample.Additions == 2,
+                    "Addition placement preserves Normal and resolves Auto at each event's timing");
+            }
+            var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document));
+            Check(restored.ContentEquals(ui.View.Document), "Draw defaults persist without invalid Auto overrides");
+            Check(OsuBeatmapWriter.Serialize(restored).ObjectSequenceMatches, "Draw defaults export successfully");
+        }
+    }
+
     private static void StableLabels()
     {
         var map = new MapDocument { DurationMs = 20000, BeatLengthMs = 500 };
@@ -262,7 +331,7 @@ internal static class HitsoundingPanelTests
         ui.Key(90, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Single().Sample.AdditionSet == 3, "Bank change is undoable");
         ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Placement is one undo step with no selector history");
         ui.Key(50); ui.Key(83); ui.Click(x, y);
-        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 1, Sample.AdditionSet: 1 }, "Drawing uses the independent Normal brush");
+        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 1, Sample.AdditionSet: 3 }, "Drawing uses the Additions selector while unselected S has no effect");
         Console.WriteLine("PASS placement banks, direct deletion and play-line input priority");
         void ChooseBank(string key)
         {
@@ -291,7 +360,7 @@ internal static class HitsoundingPanelTests
                 && setting.InheritedFields.HasFlag(InheritedSampleFields.NormalSet) == inheritedNormal,
                 "Addition placement preserves both the existing Normal bank and its inheritance");
             Check(setting.Sample.AdditionSet == 2 && setting.Sample.Additions == 1 << (lane - 1),
-                "Whistle, Finish and Clap placement uses the Soft brush");
+                "Whistle, Finish and Clap placement uses the Additions selector");
             ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Isolated placement is one undo step");
             ui.Key(89, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Single() == setting, "Redo retains bank isolation");
             void Choose(FruitsAtelier.App.Rendering.Rect bounds, string key)
@@ -886,6 +955,7 @@ internal static class HitsoundingPanelTests
     }
     public static void Run()
     {
+        DrawSampleDefaults();
         HitsoundingTimingDragTests.Run();
         HitsoundingPreciseAuditionTests.Run();
         StableLabels();
@@ -1243,7 +1313,7 @@ internal static class HitsoundingPanelTests
         var resolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
         Check(resolver.Describe(note) is { NormalSet: 3, Index: 2, Volume: 60 }, "Spinner end inherits timing at its end");
         var normal = LaneBlocks(ui, 1).Single();
-        ui.Click(normal.X + normal.Width / 2, normal.Y + 10); ui.View.SetModifiers(true, false); ui.Key(87); ui.View.SetModifiers(false, false);
+        ui.Click(normal.X + normal.Width / 2, normal.Y + 10); ui.Key(87, shift: true);
         resolver = new(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
         Check(resolver.Describe(note).NormalSet == 1, "Spinner Normal tag is selectable and editable");
         ui.Key(90, ctrl: true);
@@ -1254,7 +1324,7 @@ internal static class HitsoundingPanelTests
         resolver = new(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
         Check(resolver.Describe(note).Additions == 2 && ui.View.Document.HitsoundOverrides.Count == 0,
             "Placing at a banana shower end edits the spinner sample columns");
-        ui.Key(49); var block = LaneBlocks(ui, 2).Single(); ui.Click(block.X + block.Width / 2, block.Y + 10); ui.View.SetModifiers(true, false); ui.Key(87, ctrl: true); ui.View.SetModifiers(false, false);
+        ui.Key(49); var block = LaneBlocks(ui, 2).Single(); ui.Click(block.X + block.Width / 2, block.Y + 10); ui.Key(87, ctrl: true);
         resolver = new(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
         Check(resolver.Describe(note) is { NormalSet: 3, AdditionSet: 1, Index: 2, Volume: 60 }, "Spinner addition selector preserves base bank and timing inheritance");
         var exported = OsuBeatmapWriter.Serialize(ui.View.Document).Text;

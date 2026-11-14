@@ -1595,7 +1595,8 @@ public sealed partial class EditorView
             else if (!ctrl && !altHeld && !shift && virtualKey is 49 or 50) SetHitsoundingTool(virtualKey == 50);
             else if (!ctrl && !altHeld && !shift && virtualKey == 53) AddHitsoundingInheritedPoint(playhead);
             else if (!ctrl && !altHeld && !shift && virtualKey is 65 or 83 or 68) SetHitsoundingBrush(virtualKey == 65 ? 2 : virtualKey == 83 ? 1 : 3);
-            else if (altHeld && virtualKey is 81 or 87 or 69 or 82) SetSampleBank(ctrl, virtualKey switch { 81 => 0, 87 => 1, 69 => 2, _ => 3 });
+            else if (!altHeld && ctrl != shift && virtualKey is 81 or 87 or 69 or 82)
+                SetSampleBank(ctrl, virtualKey switch { 81 => 0, 87 => 1, 69 => 2, _ => 3 });
             else if (ctrl && virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (ctrl && virtualKey == 89) Redo();
             else if (ctrl && virtualKey == 9) SwitchDifficulty(AdjacentDifficulty(shift));
@@ -1605,7 +1606,7 @@ public sealed partial class EditorView
             else if (!ctrl && virtualKey == 46 && hitsoundingTimingSelection.Count > 0) DeleteHitsoundingTimingSelection();
             else if (!ctrl && virtualKey == 46) DeleteHitsoundingSelection();
             else if (!ctrl && !altHeld && virtualKey == 81) CycleHitsoundingSampleSet();
-            else if (!ctrl && virtualKey is 87 or 69 or 82) ToggleHitsoundingAddition(virtualKey == 87 ? 2 : virtualKey == 69 ? 4 : 8);
+            else if (!ctrl && !shift && !altHeld && virtualKey is 87 or 69 or 82) ToggleHitsoundingAddition(virtualKey == 87 ? 2 : virtualKey == 69 ? 4 : 8);
             return;
         }
         if (UiScaleKey(virtualKey, ctrl)) return;

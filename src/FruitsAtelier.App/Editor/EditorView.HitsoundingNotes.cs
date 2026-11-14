@@ -107,6 +107,8 @@ public sealed partial class EditorView
             if (Edit(L.Get("hitsounding.createNote"), () =>
             {
                 Document.Fruits.Add(new() { Id = id, TimeMs = start, X = 256, Y = 192 });
+                if (nextNormalBank != 0) ObjectFlags.SetSampleBank(Document, id, false, nextNormalBank);
+                if (nextAdditionBank != 0) ObjectFlags.SetSampleBank(Document, id, true, nextAdditionBank);
                 Document.DurationMs = Math.Max(Document.DurationMs, end);
             })) SelectObjects([id], id);
         }

@@ -5,8 +5,11 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     internal enum ShortcutScope { Global, Library, Compose, Timing, TimingPoints, Hitsounding, Testplay, Gallery, Samples }
-    internal sealed record ShortcutCommand(ShortcutScope Scope, string Id, string Group, bool Lazer, ShortcutBinding[] Defaults)
+    internal sealed record ShortcutCommand(ShortcutScope Scope, string Id, string Group, bool Lazer, ShortcutBinding[] DispatchBindings)
     {
+        // Unbound commands retain dispatch gestures so custom bindings reach the guarded input handlers.
+        public ShortcutBinding[] Defaults => Scope == ShortcutScope.Hitsounding
+            && Id is "hitToggleWhistle" or "hitToggleFinish" or "hitToggleClap" ? [] : DispatchBindings;
         public string StorageKey => $"{(Lazer ? "lazer" : "default")}/{Scope}/{Id}";
         // Text follows the dispatched sample bank; storage IDs retain existing user assignments.
         private string TextId => Id.StartsWith("normal", StringComparison.Ordinal) || Id.StartsWith("addition", StringComparison.Ordinal)
@@ -290,22 +293,22 @@ public sealed partial class EditorView
         Add(ShortcutScope.Compose, "additionDrum", "snapping", "default", ShortcutBinding.From(16, 82));
         Add(ShortcutScope.Compose, "normalDrum", "snapping", "lazer", ShortcutBinding.From(17, 82));
         Add(ShortcutScope.Compose, "additionDrum", "snapping", "lazer", ShortcutBinding.From(18, 82));
-        Add(ShortcutScope.Hitsounding, "normalAuto", "snapping", "default", ShortcutBinding.From(17, 18, 81));
-        Add(ShortcutScope.Hitsounding, "additionAuto", "snapping", "default", ShortcutBinding.From(18, 81));
-        Add(ShortcutScope.Hitsounding, "normalAuto", "snapping", "lazer", ShortcutBinding.From(17, 18, 81));
-        Add(ShortcutScope.Hitsounding, "additionAuto", "snapping", "lazer", ShortcutBinding.From(18, 81));
-        Add(ShortcutScope.Hitsounding, "normalNormal", "snapping", "default", ShortcutBinding.From(17, 18, 87));
-        Add(ShortcutScope.Hitsounding, "additionNormal", "snapping", "default", ShortcutBinding.From(18, 87));
-        Add(ShortcutScope.Hitsounding, "normalNormal", "snapping", "lazer", ShortcutBinding.From(17, 18, 87));
-        Add(ShortcutScope.Hitsounding, "additionNormal", "snapping", "lazer", ShortcutBinding.From(18, 87));
-        Add(ShortcutScope.Hitsounding, "normalSoft", "snapping", "default", ShortcutBinding.From(17, 18, 69));
-        Add(ShortcutScope.Hitsounding, "additionSoft", "snapping", "default", ShortcutBinding.From(18, 69));
-        Add(ShortcutScope.Hitsounding, "normalSoft", "snapping", "lazer", ShortcutBinding.From(17, 18, 69));
-        Add(ShortcutScope.Hitsounding, "additionSoft", "snapping", "lazer", ShortcutBinding.From(18, 69));
-        Add(ShortcutScope.Hitsounding, "normalDrum", "snapping", "default", ShortcutBinding.From(17, 18, 82));
-        Add(ShortcutScope.Hitsounding, "additionDrum", "snapping", "default", ShortcutBinding.From(18, 82));
-        Add(ShortcutScope.Hitsounding, "normalDrum", "snapping", "lazer", ShortcutBinding.From(17, 18, 82));
-        Add(ShortcutScope.Hitsounding, "additionDrum", "snapping", "lazer", ShortcutBinding.From(18, 82));
+        Add(ShortcutScope.Hitsounding, "normalAuto", "snapping", "default", ShortcutBinding.From(17, 81));
+        Add(ShortcutScope.Hitsounding, "additionAuto", "snapping", "default", ShortcutBinding.From(16, 81));
+        Add(ShortcutScope.Hitsounding, "normalAuto", "snapping", "lazer", ShortcutBinding.From(17, 81));
+        Add(ShortcutScope.Hitsounding, "additionAuto", "snapping", "lazer", ShortcutBinding.From(16, 81));
+        Add(ShortcutScope.Hitsounding, "normalNormal", "snapping", "default", ShortcutBinding.From(17, 87));
+        Add(ShortcutScope.Hitsounding, "additionNormal", "snapping", "default", ShortcutBinding.From(16, 87));
+        Add(ShortcutScope.Hitsounding, "normalNormal", "snapping", "lazer", ShortcutBinding.From(17, 87));
+        Add(ShortcutScope.Hitsounding, "additionNormal", "snapping", "lazer", ShortcutBinding.From(16, 87));
+        Add(ShortcutScope.Hitsounding, "normalSoft", "snapping", "default", ShortcutBinding.From(17, 69));
+        Add(ShortcutScope.Hitsounding, "additionSoft", "snapping", "default", ShortcutBinding.From(16, 69));
+        Add(ShortcutScope.Hitsounding, "normalSoft", "snapping", "lazer", ShortcutBinding.From(17, 69));
+        Add(ShortcutScope.Hitsounding, "additionSoft", "snapping", "lazer", ShortcutBinding.From(16, 69));
+        Add(ShortcutScope.Hitsounding, "normalDrum", "snapping", "default", ShortcutBinding.From(17, 82));
+        Add(ShortcutScope.Hitsounding, "additionDrum", "snapping", "default", ShortcutBinding.From(16, 82));
+        Add(ShortcutScope.Hitsounding, "normalDrum", "snapping", "lazer", ShortcutBinding.From(17, 82));
+        Add(ShortcutScope.Hitsounding, "additionDrum", "snapping", "lazer", ShortcutBinding.From(16, 82));
         Add(ShortcutScope.Hitsounding, "hitSelect", "tools", "both", ShortcutBinding.From(49));
         Add(ShortcutScope.Hitsounding, "hitDraw", "tools", "both", ShortcutBinding.From(50));
         Add(ShortcutScope.Hitsounding, "hitWhistle", "tools", "both", ShortcutBinding.From(65));
