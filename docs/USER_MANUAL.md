@@ -1169,6 +1169,12 @@ On **Colour palette**, choose 3–8 colours and generate a proposal from the cur
 
 Switch to Hitsounding for sound tracks and **Timing Helper**. Audible tracks use green mute controls; muted tracks use grey. Lock controls are teal when unlocked and pale red when locked. Locked tracks have a pale red background. Locks protect editing and do not mute sound. A selection rectangle can start in a locked track and select sound tags in unlocked tracks. Selecting sound tags leaves the Notes graphics unhighlighted.
 
+Move selected Notes, additions or SB sounds with half-opacity destination previews; originals remain visible until release. Addition groups move only when every sound has a destination fruit event. Drag a selected addition group in either Select or Draw mode. Escape cancels, and a completed move is one undo step. Navigation remains available during drags and marquees; holding the pointer at a lane edge scrolls the timeline. Middle-drag pans time, Ctrl+wheel changes Snap and Alt+wheel zooms around the pointer.
+
+Use the upper-left **Sampleset** and **Additions** selectors for placement defaults. Auto Sampleset inherits timing; Auto Additions follows the Normal bank. Placing another addition on a note preserves its existing shared addition bank. The left bank buttons and Q/A/S/D modify selected events only. Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum, and Ctrl+Q/W/E/R sets Additions; hover hints reflect custom bindings. W/E/R addition toggles have no default bindings in Hitsounding.
+
+Unavailable sample files are skipped during playback. Library audition and file-operation failures leave editing available; operation errors appear in the status bar.
+
 Select red and green timing points with Ctrl-click or a marquee. **Ctrl+C**, then **Ctrl+V** in another difficulty, pastes at the original timestamps and replaces timing points at those timestamps in one undo step. Other timestamps remain unchanged. **5** adds an inherited point at the playhead. A selection containing red points cannot be dragged.
 
 At a time without a timing point, edit the draft and choose **Apply to affecting timing line** or insert a new inherited point. Volume track clicks step by five percentage points; dragging and numeric input retain one-percent precision.
@@ -1225,8 +1231,14 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 
 ### Hitsounding
 
-In the Hitsounding workspace, **5** adds an inherited timing point at the playhead. The binding can be changed in Settings.
-See [Hitsounding controls](HITSOUNDS.md) for selection, volume ramps and timing drafts.
+In the Hitsounding workspace, **5** adds an inherited timing point at the playhead.
+Left/Right and Shift+Left/Right follow Mapping navigation for the active Default/lazer profile,
+including during drags. J/K moves the unlocked Notes, addition or SB selection by one Snap step.
+Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum; Ctrl+Q/W/E/R sets Additions.
+Q/A/S/D changes selected banks only. Addition toggle commands have no default keys here.
+Customize these bindings in Settings; selector hover hints show the active bindings.
+See [Hitsounding controls](HITSOUNDS.md) and [Mapping command coverage](HITSOUND_MAPPING_PARITY.md)
+for navigation, selection, volume ramps and timing drafts.
 
 ### Experimental lazer editing
 

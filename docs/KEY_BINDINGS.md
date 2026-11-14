@@ -22,8 +22,14 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 
 ## Hitsounding
 
-In the Hitsounding workspace, **5** adds an inherited timing point at the playhead. The binding can be changed in Settings.
-See [Hitsounding controls](HITSOUNDS.md) for selection, volume ramps and timing drafts.
+In the Hitsounding workspace, **5** adds an inherited timing point at the playhead.
+Left/Right and Shift+Left/Right follow Mapping navigation for the active Default/lazer profile,
+including during drags. J/K moves the unlocked Notes, addition or SB selection by one Snap step.
+Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum; Ctrl+Q/W/E/R sets Additions.
+Q/A/S/D changes selected banks only. Addition toggle commands have no default keys here.
+Customize these bindings in Settings; selector hover hints show the active bindings.
+See [Hitsounding controls](HITSOUNDS.md) and [Mapping command coverage](HITSOUND_MAPPING_PARITY.md)
+for navigation, selection, volume ramps and timing drafts.
 
 ## Experimental lazer editing
 

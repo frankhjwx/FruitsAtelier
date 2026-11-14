@@ -389,7 +389,8 @@ inherit the active timing properties. Generation selects both endpoints and ever
 generated green point together. The complete operation is one undo step.
 Timing Helper's sample bank choices are Soft, Normal and Drum.
 The left-hand sample-bank tools highlight the resolved bank of selected sounds;
-mixed banks have no highlighted choice. With no selection, they show the drawing bank.
+mixed banks have no highlighted choice. With no selection, these tools are disabled;
+use the upper-left Sampleset and Additions selectors for placement defaults.
 While playing, timeline wheel navigation advances by full beats, matching Mapping;
 paused navigation follows the selected Snap subdivision.
 Left/Right and Shift+Left/Right use Mapping's keyboard navigation: one/four beats
