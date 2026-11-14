@@ -758,6 +758,7 @@ internal static class HitsoundingPanelTests
     }
     public static void LengthAndMove()
     {
+        GroupMoveAndNavigation();
         var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
         map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1 });
         foreach (int time in new[] { 0, 250, 1250, 1500 }) map.Fruits.Add(new() { TimeMs = time, X = 256,
@@ -797,6 +798,72 @@ internal static class HitsoundingPanelTests
             ui.View.PointerDown(x, y, 0, false, false); ui.View.PointerMove(targetX, y, false, false); ui.Paint();
             Check(baseline.ContentEquals(ui.View.Document), "Drag preview does not modify content");
             ui.View.PointerUp(targetX, y, 0); ui.Paint();
+        }
+    }
+    private static void GroupMoveAndNavigation()
+    {
+        foreach (bool precise in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 12000, BeatLengthMs = 500 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1 });
+            foreach (int time in new[] { 1000, 1500, 2000, 2500 })
+                map.Fruits.Add(new() { TimeMs = time, X = 256, OriginalLine = $"256,192,{time},1,{(time <= 1500 ? 2 : 0)},0:0:0:0:" });
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage();
+            ui.View.UpdateTransport(2000, 12000, true, false, false, null, null); ui.Paint();
+            if (precise) { ui.ClickText(L.Get("hitsounding.precise")); ui.Paint(); }
+            var baseline = ui.View.Document.DeepClone(); var conversion = ui.View.Conversion;
+            var sounds = LaneBlocks(ui, 2);
+            void Select()
+            {
+                foreach (var sound in sounds)
+                {
+                    ui.View.PointerDown(sound.X + 2, sound.Y + 10, 0, false, true);
+                    ui.View.PointerUp(sound.X + 2, sound.Y + 10, 0);
+                }
+                ui.Paint();
+            }
+            Select();
+            var grid = ui.View.HitsoundingNotesLaneBounds;
+            float X(double time) => grid.X + (float)((time - 800) / 4000 * grid.Width);
+            float y = sounds[0].Y + 10;
+            void Begin(double destination)
+            {
+                ui.View.PointerDown(sounds[0].X + 2, y, 0, false, false);
+                ui.View.PointerMove(X(destination), y, false, false); ui.Paint();
+                Check(baseline.ContentEquals(ui.View.Document) && ReferenceEquals(conversion, ui.View.Conversion), "Group ghost retains committed content and conversion");
+                Check(ui.Canvas.PaintCalls.Count(p => p.FillBounds is { Width: 18, Height: 32 } r && r.Y <= y && r.Bottom > y && p.Opacity == .5f) == 2,
+                    "Both selected sounds have translucent destination ghosts");
+            }
+            Begin(2000); ui.Key(27); ui.View.PointerUp(X(2000), y, 0); ui.Paint();
+            Check(baseline.ContentEquals(ui.View.Document), "Escape cancels the complete sound move");
+            Begin(2500); ui.View.PointerUp(X(2500), y, 0); ui.Paint();
+            Check(baseline.ContentEquals(ui.View.Document), "A missing group destination rejects the entire move");
+            Begin(2000); ui.View.PointerUp(X(2000), y, 0); ui.Paint();
+            var resolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
+            Check(ui.View.Conversion.Objects.All(n => resolver.Describe(n).Additions == (n.TimeMs >= 2000 ? 2 : 0)), "Release moves both additions by the same offset");
+            ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Group move is one undo step");
+            ui.View.UpdateTransport(6000, 12000, true, true, false, null, null);
+            ui.Key(37, shift: true); Check(ui.View.PlayheadMs == 4000, "Shift-left seeks four beats during playback");
+            ui.Key(39, shift: true); Check(ui.View.PlayheadMs == 6000, "Shift-right seeks four beats during playback");
+            ui.View.UpdateTransport(6000, 12000, true, false, false, null, null);
+            ui.Key(37, shift: true); Check(ui.View.PlayheadMs == 5500, "Paused Shift-left seeks four snap divisions");
+        }
+        foreach (bool lazer in new[] { false, true })
+        foreach (bool playing in new[] { false, true })
+        foreach (bool shift in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 12000, BeatLengthMs = 400 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 400 });
+            var mapping = new Ui(false); mapping.LoadDocument(map); mapping.View.LibrarySettings.LazerEditing = lazer;
+            var sounds = new Ui(false); sounds.LoadDocument(map); sounds.View.LibrarySettings.LazerEditing = lazer;
+            sounds.View.ShowHitsoundingPage();
+            foreach (int key in new[] { 37, 39 })
+            {
+                mapping.View.UpdateTransport(6000, 12000, true, playing, false, null, null);
+                sounds.View.UpdateTransport(6000, 12000, true, playing, false, null, null);
+                mapping.Key(key, shift: shift); sounds.Key(key, shift: shift);
+                Check(mapping.View.PlayheadMs == sounds.View.PlayheadMs, "Hitsounding arrow navigation matches Mapping in each editing and playback mode");
+            }
         }
     }
     public static void Run()
@@ -1047,6 +1114,18 @@ internal static class HitsoundingPanelTests
         Check(Samples().Any(s => s.TimeMs == 750 && s.Volume == 65), "Storyboard dragging snaps to an independent timestamp");
         ui.Key(90, ctrl: true); Wait(2); Check(baseline.ContentEquals(ui.View.Document), "Storyboard move is undoable");
         first = Blocks()[0]; second = Blocks()[1];
+        foreach (var block in new[] { first, second })
+        {
+            ui.View.PointerDown(block.X + 5, block.Y + 10, 0, false, true);
+            ui.View.PointerUp(block.X + 5, block.Y + 10, 0); ui.Paint();
+        }
+        ui.View.PointerDown(first.X + 5, first.Y + 10, 0, false, false);
+        ui.View.PointerMove(first.X + 5 - dx / 2, first.Y + 10, false, false); ui.Paint();
+        Check(baseline.ContentEquals(ui.View.Document), "SB group previews without rewriting its events");
+        ui.View.PointerUp(first.X + 5 - dx / 2, first.Y + 10, 0); Wait(2);
+        Check(Samples().Select(s => s.TimeMs).Order().SequenceEqual(new[] { 250d, 750d }), "SB group moves backward with one shared offset");
+        ui.Key(90, ctrl: true); Wait(2); Check(baseline.ContentEquals(ui.View.Document), "SB group movement is one undo step");
+        first = Blocks()[0]; second = Blocks()[1];
         ui.View.PointerDown(first.X - 5, first.Y - 5, 0, false, false);
         ui.View.PointerMove(second.Right + 5, second.Bottom + 5, false, false);
         ui.View.PointerUp(second.Right + 5, second.Bottom + 5, 0); ui.Paint();
@@ -1076,7 +1155,7 @@ internal static class HitsoundingPanelTests
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             do { ui.Paint(); if (Blocks().Length == count && (count != 0 || Samples().Count == 0)) return; Thread.Sleep(5); } while (watch.Elapsed.TotalSeconds < 10);
-            throw new InvalidOperationException($"Expected {count} storyboard blocks, saw {Blocks().Length}");
+            throw new InvalidOperationException($"Expected {count} storyboard blocks, saw {Blocks().Length}; {ui.View.StatusMessage}; {string.Join(';', Samples().Select(s => s.TimeMs))}");
         }
     }
     public static void CrossDifficultyClipboard()
@@ -1174,6 +1253,23 @@ internal static class HitsoundingPanelTests
         ui.View.ShowHitsoundingPage(); ui.Paint();
         Console.WriteLine($"Hitsounding cold setup={System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds:F3}ms / {GC.GetAllocatedBytesForCurrentThread() - allocated}B");
         Measure("Note based");
+        var noteLock = ui.View.HitsoundingLockBounds(0);
+        ui.Click(noteLock.X + noteLock.Width / 2, noteLock.Y + 12);
+        Check(baseline.ContentEquals(ui.View.Document), "Unlocking Notes preserves benchmark content");
+        ui.View.UpdateTransport(70500, 90000, true, false, false, null, null); ui.Paint();
+        var noteLane = ui.View.HitsoundingNotesLaneBounds;
+        float noteX = noteLane.X + noteLane.Width * .3f, noteY = noteLane.Y + noteLane.Height / 2;
+        ui.Click(noteX, noteY); ui.Key(65, ctrl: true);
+        Check(baseline.ContentEquals(ui.View.Document), "Selecting Notes preserves benchmark content");
+        ui.View.PointerDown(noteX, noteY, 0, false, false);
+        Check(ui.View.WantsCapture, "Group benchmark starts an editable Notes gesture");
+        Measure("Notes group ghost");
+        Check(baseline.ContentEquals(ui.View.Document), "Held Notes ghosts preserve benchmark content");
+        ui.Key(27);
+        Check(baseline.ContentEquals(ui.View.Document), "Group ghosts retain committed content");
+        Check(ReferenceEquals(conversion, ui.View.Conversion), "Group ghosts reuse committed conversion");
+        ui.Click(noteLock.X + noteLock.Width / 2, noteLock.Y + 12);
+        ui.View.UpdateTransport(30500, 90000, true, false, false, null, null); ui.Paint();
         var timingHandle = ui.View.HitsoundingTimingHandleBounds(ui.View.Document.TimingPoints.Single(p => p.TimeMs == 30000));
         ui.View.PointerDown(timingHandle.X + 4, timingHandle.Y + 10, 0, false, false);
         Measure("Timing handle drag"); ui.Key(27);

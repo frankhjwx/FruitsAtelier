@@ -238,7 +238,7 @@ public sealed partial class EditorView
         for (int i = first; i < hitsoundingNotes.Length && hitsoundingNotes[i].TimeMs <= end; i++)
         {
             var item = hitsoundingNotes[i];
-            float x = X(HitsoundingNotePreviewTime(item.SourceId, item.TimeMs)), y = notesViewport.Y + 27 * notesHeight / 64;
+            float x = X(item.TimeMs), y = notesViewport.Y + 27 * notesHeight / 64;
             if (item.Kind == CatchObjectKind.Droplet) c.Circle(x, y, Math.Max(2, 4 * notesHeight / 64), Foreground, false, 1.5f);
             if (item.Kind == CatchObjectKind.Droplet)
                 hitsoundingSoundHits.Add((new(x - 5, y - 5, 10, 10), item, 0));
@@ -292,18 +292,21 @@ public sealed partial class EditorView
                 c.StrokeOpacity(new(X(candidate.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
             }
         }
-        if (hitsoundingMoveActive && hitsoundingMoveSource is { } moving && hitsoundingMoveTarget is { } target)
+        if (hitsoundingMoveActive && hitsoundingMoveSource is not null)
+        foreach (var copy in hitsoundingMoveCopies)
         {
-            float y = top + (moving.Lane + .5f) * laneHeight - 16;
-            var source = hitsoundingNoteLookup[(moving.Id, moving.Event)];
-            c.Fill(new(X(target.TimeMs) - 9, y, 18, 32), HitsoundingBankColor(hitsoundingResolver!.Describe(source).AdditionSet), 4, .5f);
-            c.StrokeOpacity(new(X(target.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
+            float y = top + (copy.Lane + .5f) * laneHeight - 16;
+            var bounds = new Rect(X(hitsoundingMoveTime + copy.Offset) - 9, y, 18, 32);
+            c.Fill(bounds, HitsoundingBankColor(copy.Sample.AdditionSet), 4, .5f);
+            c.StrokeOpacity(bounds, Foreground, 1, 4, .5f);
         }
-        if (hitsoundingStoryboardMove is not null && hitsoundingStoryboardMoved)
+        if (hitsoundingStoryboardMove is { } storyboardMove && hitsoundingStoryboardMoved)
+        foreach (var sample in hitsoundingStoryboardMoveSources)
         {
             float y = top + 6.5f * laneHeight - 16;
-            c.Fill(new(X(hitsoundingStoryboardMoveTime), y, 36, 32), HitsoundingColors[6], 4, .5f);
-            c.StrokeOpacity(new(X(hitsoundingStoryboardMoveTime), y, 36, 32), Foreground, 1, 4, .5f);
+            float x = X(sample.TimeMs + hitsoundingStoryboardMoveTime - storyboardMove.TimeMs);
+            c.Fill(new(x, y, 36, 32), HitsoundingColors[6], 4, .5f);
+            c.StrokeOpacity(new(x, y, 36, 32), Foreground, 1, 4, .5f);
         }
         if (hitsoundingMarquee && hitsoundingMarqueeMoved)
         {

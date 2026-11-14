@@ -12,8 +12,10 @@ public sealed partial class EditorView
     private StoryboardSample[] hitsoundingStoryboardClipboard = [];
     private StoryboardSample? hitsoundingStoryboardMove;
     private double hitsoundingStoryboardMoveTime;
+    private double hitsoundingStoryboardMoveMinimum;
     private (float X, float Y) hitsoundingStoryboardMoveStart;
     private bool hitsoundingStoryboardMoved;
+    private StoryboardSample[] hitsoundingStoryboardMoveSources = [];
 
     private bool BeginHitsoundingStoryboardPointer(float x, float y, int button, bool ctrl)
     {
@@ -26,13 +28,16 @@ public sealed partial class EditorView
             SyncHitsoundingNoteSelection();
             return true;
         }
-        hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
+        hitsoundingMultiSelection.Clear();
+        if (!hitsoundingStoryboardSelection.Contains(hit.Sample)) hitsoundingStoryboardSelection.Clear();
         hitsoundingSelected = null; hitsoundingSelectedTiming = null; SelectObjects([]);
         hitsoundingStoryboardSelection.Add(hit.Sample);
         if (button == 2) DeleteHitsoundingStoryboardSelection();
         else if (button == 0)
         {
             hitsoundingStoryboardMove = hit.Sample;
+            hitsoundingStoryboardMoveSources = hitsoundingStoryboardSelection.ToArray();
+            hitsoundingStoryboardMoveMinimum = hit.Sample.TimeMs - hitsoundingStoryboardMoveSources.Min(s => s.TimeMs);
             hitsoundingStoryboardMoveTime = hit.Sample.TimeMs;
             hitsoundingStoryboardMoveStart = (x, y); hitsoundingStoryboardMoved = false;
         }
@@ -43,15 +48,18 @@ public sealed partial class EditorView
         if (hitsoundingStoryboardMove is not { } sample) return false;
         hitsoundingStoryboardMoved |= Math.Abs(x - hitsoundingStoryboardMoveStart.X) > ContentDragThreshold || Math.Abs(y - hitsoundingStoryboardMoveStart.Y) > ContentDragThreshold;
         if (hitsoundingStoryboardMoved)
-            hitsoundingStoryboardMoveTime = Math.Max(0, SnapTiming().Snap(sample.TimeMs + (x - hitsoundingStoryboardMoveStart.X) / hitsoundingGridBounds.Width * hitsoundingSpan, divisor));
+            hitsoundingStoryboardMoveTime = Math.Max(hitsoundingStoryboardMoveMinimum,
+                SnapTiming().Snap(sample.TimeMs + (x - hitsoundingStoryboardMoveStart.X) / hitsoundingGridBounds.Width * hitsoundingSpan, divisor));
         return true;
     }
     private bool EndHitsoundingStoryboardMove()
     {
         if (hitsoundingStoryboardMove is not { } sample) return false;
         hitsoundingStoryboardMove = null;
+        var sources = hitsoundingStoryboardMoveSources;
+        hitsoundingStoryboardMoveSources = [];
         if (hitsoundingStoryboardMoved && hitsoundingStoryboardMoveTime != sample.TimeMs)
-            EditHitsoundingStoryboard([sample], [sample with { TimeMs = hitsoundingStoryboardMoveTime }], move: true);
+            EditHitsoundingStoryboard(sources, sources.Select(s => s with { TimeMs = s.TimeMs + hitsoundingStoryboardMoveTime - sample.TimeMs }).ToArray(), move: true);
         hitsoundingStoryboardMoved = false;
         return true;
     }

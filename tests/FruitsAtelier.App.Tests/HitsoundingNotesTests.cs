@@ -56,7 +56,9 @@ internal static class HitsoundingNotesTests
             ui.View.PointerDown(X(1000), Y(), 0, false, false);
             ui.View.PointerMove(X(1125), Y(), false, false); ui.Paint();
             Check(baseline.ContentEquals(ui.View.Document), "Moving Notes previews without mutating content");
-            Check(HasCircle(1125) && !HasCircle(1000), "Preview moves the original note graphic instead of leaving a duplicate");
+            Check(HasCircle(1125) && HasCircle(1000), "Preview retains the committed note and shows its destination ghost");
+            Check(ui.View.WantsCapture && ui.Canvas.Circles.Any(c => c.Radius > 10 && Math.Abs(c.X - X(1125)) < 1 && c.Opacity > 0 && c.Opacity < .5f),
+                "Note drag captures the pointer and renders a translucent ghost");
             ui.Key(27); ui.View.PointerUp(X(1125), Y(), 0); ui.View.PointerMove(0, 0, false, false); ui.Paint();
             Check(HasCircle(1000) && !HasCircle(1125), "Escape restores the original note graphic");
             Drag(1000, 1125);
@@ -71,6 +73,11 @@ internal static class HitsoundingNotesTests
             Check(baseline.ContentEquals(ui.View.Document), "Marquee preview leaves content unchanged");
             ui.View.PointerUp(X(1600), y, 0); ui.Paint();
             Check(ui.View.SelectedObjectIds.Count == 2 && ui.View.Document.Tracks.Count == 1, "Dragging empty Notes selects objects");
+            ui.View.PointerDown(X(1000), y, 0, false, false);
+            ui.View.PointerMove(X(1125), y, false, false); ui.Paint();
+            Check(HasCircle(1125) && HasCircle(1625) && HasCircle(1000) && HasCircle(1500)
+                && baseline.ContentEquals(ui.View.Document), "Selected Notes retain both originals and preview both destinations");
+            ui.Key(27); ui.View.PointerUp(X(1125), y, 0); ui.Paint();
             Check(ui.View.HitsoundingBrushEnabled, "Selected Notes enable brushes in either mode");
             ui.Key(68); Check(ui.View.HitsoundingBrush == 3, "D selects Drum with Notes selected");
             ui.Key(81); Check(ui.View.HitsoundingBrush == 2, "Q cycles brushes with Notes selected");

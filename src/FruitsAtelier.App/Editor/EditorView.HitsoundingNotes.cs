@@ -14,6 +14,7 @@ public sealed partial class EditorView
     private double hitsoundingMoveMin, hitsoundingMoveMax;
     private Guid hitsoundingNoteId;
     private Guid[] hitsoundingNoteSelectionBefore = [];
+    private (Guid Id, double Start, double End, int SourceOrder, bool IsBanana, int Spans, int StackIndex, float StackOffset, int EventIndex)[] hitsoundingNoteMoveMarkers = [];
     private Rect HitsoundingNotesLane => new(hitsoundingGridBounds.X, hitsoundingGridBounds.Y,
         hitsoundingGridBounds.Width, hitsoundingGridBounds.Height / 7);
     internal Rect HitsoundingNotesLaneBounds => HitsoundingNotesLane;
@@ -64,6 +65,8 @@ public sealed partial class EditorView
             hitsoundingNoteGesture = slider && Math.Abs(x - tail) <= 10 ? HitsoundingNoteGesture.End
                 : slider && Math.Abs(x - head) <= 10 ? HitsoundingNoteGesture.Start : HitsoundingNoteGesture.Move;
             if (slider && IsReadOnlySlider(hit.Id)) hitsoundingNoteGesture = HitsoundingNoteGesture.None;
+            hitsoundingNoteMoveMarkers = timelineMarkers.Where(m => m.StackIndex < TimelineStackLimit &&
+                (hitsoundingNoteGesture == HitsoundingNoteGesture.Move ? objectSelection.Contains(m.Id) : m.Id == hit.Id)).ToArray();
         }
         else
         {
@@ -94,6 +97,7 @@ public sealed partial class EditorView
         var gesture = hitsoundingNoteGesture;
         if (gesture == HitsoundingNoteGesture.None) return false;
         hitsoundingNoteGesture = HitsoundingNoteGesture.None;
+        hitsoundingNoteMoveMarkers = [];
         if (gesture == HitsoundingNoteGesture.Marquee && !hitsoundingNoteMoved && hitsoundingNoteCanCreate)
         {
             double start = Math.Min(hitsoundingNoteFrom, hitsoundingNoteTo), end = Math.Max(hitsoundingNoteFrom, hitsoundingNoteTo);
@@ -135,6 +139,33 @@ public sealed partial class EditorView
         if (!hitsoundingAllowNotes) return;
         float X(double time) => hitsoundingGridBounds.X + (float)((time - HitsoundingStart) / hitsoundingSpan * hitsoundingGridBounds.Width);
         var lane = HitsoundingNotesLane;
+        if (hitsoundingNoteMoved && hitsoundingNoteGesture is HitsoundingNoteGesture.Move or HitsoundingNoteGesture.Start or HitsoundingNoteGesture.End)
+        {
+            float scale = Math.Min(64, lane.Height) / 64;
+            float ghostY = lane.Y + (lane.Height - 64 * scale) / 2 + 27 * scale;
+            foreach (var marker in hitsoundingNoteMoveMarkers)
+            {
+                if (hitsoundingNoteGesture == HitsoundingNoteGesture.Move ? !objectSelection.Contains(marker.Id) : marker.Id != hitsoundingNoteId) continue;
+                double start = HitsoundingNotePreviewTime(marker.Id, marker.Start), end = HitsoundingNotePreviewTime(marker.Id, marker.End);
+                float left = X(start), right = X(end);
+                if (right < lane.X - 19 * scale || left > lane.Right + 19 * scale) continue;
+                uint colour = marker.IsBanana ? Gold : ComboColour(marker.Id, useFallbackPalette: true, eventIndex: marker.EventIndex);
+                float y = ghostY + marker.StackOffset * scale;
+                if (end > start) c.Fill(new(left - 19 * scale, y - 19 * scale, right - left + 38 * scale, 38 * scale), colour, 19 * scale, .25f);
+                void Ring(double time) => FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin,
+                    X(time), y, 38 * scale, colour, opacity: .45f);
+                Ring(start);
+                if (end > start) Ring(end);
+                if (marker.Spans > 1 && end > start)
+                {
+                    double spanDuration = (end - start) / marker.Spans;
+                    int first = (int)Math.Clamp(Math.Ceiling((HitsoundingStart - start) / spanDuration), 1, marker.Spans);
+                    int last = (int)Math.Clamp(Math.Floor((HitsoundingStart + hitsoundingSpan - start) / spanDuration), 0, marker.Spans - 1);
+                    for (int span = first; span <= last; span++) Ring(start + span * spanDuration);
+                }
+            }
+            return;
+        }
         if (hitsoundingNoteGesture == HitsoundingNoteGesture.Marquee && hitsoundingNoteMoved)
         {
             var box = new Rect(Math.Min(X(hitsoundingNoteFrom), X(hitsoundingNoteTo)), lane.Y,

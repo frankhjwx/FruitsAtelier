@@ -189,9 +189,12 @@ bank directly and preserve an inherited sample index so later timing edits still
 Explicit nonzero object indices remain explicit. A zero object index, including saved
 event overrides, inherits timing for display, playback and export. Adjustments affect target event
 overrides, including their shared addition bank/index, without rewriting timing intervals.
-In Select mode, drag an existing Whistle, Finish or Clap tag onto another fruit event to
-move that addition, with a half-opacity preview and the same sampleset confirmation.
-Normal and SliderTick cannot be moved. A move is one undo step.
+In Select mode, drag an existing Whistle, Finish or Clap tag to move it or its selected
+addition group. The original tags remain visible and half-opacity ghosts show the
+destination with relative timestamps and lanes preserved. Release applies one undoable
+move only when every addition has a destination fruit event; missing destinations leave
+the complete group unchanged. Escape cancels the preview. Sampleset mismatches use the
+same confirmation as paste. Normal and SliderTick remain attached to their notes.
 Select is the default input mode. Clicking an empty addition slot does not place a
 sound; dragging empty space selects sounds with a marquee. Draw mode previews the
 addition under the pointer: click to place one sound, or drag to marquee-select
@@ -228,8 +231,9 @@ X=256 (osu! Y=192), drag empty space to marquee-select parents, and Ctrl-click t
 add or remove a parent from the selection. Drag an existing note body to move the
 selection in time. Drag a slider's head or tail to adjust that endpoint while
 retaining the other; Ctrl+plus/minus changes its reverse count as in Mapping.
-Dragging moves the note graphics to their preview positions; release creates one
-undo step and Escape restores the original positions. Right-click a note to delete
+Dragging retains the committed note graphics and shows half-opacity destination ghosts
+for the selected parents. Release creates one undo step and Escape cancels the preview.
+Right-click a note to delete
 it, or the selected group if that note is selected, with undo support.
 
 Notes selection uses a separate clipboard payload from sound tags. Ctrl+C/X/V
@@ -247,7 +251,8 @@ Audible events flash with a white edge and a coloured outer glow for 280 ms as p
 
 SB Hitsound supports selection, marquee selection, cut/copy/paste, deletion and dragging.
 Pastes preserve relative times, filenames, layers and volumes without requiring a note
-at the destination. Dragging snaps to the beat grid and previews without changing content.
+at the destination. Dragging a selected SB sound moves the selected SB group with one
+shared snapped offset and half-opacity ghosts, without changing content before release.
 Edits participate in undo/redo. Moving or deleting a shared `.osb` sample edits that shared
 file, so it affects every difficulty using it; pasted copies belong to the current map.
 External changes to a shared file are checked before edits and undo/redo.
@@ -366,6 +371,12 @@ The left-hand sample-bank tools highlight the resolved bank of selected sounds;
 mixed banks have no highlighted choice. With no selection, they show the drawing bank.
 While playing, timeline wheel navigation advances by full beats, matching Mapping;
 paused navigation follows the selected Snap subdivision.
+Left/Right and Shift+Left/Right use Mapping's keyboard navigation: one/four beats
+while playing and one/four Snap steps while paused in Default mode. Lazer mode uses
+its BPM-dependent playback seek distance and coarse paused grid. These bindings are
+configurable in the Hitsounding section of Key Bindings.
+See [Mapping and Hitsounding command coverage](HITSOUND_MAPPING_PARITY.md) for the
+remaining navigation, selection and editing differences.
 After copying sounds or Notes while paused, selecting a different target without seeking
 makes its first timestamp the paste destination. Otherwise, paste starts at the playhead. Matching Notes allow
 one millisecond of rounding difference and do not treat a preceding slider ending

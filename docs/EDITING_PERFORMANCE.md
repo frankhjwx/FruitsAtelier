@@ -136,6 +136,11 @@ texture. Ordinary paths retain vector rendering.
 Hitsound snapshots parse each parent's sample and edge fields once. Nested events
 must not copy or split its slider geometry text while resolving their samples.
 
+Hitsounding move gestures retain selected note markers, addition samples or SB samples
+at pointer-down. Pointer movement updates candidate times; rendering draws translucent
+ghosts over committed content without rebuilding conversion or export. Release submits
+one edit, while cancellation and difficulty retirement discard the gesture snapshots.
+
 Legacy droplet effects run on a detached candidate at the content commit boundary.
 The active transaction retains its baseline until validation completes. Rendering
 and playback reuse the prior committed conversion; save/export and content edits

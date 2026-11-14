@@ -1886,6 +1886,12 @@ creation and snapped previews at the canvas centre, marquee selection in both to
 pastes, slider head/tail timing, reverse shortcuts, undo/redo and cancellation in
 English and Chinese.
 
+The Hitsounding panel check also covers grouped addition ghosts in both display modes,
+atomic rejection of incomplete destinations, cancellation, release commits, undo and
+Shift-arrow playback navigation. The Notes check verifies retained originals with
+translucent single/group previews and pointer capture. SB checks cover group retiming
+and undo. Native Hitsounding captures include single and grouped sound ghosts.
+
 
 ## Testplay mod combinations
 

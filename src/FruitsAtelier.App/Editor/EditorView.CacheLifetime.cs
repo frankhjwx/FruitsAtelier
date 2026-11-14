@@ -25,7 +25,9 @@ public sealed partial class EditorView
     private void ReleaseDifficultyCaches(bool preserveMedia = false, bool preserveClipboard = false)
     {
         hitsoundingStoryboardMove = null; hitsoundingStoryboardMoved = false;
+        hitsoundingStoryboardMoveSources = []; hitsoundingNoteMoveMarkers = [];
         hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
+        hitsoundingMoveSources = []; hitsoundingMoveCopies = [];
         hitsoundingAudio.Clear();
         if (!preserveClipboard) { hitsoundingClipboard = []; hitsoundingStoryboardClipboard = []; hitsoundingClipboardSources.Clear(); }
         hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); hitsoundingStoryboardHits.Clear(); hitsoundingMarquee = false; hitsoundingSelectedTiming = null; timingHelperPoints = [];

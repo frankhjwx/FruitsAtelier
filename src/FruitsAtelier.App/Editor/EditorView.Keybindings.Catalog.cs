@@ -109,6 +109,8 @@ public sealed partial class EditorView
         Add(ShortcutScope.Hitsounding, "play", "playback", "both", ShortcutBinding.From(32));
         Add(ShortcutScope.Hitsounding, "previousBeat", "playback", "both", ShortcutBinding.From(37));
         Add(ShortcutScope.Hitsounding, "nextBeat", "playback", "both", ShortcutBinding.From(39));
+        Add(ShortcutScope.Hitsounding, "previousFour", "playback", "both", ShortcutBinding.From(16, 37));
+        Add(ShortcutScope.Hitsounding, "nextFour", "playback", "both", ShortcutBinding.From(16, 39));
         Add(ShortcutScope.Hitsounding, "save", "files", "both", ShortcutBinding.From(17, 83));
         Add(ShortcutScope.Hitsounding, "nextDifficulty", "files", "both", ShortcutBinding.From(17, 9));
         Add(ShortcutScope.Hitsounding, "previousDifficulty", "files", "both", ShortcutBinding.From(17, 16, 9));

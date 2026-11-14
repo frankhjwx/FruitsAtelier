@@ -1604,7 +1604,11 @@ public sealed partial class EditorView
             else if (!ctrl && virtualKey == 46 && hitsoundingTimingSelection.Count > 0) DeleteHitsoundingTimingSelection();
             else if (!ctrl && virtualKey == 46) DeleteHitsoundingSelection();
             else if (!ctrl && virtualKey == 32) TogglePlayback();
-            else if (!ctrl && virtualKey is 37 or 39) SeekByWheel(virtualKey == 37 ? -1 : 1, 1);
+            else if (!ctrl && !altHeld && virtualKey is 37 or 39)
+            {
+                if (IsLazerEditing) SeekLazerStep(virtualKey == 37 ? -1 : 1, shift);
+                else HandleLegacyKey(virtualKey, shift);
+            }
             else if (!ctrl && !altHeld && virtualKey == 81) CycleHitsoundingSampleSet();
             else if (!ctrl && virtualKey is 87 or 69 or 82) ToggleHitsoundingAddition(virtualKey == 87 ? 2 : virtualKey == 69 ? 4 : 8);
             else if (!ctrl && virtualKey is 187 or 189) ZoomHitsounding(virtualKey == 187 ? .8 : 1.25, hitsoundingGridBounds.X + hitsoundingGridBounds.Width * .3f);
@@ -1829,9 +1833,12 @@ public sealed partial class EditorView
         randomDragging = false; dockHorizontalDrag = null;
         if (hitsoundingHeadDrag) hitsoundingHeadRatio = hitsoundingHeadBefore;
         hitsoundingNoteGesture = HitsoundingNoteGesture.None;
+        hitsoundingNoteMoveMarkers = [];
         hitsoundingHeadDrag = hitsoundingPainting = hitsoundingMarquee = false; hitsoundingPaint.Clear();
         hitsoundingStoryboardMove = null; hitsoundingStoryboardMoved = false;
+        hitsoundingStoryboardMoveSources = [];
         hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
+        hitsoundingMoveSources = []; hitsoundingMoveCopies = [];
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);
