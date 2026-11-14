@@ -155,7 +155,7 @@ public sealed partial class EditorView
         {
             if (hitsoundingLibraryRoot is not { } root || hitsoundingLibraryDirectory is not { } folder) return;
             try { HitsoundLibraryFiles.Validate(root, folder, allowRoot: true); Directory.CreateDirectory(folder); RequestOpenExternalPath?.Invoke(folder); }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { ShowError(error.Message); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { ReportResourceError(error.Message); }
         }, hitsoundingLibraryDirectory is not null));
         contextItems.Add(new(L.Get("hitsounding.newFolder"), () => BeginHitsoundingName(), available, ShortcutKeys("sampleNewFolder", ShortcutScope.Samples)));
         contextItems.Add(new(L.Get("hitsounding.rename"), () => BeginHitsoundingName(hitsoundingLibrarySelection.Single()), available && hitsoundingLibrarySelection.Count == 1, ShortcutKeys("sampleRename", ShortcutScope.Samples)));

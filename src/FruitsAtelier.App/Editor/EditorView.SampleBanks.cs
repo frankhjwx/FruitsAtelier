@@ -70,6 +70,24 @@ public sealed partial class EditorView
         }
     }
 
+    private void DrawSampleBankTooltip(ICanvas c)
+    {
+        if (menu >= 0 || contextItems.Count > 0 || WantsCapture) return;
+        bool additions = AdditionsBounds.Contains(mouseX, mouseY);
+        if (!additions && !SamplesetBounds.Contains(mouseX, mouseY)) return;
+        var scope = HitsoundingPageVisible ? ShortcutScope.Hitsounding : ShortcutScope.Compose;
+        string text = L.Get(additions ? "samples.additions" : "samples.sampleset");
+        string[] suffixes = ["Auto", "Normal", "Soft", "Drum"];
+        for (int bank = 0; bank < suffixes.Length; bank++)
+        {
+            string nameKey = "shortcuts.command." + (additions ? "addition" : "normal") + suffixes[bank];
+            var command = ShortcutCommands.FirstOrDefault(command => command.Scope == scope
+                && command.Lazer == LibrarySettings.LazerEditing && command.NameKey == nameKey);
+            text += "\n" + (command is null ? SampleBankName(bank) : ShortcutHint(SampleBankName(bank), command.Id, scope));
+        }
+        DrawPaletteTooltip(c, text, additions ? AdditionsBounds : SamplesetBounds, left: false, above: false);
+    }
+
     private bool RefreshHitsoundingSampleBanks()
     {
         if (ReferenceEquals(hitsoundingSampleBankConversion, hitsoundingConversion)
@@ -111,7 +129,7 @@ public sealed partial class EditorView
                 sample = sample with { AdditionSet = hitsoundingResolver.Describe(note!).AdditionSet };
                 inherited &= ~InheritedSampleFields.AdditionSet;
             }
-            return setting with { Sample = additions ? sample with { AdditionSet = bank } : sample with { NormalSet = bank },
+            return setting with { Sample = additions ? sample with { AdditionSet = Math.Max(1, bank) } : sample with { NormalSet = Math.Max(1, bank) },
                 InheritedFields = inherited };
         }).ToArray();
         Edit(L.Get("samples.change"), () => { foreach (var change in changes) SetHitsoundingEvent(change); });

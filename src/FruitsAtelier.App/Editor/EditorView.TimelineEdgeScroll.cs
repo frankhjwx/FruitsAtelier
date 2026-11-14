@@ -19,6 +19,7 @@ public sealed partial class EditorView
     {
         get
         {
+            if (HitsoundingPageVisible) return HitsoundingScrollNeedsRedraw;
             double direction = TimelineDragScrollDirection;
             return direction > 0 && playhead < TimelineDurationMs || direction < 0 && playhead > 0;
         }
@@ -26,6 +27,7 @@ public sealed partial class EditorView
 
     private void AdvanceTimelineDragScroll()
     {
+        if (HitsoundingPageVisible) { AdvanceHitsoundingNavigation(); return; }
         if (drag != DragKind.Objects || !objectDragTimeline) return;
         long now = timeProvider.GetTimestamp();
         double elapsed = Math.Clamp(timeProvider.GetElapsedTime(timelineEdgeScrollTimestamp, now).TotalSeconds, 0, .05);

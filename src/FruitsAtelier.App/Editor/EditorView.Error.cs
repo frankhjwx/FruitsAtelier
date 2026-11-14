@@ -116,6 +116,12 @@ public sealed partial class EditorView
         catch (Exception error) { RecoverySaveFailed(error.Message); }
     }
 
+    private void ReportResourceError(string message)
+    {
+        SetNotice(L.Get("files.failed", L.Localized(message)));
+        statusIsError = true;
+    }
+
     public void ShowError(string message)
     {
         if (ErrorVisible || preparingError) return;

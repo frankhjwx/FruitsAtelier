@@ -383,6 +383,14 @@ public sealed partial class EditorView
     private bool BeginHitsoundingCanvasPointer(float x, float y, int button, bool ctrl, bool shift)
     {
         if (!hitsoundingBounds.Contains(x, y)) return false;
+        if (button == 1 && hitsoundingGridBounds.Contains(x, y))
+        {
+            if (!CommitField()) return true;
+            CancelInteraction();
+            hitsoundingPanning = true; hitsoundingPanX = x; hitsoundingPanTime = playhead;
+            return true;
+        }
+        RememberHitsoundingNavigation();
         if (button == 0 && !ctrl && HitsoundingPrecise && hitsoundingPreciseAuditionButton is { } audition && audition.Bounds.Contains(x, y))
         { ToggleHitsoundingLibraryAudition(audition.Sound); return true; }
         if (BeginHitsoundingTimingPointer(x, y, button, ctrl, shift)) return true;
@@ -449,11 +457,32 @@ public sealed partial class EditorView
             ? HitsoundingPlacementNoteAt(x, y) : null;
         if (button == 0 && note is null && placement is null && HitsoundingHeadHovered(x, y))
         { hitsoundingHeadBefore = hitsoundingHeadRatio; hitsoundingHeadDrag = true; return true; }
-        bool canMove = !hitsoundingDraw && button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
+        bool selectedGroup = hitsoundingMultiSelection.Count > 1 && pressedSound.Note is { } pressedNote
+            && hitsoundingMultiSelection.Contains((pressedNote.SourceId, pressedNote.EventIndex, pressedSound.Lane));
+        bool canMove = (!hitsoundingDraw || selectedGroup) && button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
         if (canMove)
         {
+            if (!CommitField()) return true;
             hitsoundingMoveSource = (pressedSound.Note!.SourceId, pressedSound.Note.EventIndex, pressedSound.Lane);
             hitsoundingMoveStart = (x, y); hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
+            if (!hitsoundingMultiSelection.Contains(hitsoundingMoveSource.Value))
+            {
+                hitsoundingMultiSelection.Clear();
+                hitsoundingMultiSelection.Add(hitsoundingMoveSource.Value);
+            }
+            hitsoundingStoryboardSelection.Clear();
+            hitsoundingMoveTime = pressedSound.Note.TimeMs;
+            hitsoundingMovePointerTime = HitsoundingPointerTime(x);
+            hitsoundingMoveSources = hitsoundingMultiSelection.Where(k => k.Lane is >= 2 and <= 4
+                && !hitsoundingLocked[k.Lane] && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event))).ToArray();
+            hitsoundingMoveCopies = hitsoundingMoveSources.Select(k =>
+            {
+                var selected = hitsoundingNoteLookup[(k.Id, k.Event)];
+                return new HitsoundingCopy(selected.TimeMs - hitsoundingMoveTime, k.Lane, hitsoundingResolver!.Describe(selected),
+                    HitsoundingTimingIndex(selected.TimeMs), hitsoundingResolver.EventSettings(selected).InheritedFields.HasFlag(InheritedSampleFields.Index));
+            }).ToArray();
+            SyncHitsoundingNoteSelection(pressedSound.Note);
+            return true;
         }
         if (note is not null) SelectHitsoundingNote(note, seek: false);
         else if (button == 0) { hitsoundingSelectedTiming = null; hitsoundingSelected = null; SelectObjects([]); }
@@ -490,8 +519,10 @@ public sealed partial class EditorView
         var setting = hitsoundingResolver!.EventSettings(note);
         var original = setting;
         int additions = hitsoundingErase ? setting.Sample.Additions & ~flag : setting.Sample.Additions | flag;
-        if (!hitsoundingErase)
-            setting = setting with { Sample = setting.Sample with { AdditionSet = hitsoundingBrush }, InheritedFields = setting.InheritedFields & ~InheritedSampleFields.AdditionSet };
+        if (!hitsoundingErase && (setting.Sample.Additions & 14) == 0)
+            setting = setting with { Sample = setting.Sample with { AdditionSet = Math.Max(1, nextAdditionBank) },
+                InheritedFields = nextAdditionBank == 0 ? setting.InheritedFields | InheritedSampleFields.AdditionSet
+                    : setting.InheritedFields & ~InheritedSampleFields.AdditionSet };
         setting = setting with { Sample = setting.Sample with { Additions = additions } };
         if (setting != original) hitsoundingPaint[key] = setting;
     }

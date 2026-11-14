@@ -85,15 +85,12 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
             if (path is null || Path.GetExtension(path).Equals(".ogg", StringComparison.OrdinalIgnoreCase)
                 || !File.Exists(path) || new FileInfo(path).Length > 16 * 1024 * 1024)
             {
+                var wave = Load(sound);
+                if (wave.Length == 0) return;
                 temporary = Path.Combine(Path.GetTempPath(), "fa-hitsound-" + Guid.NewGuid() + ".wav");
-                File.WriteAllBytes(temporary, Load(sound)); path = temporary;
+                File.WriteAllBytes(temporary, wave); path = temporary;
             }
             sample = OpenSample(path);
-            if (sample == 0)
-            {
-                temporary ??= Path.Combine(Path.GetTempPath(), "fa-hitsound-" + Guid.NewGuid() + ".wav");
-                File.WriteAllBytes(temporary, HitsoundSamples.CreateWave(sound)); sample = OpenSample(temporary);
-            }
             lock (gate)
             {
                 if (disposed || version != generation || sample == 0) return;
@@ -168,10 +165,10 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
         {
             try
             {
-                if (new FileInfo(sound.FilePath).Length > 16 * 1024 * 1024) return HitsoundSamples.CreateWave(sound);
+                if (new FileInfo(sound.FilePath).Length > 16 * 1024 * 1024) return [];
                 if (!Path.GetExtension(sound.FilePath).Equals(".ogg", StringComparison.OrdinalIgnoreCase)) return File.ReadAllBytes(sound.FilePath);
                 using var reader = new VorbisReader(sound.FilePath);
-                if (reader.Channels is < 1 or > 8 || reader.SampleRate is < 8000 or > 192000) return HitsoundSamples.CreateWave(sound);
+                if (reader.Channels is < 1 or > 8 || reader.SampleRate is < 8000 or > 192000) return [];
                 using var stream = new MemoryStream(); using var writer = new BinaryWriter(stream);
                 writer.Write("RIFF"u8); writer.Write(0); writer.Write("WAVEfmt "u8); writer.Write(16);
                 writer.Write((short)1); writer.Write((short)reader.Channels); writer.Write(reader.SampleRate);
@@ -180,13 +177,14 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
                 var buffer = new float[4096]; int count;
                 while ((count = reader.ReadSamples(buffer, 0, buffer.Length)) > 0)
                 {
-                    if (stream.Length + count * 2 > 16 * 1024 * 1024) return HitsoundSamples.CreateWave(sound);
+                    if (stream.Length + count * 2 > 16 * 1024 * 1024) return [];
                     for (int i = 0; i < count; i++) writer.Write((short)Math.Clamp(buffer[i] * 32767, -32768, 32767));
                 }
                 int length = (int)stream.Length; stream.Position = 4; writer.Write(length - 8); stream.Position = 40; writer.Write(length - 44);
                 return stream.ToArray();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException) { MacPaths.Log(ex.ToString()); }
+            return [];
         }
         return HitsoundSamples.CreateWave(sound);
     }

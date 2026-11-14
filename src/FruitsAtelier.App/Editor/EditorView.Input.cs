@@ -1040,7 +1040,7 @@ public sealed partial class EditorView
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
         if (HandleVolumePopoverWheel(x, y, delta)) return;
-        if (HitsoundingWheel(x, y, delta, alt || altHeld)) return;
+        if (HitsoundingWheel(x, y, delta, ctrl, shift || shiftHeld, alt || altHeld)) return;
         if (BrowserToolbarContains(x, y)) return;
         if (DiscussionImageVisible) { DiscussionImageWheel(x, y, delta, ctrl); return; }
         if (PatternNameVisible || GalleryTagsVisible) return;
@@ -1585,16 +1585,18 @@ public sealed partial class EditorView
         {
             if (virtualKey == 27)
             {
-                if (timingHelperScrolling || hitsoundingNoteGesture != HitsoundingNoteGesture.None || timingHelperVolumeDrag is not null || hitsoundingTimingDrag is not null || hitsoundingTimingBox || hitsoundingHeadDrag || hitsoundingPainting || hitsoundingMarquee || hitsoundingMoveSource is not null || hitsoundingStoryboardMove is not null || hitsoundingDragFile is not null || hitsoundingSplitDrag is not null) CancelInteraction();
+                if (hitsoundingPanning || timingHelperScrolling || hitsoundingNoteGesture != HitsoundingNoteGesture.None || timingHelperVolumeDrag is not null || hitsoundingTimingDrag is not null || hitsoundingTimingBox || hitsoundingHeadDrag || hitsoundingPainting || hitsoundingMarquee || hitsoundingMoveSource is not null || hitsoundingStoryboardMove is not null || hitsoundingDragFile is not null || hitsoundingSplitDrag is not null) CancelInteraction();
                 else if (panelMenuOpen || menu >= 0 || contextItems.Count > 0) { panelMenuOpen = false; menu = -1; contextItems.Clear(); }
                 else ShowLibrary();
             }
+            else if (HitsoundingNavigationKey(virtualKey, ctrl, shift)) { }
             else if (HitsoundingTimingClipboardKey(virtualKey, ctrl, shift)) { }
             else if (HitsoundingNotesKey(virtualKey, ctrl, shift)) { }
             else if (!ctrl && !altHeld && !shift && virtualKey is 49 or 50) SetHitsoundingTool(virtualKey == 50);
             else if (!ctrl && !altHeld && !shift && virtualKey == 53) AddHitsoundingInheritedPoint(playhead);
             else if (!ctrl && !altHeld && !shift && virtualKey is 65 or 83 or 68) SetHitsoundingBrush(virtualKey == 65 ? 2 : virtualKey == 83 ? 1 : 3);
-            else if (altHeld && virtualKey is 81 or 87 or 69 or 82) SetSampleBank(ctrl, virtualKey switch { 81 => 0, 87 => 1, 69 => 2, _ => 3 });
+            else if (!altHeld && ctrl != shift && virtualKey is 81 or 87 or 69 or 82)
+                SetSampleBank(ctrl, virtualKey switch { 81 => 0, 87 => 1, 69 => 2, _ => 3 });
             else if (ctrl && virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (ctrl && virtualKey == 89) Redo();
             else if (ctrl && virtualKey == 9) SwitchDifficulty(AdjacentDifficulty(shift));
@@ -1603,11 +1605,8 @@ public sealed partial class EditorView
             else if (ctrl && virtualKey == 86) PasteHitsoundingSelection();
             else if (!ctrl && virtualKey == 46 && hitsoundingTimingSelection.Count > 0) DeleteHitsoundingTimingSelection();
             else if (!ctrl && virtualKey == 46) DeleteHitsoundingSelection();
-            else if (!ctrl && virtualKey == 32) TogglePlayback();
-            else if (!ctrl && virtualKey is 37 or 39) SeekByWheel(virtualKey == 37 ? -1 : 1, 1);
             else if (!ctrl && !altHeld && virtualKey == 81) CycleHitsoundingSampleSet();
-            else if (!ctrl && virtualKey is 87 or 69 or 82) ToggleHitsoundingAddition(virtualKey == 87 ? 2 : virtualKey == 69 ? 4 : 8);
-            else if (!ctrl && virtualKey is 187 or 189) ZoomHitsounding(virtualKey == 187 ? .8 : 1.25, hitsoundingGridBounds.X + hitsoundingGridBounds.Width * .3f);
+            else if (!ctrl && !shift && !altHeld && virtualKey is 87 or 69 or 82) ToggleHitsoundingAddition(virtualKey == 87 ? 2 : virtualKey == 69 ? 4 : 8);
             return;
         }
         if (UiScaleKey(virtualKey, ctrl)) return;
@@ -1828,10 +1827,14 @@ public sealed partial class EditorView
         songDrag = -1;
         randomDragging = false; dockHorizontalDrag = null;
         if (hitsoundingHeadDrag) hitsoundingHeadRatio = hitsoundingHeadBefore;
+        hitsoundingPanning = false;
         hitsoundingNoteGesture = HitsoundingNoteGesture.None;
+        hitsoundingNoteMoveMarkers = [];
         hitsoundingHeadDrag = hitsoundingPainting = hitsoundingMarquee = false; hitsoundingPaint.Clear();
         hitsoundingStoryboardMove = null; hitsoundingStoryboardMoved = false;
+        hitsoundingStoryboardMoveSources = [];
         hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
+        hitsoundingMoveSources = []; hitsoundingMoveCopies = [];
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);

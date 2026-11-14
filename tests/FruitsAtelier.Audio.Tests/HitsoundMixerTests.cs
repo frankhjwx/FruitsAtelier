@@ -15,6 +15,7 @@ static class HitsoundMixerTests
         ExclusiveAudition();
         TestplayMenuSamples();
         WaveformDecoding();
+        UnavailableSamples();
         using var mixer = new HitsoundPlayer();
         var buffer = new float[4096];
         var sound = new Hitsound(CatchObjectKind.Fruit, null, .5f);
@@ -44,6 +45,34 @@ static class HitsoundMixerTests
         mixer.Queue(new(CatchObjectKind.Fruit, normal, 1)); mixer.Read(buffer, 0, buffer.Length);
         if (!buffer.Any(v => Math.Abs(v) > .001)) throw new Exception("Default normal-only note emitted silent PCM");
         Console.WriteLine("PASS Hitsound PCM mixing, volume, overlap, stop, clipping and custom WAV decoding");
+    }
+
+    private static void UnavailableSamples()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/unavailable-audio", Guid.NewGuid().ToString("N")));
+        Directory.CreateDirectory(root);
+        try
+        {
+            foreach (string name in new[] { "missing.wav", "invalid.wav", "locked.wav", "oversized.wav" })
+            {
+                string path = Path.Combine(root, name);
+                if (name != "missing.wav") File.WriteAllBytes(path, name == "invalid.wav" ? [1, 2, 3] : HitsoundSamples.CreateWave(CatchObjectKind.Fruit));
+                if (name == "oversized.wav") { using var large = File.OpenWrite(path); large.SetLength(16 * 1024 * 1024 + 1); }
+                using var locked = name == "locked.wav" ? new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None) : null;
+                using var mixer = new HitsoundPlayer(createAuditionOutput: () => throw new Exception("Unavailable samples must not start an audio device"));
+                var sound = new Hitsound(CatchObjectKind.Fruit, path, 1);
+                var buffer = new float[4096];
+                mixer.Queue(sound); mixer.Read(buffer, 0, buffer.Length);
+                if (buffer.Any(v => v != 0)) throw new Exception(name + " produced fallback audio");
+                if (mixer.PlayExclusiveAudition(sound) != 0) throw new Exception(name + " reported audition duration");
+                mixer.PlayAudition(sound);
+                mixer.Queue(sound with { FilePath = null });
+                for (int i = 0; i < 64; i++) mixer.Queue(sound);
+                mixer.Read(buffer, 0, buffer.Length);
+                if (!buffer.Any(v => v != 0)) throw new Exception("Unavailable custom sound disabled subsequent built-in playback");
+            }
+        }
+        finally { Directory.Delete(root, true); }
     }
 
     private static void ExclusiveAudition()

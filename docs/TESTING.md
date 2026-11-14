@@ -1811,6 +1811,17 @@ menus and inspector at narrow and ordinary window sizes under
 
 ## Hitsounding workspace checks
 
+Hitsounding panel checks include missing and locked slot resources, recovery from
+a deleted library directory, and synchronous/asynchronous audition failures without
+modal interruption. Selected bank checks roundtrip every selector edit and verify
+Auto inheritance after workspace save/reopen, timing changes, undo/redo and export.
+The native Hitsounding render check verifies Auto selection persistence and captures
+failed audition feedback. `Core.Tests --hitsound-copier` checks replacement across competing
+extensions, external modifications, locked files, no-op assignment and save/export
+with event overrides. `Audio.Tests --hitsound-check` verifies silent handling of
+missing, malformed, locked and oversized custom samples without starting an
+audition device, and continued playback of valid samples.
+
 `App.Tests --hitsounding-feedback-check` covers the inherited-point shortcut, deferred affecting-line application, five-percent slider clicks and precise dragging, adjacent two-point volume ramps with tempo changes and undo, the compact interval dropdown and generated group selection, multi-selection Offset visibility, proportional scrollbar input, selection bank highlighting, and selected-target sound paste. It is included in the Hitsounding panel check.
 
 `App.Tests --hitsound-library-files-check` covers real right-button context menus,
@@ -1835,7 +1846,17 @@ original timing handles, red-point drag prevention, exact ruler seeking while
 playing or paused, and content/conversion reuse
 in English and Chinese at two window sizes.
 
-`App.Tests --hitsounding-panel-check` covers the Snap ruler, actual slider ticks,
+`App.Tests --hitsounding-navigation-check` compares Default/lazer navigation with
+Mapping during paused/playing transport, including timing/boundary/bookmark jumps,
+wheel modifiers, remapping, middle panning, bounded zoom, held-ghost navigation,
+600 px/s edge scrolling, offscreen marquee selection, J/K multi-selection moves,
+undo and conversion reuse. It is also included in the panel check. The panel check
+covers consecutive SB group nudges with source-line retention.
+Native Hitsounding captures include edge-scroll previews and bounded-zoom panning,
+alongside the Select/Draw tool controls at both window sizes.
+
+`App.Tests --hitsounding-panel-check` covers Draw selector defaults across timing changes,
+selection-only bank keys, unbound addition toggles and custom bindings, the Snap ruler, actual slider ticks,
 centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,
 default bank labels, timing-tag order, the unified Config dock, library search/imports,
 slot drag/drop, and resource undo/redo. Config checks include the eight-row SampleSet
@@ -1844,7 +1865,8 @@ and live library create/rename/delete notifications. It also checks live Inspect
 undoable volume gestures with live playback and conversion reuse, nearby timing rows,
 new-point drafts, event-specific additions, single-click placement and its undo,
 placement-origin marquee selection without added sounds or history, empty-space selection, Q/ASD bank changes with single and multiple selections in both modes,
-Normal/addition bank isolation (including inherited Normal banks when placing each addition), selection-aware bank selectors with mixed/Auto values and batch undo, direct right-click deletion,
+Normal/addition bank isolation (including inherited banks, existing-addition priority,
+matching hover previews and project roundtrips when placing each addition), selection-aware bank selectors with mixed/Auto values and batch undo, direct right-click deletion,
 placement and selection at the play line, and one-step bank-change undo through the selectors, playback flashes, normalized narrow waveforms,
 visible interval labels, Kiai span boundaries and timing-drag previews, and play-line bounds. It also checks marquee copy/delete/paste,
 red/green timing-index mismatch confirmation and cancellation, bank and event-index
@@ -1856,7 +1878,8 @@ confirmation/cancellation and one-step move undo are also covered. `--hitsoundin
 setup and warm pointer/render work with Mapping on the same mixed-object fixture,
 including allocations and committed-conversion reuse.
 
-`FruitsAtelier.App.exe --render-check --hitsounding-render-check` renders English
+`FruitsAtelier.App.exe --render-check --hitsounding-render-check` includes selector
+shortcut hover hints and renders English
 and Chinese at 980×620 and 1440×900 under `artifacts/tests/hitsounding-native`,
 including Mapping BPM flags and Hitsounding timing tracks.
 Run the object-timeline, docking and hitsound regressions when changing this view,
@@ -1885,6 +1908,12 @@ one-second popup and its fade, plus copy/paste menus in English and Chinese at
 creation and snapped previews at the canvas centre, marquee selection in both tools, atomic matching/empty/conflicting clipboard
 pastes, slider head/tail timing, reverse shortcuts, undo/redo and cancellation in
 English and Chinese.
+
+The Hitsounding panel check also covers grouped addition ghosts in both display modes and tools,
+atomic rejection of incomplete destinations, cancellation, release commits, undo and
+Shift-arrow playback navigation. The Notes check verifies retained originals with
+translucent single/group previews and pointer capture. SB checks cover group retiming
+and undo. Native Hitsounding captures include single and grouped sound ghosts.
 
 
 ## Testplay mod combinations

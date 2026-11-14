@@ -7,7 +7,7 @@ static class KeybindingTests
     public static void Run()
     {
         string language = L.Language;
-        try { L.SetLanguage("en"); Catalog(); Routing(); Settings(); GameplayChords(); Hints(); DropletSelectionLockTests.Tooltips(); }
+        try { L.SetLanguage("en"); Catalog(); Routing(); Settings(); GameplayChords(); Hints(); SampleBankHints(); DropletSelectionLockTests.Tooltips(); }
         finally { L.SetLanguage(language); }
         Console.WriteLine("PASS shortcut catalog, routing, contexts, profiles, capture, conflicts, persistence and layout");
     }
@@ -30,6 +30,29 @@ static class KeybindingTests
             Check(view.ShortcutKeys(command.Id, command.Scope) == "", "unbound button and menu have no shortcut text");
             view.LibrarySettings.ShortcutBindings.Remove(command.StorageKey);
             Check(view.ShortcutKeys(command.Id, command.Scope) == "A", "restoring defaults restores the hint");
+        }
+    }
+    private static void SampleBankHints()
+    {
+        foreach (string locale in new[] { "en", "zh-CN" })
+        foreach (bool lazer in new[] { false, true })
+        {
+            L.SetLanguage(locale);
+            var ui = new Ui(false); var view = ui.View;
+            ui.Resize(1440, 900); view.LibrarySettings.LazerEditing = lazer;
+            view.ShowHitsoundingPage(); ui.Paint();
+            foreach (bool additions in new[] { false, true })
+            {
+                var bounds = additions ? view.AdditionsBounds : view.SamplesetBounds;
+                view.PointerMove(bounds.X + 10, bounds.Y + 10, false, false); ui.Paint();
+                foreach (char key in "QWER")
+                    Check(ui.Canvas.Texts.Any(t => t.Value.Contains((additions ? "Ctrl" : "Shift") + " + " + key)), "selector hover lists all default bank shortcuts");
+                var command = Command(additions ? "normalAuto" : "additionAuto", EditorView.ShortcutScope.Hitsounding, lazer);
+                view.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(118)]; ui.Paint();
+                Check(ui.Canvas.Texts.Any(t => t.Value.Contains("F7")), "selector hover reflects configured binding");
+                view.LibrarySettings.ShortcutBindings[command.StorageKey] = []; ui.Paint();
+                Check(!ui.Canvas.Texts.Any(t => t.Value.Contains("F7")), "unassigned bank shortcut disappears from hint");
+            }
         }
     }
     private static EditorView.ShortcutCommand Command(string id, EditorView.ShortcutScope scope = EditorView.ShortcutScope.Compose, bool lazer = false)

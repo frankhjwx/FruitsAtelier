@@ -26,6 +26,8 @@ public sealed partial class EditorView
         hitsoundingAuditionPath = key;
         hitsoundingAuditionCancellation = new();
         try { hitsoundingAuditionTask = RequestStartLibraryAudition(sound, hitsoundingAuditionCancellation.Token); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        { StopHitsoundingLibraryAudition(); ReportResourceError(error.Message); return; }
         catch { StopHitsoundingLibraryAudition(); throw; }
         PumpHitsoundingAudition();
     }
@@ -61,7 +63,7 @@ public sealed partial class EditorView
             {
                 string? error = task.Exception?.GetBaseException().Message;
                 StopHitsoundingLibraryAudition();
-                if (error is not null) ShowError(error);
+                if (error is not null) ReportResourceError(error);
                 return;
             }
             hitsoundingAuditionDuration = task.Result; hitsoundingAuditionStarted = CanvasDimNowMs;

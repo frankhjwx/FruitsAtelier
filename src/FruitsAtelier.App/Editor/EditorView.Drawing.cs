@@ -221,6 +221,7 @@ public sealed partial class EditorView
                 && new Rect(MappingCanvasSelectorBounds.X, MappingCanvasSelectorBounds.Y - 17,
                     MappingCanvasSelectorBounds.Width, MappingCanvasSelectorBounds.Height + 17).Contains(mouseX, mouseY))
                 DrawPaletteTooltip(c, L.Get("mappingCanvas.hint"), MappingCanvasSelectorBounds, left: false, above: false);
+            if (!TimingPageVisible && DockContentInputAvailable) DrawSampleBankTooltip(c);
             if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingMuteTooltip(c);
             if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingLockTooltip(c);
             if (HitsoundingPageVisible && DockContentInputAvailable) DrawHitsoundingToolTooltip(c);

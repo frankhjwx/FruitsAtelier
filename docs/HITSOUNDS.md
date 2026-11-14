@@ -71,8 +71,10 @@ each include hitnormal, hitwhistle, hitfinish, hitclap, and slidertick. Banana u
 separate Catch sample. Source revisions, checksums and asset licenses are in
 [Default samples](../assets/audio/osu/README.md).
 
-A synthesized emergency tone remains available for corrupt/oversized input or missing
-application assets. Imported `.osk` files include supported WAV, OGG and MP3 hitnormal, hitwhistle, hitfinish, hitclap and slidertick samples for all three banks. Skin switches invalidate resolved events and preload the new sample bank across difficulties. Older imported caches are re-extracted from their stored archives when selected. Within a skin, WAV takes precedence over OGG and MP3; a selected skin always takes precedence over the fallback skin regardless of file format.
+A resolved audio file that cannot be read or decoded, or exceeds the size limit,
+is skipped silently. Failed samples are cached until the audio bank is refreshed,
+so playback does not repeatedly attempt decoding. Synthesized samples remain available
+when no file is assigned. Imported `.osk` files include supported WAV, OGG and MP3 hitnormal, hitwhistle, hitfinish, hitclap and slidertick samples for all three banks. Skin switches invalidate resolved events and preload the new sample bank across difficulties. Older imported caches are re-extracted from their stored archives when selected. Within a skin, WAV takes precedence over OGG and MP3; a selected skin always takes precedence over the fallback skin regardless of file format.
 
 Opening a project preloads the samples referenced by every difficulty, including notes far
 beyond the current playhead. The editor supplies isolated document snapshots. macOS builds
@@ -131,7 +133,10 @@ Choose **Hitsounding Panel** from the same workspace selector as Mapping and Tim
 Its dock layout and display mode are remembered independently. The horizontal ruler
 uses the current Snap division and the shared osu-style tick colours and lengths.
 Alt+wheel zooms around the pointer's time without changing playback position;
-ordinary wheel moves one current Snap division per notch. From an off-grid timestamp,
+the visible span is bounded to 250 ms–10 s, or the song duration when shorter.
+Middle-drag pans time over any lane. Ctrl+wheel changes Snap, and Shift+wheel uses
+Mapping's coarse navigation. In Default mode, ordinary wheel moves one current Snap
+division per notch while paused. From an off-grid timestamp,
 the first notch lands on the nearest grid point in the chosen direction. Drag the highlighted yellow line to change its viewport
 position without seeking. Both dragging and zoom keep it within 5–95% of the timeline.
 
@@ -189,9 +194,13 @@ bank directly and preserve an inherited sample index so later timing edits still
 Explicit nonzero object indices remain explicit. A zero object index, including saved
 event overrides, inherits timing for display, playback and export. Adjustments affect target event
 overrides, including their shared addition bank/index, without rewriting timing intervals.
-In Select mode, drag an existing Whistle, Finish or Clap tag onto another fruit event to
-move that addition, with a half-opacity preview and the same sampleset confirmation.
-Normal and SliderTick cannot be moved. A move is one undo step.
+In Select mode, drag an existing Whistle, Finish or Clap tag to move it or its selected
+addition group. In Draw mode, pressing a tag in a multi-selection also starts group
+movement, taking priority over placement and marquee selection. The original tags remain visible and half-opacity ghosts show the
+destination with relative timestamps and lanes preserved. Release applies one undoable
+move only when every addition has a destination fruit event; missing destinations leave
+the complete group unchanged. Escape cancels the preview. Sampleset mismatches use the
+same confirmation as paste. Normal and SliderTick remain attached to their notes.
 Select is the default input mode. Clicking an empty addition slot does not place a
 sound; dragging empty space selects sounds with a marquee. Draw mode previews the
 addition under the pointer: click to place one sound, or drag to marquee-select
@@ -203,18 +212,28 @@ Sampleset and Additions at the upper left display the authored banks of the sele
 events, using Auto for inherited or mixed values as in Mapping. Changing either
 selector applies that bank to every selected event in one undo step; the other bank
 remains unchanged. With no selected events, the selectors retain their independent
-placement defaults; Hitsounding painting uses its own brush instead.
+placement defaults. Draw creates Notes with these banks. Auto Sampleset inherits
+the timing at the note, and Auto Additions follows its Normal bank. Placing an
+addition on a note that already has Whistle, Finish or Clap preserves its shared
+Additions bank and inheritance. The first addition uses the Additions default.
+Both cases preserve the note's Normal bank. Inherited banks and sample indices continue to follow timing edits.
+
+Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum; Ctrl+Q/W/E/R sets Additions
+in the same order. Both editing profiles use these defaults, including during Draw
+placement. Key bindings can customize them. Hover over either selector to see
+the four shortcuts for the active profile and custom bindings.
 
 The left tool column offers **Select (1)**, **Draw (2)**, then **Soft (A)**,
-**Normal (S)** and **Drum (D)** brushes. Mode and brush are independent selections. In Select mode, brush buttons and Q/A/S/D are enabled only while notes or sound events are selected; otherwise the buttons are dimmed. Draw mode always enables the brushes.
+**Normal (S)** and **Drum (D)** bank buttons. In both Select and Draw, these buttons
+and Q/A/S/D are enabled only while notes or sound events are selected; otherwise
+the buttons are dimmed and the shortcuts have no effect.
 **Q** cycles Soft → Normal → Drum, using the earliest selected event's current bank
 when a selection exists. In either mode, Q/A/S/D and the brush buttons
 apply the bank to the selection in one undo step. Selected Normal tags change their
 normal bank; selected addition tags change their shared addition bank. Selected
 Notes parents change both banks on their events. Other sample fields are retained.
-Without a selection, Draw changes only its placement brush. Placing an addition
-uses that bank while preserving Normal. W/E/R toggle Whistle/Finish/Clap on the selected
-event. Text inputs and modified shortcuts retain priority. Hover tips explain each
+Whistle/Finish/Clap toggle commands have no default keys in Hitsounding; assign
+them in Key bindings to toggle additions on selected events. Text inputs and modified shortcuts retain priority. Hover tips explain each
 tool's shortcut and interaction behavior.
 
 Each track has a **Lock** button beside its label. Locked tracks show a pale red background
@@ -228,8 +247,9 @@ X=256 (osu! Y=192), drag empty space to marquee-select parents, and Ctrl-click t
 add or remove a parent from the selection. Drag an existing note body to move the
 selection in time. Drag a slider's head or tail to adjust that endpoint while
 retaining the other; Ctrl+plus/minus changes its reverse count as in Mapping.
-Dragging moves the note graphics to their preview positions; release creates one
-undo step and Escape restores the original positions. Right-click a note to delete
+Dragging retains the committed note graphics and shows half-opacity destination ghosts
+for the selected parents. Release creates one undo step and Escape cancels the preview.
+Right-click a note to delete
 it, or the selected group if that note is selected, with undo support.
 
 Notes selection uses a separate clipboard payload from sound tags. Ctrl+C/X/V
@@ -247,7 +267,8 @@ Audible events flash with a white edge and a coloured outer glow for 280 ms as p
 
 SB Hitsound supports selection, marquee selection, cut/copy/paste, deletion and dragging.
 Pastes preserve relative times, filenames, layers and volumes without requiring a note
-at the destination. Dragging snaps to the beat grid and previews without changing content.
+at the destination. Dragging a selected SB sound moves the selected SB group with one
+shared snapped offset and half-opacity ghosts, without changing content before release.
 Edits participate in undo/redo. Moving or deleting a shared `.osb` sample edits that shared
 file, so it affects every difficulty using it; pasted copies belong to the current map.
 External changes to a shared file are checked before edits and undo/redo.
@@ -306,6 +327,11 @@ of beatmap undo history.
 Library audition plays one file at a time. Starting another file stops the previous
 one; the active row shows a progress fill, outline and Stop button. Navigation and
 file changes stop audition. Audition uses independent playback from map preview.
+Unavailable audio stops that audition without interrupting editing. Library file
+operations and sample replacement failures use the status bar rather than a modal
+dialog. A deleted or inaccessible current directory falls back to an accessible
+parent within the library. Failed replacement preserves the existing sample;
+external modifications are never forcibly overwritten by undo or redo.
 
 In Precise HS, clicking a sound block selects it and reveals an audition button
 inside its lower-left waveform area when the visible block is wide enough.
@@ -363,9 +389,28 @@ inherit the active timing properties. Generation selects both endpoints and ever
 generated green point together. The complete operation is one undo step.
 Timing Helper's sample bank choices are Soft, Normal and Drum.
 The left-hand sample-bank tools highlight the resolved bank of selected sounds;
-mixed banks have no highlighted choice. With no selection, they show the drawing bank.
+mixed banks have no highlighted choice. With no selection, these tools are disabled;
+use the upper-left Sampleset and Additions selectors for placement defaults.
 While playing, timeline wheel navigation advances by full beats, matching Mapping;
 paused navigation follows the selected Snap subdivision.
+Left/Right and Shift+Left/Right use Mapping's keyboard navigation: one/four beats
+while playing and one/four Snap steps while paused in Default mode. Lazer mode uses
+its BPM-dependent playback seek distance and coarse paused grid. These bindings are
+configurable in the Hitsounding section of Key Bindings. Home jumps to song start;
+Z jumps to the first object and then song start; V/End jumps to the last object end
+and then song end. X starts playback at song start, and Space/C toggles playback.
+Up/Down visits timing points with the active editing profile's direction. Bookmark,
+lazer parent/sample-boundary, speed and Snap shortcuts also follow Mapping.
+J/K moves the active unlocked Notes, addition or SB selection earlier/later by one
+Snap subdivision; every addition destination must match a fruit event.
+
+Navigation remains available while dragging or selecting: ghosts update beneath a
+stationary pointer, with content committed only on release. Moving into either
+24-pixel lane edge scrolls progressively faster, up to 600 pixels per second,
+matching Mapping's horizontal object timeline. Marquees keep their time anchor and
+include objects scrolled out of view. Escape cancels the edit and stops scrolling.
+See [Mapping and Hitsounding command coverage](HITSOUND_MAPPING_PARITY.md) for the
+remaining navigation, selection and editing differences.
 After copying sounds or Notes while paused, selecting a different target without seeking
 makes its first timestamp the paste destination. Otherwise, paste starts at the playhead. Matching Notes allow
 one millisecond of rounding difference and do not treat a preceding slider ending

@@ -4,6 +4,75 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class HitsoundingPanelTests
 {
+    private static void DrawSampleDefaults()
+    {
+        foreach (bool lazer in new[] { false, true })
+        foreach (int normalBank in new[] { 0, 1, 2, 3 })
+        foreach (int additionBank in new[] { 0, 1, 2, 3 })
+        {
+            var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 2 });
+            map.TimingPoints.Add(new() { TimeMs = 2000, BeatLengthMs = -100, Uninherited = false, SampleSet = 3, SampleIndex = 4 });
+            map.Fruits.Add(new() { TimeMs = 1000, X = 256 }); map.Fruits.Add(new() { TimeMs = 2500, X = 256 });
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900);
+            ui.View.LibrarySettings.LazerEditing = lazer; ui.View.ShowHitsoundingPage(); ui.Paint();
+            ui.Key(50);
+            int[] keys = [81, 87, 69, 82];
+            ui.Key(keys[normalBank], shift: true); ui.Key(keys[additionBank], ctrl: true);
+            var before = ui.View.Document.DeepClone();
+            foreach (int key in new[] { 81, 65, 83, 68 }) ui.Key(key);
+            Check(!ui.View.HitsoundingBrushEnabled && before.ContentEquals(ui.View.Document), "Unselected Draw ignores Q/A/S/D");
+            if (normalBank == 0 && additionBank == 0)
+            {
+                ui.Key(49); var selected = LaneBlocks(ui, 1)[0];
+                ui.Click(selected.X + selected.Width / 2, selected.Y + 10);
+                foreach (int key in new[] { 87, 69, 82 }) ui.Key(key);
+                Check(before.ContentEquals(ui.View.Document), "Unbound W/E/R leave selected sounds unchanged");
+                var command = EditorView.ShortcutCommands.Single(c => c.Scope == EditorView.ShortcutScope.Hitsounding
+                    && c.Lazer == lazer && c.Id == "hitToggleWhistle");
+                Check(ui.View.CommandBindings(command).Length == 0, "Addition toggle has no default binding");
+                ui.View.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(74)];
+                ui.Key(74);
+                Check(!before.ContentEquals(ui.View.Document), "Custom addition toggle binding executes");
+                ui.Key(90, ctrl: true);
+                ui.View.LibrarySettings.ShortcutBindings.Remove(command.StorageKey);
+                ui.Key(50);
+            }
+            var first = LaneBlocks(ui, 1)[0]; var second = LaneBlocks(ui, 1)[1];
+            var noteLock = ui.View.HitsoundingLockBounds(0); ui.Click(noteLock.X + 10, noteLock.Y + 10);
+            float x = first.X + first.Width / 2 + (second.X - first.X) / 3;
+            var notes = ui.View.HitsoundingNotesLaneBounds;
+            ui.Click(x, notes.Y + notes.Height / 2);
+            var created = ui.View.Document.Fruits.Single(f => f.TimeMs == 1500);
+            var converted = CatchStreamConverter.Convert(ui.View.Document).Objects;
+            var resolver = new HitsoundResolver(ui.View.Document, converted, inspectResources: false);
+            var sample = resolver.Describe(converted.Single(n => n.SourceId == created.Id));
+            int expectedNormal = normalBank == 0 ? 2 : normalBank;
+            Check(sample.NormalSet == expectedNormal && sample.AdditionSet == (additionBank == 0 ? expectedNormal : additionBank)
+                && sample.Index == 2, "New Notes use both selector defaults and timing index");
+            ui.Key(90, ctrl: true); Check(before.ContentEquals(ui.View.Document), "Note placement remains one undo step");
+            foreach (int index in new[] { 0, 1 })
+            {
+                var block = LaneBlocks(ui, 1)[index];
+                var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane2") && t.X > 340 && t.X < 1100);
+                ui.Click(block.X + block.Width / 2, label.Y + 8);
+            }
+            converted = CatchStreamConverter.Convert(ui.View.Document).Objects;
+            resolver = new(ui.View.Document, converted, inspectResources: false);
+            foreach (var note in converted)
+            {
+                int timingBank = note.TimeMs < 2000 ? 2 : 3;
+                sample = resolver.Describe(note);
+                Check(sample.NormalSet == timingBank && sample.AdditionSet == (additionBank == 0 ? timingBank : additionBank)
+                    && sample.Index == (note.TimeMs < 2000 ? 2 : 4) && sample.Additions == 2,
+                    "Addition placement preserves Normal and resolves Auto at each event's timing");
+            }
+            var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document));
+            Check(restored.ContentEquals(ui.View.Document), "Draw defaults persist without invalid Auto overrides");
+            Check(OsuBeatmapWriter.Serialize(restored).ObjectSequenceMatches, "Draw defaults export successfully");
+        }
+    }
+
     private static void StableLabels()
     {
         var map = new MapDocument { DurationMs = 20000, BeatLengthMs = 500 };
@@ -262,7 +331,7 @@ internal static class HitsoundingPanelTests
         ui.Key(90, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Single().Sample.AdditionSet == 3, "Bank change is undoable");
         ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Placement is one undo step with no selector history");
         ui.Key(50); ui.Key(83); ui.Click(x, y);
-        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 1, Sample.AdditionSet: 1 }, "Drawing uses the independent Normal brush");
+        Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.NormalSet: 1, Sample.AdditionSet: 3 }, "Drawing uses the Additions selector while unselected S has no effect");
         Console.WriteLine("PASS placement banks, direct deletion and play-line input priority");
         void ChooseBank(string key)
         {
@@ -274,24 +343,36 @@ internal static class HitsoundingPanelTests
     {
         foreach (int lane in new[] { 2, 3, 4 })
         foreach (bool inheritedNormal in new[] { false, true })
+        foreach (int existing in new[] { 0, 2, 4, 8, 6, 10, 12 })
+        foreach (int bank in new[] { 0, 3 })
         {
+            int flag = 1 << (lane - 1);
+            if ((existing & flag) != 0) continue;
             var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
             map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2 });
             map.Fruits.Add(new() { TimeMs = 1000, X = 256,
-                OriginalLine = $"256,192,1000,1,0,{(inheritedNormal ? 0 : 1)}:0:0:0:" });
+                OriginalLine = $"256,192,1000,1,{existing},{(inheritedNormal ? 0 : 1)}:{bank}:0:0:" });
             var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint(); ui.ClickText(L.Get("hitsounding.draw"));
             var baseline = ui.View.Document.DeepClone();
             Choose(ui.View.SamplesetBounds, "timing.drum");
             Choose(ui.View.AdditionsBounds, "timing.soft");
             var normal = LaneBlocks(ui, 1).Single();
             var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100 && t.Y >= ui.View.HitsoundingNotesLaneBounds.Y && t.X >= ui.View.HitsoundingNotesLaneBounds.X - 146);
+            int expectedBank = existing == 0 ? 2 : bank == 0 ? inheritedNormal ? 2 : 1 : bank;
+            ui.View.PointerMove(normal.X + normal.Width / 2, label.Y + 8, false, false); ui.Paint();
+            uint expectedColor = expectedBank == 2 ? 0x65BF8Au : expectedBank == 3 ? 0xDC747Bu : 0xE0B55Fu;
+            Check(ui.Canvas.PaintCalls.Any(p => p.Color == expectedColor && p.FillBounds is { Width: 18, Height: 32 } && p.Opacity == .5f),
+                "Placement preview follows the existing addition bank before selector defaults");
             ui.Click(normal.X + normal.Width / 2, label.Y + 8);
             var setting = ui.View.Document.HitsoundOverrides.Single();
             Check(setting.Sample.NormalSet == (inheritedNormal ? 2 : 1)
                 && setting.InheritedFields.HasFlag(InheritedSampleFields.NormalSet) == inheritedNormal,
                 "Addition placement preserves both the existing Normal bank and its inheritance");
-            Check(setting.Sample.AdditionSet == 2 && setting.Sample.Additions == 1 << (lane - 1),
-                "Whistle, Finish and Clap placement uses the Soft brush");
+            Check(setting.Sample.AdditionSet == expectedBank && setting.Sample.Additions == (existing | flag)
+                && setting.InheritedFields.HasFlag(InheritedSampleFields.AdditionSet) == (existing != 0 && bank == 0),
+                "Existing additions retain their shared bank and inheritance; the first addition uses the selector");
+            var reopened = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document));
+            Check(reopened.ContentEquals(ui.View.Document), "Placement priority survives project roundtrip");
             ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Isolated placement is one undo step");
             ui.Key(89, ctrl: true); Check(ui.View.Document.HitsoundOverrides.Single() == setting, "Redo retains bank isolation");
             void Choose(FruitsAtelier.App.Rendering.Rect bounds, string key)
@@ -333,6 +414,21 @@ internal static class HitsoundingPanelTests
         Check(ui.View.Document.HitsoundOverrides.All(h => h.InheritedFields.HasFlag(InheritedSampleFields.AdditionSet)), "Auto restores inheritance on all selected events");
         ui.Key(90, ctrl: true); Display(true, "timing.drum");
         ui.Key(89, ctrl: true); Display(true, "samples.auto");
+        Choose(false, "samples.auto"); Choose(true, "samples.auto");
+        var inherited = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document));
+        inherited.TimingPoints[0].SampleSet = 1;
+        var inheritedEvents = CatchStreamConverter.Convert(inherited).Objects;
+        var resolver = new HitsoundResolver(inherited, inheritedEvents, inspectResources: false);
+        Check(inheritedEvents.All(n => resolver.Describe(n) is { NormalSet: 1, AdditionSet: 1 }), "Saved Auto banks follow later timing changes");
+        _ = OsuBeatmapWriter.Serialize(inherited);
+        ui.Key(90, ctrl: true); _ = ProjectSerializer.Serialize(ui.View.Document);
+        ui.Key(89, ctrl: true); _ = ProjectSerializer.Serialize(ui.View.Document);
+        string workspace = Path.GetFullPath(Path.Combine("artifacts/tests/hitsounding-auto-save", Guid.NewGuid().ToString("N")));
+        ui.View.LibrarySettings.Workspace = workspace; ui.View.LibrarySettings.OsuRoot = "";
+        Check(ui.View.SaveWorkspace(), "Auto banks save through the workspace save operation");
+        var reopened = WorkspaceProject.Open(ui.View.WorkspaceSession!.Directory).Project.Difficulties.Single().Document;
+        Check(reopened.HitsoundOverrides.SequenceEqual(ui.View.Document.HitsoundOverrides), "Workspace reopening retains Auto bank overrides");
+        _ = OsuBeatmapWriter.Serialize(reopened);
         var normal = LaneBlocks(ui, 1)[0]; ui.Click(normal.X + normal.Width / 2, normal.Y - 10);
         Display(false, "timing.normal"); Display(true, "timing.soft");
         Select(2, 0); Select(3, 1, true); Choose(true, "timing.normal");
@@ -355,6 +451,7 @@ internal static class HitsoundingPanelTests
             ui.Click(bounds.X + 10, bounds.Y + 10);
             var text = ui.Canvas.Texts.Where(t => t.Value.TrimStart('✓', ' ') == L.Get(key) && t.X >= bounds.X && t.X < bounds.Right && t.Y >= bounds.Bottom).OrderBy(t => t.Y).First();
             ui.Click(text.X + 5, text.Y + 5);
+            Check(ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)).ContentEquals(ui.View.Document), "Bank selector edits remain saveable with inheritance intact");
         }
     }
     public static void KiaiStrip()
@@ -758,6 +855,7 @@ internal static class HitsoundingPanelTests
     }
     public static void LengthAndMove()
     {
+        GroupMoveAndNavigation();
         var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
         map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1 });
         foreach (int time in new[] { 0, 250, 1250, 1500 }) map.Fruits.Add(new() { TimeMs = time, X = 256,
@@ -799,8 +897,77 @@ internal static class HitsoundingPanelTests
             ui.View.PointerUp(targetX, y, 0); ui.Paint();
         }
     }
+    private static void GroupMoveAndNavigation()
+    {
+        foreach (bool precise in new[] { false, true })
+        foreach (bool draw in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 12000, BeatLengthMs = 500 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1 });
+            foreach (int time in new[] { 1000, 1500, 2000, 2500 })
+                map.Fruits.Add(new() { TimeMs = time, X = 256, OriginalLine = $"256,192,{time},1,{(time <= 1500 ? 2 : 0)},0:0:0:0:" });
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage();
+            ui.View.UpdateTransport(2000, 12000, true, false, false, null, null); ui.Paint();
+            if (precise) { ui.ClickText(L.Get("hitsounding.precise")); ui.Paint(); }
+            var baseline = ui.View.Document.DeepClone(); var conversion = ui.View.Conversion;
+            var sounds = LaneBlocks(ui, 2);
+            void Select()
+            {
+                foreach (var sound in sounds)
+                {
+                    ui.View.PointerDown(sound.X + 2, sound.Y + 10, 0, false, true);
+                    ui.View.PointerUp(sound.X + 2, sound.Y + 10, 0);
+                }
+                ui.Paint();
+            }
+            Select();
+            if (draw) ui.Key(50);
+            var grid = ui.View.HitsoundingNotesLaneBounds;
+            float X(double time) => grid.X + (float)((time - 800) / 4000 * grid.Width);
+            float y = sounds[0].Y + 10;
+            void Begin(double destination)
+            {
+                ui.View.PointerDown(sounds[0].X + 2, y, 0, false, false);
+                ui.View.PointerMove(X(destination), y, false, false); ui.Paint();
+                Check(baseline.ContentEquals(ui.View.Document) && ReferenceEquals(conversion, ui.View.Conversion), "Group ghost retains committed content and conversion");
+                Check(ui.Canvas.PaintCalls.Count(p => p.FillBounds is { Width: 18, Height: 32 } r && r.Y <= y && r.Bottom > y && p.Opacity == .5f) == 2,
+                    "Both selected sounds have translucent destination ghosts");
+            }
+            Begin(2000); ui.Key(27); ui.View.PointerUp(X(2000), y, 0); ui.Paint();
+            Check(baseline.ContentEquals(ui.View.Document), "Escape cancels the complete sound move");
+            Begin(2500); ui.View.PointerUp(X(2500), y, 0); ui.Paint();
+            Check(baseline.ContentEquals(ui.View.Document), "A missing group destination rejects the entire move");
+            Begin(2000); ui.View.PointerUp(X(2000), y, 0); ui.Paint();
+            var resolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
+            Check(ui.View.Conversion.Objects.All(n => resolver.Describe(n).Additions == (n.TimeMs >= 2000 ? 2 : 0)), "Release moves both additions by the same offset without placing extra sounds in either tool");
+            ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Group move is one undo step");
+            ui.View.UpdateTransport(6000, 12000, true, true, false, null, null);
+            ui.Key(37, shift: true); Check(ui.View.PlayheadMs == 4000, "Shift-left seeks four beats during playback");
+            ui.Key(39, shift: true); Check(ui.View.PlayheadMs == 6000, "Shift-right seeks four beats during playback");
+            ui.View.UpdateTransport(6000, 12000, true, false, false, null, null);
+            ui.Key(37, shift: true); Check(ui.View.PlayheadMs == 5500, "Paused Shift-left seeks four snap divisions");
+        }
+        foreach (bool lazer in new[] { false, true })
+        foreach (bool playing in new[] { false, true })
+        foreach (bool shift in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 12000, BeatLengthMs = 400 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 400 });
+            var mapping = new Ui(false); mapping.LoadDocument(map); mapping.View.LibrarySettings.LazerEditing = lazer;
+            var sounds = new Ui(false); sounds.LoadDocument(map); sounds.View.LibrarySettings.LazerEditing = lazer;
+            sounds.View.ShowHitsoundingPage();
+            foreach (int key in new[] { 37, 39 })
+            {
+                mapping.View.UpdateTransport(6000, 12000, true, playing, false, null, null);
+                sounds.View.UpdateTransport(6000, 12000, true, playing, false, null, null);
+                mapping.Key(key, shift: shift); sounds.Key(key, shift: shift);
+                Check(mapping.View.PlayheadMs == sounds.View.PlayheadMs, "Hitsounding arrow navigation matches Mapping in each editing and playback mode");
+            }
+        }
+    }
     public static void Run()
     {
+        DrawSampleDefaults();
         HitsoundingTimingDragTests.Run();
         HitsoundingPreciseAuditionTests.Run();
         StableLabels();
@@ -922,9 +1089,30 @@ internal static class HitsoundingPanelTests
         ui.Key(89, ctrl: true); Check(File.ReadAllBytes(wave).SequenceEqual(replacement), "UI redo replaces assigned sample");
         ui.Key(90, ctrl: true);
         string libraryRoot = Path.GetDirectoryName(saved)!;
+        foreach (bool missing in new[] { false, true })
+        {
+            string librarySource = Path.Combine(libraryRoot, "replacement.wav");
+            if (missing) File.Delete(librarySource);
+            using (var locked = missing ? null : new FileStream(wave, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                sourceLabel = ui.Canvas.Texts.Last(t => t.Value == "replacement.wav");
+                slotLabel = ui.Canvas.Texts.First(t => t.Value == "Normal" && t.X < 300);
+                ui.View.PointerDown(sourceLabel.X + 4, sourceLabel.Y + 4, 0, false, false);
+                ui.View.PointerMove(slotLabel.X + 4, slotLabel.Y + 4, false, false);
+                ui.View.PointerUp(slotLabel.X + 4, slotLabel.Y + 4, 0);
+                Check(!ui.View.ErrorVisible && ui.View.PrepareFileOperation(), "Unavailable slot resources leave the editor usable");
+            }
+            Check(File.ReadAllBytes(wave).SequenceEqual(before), "Failed replacement preserves the existing sound");
+            File.WriteAllBytes(librarySource, replacement); ui.Paint();
+        }
         string nested = Path.Combine(libraryRoot, "Drums", "Tight"); Directory.CreateDirectory(nested);
         ui.View.ShowHitsoundingPage(); ui.Paint();
         OpenFolder("Drums"); OpenFolder("Tight");
+        string removedDirectory = Path.Combine(nested, "deleted-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(removedDirectory); ui.View.NavigateHitsoundingDirectory(removedDirectory);
+        Directory.Delete(removedDirectory);
+        ui.View.NavigateHitsoundingDirectory(removedDirectory); ui.Paint();
+        Check(!ui.View.ErrorVisible && ui.Canvas.Texts.Any(t => t.Value.EndsWith(Path.Combine("Drums", "Tight"), StringComparison.Ordinal)), "Deleted current folder returns to its accessible parent");
         ui.View.DropLibraryFiles([source]); WaitImport();
         Check(File.Exists(Path.Combine(nested, "replacement.wav")), "Imports target the browsed subfolder");
         ui.View.NavigateHitsoundingDirectory(Path.GetDirectoryName(libraryRoot)); ui.Paint();
@@ -1027,6 +1215,17 @@ internal static class HitsoundingPanelTests
         var baseline = ui.View.Document.DeepClone(); double time = ui.View.PlayheadMs;
         var first = Blocks()[0]; ui.Click(first.X + 5, first.Y + 10);
         Check(ui.View.PlayheadMs == time, "Storyboard selection does not seek");
+        var nudgeTarget = Blocks()[1];
+        ui.View.PointerDown(nudgeTarget.X + 5, nudgeTarget.Y + 10, 0, false, true);
+        ui.View.PointerUp(nudgeTarget.X + 5, nudgeTarget.Y + 10, 0); ui.Paint();
+        ui.Key(75); Wait(2);
+        Check(Samples().Select(s => s.TimeMs).Order().SequenceEqual(new[] { 625d, 1125d }), "K nudges the selected SB group");
+        ui.Key(74); Wait(2);
+        Check(Samples().Select(s => s.TimeMs).Order().SequenceEqual(new[] { 500d, 1000d }), "J retains SB selection and restores its timestamps");
+        ui.Key(90, ctrl: true); ui.Key(90, ctrl: true); Wait(2);
+        Check(baseline.ContentEquals(ui.View.Document), "SB nudges restore source sections through undo");
+        ui.LoadDocument(map); ui.View.ShowHitsoundingPage(); Wait(2);
+        first = Blocks()[0]; ui.Click(first.X + 5, first.Y + 10);
         var ctrlTarget = Blocks()[1];
         ui.View.PointerDown(ctrlTarget.X + 5, ctrlTarget.Y + 10, 0, false, true);
         ui.View.PointerUp(ctrlTarget.X + 5, ctrlTarget.Y + 10, 0); ui.Paint(); ui.Key(46); Wait(0);
@@ -1046,6 +1245,18 @@ internal static class HitsoundingPanelTests
         ui.View.PointerUp(first.X + 5 + dx / 2, first.Y + 10, 0); Wait(2);
         Check(Samples().Any(s => s.TimeMs == 750 && s.Volume == 65), "Storyboard dragging snaps to an independent timestamp");
         ui.Key(90, ctrl: true); Wait(2); Check(baseline.ContentEquals(ui.View.Document), "Storyboard move is undoable");
+        first = Blocks()[0]; second = Blocks()[1];
+        foreach (var block in new[] { first, second })
+        {
+            ui.View.PointerDown(block.X + 5, block.Y + 10, 0, false, true);
+            ui.View.PointerUp(block.X + 5, block.Y + 10, 0); ui.Paint();
+        }
+        ui.View.PointerDown(first.X + 5, first.Y + 10, 0, false, false);
+        ui.View.PointerMove(first.X + 5 - dx / 2, first.Y + 10, false, false); ui.Paint();
+        Check(baseline.ContentEquals(ui.View.Document), "SB group previews without rewriting its events");
+        ui.View.PointerUp(first.X + 5 - dx / 2, first.Y + 10, 0); Wait(2);
+        Check(Samples().Select(s => s.TimeMs).Order().SequenceEqual(new[] { 250d, 750d }), "SB group moves backward with one shared offset");
+        ui.Key(90, ctrl: true); Wait(2); Check(baseline.ContentEquals(ui.View.Document), "SB group movement is one undo step");
         first = Blocks()[0]; second = Blocks()[1];
         ui.View.PointerDown(first.X - 5, first.Y - 5, 0, false, false);
         ui.View.PointerMove(second.Right + 5, second.Bottom + 5, false, false);
@@ -1076,7 +1287,7 @@ internal static class HitsoundingPanelTests
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             do { ui.Paint(); if (Blocks().Length == count && (count != 0 || Samples().Count == 0)) return; Thread.Sleep(5); } while (watch.Elapsed.TotalSeconds < 10);
-            throw new InvalidOperationException($"Expected {count} storyboard blocks, saw {Blocks().Length}");
+            throw new InvalidOperationException($"Expected {count} storyboard blocks, saw {Blocks().Length}; {ui.View.StatusMessage}; {string.Join(';', Samples().Select(s => s.TimeMs))}");
         }
     }
     public static void CrossDifficultyClipboard()
@@ -1114,7 +1325,7 @@ internal static class HitsoundingPanelTests
         var resolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
         Check(resolver.Describe(note) is { NormalSet: 3, Index: 2, Volume: 60 }, "Spinner end inherits timing at its end");
         var normal = LaneBlocks(ui, 1).Single();
-        ui.Click(normal.X + normal.Width / 2, normal.Y + 10); ui.View.SetModifiers(true, false); ui.Key(87); ui.View.SetModifiers(false, false);
+        ui.Click(normal.X + normal.Width / 2, normal.Y + 10); ui.Key(87, shift: true);
         resolver = new(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
         Check(resolver.Describe(note).NormalSet == 1, "Spinner Normal tag is selectable and editable");
         ui.Key(90, ctrl: true);
@@ -1125,7 +1336,7 @@ internal static class HitsoundingPanelTests
         resolver = new(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
         Check(resolver.Describe(note).Additions == 2 && ui.View.Document.HitsoundOverrides.Count == 0,
             "Placing at a banana shower end edits the spinner sample columns");
-        ui.Key(49); var block = LaneBlocks(ui, 2).Single(); ui.Click(block.X + block.Width / 2, block.Y + 10); ui.View.SetModifiers(true, false); ui.Key(87, ctrl: true); ui.View.SetModifiers(false, false);
+        ui.Key(49); var block = LaneBlocks(ui, 2).Single(); ui.Click(block.X + block.Width / 2, block.Y + 10); ui.Key(87, ctrl: true);
         resolver = new(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
         Check(resolver.Describe(note) is { NormalSet: 3, AdditionSet: 1, Index: 2, Volume: 60 }, "Spinner addition selector preserves base bank and timing inheritance");
         var exported = OsuBeatmapWriter.Serialize(ui.View.Document).Text;
@@ -1174,6 +1385,23 @@ internal static class HitsoundingPanelTests
         ui.View.ShowHitsoundingPage(); ui.Paint();
         Console.WriteLine($"Hitsounding cold setup={System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds:F3}ms / {GC.GetAllocatedBytesForCurrentThread() - allocated}B");
         Measure("Note based");
+        var noteLock = ui.View.HitsoundingLockBounds(0);
+        ui.Click(noteLock.X + noteLock.Width / 2, noteLock.Y + 12);
+        Check(baseline.ContentEquals(ui.View.Document), "Unlocking Notes preserves benchmark content");
+        ui.View.UpdateTransport(70500, 90000, true, false, false, null, null); ui.Paint();
+        var noteLane = ui.View.HitsoundingNotesLaneBounds;
+        float noteX = noteLane.X + noteLane.Width * .3f, noteY = noteLane.Y + noteLane.Height / 2;
+        ui.Click(noteX, noteY); ui.Key(65, ctrl: true);
+        Check(baseline.ContentEquals(ui.View.Document), "Selecting Notes preserves benchmark content");
+        ui.View.PointerDown(noteX, noteY, 0, false, false);
+        Check(ui.View.WantsCapture, "Group benchmark starts an editable Notes gesture");
+        Measure("Notes group ghost");
+        Check(baseline.ContentEquals(ui.View.Document), "Held Notes ghosts preserve benchmark content");
+        ui.Key(27);
+        Check(baseline.ContentEquals(ui.View.Document), "Group ghosts retain committed content");
+        Check(ReferenceEquals(conversion, ui.View.Conversion), "Group ghosts reuse committed conversion");
+        ui.Click(noteLock.X + noteLock.Width / 2, noteLock.Y + 12);
+        ui.View.UpdateTransport(30500, 90000, true, false, false, null, null); ui.Paint();
         var timingHandle = ui.View.HitsoundingTimingHandleBounds(ui.View.Document.TimingPoints.Single(p => p.TimeMs == 30000));
         ui.View.PointerDown(timingHandle.X + 4, timingHandle.Y + 10, 0, false, false);
         Measure("Timing handle drag"); ui.Key(27);

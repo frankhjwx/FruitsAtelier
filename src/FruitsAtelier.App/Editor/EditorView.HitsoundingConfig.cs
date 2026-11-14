@@ -275,18 +275,32 @@ public sealed partial class EditorView
         }
         hitsoundingLibraryRoot = root;
         hitsoundingLibraryFiles = []; hitsoundingLibraryDirectories.Clear();
-        if (!HitsoundingDirectoryInsideRoot(hitsoundingLibraryDirectory) || !Directory.Exists(hitsoundingLibraryDirectory)) hitsoundingLibraryDirectory = root;
-        try
+        string? current = hitsoundingLibraryDirectory ?? root;
+        while (current is not null)
         {
-            if (hitsoundingLibraryDirectory is { } current && HitsoundingDirectoryInsideRoot(current) && Directory.Exists(current))
+            try
             {
-                var options = new EnumerationOptions { AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = true };
-                hitsoundingLibraryDirectories.UnionWith(Directory.EnumerateDirectories(current, "*", options).Take(20000));
-                hitsoundingLibraryFiles = Directory.EnumerateFiles(current, "*", options).Where(IsHitsoundingAudio)
-                    .Order(StringComparer.OrdinalIgnoreCase).Take(20000).ToArray();
+                if (HitsoundingDirectoryInsideRoot(current) && Directory.Exists(current))
+                {
+                    var options = new EnumerationOptions { AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = false };
+                    var directories = Directory.EnumerateDirectories(current, "*", options).Take(20000).ToArray();
+                    var files = Directory.EnumerateFiles(current, "*", options).Where(IsHitsoundingAudio)
+                        .Order(StringComparer.OrdinalIgnoreCase).Take(20000).ToArray();
+                    hitsoundingLibraryDirectories.UnionWith(directories); hitsoundingLibraryFiles = files;
+                    break;
+                }
             }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { ReportResourceError(error.Message); }
+            if (current == root) break;
+            string? parent = Path.GetDirectoryName(current);
+            current = parent is not null && root is not null && parent.Length >= root.Length ? parent : root;
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { ShowError(error.Message); }
+        if (hitsoundingLibraryDirectory != current)
+        {
+            StopHitsoundingLibraryAudition(); hitsoundingQuery = "";
+            hitsoundingLibrarySelection.Clear(); hitsoundingLibraryAnchor = null;
+        }
+        hitsoundingLibraryDirectory = current;
         hitsoundingLibrarySelection.IntersectWith(hitsoundingLibraryDirectories.Concat(hitsoundingLibraryFiles));
         FilterHitsoundingLibrary();
     }
@@ -307,20 +321,21 @@ public sealed partial class EditorView
     {
         try
         {
-            if (!HitsoundingDirectoryInsideRoot(path) || !Directory.Exists(path)) return;
+            if (!HitsoundingDirectoryInsideRoot(path)) return;
+            if (!Directory.Exists(path)) { RefreshHitsoundingLibrary(); return; }
             StopHitsoundingLibraryAudition();
             hitsoundingLibraryDirectory = Path.GetFullPath(path!); hitsoundingQuery = "";
             hitsoundingLibrarySelection.Clear(); hitsoundingLibraryAnchor = null; hitsoundingNaming = false;
             textEditor.Field = ""; RefreshHitsoundingLibrary();
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { ShowError(error.Message); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { ReportResourceError(error.Message); }
     }
     private static bool IsHitsoundingAudio(string path) => Path.GetExtension(path).ToLowerInvariant() is ".wav" or ".ogg" or ".mp3";
     private void ImportHitsoundingLibrary(IEnumerable<string> paths)
     {
         if (hitsoundingImportTask is not null) return;
         RefreshHitsoundingLibrary();
-        if (hitsoundingLibraryDirectory is not { } root || !HitsoundingDirectoryInsideRoot(root)) { ShowError(L.Get("hitsounding.workspaceRequired")); return; }
+        if (hitsoundingLibraryDirectory is not { } root || !HitsoundingDirectoryInsideRoot(root)) { ReportResourceError(L.Get("hitsounding.workspaceRequired")); return; }
         var sources = paths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         hitsoundingImportTask = Task.Run<string?>(() =>
         {
@@ -386,8 +401,8 @@ public sealed partial class EditorView
             RefreshHitsoundingLibrary();
             var completed = hitsoundingFileCompleted; hitsoundingFileCompleted = null;
             hitsoundingAudio.Clear(); hitsoundingResourcesChanged = true;
-            if (task.IsCompletedSuccessfully) { if (task.Result is { } error) ShowError(error); else completed?.Invoke(); }
-            else if (task.Exception is { } error) ShowError(error.GetBaseException().Message);
+            if (task.IsCompletedSuccessfully) { if (task.Result is { } error) ReportResourceError(error); else completed?.Invoke(); }
+            else if (task.Exception is { } error) ReportResourceError(error.GetBaseException().Message);
         }
     }
     private void AssignHitsoundingSlot(string name, string source)
@@ -397,7 +412,7 @@ public sealed partial class EditorView
         try
         {
             string? root = Path.GetDirectoryName(Document.SourcePath ?? Document.AudioPath);
-            if (root is null) { ShowError(L.Get("copier.saveFirst")); return; }
+            if (root is null) { ReportResourceError(L.Get("copier.saveFirst")); return; }
             var plan = HitsoundResourcePlan.ReplaceSample(root, hitsoundingBank, hitsoundingIndex, name, source);
             if (plan.DisplayNames.Count == 0) return;
             history.EditResources(L.Get("hitsounding.replace"), forward =>
@@ -406,7 +421,7 @@ public sealed partial class EditorView
                 InvalidateHitsoundingResources();
             });
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException) { ShowError(error.Message); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException) { ReportResourceError(error.Message); }
     }
     private void InvalidateHitsoundingResources()
     {
@@ -441,6 +456,12 @@ public sealed partial class EditorView
     private bool HitsoundingPointerMove(float x, float y)
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable) return false;
+        if (hitsoundingPanning)
+        {
+            mouseX = x; mouseY = y;
+            SeekTo(hitsoundingPanTime + (hitsoundingPanX - x) * hitsoundingSpan / Math.Max(1, hitsoundingGridBounds.Width));
+            return true;
+        }
         if (timingHelperScrolling) { MoveTimingHelperScroll(y); return true; }
         if (timingHelperVolumeDrag is not null) { MoveTimingHelperVolume(x); return true; }
         if (MoveHitsoundingLibraryPointer(x, y)) return true;
@@ -453,6 +474,8 @@ public sealed partial class EditorView
     private bool HitsoundingPointerUp(float x, float y, int button)
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable) return false;
+        if (button == 1 && hitsoundingPanning)
+        { HitsoundingPointerMove(x, y); hitsoundingPanning = false; return true; }
         if (button != 0) return button == 2 && hitsoundingPainting && hitsoundingErase && EndHitsoundingCanvasPointer();
         if (timingHelperScrolling) { MoveTimingHelperScroll(y); timingHelperScrolling = false; return true; }
         if (timingHelperVolumeDrag is not null) { MoveTimingHelperVolume(x); FinishTimingHelperVolume(); return true; }
@@ -467,7 +490,7 @@ public sealed partial class EditorView
         else if (hitsoundingLibraryBounds.Contains(x, y)) ImportHitsoundingLibrary([path]);
         return true;
     }
-    private bool HitsoundingWheel(float x, float y, float delta, bool alt)
+    private bool HitsoundingWheel(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable || menu >= 0 || contextItems.Count > 0) return false;
         if (hitsoundingInspectorBounds.Contains(x, y))
@@ -479,8 +502,16 @@ public sealed partial class EditorView
         if (hitsoundingSampleBounds.Contains(x, y)) { hitsoundingSampleScroll = Math.Max(0, hitsoundingSampleScroll - delta / 120 * 30); return true; }
         if (hitsoundingLibraryBounds.Contains(x, y)) { hitsoundingLibraryScroll = Math.Max(0, hitsoundingLibraryScroll - (int)(delta / 120)); return true; }
         if (!hitsoundingBounds.Contains(x, y)) return false;
-        if (alt) ZoomHitsounding(Math.Pow(1.25, -delta / 120), x);
-        else SeekByWheel(-delta / 120, 1);
+        if (ctrl && !alt && !shift)
+        { if (IsLazerEditing) AdjustLazerSnapWheel(delta); else AdjustSnapWheel(delta); }
+        else if (alt && !ctrl && !shift) ZoomHitsounding(Math.Pow(1.25, -delta / 120), x);
+        else if (!ctrl && !alt)
+        {
+            if (IsLazerEditing) HandleLazerWheel(x, y, delta, false, shift, false, true, false, false);
+            else SeekByWheel(-delta / 120 * (shift ? 4 : 1), 1);
+        }
+        ContinueHitsoundingNavigation(startGesture: true);
+        if (hitsoundingPanning) { hitsoundingPanX = mouseX; hitsoundingPanTime = playhead; }
         return true;
     }
 }

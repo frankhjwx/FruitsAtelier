@@ -22,9 +22,9 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-edge-drag", "-pan-zoom", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-audition-failed", "-auto-banks", "-sampleset-hint", "-additions-hint", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
             {
-                if (scenario == "-audition" && !precise) continue;
+                if (scenario.StartsWith("-audition", StringComparison.Ordinal) && (!precise || size.Item2 < 900)) continue;
                 L.SetLanguage(locale);
                 var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
                 map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, Uninherited = true, SampleSet = 2, SampleIndex = 1, Volume = 80, Effects = 1 });
@@ -58,10 +58,10 @@ internal static class HitsoundingRenderCheck
                 var clock = new AuditionClock();
                 var editor = new EditorView(false, timeProvider: clock); editor.LoadDocument(map);
                 editor.RequestWaveform = (path, token) => Task.FromResult(FruitsAtelier.App.Audio.WaveformDecoder.Load(path, token).GetAwaiter().GetResult());
-                if (scenario == "-audition")
+                if (scenario.StartsWith("-audition", StringComparison.Ordinal))
                 {
                     editor.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.5f, 1000).ToArray(), 1));
-                    editor.RequestStartLibraryAudition = (_, _) => Task.FromResult(1000d);
+                    editor.RequestStartLibraryAudition = (_, _) => scenario == "-audition-failed" ? Task.FromException<double>(new IOException(L.Get("copier.missingFile", "custom.wav"))) : Task.FromResult(1000d);
                 }
                 editor.LibrarySettings.Workspace = Path.Combine(folder, "workspace");
                 string library = Path.Combine(editor.LibrarySettings.Workspace, "HitsoundLibrary");
@@ -78,6 +78,12 @@ internal static class HitsoundingRenderCheck
                 {
                     int index = Array.IndexOf(new[] { "select", "draw", "soft", "normal", "drum" }, scenario[6..]);
                     var button = editor.HitsoundingToolBounds(index);
+                    editor.PointerMove(button.X + button.Width / 2, button.Y + button.Height / 2, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
+                if (scenario is "-sampleset-hint" or "-additions-hint")
+                {
+                    var button = scenario == "-sampleset-hint" ? editor.SamplesetBounds : editor.AdditionsBounds;
                     editor.PointerMove(button.X + button.Width / 2, button.Y + button.Height / 2, false, false);
                     editor.Render(canvas, size.Item1, size.Item2);
                 }
@@ -123,6 +129,44 @@ internal static class HitsoundingRenderCheck
                         editor.Render(canvas, size.Item1, size.Item2);
                     }
                 }
+                if (scenario is "-sound-drag" or "-sound-group-drag" or "-sound-group-draw")
+                {
+                    var lane = editor.HitsoundingNotesLaneBounds;
+                    float X(double time) => lane.X + (float)(lane.Width * time / 4000);
+                    float y = editor.HitsoundingMuteBounds(2).Y + 12;
+                    if (scenario is "-sound-group-drag" or "-sound-group-draw")
+                        foreach (double time in new[] { 500d, 2500d })
+                        {
+                            editor.PointerDown(X(time) + 2, y, 0, false, true);
+                            editor.PointerUp(X(time) + 2, y, 0);
+                            editor.Render(canvas, size.Item1, size.Item2);
+                        }
+                    if (scenario == "-sound-group-draw") editor.KeyDown(50, false, false);
+                    editor.PointerDown(X(500) + 2, y, 0, false, false);
+                    editor.PointerMove(X(625), y, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
+                if (scenario is "-edge-drag" or "-pan-zoom")
+                {
+                    var lane = editor.HitsoundingNotesLaneBounds;
+                    float x = lane.X + lane.Width * .25f, y = lane.Y + lane.Height * 2.5f;
+                    if (scenario == "-pan-zoom")
+                    {
+                        editor.Wheel(x, y, -2400, false, false, true);
+                        editor.PointerDown(x, y, 1, false, false);
+                        editor.PointerMove(x - lane.Width * .1f, y, false, false);
+                        editor.PointerUp(x - lane.Width * .1f, y, 1);
+                    }
+                    else
+                    {
+                        x = lane.X + lane.Width * .125f;
+                        editor.PointerDown(x, y, 0, false, false);
+                        editor.PointerMove(lane.Right, y, false, false);
+                        for (int frame = 0; frame < 10; frame++)
+                        { clock.Now += 50; editor.Render(canvas, size.Item1, size.Item2); }
+                    }
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
                 if (scenario == "-draw")
                 {
                     editor.KeyDown(50, false, false);
@@ -131,7 +175,7 @@ internal static class HitsoundingRenderCheck
                     editor.PointerMove(zero + (twoSeconds - zero) * .375f, editor.HitsoundingMuteBounds(2).Y + 12, false, false);
                     editor.Render(canvas, size.Item1, size.Item2);
                 }
-                if (scenario == "-audition")
+                if (scenario.StartsWith("-audition", StringComparison.Ordinal))
                 {
                     float zero = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 0)).X + 4;
                     float twoSeconds = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 2000)).X + 4;
@@ -140,9 +184,32 @@ internal static class HitsoundingRenderCheck
                     editor.PointerDown(x, y, 0, false, false); editor.PointerUp(x, y, 0);
                     editor.Render(canvas, size.Item1, size.Item2);
                     var play = editor.HitsoundingPreciseAuditionBounds;
+                    if (play.Width <= 0) throw new InvalidOperationException("Selected sound has no audition control.");
                     editor.PointerDown(play.X + 14, play.Y + 12, 0, false, false); editor.PointerUp(play.X + 14, play.Y + 12, 0);
                     clock.Now += 500;
                     editor.Render(canvas, size.Item1, size.Item2);
+                    if (editor.ErrorVisible || !editor.PrepareFileOperation()) throw new InvalidOperationException("Audition failure blocked the editor.");
+                    if (scenario == "-audition-failed" && !editor.StatusMessage.Contains("custom.wav")) throw new InvalidOperationException("Failed audition did not report its nonblocking feedback.");
+                }
+                if (scenario == "-auto-banks")
+                {
+                    float zero = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 0)).X + 4;
+                    float twoSeconds = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 2000)).X + 4;
+                    var lane = editor.HitsoundingMuteBounds(3);
+                    float x = (zero + twoSeconds) / 2 + 4, y = lane.Y + 12;
+                    editor.PointerDown(x, y, 0, false, false); editor.PointerUp(x, y, 0);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                    foreach (bool additions in new[] { false, true })
+                    {
+                        var bounds = additions ? editor.AdditionsBounds : editor.SamplesetBounds;
+                        editor.PointerDown(bounds.X + 10, bounds.Y + 10, 0, false, false); editor.PointerUp(bounds.X + 10, bounds.Y + 10, 0);
+                        editor.Render(canvas, size.Item1, size.Item2);
+                        editor.PointerDown(bounds.X + 10, bounds.Bottom + 20, 0, false, false); editor.PointerUp(bounds.X + 10, bounds.Bottom + 20, 0);
+                        editor.Render(canvas, size.Item1, size.Item2);
+                    }
+                    var saved = ProjectSerializer.Read(ProjectSerializer.Serialize(editor.Document));
+                    if (saved.HitsoundOverrides.Count == 0 || saved.HitsoundOverrides.Any(s => !s.InheritedFields.HasFlag(InheritedSampleFields.NormalSet | InheritedSampleFields.AdditionSet)))
+                        throw new InvalidOperationException("Auto bank selection did not retain saveable inheritance.");
                 }
                 if (scenario == "-green-hover")
                 {
