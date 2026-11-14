@@ -190,7 +190,8 @@ Explicit nonzero object indices remain explicit. A zero object index, including 
 event overrides, inherits timing for display, playback and export. Adjustments affect target event
 overrides, including their shared addition bank/index, without rewriting timing intervals.
 In Select mode, drag an existing Whistle, Finish or Clap tag to move it or its selected
-addition group. The original tags remain visible and half-opacity ghosts show the
+addition group. In Draw mode, pressing a tag in a multi-selection also starts group
+movement, taking priority over placement and marquee selection. The original tags remain visible and half-opacity ghosts show the
 destination with relative timestamps and lanes preserved. Release applies one undoable
 move only when every addition has a destination fruit event; missing destinations leave
 the complete group unchanged. Escape cancels the preview. Sampleset mismatches use the

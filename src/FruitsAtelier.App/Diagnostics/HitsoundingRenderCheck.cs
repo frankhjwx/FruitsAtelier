@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-sound-drag", "-sound-group-drag", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
             {
                 if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
@@ -123,18 +123,19 @@ internal static class HitsoundingRenderCheck
                         editor.Render(canvas, size.Item1, size.Item2);
                     }
                 }
-                if (scenario is "-sound-drag" or "-sound-group-drag")
+                if (scenario is "-sound-drag" or "-sound-group-drag" or "-sound-group-draw")
                 {
                     var lane = editor.HitsoundingNotesLaneBounds;
                     float X(double time) => lane.X + (float)(lane.Width * time / 4000);
                     float y = editor.HitsoundingMuteBounds(2).Y + 12;
-                    if (scenario == "-sound-group-drag")
+                    if (scenario is "-sound-group-drag" or "-sound-group-draw")
                         foreach (double time in new[] { 500d, 2500d })
                         {
                             editor.PointerDown(X(time) + 2, y, 0, false, true);
                             editor.PointerUp(X(time) + 2, y, 0);
                             editor.Render(canvas, size.Item1, size.Item2);
                         }
+                    if (scenario == "-sound-group-draw") editor.KeyDown(50, false, false);
                     editor.PointerDown(X(500) + 2, y, 0, false, false);
                     editor.PointerMove(X(625), y, false, false);
                     editor.Render(canvas, size.Item1, size.Item2);

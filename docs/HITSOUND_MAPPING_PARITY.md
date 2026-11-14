@@ -57,7 +57,7 @@ Notes, sound or timing selection. Sample Library focus has its own command scope
 | Double-click timeline object: select and seek | Missing on Hitsounding lanes; double-click dispatch returns before Mapping's timeline handler. |
 | Ctrl+A | Works for an active unlocked Notes selection. Sound and canvas timing selections do not have a select-all handler, despite the Hitsounding catalog entry. Sample Library and F6 have separate select-all commands. |
 | Drag one or multiple parents in time | Unlocked Notes supports it with translucent ghosts and release commit. Slider head/tail hits resize that endpoint instead of moving the group. |
-| Drag one or multiple Whistle/Finish/Clap tags | Supported in Select: shared time offset, preserved lanes, ghosts, atomic release, Escape and undo. All destination fruit events must exist. |
+| Drag one or multiple Whistle/Finish/Clap tags | Supported in Select; Draw also moves an existing multi-selection when pressing one of its tags, before placement or marquee handling. Shared time offset, preserved lanes, ghosts, atomic release, Escape and undo apply. All destination fruit events must exist. |
 | Drag one or multiple SB sounds | Supported with one snapped offset; no destination note required. |
 | Mixed SB and note-addition drag | Not a unified gesture: dragging an addition retains additions; dragging an SB sound retains SB samples. |
 | Normal / SliderTick movement | These are tied to their notes; move Notes instead. |

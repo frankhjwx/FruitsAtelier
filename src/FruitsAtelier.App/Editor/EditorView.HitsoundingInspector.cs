@@ -449,7 +449,9 @@ public sealed partial class EditorView
             ? HitsoundingPlacementNoteAt(x, y) : null;
         if (button == 0 && note is null && placement is null && HitsoundingHeadHovered(x, y))
         { hitsoundingHeadBefore = hitsoundingHeadRatio; hitsoundingHeadDrag = true; return true; }
-        bool canMove = !hitsoundingDraw && button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
+        bool selectedGroup = hitsoundingMultiSelection.Count > 1 && pressedSound.Note is { } pressedNote
+            && hitsoundingMultiSelection.Contains((pressedNote.SourceId, pressedNote.EventIndex, pressedSound.Lane));
+        bool canMove = (!hitsoundingDraw || selectedGroup) && button == 0 && pressedSound.Note is { Kind: CatchObjectKind.Fruit } && pressedSound.Lane is >= 2 and <= 4;
         if (canMove)
         {
             if (!CommitField()) return true;

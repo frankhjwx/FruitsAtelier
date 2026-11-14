@@ -803,6 +803,7 @@ internal static class HitsoundingPanelTests
     private static void GroupMoveAndNavigation()
     {
         foreach (bool precise in new[] { false, true })
+        foreach (bool draw in new[] { false, true })
         {
             var map = new MapDocument { DurationMs = 12000, BeatLengthMs = 500 };
             map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, SampleSet = 2, SampleIndex = 1 });
@@ -823,6 +824,7 @@ internal static class HitsoundingPanelTests
                 ui.Paint();
             }
             Select();
+            if (draw) ui.Key(50);
             var grid = ui.View.HitsoundingNotesLaneBounds;
             float X(double time) => grid.X + (float)((time - 800) / 4000 * grid.Width);
             float y = sounds[0].Y + 10;
@@ -840,7 +842,7 @@ internal static class HitsoundingPanelTests
             Check(baseline.ContentEquals(ui.View.Document), "A missing group destination rejects the entire move");
             Begin(2000); ui.View.PointerUp(X(2000), y, 0); ui.Paint();
             var resolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
-            Check(ui.View.Conversion.Objects.All(n => resolver.Describe(n).Additions == (n.TimeMs >= 2000 ? 2 : 0)), "Release moves both additions by the same offset");
+            Check(ui.View.Conversion.Objects.All(n => resolver.Describe(n).Additions == (n.TimeMs >= 2000 ? 2 : 0)), "Release moves both additions by the same offset without placing extra sounds in either tool");
             ui.Key(90, ctrl: true); Check(baseline.ContentEquals(ui.View.Document), "Group move is one undo step");
             ui.View.UpdateTransport(6000, 12000, true, true, false, null, null);
             ui.Key(37, shift: true); Check(ui.View.PlayheadMs == 4000, "Shift-left seeks four beats during playback");
