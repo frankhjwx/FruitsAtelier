@@ -441,6 +441,12 @@ public sealed partial class EditorView
     private bool HitsoundingPointerMove(float x, float y)
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable) return false;
+        if (hitsoundingPanning)
+        {
+            mouseX = x; mouseY = y;
+            SeekTo(hitsoundingPanTime + (hitsoundingPanX - x) * hitsoundingSpan / Math.Max(1, hitsoundingGridBounds.Width));
+            return true;
+        }
         if (timingHelperScrolling) { MoveTimingHelperScroll(y); return true; }
         if (timingHelperVolumeDrag is not null) { MoveTimingHelperVolume(x); return true; }
         if (MoveHitsoundingLibraryPointer(x, y)) return true;
@@ -453,6 +459,8 @@ public sealed partial class EditorView
     private bool HitsoundingPointerUp(float x, float y, int button)
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable) return false;
+        if (button == 1 && hitsoundingPanning)
+        { HitsoundingPointerMove(x, y); hitsoundingPanning = false; return true; }
         if (button != 0) return button == 2 && hitsoundingPainting && hitsoundingErase && EndHitsoundingCanvasPointer();
         if (timingHelperScrolling) { MoveTimingHelperScroll(y); timingHelperScrolling = false; return true; }
         if (timingHelperVolumeDrag is not null) { MoveTimingHelperVolume(x); FinishTimingHelperVolume(); return true; }
@@ -467,7 +475,7 @@ public sealed partial class EditorView
         else if (hitsoundingLibraryBounds.Contains(x, y)) ImportHitsoundingLibrary([path]);
         return true;
     }
-    private bool HitsoundingWheel(float x, float y, float delta, bool alt)
+    private bool HitsoundingWheel(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
         if (!HitsoundingPageVisible || !DockContentInputAvailable || menu >= 0 || contextItems.Count > 0) return false;
         if (hitsoundingInspectorBounds.Contains(x, y))
@@ -479,8 +487,16 @@ public sealed partial class EditorView
         if (hitsoundingSampleBounds.Contains(x, y)) { hitsoundingSampleScroll = Math.Max(0, hitsoundingSampleScroll - delta / 120 * 30); return true; }
         if (hitsoundingLibraryBounds.Contains(x, y)) { hitsoundingLibraryScroll = Math.Max(0, hitsoundingLibraryScroll - (int)(delta / 120)); return true; }
         if (!hitsoundingBounds.Contains(x, y)) return false;
-        if (alt) ZoomHitsounding(Math.Pow(1.25, -delta / 120), x);
-        else SeekByWheel(-delta / 120, 1);
+        if (ctrl && !alt && !shift)
+        { if (IsLazerEditing) AdjustLazerSnapWheel(delta); else AdjustSnapWheel(delta); }
+        else if (alt && !ctrl && !shift) ZoomHitsounding(Math.Pow(1.25, -delta / 120), x);
+        else if (!ctrl && !alt)
+        {
+            if (IsLazerEditing) HandleLazerWheel(x, y, delta, false, shift, false, true, false, false);
+            else SeekByWheel(-delta / 120 * (shift ? 4 : 1), 1);
+        }
+        ContinueHitsoundingNavigation(startGesture: true);
+        if (hitsoundingPanning) { hitsoundingPanX = mouseX; hitsoundingPanTime = playhead; }
         return true;
     }
 }

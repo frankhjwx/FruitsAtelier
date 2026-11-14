@@ -22,7 +22,7 @@ internal static class HitsoundingPreciseAuditionTests
         var clock = new Clock(); var ui = new Ui(false, timeProvider: clock);
         ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.LibrarySettings.Workspace = workspace;
         ui.View.ShowHitsoundingPage(); ui.View.UpdateTransport(1200, 8000, true, false, false, null, null);
-        ui.View.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.5f, 1000).ToArray(), 1));
+        ui.View.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.5f, 1000).ToArray(), .3));
         var played = new List<Hitsound>(); int stops = 0;
         ui.View.RequestStartLibraryAudition = (sound, token) => { played.Add(sound); return Task.FromResult(1000d); };
         ui.View.RequestStopLibraryAudition = () => stops++;
@@ -47,11 +47,11 @@ internal static class HitsoundingPreciseAuditionTests
         LibraryPlay(); Check(stops == 4 && played.Count == 5, "Library audition stops an active Precise sound");
         clock.Now += 1000; ui.Paint(); Check(stops == 5, "Audition completes and resets its control");
         var selected = Block(3);
-        ui.View.Wheel(selected.X, selected.Y, -960, false, false, true); ui.Paint();
+        ui.View.Wheel(selected.X, selected.Y, -240, false, false, true); ui.Paint();
         Check(Block(3).Width is >= 24 and < 48 && ui.View.HitsoundingPreciseAuditionBounds.Width > 0, "Compact blocks still show the small audition control");
         ui.View.Wheel(selected.X, selected.Y, -240, false, false, true); ui.Paint();
         Check(Block(3).Width < 24 && ui.View.HitsoundingPreciseAuditionBounds.Width == 0, "Blocks too narrow to fit the control hide it");
-        ui.View.Wheel(selected.X, selected.Y, 1200, false, false, true); ui.Paint();
+        ui.View.Wheel(selected.X, selected.Y, 480, false, false, true); ui.Paint();
         Check(ui.View.HitsoundingPreciseAuditionBounds.Width > 0, "The control returns when the selected block is wide enough");
         ui.ClickText(L.Get("hitsounding.noteBased"));
         Check(ui.View.HitsoundingPreciseAuditionBounds.Width == 0 && baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty && ui.View.PlayheadMs == 1200,

@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-edge-drag", "-pan-zoom", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
             {
                 if (scenario == "-audition" && !precise) continue;
                 L.SetLanguage(locale);
@@ -138,6 +138,27 @@ internal static class HitsoundingRenderCheck
                     if (scenario == "-sound-group-draw") editor.KeyDown(50, false, false);
                     editor.PointerDown(X(500) + 2, y, 0, false, false);
                     editor.PointerMove(X(625), y, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                }
+                if (scenario is "-edge-drag" or "-pan-zoom")
+                {
+                    var lane = editor.HitsoundingNotesLaneBounds;
+                    float x = lane.X + lane.Width * .25f, y = lane.Y + lane.Height * 2.5f;
+                    if (scenario == "-pan-zoom")
+                    {
+                        editor.Wheel(x, y, -2400, false, false, true);
+                        editor.PointerDown(x, y, 1, false, false);
+                        editor.PointerMove(x - lane.Width * .1f, y, false, false);
+                        editor.PointerUp(x - lane.Width * .1f, y, 1);
+                    }
+                    else
+                    {
+                        x = lane.X + lane.Width * .125f;
+                        editor.PointerDown(x, y, 0, false, false);
+                        editor.PointerMove(lane.Right, y, false, false);
+                        for (int frame = 0; frame < 10; frame++)
+                        { clock.Now += 50; editor.Render(canvas, size.Item1, size.Item2); }
+                    }
                     editor.Render(canvas, size.Item1, size.Item2);
                 }
                 if (scenario == "-draw")

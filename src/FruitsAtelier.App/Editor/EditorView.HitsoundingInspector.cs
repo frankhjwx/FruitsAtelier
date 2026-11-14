@@ -383,6 +383,14 @@ public sealed partial class EditorView
     private bool BeginHitsoundingCanvasPointer(float x, float y, int button, bool ctrl, bool shift)
     {
         if (!hitsoundingBounds.Contains(x, y)) return false;
+        if (button == 1 && hitsoundingGridBounds.Contains(x, y))
+        {
+            if (!CommitField()) return true;
+            CancelInteraction();
+            hitsoundingPanning = true; hitsoundingPanX = x; hitsoundingPanTime = playhead;
+            return true;
+        }
+        RememberHitsoundingNavigation();
         if (button == 0 && !ctrl && HitsoundingPrecise && hitsoundingPreciseAuditionButton is { } audition && audition.Bounds.Contains(x, y))
         { ToggleHitsoundingLibraryAudition(audition.Sound); return true; }
         if (BeginHitsoundingTimingPointer(x, y, button, ctrl, shift)) return true;
@@ -464,6 +472,7 @@ public sealed partial class EditorView
             }
             hitsoundingStoryboardSelection.Clear();
             hitsoundingMoveTime = pressedSound.Note.TimeMs;
+            hitsoundingMovePointerTime = HitsoundingPointerTime(x);
             hitsoundingMoveSources = hitsoundingMultiSelection.Where(k => k.Lane is >= 2 and <= 4
                 && !hitsoundingLocked[k.Lane] && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event))).ToArray();
             hitsoundingMoveCopies = hitsoundingMoveSources.Select(k =>

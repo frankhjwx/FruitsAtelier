@@ -2515,5 +2515,9 @@
   "media.useBackground": "Use as background",
   "media.useVideo": "Use as video",
   "shortcuts.hint": "{0} ({1})",
-  "media.includeSubfolders": "Include subfolders"
+  "media.includeSubfolders": "Include subfolders",
+  "shortcuts.command.previousParent": "이전 오브젝트",
+  "shortcuts.command.nextParent": "다음 오브젝트",
+  "shortcuts.description.previousParent": "이전 부모 오브젝트의 시작 위치로 이동합니다.",
+  "shortcuts.description.nextParent": "다음 부모 오브젝트의 시작 위치로 이동합니다."
 }

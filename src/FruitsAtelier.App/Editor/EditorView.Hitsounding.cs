@@ -123,7 +123,7 @@ public sealed partial class EditorView
     {
         double fraction = Math.Clamp((anchorX - hitsoundingGridBounds.X) / Math.Max(1, hitsoundingGridBounds.Width), 0, 1);
         double anchorTime = HitsoundingStart + fraction * hitsoundingSpan;
-        hitsoundingSpan = Math.Clamp(hitsoundingSpan * factor, 250, 120000);
+        hitsoundingSpan = Math.Clamp(hitsoundingSpan * factor, 250, Math.Clamp(TimelineDurationMs, 250, 10000));
         double start = anchorTime - fraction * hitsoundingSpan;
         hitsoundingHeadRatio = Math.Clamp((playhead - start) / hitsoundingSpan, .05, .95);
     }

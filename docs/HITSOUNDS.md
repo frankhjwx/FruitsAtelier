@@ -131,7 +131,10 @@ Choose **Hitsounding Panel** from the same workspace selector as Mapping and Tim
 Its dock layout and display mode are remembered independently. The horizontal ruler
 uses the current Snap division and the shared osu-style tick colours and lengths.
 Alt+wheel zooms around the pointer's time without changing playback position;
-ordinary wheel moves one current Snap division per notch. From an off-grid timestamp,
+the visible span is bounded to 250 ms–10 s, or the song duration when shorter.
+Middle-drag pans time over any lane. Ctrl+wheel changes Snap, and Shift+wheel uses
+Mapping's coarse navigation. In Default mode, ordinary wheel moves one current Snap
+division per notch while paused. From an off-grid timestamp,
 the first notch lands on the nearest grid point in the chosen direction. Drag the highlighted yellow line to change its viewport
 position without seeking. Both dragging and zoom keep it within 5–95% of the timeline.
 
@@ -375,7 +378,19 @@ paused navigation follows the selected Snap subdivision.
 Left/Right and Shift+Left/Right use Mapping's keyboard navigation: one/four beats
 while playing and one/four Snap steps while paused in Default mode. Lazer mode uses
 its BPM-dependent playback seek distance and coarse paused grid. These bindings are
-configurable in the Hitsounding section of Key Bindings.
+configurable in the Hitsounding section of Key Bindings. Home jumps to song start;
+Z jumps to the first object and then song start; V/End jumps to the last object end
+and then song end. X starts playback at song start, and Space/C toggles playback.
+Up/Down visits timing points with the active editing profile's direction. Bookmark,
+lazer parent/sample-boundary, speed and Snap shortcuts also follow Mapping.
+J/K moves the active unlocked Notes, addition or SB selection earlier/later by one
+Snap subdivision; every addition destination must match a fruit event.
+
+Navigation remains available while dragging or selecting: ghosts update beneath a
+stationary pointer, with content committed only on release. Moving into either
+24-pixel lane edge scrolls progressively faster, up to 600 pixels per second,
+matching Mapping's horizontal object timeline. Marquees keep their time anchor and
+include objects scrolled out of view. Escape cancels the edit and stops scrolling.
 See [Mapping and Hitsounding command coverage](HITSOUND_MAPPING_PARITY.md) for the
 remaining navigation, selection and editing differences.
 After copying sounds or Notes while paused, selecting a different target without seeking

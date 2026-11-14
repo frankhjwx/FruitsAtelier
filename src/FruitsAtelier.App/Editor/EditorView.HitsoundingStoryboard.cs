@@ -13,6 +13,7 @@ public sealed partial class EditorView
     private StoryboardSample? hitsoundingStoryboardMove;
     private double hitsoundingStoryboardMoveTime;
     private double hitsoundingStoryboardMoveMinimum;
+    private double hitsoundingStoryboardPointerTime;
     private (float X, float Y) hitsoundingStoryboardMoveStart;
     private bool hitsoundingStoryboardMoved;
     private StoryboardSample[] hitsoundingStoryboardMoveSources = [];
@@ -39,6 +40,7 @@ public sealed partial class EditorView
             hitsoundingStoryboardMoveSources = hitsoundingStoryboardSelection.ToArray();
             hitsoundingStoryboardMoveMinimum = hit.Sample.TimeMs - hitsoundingStoryboardMoveSources.Min(s => s.TimeMs);
             hitsoundingStoryboardMoveTime = hit.Sample.TimeMs;
+            hitsoundingStoryboardPointerTime = HitsoundingPointerTime(x);
             hitsoundingStoryboardMoveStart = (x, y); hitsoundingStoryboardMoved = false;
         }
         return true;
@@ -49,7 +51,7 @@ public sealed partial class EditorView
         hitsoundingStoryboardMoved |= Math.Abs(x - hitsoundingStoryboardMoveStart.X) > ContentDragThreshold || Math.Abs(y - hitsoundingStoryboardMoveStart.Y) > ContentDragThreshold;
         if (hitsoundingStoryboardMoved)
             hitsoundingStoryboardMoveTime = Math.Max(hitsoundingStoryboardMoveMinimum,
-                SnapTiming().Snap(sample.TimeMs + (x - hitsoundingStoryboardMoveStart.X) / hitsoundingGridBounds.Width * hitsoundingSpan, divisor));
+                SnapTiming().Snap(sample.TimeMs + HitsoundingPointerTime(x) - hitsoundingStoryboardPointerTime, divisor));
         return true;
     }
     private bool EndHitsoundingStoryboardMove()
@@ -67,16 +69,15 @@ public sealed partial class EditorView
     {
         if (hitsoundingStoryboardSelection.Count > 0) EditHitsoundingStoryboard(hitsoundingStoryboardSelection.ToArray(), []);
     }
-    private void EditHitsoundingStoryboard(StoryboardSample[] remove, StoryboardSample[] add, bool move = false, Action? editNotes = null)
+    private bool EditHitsoundingStoryboard(StoryboardSample[] remove, StoryboardSample[] add, bool move = false, Action? editNotes = null, bool retainSelection = false)
     {
         if (hitsoundingLocked[6])
         {
-            if (editNotes is not null) Edit(L.Get("hitsounding.paste"), editNotes);
-            return;
+            return editNotes is not null && Edit(L.Get("hitsounding.paste"), editNotes);
         }
-        if (!CommitField()) return;
+        if (!CommitField()) return false;
         string? root = StoryboardMediaDirectory(Document);
-        if (root is null) return;
+        if (root is null) return false;
         try
         {
             var mapLines = new List<(OsuSection Section, int Index)>();
@@ -101,7 +102,7 @@ public sealed partial class EditorView
             if (sharedLines.Count > 0)
             {
                 sharedPath = Directory.EnumerateFiles(root).Where(p => string.Equals(Path.GetExtension(p), ".osb", StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase).FirstOrDefault();
-                if (sharedPath is null) return;
+                if (sharedPath is null) return false;
                 before = File.ReadAllText(sharedPath);
                 var originalLines = before.Split('\n');
                 foreach (var sample in remove.Where(s => s.Shared))
@@ -141,9 +142,31 @@ public sealed partial class EditorView
                     }
                 }, (forward, _, _) => Resources(forward)); }
                 finally { if (!applied && sharedPath is not null) Resources(false); }
+                if (!applied) return false;
             }
             hitsoundingStoryboardSelection.Clear();
+            if (retainSelection)
+            {
+                foreach (var sample in add.Where(s => s.Shared))
+                    hitsoundingStoryboardSelection.Add(sample with { SourceText = Serialize(sample) });
+                int sourceLine = 0;
+                var targetSection = Document.OriginalSections.FirstOrDefault(s => s.Name == "Events");
+                foreach (var section in Document.OriginalSections)
+                {
+                    if (section.Name is not ("Events" or "Variables" or "General")) continue;
+                    sourceLine++;
+                    for (int i = 0; i < section.Lines.Count; i++)
+                    {
+                        sourceLine++;
+                        int addedIndex = i - (section.Lines.Count - mapAdd.Length);
+                        if (ReferenceEquals(section, targetSection) && addedIndex >= 0)
+                            hitsoundingStoryboardSelection.Add(mapAdd[addedIndex] with { SourceLine = sourceLine, SourceText = section.Lines[i] });
+                    }
+                }
+            }
+            return true;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException) { ShowError(error.Message); }
+        return false;
     }
 }

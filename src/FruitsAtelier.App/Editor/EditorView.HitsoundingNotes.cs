@@ -14,6 +14,7 @@ public sealed partial class EditorView
     private double hitsoundingMoveMin, hitsoundingMoveMax;
     private Guid hitsoundingNoteId;
     private Guid[] hitsoundingNoteSelectionBefore = [];
+    private readonly List<int> hitsoundingNoteMarqueeIndices = [];
     private (Guid Id, double Start, double End, int SourceOrder, bool IsBanana, int Spans, int StackIndex, float StackOffset, int EventIndex)[] hitsoundingNoteMoveMarkers = [];
     private Rect HitsoundingNotesLane => new(hitsoundingGridBounds.X, hitsoundingGridBounds.Y,
         hitsoundingGridBounds.Width, hitsoundingGridBounds.Height / 7);
@@ -86,8 +87,9 @@ public sealed partial class EditorView
         if (hitsoundingNoteGesture == HitsoundingNoteGesture.Marquee && hitsoundingNoteMoved)
         {
             double from = Math.Min(hitsoundingNoteFrom, hitsoundingNoteTo), to = Math.Max(hitsoundingNoteFrom, hitsoundingNoteTo);
-            SelectObjects(hitsoundingNoteSelectionBefore.Concat(timelineVisibleMarkers
-                .Where(t => t.Start <= to && t.End >= from && CanSelectCollaborationObject(t.Id)).Select(t => t.Id)));
+            timelineMarkerRange.Fill(from, to, hitsoundingNoteMarqueeIndices);
+            SelectObjects(hitsoundingNoteSelectionBefore.Concat(hitsoundingNoteMarqueeIndices.Select(i => timelineMarkers[i].Id)
+                .Where(CanSelectCollaborationObject)));
         }
         return true;
     }

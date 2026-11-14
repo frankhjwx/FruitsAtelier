@@ -1835,6 +1835,15 @@ original timing handles, red-point drag prevention, exact ruler seeking while
 playing or paused, and content/conversion reuse
 in English and Chinese at two window sizes.
 
+`App.Tests --hitsounding-navigation-check` compares Default/lazer navigation with
+Mapping during paused/playing transport, including timing/boundary/bookmark jumps,
+wheel modifiers, remapping, middle panning, bounded zoom, held-ghost navigation,
+600 px/s edge scrolling, offscreen marquee selection, J/K multi-selection moves,
+undo and conversion reuse. It is also included in the panel check. The panel check
+covers consecutive SB group nudges with source-line retention.
+Native Hitsounding captures include edge-scroll previews and bounded-zoom panning,
+alongside the Select/Draw tool controls at both window sizes.
+
 `App.Tests --hitsounding-panel-check` covers the Snap ruler, actual slider ticks,
 centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,
 default bank labels, timing-tag order, the unified Config dock, library search/imports,

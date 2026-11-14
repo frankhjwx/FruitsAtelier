@@ -2515,5 +2515,9 @@
   "media.useBackground": "設為背景",
   "media.useVideo": "設為影片",
   "shortcuts.hint": "{0}（{1}）",
-  "media.includeSubfolders": "包含子資料夾"
+  "media.includeSubfolders": "包含子資料夾",
+  "shortcuts.command.previousParent": "上一個物件",
+  "shortcuts.command.nextParent": "下一個物件",
+  "shortcuts.description.previousParent": "跳轉至上一個父物件的起點。",
+  "shortcuts.description.nextParent": "跳轉至下一個父物件的起點。"
 }

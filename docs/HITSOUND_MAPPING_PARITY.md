@@ -11,33 +11,33 @@ Notes, sound or timing selection. Sample Library focus has its own command scope
 
 | Mapping input / action | Hitsounding behavior |
 | --- | --- |
-| Space / C: play or pause | Space works; C alias is absent. |
+| Space / C: play or pause | Supported. |
 | Left / Right: previous / next Snap step when paused, beat when playing | Supported; uses the active Default or lazer keyboard seek semantics. |
 | Shift+Left / Right: four steps or beats | Supported, including playback; lazer retains its coarse seek semantics. |
-| X: seek song start and play | Missing shortcut. Transport buttons remain available. |
-| Home: seek song start | Missing shortcut. |
-| Z: first object, then song start | Missing shortcut. |
-| V / End: last object end, then song end | Missing shortcuts. Default Mapping uses the last parent by start order; lazer uses the maximum end. |
-| Up / Down: next / previous timing point (reversed in lazer) | Missing shortcuts. Timing Helper can select a nearby/affecting point and explicitly Jump. |
-| Ctrl+Left / Right without selection: bookmark in Default, parent start in lazer | Missing navigation shortcuts. |
-| Alt+Left / Right in lazer: previous / next bookmark | Changes volume channel in Hitsounding, not bookmark position. |
-| Ctrl+Shift+Left / Right in lazer: slider/sample boundaries | Missing. Mapping includes head, first-span midpoint, reverses, tail and adjacent parent boundaries. |
-| Ctrl+B / Ctrl+Shift+B: add/remove bookmark | Missing keyboard handlers. Shared bookmark and overview controls remain available. |
-| Ctrl+Up / Down: speed by 25 percentage points | Missing shortcuts; shared speed buttons work. |
-| Ctrl+Shift+Up / Down: speed by 5 percentage points | Missing shortcuts. |
+| X: seek song start and play | Supported. |
+| Home: seek song start | Supported. |
+| Z: first object, then song start | Supported. |
+| V / End: last object end, then song end | Supported. Default uses the last parent by start order; lazer uses the maximum end. |
+| Up / Down: next / previous timing point (reversed in lazer) | Supported with the active editing profile; Timing Helper also offers an explicit Jump. |
+| Ctrl+Left / Right without selection: bookmark in Default, parent start in lazer | Supported; selected sound tags do not turn this into a spatial nudge. |
+| Alt+Left / Right in lazer: previous / next bookmark | Supported; these chords navigate bookmarks in lazer. |
+| Ctrl+Shift+Left / Right in lazer: slider/sample boundaries | Supported, including head, first-span midpoint, reverses, tail and adjacent parent boundaries. |
+| Ctrl+B / Ctrl+Shift+B: add/remove bookmark | Supported outside active drag gestures. |
+| Ctrl+Up / Down: speed by 25 percentage points | Supported; shared speed buttons also work. |
+| Ctrl+Shift+Up / Down: speed by 5 percentage points | Supported. |
 | Click timestamp: Jump to time | Shared dialog works; neither workspace has a dedicated default opening shortcut. |
 | Click/drag shared bottom transport | Available. This is distinct from dragging the Hitsounding lanes. |
-| Wheel over editing surface | Supported: Snap subdivision paused, full beat playing. Hitsounding wheel does not use lazer's BPM-dependent seek calculation. |
-| Shift+wheel: coarse navigation | Missing on Hitsounding lanes; Shift is ignored there. Shared bottom overview has its own handler. |
-| Ctrl+wheel: change beat division | Missing on Hitsounding lanes; it seeks instead. Snap slider remains available. |
-| Alt+wheel: zoom | Hitsounding has pointer-anchored horizontal time zoom. It does not zoom Catch's spatial axis. |
-| Ctrl+Alt+wheel: cycle tools in Default | Missing; Hitsounding treats Alt as time zoom. Lazer Mapping has no tool-cycle action. |
-| Middle drag: canvas pan | Missing on Hitsounding lanes. Default Mapping pans time and, when unlocked, X; lazer canvas middle drag pans X. |
-| Drag selection/objects to viewport edge | Mapping has edge scrolling. Hitsounding clamps the marquee and has no lane-edge auto-scroll. |
-| Wheel/zoom while holding object or endpoint drag | Hitsounding can seek/zoom, but lacks Mapping's continuation/rebasing path. A stationary pointer does not refresh Notes/addition ghosts after navigation. |
-| Space/C while holding a drag | Sound gestures can use Space; C is absent. Notes gestures consume keys other than Escape. |
-| Z/V while holding a drag | Missing. |
-| Select objects beyond the viewport by marquee + navigation | Hitsounding sound marquee retains its time anchor and follows playback; Notes marquee and held-note navigation do not have full Mapping parity. |
+| Wheel over editing surface | Supported with Mapping timeline wheel semantics for Default and lazer. |
+| Shift+wheel: coarse navigation | Supported with the active editing profile. |
+| Ctrl+wheel: change beat division | Supported without seeking. |
+| Alt+wheel: zoom | Pointer-anchored horizontal time zoom, bounded to 250 ms–10 s (or song duration if shorter). |
+| Ctrl+Alt+wheel: cycle tools in Default | No tool-cycle action; the combined modifiers leave the viewport unchanged. |
+| Middle drag: canvas pan | Supported as horizontal time panning, including locked lanes. Hitsounding has no spatial axis. |
+| Drag selection/objects to viewport edge | Supported for Notes, additions, SB samples and timing drags/marquees. A 24 px edge zone ramps to Mapping timeline speed (600 px/s). |
+| Wheel/zoom while holding object or endpoint drag | Supported; held previews follow navigation and snapping changes without committing content. |
+| Space/C while holding a drag | Supported; playback refreshes the held preview. |
+| Z/V while holding a drag | Supported. |
+| Select objects beyond the viewport by marquee + navigation | Supported; Notes and sound marquees retain their original time anchors and include offscreen objects. |
 | Reverse canvas wheel preference | Catch-specific; not applied to Hitsounding lanes. |
 | - / =: change canvas time spacing | Hitsounding uses these for horizontal timeline zoom. |
 | Independent X/Y scale, uniform-scale lock, reset/follow viewport | Mapping canvas controls; Hitsounding has its own span and play-line-position controls, without a spatial axis. |
@@ -61,7 +61,7 @@ Notes, sound or timing selection. Sample Library focus has its own command scope
 | Drag one or multiple SB sounds | Supported with one snapped offset; no destination note required. |
 | Mixed SB and note-addition drag | Not a unified gesture: dragging an addition retains additions; dragging an SB sound retains SB samples. |
 | Normal / SliderTick movement | These are tied to their notes; move Notes instead. |
-| J / K: nudge selection earlier/later by Snap | Missing for Notes, additions and SB selections. |
+| J / K: nudge selection earlier/later by Snap | Supported for unlocked Notes, additions and SB samples. Addition destinations must all match existing fruit events; SB samples retain independent timestamps. |
 | Ctrl+Left / Right: nudge selected X | Missing; Hitsounding has no X-position axis. |
 | Ctrl+Shift+Left / Right: horizontal grid nudge in Default | Missing; no X-position axis. |
 | Shift+timeline drag: disable beat snapping | Missing for Notes and SB dragging. Additions target existing fruit events. |
@@ -91,8 +91,8 @@ Notes, sound or timing selection. Sample Library focus has its own command scope
 
 | Mapping input / action | Hitsounding behavior |
 | --- | --- |
-| Shift+1–9: Snap divisor | Missing shortcuts; some modified keys can fall through to unrelated Hitsounding actions. Use the Snap slider. |
-| Ctrl+M: cycle 1/3, 1/4, 1/6, 1/8 | Missing shortcut. |
+| Shift+1–9: Snap divisor | Supported with the active editing profile. |
+| Ctrl+M: cycle 1/3, 1/4, 1/6, 1/8 | Supported. |
 | Ctrl+1–4 / G: spatial grid size | Missing lane equivalent; no spatial axis. |
 | T: Grid Snap; Y: Distance Snap (T/Y in lazer) | No Hitsounding placement equivalents. |
 | Hold Shift/Alt: temporary Grid/Distance Snap inversion | No corresponding sound/Notes gesture behavior. |
@@ -119,7 +119,7 @@ Notes, sound or timing selection. Sample Library focus has its own command scope
 | Ctrl+Shift+A | Missing AiMod shortcut; Edit menu remains. |
 | Tab: Catch/osu! canvas switch | Shared early handler still toggles the stored Mapping canvas and cancels selection; it does not switch the visible Hitsounding lane layout. |
 | Esc | Cancels the active Hitsounding gesture/menu first, otherwise returns to Library. |
-| Alt+arrows | Volume channel/level controls work, including Alt+Left/Right in lazer Hitsounding. |
+| Alt+arrows | Volume channel/level controls work in Default; lazer reserves Alt+Left/Right for bookmarks and retains Alt+Up/Down for volume. |
 | F12 / Alt+Enter / Ctrl+Shift+F8 | Shared screenshot, fullscreen and diagnostics commands. |
 | File/difficulty menus, layouts, settings, skins, shared transport and dock controls | Available subject to their individual guards; switching workspace does not remove these application features. |
 

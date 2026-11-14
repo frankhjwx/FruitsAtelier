@@ -24,6 +24,7 @@ public sealed partial class EditorView
 
     private void ReleaseDifficultyCaches(bool preserveMedia = false, bool preserveClipboard = false)
     {
+        hitsoundingPanning = false;
         hitsoundingStoryboardMove = null; hitsoundingStoryboardMoved = false;
         hitsoundingStoryboardMoveSources = []; hitsoundingNoteMoveMarkers = [];
         hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;

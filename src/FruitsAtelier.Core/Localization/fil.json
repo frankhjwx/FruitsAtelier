@@ -2515,5 +2515,9 @@
   "media.useBackground": "Use as background",
   "media.useVideo": "Use as video",
   "shortcuts.hint": "{0} ({1})",
-  "media.includeSubfolders": "Include subfolders"
+  "media.includeSubfolders": "Include subfolders",
+  "shortcuts.command.previousParent": "Nakaraang object",
+  "shortcuts.command.nextParent": "Susunod na object",
+  "shortcuts.description.previousParent": "Pumunta sa simula ng nakaraang parent object.",
+  "shortcuts.description.nextParent": "Pumunta sa simula ng susunod na parent object."
 }

@@ -95,15 +95,13 @@ public sealed partial class EditorView
             bool enabled = i < 2 || HitsoundingBrushEnabled;
             bool active = enabled && (i < 2 ? hitsoundingDraw == (i == 1) : displayedBank == banks[i]);
             uint color = !enabled ? Muted : i < 2 ? Accent : HitsoundingBankColor(banks[i]);
+            c.Fill(box, active ? Surface : Panel, 6);
+            c.StrokeOpacity(box, color, active ? 2 : 1, 6, active ? 1 : .35f);
             if (i == 0)
-                c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", "select.png"), box, opacity: active ? 1 : .45f);
+                DrawHitsoundingSelectIcon(c, new(x + size * .28f, y + size * .12f, size * .44f, size * .44f), active ? 1 : .55f);
             else
-            {
-                c.Fill(box, active ? Surface : Panel, 6);
-                c.StrokeOpacity(box, color, active ? 2 : 1, 6, active ? 1 : .35f);
                 c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "hitsounding", names[i] + ".png"),
                     new(x + size * .22f, y + 3, size * .56f, size * .56f), opacity: !enabled ? .18f : active ? 1 : .55f);
-            }
             string shortcut = ShortcutKeys(commands[i], ShortcutScope.Hitsounding, first: true);
             float keyFont = Math.Min(10, (size - 10) / Math.Max(1, c.MeasureText(shortcut, 10, true)) * 10);
             if (shortcut.Length > 0) c.Text(shortcut, x + 5, y + 4, keyFont, color, size - 10, true);
@@ -115,6 +113,22 @@ public sealed partial class EditorView
             y += size + gap;
         }
     }
+    private void DrawHitsoundingSelectIcon(ICanvas c, Rect r, float opacity)
+    {
+        float width = Math.Max(1, r.Width * .055f);
+        void Line(float x1, float y1, float x2, float y2, uint colour) =>
+            c.Line(r.X + x1 * r.Width, r.Y + y1 * r.Height, r.X + x2 * r.Width, r.Y + y2 * r.Height, colour, width, opacity);
+        for (int i = 0; i < 3; i++)
+        {
+            float from = i * .32f, to = from + .18f;
+            Line(from, 0, to, 0, Accent); Line(0, from, 0, to, Accent);
+            if (i < 2) { Line(from, .82f, to, .82f, Accent); Line(.82f, from, .82f, to, Accent); }
+        }
+        c.Polyline(HitsoundingSelectCursor, r.X, r.Y, r.Width, Foreground, width, opacity);
+    }
+    private static readonly System.Numerics.Vector2[] HitsoundingSelectCursor =
+        [new(.45f, .35f), new(.95f, .73f), new(.72f, .75f), new(.86f, .96f),
+         new(.75f, 1), new(.61f, .79f), new(.5f, .94f), new(.45f, .35f)];
     private void DrawHitsoundingToolTooltip(ICanvas c)
     {
         if (menu >= 0 || contextItems.Count > 0 || WantsCapture) return;

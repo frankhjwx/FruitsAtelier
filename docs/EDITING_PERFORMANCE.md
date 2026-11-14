@@ -140,6 +140,10 @@ Hitsounding move gestures retain selected note markers, addition samples or SB s
 at pointer-down. Pointer movement updates candidate times; rendering draws translucent
 ghosts over committed content without rebuilding conversion or export. Release submits
 one edit, while cancellation and difficulty retirement discard the gesture snapshots.
+Keyboard/wheel navigation and edge-scroll frames update those same candidates from
+their original time anchors. Edge scrolling uses the shared desktop frame scheduler
+and elapsed time, without rebuilding conversion. Notes marquees query the retained
+timeline interval index so selection includes objects scrolled out of view.
 
 Legacy droplet effects run on a detached candidate at the content commit boundary.
 The active transaction retains its baseline until validation completes. Rendering

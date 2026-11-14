@@ -2515,5 +2515,9 @@
   "media.useBackground": "Use as background",
   "media.useVideo": "Use as video",
   "shortcuts.hint": "{0} ({1})",
-  "media.includeSubfolders": "Include subfolders"
+  "media.includeSubfolders": "Include subfolders",
+  "shortcuts.command.previousParent": "Objet précédent",
+  "shortcuts.command.nextParent": "Objet suivant",
+  "shortcuts.description.previousParent": "Aller au début de l’objet parent précédent.",
+  "shortcuts.description.nextParent": "Aller au début de l’objet parent suivant."
 }

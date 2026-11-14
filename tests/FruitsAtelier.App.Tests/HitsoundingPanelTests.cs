@@ -1096,6 +1096,17 @@ internal static class HitsoundingPanelTests
         var baseline = ui.View.Document.DeepClone(); double time = ui.View.PlayheadMs;
         var first = Blocks()[0]; ui.Click(first.X + 5, first.Y + 10);
         Check(ui.View.PlayheadMs == time, "Storyboard selection does not seek");
+        var nudgeTarget = Blocks()[1];
+        ui.View.PointerDown(nudgeTarget.X + 5, nudgeTarget.Y + 10, 0, false, true);
+        ui.View.PointerUp(nudgeTarget.X + 5, nudgeTarget.Y + 10, 0); ui.Paint();
+        ui.Key(75); Wait(2);
+        Check(Samples().Select(s => s.TimeMs).Order().SequenceEqual(new[] { 625d, 1125d }), "K nudges the selected SB group");
+        ui.Key(74); Wait(2);
+        Check(Samples().Select(s => s.TimeMs).Order().SequenceEqual(new[] { 500d, 1000d }), "J retains SB selection and restores its timestamps");
+        ui.Key(90, ctrl: true); ui.Key(90, ctrl: true); Wait(2);
+        Check(baseline.ContentEquals(ui.View.Document), "SB nudges restore source sections through undo");
+        ui.LoadDocument(map); ui.View.ShowHitsoundingPage(); Wait(2);
+        first = Blocks()[0]; ui.Click(first.X + 5, first.Y + 10);
         var ctrlTarget = Blocks()[1];
         ui.View.PointerDown(ctrlTarget.X + 5, ctrlTarget.Y + 10, 0, false, true);
         ui.View.PointerUp(ctrlTarget.X + 5, ctrlTarget.Y + 10, 0); ui.Paint(); ui.Key(46); Wait(0);
