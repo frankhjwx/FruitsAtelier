@@ -11,6 +11,7 @@ internal static class TimingEditorTests
             foreach (string lang in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(lang);
+                KiaiSelection();
                 UnchangedBpm();
                 FloatingWindow();
                 FloatingResize();
@@ -99,6 +100,49 @@ internal static class TimingEditorTests
             }
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void KiaiSelection()
+    {
+        foreach (bool showSv in new[] { false, true })
+        foreach (bool mixed in new[] { false, true })
+        {
+            var map = Map();
+            map.TimingPoints[0].Effects = 8;
+            if (mixed) map.TimingPoints.Add(new TimingPoint
+            {
+                TimeMs = 1000, BeatLengthMs = -100, Uninherited = false,
+                SampleSet = 2, Volume = 35, Effects = 8, SourceOrder = 1
+            });
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900);
+            ui.Key(117);
+            if (showSv) ClickProperty(ui, L.Get("timing.showSv"));
+            ui.Key('A', ctrl: true); ui.ClickText(L.Get("timing.style"));
+            string copied = ""; ui.View.RequestCopyText = text => copied = text;
+            void AssertDraft(int effects)
+            {
+                ui.Key('C', ctrl: true);
+                var points = TimingEditing.Parse(copied);
+                Check(points.Length == map.TimingPoints.Count && points.All(p => p.Effects == effects),
+                    "Kiai edits selected red/green rows without adding points or changing other effects");
+            }
+            ClickProperty(ui, L.Get("timing.kiai")); AssertDraft(9);
+            Check(ui.View.Document.ContentEquals(map), "Kiai draft preserves live content");
+            ui.Key('Z', ctrl: true); AssertDraft(8);
+            ui.Key('Y', ctrl: true); AssertDraft(9);
+            ClickProperty(ui, L.Get("timing.kiai")); AssertDraft(8);
+            ClickProperty(ui, L.Get("timing.kiai")); ui.Key(13);
+            var expected = map.DeepClone();
+            foreach (var point in expected.TimingPoints) { point.Effects = 9; point.OriginalLine = null; }
+            Check(ui.View.Document.ContentEquals(expected), "Kiai commit preserves timing types and all other content");
+            var saved = ui.View.Document.DeepClone();
+            Check(ProjectSerializer.Read(ProjectSerializer.Serialize(saved)).ContentEquals(saved), "Kiai survives project roundtrip");
+            var exported = OsuBeatmapWriter.Serialize(saved).ReadBack.TimingPoints;
+            Check(exported.Count == saved.TimingPoints.Count && exported.All(p => p.Effects == 9)
+                && exported[0].Uninherited, "Red Kiai survives osu export without an extra green point");
+            ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Kiai commit undoes atomically");
+            ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(saved), "Kiai commit redoes atomically");
+        }
     }
 
     private static void UnchangedBpm()

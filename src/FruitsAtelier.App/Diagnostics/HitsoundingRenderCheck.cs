@@ -90,6 +90,16 @@ internal static class HitsoundingRenderCheck
                         editor.PointerUp(button.X + 12, button.Y + 12, 0);
                     }
                     editor.Render(canvas, size.Item1, size.Item2);
+                    var notes = editor.HitsoundingNotesLaneBounds;
+                    var normalLock = editor.HitsoundingLockBounds(1);
+                    editor.PointerDown(normalLock.X + 12, normalLock.Y + 12, 0, false, false);
+                    editor.PointerUp(normalLock.X + 12, normalLock.Y + 12, 0);
+                    editor.Render(canvas, size.Item1, size.Item2);
+                    float fromX = notes.X + notes.Width * .1f, toX = notes.X + notes.Width * .4f;
+                    float fromY = notes.Y + notes.Height / 2, toY = notes.Y + notes.Height * 2.8f;
+                    editor.PointerDown(fromX, fromY, 0, false, false);
+                    editor.PointerMove(toX, toY, false, false);
+                    editor.Render(canvas, size.Item1, size.Item2);
                 }
                 if (scenario is "-notes" or "-notes-drag" or "-notes-preview")
                 {

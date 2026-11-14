@@ -43,7 +43,7 @@ public sealed partial class EditorView
         {
             if (!hitsoundingLocked[lane]) continue;
             var bounds = new Rect(g.X, g.Y + lane * height, g.Width, height);
-            c.Fill(bounds, 0x293649, opacity: .55f);
+            c.Fill(bounds, 0xE89A9A, opacity: .18f);
         }
     }
     private void DrawHitsoundingLockTooltip(ICanvas c)

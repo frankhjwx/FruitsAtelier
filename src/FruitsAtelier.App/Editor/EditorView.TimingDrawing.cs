@@ -222,9 +222,8 @@ public sealed partial class EditorView
         }
         else
         {
-            bool enabled = points.All(p => !p.Uninherited);
             TimingCheck(c, new(r.X + 12, y, r.Width - 24, 32), "timing.kiai", points.All(p => (p.Effects & 1) != 0),
-                () => SetTimingValues("kiai", points.All(p => (p.Effects & 1) != 0) ? 0 : 1), enabled);
+                () => SetTimingValues("kiai", points.All(p => (p.Effects & 1) != 0) ? 0 : 1));
             c.Text(L.Get("timing.kiaiHelp"), r.X + 12, y + 50, 13, Muted, r.Width - 24);
         }
     }

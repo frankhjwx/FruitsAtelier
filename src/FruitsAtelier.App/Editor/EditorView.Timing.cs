@@ -281,7 +281,7 @@ public sealed partial class EditorView
                     case "volume": p.Volume = (int)Math.Round(value); break;
                     case "index": p.SampleIndex = (int)value; break;
                     case "bank": p.SampleSet = (int)value; break;
-                    case "kiai" when !p.Uninherited: p.Effects = (p.Effects & ~1) | (int)value; break;
+                    case "kiai": p.Effects = (p.Effects & ~1) | (int)value; break;
                 }
             }
         });

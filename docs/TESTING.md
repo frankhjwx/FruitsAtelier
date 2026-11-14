@@ -1755,6 +1755,8 @@ Windows `FruitsAtelier.App --render-check --timing-sv-render-check` exercises na
 controls and captures both languages, compact/wide windows and 96/144/192 DPI under
 `artifacts/tests/timing-sv-native`.
 
+`App.Tests --timing-feedback-check` covers red and mixed red/green Kiai edits, draft and committed undo/redo, project roundtrips and osu export without extra green points. Native `--timing-sv-render-check` also operates the red-point Kiai toggle.
+
 `App.Tests --timing-feedback-check` includes waveform rendering, subdivision colours,
 zoom and cached audio, and also checks the floating F6 window: undimmed
 editor rendering, title dragging, four-corner proportional scaling down to 50%,
@@ -1879,7 +1881,7 @@ and stale asynchronous clipboard responses at normal and half window scale.
 one-second popup and its fade, plus copy/paste menus in English and Chinese at
 96/144/192 DPI. Captures go to `artifacts/tests/timing-clipboard-native`.
 
-`App.Tests --hitsounding-notes-check` checks per-track locking, Draw-only Notes
+`App.Tests --hitsounding-notes-check` checks pale red locked-track backgrounds, sound selection rectangles starting in locked tracks while excluding locked sounds, unchanged Notes highlighting during sound selection, per-track locking, Draw-only Notes
 creation and snapped previews at the canvas centre, marquee selection in both tools, atomic matching/empty/conflicting clipboard
 pastes, slider head/tail timing, reverse shortcuts, undo/redo and cancellation in
 English and Chinese.

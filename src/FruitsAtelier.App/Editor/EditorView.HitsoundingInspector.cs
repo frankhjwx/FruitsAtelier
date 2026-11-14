@@ -405,7 +405,19 @@ public sealed partial class EditorView
         }
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
         int pointerLane = Math.Clamp((int)((y - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7)), 0, 6);
-        if (hitsoundingLocked[pointerLane]) return true;
+        if (hitsoundingLocked[pointerLane])
+        {
+            if (button == 0 && CommitField())
+            {
+                hitsoundingNotesSelection = false;
+                hitsoundingTimingSelection.Clear(); hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
+                hitsoundingSelectedTiming = null; hitsoundingSelected = null; SelectObjects([]);
+                hitsoundingMarquee = true; hitsoundingMarqueeMoved = false;
+                hitsoundingMarqueeStartTime = HitsoundingStart + (x - hitsoundingGridBounds.X) / hitsoundingGridBounds.Width * hitsoundingSpan;
+                hitsoundingMarqueeStart = hitsoundingMarqueeEnd = (x, y);
+            }
+            return true;
+        }
         if (BeginHitsoundingNotesPointer(x, y, button, ctrl, shift)) return true;
         hitsoundingNotesSelection = false;
         hitsoundingTimingSelection.Clear();

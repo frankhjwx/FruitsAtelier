@@ -832,8 +832,10 @@ Press **F6**. Select a row, Ctrl-click to toggle rows, or Shift-click for a rang
 
 | Point | Editable role |
 | --- | --- |
-| Red | Timing section: offset, BPM and meter |
+| Red | Timing section: offset, BPM and meter; sample bank/index, volume and Kiai |
 | Green | Inherited sample bank/index, volume and Kiai settings; imported SV is retained |
+
+Kiai can be toggled on red points or mixed red/green selections without adding inherited points.
 
 **Ctrl+P** adds a red point at the playhead; **Ctrl+Shift+P** adds a green one. **Ctrl+I** deletes selected rows in the dialog or the current section outside it. Ordinary deletion protects the first red point.
 
@@ -1165,7 +1167,7 @@ On **Colour palette**, choose 3–8 colours and generate a proposal from the cur
 
 ## Hitsounding workspace
 
-Switch to Hitsounding for sound tracks and **Timing Helper**. Audible tracks use green mute controls; muted tracks use grey. Lock controls are teal when unlocked and pale red when locked. Locks protect editing and do not mute sound.
+Switch to Hitsounding for sound tracks and **Timing Helper**. Audible tracks use green mute controls; muted tracks use grey. Lock controls are teal when unlocked and pale red when locked. Locked tracks have a pale red background. Locks protect editing and do not mute sound. A selection rectangle can start in a locked track and select sound tags in unlocked tracks. Selecting sound tags leaves the Notes graphics unhighlighted.
 
 Select red and green timing points with Ctrl-click or a marquee. **Ctrl+C**, then **Ctrl+V** in another difficulty, pastes at the original timestamps and replaces timing points at those timestamps in one undo step. Other timestamps remain unchanged. **5** adds an inherited point at the playhead. A selection containing red points cannot be dragged.
 
