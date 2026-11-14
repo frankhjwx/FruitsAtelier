@@ -71,8 +71,10 @@ each include hitnormal, hitwhistle, hitfinish, hitclap, and slidertick. Banana u
 separate Catch sample. Source revisions, checksums and asset licenses are in
 [Default samples](../assets/audio/osu/README.md).
 
-A synthesized emergency tone remains available for corrupt/oversized input or missing
-application assets. Imported `.osk` files include supported WAV, OGG and MP3 hitnormal, hitwhistle, hitfinish, hitclap and slidertick samples for all three banks. Skin switches invalidate resolved events and preload the new sample bank across difficulties. Older imported caches are re-extracted from their stored archives when selected. Within a skin, WAV takes precedence over OGG and MP3; a selected skin always takes precedence over the fallback skin regardless of file format.
+A resolved audio file that cannot be read or decoded, or exceeds the size limit,
+is skipped silently. Failed samples are cached until the audio bank is refreshed,
+so playback does not repeatedly attempt decoding. Synthesized samples remain available
+when no file is assigned. Imported `.osk` files include supported WAV, OGG and MP3 hitnormal, hitwhistle, hitfinish, hitclap and slidertick samples for all three banks. Skin switches invalidate resolved events and preload the new sample bank across difficulties. Older imported caches are re-extracted from their stored archives when selected. Within a skin, WAV takes precedence over OGG and MP3; a selected skin always takes precedence over the fallback skin regardless of file format.
 
 Opening a project preloads the samples referenced by every difficulty, including notes far
 beyond the current playhead. The editor supplies isolated document snapshots. macOS builds
@@ -315,6 +317,11 @@ of beatmap undo history.
 Library audition plays one file at a time. Starting another file stops the previous
 one; the active row shows a progress fill, outline and Stop button. Navigation and
 file changes stop audition. Audition uses independent playback from map preview.
+Unavailable audio stops that audition without interrupting editing. Library file
+operations and sample replacement failures use the status bar rather than a modal
+dialog. A deleted or inaccessible current directory falls back to an accessible
+parent within the library. Failed replacement preserves the existing sample;
+external modifications are never forcibly overwritten by undo or redo.
 
 In Precise HS, clicking a sound block selects it and reveals an audition button
 inside its lower-left waveform area when the visible block is wide enough.

@@ -53,6 +53,16 @@ internal static class HitsoundingPreciseAuditionTests
         Check(Block(3).Width < 24 && ui.View.HitsoundingPreciseAuditionBounds.Width == 0, "Blocks too narrow to fit the control hide it");
         ui.View.Wheel(selected.X, selected.Y, 480, false, false, true); ui.Paint();
         Check(ui.View.HitsoundingPreciseAuditionBounds.Width > 0, "The control returns when the selected block is wide enough");
+        foreach (bool synchronous in new[] { false, true })
+        {
+            ui.View.RequestStartLibraryAudition = (_, _) => synchronous
+                ? throw new IOException("Unavailable sample") : Task.FromException<double>(new InvalidDataException("Invalid audio"));
+            Play(); ui.Paint();
+            Check(!ui.View.ErrorVisible && ui.View.PrepareFileOperation() && ui.View.StatusMessage.Contains(synchronous ? "Unavailable sample" : "Invalid audio"),
+                "Failed auditions reset their controls and report a nonblocking error");
+            ui.View.RequestStartLibraryAudition = (_, _) => Task.FromResult(1000d);
+            Play(); Play();
+        }
         ui.ClickText(L.Get("hitsounding.noteBased"));
         Check(ui.View.HitsoundingPreciseAuditionBounds.Width == 0 && baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty && ui.View.PlayheadMs == 1200,
             "Audition and mode changes preserve document history and transport position");

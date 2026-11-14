@@ -1811,6 +1811,15 @@ menus and inspector at narrow and ordinary window sizes under
 
 ## Hitsounding workspace checks
 
+Hitsounding panel checks include missing and locked slot resources, recovery from
+a deleted library directory, and synchronous/asynchronous audition failures without
+modal interruption. The native Hitsounding render check captures failed audition
+feedback. `Core.Tests --hitsound-copier` checks replacement across competing
+extensions, external modifications, locked files, no-op assignment and save/export
+with event overrides. `Audio.Tests --hitsound-check` verifies silent handling of
+missing, malformed, locked and oversized custom samples without starting an
+audition device, and continued playback of valid samples.
+
 `App.Tests --hitsounding-feedback-check` covers the inherited-point shortcut, deferred affecting-line application, five-percent slider clicks and precise dragging, adjacent two-point volume ramps with tempo changes and undo, the compact interval dropdown and generated group selection, multi-selection Offset visibility, proportional scrollbar input, selection bank highlighting, and selected-target sound paste. It is included in the Hitsounding panel check.
 
 `App.Tests --hitsound-library-files-check` covers real right-button context menus,

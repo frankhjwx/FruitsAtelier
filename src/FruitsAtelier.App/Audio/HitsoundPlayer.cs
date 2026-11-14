@@ -56,6 +56,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
     {
         if (unavailable || !double.IsFinite(timeMs)) return;
         var samples = GetSamples(sound);
+        if (samples.Length == 0) return;
         lock (gate)
         {
             scheduledCount++;
@@ -71,17 +72,20 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
     public void PlayAudition(Hitsound sound)
     {
         if (unavailable) return;
+        var samples = GetSamples(sound);
+        if (samples.Length == 0) return;
         EnsureAuditionOutput();
         auditionMixer!.Volume = Volume;
-        auditionMixer.QueueSamples(GetSamples(sound), sound.Volume);
+        auditionMixer.QueueSamples(samples, sound.Volume);
         auditionOutput!.Play();
     }
     public double PlayExclusiveAudition(Hitsound sound)
     {
         Stop(); cache.Clear(); cacheBytes = 0;
         if (unavailable) return 0;
-        EnsureAuditionOutput();
         var samples = GetSamples(sound);
+        if (samples.Length == 0) return 0;
+        EnsureAuditionOutput();
         auditionMixer!.Volume = Volume;
         auditionMixer.QueueSamples(samples, sound.Volume);
         auditionOutput!.Play();
@@ -205,6 +209,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
     }
     private void QueueSamples(float[] decoded, float gain)
     {
+        if (decoded.Length == 0) return;
         lock (gate)
         {
             immediateCount++;
@@ -216,7 +221,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
     {
         string key = sound.FilePath ?? $"{sound.Kind}/{sound.SampleSet}/{sound.Name}";
         if (cache.TryGetValue(key, out var cached)) return cached;
-        float[] samples = HitsoundSamples.Create(sound);
+        float[] samples = sound.FilePath is null ? HitsoundSamples.Create(sound) : [];
         if (sound.FilePath is not null)
         {
             double beganMs = AudioDiagnosticLog.NowMs;
@@ -257,7 +262,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
             {
                 if (diagnostics.Enabled) diagnostics.Write("hitsoundDecodeFailed", new { fileName = Path.GetFileName(sound.FilePath),
                     decoder, sourceFormat, errorType = ex.GetType().FullName, ex.HResult, ex.StackTrace,
-                    fallback = "generatedSample", elapsedMs = AudioDiagnosticLog.NowMs - beganMs });
+                    fallback = "silence", elapsedMs = AudioDiagnosticLog.NowMs - beganMs });
                 log?.Invoke(ex.ToString());
             }
         }

@@ -2,12 +2,50 @@ using FruitsAtelier.Core;
 
 internal static class HitsoundCopierTests
 {
+    private static void ReplacementFailures()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/hitsound-replacement", Guid.NewGuid().ToString("N")));
+        Directory.CreateDirectory(root);
+        string wave = Path.Combine(root, "normal-hitnormal.wav"), ogg = Path.Combine(root, "normal-hitnormal.ogg");
+        string source = Path.Combine(root, "custom.wav");
+        File.WriteAllBytes(wave, [1, 2]); File.WriteAllBytes(ogg, [3, 4]); File.WriteAllBytes(source, [5, 6]);
+        var document = Read("80,192,1000,1,2,0:0:0:0:");
+        var events = CatchStreamConverter.Convert(document).Objects;
+        document.HitsoundOverrides.Add(new HitsoundResolver(document, events).EventSettings(events.Single()));
+        var history = new EditorHistory(document);
+        var plan = HitsoundResourcePlan.ReplaceSample(root, 1, 1, "hitnormal", source);
+        history.EditResources("replace", forward => { if (forward) plan.Apply(); else plan.Restore(); });
+        Check(File.ReadAllBytes(wave).SequenceEqual(new byte[] { 5, 6 }) && !File.Exists(ogg), "Replacement removes competing extensions");
+        OsuBeatmapReader.Validate(document);
+        Check(ProjectSerializer.Read(ProjectSerializer.Serialize(document)).ContentEquals(document), "Replacement with event overrides preserves save data");
+        OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(document).Text);
+        history.Undo();
+        Check(File.ReadAllBytes(wave).SequenceEqual(new byte[] { 1, 2 }) && File.Exists(ogg) && !history.IsDirty, "Undo restores both extensions");
+        history.Redo(); history.Undo();
+        File.WriteAllBytes(wave, [9]);
+        try { plan.Apply(); throw new Exception("Expected external modification rejection"); }
+        catch (IOException) { }
+        Check(File.ReadAllBytes(wave).SequenceEqual(new byte[] { 9 }) && File.Exists(ogg), "External changes cannot be overwritten by a stale plan");
+        File.WriteAllBytes(wave, [1, 2]);
+        using (var locked = new FileStream(wave, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            try { plan.Apply(); throw new Exception("Expected sharing violation"); }
+            catch (IOException) { }
+            Check(File.Exists(ogg), "Locked destination does not delete competing extensions");
+        }
+        Check(File.ReadAllBytes(wave).SequenceEqual(new byte[] { 1, 2 }), "Locked replacement preserves bytes");
+        File.Delete(ogg);
+        Check(HitsoundResourcePlan.ReplaceSample(root, 1, 1, "hitnormal", wave).DisplayNames.Count == 0, "Assigning the same file is a no-op");
+        Directory.Delete(root, true);
+    }
+
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     private static MapDocument Read(string objects, string timing = "0,500,4,1,0,100,1,0") => OsuBeatmapReader.Read(
         "osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:2\n[TimingPoints]\n" + timing + "\n[HitObjects]\n" + objects);
 
     public static void Run()
     {
+        ReplacementFailures();
         var source = Read("80,192,1000,1,8,2:3:2:70:\n120,192,1250,1,0,2:2:2:35:\n180,192,1500,1,2,3:3:3:60:\n200,192,4000,1,4,0:0:0:0:",
             "0,500,4,1,0,100,1,0\n1000,-25,4,2,2,70,0,1");
         var target = Read("100,192,1000,2,4,L|200:192,1,100,4|4,1:1|1:1,0:0:0:0:\n300,192,2000,1,8,0:0:0:0:");

@@ -991,9 +991,30 @@ internal static class HitsoundingPanelTests
         ui.Key(89, ctrl: true); Check(File.ReadAllBytes(wave).SequenceEqual(replacement), "UI redo replaces assigned sample");
         ui.Key(90, ctrl: true);
         string libraryRoot = Path.GetDirectoryName(saved)!;
+        foreach (bool missing in new[] { false, true })
+        {
+            string librarySource = Path.Combine(libraryRoot, "replacement.wav");
+            if (missing) File.Delete(librarySource);
+            using (var locked = missing ? null : new FileStream(wave, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                sourceLabel = ui.Canvas.Texts.Last(t => t.Value == "replacement.wav");
+                slotLabel = ui.Canvas.Texts.First(t => t.Value == "Normal" && t.X < 300);
+                ui.View.PointerDown(sourceLabel.X + 4, sourceLabel.Y + 4, 0, false, false);
+                ui.View.PointerMove(slotLabel.X + 4, slotLabel.Y + 4, false, false);
+                ui.View.PointerUp(slotLabel.X + 4, slotLabel.Y + 4, 0);
+                Check(!ui.View.ErrorVisible && ui.View.PrepareFileOperation(), "Unavailable slot resources leave the editor usable");
+            }
+            Check(File.ReadAllBytes(wave).SequenceEqual(before), "Failed replacement preserves the existing sound");
+            File.WriteAllBytes(librarySource, replacement); ui.Paint();
+        }
         string nested = Path.Combine(libraryRoot, "Drums", "Tight"); Directory.CreateDirectory(nested);
         ui.View.ShowHitsoundingPage(); ui.Paint();
         OpenFolder("Drums"); OpenFolder("Tight");
+        string removedDirectory = Path.Combine(nested, "deleted-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(removedDirectory); ui.View.NavigateHitsoundingDirectory(removedDirectory);
+        Directory.Delete(removedDirectory);
+        ui.View.NavigateHitsoundingDirectory(removedDirectory); ui.Paint();
+        Check(!ui.View.ErrorVisible && ui.Canvas.Texts.Any(t => t.Value.EndsWith(Path.Combine("Drums", "Tight"), StringComparison.Ordinal)), "Deleted current folder returns to its accessible parent");
         ui.View.DropLibraryFiles([source]); WaitImport();
         Check(File.Exists(Path.Combine(nested, "replacement.wav")), "Imports target the browsed subfolder");
         ui.View.NavigateHitsoundingDirectory(Path.GetDirectoryName(libraryRoot)); ui.Paint();

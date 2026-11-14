@@ -166,7 +166,7 @@ public sealed partial class EditorView
             }
             return true;
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException) { ShowError(error.Message); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException) { ReportResourceError(error.Message); }
         return false;
     }
 }

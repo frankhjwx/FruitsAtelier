@@ -22,9 +22,9 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-edge-drag", "-pan-zoom", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
+            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-edge-drag", "-pan-zoom", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-audition-failed", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
             {
-                if (scenario == "-audition" && !precise) continue;
+                if (scenario.StartsWith("-audition", StringComparison.Ordinal) && (!precise || size.Item2 < 900)) continue;
                 L.SetLanguage(locale);
                 var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
                 map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, Uninherited = true, SampleSet = 2, SampleIndex = 1, Volume = 80, Effects = 1 });
@@ -58,10 +58,10 @@ internal static class HitsoundingRenderCheck
                 var clock = new AuditionClock();
                 var editor = new EditorView(false, timeProvider: clock); editor.LoadDocument(map);
                 editor.RequestWaveform = (path, token) => Task.FromResult(FruitsAtelier.App.Audio.WaveformDecoder.Load(path, token).GetAwaiter().GetResult());
-                if (scenario == "-audition")
+                if (scenario.StartsWith("-audition", StringComparison.Ordinal))
                 {
                     editor.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(Enumerable.Repeat(.5f, 1000).ToArray(), 1));
-                    editor.RequestStartLibraryAudition = (_, _) => Task.FromResult(1000d);
+                    editor.RequestStartLibraryAudition = (_, _) => scenario == "-audition-failed" ? Task.FromException<double>(new IOException(L.Get("copier.missingFile", "custom.wav"))) : Task.FromResult(1000d);
                 }
                 editor.LibrarySettings.Workspace = Path.Combine(folder, "workspace");
                 string library = Path.Combine(editor.LibrarySettings.Workspace, "HitsoundLibrary");
@@ -169,7 +169,7 @@ internal static class HitsoundingRenderCheck
                     editor.PointerMove(zero + (twoSeconds - zero) * .375f, editor.HitsoundingMuteBounds(2).Y + 12, false, false);
                     editor.Render(canvas, size.Item1, size.Item2);
                 }
-                if (scenario == "-audition")
+                if (scenario.StartsWith("-audition", StringComparison.Ordinal))
                 {
                     float zero = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 0)).X + 4;
                     float twoSeconds = editor.HitsoundingTimingHandleBounds(editor.Document.TimingPoints.First(p => p.TimeMs == 2000)).X + 4;
@@ -178,9 +178,12 @@ internal static class HitsoundingRenderCheck
                     editor.PointerDown(x, y, 0, false, false); editor.PointerUp(x, y, 0);
                     editor.Render(canvas, size.Item1, size.Item2);
                     var play = editor.HitsoundingPreciseAuditionBounds;
+                    if (play.Width <= 0) throw new InvalidOperationException("Selected sound has no audition control.");
                     editor.PointerDown(play.X + 14, play.Y + 12, 0, false, false); editor.PointerUp(play.X + 14, play.Y + 12, 0);
                     clock.Now += 500;
                     editor.Render(canvas, size.Item1, size.Item2);
+                    if (editor.ErrorVisible || !editor.PrepareFileOperation()) throw new InvalidOperationException("Audition failure blocked the editor.");
+                    if (scenario == "-audition-failed" && !editor.StatusMessage.Contains("custom.wav")) throw new InvalidOperationException("Failed audition did not report its nonblocking feedback.");
                 }
                 if (scenario == "-green-hover")
                 {
