@@ -150,7 +150,7 @@ internal static class HitsoundingNotesTests
             ui.Click(x, y); ui.Key(68); ui.Key(81); ui.Key(46);
             ui.View.PointerDown(x, y, 2, false, false); ui.View.PointerUp(x, y, 2); ui.Paint();
             Check(ui.View.SelectedObjectIds.Count == 0 && baseline.ContentEquals(ui.View.Document), "Locked tracks reject selection and edits");
-            Check(ui.Canvas.Fills.Any(f => f.Color == 0x293649 && f.Bounds.Contains(x, y)), "Locked tracks display an overlay");
+            Check(ui.Canvas.Fills.Any(f => f.Color == 0xE89A9A && f.Bounds.Contains(x, y)), "Locked tracks display a pale red overlay");
             ui.Click(button.X + 12, button.Y + 12);
             if (lane <= 4)
             {
@@ -160,6 +160,23 @@ internal static class HitsoundingNotesTests
         }
         var whistleLock = ui.View.HitsoundingLockBounds(2); ui.Click(whistleLock.X + 12, whistleLock.Y + 12);
         var bounds = ui.View.HitsoundingNotesLaneBounds;
+        ui.Key(49);
+        var unselectedNotes = ui.Canvas.Circles.Where(c => bounds.Contains(c.X, c.Y)).ToArray();
+        foreach (int origin in new[] { 0, 2 })
+        {
+            float fromX = bounds.X + bounds.Width * .2f, toX = bounds.X + bounds.Width * .3f;
+            float fromY = bounds.Y + (origin + .5f) * bounds.Height, toY = bounds.Y + 4.8f * bounds.Height;
+            ui.View.PointerDown(fromX, fromY, 0, false, false);
+            ui.View.PointerMove(toX, toY, false, false); ui.Paint();
+            ui.View.PointerUp(toX, toY, 0); ui.Paint();
+            Check(ui.View.SelectedObjectIds.Count == 1, "Marquee can start in a locked lane and select unlocked sounds");
+            Check(ui.Canvas.Circles.Where(c => bounds.Contains(c.X, c.Y)).SequenceEqual(unselectedNotes), "Sound marquee leaves Notes unhighlighted");
+            ui.Key(46);
+            var selectedResolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
+            Check(selectedResolver.Describe(ui.View.Conversion.Objects.Single()).Additions == 2, "Marquee excludes locked Whistle while selecting Finish and Clap");
+            ui.Key(90, ctrl: true);
+            Check(baseline.ContentEquals(ui.View.Document), "Marquee sound deletion is one undo step");
+        }
         ui.Click(bounds.X + bounds.Width / 4, bounds.Y + 1.5f * bounds.Height); ui.Key(68);
         var resolver = new HitsoundResolver(ui.View.Document, ui.View.Conversion.Objects, inspectResources: false);
         Check(resolver.Describe(ui.View.Conversion.Objects.Single()) is { NormalSet: 3, AdditionSet: 1, Additions: 14 },

@@ -515,7 +515,7 @@ public sealed partial class EditorView
         {
             var item = visibleItems[index];
             if (item.End <= item.Start) return;
-            bool selected = IsObjectSelected(item.Id);
+            bool selected = (!previewHitsounding || hitsoundingNotesSelection) && IsObjectSelected(item.Id);
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true, eventIndex: item.EventIndex);
             var bounds = timelineObjects[index].Bounds;
             if (item.IsBanana && bananaSegments.TryGetValue(item.Id, out var segments))
@@ -541,7 +541,7 @@ public sealed partial class EditorView
         void DrawMarkers(int index)
         {
             var item = visibleItems[index];
-            bool selected = IsObjectSelected(item.Id);
+            bool selected = (!previewHitsounding || hitsoundingNotesSelection) && IsObjectSelected(item.Id);
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true, eventIndex: item.EventIndex);
             float left = X(item.Start), right = X(item.End), cy = timelineObjects[index].Bounds.Y + timelineObjects[index].Bounds.Height / 2;
             void Ring(float ringX, int? number = null, int? edge = null)

@@ -169,7 +169,9 @@ blue-grey. Timing edits and drag previews refresh these intervals. Red timing
 points can be selected but cannot be dragged in Hitsounding.
 
 Clicking a Notes object or an existing sound tag selects its event.
-Selecting a sound does not seek. Clicking empty grid space clears selection and preserves the playing position.
+Selecting a sound highlights only its sound tag, leaving the Notes graphics
+unhighlighted, and does not seek. Clicking empty grid space clears selection and
+preserves the playing position.
 Left-click the upper time ruler to seek directly to the corresponding time, while
 retaining the playing or paused state. Dragging the play line still adjusts its viewport position.
 Ctrl-click toggles individual sound tags, Notes events, storyboard sounds, and red or green timing blocks or handles without replacing the existing selection.
@@ -215,8 +217,10 @@ uses that bank while preserving Normal. W/E/R toggle Whistle/Finish/Clap on the 
 event. Text inputs and modified shortcuts retain priority. Hover tips explain each
 tool's shortcut and interaction behavior.
 
-Each track has a **Lock** button beside its label. Locked tracks show a tinted background
-behind their notes, cannot be selected, and reject direct editing and paste. Notes starts
+Each track has a **Lock** button beside its label. Locked tracks show a pale red background
+behind their notes, cannot be selected, and reject direct editing and paste. A selection
+rectangle can start in a locked track and cross other tracks; only unlocked sound
+tracks contribute selected tags. Notes starts
 locked; the other tracks start unlocked. Lock buttons are teal when unlocked and pale red when locked. Locks do not mute playback or change history.
 Unlock Notes to edit existing notes in either mode. In Draw, an empty-space hover
 shows a snapped placement preview and a click creates a circle at Mapping
