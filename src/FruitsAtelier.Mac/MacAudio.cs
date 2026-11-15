@@ -7,7 +7,7 @@ namespace FruitsAtelier.Mac;
 
 public sealed record MacAudioState(string? FilePath, double PositionMs, double DurationMs, bool IsPlaying, bool CanPlay, bool IsLoading, string? Error);
 
-public sealed class MacAudio : IDisposable
+public sealed partial class MacAudio : IDisposable
 {
     private readonly object gate = new();
     private nint player;
@@ -27,7 +27,11 @@ public sealed class MacAudio : IDisposable
         }
     }
     public const double SchedulingLeadSeconds = .15;
-    public MacAudio(bool muted = false) => this.muted = muted;
+    public MacAudio(bool muted = false)
+    {
+        this.muted = muted;
+        bufferTimer = new(_ => PumpBuffers(), null, Timeout.Infinite, 20);
+    }
     public MacAudioState State
     {
         get
@@ -157,12 +161,15 @@ public sealed class MacAudio : IDisposable
     private void StartPlayback()
     {
         playbackMapStart = Position(player) * 1000;
-        // A paused music node retains output state that offsets currentTime on resume.
-        // Reset that session before taking the device-clock origin, preserving the map position.
+        // Retire decoded/read-ahead PCM and the stretcher together on every new
+        // session, so seek, resume and rate changes retain the source position.
         playbackRequested = false;
         if (Rearm(player, playbackMapStart / 1000) == 0) { error = L.Get("mac.audioPlayFailed"); return; }
+        buffers = new MusicBuffers(player, playbackSpeed, adjustPitch);
+        buffers.Fill();
         playbackDeviceStart = DeviceTime(player) + SchedulingLeadSeconds;
         playbackRequested = PlayAt(player, playbackDeviceStart) != 0;
+        if (playbackRequested) bufferTimer.Change(0, 20);
     }
     public double? HitsoundHostTime(double mapTimeMs)
     {
@@ -170,8 +177,8 @@ public sealed class MacAudio : IDisposable
             ? HostTime() + playbackDeviceStart - DeviceTime(player) + (mapTimeMs - playbackMapStart) / (1000 * playbackSpeed) : null;
     }
     private static void DeleteCache(string? filename) { if (filename is not null) try { File.Delete(filename); } catch (IOException) { } }
-    private void Release() { if (player != 0) Close(player); player = 0; playbackRequested = false; DeleteCache(cachePath); cachePath = null; }
-    public void Dispose() { lock (gate) { if (disposed) return; disposed = true; load?.Cancel(); load?.Dispose(); Release(); } }
+    private void Release() { buffers = null; if (player != 0) Close(player); player = 0; playbackRequested = false; DeleteCache(cachePath); cachePath = null; }
+    public void Dispose() { lock (gate) { if (disposed) return; disposed = true; bufferTimer.Dispose(); load?.Cancel(); load?.Dispose(); Release(); } }
 
     private static void DecodeOgg(string source, string destination, CancellationToken token)
     {

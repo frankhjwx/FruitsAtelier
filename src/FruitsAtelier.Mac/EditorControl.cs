@@ -44,7 +44,7 @@ internal sealed class EditorControl : Control, IDisposable
     private Point EditorPoint(PointerEventArgs e) => e.GetPosition(this) / uiScale;
     public EditorControl()
     {
-        boundary = new(View, error => MacPaths.Log(error.ToString()), InvalidateVisual);
+        boundary = new(View, error => MacPaths.Log(error.ToString()), Refresh);
         renderRecovery = new(boundary.Report, error =>
         {
             MacPaths.Log(error.ToString());
@@ -195,9 +195,11 @@ internal sealed class EditorControl : Control, IDisposable
     }
     public override void Render(DrawingContext context)
     {
+        rendering = true;
         renderRecovery.BeginFrame(View.RecoveryActive);
         try { RenderEditor(context); }
         catch (Exception error) { renderRecovery.Fail(error, View.RecoveryActive); }
+        finally { rendering = false; }
     }
     private void RenderEditor(DrawingContext context)
     {
@@ -222,8 +224,25 @@ internal sealed class EditorControl : Control, IDisposable
     private static IEnumerable<string> DroppedPaths(DragEventArgs e)
         => e.DataTransfer.TryGetFiles()?.OfType<IStorageFile>().Select(f => f.TryGetLocalPath()).OfType<string>() ?? [];
 
+    private bool rendering, refreshQueued;
     internal void Refresh()
     {
+        // Library completion and focus callbacks can run inside View.Render.
+        // Avalonia forbids invalidating a visual during that render pass, including
+        // when the recovery UI itself requests a frame. Coalesce those requests.
+        if (rendering)
+        {
+            if (!refreshQueued)
+            {
+                refreshQueued = true;
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    refreshQueued = false;
+                    Refresh();
+                }, Avalonia.Threading.DispatcherPriority.Background);
+            }
+            return;
+        }
         try { RefreshEditor(); }
         catch (Exception error) { boundary.Report(error); }
     }

@@ -195,6 +195,11 @@
         "resolved": "2.88.9",
         "contentHash": "wb2kYgU7iy84nQLYZwMeJXixvK++GoIuECjU4ECaUKNuflyRlJKyiRhN1MAHswvlvzuvkrjRWlK0Za6+kYQK7w=="
       },
+      "SoundTouch.Net": {
+        "type": "Transitive",
+        "resolved": "2.3.2",
+        "contentHash": "5A29Pll/n4kEEPvCD5DFot3MJG+VgiaRG6LbNQVkF94VerC1b5iZtJKfdLQXZPFrl3LiVbKm3txKBe5/pbv5rw=="
+      },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
         "resolved": "2.1.13",
@@ -245,8 +250,9 @@
           "Avalonia.Desktop": "[11.3.7, )",
           "Avalonia.Themes.Fluent": "[11.3.7, )",
           "FFmpeg.AutoGen": "[4.3.0.1, )",
-          "FruitsAtelier.Core": "[1.2.3, )",
+          "FruitsAtelier.Core": "[1.4.7, )",
           "NVorbis": "[0.10.4, )",
+          "SoundTouch.Net": "[2.3.2, )",
           "Tmds.DBus.Protocol": "[0.21.3, )",
           "ppy.osu.Framework.NativeLibs": "[2025.806.0-nativelibs, )"
         }

@@ -80,7 +80,11 @@ internal sealed partial class MacWindow : Window
         };
         View.RequestPrepareHitsound = hitsounds.Prepare;
         View.RequestHitsound = hitsounds.Play;
-        View.RequestAuditionHitsound = hitsounds.Play;
+        View.RequestAuditionHitsound = async sound =>
+        {
+            try { await hitsounds.PrepareAndPlayAsync(sound); }
+            catch (Exception error) { editor.RunUi(() => View.SetNotice(error.Message)); }
+        };
         View.RequestRecycleHitsoundingFiles = SystemTrash.Recycle;
         View.RequestStartLibraryAudition = libraryAudition.PlayExclusiveAuditionAsync;
         View.RequestStopLibraryAudition = libraryAudition.Stop;
@@ -524,6 +528,7 @@ internal sealed partial class MacWindow : Window
     private static string SafeName(string name) => string.IsNullOrWhiteSpace(name) ? L.Get("files.untitled") : new string(name.Where(c => !Path.GetInvalidFileNameChars().Contains(c) && c != ':').Take(100).ToArray());
     private async Task SmokeCheck()
     {
+        if (Program.Arguments.Contains("--mac-host-check")) { await HostRenderCheck(); return; }
         View.LoadDocument(DemoMap.Create()); View.CloseLibrary(); editor.Refresh();
         string folder = Path.Combine(MacPaths.Artifacts, "macos-check"); Directory.CreateDirectory(folder);
         using var bitmap = new RenderTargetBitmap(new PixelSize((int)editor.Bounds.Width, (int)editor.Bounds.Height), new Vector(96, 96));
