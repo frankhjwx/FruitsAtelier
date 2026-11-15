@@ -1,4 +1,5 @@
 {
+  "library.exitPrompt": "Weet je zeker dat je Fruits Atelier wilt afsluiten?",
   "distance.selectionGap": "Tijd tussen objecten: {0:0.###} ms",
   "testplay.showFruitStack": "Fruitstapel tijdens testspel",
   "browser.settings": "Web",

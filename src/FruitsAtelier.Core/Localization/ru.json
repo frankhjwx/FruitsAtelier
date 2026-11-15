@@ -1,4 +1,5 @@
 {
+  "library.exitPrompt": "Вы уверены, что хотите выйти из Fruits Atelier?",
   "distance.selectionGap": "Интервал объектов: {0:0.###} мс",
   "testplay.showFruitStack": "Стопка фруктов в тестовой игре",
   "browser.settings": "Web",

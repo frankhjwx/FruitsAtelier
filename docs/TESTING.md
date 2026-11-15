@@ -1929,3 +1929,8 @@ Hidden/Flashlight gameplay at compact and wide sizes in English and Chinese,
 and checks native Flashlight mask pixels. Set `FRUITS_TEST_SKIN` to a skin
 directory to inspect its real HUD mod artwork. The check does not save that skin
 preference. Output remains under `artifacts/tests/testplay-native/`.
+
+`App.Tests --library-exit-check` verifies Library exit confirmation, cancellation,
+input isolation and navigation in English and Chinese. On macOS,
+`bash Run-Editor-Mac.command --smoke-check --library-exit-check` captures the
+confirmation in both languages under `artifacts/macos-check/library-exit`.

@@ -1,4 +1,5 @@
 {
+  "library.exitPrompt": "确定要退出 Fruits Atelier 吗？",
   "distance.selectionGap": "对象间隔：{0:0.###} ms",
   "testplay.showFruitStack": "试打水果堆叠",
   "browser.settings": "Web",

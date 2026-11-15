@@ -1,4 +1,5 @@
 {
+  "library.exitPrompt": "確定要結束 Fruits Atelier 嗎？",
   "distance.selectionGap": "物件間隔：{0:0.###} ms",
   "testplay.showFruitStack": "試玩水果堆疊",
   "browser.settings": "Web",

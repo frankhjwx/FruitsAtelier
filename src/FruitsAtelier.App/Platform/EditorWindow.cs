@@ -424,6 +424,7 @@ internal sealed partial class EditorWindow : IDisposable
     }
     private void Close()
     {
+        view.CancelLibraryExitConfirmation();
         if (view.AcknowledgementsVisible) { Native.DestroyWindow(hwnd); return; }
         view.CancelFirstRunSetup();
         ConfirmDiscard(() => { SaveWindowPreferences(); view.SaveLibraryMemory(); Native.DestroyWindow(hwnd); });

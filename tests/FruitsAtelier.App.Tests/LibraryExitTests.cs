@@ -6,6 +6,7 @@ internal static class LibraryExitTests
 {
     public static void Run()
     {
+        ExitConfirmation();
         SavedRatingRefreshes();
         string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-library-exit-" + Guid.NewGuid());
         var view = new EditorView();
@@ -55,6 +56,63 @@ internal static class LibraryExitTests
             while (view.LibraryLoading && DateTime.UtcNow < deadline) Thread.Sleep(10);
             if (Directory.Exists(root)) Directory.Delete(root, true);
         }
+    }
+
+    public static void ExitConfirmation()
+    {
+        string originalLanguage = L.Language;
+        try
+        {
+            foreach (string language in new[] { "en", "zh-CN" })
+            {
+                L.SetLanguage(language);
+                var view = new EditorView(loadDemo: false);
+                var canvas = new RecordingCanvas();
+                // Empty Library avoids touching any user workspace or settings.
+                typeof(EditorView).GetProperty(nameof(EditorView.LibraryVisible))!.SetValue(view, true);
+                int closed = 0;
+                view.RequestClose = () => closed++;
+                Paint();
+                view.KeyDown(27, false, false);
+                Check(view.DiscardConfirmationVisible && closed == 0, "Esc asks before exiting");
+                Paint();
+                Check(canvas.Texts.Any(t => t.Value == L.Get("library.exitPrompt")), "Localized exit prompt renders");
+                var before = canvas.Texts.ToArray();
+                view.PointerDown(60, 160, 0, false, false);
+                view.PointerUp(60, 160, 0);
+                view.PointerDoubleClick(320, 250, false, false);
+                view.PointerMove(320, 400, false, false);
+                view.Wheel(320, 300, -120, false);
+                view.KeyDown('F', true, false);
+                view.TextInput('x');
+                Check(!view.LibraryTextFocused && !view.CanDropLibraryFiles && !view.CanDropAudio,
+                    "Modal blocks search and file drops");
+                Paint();
+                Check(canvas.Texts.SequenceEqual(before), "Background clicks, double clicks, movement, wheel and typing are blocked");
+                view.KeyDown(27, false, false);
+                Check(!view.DiscardConfirmationVisible && closed == 0, "Esc cancels exit");
+                view.KeyDown(27, false, false); Paint(); Click("mac.cancel");
+                Check(!view.DiscardConfirmationVisible && closed == 0, "Cancel keeps Library open");
+                view.KeyDown(27, false, false); view.KeyDown(13, false, false);
+                Check(!view.DiscardConfirmationVisible && closed == 0, "Enter uses safe cancellation");
+                view.KeyDown('F', true, false); view.KeyDown(27, false, false);
+                Check(!view.DiscardConfirmationVisible, "Esc first leaves search input");
+                view.KeyDown(27, false, false); Paint(); Click("ui.exitMenu");
+                Check(!view.DiscardConfirmationVisible && closed == 1, "Exit requests native close exactly once");
+                view.KeyDown(27, false, false);
+                view.CancelLibraryExitConfirmation();
+                Check(!view.DiscardConfirmationVisible && closed == 1, "Native close can dismiss the Esc-only prompt without invoking its callback");
+                void Paint() { canvas.Clear(); view.Render(canvas, 980, 620); }
+                void Click(string key)
+                {
+                    var text = canvas.Texts.Last(t => t.Value == L.Get(key));
+                    view.PointerDown(text.X + 4, text.Y + 4, 0, false, false);
+                    view.PointerUp(text.X + 4, text.Y + 4, 0);
+                }
+            }
+        }
+        finally { L.SetLanguage(originalLanguage); }
+        static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
     }
 
     private static void SavedRatingRefreshes()

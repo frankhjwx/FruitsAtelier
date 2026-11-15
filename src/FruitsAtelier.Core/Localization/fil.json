@@ -1,4 +1,5 @@
 {
+  "library.exitPrompt": "Sigurado ka bang gusto mong lumabas sa Fruits Atelier?",
   "distance.selectionGap": "Pagitan ng mga object: {0:0.###} ms",
   "testplay.showFruitStack": "Salansan ng prutas sa testplay",
   "browser.settings": "Web",

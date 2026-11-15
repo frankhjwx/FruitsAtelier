@@ -1,4 +1,5 @@
 {
+  "library.exitPrompt": "Czy na pewno chcesz zamknąć Fruits Atelier?",
   "distance.selectionGap": "Odstęp między obiektami: {0:0.###} ms",
   "testplay.showFruitStack": "Stos owoców w grze testowej",
   "browser.settings": "Web",

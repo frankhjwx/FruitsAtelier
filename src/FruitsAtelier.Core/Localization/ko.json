@@ -1,4 +1,5 @@
 {
+  "library.exitPrompt": "Fruits Atelier를 종료하시겠습니까?",
   "distance.selectionGap": "오브젝트 간격: {0:0.###} ms",
   "testplay.showFruitStack": "테스트플레이 과일 더미",
   "browser.settings": "Web",
