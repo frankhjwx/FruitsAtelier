@@ -4,6 +4,8 @@ using L = FruitsAtelier.Localization.Strings;
 
 static class KeybindingTests
 {
+    private static string PrimaryModifierName => OperatingSystem.IsMacOS() ? "Cmd" : "Ctrl";
+
     public static void Run()
     {
         string language = L.Language;
@@ -23,8 +25,8 @@ static class KeybindingTests
             string body = L.Get("hitsounding.hint.brush", L.Get("timing.soft"));
             view.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(17, 'U'), ShortcutBinding.From('J')];
             string hint = view.ShortcutHint(body, command.Id, command.Scope);
-            Check(hint.Contains("Ctrl + U / J") && hint.EndsWith(body[body.IndexOf('\n')..]), "hint shows all bindings and preserves mouse instructions");
-            Check(view.ShortcutKeys(command.Id, command.Scope, first: true) == "Ctrl + U", "button keycap shows first configured chord");
+            Check(hint.Contains(PrimaryModifierName + " + U / J") && hint.EndsWith(body[body.IndexOf('\n')..]), "hint shows all bindings and preserves mouse instructions");
+            Check(view.ShortcutKeys(command.Id, command.Scope, first: true) == PrimaryModifierName + " + U", "button keycap shows first configured chord");
             view.LibrarySettings.ShortcutBindings[command.StorageKey] = [];
             Check(view.ShortcutHint(body, command.Id, command.Scope) == body, "unbound hint retains only its description, without empty parentheses");
             Check(view.ShortcutKeys(command.Id, command.Scope) == "", "unbound button and menu have no shortcut text");
@@ -46,7 +48,7 @@ static class KeybindingTests
                 var bounds = additions ? view.AdditionsBounds : view.SamplesetBounds;
                 view.PointerMove(bounds.X + 10, bounds.Y + 10, false, false); ui.Paint();
                 foreach (char key in "QWER")
-                    Check(ui.Canvas.Texts.Any(t => t.Value.Contains((additions ? "Ctrl" : "Shift") + " + " + key)), "selector hover lists all default bank shortcuts");
+                    Check(ui.Canvas.Texts.Any(t => t.Value.Contains((additions ? PrimaryModifierName : "Shift") + " + " + key)), "selector hover lists all default bank shortcuts");
                 var command = Command(additions ? "normalAuto" : "additionAuto", EditorView.ShortcutScope.Hitsounding, lazer);
                 view.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(118)]; ui.Paint();
                 Check(ui.Canvas.Texts.Any(t => t.Value.Contains("F7")), "selector hover reflects configured binding");
@@ -174,7 +176,7 @@ static class KeybindingTests
         var row = ui.Canvas.Texts.First(t => t.Value == L.Get(Command("select").NameKey));
         ui.Click(keyX + 12, row.Y); Check(view.CapturingShortcut, "keycap starts capture");
         Press(view, 'D', true); ui.Paint();
-        Check(ui.Canvas.Texts.Any(t => t.Value == "Ctrl + D"), "capture displays combination");
+        Check(ui.Canvas.Texts.Any(t => t.Value == PrimaryModifierName + " + D"), "capture displays combination");
         ui.ClickText(L.Get("shortcuts.useBinding"));
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("shortcuts.conflictTitle")), "collision asks before overwrite");
         ui.ClickText(L.Get("shortcuts.cancel"));
