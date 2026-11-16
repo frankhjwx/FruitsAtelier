@@ -1,10 +1,10 @@
 # FruitsAtelier
 
-User Manual | Version 1.4.7
+User Manual | Version 1.4.8
 
 ## Using this manual
 
-This manual describes FruitsAtelier v1.4.7. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
+This manual describes FruitsAtelier v1.4.8. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
 
 ### Choose an editing canvas
 
@@ -95,6 +95,10 @@ Right-click a tab to locate its saved file, workspace folder or associated osu! 
 A saved project folder contains `project.catchdiff`, separate `.catchdiff` difficulty files and synchronization data when associated with osu!. Keep the folder together. Referenced audio, backgrounds and samples may live outside it.
 
 Changing the workspace path in Settings opens another workspace; it does not move your existing files. See saving and backups.
+
+### Leaving the Library
+
+In the Library main view, **Esc** opens an exit confirmation. Choose **Exit** to close the application; **Cancel**, **Enter** or **Esc** keeps it open. Active menus, fields and Library subpages are dismissed first. Closing the window normally does not show this extra confirmation.
 
 ### Collections, My Maps and templates
 
@@ -709,7 +713,7 @@ TinyDroplets are excluded by default; enable **View → Include tiny droplets** 
 
 Choose map-specific Distance Snap presets or Global speed presets independently in ordinary Catch and experimental lazer editing. Global presets include 0.5 and 1.0 px/ms plus up to eight custom values. Movement labels and Inspector readouts use the selected units. Guide visibility and collinear snapping work with either system.
 
-Object Snap aligns X to nearby objects without moving placement time. Configure earlier/later search windows in beats; it is disabled by default. Whole-object Distance Snap, collinear and object targets compete by their pointer correction distance. osu! geometric object alignment instead uses visible circles/slider endpoints and its own DS multiplier.
+Object Snap aligns X to nearby objects without moving placement time. Configure earlier/later search windows in beats. These settings are shared across difficulties and persist on this computer. Without saved global values, Object Snap starts disabled with two earlier beats and one later beat; older per-difficulty values are ignored. Whole-object Distance Snap, collinear and object targets compete by their pointer correction distance. osu! geometric object alignment instead uses visible circles/slider endpoints and its own DS multiplier.
 
 Optional experimental divisions add fine grids; tenth/eleventh families are also available where supported. Beat Snap governs time, Grid Snap governs position, and SliderTickRate governs derived ticks. Slider head and tail snapping have independent controls; inspect them before editing duration.
 
@@ -1304,7 +1308,7 @@ Compose shortcut remain accessible through their existing menus and controls.
 | Ctrl+Shift+A | Open AiMod for the current difficulty. |
 | F6 | Open Timing and Control Points. |
 | F12 | Copy the current editor window content to the system clipboard as an image, including visible dialogs or testplay. Paste it into a chat or image editor. |
-| Esc | Dismiss the current field, popup, menu or gesture first. From idle Compose, request return to Library; from Timing, return to Compose. Unsaved changes can prompt. |
+| Esc | Dismiss the current field, popup, menu or gesture first. From idle Compose, request return to Library; from Timing, return to Compose. Unsaved changes can prompt. In the Library main view, open the exit confirmation; Enter or Esc cancels it. |
 
 F2 has no Compose page action. It has a separate meaning during testplay.
 Windows Alt+F4 requests closing the application window; use Esc to return to

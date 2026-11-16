@@ -8,7 +8,9 @@
 
 [官网](https://fruitsatelier.himiko.moe/) · [下载](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**当前版本：1.4.7**
+**当前版本：1.4.8**
+
+对象吸附设置在各难度间共用，并保存在当前电脑上。在曲库中按 Esc 会先询问是否退出。
 
 ![水果工坊的编辑画布、物件时间轴与 Catch 预览](assets/screenshots/twin-bloom.png)
 
