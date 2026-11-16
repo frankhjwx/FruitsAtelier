@@ -289,11 +289,11 @@ public sealed partial class EditorView
         LibrarySettings.LazerDistanceGuidesVisible = draft.ShowGuides;
         if (IsLazerEditing) LibrarySettings.LazerSpeedDistanceSnap = draft.SpeedMode;
         else LibrarySettings.MappingSpeedDistanceSnap = draft.SpeedMode;
-        EditingPreferences.ObjectSnap = draft.ObjectSnap;
-        EditingPreferences.ObjectSnapEarlierBeats = draft.EarlierBeats;
-        EditingPreferences.ObjectSnapLaterBeats = draft.LaterBeats;
+        LibrarySettings.ObjectSnap = draft.ObjectSnap;
+        LibrarySettings.ObjectSnapEarlierBeats = draft.EarlierBeats;
+        LibrarySettings.ObjectSnapLaterBeats = draft.LaterBeats;
         objectSnapTarget = null;
-        SaveMapEditingPreferences();
+        RequestViewPreference?.Invoke();
     }
 
     private void DrawObjectSnapConfiguration(ICanvas c, Rect r)
@@ -314,9 +314,9 @@ public sealed partial class EditorView
             return;
         }
         ObjectSnapEarlierPlusBounds = Row(r.Y + 38, "ds.objectEarlier", dsObjectEarlier,
-            () => dsObjectEarlier = Math.Max(0, dsObjectEarlier - 1), () => dsObjectEarlier = Math.Min(MapEditingPreferences.MaximumObjectSnapBeats, dsObjectEarlier + 1));
+            () => dsObjectEarlier = Math.Max(0, dsObjectEarlier - 1), () => dsObjectEarlier = Math.Min(LibrarySettings.MaximumObjectSnapBeats, dsObjectEarlier + 1));
         ObjectSnapLaterPlusBounds = Row(r.Y + 70, "ds.objectLater", dsObjectLater,
-            () => dsObjectLater = Math.Max(0, dsObjectLater - 1), () => dsObjectLater = Math.Min(MapEditingPreferences.MaximumObjectSnapBeats, dsObjectLater + 1));
+            () => dsObjectLater = Math.Max(0, dsObjectLater - 1), () => dsObjectLater = Math.Min(LibrarySettings.MaximumObjectSnapBeats, dsObjectLater + 1));
         if (available && ObjectSnapToggleBounds.Contains(mouseX, mouseY))
             DrawPaletteTooltip(c, L.Get("ds.objectSnapTip"), toggle, left: true, above: true);
 
@@ -326,7 +326,7 @@ public sealed partial class EditorView
             Button(c, new(r.Right - 130, y, 26, 26), "−", decrease, enabled: available && dsObjectSnap && value > 0);
             c.Text(L.Get("ds.objectBeats", value), r.Right - 98, y + 7, 11, Foreground, 66);
             var plus = new Rect(r.Right - 26, y, 26, 26);
-            Button(c, plus, "+", increase, enabled: available && dsObjectSnap && value < MapEditingPreferences.MaximumObjectSnapBeats);
+            Button(c, plus, "+", increase, enabled: available && dsObjectSnap && value < LibrarySettings.MaximumObjectSnapBeats);
             return plus;
         }
     }

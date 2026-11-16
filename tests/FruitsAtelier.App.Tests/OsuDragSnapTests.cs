@@ -62,7 +62,7 @@ internal static class OsuDragSnapTests
         map.Fruits.Add(new() { TimeMs = 6000, X = 160, Y = 300 });
         map.ImportedSliders.Add(Slider(1400, 300, 192, 400, 192));
         var ui = NewUi(map);
-        var preferences = (MapEditingPreferences)typeof(EditorView).GetProperty("EditingPreferences", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ui.View)!;
+        var preferences = ui.View.LibrarySettings;
         ui.View.OpenDistanceSnapDialog(); ui.Paint();
         var toggle = ui.View.ObjectSnapToggleBounds;
         ui.Click(toggle.X + 10, toggle.Y + 10);
@@ -100,7 +100,7 @@ internal static class OsuDragSnapTests
         map.Fruits.Add(new() { TimeMs = 1300, X = 200, Y = 192 });
         var slider = Slider(1500, 80, 256, 180, 256); map.ImportedSliders.Add(slider);
         var ui = NewUi(map);
-        var preferences = (MapEditingPreferences)typeof(EditorView).GetProperty("EditingPreferences", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ui.View)!;
+        var preferences = ui.View.LibrarySettings;
         preferences.ObjectSnap = true;
         var from = ui.View.OsuCanvasScreen(130, 256); var to = ui.View.OsuCanvasScreen(149, 193);
         ui.View.PointerDown(from.X, from.Y, 0, false, false); ui.View.PointerMove(to.X, to.Y, false, false);

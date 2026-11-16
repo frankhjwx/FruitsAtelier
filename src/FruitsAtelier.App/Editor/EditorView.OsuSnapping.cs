@@ -42,7 +42,7 @@ public sealed partial class EditorView
     private (double X, double Y) SnapOsuObjectPoint((double X, double Y) raw, (double X, double Y) candidate,
         OsuSnapTarget[] targets, ISet<Guid>? excluded, bool distanceSnapped)
     {
-        if (!EditingPreferences.ObjectSnap) return candidate;
+        if (!LibrarySettings.ObjectSnap) return candidate;
         double scale = OsuCanvasBounds.Width / 512;
         double nearest = distanceSnapped ? Distance(raw.X, raw.Y, candidate.X, candidate.Y) * scale : double.PositiveInfinity;
         foreach (var target in targets)

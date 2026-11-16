@@ -11,7 +11,7 @@ public sealed partial class EditorView
     private DistanceSnap.Reference[] objectDragDistanceReferences = [];
     private MapPoint? objectDragSnapFirst, objectDragSnapLast, objectDragSnapPoint;
     internal (bool Enabled, int Earlier, int Later) ObjectSnapSettings =>
-        (EditingPreferences.ObjectSnap, EditingPreferences.ObjectSnapEarlierBeats, EditingPreferences.ObjectSnapLaterBeats);
+        (LibrarySettings.ObjectSnap, LibrarySettings.ObjectSnapEarlierBeats, LibrarySettings.ObjectSnapLaterBeats);
     internal MapPoint? ObjectSnapTargetPoint => objectSnapTarget is { } target ? new(target.TimeMs, target.X) : null;
 
     private bool TrySnapToObject(MapPoint point, double rawX, out MapPoint result)
@@ -19,7 +19,7 @@ public sealed partial class EditorView
         result = point;
         objectSnapTarget = null;
         distanceOutside = false;
-        if (!EditingPreferences.ObjectSnap || draftTrack != Guid.Empty) return false;
+        if (!LibrarySettings.ObjectSnap || draftTrack != Guid.Empty) return false;
         EnsureConversion();
         RefreshObjectSnapFruits();
         double nearest = 6, nearestTime = double.PositiveInfinity;
@@ -42,8 +42,8 @@ public sealed partial class EditorView
         ISet<Guid>? excluded, double minX, double maxX, ref double nearest, ref double nearestTime)
     {
         var timing = SnapTiming();
-        double start = timing.OffsetBeats(point.TimeMs, -EditingPreferences.ObjectSnapEarlierBeats);
-        double end = timing.OffsetBeats(point.TimeMs, EditingPreferences.ObjectSnapLaterBeats);
+        double start = timing.OffsetBeats(point.TimeMs, -LibrarySettings.ObjectSnapEarlierBeats);
+        double end = timing.OffsetBeats(point.TimeMs, LibrarySettings.ObjectSnapLaterBeats);
         int low = 0, high = fruits.Length;
         while (low < high)
         {
@@ -104,7 +104,7 @@ public sealed partial class EditorView
         bool distanceSnapped = TryDistanceSnap(rawPoint, objectDragDistanceReferences, objectSelection,
             first.X + minDeltaX, first.X + maxDeltaX, out var distancePoint);
         if (distanceSnapped) deltaX = distancePoint.X - first.X;
-        if (!EditingPreferences.ObjectSnap) return distanceSnapped;
+        if (!LibrarySettings.ObjectSnap) return distanceSnapped;
         // All active snap positions compete against the raw pointer, so crossing an
         // object alignment cannot switch back to a more distant DS position.
         double nearest = distanceSnapped ? Math.Abs(deltaX - rawDeltaX) * Playfield.Width / 512

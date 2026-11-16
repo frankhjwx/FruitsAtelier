@@ -10,7 +10,7 @@ internal static class ObjectSnapTests
 
     public static void Run()
     {
-        BeatRanges(); Placement(); Configuration(); Dragging(); OrderedDragging();
+        BeatRanges(); Placement(); Configuration(); GlobalPreferences(); Dragging(); OrderedDragging();
     }
 
     private static void LoadWithObjectSnap(Ui ui, MapDocument map)
@@ -80,13 +80,13 @@ internal static class ObjectSnapTests
 
     private static void Configuration()
     {
-        var legacy = JsonSerializer.Deserialize<MapEditingPreferences>("{\"DistanceSnap\":true}")!;
+        var legacy = JsonSerializer.Deserialize<LibrarySettings>("{}")!;
         Check(!legacy.ObjectSnap && legacy.ObjectSnapEarlierBeats == 2 && legacy.ObjectSnapLaterBeats == 1,
             "Older settings should default object snap to off.");
-        Check(!new MapEditingPreferences().ObjectSnap, "New preferences should default object snap to off.");
-        Check(JsonSerializer.Deserialize<MapEditingPreferences>("{\"ObjectSnap\":true}")!.ObjectSnap,
+        Check(!new LibrarySettings().ObjectSnap, "New preferences should default object snap to off.");
+        Check(JsonSerializer.Deserialize<LibrarySettings>("{\"ObjectSnap\":true}")!.ObjectSnap,
             "Explicitly enabled object snap was not preserved.");
-        var limits = JsonSerializer.Deserialize<MapEditingPreferences>("{\"ObjectSnapEarlierBeats\":16,\"ObjectSnapLaterBeats\":-1}")!;
+        var limits = JsonSerializer.Deserialize<LibrarySettings>("{\"ObjectSnapEarlierBeats\":16,\"ObjectSnapLaterBeats\":-1}")!;
         Check(limits.ObjectSnapEarlierBeats == 4 && limits.ObjectSnapLaterBeats == 0,
             "Stored object snap ranges exceeded zero to four beats.");
         string language = Strings.Language;
@@ -110,8 +110,7 @@ internal static class ObjectSnapTests
                 Check(before.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty,
                     "Object snap preferences changed beatmap content or history.");
                 var settings = JsonSerializer.Deserialize<LibrarySettings>(JsonSerializer.Serialize(ui.View.LibrarySettings))!;
-                var restored = settings.MapEditingPreferences.Values.Single();
-                Check(restored.ObjectSnap && restored.ObjectSnapEarlierBeats == 3 && restored.ObjectSnapLaterBeats == 2,
+                Check(settings.ObjectSnap && settings.ObjectSnapEarlierBeats == 3 && settings.ObjectSnapLaterBeats == 2,
                     "Settings round trip lost search ranges.");
                 Open();
                 for (int i = 0; i < 5; i++) { Click(ui.View.ObjectSnapEarlierPlusBounds); Click(ui.View.ObjectSnapLaterPlusBounds); }
@@ -130,6 +129,45 @@ internal static class ObjectSnapTests
             }
         }
         finally { Strings.SetLanguage(language); }
+    }
+
+    private static void GlobalPreferences()
+    {
+        string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "fa-object-snap-" + Guid.NewGuid());
+        Directory.CreateDirectory(root);
+        try
+        {
+            string path = Path.Combine(root, "library.json");
+            var ui = new Ui();
+            ui.View.LibrarySettings.Workspace = Path.Combine(root, "workspace");
+            var project = BeatmapProject.FromDocuments([new MapDocument(), new MapDocument()]);
+            ui.View.LoadProject(project);
+            int mapPreferenceCount = ui.View.LibrarySettings.MapEditingPreferences.Count;
+            ui.View.RequestViewPreference = () => ui.View.LibrarySettings.Save(path);
+            ui.View.OpenDistanceSnapDialog(); ui.Paint();
+            var toggle = ui.View.ObjectSnapToggleBounds;
+            ui.Click(toggle.X + 10, toggle.Y + 10);
+            var earlier = ui.View.ObjectSnapEarlierPlusBounds;
+            ui.Click(earlier.X + 10, earlier.Y + 10);
+            ui.ClickText(Strings.Get("library.apply"));
+            Check(ui.View.ObjectSnapSettings == (true, 3, 1), "Global object snap did not apply.");
+            Check(ui.View.LibrarySettings.MapEditingPreferences.Count == mapPreferenceCount,
+                "Object snap wrote a per-difficulty preference.");
+            ui.View.SwitchDifficulty(1);
+            Check(ui.View.ObjectSnapSettings == (true, 3, 1), "Switching difficulty reset global object snap.");
+            ui.View.OpenSettings(); ui.View.ApplySettings(path, force: true); ui.Key(27);
+            Check(LibrarySettings.Load(path).ObjectSnap, "Settings Apply reset global object snap.");
+            var fresh = new EditorView(false);
+            typeof(EditorView).GetProperty(nameof(EditorView.LibrarySettings))!.SetValue(fresh, LibrarySettings.Load(path));
+            fresh.LoadProject(BeatmapProject.FromDocuments([new MapDocument()]));
+            Check(fresh.ObjectSnapSettings == (true, 3, 1), "Restart or another project reset global object snap.");
+            File.WriteAllText(path, "{\"MapEditingPreferences\":{\"" + project.Difficulties[0].Id
+                + "\":{\"ObjectSnap\":true,\"ObjectSnapEarlierBeats\":4,\"ObjectSnapLaterBeats\":0}}}");
+            var legacy = LibrarySettings.Load(path);
+            Check(!legacy.ObjectSnap && legacy.ObjectSnapEarlierBeats == 2 && legacy.ObjectSnapLaterBeats == 1,
+                "Legacy per-difficulty settings must not override global defaults.");
+        }
+        finally { Directory.Delete(root, true); }
     }
 
     private static void OrderedDragging()

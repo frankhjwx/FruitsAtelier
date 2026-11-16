@@ -1697,8 +1697,10 @@ the alignment guide.
 With DS inactive, object alignment retains the six-DIP capture limit.
 Timeline dragging, scaling and individual
 slider control/event edits retain their existing rules. Apply saves the switch and
-ranges as per-difficulty editing preferences; Cancel discards their drafts. These preferences survive restart
-without changing beatmap content, undo history or exported files. The DS preview
+ranges as global preferences on this computer; Cancel discards their drafts. These preferences survive restart
+without changing beatmap content, undo history or exported files. Legacy per-difficulty
+object-snap values are ignored; installations without global values start disabled
+with two earlier beats and one later beat. The DS preview
 continues to demonstrate distance and collinear snapping.
 
 The upper-left section sets base SV or its equivalent 1.0x Distance Per Beat (DPB), with SV limits 0.4–3.6 (DPB 40–360 px). New difficulties default to 192 px with SliderMultiplier 1.92; imported difficulties initially show `100 ×` their stored [Difficulty] SliderMultiplier. Changing the base value updates DPB and effective SliderMultiplier together while preserving existing slider playback through validated inherited SV compensation. The DPB override is saved in `.catchproj`; `.osu` export uses the effective SliderMultiplier and compensated timing. Drag the Stand/Walk/Dash/HDash bar to choose a whole-pixel value. The bar uses the same four equal Stand/Walk/Dash/HDash regions as the preset reference below; its 1.0x marker and drag positions use the same movement distance limits at the selected beat subdivision. Both dragging and numeric entry enforce the SV limits, independently of the selected reference Snap and timing. A separate Grid Snap switch row and the 4/8/16/32 px level row below the numeric field control only DPB drag rounding; they start from the editor grid settings on first opening and then remain independent for the editor session. The level row is dimmed and unavailable while this Grid Snap switch is off. With Grid Snap enabled here, dragging moves in the selected step; the numeric field accepts any value in range, including decimals. The base distance is independent of BPM, while its speed in milliseconds follows the active red timing point. Existing preset multipliers rescale with draft DPB changes so their pixel distances stay fixed; the preview uses the draft DPB immediately. Apply stores the base distance and rescaled presets together as one undoable difficulty edit; Cancel leaves both unchanged.

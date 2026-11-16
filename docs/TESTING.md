@@ -913,7 +913,9 @@ and non-client frame sizing in English and Chinese. Captures and results are
 written to `artifacts/tests/dpi-native`. These checks use real Direct2D rendering
 with simulated DPI notifications; they do not change Windows display settings.
 
-`App.Tests --object-snap-check` verifies full-beat search ranges across BPM changes
+`App.Tests --object-snap-check` verifies global preference defaults, isolation from legacy
+per-difficulty settings, Settings Apply, difficulty switching and restart persistence,
+and full-beat search ranges across BPM changes
 and independently of meter, bidirectional fruit and slider-start placement, exact X priority over Grid
 and Distance Snap, undo, hover isolation, default preferences and Apply/Cancel.
 Whole-object checks sweep horizontally in both directions with DS, object and

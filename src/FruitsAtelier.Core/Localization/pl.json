@@ -60,7 +60,7 @@
   "ds.objectLater": "Później",
   "ds.objectBeats": "{0} uderz.",
   "ds.osuObjectSnapTip": "Przyciąga do aktywnych widocznych kół i końców sliderów w promieniu 6 pikseli. Pomija przesuwane obiekty; wybiera najbliższą pozycję obiektu lub DS.",
-  "ds.objectSnapTip": "Przy przesuwaniu obiektów lub całego slidera przyciąga pierwszy albo ostatni owoc i przesuwa całe zaznaczenie razem. Wyrównuje X do pobliskich owoców bez zmiany czasu umieszczenia. Szuka w obu kierunkach o ustawioną liczbę uderzeń (odstępy 1/1 Snap), uwzględniając BPM. Przy umieszczaniu ma pierwszeństwo przed siatką i przyciąganiem według odległości. Podczas przesuwania całych obiektów z aktywnym DS wygrywa najbliższa pozycja obiektu, DS lub współliniowa. Zastosuj zapisuje ustawienie dla poziomu trudności.",
+  "ds.objectSnapTip": "Przy przesuwaniu obiektów lub całego slidera przyciąga pierwszy albo ostatni owoc i przesuwa całe zaznaczenie razem. Wyrównuje X do pobliskich owoców bez zmiany czasu umieszczenia. Szuka w obu kierunkach o ustawioną liczbę uderzeń (odstępy 1/1 Snap), uwzględniając BPM. Przy umieszczaniu ma pierwszeństwo przed siatką i przyciąganiem według odległości. Podczas przesuwania całych obiektów z aktywnym DS wygrywa najbliższa pozycja obiektu, DS lub współliniowa. Zastosuj zapisuje ustawienie globalnie na tym komputerze.",
   "mappingCanvas.legacy": "osu!Legacy",
   "mappingCanvas.catch": "Catch",
   "mappingCanvas.hint": "osu!Legacy: kółka 2D i Legacy Slider.\nCatch: pozycja/czas i FSlider.\nTab: przełącz obszar edycji.",

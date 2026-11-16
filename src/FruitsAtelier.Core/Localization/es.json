@@ -60,7 +60,7 @@
   "ds.objectLater": "Tiempo posterior",
   "ds.objectBeats": "{0} pulsos",
   "ds.osuObjectSnapTip": "Ajusta a círculos activos visibles y extremos de sliders en un radio de 6 píxeles. Excluye los objetos movidos; elige la posición de objeto o DS más cercana.",
-  "ds.objectSnapTip": "Al mover objetos o un slider completo, ajusta la primera o la última fruta y desplaza toda la selección. Alinea X con frutas cercanas sin cambiar el tiempo de colocación. Busca antes y después según los pulsos configurados (intervalos de 1/1 Snap) y los cambios de BPM. Al colocar, tiene prioridad sobre la cuadrícula y el ajuste por distancia. Al arrastrar objetos completos con DS activo, gana la posición más cercana entre objetos, DS y alineación colineal. Aplicar guarda esta preferencia por dificultad.",
+  "ds.objectSnapTip": "Al mover objetos o un slider completo, ajusta la primera o la última fruta y desplaza toda la selección. Alinea X con frutas cercanas sin cambiar el tiempo de colocación. Busca antes y después según los pulsos configurados (intervalos de 1/1 Snap) y los cambios de BPM. Al colocar, tiene prioridad sobre la cuadrícula y el ajuste por distancia. Al arrastrar objetos completos con DS activo, gana la posición más cercana entre objetos, DS y alineación colineal. Aplicar guarda esta preferencia globalmente en este equipo.",
   "mappingCanvas.legacy": "osu!Legacy",
   "mappingCanvas.catch": "Catch",
   "mappingCanvas.hint": "osu!Legacy: círculos 2D y Legacy Slider.\nCatch: posición/tiempo y FSlider.\nTab: cambiar lienzo.",
