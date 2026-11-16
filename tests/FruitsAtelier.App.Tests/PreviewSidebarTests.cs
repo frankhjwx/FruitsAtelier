@@ -163,7 +163,7 @@ internal static class PreviewSidebarTests
         Check(ui.View.Document.ContentEquals(baseline) && !ui.View.IsDirty, "preview controls preserve content and history");
         Check(ui.Canvas.Texts.Single(text => text.Value == L.Get("library.back")).X > ui.View.SkinSelectorBounds.Right, "Library is right of the skin selector");
         ui.ClickText(L.Get("ui.file"));
-        var shortcuts = ui.Canvas.Texts.Where(text => text.Value.StartsWith("Ctrl +", StringComparison.Ordinal)).ToArray();
+        var shortcuts = ui.Canvas.Texts.Where(text => text.Value.StartsWith(OperatingSystem.IsMacOS() ? "Cmd +" : "Ctrl +", StringComparison.Ordinal)).ToArray();
         Check(shortcuts.Length >= 3, "menu shortcuts are separate labels");
         var edges = shortcuts.Select(text => text.X + ((ICanvas)ui.Canvas).MeasureText(text.Value, 12)).ToArray();
         Check(edges.Max() - edges.Min() < .01, "shortcut right edges align");

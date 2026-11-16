@@ -783,7 +783,7 @@ internal static class TestplayTests
         (int Key, string Name)[] keys = [
             (186, ";"), (222, "'"), (219, "["), (221, "]"), (187, "="), (188, ","), (189, "-"),
             (190, "."), (191, "/"), (192, "`"), (220, "\\"), (223, "OEM 8"), (226, "OEM 102"),
-            (8, "Backspace"), (12, "Clear"), (13, "Enter"), (17, "Ctrl"), (18, "Alt"), (20, "Caps Lock"),
+            (8, "Backspace"), (12, "Clear"), (13, "Enter"), (17, OperatingSystem.IsMacOS() ? "Cmd" : "Ctrl"), (18, OperatingSystem.IsMacOS() ? "Option" : "Alt"), (20, "Caps Lock"),
             (33, "Page Up"), (34, "Page Down"), (35, "End"), (36, "Home"), (45, "Insert"), (46, "Delete"),
             (106, "Num *"), (107, "Num +"), (108, "Num Separator"), (109, "Num -"), (110, "Num ."),
             (111, "Num /"), (144, "Num Lock"), (145, "Scroll Lock")];
