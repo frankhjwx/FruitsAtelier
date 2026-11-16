@@ -9,6 +9,7 @@ public sealed partial class EditorView
     private bool deleteProjectConfirmation, replaceBackgroundConfirmation;
     private bool addDifficultyConfirmation, faOnlyConfirmation, newDifficultyFaOnly;
     private bool offerSongsExport;
+    private bool libraryExitConfirmation;
     private bool keepDeletedProjectBackup;
     private bool ContentConfirmationVisible => MapTemplatesVisible || FazVisible || discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || previousSaveRestore is not null;
     public bool DiscardConfirmationVisible => ContentConfirmationVisible || SynchronizationBlocksInput;
@@ -21,6 +22,17 @@ public sealed partial class EditorView
         CancelInteraction(); menu = -1; contextItems.Clear();
         discardConfirmation = answer;
         hits.Clear(); fields.Clear();
+    }
+
+    private void ShowLibraryExitConfirmation()
+    {
+        ShowDiscardConfirmation(answer => { if (answer == 7) RequestClose?.Invoke(); });
+        libraryExitConfirmation = true;
+    }
+
+    public void CancelLibraryExitConfirmation()
+    {
+        if (libraryExitConfirmation) AnswerDiscard(2);
     }
 
     public void ShowDeleteProjectConfirmation(Action<bool, bool> answer)
@@ -42,6 +54,7 @@ public sealed partial class EditorView
         discardConfirmation = null; hitsoundingPasteConfirmation = false;
         addDifficultyConfirmation = faOnlyConfirmation = false;
         deleteProjectConfirmation = false;
+        libraryExitConfirmation = false;
         replaceBackgroundConfirmation = false;
         offerSongsExport = false;
         previousSaveConfirmation = false;
@@ -77,6 +90,18 @@ public sealed partial class EditorView
         if (SynchronizationVisible) { DrawSynchronization(c); return; }
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();
+        if (libraryExitConfirmation)
+        {
+            float left = (width - 500) / 2, top = (height - 180) / 2;
+            c.Fill(new(0, 0, width, height), Background, opacity: .65f);
+            c.Fill(new(left, top, 500, 180), Panel, 8);
+            c.Stroke(new(left, top, 500, 180), Accent, 2, 8);
+            c.Text(L.Get("ui.exitMenu"), left + 24, top + 24, 20, Foreground, 452, true);
+            c.Text(L.Get("library.exitPrompt"), left + 24, top + 62, 14, Foreground, 452);
+            Button(c, new(left + 24, top + 116, 210, 40), L.Get("mac.cancel"), () => AnswerDiscard(2), true);
+            Button(c, new(left + 266, top + 116, 210, 40), L.Get("ui.exitMenu"), () => AnswerDiscard(7));
+            return;
+        }
         if (hitsoundingPasteConfirmation) { DrawHitsoundingPasteConfirmation(c); return; }
         if (SliderCanvasChoiceVisible) { DrawSliderCanvasChoice(c); return; }
         if (galleryDeletingFolder is not null) { DrawGalleryFolderDeletion(c); return; }

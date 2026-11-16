@@ -80,7 +80,11 @@ internal sealed partial class MacWindow : Window
         };
         View.RequestPrepareHitsound = hitsounds.Prepare;
         View.RequestHitsound = hitsounds.Play;
-        View.RequestAuditionHitsound = hitsounds.Play;
+        View.RequestAuditionHitsound = async sound =>
+        {
+            try { await hitsounds.PrepareAndPlayAsync(sound); }
+            catch (Exception error) { editor.RunUi(() => View.SetNotice(error.Message)); }
+        };
         View.RequestRecycleHitsoundingFiles = SystemTrash.Recycle;
         View.RequestStartLibraryAudition = libraryAudition.PlayExclusiveAuditionAsync;
         View.RequestStopLibraryAudition = libraryAudition.Stop;
@@ -243,6 +247,7 @@ internal sealed partial class MacWindow : Window
             editor.RunUi(() =>
             {
                 if (allowClose) { if (!smokeCheck) SaveWindowPreferences(); return; }
+                View.CancelLibraryExitConfirmation();
                 if (recoverySaveBusy) return;
                 if (View.RecoveryActive)
                 {
@@ -524,6 +529,35 @@ internal sealed partial class MacWindow : Window
     private static string SafeName(string name) => string.IsNullOrWhiteSpace(name) ? L.Get("files.untitled") : new string(name.Where(c => !Path.GetInvalidFileNameChars().Contains(c) && c != ':').Take(100).ToArray());
     private async Task SmokeCheck()
     {
+        if (Program.Arguments.Contains("--library-exit-check"))
+        {
+            View.ShowLibrary();
+            var close = View.RequestClose;
+            int requested = 0;
+            View.RequestClose = () => requested++;
+            try
+            {
+                foreach (string language in new[] { "en", "zh-CN" })
+                {
+                    FruitsAtelier.Localization.Strings.SetLanguage(language);
+                    View.KeyDown(27, false, false);
+                    if (!View.DiscardConfirmationVisible || requested != 0)
+                        throw new InvalidOperationException("Library Esc must ask before closing.");
+                    editor.Refresh();
+                    await Task.Delay(100);
+                    string output = Path.Combine(MacPaths.Artifacts, "macos-check", "library-exit");
+                    Directory.CreateDirectory(output);
+                    using var capture = new RenderTargetBitmap(new PixelSize((int)editor.Bounds.Width, (int)editor.Bounds.Height), new Vector(96, 96));
+                    capture.Render(editor); capture.Save(Path.Combine(output, language + ".png"));
+                    View.KeyDown(27, false, false);
+                    if (View.DiscardConfirmationVisible || requested != 0)
+                        throw new InvalidOperationException("Library Esc must cancel the confirmation.");
+                }
+            }
+            finally { View.RequestClose = close; }
+            return;
+        }
+        if (Program.Arguments.Contains("--mac-host-check")) { await HostRenderCheck(); return; }
         View.LoadDocument(DemoMap.Create()); View.CloseLibrary(); editor.Refresh();
         string folder = Path.Combine(MacPaths.Artifacts, "macos-check"); Directory.CreateDirectory(folder);
         using var bitmap = new RenderTargetBitmap(new PixelSize((int)editor.Bounds.Width, (int)editor.Bounds.Height), new Vector(96, 96));

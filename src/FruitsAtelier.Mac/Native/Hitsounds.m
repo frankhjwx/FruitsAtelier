@@ -25,6 +25,9 @@ static void render(FAMix *mix, double time, unsigned frames, float *out) {
     while (read != write) {
         FAHit hit = mix->queue[read]; read = (read + 1) % FA_QUEUE;
         if (hit.generation != generation) continue;
+        // An audition has no map deadline. Start at the next available render
+        // frame instead of discarding its attack to catch up to a past host time.
+        if (isnan(hit.start)) { hit.start = time; atomic_store(&mix->lastStart, time); }
         unsigned slot = 0;
         for (unsigned i = 0; i < FA_VOICES; i++) {
             FAHit v = mix->voices[i];
@@ -132,9 +135,12 @@ int fa_hitsounds_schedule(void *handle, void *sample, double start, float volume
     if (next == atomic_load(&mix->read)) return 0;
     AVAudioPCMBuffer *buffer = (__bridge AVAudioPCMBuffer *)sample;
     mix->queue[write] = (FAHit){ buffer.floatChannelData[0], buffer.frameLength, start, volume, atomic_load(&mix->generation), false };
-    atomic_store(&mix->lastStart, start); atomic_store(&mix->lastDuration, buffer.frameLength / FA_RATE);
+    atomic_store(&mix->lastStart, isnan(start) ? fa_audio_host_time() : start); atomic_store(&mix->lastDuration, buffer.frameLength / FA_RATE);
     atomic_store(&mix->write, next);
     return 1;
+}
+int fa_hitsounds_play(void *handle, void *sample, float volume) {
+    return fa_hitsounds_schedule(handle, sample, NAN, volume);
 }
 void fa_hitsounds_stop(void *handle) {
     FAMix *mix = ((__bridge FAHitEngine *)handle)->mix;

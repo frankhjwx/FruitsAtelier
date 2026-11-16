@@ -23,6 +23,7 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
     }
     private bool disposed;
     private int generation;
+    private long playbackEpoch;
     private long bytes;
     private const long MemoryLimit = 256 * 1024 * 1024;
     public Task Preparation { get { lock (gate) return preparation; } }
@@ -96,7 +97,12 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
                 if (disposed || version != generation || sample == 0) return;
                 long size = SampleBytes(sample);
                 if (bytes + size > MemoryLimit) { MacPaths.Log("Hitsound project PCM bank exceeds 256 MiB; sample skipped: " + Key(sound)); return; }
-                if (engine == 0) { engine = Open(muted ? 1 : 0); SetNativeVolume(engine, volume); NativePlayerCreations++; }
+                if (engine == 0)
+                {
+                    engine = Open(muted ? 1 : 0);
+                    if (engine == 0) throw new InvalidOperationException(FruitsAtelier.Localization.Strings.Get("mac.audioPlayFailed"));
+                    SetNativeVolume(engine, volume); NativePlayerCreations++;
+                }
                 samples[Key(sound)] = sample; sample = 0; bytes += size; SampleLoads++;
                 pending.Remove(Key(sound));
             }
@@ -115,7 +121,25 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
         }
     }
     private static string Key(Hitsound sound) => sound.FilePath ?? $"{sound.Kind}/{sound.SampleSet}/{sound.Name}";
-    public void Play(Hitsound sound) => Schedule(sound, HostTime());
+    public void Play(Hitsound sound)
+    {
+        lock (gate)
+            if (!disposed && engine != 0 && samples.TryGetValue(Key(sound), out nint sample) && sample != 0)
+                PlayNative(engine, sample, sound.Volume);
+    }
+    public async Task PrepareAndPlayAsync(Hitsound sound)
+    {
+        long epoch; int version; Task ready;
+        lock (gate)
+        {
+            if (disposed) return;
+            epoch = playbackEpoch; version = generation;
+            Prepare(sound); ready = preparation;
+        }
+        await ready.ConfigureAwait(false);
+        lock (gate)
+            if (!disposed && epoch == playbackEpoch && version == generation) Play(sound);
+    }
     public async Task<double> PlayExclusiveAuditionAsync(Hitsound sound, CancellationToken token)
     {
         Stop();
@@ -127,7 +151,7 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
         {
             token.ThrowIfCancellationRequested();
             if (disposed || engine == 0 || !samples.TryGetValue(Key(sound), out nint sample) || sample == 0) return 0;
-            ScheduleNative(engine, sample, HostTime(), sound.Volume);
+            PlayNative(engine, sample, sound.Volume);
             return SampleBytes(sample) * 1000d / (sizeof(float) * HitsoundSamples.SampleRate);
         }
     }
@@ -150,7 +174,7 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
                 ScheduleNative(engine, sample, hostTime, sound.Volume);
         }
     }
-    public void Stop() { lock (gate) if (engine != 0) StopNative(engine); }
+    public void Stop() { lock (gate) { playbackEpoch++; if (engine != 0) StopNative(engine); } }
     private void ReleaseBank()
     {
         // Stop/join the render callback before releasing sample memory referenced by queued voices.
@@ -197,6 +221,7 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
     [DllImport(Library, EntryPoint="fa_hitsounds_sample_close")] private static extern void CloseSample(nint sample);
     [DllImport(Library, EntryPoint="fa_hitsounds_sample_bytes")] private static extern uint SampleBytes(nint sample);
     [DllImport(Library, EntryPoint="fa_hitsounds_schedule")] private static extern int ScheduleNative(nint engine, nint sample, double start, float volume);
+    [DllImport(Library, EntryPoint="fa_hitsounds_play")] private static extern int PlayNative(nint engine, nint sample, float volume);
     [DllImport(Library, EntryPoint="fa_hitsounds_stop")] private static extern void StopNative(nint engine);
     [DllImport(Library, EntryPoint="fa_hitsounds_loop")] private static extern void LoopNative(nint engine, nint sample, float volume);
     [DllImport(Library, EntryPoint="fa_hitsounds_position")] private static extern double Position(nint engine);

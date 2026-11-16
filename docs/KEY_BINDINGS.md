@@ -95,7 +95,7 @@ Compose shortcut remain accessible through their existing menus and controls.
 | Ctrl+Shift+A | Open AiMod for the current difficulty. |
 | F6 | Open Timing and Control Points. |
 | F12 | Copy the current editor window content to the system clipboard as an image, including visible dialogs or testplay. Paste it into a chat or image editor. |
-| Esc | Dismiss the current field, popup, menu or gesture first. From idle Compose, request return to Library; from Timing, return to Compose. Unsaved changes can prompt. |
+| Esc | Dismiss the current field, popup, menu or gesture first. From idle Compose, request return to Library; from Timing, return to Compose. Unsaved changes can prompt. In the Library main view, open the exit confirmation; Enter or Esc cancels it. |
 
 F2 has no Compose page action. It has a separate meaning during testplay.
 Windows Alt+F4 requests closing the application window; use Esc to return to

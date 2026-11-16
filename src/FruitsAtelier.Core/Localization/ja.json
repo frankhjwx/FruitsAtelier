@@ -1,4 +1,5 @@
 {
+  "library.exitPrompt": "Fruits Atelier を終了しますか？",
   "distance.selectionGap": "オブジェクト間隔: {0:0.###} ms",
   "testplay.showFruitStack": "テストプレイのフルーツ積み重ね",
   "browser.settings": "Web",
@@ -59,7 +60,7 @@
   "ds.objectLater": "後の時間",
   "ds.objectBeats": "{0} 拍",
   "ds.osuObjectSnapTip": "画面内のアクティブなサークルとスライダー端点に6ピクセル以内でスナップします。移動中のオブジェクトを除外し、最も近いオブジェクトまたはDS位置を選択します。",
-  "ds.objectSnapTip": "既存のオブジェクトやスライダー全体を移動するときは、最初または最後のフルーツを合わせ、選択範囲をまとめて移動します。配置時刻を維持して、近くのフルーツの X 座標に合わせます。設定した拍数（1/1 Snap の間隔）の範囲を前後に検索し、BPM の変更に従います。配置時はグリッドと距離スナップより優先されます。DS が有効な全体移動では、オブジェクト、DS、共線位置から最も近い候補を選びます。適用すると難易度ごとに編集設定を保存します。",
+  "ds.objectSnapTip": "既存のオブジェクトやスライダー全体を移動するときは、最初または最後のフルーツを合わせ、選択範囲をまとめて移動します。配置時刻を維持して、近くのフルーツの X 座標に合わせます。設定した拍数（1/1 Snap の間隔）の範囲を前後に検索し、BPM の変更に従います。配置時はグリッドと距離スナップより優先されます。DS が有効な全体移動では、オブジェクト、DS、共線位置から最も近い候補を選びます。適用すると、この端末の全難易度に共通する設定として保存します。",
   "mappingCanvas.legacy": "osu!Legacy",
   "mappingCanvas.catch": "Catch",
   "mappingCanvas.hint": "osu!Legacy：二次元の円と Legacy Slider。\nCatch：位置・時間の編集と FSlider。\nTab：キャンバス切り替え。",

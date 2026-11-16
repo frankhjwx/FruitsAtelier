@@ -846,6 +846,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (libraryExitConfirmation) return;
         if (MediaRefinementVisible) return;
         if (librarySettingsOpen) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (ErrorVisible) return;
@@ -970,6 +971,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (libraryExitConfirmation) return;
         if (MediaRefinementVisible) return;
         if (SettingsOwnsInput) { SettingsWheel(x, y, delta); return; }
         if (!ErrorVisible && !DiscardConfirmationVisible && (CapturingShortcut || shortcutResetMode))
@@ -2137,6 +2139,7 @@ public sealed partial class EditorView
     }
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (libraryExitConfirmation) { mouseX = x; mouseY = y; return; }
         if (MediaRefinementVisible && !ErrorVisible) { mouseX = x; mouseY = y; if (mediaPickDragging) PickMediaColour(x, y); return; }
         if (ErrorVisible) { mouseX = x; mouseY = y; return; }
         if (SettingsOwnsInput) { SettingsPointerMove(x, y); return; }
@@ -2147,6 +2150,7 @@ public sealed partial class EditorView
     }
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (libraryExitConfirmation) return;
         if (MediaRefinementVisible) { if (button == 0) mediaPickDragging = false; return; }
         if (ErrorVisible) return;
         if (SettingsOwnsInput) { SettingsPointerUp(x, y, button); return; }
@@ -2157,6 +2161,11 @@ public sealed partial class EditorView
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (libraryExitConfirmation && !ErrorVisible)
+        {
+            if (virtualKey is 27 or 13) AnswerDiscard(2);
+            return;
+        }
         if (MediaRefinementVisible && !ErrorVisible)
         {
             if (virtualKey == 27)
@@ -2199,6 +2208,7 @@ public sealed partial class EditorView
     }
     public void TextInput(char value)
     {
+        if (libraryExitConfirmation) return;
         if (MediaRefinementVisible) return;
         if (SettingsOwnsInput)
         {

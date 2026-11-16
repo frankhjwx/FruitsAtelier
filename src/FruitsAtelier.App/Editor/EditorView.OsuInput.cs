@@ -104,7 +104,7 @@ public sealed partial class EditorView
             }
         }
         var result = (X: Math.Clamp(Math.Round(px), 0, 512), Y: Math.Clamp(Math.Round(py), 0, 384));
-        return useObjects && EditingPreferences.ObjectSnap ? SnapOsuObjectPoint(p, result, OsuObjectSnapTargets(), null, distanceSnapped) : result;
+        return useObjects && LibrarySettings.ObjectSnap ? SnapOsuObjectPoint(p, result, OsuObjectSnapTargets(), null, distanceSnapped) : result;
     }
 
     private double OsuPlacementTime => Math.Max(0, snap ? SnapTiming().Snap(playhead, divisor) : playhead);

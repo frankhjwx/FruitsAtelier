@@ -1,4 +1,5 @@
 {
+  "library.exitPrompt": "Fruits Atelier를 종료하시겠습니까?",
   "distance.selectionGap": "오브젝트 간격: {0:0.###} ms",
   "testplay.showFruitStack": "테스트플레이 과일 더미",
   "browser.settings": "Web",
@@ -59,7 +60,7 @@
   "ds.objectLater": "이후 시간",
   "ds.objectBeats": "{0} 박",
   "ds.osuObjectSnapTip": "화면의 활성 서클과 슬라이더 양 끝에 6픽셀 이내로 스냅합니다. 이동 중인 오브젝트는 제외하고 가장 가까운 오브젝트 또는 DS 위치를 선택합니다.",
-  "ds.objectSnapTip": "기존 오브젝트나 슬라이더 전체를 옮길 때 첫 번째 또는 마지막 과일을 맞추고 선택 항목을 함께 이동합니다. 배치 시간을 유지하며 가까운 과일의 X 좌표에 맞춥니다. BPM 변화를 따라 설정한 박 수(1/1 Snap 간격)만큼 앞뒤로 검색합니다. 배치 시 격자 및 거리 스냅보다 우선합니다. DS가 켜진 전체 이동에서는 오브젝트, DS, 공선 위치 중 가장 가까운 후보를 선택합니다. 적용하면 난이도별 편집 설정으로 저장됩니다.",
+  "ds.objectSnapTip": "기존 오브젝트나 슬라이더 전체를 옮길 때 첫 번째 또는 마지막 과일을 맞추고 선택 항목을 함께 이동합니다. 배치 시간을 유지하며 가까운 과일의 X 좌표에 맞춥니다. BPM 변화를 따라 설정한 박 수(1/1 Snap 간격)만큼 앞뒤로 검색합니다. 배치 시 격자 및 거리 스냅보다 우선합니다. DS가 켜진 전체 이동에서는 오브젝트, DS, 공선 위치 중 가장 가까운 후보를 선택합니다. 적용하면 이 컴퓨터의 모든 난이도에 공통으로 저장됩니다.",
   "mappingCanvas.legacy": "osu!Legacy",
   "mappingCanvas.catch": "Catch",
   "mappingCanvas.hint": "osu!Legacy: 2차원 원과 Legacy Slider.\nCatch: 위치/시간 편집과 FSlider.\nTab: 캔버스 전환.",

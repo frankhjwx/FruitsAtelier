@@ -42,6 +42,12 @@
         "resolved": "2025.806.0-nativelibs",
         "contentHash": "andr6OYdjUCpglWMdKoXarGVcgQFza3oRZ8LMJFHjv31N2tO6v9DTs6gZdJB8YWuOBMn77A6Eg3Hy38UZhD9IA=="
       },
+      "SoundTouch.Net": {
+        "type": "Direct",
+        "requested": "[2.3.2, )",
+        "resolved": "2.3.2",
+        "contentHash": "5A29Pll/n4kEEPvCD5DFot3MJG+VgiaRG6LbNQVkF94VerC1b5iZtJKfdLQXZPFrl3LiVbKm3txKBe5/pbv5rw=="
+      },
       "Tmds.DBus.Protocol": {
         "type": "Direct",
         "requested": "[0.21.3, )",

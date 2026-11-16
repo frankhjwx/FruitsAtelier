@@ -8,7 +8,9 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 [Website](https://fruitsatelier.himiko.moe/) · [Download](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**Current version: 1.4.7**
+**Current version: 1.4.8**
+
+Object Snap settings are shared across difficulties and remembered on this computer. In the Library, Esc asks for confirmation before exiting.
 
 ![FruitsAtelier's editing canvas, object timeline, and Catch preview](assets/screenshots/twin-bloom.png)
 

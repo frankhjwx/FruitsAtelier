@@ -758,7 +758,7 @@ public sealed partial class EditorView
         if (updatesPage) { if (key == 27) updatesPage = false; return; }
         if (key == 27 && settingsColourIndex >= 0) { CancelSettingsColourPicker(); return; }
         if (key == 27) FinishVolumeDrag();
-        if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else if (librarySettingsOpen) CloseSettings(); else resourcePage = false; return; }
+        if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else if (librarySettingsOpen) CloseSettings(); else if (resourcePage) resourcePage = false; else ShowLibraryExitConfirmation(); return; }
         if (key == 116 && !librarySettingsOpen) { if (!FirstRunSetupVisible) StartLibraryScan(); return; }
         if (!librarySettingsOpen && ctrl && key == 70) { libraryField = 2; SelectInput("library:2", libraryQuery); return; }
         if (key == 13 && libraryField < 0 && !librarySettingsOpen && !resourcePage && libraryBrowser?.Selected?.Map is { } map)

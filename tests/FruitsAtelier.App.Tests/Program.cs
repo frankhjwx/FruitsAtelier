@@ -3,6 +3,7 @@ using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 try
 {
+if (args.Contains("--library-exit-check")) { LibraryExitTests.ExitConfirmation(); LibraryNavigationTests.Run(); Console.WriteLine("PASS Library exit confirmation and navigation"); return 0; }
 if (args.Contains("--media-panel-check")) { MediaPanelTests.Run(); return 0; }
 if (args.Contains("--media-panel-performance")) { MediaPanelTests.Performance(); return 0; }
 if (args.Contains("--testplay-mods-check")) { TestplayModTests.Run(); PreviewSidebarTests.Sidebar(); TestplayStartupDelayTests.IndependentSpeed(); DockPersistenceTests.Run(); InspectorPanelsTests.Run(); TestplayTests.LivePlate(); DockingTests.Run(); PreviewSidebarTests.DisplayModesAndOverscan(); return 0; }

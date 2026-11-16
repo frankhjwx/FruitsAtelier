@@ -1,6 +1,10 @@
 # Running on macOS
 
-The Mac host uses Avalonia desktop windows, AVAudioEngine with AVAudioPlayerNode and AVAudioUnitTimePitch for music, and a persistent AVAudioEngine mixer for hitsounds. Build scripts target the current machine architecture: `osx-arm64` for Apple Silicon and `osx-x64` for Intel.
+The Mac host uses Avalonia desktop windows, AVAudioEngine with AVAudioPlayerNode for prepared music PCM, and a persistent AVAudioEngine mixer for hitsounds. SoundTouch.Net processes tempo changes before playback, using the same settings as the Windows transport; 100% playback bypasses processing. A bounded half-second PCM queue is replenished off the audio render thread. Music and scheduled hitsounds share a host-clock origin at every speed. Seek, pause/resume and speed changes retire buffered PCM and restart processing at the retained source position.
+
+Immediate auditions start at the next available render frame to preserve short attacks. Panel auditions prepare missing samples asynchronously, while library and Precise HS auditions replace the previous audition. Stopping or replacing the project cancels pending panel playback.
+
+Build scripts target the current machine architecture: `osx-arm64` for Apple Silicon and `osx-x64` for Intel.
 
 ## Running from source
 
@@ -35,3 +39,19 @@ Mac accepts both Command and Ctrl shortcuts. Delete / Backspace deletes objects;
 Opening a beatmap archive loads its Catch difficulties into one project. Closing or replacing unsaved content offers Save, Discard, and Cancel.
 
 See [Editing Controls](EDITOR_UI.md) for other operations and [Building and Testing](TESTING.md) for test commands.
+
+## Native audio and render regressions
+
+`bash scripts/Test-Mac.sh --native-only` includes actual PCM onset/pitch checks at
+10%–150% speed, pitch-adjusted playback, seek/resume, negative lead-in, immediate
+sample integrity and panel/library audition cancellation. Output is muted after
+PCM observations. The native test executable also accepts `--pcm-alignment-check`
+and `--audition-check` to run these groups separately. Onset checks compare the
+first source PCM in each playback session; time-stretching may redistribute an
+interior transient's energy within its processing grain.
+
+`bash Run-Editor-Mac.command --smoke-check --mac-host-check` opens generated
+workspace fixtures through real Avalonia render frames, checks focus callbacks,
+then injects a recovery error and retries. Fixtures and captures remain under
+`artifacts/macos-check/host`. Render-time refresh requests are coalesced and posted
+after the active frame, including refreshes requested by error recovery.

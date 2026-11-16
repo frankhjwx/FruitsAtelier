@@ -3,6 +3,7 @@ using FruitsAtelier.Mac;
 
 if (args.Length == 2 && args[0] == "--profile-map") { await HitsoundPerformance.ProfileMap(args[1]); return; }
 if (args.Contains("--profile-hitsounds")) { await HitsoundPerformance.Run(); return; }
+if (args.Contains("--pcm-alignment-check")) { await MusicPcmAlignmentTests.Run(); return; }
 
 void Check(bool ok, string message) { if (!ok) throw new Exception(message); Console.WriteLine("PASS " + message); }
 Check(MacInput.Control(KeyModifiers.Meta) && MacInput.Control(KeyModifiers.Control) && !MacInput.Control(KeyModifiers.Shift), "Command/Ctrl are mapped without treating Shift as Ctrl");
@@ -38,6 +39,7 @@ using (var writer = new BinaryWriter(File.Create(wav)))
     writer.Write("data"u8); writer.Write(count * 2); writer.Write(new byte[count * 2]);
 }
 if (args.Length == 2 && args[0] == "--check-resume-music") { await HitsoundLatencyTests.Run(wav, args[1]); return; }
+if (args.Contains("--audition-check")) { await MacAuditionTests.Run(wav); return; }
 using var audio = new MacAudio(muted: true);
 await audio.LoadAsync(wav);
 Check(audio.State.CanPlay && Math.Abs(audio.State.DurationMs - 3000) < 2, "Native WAV opens with actual duration");
@@ -92,4 +94,6 @@ using (var hitsounds = new MacHitsoundPlayer(muted: true))
 }
 await HitsoundLatencyTests.Run(wav);
 await HitsoundPerformance.Run();
+await MusicPcmAlignmentTests.Run();
+await MacAuditionTests.Run(wav);
 Console.WriteLine("Mac native checks passed.");

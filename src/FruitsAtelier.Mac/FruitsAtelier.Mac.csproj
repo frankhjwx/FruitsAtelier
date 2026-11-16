@@ -18,6 +18,8 @@
     <!-- Use the security backport for Avalonia's transitive D-Bus dependency. -->
     <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
     <PackageReference Include="NVorbis" Version="0.10.4" />
+    <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
+    <None Include="../FruitsAtelier.App/Audio/Licenses/SoundTouch.Net.txt" Link="Licenses/SoundTouch.Net.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <PackageReference Include="FFmpeg.AutoGen" Version="4.3.0.1" />
     <PackageReference Include="ppy.osu.Framework.NativeLibs" Version="2025.806.0-nativelibs" ExcludeAssets="runtime" GeneratePathProperty="true" />
     <Content Include="$(Pkgppy_osu_Framework_NativeLibs)/runtimes/osx/native/libav*.dylib;$(Pkgppy_osu_Framework_NativeLibs)/runtimes/osx/native/libswscale*.dylib" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

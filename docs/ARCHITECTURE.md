@@ -11,7 +11,7 @@ The application uses C# 12 / .NET 10. Windows and macOS share the editor, data m
 | Drawing | DX11 / DXGI, Direct2D / DirectWrite, Vortice 3.6.2 | Avalonia 11.3.7, `MacCanvas` implements `ICanvas` |
 | Embedded website | WebView2 on a dedicated STA loop, child HWND | WKWebView hosted by Avalonia NativeControlHost |
 | PNG | Windows Imaging Component | Avalonia bitmaps |
-| Audio | NAudio shared-mode WASAPI; Media Foundation / NVorbis / WAV reader | AVAudioEngine music with AVAudioUnitTimePitch; separate PCM hitsound mixer; NVorbis for OGG |
+| Audio | NAudio shared-mode WASAPI; Media Foundation / NVorbis / WAV reader | AVAudioEngine music with SoundTouch-prepared PCM; separate PCM hitsound mixer; NVorbis for OGG |
 
 See [Building and Testing](TESTING.md) for SDK selection and build commands, and [Third-party notices](../THIRD_PARTY_NOTICES.md) for package versions and licenses.
 
@@ -358,7 +358,7 @@ outputs before waiting for browser shutdown or filesystem cleanup on both platfo
 
 Windows `AudioTransport` serializes load, play, pause, and seek operations on a worker; the UI reads immutable state snapshots. MP3 decoding fills a bounded PCM cache continuously. Pause holds the published position captured when requested and rebuilds output at that source frame; later seeks take precedence. Seek and EOF replay also rebuild output. SoundTouch.Net 2.3.2 preserves pitch for ordinary tempo changes and changes playback rate for DT/HT; timestamped hitsounds are mixed afterward at their original sample speed. Device elapsed time is multiplied by tempo to recover map time. Changing speed rebuilds output at its consumed position. See the [Windows audio reference](../src/FruitsAtelier.App/Audio/REFERENCE.md).
 
-Mac schedules an AVAudioPlayerNode through `Native/Audio.m`; AVAudioUnitTimePitch preserves pitch for ordinary tempo changes and adjusts it with the clock rate for DT/HT. Map position uses the output render timestamp, scheduled start, source position and tempo. The time-pitch unit is bypassed at 100%. NVorbis first decodes OGG into capacity-limited PCM WAV. Stale load results are discarded, and replay after EOF rebuilds the player. Hitsounds preload project PCM on a worker and submit timestamps to a persistent native mixer; see [Hitsounds](HITSOUNDS.md). See [Running on macOS](MACOS.md).
+Mac schedules prepared PCM through an AVAudioPlayerNode in `Native/Audio.m`. SoundTouch.Net handles tempo changes with the Windows transport settings, bypassing processing at 100%. A bounded half-second queue is replenished off the render thread; music and scheduled hitsounds share a host-clock origin. Seek, pause/resume and speed changes retire buffered PCM and restart at the retained source position. NVorbis decodes OGG into capacity-limited PCM WAV. Hitsounds preload project PCM on a worker and submit timestamps to a persistent native mixer; see [Hitsounds](HITSOUNDS.md) and [Running on macOS](MACOS.md).
 
 Preview hitsound scheduling, sample resolution, and platform playback are documented in [Hitsounds](HITSOUNDS.md).
 

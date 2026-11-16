@@ -45,7 +45,7 @@ internal static class LibraryDoubleClickTests
             view.PointerDown(x, y, 2, false, false); Settle();
             Click("project.openSongsFolder");
             Check(openedPath is null, "a project without a source cannot open a Songs folder");
-            view.KeyDown(27, false, false);
+            Check(!view.DiscardConfirmationVisible, "disabled folder action leaves no exit confirmation");
             string sourceFolder = Path.Combine(root, "Songs", "Source set");
             Directory.CreateDirectory(sourceFolder);
             session.Manifest.ExternalSourceDirectory = sourceFolder;

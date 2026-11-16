@@ -175,6 +175,12 @@ public sealed class LibrarySettings
     private int backgroundDim = 90;
     public int BackgroundDim { get => backgroundDim; set => backgroundDim = Math.Clamp(value, 0, 100); }
     public Dictionary<Guid, MapEditingPreferences> MapEditingPreferences { get; set; } = [];
+    public const int MaximumObjectSnapBeats = 4;
+    public bool ObjectSnap { get; set; }
+    private int objectSnapEarlierBeats = 2, objectSnapLaterBeats = 1;
+    public int ObjectSnapEarlierBeats { get => objectSnapEarlierBeats; set => objectSnapEarlierBeats = Math.Clamp(value, 0, MaximumObjectSnapBeats); }
+    public int ObjectSnapLaterBeats { get => objectSnapLaterBeats; set => objectSnapLaterBeats = Math.Clamp(value, 0, MaximumObjectSnapBeats); }
+
     private double canvasZoom = .6, objectTimelineScale = .18, waveformSpanMs = 10000;
     public double CanvasZoom { get => canvasZoom; set => canvasZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 2) : .6; }
     private double canvasTimeZoom = .6;
@@ -250,7 +256,6 @@ public sealed class MapEditingPreferences
         get => activePanel;
         set => activePanel = value is "Timing" or "Hitsounding" ? value : "Mapping";
     }
-    public const int MaximumObjectSnapBeats = 4;
     public bool AnchorSnap { get; set; }
     private int beatSnapDivisor = 4;
     public int BeatSnapDivisor
@@ -260,10 +265,6 @@ public sealed class MapEditingPreferences
     }
     public bool GridSnap { get; set; }
     public bool DistanceSnap { get; set; }
-    public bool ObjectSnap { get; set; }
-    private int objectSnapEarlierBeats = 2, objectSnapLaterBeats = 1;
-    public int ObjectSnapEarlierBeats { get => objectSnapEarlierBeats; set => objectSnapEarlierBeats = Math.Clamp(value, 0, MaximumObjectSnapBeats); }
-    public int ObjectSnapLaterBeats { get => objectSnapLaterBeats; set => objectSnapLaterBeats = Math.Clamp(value, 0, MaximumObjectSnapBeats); }
     public bool MovementAnalysis { get; set; }
     private int gridLevel = 4;
     public int GridLevel { get => gridLevel; set => gridLevel = value is 4 or 8 or 16 or 32 ? value : 4; }

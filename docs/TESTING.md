@@ -913,7 +913,9 @@ and non-client frame sizing in English and Chinese. Captures and results are
 written to `artifacts/tests/dpi-native`. These checks use real Direct2D rendering
 with simulated DPI notifications; they do not change Windows display settings.
 
-`App.Tests --object-snap-check` verifies full-beat search ranges across BPM changes
+`App.Tests --object-snap-check` verifies global preference defaults, isolation from legacy
+per-difficulty settings, Settings Apply, difficulty switching and restart persistence,
+and full-beat search ranges across BPM changes
 and independently of meter, bidirectional fruit and slider-start placement, exact X priority over Grid
 and Distance Snap, undo, hover isolation, default preferences and Apply/Cancel.
 Whole-object checks sweep horizontally in both directions with DS, object and
@@ -1929,3 +1931,8 @@ Hidden/Flashlight gameplay at compact and wide sizes in English and Chinese,
 and checks native Flashlight mask pixels. Set `FRUITS_TEST_SKIN` to a skin
 directory to inspect its real HUD mod artwork. The check does not save that skin
 preference. Output remains under `artifacts/tests/testplay-native/`.
+
+`App.Tests --library-exit-check` verifies Library exit confirmation, cancellation,
+input isolation and navigation in English and Chinese. On macOS,
+`bash Run-Editor-Mac.command --smoke-check --library-exit-check` captures the
+confirmation in both languages under `artifacts/macos-check/library-exit`.
