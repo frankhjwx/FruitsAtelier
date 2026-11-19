@@ -37,7 +37,7 @@ public sealed partial class EditorView
         if (overrides is not null && overrides.TryGetValue(command.StorageKey, out var value)) return value ?? [];
         // Preserve custom bindings saved before these Hitsounding defaults were assigned.
         if (overrides is { Count: > 0 } && command.Scope == ShortcutScope.Hitsounding
-            && command.Id is "hitToggleWhistle" or "hitToggleFinish" or "hitToggleClap" or "hitHighlightSoundNotes"
+            && command.Id is "hitToggleWhistle" or "hitToggleFinish" or "hitToggleClap" or "hitHighlightSoundNotes" or "previousParent" or "nextParent"
             && ShortcutCommands.Any(other => other.Lazer == command.Lazer
                 && other.Scope is ShortcutScope.Hitsounding or ShortcutScope.Global
                 && overrides.TryGetValue(other.StorageKey, out var bindings)

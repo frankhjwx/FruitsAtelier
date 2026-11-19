@@ -536,8 +536,10 @@ public sealed partial class EditorView
         {
             if (!hitsoundingAllowNotes || hitsoundingNoteGesture != HitsoundingNoteGesture.None) return;
             int? edge = SoundEdge(selection);
-            targets = objectSelection.Where(CanSelectCollaborationObject)
-                .SelectMany(id => hitsoundingParentNotes.GetValueOrDefault(id) ?? [])
+            IEnumerable<ConvertedCatchObject> selectedNotes = hitsoundingHighlightedNotes.Count > 0 && HitsoundingSelectedNote is { } exactNote
+                ? [exactNote]
+                : objectSelection.Where(CanSelectCollaborationObject).SelectMany(id => hitsoundingParentNotes.GetValueOrDefault(id) ?? []);
+            targets = selectedNotes
                 .Where(note => note.Kind == CatchObjectKind.Fruit)
                 .Select(resolver.EventSettings)
                 .Where(setting => edge is null || setting.EdgeIndex == edge)

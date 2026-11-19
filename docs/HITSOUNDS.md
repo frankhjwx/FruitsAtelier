@@ -410,8 +410,16 @@ its BPM-dependent playback seek distance and coarse paused grid. These bindings 
 configurable in the Hitsounding section of Key Bindings. Home jumps to song start;
 Z jumps to the first object and then song start; V/End jumps to the last object end
 and then song end. X starts playback at song start, and Space/C toggles playback.
-Up/Down visits timing points with the active editing profile's direction. Bookmark,
-lazer parent/sample-boundary, speed and Snap shortcuts also follow Mapping.
+Up/Down visits timing points with the active editing profile's direction. Speed,
+Snap and lazer sample-boundary shortcuts also follow Mapping.
+With Notes or sound tags selected, Ctrl+Left/Right selects the previous or next
+sound-editable note. For a group, start before the earliest selected note or after
+the latest one. Slider heads, repeats and tails count individually. Slider ticks
+and storyboard samples are skipped. The view follows targets outside the visible
+timeline. Both directions can be rebound in Hitsounding Key Bindings.
+With no selection, Ctrl+Left/Right still seeks bookmarks in Default and parent
+starts in Lazer. Use Alt+Shift+Left/Right in Default or Alt+Left/Right in Lazer to
+seek bookmarks while a selection is active.
 J/K moves the active unlocked Notes, addition or SB selection earlier/later by one
 Snap subdivision; every addition destination must match a fruit event.
 

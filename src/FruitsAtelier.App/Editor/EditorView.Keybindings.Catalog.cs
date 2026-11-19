@@ -338,12 +338,12 @@ public sealed partial class EditorView
             "snap1", "snap2", "snap3", "snap4", "snap5", "snap6", "snap7", "snap8", "snap9", "earlier", "later"];
         commands.AddRange(commands.Where(c => c.Scope == ShortcutScope.Compose && hitsoundingNavigation.Contains(c.Id))
             .Select(c => c with { Scope = ShortcutScope.Hitsounding }).ToArray());
-        Add(ShortcutScope.Hitsounding, "bookmarkLeft", "playback", "default", ShortcutBinding.From(17, 37));
-        Add(ShortcutScope.Hitsounding, "bookmarkRight", "playback", "default", ShortcutBinding.From(17, 39));
+        Add(ShortcutScope.Hitsounding, "bookmarkLeft", "playback", "default", ShortcutBinding.From(18, 16, 37));
+        Add(ShortcutScope.Hitsounding, "bookmarkRight", "playback", "default", ShortcutBinding.From(18, 16, 39));
         Add(ShortcutScope.Hitsounding, "bookmarkLeft", "playback", "lazer", ShortcutBinding.From(18, 37));
         Add(ShortcutScope.Hitsounding, "bookmarkRight", "playback", "lazer", ShortcutBinding.From(18, 39));
-        Add(ShortcutScope.Hitsounding, "previousParent", "playback", "lazer", ShortcutBinding.From(17, 37));
-        Add(ShortcutScope.Hitsounding, "nextParent", "playback", "lazer", ShortcutBinding.From(17, 39));
+        Add(ShortcutScope.Hitsounding, "previousParent", "tools", "both", ShortcutBinding.From(17, 37));
+        Add(ShortcutScope.Hitsounding, "nextParent", "tools", "both", ShortcutBinding.From(17, 39));
         Add(ShortcutScope.Hitsounding, "sampleLeft", "playback", "lazer", ShortcutBinding.From(17, 16, 37));
         Add(ShortcutScope.Hitsounding, "sampleRight", "playback", "lazer", ShortcutBinding.From(17, 16, 39));
         return commands.ToArray();

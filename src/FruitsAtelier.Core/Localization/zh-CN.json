@@ -2520,8 +2520,8 @@
   "media.useVideo": "设为视频",
   "shortcuts.hint": "{0}（{1}）",
   "media.includeSubfolders": "包含子文件夹",
-  "shortcuts.command.previousParent": "上一个物件",
-  "shortcuts.command.nextParent": "下一个物件",
-  "shortcuts.description.previousParent": "跳转到上一个父物件的起点。",
-  "shortcuts.description.nextParent": "跳转到下一个父物件的起点。"
+  "shortcuts.command.previousParent": "选择上一个音符",
+  "shortcuts.command.nextParent": "选择下一个音符",
+  "shortcuts.description.previousParent": "选择当前选区之前可编辑音效的最近音符。",
+  "shortcuts.description.nextParent": "选择当前选区之后可编辑音效的最近音符。"
 }

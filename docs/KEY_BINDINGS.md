@@ -24,6 +24,11 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 
 In the Hitsounding workspace, **5** adds an inherited timing point at the playhead.
 **F** toggles Notes highlights for the selected sound tags.
+**Ctrl+Left/Right** selects the previous or next sound-editable note beyond the
+current selection. Slider repeats count as notes. Slider ticks and SB samples
+are skipped. With no selection, the keys seek bookmarks in Default or parent
+starts in Lazer. **Alt+Shift+Left/Right** in Default and **Alt+Left/Right** in
+Lazer seek bookmarks even with a selection.
 Left/Right and Shift+Left/Right follow Mapping navigation for the active Default/lazer profile,
 including during drags. J/K moves the unlocked Notes, addition or SB selection by one Snap step.
 Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum; Ctrl+Q/W/E/R sets Additions.

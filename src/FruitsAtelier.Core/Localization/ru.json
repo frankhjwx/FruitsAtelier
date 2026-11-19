@@ -2520,8 +2520,8 @@
   "media.useVideo": "Use as video",
   "shortcuts.hint": "{0} ({1})",
   "media.includeSubfolders": "Include subfolders",
-  "shortcuts.command.previousParent": "Предыдущий объект",
-  "shortcuts.command.nextParent": "Следующий объект",
-  "shortcuts.description.previousParent": "Перейти к началу предыдущего родительского объекта.",
-  "shortcuts.description.nextParent": "Перейти к началу следующего родительского объекта."
+  "shortcuts.command.previousParent": "Select Previous Note",
+  "shortcuts.command.nextParent": "Select Next Note",
+  "shortcuts.description.previousParent": "Select the previous sound-editable note from the current selection.",
+  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection."
 }

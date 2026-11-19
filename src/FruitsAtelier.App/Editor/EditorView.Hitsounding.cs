@@ -256,8 +256,9 @@ public sealed partial class EditorView
             if (item.Kind == CatchObjectKind.Droplet)
                 hitsoundingSoundHits.Add((new(x - 5, y - 5, 10, 10), item, 0));
             float radius = (item.Kind == CatchObjectKind.Droplet ? 5 : 19) * notesHeight / 64;
-            if (hitsoundingNotesSelection && hitsoundingSelected == (item.SourceId, item.EventIndex)) c.Circle(x, y, radius + 3, Accent, false, 2);
-            if (item.Kind == CatchObjectKind.Droplet
+            if (hitsoundingNotesSelection && hitsoundingHighlightedNotes.Count == 0 && hitsoundingSelected == (item.SourceId, item.EventIndex))
+                c.Circle(x, y, radius + 3, Accent, false, 2);
+            if ((item.Kind == CatchObjectKind.Droplet || SpinnerHitsounds.IsEndEvent(item))
                 && hitsoundingHighlightedNotes.Contains((item.SourceId, item.EventIndex, false, item.Kind)))
                 c.Circle(x, y, radius, OsuSelectionColour, false, Math.Max(1, 3 * notesHeight / 64));
             float flash = hitsoundingAudibleNotes.Contains((item.SourceId, item.EventIndex)) ? HitsoundingFlash(item.TimeMs) : 0;

@@ -38,7 +38,7 @@ public sealed partial class EditorView
     }
     private void ToggleHitsoundingSoundNoteHighlights()
     {
-        if (hitsoundingHighlightHeld || WantsCapture || ActiveShortcutScope != ShortcutScope.Hitsounding
+        if (hitsoundingHighlightHeld || WantsCapture || hitsoundingMultiSelection.Count == 0 || ActiveShortcutScope != ShortcutScope.Hitsounding
             || hitsoundingNotesSelection || !CommitField()) return;
         hitsoundingHighlightHeld = true;
         if (hitsoundingHighlightedNotes.Count > 0) hitsoundingHighlightedNotes.Clear();
@@ -46,14 +46,18 @@ public sealed partial class EditorView
     }
     private void HighlightHitsoundingSoundNotes()
     {
-        if (hitsoundingResolver is not { } resolver) return;
         foreach (var (id, eventIndex, lane) in hitsoundingMultiSelection)
         {
             if (HitsoundingLaneLocked(lane) || !CanSelectCollaborationObject(id)
                 || !hitsoundingNoteLookup.TryGetValue((id, eventIndex), out var note)) continue;
-            bool edge = note.Kind == CatchObjectKind.Fruit && !note.IsStandalone;
-            hitsoundingHighlightedNotes.Add((id, edge ? resolver.EventSettings(note).EdgeIndex : eventIndex, edge, note.Kind));
+            HighlightHitsoundingNote(note);
         }
+    }
+    private void HighlightHitsoundingNote(ConvertedCatchObject note)
+    {
+        bool edge = note.Kind == CatchObjectKind.Fruit && !note.IsStandalone;
+        int index = edge ? hitsoundingResolver!.EventSettings(note).EdgeIndex : note.EventIndex;
+        hitsoundingHighlightedNotes.Add((note.SourceId, index, edge, note.Kind));
     }
     private float HitsoundingMarqueeStartX => hitsoundingGridBounds.X
         + (float)((hitsoundingMarqueeStartTime - HitsoundingStart) / hitsoundingSpan * hitsoundingGridBounds.Width);

@@ -535,7 +535,7 @@ public sealed partial class EditorView
         void DrawMarkers(int index)
         {
             var item = visibleItems[index];
-            bool selected = (!previewHitsounding || hitsoundingNotesSelection) && IsObjectSelected(item.Id);
+            bool selected = (!previewHitsounding || hitsoundingNotesSelection && hitsoundingHighlightedNotes.Count == 0) && IsObjectSelected(item.Id);
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true, eventIndex: item.EventIndex);
             float left = X(item.Start), right = X(item.End), cy = timelineObjects[index].Bounds.Y + timelineObjects[index].Bounds.Height / 2;
             void Ring(float ringX, int? number = null, int? edge = null)

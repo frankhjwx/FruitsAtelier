@@ -1285,6 +1285,8 @@ internal static class HitsoundingPanelTests
         ui.ClickText(L.Get("hitsounding.precise")); Wait(2);
         var baseline = ui.View.Document.DeepClone(); double time = ui.View.PlayheadMs;
         var first = Blocks()[0]; ui.Click(first.X + 5, first.Y + 10);
+        ui.Key(39, ctrl: true); ui.View.KeyUp(39);
+        Check(ui.View.SelectedObjectIds.Count == 0 && ui.View.PlayheadMs == time, "Storyboard sounds do not anchor note-selection shortcuts");
         Check(ui.View.PlayheadMs == time, "Storyboard selection does not seek");
         var nudgeTarget = Blocks()[1];
         ui.View.PointerDown(nudgeTarget.X + 5, nudgeTarget.Y + 10, 0, false, true);

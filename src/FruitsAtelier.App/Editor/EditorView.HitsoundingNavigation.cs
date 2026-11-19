@@ -63,6 +63,8 @@ public sealed partial class EditorView
     }
     private bool HitsoundingNavigationKey(int key, bool ctrl, bool shift)
     {
+        if (ctrl && !shift && !altHeld && key is 37 or 39
+            && SelectAdjacentHitsoundingNote(key == 37 ? -1 : 1)) return true;
         bool handled = true;
         if (ctrl && !altHeld && key is 38 or 40) AdjustPlaybackSpeed(key == 38 ? 1 : -1, shift);
         else if (ctrl && !altHeld && !shift && key == 77) HandleLegacyShortcut(key, false);
@@ -77,7 +79,7 @@ public sealed partial class EditorView
                     if (shift) OsuTimeline.RemoveNearestBookmark(Document, time); else OsuTimeline.AddBookmark(Document, time);
                 });
         }
-        else if (IsLazerEditing && !ctrl && !shift && altHeld && key is 37 or 39) SeekBookmark(key == 39);
+        else if (!ctrl && altHeld && shift != IsLazerEditing && key is 37 or 39) SeekBookmark(key == 39);
         else if (ctrl && !altHeld && key is 37 or 39)
         {
             if (IsLazerEditing && shift) SeekLazerSamplePoint(key == 37 ? -1 : 1);
@@ -108,6 +110,57 @@ public sealed partial class EditorView
             if (hitsoundingPanning) { hitsoundingPanX = mouseX; hitsoundingPanTime = playhead; }
         }
         return handled;
+    }
+    private bool SelectAdjacentHitsoundingNote(int direction)
+    {
+        if (WantsCapture || ActiveShortcutScope != ShortcutScope.Hitsounding) return true;
+        if (!hitsoundingNotesSelection && hitsoundingMultiSelection.Count == 0 && hitsoundingSelected is null)
+            return hitsoundingStoryboardSelection.Count > 0;
+        if (hitsoundingNotesSelection && objectSelection.Count == 0) return false;
+
+        RefreshHitsoundingSnapshot();
+        int? edge = hitsoundingNotesSelection ? SoundEdge(selection) : null;
+        int boundary = -1;
+        foreach (var note in HitsoundingNavigationSelection())
+        {
+            if (note.Kind != CatchObjectKind.Fruit || !CanSelectSlider(note.SourceId)) continue;
+            if (edge is not null && hitsoundingResolver!.EventSettings(note).EdgeIndex != edge) continue;
+            int index = FirstAfter(hitsoundingNotes, Math.BitDecrement(note.TimeMs));
+            for (; index < hitsoundingNotes.Length && hitsoundingNotes[index].TimeMs == note.TimeMs; index++)
+            {
+                if (hitsoundingNotes[index].SourceId != note.SourceId || hitsoundingNotes[index].EventIndex != note.EventIndex) continue;
+                if (boundary < 0 || direction * (index - boundary) > 0) boundary = index;
+                break;
+            }
+        }
+        if (boundary < 0) return true;
+
+        for (int index = boundary + direction; index >= 0 && index < hitsoundingNotes.Length; index += direction)
+        {
+            var note = hitsoundingNotes[index];
+            if (note.Kind != CatchObjectKind.Fruit || !CanSelectSlider(note.SourceId)) continue;
+            hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); hitsoundingTimingSelection.Clear();
+            SelectObjects([note.SourceId], note.SourceId);
+            hitsoundingSelected = (note.SourceId, note.EventIndex);
+            hitsoundingSelectedTiming = null;
+            HighlightHitsoundingNote(note);
+            if (note.TimeMs < HitsoundingStart || note.TimeMs > HitsoundingStart + hitsoundingSpan) SeekTo(note.TimeMs);
+            break;
+        }
+        return true;
+    }
+    private IEnumerable<ConvertedCatchObject> HitsoundingNavigationSelection()
+    {
+        if (hitsoundingNotesSelection)
+        {
+            var exact = hitsoundingHighlightedNotes.Count > 0 ? HitsoundingSelectedNote : SelectedTimelineFruit();
+            if (exact is not null) return [exact];
+            return objectSelection.SelectMany(id => hitsoundingParentNotes.GetValueOrDefault(id) ?? []);
+        }
+        if (hitsoundingMultiSelection.Count == 0)
+            return HitsoundingSelectedNote is { } note ? [note] : [];
+        return hitsoundingMultiSelection.Where(key => key.Lane is >= 1 and <= 4)
+            .Select(key => hitsoundingNoteLookup.GetValueOrDefault((key.Id, key.Event))).OfType<ConvertedCatchObject>();
     }
     private void NudgeHitsoundingSelection(int direction)
     {

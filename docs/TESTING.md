@@ -1858,8 +1858,11 @@ in English and Chinese at two window sizes.
 Mapping during paused/playing transport, including timing/boundary/bookmark jumps,
 wheel modifiers, remapping, middle panning, bounded zoom, held-ghost navigation,
 600 px/s edge scrolling, offscreen marquee selection, J/K multi-selection moves,
-undo and conversion reuse. It is also included in the panel check. The panel check
-covers consecutive SB group nudges with source-line retention.
+undo and conversion reuse. It covers previous/next note selection at the edges of
+a group, slider repeats, skipped slider ticks, offscreen reveals, custom bindings and
+edge-specific W/E/R edits. It is also included in the panel check. The panel check
+covers skipping storyboard samples during note-selection navigation and
+consecutive SB group nudges with source-line retention.
 Native Hitsounding captures include edge-scroll previews and bounded-zoom panning,
 alongside the Select/Draw tool controls at both window sizes.
 
