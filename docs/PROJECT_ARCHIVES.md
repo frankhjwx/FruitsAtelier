@@ -77,18 +77,22 @@ Open the corresponding project in the editor, then use **File → Import difficu
 desktop activation show an error asking the user to open the corresponding project
 first; a `.fad` never creates a standalone library project.
 
-Matching uses the native difficulty ID first. For copies with different local IDs,
-the song must match by positive BeatmapSetID or nonempty Artist and Title; a unique
-positive BeatmapID, then an exact difficulty name, identifies an existing difficulty.
-A missing difficulty is added. Existing difficulties enter the synchronization
+Matching uses the native difficulty ID first, then a unique positive BeatmapID.
+If neither matches, the song must match by positive BeatmapSetID or nonempty
+Artist and Title. An exact difficulty name within that song identifies an existing
+difficulty, and a missing difficulty is added. Existing difficulties enter the synchronization
 comparison UI before changes are applied. Cancel and Keep local preserve current
 content. Metadata, timing and section choices are independent of the native object
 and FA settings group, which is reviewed as one unit to preserve exact editable
 curves, handles, streams and other authoring state. Updates form one undo step and
 retain the receiver's native difficulty ID, local audio and Songs associations.
+Collaboration sections retain their time ranges and keep links to difficulties with
+the same native ID. Sections with unavailable references become unassigned, and
+the editor reports them after import.
 
-Older `.fad` packages containing resources remain supported. Their imported
-resources are checked before application. Different files with the same
+Data-only imports can proceed before the project has a resource directory. Older
+packages that include files require a resource destination. Imported resources are
+checked before application. Different files with the same
 relative name cause an error; existing resources are never overwritten. Added
 resources remain available after undoing an update because other difficulties may
 use them. The original `.osu` is not written by importing a `.fad`; save and export

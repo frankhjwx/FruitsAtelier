@@ -1,10 +1,10 @@
 # FruitsAtelier
 
-User Manual | Version 1.4.8
+User Manual | Version 1.4.9
 
 ## Using this manual
 
-This manual describes FruitsAtelier v1.4.8. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
+This manual describes FruitsAtelier v1.4.9. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
 
 ### Choose an editing canvas
 
