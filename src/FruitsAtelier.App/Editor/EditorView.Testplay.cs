@@ -355,8 +355,8 @@ public sealed partial class EditorView
                     20, 0xE6F2FF, stage.Width, true, opacity);
             }
         }
-        DrawVolumePopover(c);
         DrawTestplayOverlays(c);
+        DrawVolumePopover(c);
         DrawTestplayCursor(c);
         if (testplayQuickRetryAt is double retryAt)
             c.Fill(new(0, 0, width, height), 0,

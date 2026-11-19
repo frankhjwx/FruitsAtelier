@@ -55,6 +55,7 @@ public sealed partial class EditorView
             ReportMediaError(c);
             DrawOsuLinkNotice(c);
             DrawOsuLinkFallback(c);
+            if (!IsTestplaying) DrawVolumePopover(c);
         }
         finally
         {
@@ -246,7 +247,6 @@ public sealed partial class EditorView
             DrawRotation(c);
             DrawBananaEdit(c);
             DrawVolumeDialog(c);
-            DrawVolumePopover(c);
             DrawDistanceSnapDialog(c);
             DrawSongSetup(c);
             DrawHitsoundCopier(c);

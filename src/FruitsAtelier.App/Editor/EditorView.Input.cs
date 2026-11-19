@@ -972,6 +972,12 @@ public sealed partial class EditorView
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
         if (libraryExitConfirmation) return;
+        if ((alt || altHeld) && !ctrl && !shift && !shiftHeld && CanUseVolumeWheel
+            && (VolumePopoverVisible && VolumePopoverBounds.Contains(x, y) || !UsesAltWheelZoom(x, y)))
+        {
+            AdjustVolumeWheel(delta);
+            return;
+        }
         if (MediaRefinementVisible) return;
         if (SettingsOwnsInput) { SettingsWheel(x, y, delta); return; }
         if (!ErrorVisible && !DiscardConfirmationVisible && (CapturingShortcut || shortcutResetMode))
@@ -1038,6 +1044,25 @@ public sealed partial class EditorView
         && (drag is DragKind.Objects or DragKind.SliderObject or DragKind.TimelineTail or DragKind.BananaStart or DragKind.BananaEnd
             || drag is DragKind.Anchor or DragKind.LegacyControl && SelectedTrack is { Nodes.Count: > 1 } track
                 && (anchorSelection.Contains(track.Nodes[0].Id) || anchorSelection.Contains(track.Nodes[^1].Id)));
+
+    private bool UsesAltWheelZoom(float x, float y)
+    {
+        if (BananaEditVisible) return BananaPreviewBounds.Contains(x, y);
+        if (StreamDialogVisible) return StackPreviewBounds.Contains(x, y);
+        if (!DockContentInputAvailable || AcknowledgementsVisible || updatesPage || FirstRunSetupVisible
+            || MapTemplatesVisible || addDifficultyConfirmation || OsuLinkPickerVisible || panelMenuOpen
+            || TimingWindowContains(x, y) || menu >= 0 || contextItems.Count > 0) return false;
+        if (PatternGalleryPopupContains(x, y))
+            return galleryLargePreviewBounds.Contains(x, y) && !galleryPreviewTagsBounds.Contains(x, y);
+        if (HitsoundingPageVisible) return hitsoundingBounds.Contains(x, y);
+        if (TimingPageVisible) return WaveformBounds.Contains(x, y);
+        if (drag != DragKind.None && drag != DragKind.Marquee && !NavigationDuringDrag) return false;
+        if (discussionQuoteViews.Count > 0 && DiscussionAnnotationsVisible)
+            foreach (var quote in discussionQuoteViews)
+                if (quote.Maximum > 0 && quote.Bounds.Contains(x, y)) return false;
+        return !rightPanel.Contains(x, y) && !assistPalette.Contains(x, y) && !difficultyTabStrip.Contains(x, y)
+            && (objectTimeline.Contains(x, y) || y >= canvas.Y + 38 && canvas.Contains(x, y));
+    }
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
@@ -1161,11 +1186,7 @@ public sealed partial class EditorView
             return;
         }
         if (updatesPage) return;
-        if (IsTestplaying)
-        {
-            if (alt && !ctrl && !shift) AdjustVolumeWheel(delta);
-            return;
-        }
+        if (IsTestplaying) return;
         if (TimeJumpVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (languageMenuOpen) return;
         if (DiscardConfirmationVisible) return;
@@ -1184,15 +1205,15 @@ public sealed partial class EditorView
         {
             if (IsLazerEditing && HandleLazerWheel(x, y, delta, ctrl, shift, alt, objectTimeline.Contains(x, y), canvas.Contains(x, y), false))
             { MoveBox(x, y); return; }
-            if (!ctrl && (canvas.Contains(x, y) || objectTimeline.Contains(x, y)))
+            if (!ctrl && !alt && (canvas.Contains(x, y) || objectTimeline.Contains(x, y)))
             {
                 mouseX = x; mouseY = y;
                 SeekByWheel(-delta / 120 * (canvas.Contains(x, y) && LibrarySettings.ReverseCanvasScroll ? -1 : 1), boxTimeline ? 1 : 0);
                 MoveBox(x, y);
             }
-            return;
+            if (!alt || ctrl || shift) return;
         }
-        if (drag != DragKind.None && !NavigationDuringDrag) return;
+        if (drag != DragKind.None && drag != DragKind.Marquee && !NavigationDuringDrag) return;
         if (contextItems.Count > 0) { if (!ScrollHitsoundingSets(x, y, delta) && !ScrollContextSubmenu(x, y, delta)) contextItems.Clear(); return; }
         if (assistPalette.Contains(x, y)) { assistScroll = Math.Clamp(assistScroll - delta / 120 * 64, 0, assistScrollLimit); return; }
         if (difficultyTabStrip.Contains(x, y))
@@ -1234,7 +1255,6 @@ public sealed partial class EditorView
         }
         if (onOverview)
         {
-            if (alt && !ctrl && !shift) { AdjustVolumeWheel(delta); return; }
             if (!AudioLoading && !ctrl && !alt) SeekByWheel(-delta / 120 * (shift ? 4 : 1), 2);
             return;
         }

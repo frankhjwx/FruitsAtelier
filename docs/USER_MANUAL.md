@@ -1443,7 +1443,7 @@ dialogs and active gestures.
 | Shift+wheel | Seek four times the normal wheel distance. During marquee selection, wheel seeking remains single-step. |
 | Ctrl+wheel over canvas or either timeline | Double / halve the current divisor within supported choices, stopping at the family boundary. |
 | Alt+wheel over canvas | Scale X and Y together around the pointer's time, including when uniform scaling is unlocked. |
-| Alt+wheel over bottom overview | Adjust the selected volume channel by five percentage points and show the volume overlay. |
+| Alt+wheel across the editor, including Catch Preview and the bottom overview | Adjust the selected Master, Music or Effect channel by five percentage points and show the volume overlay. Dedicated zoom surfaces keep their zoom binding. Library and Settings keep their normal scrolling. |
 | Alt+wheel over object timeline | Zoom that timeline independently. |
 | Alt+wheel over Timing waveform | Zoom the waveform time scale. Ctrl+wheel on the waveform currently does nothing. |
 | Ctrl+Alt+wheel over canvas or object timeline | Wheel down advances Select → Fruit → FSlider → Banana Shower; wheel up reverses this cycle. |
