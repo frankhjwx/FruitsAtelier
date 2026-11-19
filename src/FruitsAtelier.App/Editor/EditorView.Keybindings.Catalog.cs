@@ -5,11 +5,8 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     internal enum ShortcutScope { Global, Library, Compose, Timing, TimingPoints, Hitsounding, Testplay, Gallery, Samples }
-    internal sealed record ShortcutCommand(ShortcutScope Scope, string Id, string Group, bool Lazer, ShortcutBinding[] DispatchBindings)
+    internal sealed record ShortcutCommand(ShortcutScope Scope, string Id, string Group, bool Lazer, ShortcutBinding[] Defaults)
     {
-        // Unbound commands retain dispatch gestures so custom bindings reach the guarded input handlers.
-        public ShortcutBinding[] Defaults => Scope == ShortcutScope.Hitsounding
-            && Id is "hitToggleWhistle" or "hitToggleFinish" or "hitToggleClap" ? [] : DispatchBindings;
         public string StorageKey => $"{(Lazer ? "lazer" : "default")}/{Scope}/{Id}";
         // Text follows the dispatched sample bank; storage IDs retain existing user assignments.
         private string TextId => Id.StartsWith("normal", StringComparison.Ordinal) || Id.StartsWith("addition", StringComparison.Ordinal)

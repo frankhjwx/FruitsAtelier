@@ -232,9 +232,10 @@ when a selection exists. In either mode, Q/A/S/D and the brush buttons
 apply the bank to the selection in one undo step. Selected Normal tags change their
 normal bank; selected addition tags change their shared addition bank. Selected
 Notes parents change both banks on their events. Other sample fields are retained.
-Whistle/Finish/Clap toggle commands have no default keys in Hitsounding; assign
-them in Key bindings to toggle additions on selected events. Text inputs and modified shortcuts retain priority. Hover tips explain each
-tool's shortcut and interaction behavior.
+W/E/R toggle Whistle/Finish/Clap on the selected fruit event when the corresponding
+track is unlocked. Both profiles use these defaults, which can be changed in Key
+Bindings. Text inputs and modified shortcuts retain priority. Hover tips explain
+each tool's shortcut and interaction behavior.
 
 Each track has a **Lock** button beside its label. Locked tracks show a pale red background
 behind their notes, cannot be selected, and reject direct editing and paste. A selection

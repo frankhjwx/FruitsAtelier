@@ -26,16 +26,40 @@ internal static class HitsoundingPanelTests
             {
                 ui.Key(49); var selected = LaneBlocks(ui, 1)[0];
                 ui.Click(selected.X + selected.Width / 2, selected.Y + 10);
-                foreach (int key in new[] { 87, 69, 82 }) ui.Key(key);
-                Check(before.ContentEquals(ui.View.Document), "Unbound W/E/R leave selected sounds unchanged");
+                void Press(char key) { ui.Key(key); ui.View.KeyUp(key); }
+                var toggles = new[] { (Key: 'W', Flag: 2), (Key: 'E', Flag: 4), (Key: 'R', Flag: 8) };
+                foreach (var (key, flag) in toggles)
+                {
+                    Press(key);
+                    Check(ui.View.Document.HitsoundOverrides.Single().Sample.Additions == flag, "W/E/R toggle their respective additions");
+                    Press(key);
+                    Check(ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 0), "Pressing the same key removes the addition");
+                    ui.Key(90, ctrl: true);
+                    ui.Key(90, ctrl: true);
+                    Check(before.ContentEquals(ui.View.Document), "Each toggle is undoable");
+                }
                 var command = EditorView.ShortcutCommands.Single(c => c.Scope == EditorView.ShortcutScope.Hitsounding
                     && c.Lazer == lazer && c.Id == "hitToggleWhistle");
-                Check(ui.View.CommandBindings(command).Length == 0, "Addition toggle has no default binding");
-                ui.View.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(74)];
-                ui.Key(74);
-                Check(!before.ContentEquals(ui.View.Document), "Custom addition toggle binding executes");
+                Check(ui.View.CommandBindings(command).Single().Same(ShortcutBinding.From('W')), "Whistle lists W in Key Bindings");
+                var zoom = EditorView.ShortcutCommands.Single(c => c.Scope == EditorView.ShortcutScope.Hitsounding
+                    && c.Lazer == lazer && c.Id == "hitZoomIn");
+                var bindings = ui.View.LibrarySettings.ShortcutBindings;
+                bindings[zoom.StorageKey] = [ShortcutBinding.From('W')];
+                Check(ui.View.CommandBindings(command).Length == 0, "A saved assignment takes priority over the restored default");
+                Press('W');
+                Check(LaneBlocks(ui, 1)[0].X > selected.X && before.ContentEquals(ui.View.Document), "The saved W binding zooms the timeline");
+                bindings.Remove(zoom.StorageKey);
+                ui.Key(189);
+                bindings[command.StorageKey] = [ShortcutBinding.From('H')];
+                Press('W');
+                Check(before.ContentEquals(ui.View.Document), "Reassigning Whistle disables its default key");
+                Press('H');
+                Check(ui.View.Document.HitsoundOverrides.Single().Sample.Additions == 2, "Custom Whistle binding executes");
                 ui.Key(90, ctrl: true);
-                ui.View.LibrarySettings.ShortcutBindings.Remove(command.StorageKey);
+                bindings[command.StorageKey] = [];
+                Press('W');
+                Check(before.ContentEquals(ui.View.Document), "Explicitly unassigning Whistle disables its default key");
+                bindings.Remove(command.StorageKey);
                 ui.Key(50);
             }
             var first = LaneBlocks(ui, 1)[0]; var second = LaneBlocks(ui, 1)[1];

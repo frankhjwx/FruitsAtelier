@@ -35,6 +35,14 @@ public sealed partial class EditorView
     {
         var overrides = draft ? draftShortcuts : LibrarySettings.ShortcutBindings;
         if (overrides is not null && overrides.TryGetValue(command.StorageKey, out var value)) return value ?? [];
+        // Preserve custom uses of W/E/R saved while the Hitsounding toggles were unassigned.
+        if (overrides is { Count: > 0 } && command.Scope == ShortcutScope.Hitsounding
+            && command.Id is "hitToggleWhistle" or "hitToggleFinish" or "hitToggleClap"
+            && ShortcutCommands.Any(other => other.Lazer == command.Lazer
+                && other.Scope is ShortcutScope.Hitsounding or ShortcutScope.Global
+                && overrides.TryGetValue(other.StorageKey, out var bindings)
+                && bindings is not null && bindings.Any(command.Defaults[0].Overlaps)))
+            return [];
         if (command.Scope == ShortcutScope.Testplay && command.Id is "moveLeft" or "moveRight" or "dash")
         {
             int i = command.Id == "moveLeft" ? 0 : command.Id == "moveRight" ? 1 : 2;

@@ -1863,7 +1863,7 @@ Native Hitsounding captures include edge-scroll previews and bounded-zoom pannin
 alongside the Select/Draw tool controls at both window sizes.
 
 `App.Tests --hitsounding-panel-check` covers Draw selector defaults across timing changes,
-selection-only bank keys, unbound addition toggles and custom bindings, the Snap ruler, actual slider ticks,
+selection-only bank keys, default W/E/R addition toggles, saved custom bindings, the Snap ruler, actual slider ticks,
 centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,
 default bank labels, timing-tag order, the unified Config dock, library search/imports,
 slot drag/drop, and resource undo/redo. Config checks include the eight-row SampleSet

@@ -98,7 +98,7 @@ Notes, sound or timing selection. Sample Library focus has its own command scope
 | Hold Shift/Alt: temporary Grid/Distance Snap inversion | No corresponding sound/Notes gesture behavior. |
 | Anchor Snap, object snap, DS presets and collinear spacing | Mapping geometry features; no sound-lane equivalents. |
 | Q: New Combo | Q cycles the Hitsounding sample bank. No New Combo keyboard equivalent. |
-| W/E/R: Whistle/Finish/Clap flags | Hitsounding has no default bindings; its configurable toggle commands modify selected events. |
+| W/E/R: Whistle/Finish/Clap flags | Toggle the corresponding addition on the selected fruit event if its track is unlocked. |
 | Shift+Q/W/E/R: Normal bank; Ctrl+Q/W/E/R: addition bank | Supported for selection and Draw placement defaults in both profiles. Q/A/S/D modify selected notes or sounds only. |
 | Ctrl+P / Ctrl+Shift+P: red/green timing point | Missing shortcuts in the lane scope. Timing menu and F6 remain; Hitsounding 5 creates a green point. |
 | Ctrl+I: delete current timing section | Missing shortcut in lane scope. Shared Timing menu remains. |

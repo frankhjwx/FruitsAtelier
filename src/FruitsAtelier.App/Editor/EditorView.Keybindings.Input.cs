@@ -22,9 +22,7 @@ public sealed partial class EditorView
         shortcutPhysicalKeys.Add(physical);
         // Modifier flags also support synthetic host events and key presses after focus changes.
         SetPhysicalModifier(17, ctrl || physical == 17); SetPhysicalModifier(16, shift || physical == 16); SetPhysicalModifier(18, altHeld || physical == 18);
-        if (LibrarySettings.ShortcutBindings is not { Count: > 0 })
-            return ShortcutCommandsAvailable && ActiveShortcutScope == ShortcutScope.Hitsounding
-                && !ctrl && !shift && !altHeld && physical is 87 or 69 or 82;
+        if (LibrarySettings.ShortcutBindings is not { Count: > 0 }) return false;
         bool available = ShortcutCommandsAvailable;
         var scope = ActiveShortcutScope;
         var commands = ShortcutCommands.Where(c => c.Lazer == LibrarySettings.LazerEditing
@@ -43,8 +41,8 @@ public sealed partial class EditorView
         if (selected is not null)
         {
             // Keep the existing input handlers as the owners of text, draft, drag and undo guards.
-            var canonical = selected.DispatchBindings.FirstOrDefault(gesture!.Same) ?? selected.DispatchBindings[0];
-            if (selected.Scope == ShortcutScope.Testplay && selected.Id is "volumeUp" or "volumeDown") canonical = selected.DispatchBindings[0];
+            var canonical = selected.Defaults.FirstOrDefault(gesture!.Same) ?? selected.Defaults[0];
+            if (selected.Scope == ShortcutScope.Testplay && selected.Id is "volumeUp" or "volumeDown") canonical = selected.Defaults[0];
             key = canonical.Keys.LastOrDefault(k => !ShortcutBinding.Modifier(k));
             if (key == 0) key = canonical.Keys[^1];
             ctrl = canonical.Keys.Contains(17); shift = canonical.Keys.Contains(16); alt = canonical.Keys.Contains(18);
@@ -54,7 +52,7 @@ public sealed partial class EditorView
         var input = ShortcutBinding.From(new[] { physical }.Concat(ctrl ? new[] { 17 } : [])
             .Concat(shift ? new[] { 16 } : []).Concat(altHeld ? new[] { 18 } : []).ToArray());
         // A removed default must not fall through to its original hard-coded handler.
-        return commands.Any(c => !(c.Scope == ShortcutScope.Testplay && c.Group == "movement") && c.DispatchBindings.Any(input.Same))
+        return commands.Any(c => !(c.Scope == ShortcutScope.Testplay && c.Group == "movement") && c.Defaults.Any(input.Same))
             || commands.Any(c => CommandBindings(c).Any(b => b.Keys.Length > 1 && b.Keys.Contains(physical)
                 && b.Keys.Where(ShortcutBinding.Modifier).All(shortcutPhysicalKeys.Contains)));
     }
