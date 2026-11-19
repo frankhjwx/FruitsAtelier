@@ -529,10 +529,33 @@ public sealed partial class EditorView
     private void ToggleHitsoundingAddition(int flag)
     {
         if (hitsoundingLocked[flag == 2 ? 2 : flag == 4 ? 3 : 4]) return;
-        if (HitsoundingSelectedNote is not { Kind: CatchObjectKind.Fruit } note) return;
-        var setting = hitsoundingResolver!.EventSettings(note);
-        setting = setting with { Sample = setting.Sample with { Additions = setting.Sample.Additions ^ flag } };
-        Edit(L.Get("assist.soundChange"), () => SetHitsoundingEvent(setting));
+        if (hitsoundingResolver is not { } resolver) return;
+        EventHitsound[] targets;
+        if (hitsoundingNotesSelection)
+        {
+            if (!hitsoundingAllowNotes || hitsoundingNoteGesture != HitsoundingNoteGesture.None) return;
+            int? edge = SoundEdge(selection);
+            targets = objectSelection.Where(CanSelectCollaborationObject)
+                .SelectMany(id => hitsoundingParentNotes.GetValueOrDefault(id) ?? [])
+                .Where(note => note.Kind == CatchObjectKind.Fruit)
+                .Select(resolver.EventSettings)
+                .Where(setting => edge is null || setting.EdgeIndex == edge)
+                .ToArray();
+        }
+        else if (HitsoundingSelectedNote is { Kind: CatchObjectKind.Fruit } note)
+            targets = [resolver.EventSettings(note)];
+        else return;
+
+        if (targets.Length == 0) return;
+        bool enable = targets.Any(setting => (setting.Sample.Additions & flag) == 0);
+        Edit(L.Get("assist.soundChange"), () =>
+        {
+            foreach (var setting in targets)
+            {
+                int additions = enable ? setting.Sample.Additions | flag : setting.Sample.Additions & ~flag;
+                SetHitsoundingEvent(setting with { Sample = setting.Sample with { Additions = additions } });
+            }
+        });
     }
     private bool MoveHitsoundingCanvasPointer(float x, float y)
     {

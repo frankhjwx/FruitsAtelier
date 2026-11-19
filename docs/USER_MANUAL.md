@@ -1179,7 +1179,9 @@ Switch to Hitsounding for sound tracks and **Timing Helper**. Audible tracks use
 
 Move selected Notes, additions or SB sounds with half-opacity destination previews; originals remain visible until release. Addition groups move only when every sound has a destination fruit event. Drag a selected addition group in either Select or Draw mode. Escape cancels, and a completed move is one undo step. Navigation remains available during drags and marquees; holding the pointer at a lane edge scrolls the timeline. Middle-drag pans time, Ctrl+wheel changes Snap and Alt+wheel zooms around the pointer.
 
-Use the upper-left **Sampleset** and **Additions** selectors for placement defaults. Auto Sampleset inherits timing and Auto Additions follows the Normal bank. Placing another addition on a note preserves its existing shared addition bank. The left bank buttons and Q/A/S/D modify selected events only. Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum, and Ctrl+Q/W/E/R sets Additions. Hover hints reflect custom bindings. W/E/R toggles Whistle/Finish/Clap on the selected fruit event when the corresponding track is unlocked.
+Use the upper-left **Sampleset** and **Additions** selectors for placement defaults. Auto Sampleset inherits timing and Auto Additions follows the Normal bank. Placing another addition on a note preserves its existing shared addition bank. The left bank buttons and Q/A/S/D modify selected events only. Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum, and Ctrl+Q/W/E/R sets Additions. Hover hints reflect custom bindings.
+
+W/E/R toggles Whistle/Finish/Clap on selected Notes or on the selected fruit event in the sound tracks when the corresponding addition track is unlocked. In Notes, click a slider's head, repeat marker or tail to highlight and edit that edge. Click the body to select the whole slider.
 
 Unavailable sample files are skipped during playback. Library audition and file-operation failures leave editing available; operation errors appear in the status bar.
 
@@ -1243,8 +1245,9 @@ In the Hitsounding workspace, **5** adds an inherited timing point at the playhe
 Left/Right and Shift+Left/Right follow Mapping navigation for the active Default/lazer profile,
 including during drags. J/K moves the unlocked Notes, addition or SB selection by one Snap step.
 Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum; Ctrl+Q/W/E/R sets Additions.
-Q/A/S/D changes selected banks only. W/E/R toggles Whistle/Finish/Clap on the
-selected fruit event when the corresponding track is unlocked.
+Q/A/S/D changes selected banks only. W/E/R toggles Whistle/Finish/Clap on selected
+Notes, including a selected slider edge, or on the selected fruit event in the
+sound tracks. The corresponding addition track must be unlocked.
 Customize these bindings in Settings; selector hover hints show the active bindings.
 See [Hitsounding controls](HITSOUNDS.md) and [Mapping command coverage](HITSOUND_MAPPING_PARITY.md)
 for navigation, selection, volume ramps and timing drafts.

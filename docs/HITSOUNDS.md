@@ -232,18 +232,22 @@ when a selection exists. In either mode, Q/A/S/D and the brush buttons
 apply the bank to the selection in one undo step. Selected Normal tags change their
 normal bank; selected addition tags change their shared addition bank. Selected
 Notes parents change both banks on their events. Other sample fields are retained.
-W/E/R toggle Whistle/Finish/Clap on the selected fruit event when the corresponding
-track is unlocked. Both profiles use these defaults, which can be changed in Key
-Bindings. Text inputs and modified shortcuts retain priority. Hover tips explain
-each tool's shortcut and interaction behavior.
+W/E/R toggle Whistle/Finish/Clap on selected Notes or on the selected fruit event
+in the sound tracks. The corresponding addition track must be unlocked. With
+multiple Notes selected, the shortcut adds the sound to all selected fruit events
+if any lack it, or removes it from all if every event already has it. Both profiles
+use these defaults, which can be changed in Key Bindings. Text inputs and modified
+shortcuts retain priority. Hover tips explain each tool's shortcut and interaction behavior.
 
 Each track has a **Lock** button beside its label. Locked tracks show a pale red background
 behind their notes, cannot be selected, and reject direct editing and paste. A selection
 rectangle can start in a locked track and cross other tracks; only unlocked sound
 tracks contribute selected tags. Notes starts
 locked; the other tracks start unlocked. Lock buttons are teal when unlocked and pale red when locked. Locks do not mute playback or change history.
-Unlock Notes to edit existing notes in either mode. In Draw, an empty-space hover
-shows a snapped placement preview and a click creates a circle at Mapping
+Unlock Notes to edit existing notes in either mode. Click a slider's head, repeat
+marker or tail to highlight and edit that edge with W/E/R. Click the body to
+select the whole slider. These highlights match Mapping's upper timeline.
+In Draw, hovering over empty space shows a snapped placement preview and a click creates a circle at Mapping
 X=256 (osu! Y=192), drag empty space to marquee-select parents, and Ctrl-click to
 add or remove a parent from the selection. Drag an existing note body to move the
 selection in time. Drag a slider's head or tail to adjust that endpoint while

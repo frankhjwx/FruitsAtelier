@@ -584,6 +584,21 @@ public sealed partial class EditorView
         RequestViewPreference?.Invoke();
     }
 
+    private void PickTimelineMarker(int markerIndex, float x, double scale)
+    {
+        soundEdge = null; distanceObject = null; clickedCoordinate = null; timelineFruit = null;
+        var marker = timelineVisibleMarkers[markerIndex];
+        if (objectSelection.Count != 1 || !objectSelection.Contains(marker.Id)) return;
+        if (timelinePatterns.Contains(marker.Id)) { timelineFruit = (marker.Id, marker.EventIndex); return; }
+        if (marker.IsBanana || marker.End <= marker.Start || marker.Spans <= 0) return;
+        double spanDuration = (marker.End - marker.Start) / marker.Spans;
+        var bounds = timelineObjects[markerIndex].Bounds;
+        double offset = (x - (bounds.X + bounds.Height / 2)) / scale;
+        int edge = (int)Math.Clamp(Math.Round(offset / spanDuration), 0, marker.Spans);
+        if (Math.Abs(offset - edge * spanDuration) * scale <= bounds.Height / 2)
+            soundEdge = (marker.Id, edge);
+    }
+
     private void BeginObjectTimeline(float x, float y, bool toggle)
     {
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
@@ -594,19 +609,7 @@ public sealed partial class EditorView
             if (!item.Bounds.Contains(x, y)) continue;
             tool = Tool.Select;
             PickObject(item.Id, toggle);
-            soundEdge = null; distanceObject = null; clickedCoordinate = null;
-            timelineFruit = timelinePatterns.Contains(item.Id) && objectSelection.Count == 1 && objectSelection.Contains(item.Id)
-                ? (item.Id, timelineMarkers.First(m => m.Id == item.Id && m.Start == item.Time).EventIndex) : null;
-            var markerSource = timelineSources.First(o => o.Id == item.Id);
-            if (!markerSource.IsBanana && !timelinePatterns.Contains(item.Id) && markerSource.End > markerSource.Start && markerSource.Spans > 0
-                && objectSelection.Count == 1 && objectSelection.Contains(item.Id) && Math.Abs(y-(item.Bounds.Y+item.Bounds.Height/2)) <= item.Bounds.Height/2)
-            {
-                double spanDuration = (markerSource.End-markerSource.Start)/markerSource.Spans;
-                double time = ObjectTimelineStartMs+(x-objectTimeline.X)/objectTimelineScale;
-                int edge = (int)Math.Clamp(Math.Round((time-markerSource.Start)/spanDuration),0,markerSource.Spans);
-                double markerX = objectTimeline.X+(markerSource.Start+edge*spanDuration-ObjectTimelineStartMs)*objectTimelineScale;
-                if (Math.Abs(x-markerX)<=item.Bounds.Height/2) soundEdge = (item.Id,edge);
-            }
+            PickTimelineMarker(i, x, objectTimelineScale);
             bool bananaStart = IsTimelineBananaStart(item, x, y) && !IsTimelineTail(item, x, y);
             if (!notesLocked && !toggle && (bananaStart || IsTimelineTail(item, x, y)))
             {
