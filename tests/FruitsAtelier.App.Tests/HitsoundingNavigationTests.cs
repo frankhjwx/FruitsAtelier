@@ -99,7 +99,7 @@ internal static class HitsoundingNavigationTests
                 0,500,4,1,0,100,1,0
                 [HitObjects]
                 256,192,1000,1,0,0:0:0:0:
-                128,192,1250,1,0,0:0:0:0:
+                128,192,1250,1,14,0:0:0:0:
                 256,192,1500,2,0,L|456:192,2,200
                 256,192,5100,1,0,0:0:0:0:
                 """);
@@ -140,6 +140,9 @@ internal static class HitsoundingNavigationTests
             ui.View.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From('U')];
             Press(ui, 39, ctrl: true); AssertSelected(map.Fruits[0].Id, 1000);
             Press(ui, 'U'); AssertSelected(map.Fruits[1].Id, 1250);
+            Check(Enumerable.Range(1, 4).All(lane => HitsoundingPanelTests.SoundHighlighted(ui, lane, X(ui, 1250)))
+                && !HitsoundingPanelTests.SoundHighlighted(ui, 1, X(ui, 1000)),
+                "Keyboard selection highlights Normal, Whistle, Finish and Clap for the destination only");
             ui.View.LibrarySettings.ShortcutBindings.Clear();
 
             Unlock(ui);
@@ -163,6 +166,7 @@ internal static class HitsoundingNavigationTests
             {
                 Check(ui.View.SelectedObjectIds.SequenceEqual(new[] { id }) && HasNoteHighlight(time),
                     $"Expected selection at {time} ms in the {(lazer ? "Lazer" : "Default")} profile");
+                Check(HitsoundingPanelTests.SoundHighlighted(ui, 1, X(ui, time)), "The selected note highlights its Normal sound tag");
             }
         }
     }

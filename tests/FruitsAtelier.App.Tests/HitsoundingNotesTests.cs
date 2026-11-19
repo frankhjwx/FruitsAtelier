@@ -180,22 +180,38 @@ internal static class HitsoundingNotesTests
                     Check(edges.Where(Highlighted).SequenceEqual(new[] { edges[edge] }),
                         "Clicking a slider head, repeat or tail highlights only that marker in both timelines");
                     if (!hitsounding) continue;
+                    Check(edges.Where(time => HitsoundingPanelTests.SoundHighlighted(ui, 1, X(time))).SequenceEqual(new[] { edges[edge] }),
+                        "An individual slider edge highlights only its own Normal tag");
                     Press("WER"[edge]);
                     Check(ui.View.Document.HitsoundOverrides.Single() is { } sample
                         && sample.SourceId == slider.Id && sample.EdgeIndex == edge && sample.Sample.Additions == (2 << edge),
                         "W/E/R applies only to the selected slider edge");
+                    Check(HitsoundingPanelTests.SoundHighlighted(ui, 2 + edge, X(edges[edge])),
+                        "A newly added sound tag highlights while its edge is selected");
                     ui.Key('Z', ctrl: true);
                     Check(baseline.ContentEquals(ui.View.Document), "Slider edge sound change is undoable");
                 }
                 ui.Click(X(body), y);
                 Check(edges.All(Highlighted), "Clicking the slider body highlights all its markers");
                 if (!hitsounding) continue;
+                Check(edges.All(time => HitsoundingPanelTests.SoundHighlighted(ui, 1, X(time))),
+                    "Clicking the slider body highlights the sound tags for all its edges");
                 Press('E');
                 Check(ui.View.Document.HitsoundOverrides.Count == edges.Length
                     && ui.View.Document.HitsoundOverrides.All(sample => sample.SourceId == slider.Id && sample.Sample.Additions == 4),
                     "W/E/R applies to every edge when the whole slider is selected");
                 ui.Key('Z', ctrl: true);
                 Check(baseline.ContentEquals(ui.View.Document), "Whole slider sound change is one undo step");
+
+                ui.Click(X(1500), y);
+                Check(HitsoundingPanelTests.SoundHighlighted(ui, 1, X(1500))
+                    && HitsoundingPanelTests.SoundHighlighted(ui, 2, X(1500))
+                    && !HitsoundingPanelTests.SoundHighlighted(ui, 1, X(1250)),
+                    "A mouse click in Notes highlights Normal and all additions for that note");
+                ui.ClickText(L.Get("hitsounding.precise"));
+                Check(HitsoundingPanelTests.SoundHighlighted(ui, 1, X(1500))
+                    && HitsoundingPanelTests.SoundHighlighted(ui, 2, X(1500)), "The same note highlights both tags in Precise HS");
+                ui.ClickText(L.Get("hitsounding.noteBased"));
 
                 ui.Click(X(1250), y);
                 Press('R');

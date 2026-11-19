@@ -286,6 +286,10 @@ public sealed partial class EditorView
         float bankLabelWidth = Math.Max(c.MeasureText("N", 11, true), Math.Max(c.MeasureText("S", 11, true), c.MeasureText("D", 11, true)));
         float digitLabelWidth = 0;
         foreach (string digit in HitsoundingDigits) digitLabelWidth = Math.Max(digitLabelWidth, c.MeasureText(digit, 11, true));
+        // A linked highlight preserves the active Notes or sound edit selection.
+        var focusedNote = hitsoundingMultiSelection.Count == 0 && hitsoundingHighlightedNotes.Count > 0
+            ? hitsoundingSelected : hitsoundingNotesSelection ? timelineFruit : null;
+        var focusedEdge = hitsoundingNotesSelection ? soundEdge : null;
         (Rect Bounds, Hitsound Sound)? selectedAudition = null;
         foreach (var laneTags in hitsoundingTagLanes) DrawTags(laneTags);
         DrawTags(hitsoundingStoryboardTags);
@@ -406,7 +410,8 @@ public sealed partial class EditorView
                 if (tag.Note is { } note)
                 {
                     if (!HitsoundingLaneLocked(tag.Lane)) hitsoundingSoundHits.Add((box, note, tag.Lane));
-                    if (!hitsoundingMarquee && hitsoundingMultiSelection.Contains((note.SourceId, note.EventIndex, tag.Lane))) c.Stroke(box, Foreground, 2, 4);
+                    if (!hitsoundingMarquee && (hitsoundingMultiSelection.Contains((note.SourceId, note.EventIndex, tag.Lane))
+                        || FollowsNoteSelection(note))) c.Stroke(box, Foreground, 2, 4);
                 }
                 if (tag.Storyboard is { } sb)
                 {
@@ -437,6 +442,13 @@ public sealed partial class EditorView
                 }
                 c.Line(x, box.Bottom, x, box.Bottom + 4, color, tag.Lane == 5 ? 2 : 1);
             }
+        }
+
+        bool FollowsNoteSelection(ConvertedCatchObject note)
+        {
+            if (focusedNote is { } exact) return exact == (note.SourceId, note.EventIndex);
+            if (!hitsoundingNotesSelection || !objectSelection.Contains(note.SourceId)) return false;
+            return focusedEdge is not { } edge || edge.Id != note.SourceId || hitsoundingResolver!.SliderEdgeIndex(note) == edge.Edge;
         }
     }
     private float HitsoundingFlash(double time) => AudioPlaying && playhead >= time && playhead < time + 280

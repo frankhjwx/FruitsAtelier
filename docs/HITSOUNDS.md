@@ -174,6 +174,9 @@ blue-grey. Timing edits and drag previews refresh these intervals. Red timing
 points can be selected but cannot be dragged in Hitsounding.
 
 Clicking a Notes object or an existing sound tag selects its event.
+Selecting a note in the Notes lane or stepping to it with Ctrl+Left/Right
+highlights its existing sound tags. A selected slider edge highlights its own
+tags, and selecting the slider body highlights tags across the slider.
 Selecting a sound highlights only its sound tag, leaving the Notes graphics
 unhighlighted, and does not seek. Clicking empty grid space clears selection and
 preserves the playing position.

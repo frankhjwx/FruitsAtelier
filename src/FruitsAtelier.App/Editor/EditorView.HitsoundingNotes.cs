@@ -38,6 +38,7 @@ public sealed partial class EditorView
             return true;
         }
         hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); hitsoundingTimingSelection.Clear();
+        hitsoundingHighlightedNotes.Clear();
         hitsoundingSelected = null; hitsoundingSelectedTiming = null;
         if (!hitsoundingNotesSelection) SelectObjects([]);
         hitsoundingNotesSelection = true;

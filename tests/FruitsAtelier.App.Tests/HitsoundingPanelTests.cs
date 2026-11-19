@@ -1503,6 +1503,10 @@ internal static class HitsoundingPanelTests
             Console.WriteLine($"{mode}: pointer p95={input[94]:F4}ms; render p50={render[49]:F3}ms p95={render[94]:F3}ms; allocation p50={memory[49]}B (recording canvas, native GPU excluded)");
         }
     }
+    internal static bool SoundHighlighted(Ui ui, int lane, float noteX)
+        => LaneBlocks(ui, lane).Any(block => (Math.Abs(block.X + block.Width / 2 - noteX) < 1 || Math.Abs(block.X - noteX) < 1)
+            && ui.Canvas.Outlines.Any(outline => outline.Bounds == block && outline.Color == ui.View.TitleBarForeground));
+
     internal static FruitsAtelier.App.Rendering.Rect[] LaneBlocks(Ui ui, int lane)
     {
         var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100 && t.Y >= ui.View.HitsoundingNotesLaneBounds.Y && t.X >= ui.View.HitsoundingNotesLaneBounds.X - 146);

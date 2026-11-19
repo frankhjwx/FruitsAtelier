@@ -1919,7 +1919,8 @@ one-second popup and its fade, plus copy/paste menus in English and Chinese at
 `App.Tests --hitsounding-notes-check` checks pale red locked-track backgrounds, sound selection rectangles starting in locked tracks while excluding locked sounds, unchanged Notes highlighting during sound selection, per-track locking, Draw-only Notes
 creation and snapped previews at the canvas centre, marquee selection in both tools, atomic matching/empty/conflicting clipboard
 pastes, slider head/tail timing, reverse shortcuts, undo/redo and cancellation in
-English and Chinese. It also compares slider head, repeat, tail and body
+English and Chinese. It checks linked highlights for Notes selections in both
+display modes and after Ctrl+Left/Right navigation. It also compares slider head, repeat, tail and body
 highlights with Mapping and checks W/E/R on single and grouped Notes, selected
 slider edges, whole sliders and locked addition tracks in both profiles.
 
