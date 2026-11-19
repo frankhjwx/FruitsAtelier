@@ -315,6 +315,7 @@ public sealed partial class EditorView
         Add(ShortcutScope.Hitsounding, "hitToggleWhistle", "tools", "both", ShortcutBinding.From(87));
         Add(ShortcutScope.Hitsounding, "hitToggleFinish", "tools", "both", ShortcutBinding.From(69));
         Add(ShortcutScope.Hitsounding, "hitToggleClap", "tools", "both", ShortcutBinding.From(82));
+        Add(ShortcutScope.Hitsounding, "hitHighlightSoundNotes", "tools", "both", ShortcutBinding.From('F'));
         Add(ShortcutScope.Hitsounding, "hitZoomIn", "tools", "both", ShortcutBinding.From(187));
         Add(ShortcutScope.Hitsounding, "hitZoomOut", "tools", "both", ShortcutBinding.From(189));
         Add(ShortcutScope.Gallery, "selectAll", "editing", "both", ShortcutBinding.From(17, 65));

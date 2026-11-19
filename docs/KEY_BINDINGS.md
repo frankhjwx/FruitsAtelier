@@ -23,6 +23,7 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 ## Hitsounding
 
 In the Hitsounding workspace, **5** adds an inherited timing point at the playhead.
+**F** toggles Notes highlights for the selected sound tags.
 Left/Right and Shift+Left/Right follow Mapping navigation for the active Default/lazer profile,
 including during drags. J/K moves the unlocked Notes, addition or SB selection by one Snap step.
 Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum; Ctrl+Q/W/E/R sets Additions.

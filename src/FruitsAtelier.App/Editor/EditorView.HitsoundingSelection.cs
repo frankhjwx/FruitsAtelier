@@ -7,6 +7,8 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private readonly HashSet<(Guid Id, int Event, int Lane)> hitsoundingMultiSelection = [];
+    private readonly HashSet<(Guid Id, int Index, bool SliderEdge, CatchObjectKind Kind)> hitsoundingHighlightedNotes = [];
+    private bool hitsoundingHighlightHeld;
     private bool hitsoundingMarquee, hitsoundingPasteConfirmation;
     private (Guid Id, int Event, int Lane)? hitsoundingMoveSource;
     private ConvertedCatchObject? hitsoundingMoveTarget;
@@ -23,7 +25,7 @@ public sealed partial class EditorView
     private double hitsoundingClipboardPlayhead;
     private double hitsoundingMarqueeStartTime;
     private bool hitsoundingMarqueeMoved;
-    private void SyncHitsoundingNoteSelection(ConvertedCatchObject? preferred = null)
+    private void SyncHitsoundingNoteSelection(ConvertedCatchObject? preferred = null, bool highlightNotes = false)
     {
         var selected = preferred is not null && hitsoundingMultiSelection.Any(k => k.Id == preferred.SourceId && k.Event == preferred.EventIndex)
             ? preferred : hitsoundingMultiSelection.Select(k => hitsoundingNoteLookup.GetValueOrDefault((k.Id, k.Event))).LastOrDefault(n => n is not null);
@@ -31,7 +33,27 @@ public sealed partial class EditorView
         hitsoundingSelected = selected is null ? null : (selected.SourceId, selected.EventIndex);
         hitsoundingSelectedTiming = null;
         if (selected is not null) PickSoundEdge(selected);
+        if (highlightNotes) HighlightHitsoundingSoundNotes();
         StatusMessage = L.Get("editor.status.objectsSelected", objectSelection.Count + hitsoundingStoryboardSelection.Count);
+    }
+    private void ToggleHitsoundingSoundNoteHighlights()
+    {
+        if (hitsoundingHighlightHeld || WantsCapture || ActiveShortcutScope != ShortcutScope.Hitsounding
+            || hitsoundingNotesSelection || !CommitField()) return;
+        hitsoundingHighlightHeld = true;
+        if (hitsoundingHighlightedNotes.Count > 0) hitsoundingHighlightedNotes.Clear();
+        else HighlightHitsoundingSoundNotes();
+    }
+    private void HighlightHitsoundingSoundNotes()
+    {
+        if (hitsoundingResolver is not { } resolver) return;
+        foreach (var (id, eventIndex, lane) in hitsoundingMultiSelection)
+        {
+            if (HitsoundingLaneLocked(lane) || !CanSelectCollaborationObject(id)
+                || !hitsoundingNoteLookup.TryGetValue((id, eventIndex), out var note)) continue;
+            bool edge = note.Kind == CatchObjectKind.Fruit && !note.IsStandalone;
+            hitsoundingHighlightedNotes.Add((id, edge ? resolver.EventSettings(note).EdgeIndex : eventIndex, edge, note.Kind));
+        }
     }
     private float HitsoundingMarqueeStartX => hitsoundingGridBounds.X
         + (float)((hitsoundingMarqueeStartTime - HitsoundingStart) / hitsoundingSpan * hitsoundingGridBounds.Width);
@@ -52,7 +74,7 @@ public sealed partial class EditorView
         {
             if (tags.Length == 0) continue;
             int lane = tags[0].Lane;
-            if (hitsoundingLocked[lane]) continue;
+            if (HitsoundingLaneLocked(lane)) continue;
             float y = hitsoundingGridBounds.Y + (lane + .5f) * laneHeight - tagHeight / 2;
             if (y >= r.Bottom || y + tagHeight <= r.Y) continue;
             for (int i = LowerTag(tags, from); i < tags.Length && tags[i].Time <= to; i++)
@@ -157,6 +179,7 @@ public sealed partial class EditorView
         if (hitsoundingStoryboardSelection.Count > 0) EditHitsoundingStoryboard(hitsoundingStoryboardSelection.ToArray(), [], editNotes: changes.Count > 0 ? ApplyNotes : null);
         else if (changes.Count > 0) Edit(L.Get("assist.soundChange"), ApplyNotes);
         hitsoundingMultiSelection.RemoveWhere(k => k.Lane is >= 2 and <= 4);
+        if (hitsoundingHighlightedNotes.Count > 0) SyncHitsoundingNoteSelection(highlightNotes: true);
     }
     private void PasteHitsoundingSelection()
     {
@@ -175,7 +198,7 @@ public sealed partial class EditorView
         var targets = new List<(HitsoundingCopy Copy, ConvertedCatchObject Note)>();
         foreach (var copy in copied)
         {
-            if (hitsoundingLocked[copy.Lane]) continue;
+            if (HitsoundingLaneLocked(copy.Lane)) continue;
             double time = targetTime + copy.Offset;
             int previousCount = targets.Count;
             int first = FirstAfter(hitsoundingNotes, time - 1.001);
@@ -223,15 +246,17 @@ public sealed partial class EditorView
                 if (moveSources is not null)
                 {
                     foreach (var target in targets) hitsoundingMultiSelection.Add((target.Note.SourceId, target.Note.EventIndex, target.Copy.Lane));
-                    SyncHitsoundingNoteSelection();
+                    SyncHitsoundingNoteSelection(highlightNotes: hitsoundingHighlightedNotes.Count > 0);
                 }
+                else hitsoundingHighlightedNotes.Clear();
                 return;
             }
             if (Edit(L.Get(moveSources is null ? "hitsounding.paste" : "hitsounding.move"), () => { foreach (var setting in changes.Values) SetHitsoundingEvent(setting); }))
             {
                 hitsoundingMultiSelection.Clear();
                 foreach (var target in targets) hitsoundingMultiSelection.Add((target.Note.SourceId, target.Note.EventIndex, target.Copy.Lane));
-                if (moveSources is not null) SyncHitsoundingNoteSelection();
+                if (moveSources is not null) SyncHitsoundingNoteSelection(highlightNotes: hitsoundingHighlightedNotes.Count > 0);
+                else hitsoundingHighlightedNotes.Clear();
             }
         }
         if (!mismatch) { Apply(true); return; }

@@ -114,9 +114,9 @@ public sealed partial class EditorView
         if (notesLocked || !CommitField()) return;
         if (hitsoundingNotesSelection && hitsoundingAllowNotes)
         { HandleLegacyKey(direction < 0 ? 74 : 75, false); return; }
-        var sources = hitsoundingMultiSelection.Where(k => k.Lane is >= 2 and <= 4 && !hitsoundingLocked[k.Lane]
+        var sources = hitsoundingMultiSelection.Where(k => k.Lane is >= 2 and <= 4 && !HitsoundingLaneLocked(k.Lane)
             && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event))).ToArray();
-        var samples = hitsoundingLocked[6] ? [] : hitsoundingStoryboardSelection.ToArray();
+        var samples = HitsoundingLaneLocked(6) ? [] : hitsoundingStoryboardSelection.ToArray();
         double start = sources.Select(k => hitsoundingNoteLookup[(k.Id, k.Event)].TimeMs)
             .Concat(samples.Select(s => s.TimeMs)).DefaultIfEmpty(double.NaN).Min();
         if (double.IsNaN(start)) return;

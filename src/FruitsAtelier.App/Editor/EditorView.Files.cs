@@ -56,7 +56,6 @@ public sealed partial class EditorView
         copiedPatternText = null; pendingPatternPaste = null; pendingPatternImport = null;
         objectClipboard = null; clipboardDifficulty = null; ObjectClipboardText = "";
         hitsoundingNotesClipboard = null; hitsoundingCopiedNotes = []; hitsoundingClipboardContainsNotes = false;
-        hitsoundingNotesSelection = false; Array.Clear(hitsoundingLocked); hitsoundingLocked[0] = true;
         foreach (var difficulty in project.Difficulties) WorkspaceTimingSynchronization.NormalizeDocument(difficulty.Document);
         CancelLegacyDropletRefresh();
         if (libraryOpenTask is { } retiredOpen)
@@ -138,6 +137,8 @@ public sealed partial class EditorView
         RestoreTemporarySnap();
         RestoreSnapPreferences();
         RestoreMapPanel();
+        hitsoundingSpan = Math.Clamp(EditingPreferences.HitsoundingSpan, 250, 10000);
+        hitsoundingHeadRatio = Math.Clamp(EditingPreferences.HitsoundingHeadRatio, .05, .95);
         CloseAimod();
         ResetDeferredConversion();
         pauseSnapDivisor = null;

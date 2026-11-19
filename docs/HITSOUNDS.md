@@ -163,8 +163,8 @@ colouring, while SB Hitsound retains purple.
 Note-based bank tags show S, N or D above the sample index; default samples omit the
 index and centre the letter. The toolbar groups Note based/Precise HS,
 and the HS text toggle with vertical separators. HS text controls sound-tag labels
-in both display modes and is remembered with the Hitsounding layout; it leaves
-Notes numbering, timing labels and waveforms visible. Precise HS retains the bank and non-default index beside the waveform.
+in both display modes. Notes numbering, timing labels and waveforms stay visible.
+Precise HS retains the bank and non-default index beside the waveform.
 Four timing tracks above Notes show BPM, Hitsound Set (bank and optional index, for
 example S:2), volume and Kiai. Each track independently merges consecutive equal
 values for display, while preserving the original timing points and their stems.
@@ -180,6 +180,10 @@ preserves the playing position.
 Left-click the upper time ruler to seek directly to the corresponding time, while
 retaining the playing or paused state. Dragging the play line still adjusts its viewport position.
 Ctrl-click toggles individual sound tags, Notes events, storyboard sounds, and red or green timing blocks or handles without replacing the existing selection.
+Press **F** to show the corresponding Notes highlights for the currently selected
+sound tags. A selected slider sound highlights its own edge. Press **F** again
+to return to the sound-only selection. The sound tags retain their selection in
+both views, and the playhead stays in place.
 Clicking the lane-label column does not seek. Dragging empty grid space draws a selection
 rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Its starting
 time follows the scrolling timeline during playback while the opposite edge stays
@@ -358,11 +362,13 @@ filters the current folder by name. Long lists scroll within their own section.
 View and library navigation do not edit beatmap objects.
 
 Each sound track has a mute button, highlighted green while audible and grey while muted. Muting greys its entire row and suppresses that
-track only during Hitsounding playback; Mapping and Testplay ignore these session
+track only during Hitsounding playback. Mapping and Testplay ignore these
 settings. Note-based sound labels use a fixed font size when **HS text** is enabled
 and hide when the block is too narrow. Equal-width blocks with the same number of
 index digits use a shared width threshold, independent of the particular digits
 or sample bank. Other blocks entering the viewport do not affect this decision.
+Each difficulty remembers its mutes, locks, Select/Draw tool, display mode, HS text,
+zoom and play-line position in local editor preferences.
 
 Drag green timing handles horizontally to move inherited points to the nearest
 Snap. Marquee-select handles to move several green points together, preserving

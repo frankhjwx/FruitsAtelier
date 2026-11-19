@@ -1175,7 +1175,7 @@ On **Colour palette**, choose 3–8 colours and generate a proposal from the cur
 
 ## Hitsounding workspace
 
-Switch to Hitsounding for sound tracks and **Timing Helper**. Audible tracks use green mute controls; muted tracks use grey. Lock controls are teal when unlocked and pale red when locked. Locked tracks have a pale red background. Locks protect editing and do not mute sound. A selection rectangle can start in a locked track and select sound tags in unlocked tracks. Selecting sound tags leaves the Notes graphics unhighlighted.
+Switch to Hitsounding for sound tracks and **Timing Helper**. Audible tracks use green mute controls; muted tracks use grey. Lock controls are teal when unlocked and pale red when locked. Locked tracks have a pale red background. Locks protect editing and do not mute sound. A selection rectangle can start in a locked track and select sound tags in unlocked tracks. Press F to toggle the Notes highlights for the selected sound tags. Mute, lock, tool and timeline display settings are saved locally for each difficulty.
 
 Move selected Notes, additions or SB sounds with half-opacity destination previews; originals remain visible until release. Addition groups move only when every sound has a destination fruit event. Drag a selected addition group in either Select or Draw mode. Escape cancels, and a completed move is one undo step. Navigation remains available during drags and marquees; holding the pointer at a lane edge scrolls the timeline. Middle-drag pans time, Ctrl+wheel changes Snap and Alt+wheel zooms around the pointer.
 

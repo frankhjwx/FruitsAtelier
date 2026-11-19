@@ -2404,6 +2404,8 @@
   "shortcuts.description.hitToggleWhistle": "Toggle Whistle on selected fruit events.",
   "shortcuts.command.hitToggleFinish": "Toggle Finish",
   "shortcuts.description.hitToggleFinish": "Toggle Finish on selected fruit events.",
+  "shortcuts.command.hitHighlightSoundNotes": "Highlight corresponding Notes",
+  "shortcuts.description.hitHighlightSoundNotes": "Toggle Notes highlights for the selected sound tags.",
   "shortcuts.command.hitToggleClap": "Toggle Clap",
   "shortcuts.description.hitToggleClap": "Toggle Clap on selected fruit events.",
   "shortcuts.command.hitZoomIn": "Zoom in",

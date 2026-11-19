@@ -542,7 +542,11 @@ public sealed partial class EditorView
             {
                 // Timeline endpoints use the combo marker, independently of gameplay slider textures.
                 FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin, ringX, cy, 38 * markerScale, color, number);
-                if (selected && (soundEdge is not { } picked || picked.Id != item.Id || picked.Edge == edge))
+                bool isSliderEdge = item.End > item.Start;
+                bool selectedSoundNote = previewHitsounding && hitsoundingHighlightedNotes.Count > 0
+                    && hitsoundingHighlightedNotes.Contains((item.Id, isSliderEdge ? edge.GetValueOrDefault() : item.EventIndex,
+                        isSliderEdge, CatchObjectKind.Fruit));
+                if (selectedSoundNote || selected && (soundEdge is not { } picked || picked.Id != item.Id || picked.Edge == edge))
                 {
                     c.Circle(ringX, cy, 19 * markerScale, OsuSelectionColour, false, Math.Max(1, 3 * markerScale));
                     if (!IsOsuCanvas)

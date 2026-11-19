@@ -26,7 +26,7 @@ public sealed partial class EditorView
         if (button == 0 && ctrl)
         {
             if (!hitsoundingStoryboardSelection.Add(hit.Sample)) hitsoundingStoryboardSelection.Remove(hit.Sample);
-            SyncHitsoundingNoteSelection();
+            SyncHitsoundingNoteSelection(highlightNotes: hitsoundingHighlightedNotes.Count > 0);
             return true;
         }
         hitsoundingMultiSelection.Clear();
@@ -71,7 +71,7 @@ public sealed partial class EditorView
     }
     private bool EditHitsoundingStoryboard(StoryboardSample[] remove, StoryboardSample[] add, bool move = false, Action? editNotes = null, bool retainSelection = false)
     {
-        if (hitsoundingLocked[6])
+        if (HitsoundingLaneLocked(6))
         {
             return editNotes is not null && Edit(L.Get("hitsounding.paste"), editNotes);
         }

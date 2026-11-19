@@ -471,7 +471,8 @@ the remaining cases. Capture both output streams when retaining test logs.
 `App.Tests --window-preferences-check` checks canvas switch persistence, settings
 compatibility, window preference serialization, per-difficulty GS/DS, grid level,
 Anchor Snap and beat-snap restoration, and temporary beat-grid isolation. It also
-checks that snap slider movement defers saving until release. Settings application
+checks that snap slider movement defers saving until release and that Hitsounding
+locks, mutes and view controls save locally per difficulty. Settings application
 checks compare every serialized preference after an unrelated change and reload,
 including canvas controls, locks, docking, window state and legacy Songs paths,
 and verify cancellation and failed-save isolation in English and Chinese. On Windows,
@@ -1862,7 +1863,8 @@ covers consecutive SB group nudges with source-line retention.
 Native Hitsounding captures include edge-scroll previews and bounded-zoom panning,
 alongside the Select/Draw tool controls at both window sizes.
 
-`App.Tests --hitsounding-panel-check` covers Draw selector defaults across timing changes,
+`App.Tests --hitsounding-panel-check` covers F toggling of Notes highlights for
+Ctrl-selected sound tags, Draw selector defaults across timing changes,
 selection-only bank keys, default W/E/R addition toggles, saved custom bindings, the Snap ruler, actual slider ticks,
 centred tags that narrow in dense passages, pointer-anchored Alt-wheel zoom, Precise HS lengths,
 default bank labels, timing-tag order, the unified Config dock, library search/imports,

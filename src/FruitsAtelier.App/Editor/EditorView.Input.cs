@@ -1596,6 +1596,7 @@ public sealed partial class EditorView
             else if (HitsoundingNotesKey(virtualKey, ctrl, shift)) { }
             else if (!ctrl && !altHeld && !shift && virtualKey is 49 or 50) SetHitsoundingTool(virtualKey == 50);
             else if (!ctrl && !altHeld && !shift && virtualKey == 53) AddHitsoundingInheritedPoint(playhead);
+            else if (!ctrl && !altHeld && !shift && virtualKey == 'F') ToggleHitsoundingSoundNoteHighlights();
             else if (!ctrl && !altHeld && !shift && virtualKey is 65 or 83 or 68) SetHitsoundingBrush(virtualKey == 65 ? 2 : virtualKey == 83 ? 1 : 3);
             else if (!altHeld && ctrl != shift && virtualKey is 81 or 87 or 69 or 82)
                 SetSampleBank(ctrl, virtualKey switch { 81 => 0, 87 => 1, 69 => 2, _ => 3 });
@@ -1818,7 +1819,7 @@ public sealed partial class EditorView
         fullscreenShortcutHeld = false;
         screenshotHeld = false;
         deferredTestplay = false;
-        placementCtrl = false; timingTapHeld = false; timingSnapDragging = false; panelMenuOpen = false;
+        placementCtrl = false; timingTapHeld = false; hitsoundingHighlightHeld = false; timingSnapDragging = false; panelMenuOpen = false;
         lazerMiddleMarquee = false;
         EndTimingVolume(true);
         timingScrollDragging = timingWindowDragging = false;

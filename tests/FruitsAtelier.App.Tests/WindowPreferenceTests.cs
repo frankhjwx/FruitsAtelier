@@ -121,14 +121,34 @@ internal static class WindowPreferenceTests
         ui.View.LoadProject(project); ui.Paint();
         ui.View.ShowHitsoundingPage(); ui.Paint();
         Check(LibrarySettings.Load(path).MapEditingPreferences[project.Difficulties[0].Id].ActivePanel == "Hitsounding", "Panel selection must save immediately in user settings");
+        ClickLane(ui, mute: false, 0);
+        ClickLane(ui, mute: false, 4);
+        ClickLane(ui, mute: true, 2);
+        ui.Key('2');
+        ui.ClickText(L.Get("hitsounding.precise"));
+        ui.ClickText(L.Get("hitsounding.showText"));
+        ui.Key(187);
+        var lane = ui.View.HitsoundingNotesLaneBounds;
+        float oldHead = PlayLineX(ui), newHead = lane.X + lane.Width * .55f;
+        ui.View.PointerDown(oldHead, 137, 0, false, false);
+        ui.View.PointerMove(newHead, 137, false, false);
+        ui.View.PointerUp(newHead, 137, 0); ui.Paint();
+        var first = LibrarySettings.Load(path).MapEditingPreferences[project.Difficulties[0].Id];
+        Check(first.HitsoundingMutedLanes == 1 << 2 && first.HitsoundingLockedLanes == 1 << 4
+            && first.HitsoundingDraw && first.HitsoundingPrecise == true && first.HitsoundingShowText == false
+            && first.HitsoundingSpan == 3200 && Math.Abs(first.HitsoundingHeadRatio - .55) < .001,
+            "Hitsounding controls save immediately to local difficulty preferences");
         ui.View.SwitchDifficulty(1); ui.Paint();
         Check(ui.View.HitsoundingPageVisible, "Difficulties in a mapset share the active panel");
+        AssertTracks(ui, muteWhistle: false, lockClap: false, draw: false);
+        ClickLane(ui, mute: true, 3);
         ui.ClickText(L.Get("hitsounding.panel") + " ▾"); ui.ClickText(L.Get("timing.detailsPanel"));
         ui.ClickText(L.Get("timing.detailsPanel") + " ▾"); ui.ClickText(L.Get("timing.panel"));
         Check(ui.View.TimingPageVisible, "Second map opens Timing");
         ui.View.SwitchDifficulty(0); ui.Paint();
         Check(ui.View.TimingPageVisible, "Switching back retains the shared panel");
         ui.View.ShowHitsoundingPage(); ui.Paint();
+        AssertTracks(ui, muteWhistle: true, lockClap: true, draw: true);
         Check(!ui.View.IsDirty && ProjectSerializer.Serialize(ui.View.CaptureProject()) == content, "Panel preferences do not modify the project");
         ui.Key(27); Check(ui.View.LibraryVisible, "Escape returns idle Hitsounding to Library");
         Check(LibrarySettings.Load(path).MapEditingPreferences[project.Difficulties[0].Id].ActivePanel == "Hitsounding", "Leaving the editor retains its panel preference");
@@ -139,11 +159,38 @@ internal static class WindowPreferenceTests
         reopened.View.InitializeLibrary(false, LibrarySettings.Load(path));
         reopened.View.LoadProject(ProjectSerializer.ReadProject(content)); reopened.Paint();
         Check(reopened.View.HitsoundingPageVisible, "Hitsounding panel survives app restart");
+        AssertTracks(reopened, muteWhistle: true, lockClap: true, draw: true);
+        var reopenedLane = reopened.View.HitsoundingNotesLaneBounds;
+        Check(Math.Abs(PlayLineX(reopened) - (reopenedLane.X + reopenedLane.Width * .55f)) < 1,
+            "Play-line position survives app restart");
         Check(reopened.Canvas.Texts.Any(t => t.Value == "restart-folder") && reopened.Canvas.Texts.Any(t => t.Value == "restart-sound.wav"), "Restored Hitsounding library loads folders and samples without pointer input");
         reopened.View.SwitchDifficulty(1); reopened.Paint();
         Check(reopened.View.HitsoundingPageVisible, "Shared panel preference survives app restart across difficulties");
+        AssertTracks(reopened, muteWhistle: false, lockClap: false, draw: false);
+        Check(IsMuted(reopened, 3), "The second difficulty restores its own muted lane on restart");
         reopened.Key(27); Check(reopened.View.LibraryVisible, "Escape returns idle Timing to Library");
         Check(new MapEditingPreferences { ActivePanel = "Unknown" }.ActivePanel == "Mapping", "Unknown panel names safely use Mapping");
+
+        static void ClickLane(Ui ui, bool mute, int lane)
+        {
+            var button = mute ? ui.View.HitsoundingMuteBounds(lane) : ui.View.HitsoundingLockBounds(lane);
+            ui.Click(button.X + button.Width / 2, button.Y + button.Height / 2);
+        }
+        static bool IsMuted(Ui ui, int lane)
+        {
+            var button = ui.View.HitsoundingMuteBounds(lane);
+            return ui.Canvas.PaintCalls.Any(call => call.Opacity == .65f && call.FillBounds is { } bounds
+                && bounds.X > button.Right && bounds.Width > 300 && bounds.Y <= button.Y && bounds.Bottom >= button.Bottom);
+        }
+        static float PlayLineX(Ui ui) => ui.Canvas.Lines.Single(line => line.Color is 0xE9CA64 or 0xFFF0A6 && line.Y1 == 130).X1;
+        static void AssertTracks(Ui ui, bool muteWhistle, bool lockClap, bool draw)
+        {
+            var notes = ui.View.HitsoundingNotesLaneBounds;
+            bool IsLocked(int lane) => ui.Canvas.Fills.Any(fill => fill.Color == 0xE89A9A
+                && fill.Bounds.Contains(notes.X + 60, notes.Y + (lane + .5f) * notes.Height));
+            Check(IsMuted(ui, 2) == muteWhistle && IsLocked(4) == lockClap
+                && IsLocked(0) != draw && ui.View.HitsoundingDraw == draw, "Difficulty restores its own lock, mute and tool state");
+        }
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

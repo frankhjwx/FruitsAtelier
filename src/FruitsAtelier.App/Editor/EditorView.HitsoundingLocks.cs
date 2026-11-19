@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private readonly bool[] hitsoundingLocked = [true, false, false, false, false, false, false];
+    private bool HitsoundingLaneLocked(int lane) => (EditingPreferences.HitsoundingLockedLanes & (1 << lane)) != 0;
     private readonly Rect[] hitsoundingLockButtons = new Rect[7];
     internal Rect HitsoundingLockBounds(int lane) => hitsoundingLockButtons[lane];
 
@@ -21,7 +21,7 @@ public sealed partial class EditorView
     private void DrawHitsoundingLock(ICanvas c, Rect bounds, int lane)
     {
         hitsoundingLockButtons[lane] = bounds;
-        bool locked = hitsoundingLocked[lane];
+        bool locked = HitsoundingLaneLocked(lane);
         const uint lockedColor = 0xE89A9A;
         c.Fill(bounds, locked ? Surface : SelectedSurface, 4);
         if (locked) c.Fill(bounds, lockedColor, 4, .18f);
@@ -29,7 +29,8 @@ public sealed partial class EditorView
         hits.Add(new(bounds, () =>
         {
             CancelInteraction();
-            hitsoundingLocked[lane] = !hitsoundingLocked[lane];
+            EditingPreferences.HitsoundingLockedLanes ^= 1 << lane;
+            SaveMapEditingPreferences();
             hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear();
             hitsoundingSelected = null; hitsoundingNotesSelection = false; SelectObjects([]);
         }, true));
@@ -41,7 +42,7 @@ public sealed partial class EditorView
         float height = g.Height / 7;
         for (int lane = 0; lane < 7; lane++)
         {
-            if (!hitsoundingLocked[lane]) continue;
+            if (!HitsoundingLaneLocked(lane)) continue;
             var bounds = new Rect(g.X, g.Y + lane * height, g.Width, height);
             c.Fill(bounds, 0xE89A9A, opacity: .18f);
         }
@@ -50,7 +51,7 @@ public sealed partial class EditorView
     {
         for (int lane = 0; lane < 7; lane++)
             if (hitsoundingLockButtons[lane].Contains(mouseX, mouseY))
-                DrawPaletteTooltip(c, L.Get(hitsoundingLocked[lane] ? "hitsounding.unlockLane" : "hitsounding.lockLane", L.Get("hitsounding.lane" + lane)),
+                DrawPaletteTooltip(c, L.Get(HitsoundingLaneLocked(lane) ? "hitsounding.unlockLane" : "hitsounding.lockLane", L.Get("hitsounding.lane" + lane)),
                     hitsoundingLockButtons[lane], left: false, above: true);
     }
 }

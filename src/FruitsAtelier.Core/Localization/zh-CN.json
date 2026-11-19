@@ -2404,6 +2404,8 @@
   "shortcuts.description.hitToggleWhistle": "切换所选水果事件的 Whistle 音效。",
   "shortcuts.command.hitToggleFinish": "切换 Finish",
   "shortcuts.description.hitToggleFinish": "切换所选水果事件的 Finish 音效。",
+  "shortcuts.command.hitHighlightSoundNotes": "高亮对应音符",
+  "shortcuts.description.hitHighlightSoundNotes": "切换所选音效对应音符的高亮显示。",
   "shortcuts.command.hitToggleClap": "切换 Clap",
   "shortcuts.description.hitToggleClap": "切换所选水果事件的 Clap 音效。",
   "shortcuts.command.hitZoomIn": "放大",
