@@ -1005,7 +1005,9 @@ Linking preserves editable project data and reviews differences against the loca
 
 Use **File → Export as .fad…** or the difficulty tab menu. Open the corresponding project before importing a FAD. It does not create a standalone Library project. Open, drop or use **File → Import difficulty (.fad)…** in that project.
 
-An existing matched difficulty enters merge review; a missing difficulty can be added. Objects and FA settings are reviewed together; metadata and timing have separate choices. Review the merged difficulty, then save or export it. Export includes unsaved work without changing the local Songs association. FAD contains only difficulty data; audio and other resource files must already be available in the receiving project.
+An existing matched difficulty enters merge review, and a missing difficulty can be added. Objects and FA settings are reviewed together, with separate choices for metadata and timing. Review the merged difficulty, then save or export it. Export includes unsaved work and preserves the local Songs association. Current FAD exports contain difficulty data. The receiving project supplies audio and other resources for playback.
+
+The editor matches an existing difficulty first by its internal identity, then by a unique online `BeatmapID`, then by its name within the same song. A data-only FAD can be imported before the project has a resource directory. Older FADs that carry resource files need a destination for those files.
 
 Collaboration sections keep their time ranges. A section stays linked when the receiving project has the referenced difficulty with the same internal identity. Otherwise, the section becomes unassigned and the editor reports it while importing the difficulty.
 

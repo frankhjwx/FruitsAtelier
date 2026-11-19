@@ -52,7 +52,9 @@ public sealed partial class EditorView
             {
                 if (comparison is null)
                 {
-                    SetFadNotice(L.Get("sync.state.Current"), plan.UnassignedSections);
+                    if (plan.Resources.DisplayNames.Count > 0)
+                        ApplyFad(snapshot.Difficulties.Single(d => d.Id == plan.Difficulty.Id), plan.Resources, plan.UnassignedSections);
+                    else SetFadNotice(L.Get("sync.state.Current"), plan.UnassignedSections);
                     return;
                 }
                 fadPending = plan;
@@ -68,6 +70,7 @@ public sealed partial class EditorView
     {
         if (fadPending is not { } pending || !syncMerges.TryGetValue(pending.Difficulty.Id, out var merge)) return;
         var choices = merge.Conflicts.ToDictionary(c => c.Key, c => useIncoming ?? syncChoices.GetValueOrDefault(c.Key));
+        if (!choices.Values.Any(v => v)) { ClearFadReview(); return; }
         bool compensate = CompensateTinyDroplets;
         var task = Task.Run(() =>
         {
@@ -78,15 +81,10 @@ public sealed partial class EditorView
         syncPage = null;
         StartFazTask(task, () =>
         {
-            var result = task.GetAwaiter().GetResult();
-            bool importing = choices.Values.Any(v => v);
+            pending.Difficulty.Document = task.GetAwaiter().GetResult();
+            ApplyFad(pending.Difficulty, pending.Resources,
+                choices.GetValueOrDefault("$objects:native") ? pending.UnassignedSections : 0);
             ClearFadReview();
-            if (importing)
-            {
-                pending.Difficulty.Document = result;
-                ApplyFad(pending.Difficulty, pending.Resources,
-                    choices.GetValueOrDefault("$objects:native") ? pending.UnassignedSections : 0);
-            }
         }, () => { if (fadPending is not null) syncPage = "resolve"; });
     }
 
@@ -122,7 +120,7 @@ public sealed partial class EditorView
         syncStatuses.Remove(incoming.Id); syncMerges.Remove(incoming.Id); syncComparisons.Remove(incoming.Id);
         resourceSnapshot = null; resourceReferences = null;
         ResetHitsounds(); PreloadProjectHitsounds(); RequestDifficultyChanged?.Invoke();
-        SetFadNotice(L.Get("fad.imported", incoming.Name), unassignedSections);
+        SetFadNotice(L.Get("fad.imported", difficulties[index].Name), unassignedSections);
     }
 
     private void SetFadNotice(string message, int unassignedSections)

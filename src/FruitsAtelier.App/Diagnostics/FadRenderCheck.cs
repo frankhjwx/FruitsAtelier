@@ -44,7 +44,7 @@ internal static class FadRenderCheck
                 ((Dictionary<Guid, WorkspaceMerge>)Field("syncMerges").GetValue(view)!)[difficulty.Id] = merge;
                 var comparisons = (System.Collections.IDictionary)Field("syncComparisons").GetValue(view)!;
                 comparisons[difficulty.Id] = comparison;
-                Field("fadPending").SetValue(view, (new ProjectDifficulty { Id = difficulty.Id, Name = "Guest", Document = incoming }, HitsoundResourcePlan.Empty));
+                Field("fadPending").SetValue(view, (new ProjectDifficulty { Id = difficulty.Id, Name = "Guest", Document = incoming }, HitsoundResourcePlan.Empty, 0));
                 typeof(EditorView).GetMethod("BeginSyncReview", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, [0]);
                 Paint("merge-fields"); Field("syncTab").SetValue(view, "Objects"); Paint("merge-objects");
                 view.KeyDown(27, false, false); view.MarkSaved(); view.ShowLibrary();

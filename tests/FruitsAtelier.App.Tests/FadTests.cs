@@ -10,7 +10,14 @@ internal static class FadTests
 {
     public static void Run()
     {
-        string root = Path.GetFullPath(Path.Combine("artifacts/tests/fad", Guid.NewGuid().ToString("N")));
+        string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
+            "atelier-fad-" + Guid.NewGuid().ToString("N"));
+        try { Run(root); }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
+    }
+
+    private static void Run(string root)
+    {
         var settings = new LibrarySettings { Workspace = Path.Combine(root, "workspace"), Songs = "" };
         Directory.CreateDirectory(settings.Workspace);
         string sender = Path.Combine(root, "sender"), receiver = Path.Combine(root, "receiver");
@@ -91,6 +98,17 @@ internal static class FadTests
                 && plan.Difficulty.Document.CollaborationReferences!.SequenceEqual([bound, missing with { DifficultyId = Guid.Empty }, unassigned]),
                 "available bindings survive and only missing bindings become unassigned without changing sections");
             Check(local.CollaborationReferences!.SequenceEqual([missing]), "unrelated stale local references do not block import or change");
+            var pathless = local.DeepClone();
+            pathless.SourcePath = pathless.AudioPath = null;
+            var pathlessDifficulty = new ProjectDifficulty { Name = "Base", Document = pathless };
+            plan = FadArchive.PlanImport(package, new() { Difficulties = [pathlessDifficulty, host] });
+            Check(plan.Difficulty.Document.AudioPath == local.AudioPath, "an earlier pathless difficulty cannot hide a valid resource directory");
+            plan = FadArchive.PlanImport(package, new() { Difficulties = [pathlessDifficulty] });
+            Check(plan.Difficulty.Document.SourcePath is null && plan.Difficulty.Document.Fruits[0].X == 120,
+                "data-only import works in a project without a resource directory");
+            pathless.SourcePath = Path.Combine(root, "missing-directory", "local.osu");
+            plan = FadArchive.PlanImport(package, new() { Difficulties = [pathlessDifficulty, host] });
+            Check(plan.Difficulty.Document.AudioPath == local.AudioPath, "a stale resource path cannot hide an existing resource directory");
             File.Delete(Path.Combine(receiver, "custom.ogg"));
         }
         File.Delete(unrelatedJournal);
@@ -132,7 +150,10 @@ internal static class FadTests
                 guest.Document.CollaborationReferences = [bound, missing, unassigned];
                 string update = Path.Combine(root, "update-" + locale + ".fad");
                 FadArchive.Export(guest, update, false, settings.Workspace);
-                ui.View.BeginFadImport(update); Settle(ui);
+                using (File.Open(local.AudioPath!, FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    ui.View.BeginFadImport(update); Settle(ui);
+                }
                 Check(ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].X == 120, "existing difficulty enters review before changing content");
                 ui.ClickText(L.Get("mac.cancel"));
                 Check(!ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].X == 120, "cancel leaves content untouched");
@@ -192,16 +213,65 @@ internal static class FadTests
             Check(mixed.Tracks[0].Nodes[0].HandleOut == curve.Nodes[0].HandleOut && mixed.Fruits[0].X == 120
                 && OsuBeatmapReader.Setting(mixed, "Metadata", "Version") == "Base", "native object choices retain editable handles independently of metadata");
         }
+        CheckOnlineDifficultyMatch(incoming, local, root, settings);
+        CheckResourceRetry(legacy, project, settings, receiver);
         Console.WriteLine("PASS FAD portable package, project matching, new difficulty, merge review, native curves, undo and library rejection");
     }
 
-    private static void Settle(Ui ui)
+    private static void CheckOnlineDifficultyMatch(ProjectDifficulty incoming, MapDocument local, string root, LibrarySettings settings)
+    {
+        var document = incoming.Document.DeepClone();
+        SongSetup.Set(document, "Metadata", "BeatmapID", "1234");
+        string archive = Path.Combine(root, "online.fad");
+        FadArchive.Export(new() { Name = incoming.Name, Document = document }, archive, false, settings.Workspace);
+        using var package = FadArchive.Prepare(archive, settings);
+        var renamed = local.DeepClone();
+        SongSetup.Set(renamed, "Metadata", "Title", "Renamed song");
+        SongSetup.Set(renamed, "Metadata", "BeatmapID", "001234");
+        var receiver = new ProjectDifficulty { Name = "Renamed difficulty", Document = renamed };
+        var plan = FadArchive.PlanImport(package, new() { Difficulties = [receiver] });
+        Check(plan.Difficulty.Id == receiver.Id && plan.Difficulty.Document.SourcePath == local.SourcePath,
+            "a unique online difficulty ID matches after song or difficulty metadata changes");
+    }
+
+    private static void CheckResourceRetry(string archive, BeatmapProject project, LibrarySettings settings, string receiver)
+    {
+        using var package = FadArchive.Prepare(archive, settings);
+        var plan = FadArchive.PlanImport(package, project);
+        plan.Difficulty.Document.Fruits[0].X = 50;
+        var ui = new Ui(false);
+        ui.View.LibrarySettings.Workspace = settings.Workspace;
+        ui.View.LibrarySettings.Songs = "";
+        ui.View.LoadProject(new() { Name = project.Name, Difficulties = [.. project.Difficulties, plan.Difficulty] });
+        ui.PaintUntilReady();
+        ui.View.BeginFadImport(archive); Settle(ui);
+        Check(ui.View.SynchronizationVisible, "legacy resource import enters review");
+        string sample = Path.Combine(receiver, "custom.ogg");
+        File.WriteAllText(sample, "created during review");
+        ui.ClickText(L.Get("fad.allExternal")); Settle(ui, expectError: true);
+        Check(ui.View.CaptureProject().Difficulties.Single(d => d.Id == plan.Difficulty.Id).Document.Fruits[0].X == 50
+            && File.ReadAllText(sample) == "created during review", "failed commit changes neither notes nor resources");
+        ui.Key(27);
+        Check(ui.View.SynchronizationVisible, "resource failure leaves the merge open for retry");
+        File.Delete(sample);
+        ui.ClickText(L.Get("fad.allExternal")); Settle(ui);
+        Check(ui.View.Document.Fruits[0].X == 120 && File.Exists(sample), "retry applies the selected notes and resources");
+
+        var before = ui.View.Document.DeepClone();
+        File.Delete(sample);
+        ui.View.BeginFadImport(archive); Settle(ui);
+        Check(!ui.View.SynchronizationVisible && ui.View.Document.ContentEquals(before) && File.Exists(sample),
+            "legacy resources can be restored even when the difficulty already matches");
+        ui.View.StopFileMonitoring();
+    }
+
+    private static void Settle(Ui ui, bool expectError = false)
     {
         var field = typeof(EditorView).GetField("fazTask", BindingFlags.Instance | BindingFlags.NonPublic)!;
         var timer = Stopwatch.StartNew();
         do { ui.Paint(); Thread.Sleep(5); } while (field.GetValue(ui.View) is not null && timer.Elapsed.TotalSeconds < 30);
         ui.Paint(); Check(field.GetValue(ui.View) is null, "background package operation completes");
-        if (ui.View.ErrorVisible) throw new Exception(string.Join(" | ", ui.Canvas.Texts.Select(t => t.Value)));
+        if (ui.View.ErrorVisible != expectError) throw new Exception(string.Join(" | ", ui.Canvas.Texts.Select(t => t.Value)));
     }
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
     private static void Throws(Action action, string message)
