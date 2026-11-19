@@ -1701,6 +1701,7 @@
   "fad.wrongProject": "이 난이도는 현재 프로젝트에 속하지 않습니다.",
   "fad.nameConflict": "같은 이름의 난이도가 있거나 난이도 수 제한에 도달했습니다.",
   "fad.imported": "가져온 난이도: {0}",
+  "fad.unassignedSections": "{0}. 미할당으로 남은 협업 구간: {1}개.",
   "faz.export": "프로젝트 내보내기 (.faz)…",
   "faz.completeDescription": "FA 편집 데이터와 리소스 및 osu! 비트맵 세트.",
   "faz.projectDescription": "FruitsAtelier용 FA 편집 데이터와 리소스.",

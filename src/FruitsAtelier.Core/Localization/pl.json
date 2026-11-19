@@ -1701,6 +1701,7 @@
   "fad.wrongProject": "Ta trudność nie należy do otwartego projektu.",
   "fad.nameConflict": "Trudność o tej nazwie już istnieje lub osiągnięto limit trudności.",
   "fad.imported": "Zaimportowano trudność: {0}",
+  "fad.unassignedSections": "{0}. Nieprzypisane sekcje współpracy: {1}.",
   "faz.export": "Eksportuj projekt (.faz)…",
   "faz.completeDescription": "Edytowalne dane FA i zasoby oraz zestaw beatmap osu!.",
   "faz.projectDescription": "Edytowalne dane FA i zasoby dla FruitsAtelier.",

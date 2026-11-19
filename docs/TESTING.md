@@ -420,6 +420,8 @@ rejection and the FAZ export chooser. `FruitsAtelier.App.exe --render-check
 --fad-render-check` captures the File menu, difficulty context menu, FAZ choices,
 native merge review and Library error in English and Chinese at two window sizes
 and 96/144/192 DPI under `artifacts/tests/fad-native`.
+FAD import also checks retained collaboration bindings, unassignment notices
+for missing dependencies, and import into a project with unrelated stale bindings.
 
 The project targets .NET 10 with C# 12. Two `global.json` entry points pin SDK versions:
 

@@ -30,13 +30,17 @@ internal static class FadTests
         var curve = new CurveTrack { CompensateTinyDroplets = false };
         curve.Nodes.AddRange([new() { TimeMs = 3000, X = 120, HandleOut = new(250, 15) }, new() { TimeMs = 4000, X = 240, HandleIn = new(-250, -15) }]);
         original.Tracks.Add(curve);
+        var bound = new CollaborationReference(Guid.NewGuid(), Guid.NewGuid(), 0, 2000);
+        var missing = new CollaborationReference(Guid.NewGuid(), Guid.NewGuid(), 2000, 5000);
+        var unassigned = new CollaborationReference(Guid.NewGuid(), Guid.Empty, 5000, 10000);
+        original.CollaborationReferences = [bound, missing, unassigned];
         var incoming = new ProjectDifficulty { Name = "Guest", Document = original };
         string archive = Path.Combine(root, "guest.fad"), before = ProjectSerializer.Serialize(original);
         FadArchive.Export(incoming, archive, false, settings.Workspace);
         Check(ProjectSerializer.Serialize(original) == before, "export leaves live content untouched");
         using (var zip = ZipFile.OpenRead(archive))
         {
-            Check(zip.Entries.All(e => e.FullName is "manifest.json" or "project.catchproj" || e.FullName.EndsWith("/.fa-resource")),
+            Check(zip.Entries.All(e => e.FullName is "manifest.json" or "project.catchproj" || e.Name == WorkspaceProject.ResourceRootMarker),
                 "difficulty export contains only native data and container metadata");
             using var reader = new StreamReader(zip.GetEntry("project.catchproj")!.Open());
             string portable = reader.ReadToEnd();
@@ -58,20 +62,39 @@ internal static class FadTests
         var local = original.DeepClone(); local.SourcePath = Path.Combine(receiver, "local.osu"); local.AudioPath = Path.Combine(receiver, "local.ogg");
         SongSetup.Set(local, "General", "AudioFilename", "local.ogg");
         SongSetup.Set(local, "Metadata", "Version", "Base"); local.Tracks.Clear(); local.Fruits[0].X = 50;
+        local.CollaborationReferences = [missing];
         File.WriteAllText(local.SourcePath!, OsuBeatmapWriter.Serialize(local, false).Text);
-        var host = new ProjectDifficulty { Name = "Base", Document = local };
+        var host = new ProjectDifficulty { Id = bound.DifficultyId, Name = "Base", Document = local };
         var project = new BeatmapProject { Name = "Song", Difficulties = [host] };
+        string unrelatedWorkspace = Path.Combine(settings.Workspace, "unrelated");
+        Directory.CreateDirectory(unrelatedWorkspace);
+        string unrelatedManifest = Path.Combine(unrelatedWorkspace, WorkspaceProject.ManifestName);
+        string unrelatedJournal = Path.Combine(settings.Workspace, ".faz-import-invalid.json");
+        File.WriteAllText(unrelatedManifest, "{}");
+        File.WriteAllText(unrelatedJournal, "{}");
         using (var package = FadArchive.Prepare(archive, settings))
         {
+            Check(File.Exists(unrelatedJournal) && File.Exists(unrelatedManifest),
+                "difficulty import does not read or recover unrelated workspace projects");
             Check(package.Project.Difficulties.Single().Document.AudioPath is null, "package has no embedded audio path");
             File.WriteAllText(Path.Combine(receiver, "custom.ogg"), "local sample");
+            string marker = Path.Combine(receiver, WorkspaceProject.ResourceRootMarker);
+            File.WriteAllText(marker, "local resource marker");
             var plan = FadArchive.PlanImport(package, project);
             plan.Resources.Apply();
             Check(plan.Difficulty.Document.AudioPath == local.AudioPath, "data-only import uses local audio");
             Check(File.ReadAllText(Path.Combine(receiver, "custom.ogg")) == "local sample"
                 && !File.Exists(Path.Combine(receiver, "bg.jpg")), "data-only import leaves local resources unchanged");
+            Check(File.ReadAllText(marker) == "local resource marker", "container marker cannot conflict with local files");
+            File.Delete(marker);
+            Check(plan.UnassignedSections == 1
+                && plan.Difficulty.Document.CollaborationReferences!.SequenceEqual([bound, missing with { DifficultyId = Guid.Empty }, unassigned]),
+                "available bindings survive and only missing bindings become unassigned without changing sections");
+            Check(local.CollaborationReferences!.SequenceEqual([missing]), "unrelated stale local references do not block import or change");
             File.Delete(Path.Combine(receiver, "custom.ogg"));
         }
+        File.Delete(unrelatedJournal);
+        File.Delete(unrelatedManifest);
         using (var package = FadArchive.Prepare(legacy, settings))
         {
             var plan = FadArchive.PlanImport(package, project);
@@ -101,9 +124,12 @@ internal static class FadTests
                 ui.View.LoadProject(project); ui.PaintUntilReady();
                 ui.View.BeginFadImport(archive); Settle(ui); ui.PaintUntilReady();
                 Check(!ui.View.ErrorVisible && ui.View.DifficultyCount == 2 && ui.View.CurrentDifficultyName == "Guest", "unknown difficulty is added");
+                Check(ui.View.StatusMessage == L.Get("fad.unassignedSections", L.Get("fad.imported", "Guest"), 1),
+                    "successful import reports unassigned sections");
                 Check(ui.View.Document.Tracks[0].Nodes[0].HandleOut == curve.Nodes[0].HandleOut, "native curve handles survive import");
                 var guest = ui.View.CaptureProject().Difficulties.Single(d => d.Id == incoming.Id);
                 guest.Document.Fruits[0].X = 400; SongSetup.Set(guest.Document, "Metadata", "Creator", "Guest mapper");
+                guest.Document.CollaborationReferences = [bound, missing, unassigned];
                 string update = Path.Combine(root, "update-" + locale + ".fad");
                 FadArchive.Export(guest, update, false, settings.Workspace);
                 ui.View.BeginFadImport(update); Settle(ui);
@@ -112,6 +138,8 @@ internal static class FadTests
                 Check(!ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].X == 120, "cancel leaves content untouched");
                 ui.View.BeginFadImport(update); Settle(ui); ui.ClickText(L.Get("fad.allExternal")); Settle(ui);
                 Check(!ui.View.ErrorVisible && ui.View.Document.Fruits[0].X == 400 && ui.View.DifficultyCount == 2, "review applies incoming native difficulty");
+                Check(ui.View.StatusMessage == L.Get("fad.unassignedSections", L.Get("fad.imported", "Guest"), 1),
+                    "applying the incoming native content during merge reports unassigned sections");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.Fruits[0].X == 120, "update is undoable");
                 ui.Key('Y', ctrl: true); Check(ui.View.Document.Fruits[0].X == 400, "update can be redone");
                 ui.View.BeginFadImport(archive); Settle(ui);

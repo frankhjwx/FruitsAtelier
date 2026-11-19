@@ -1701,6 +1701,7 @@
   "fad.wrongProject": "Tingkat kesulitan ini bukan bagian dari proyek yang terbuka.",
   "fad.nameConflict": "Nama tingkat kesulitan sudah ada atau batas jumlahnya telah tercapai.",
   "fad.imported": "Tingkat kesulitan diimpor: {0}",
+  "fad.unassignedSections": "{0}. Bagian kolaborasi yang tidak ditetapkan: {1}.",
   "faz.export": "Ekspor proyek (.faz)…",
   "faz.completeDescription": "Data FA yang dapat diedit dan sumber daya, beserta set beatmap osu!.",
   "faz.projectDescription": "Data FA yang dapat diedit dan sumber daya untuk FruitsAtelier.",

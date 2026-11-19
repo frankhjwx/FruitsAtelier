@@ -48,6 +48,7 @@ public static partial class WorkspaceProject
 {
     internal static readonly object Gate = new();
     public const string ManifestName = "project.catchdiff";
+    public const string ResourceRootMarker = ".fa-resource";
     public static WorkspaceManifest SnapshotManifest(WorkspaceManifest manifest) => new()
     {
         SchemaVersion = manifest.SchemaVersion, ArchiveFingerprint = manifest.ArchiveFingerprint, Id = manifest.Id, Name = manifest.Name, Notes = manifest.Notes, SongsRoot = manifest.SongsRoot,
@@ -208,6 +209,7 @@ public static partial class WorkspaceProject
                     do { name = stem + " (" + suffix++ + ").catchdiff"; } while (!names.Add(name));
                 }
                 string? source = diff.Document.SourcePath;
+                if (Path.GetFileName(source) == ResourceRootMarker) source = null;
                 if (old is null && source is not null && System.IO.File.Exists(source)
                     && LibraryDatabase.ReadMetadata(source)?.Difficulty != diff.Name) source = null;
                 if (old is null && source is not null)
@@ -269,7 +271,7 @@ public static partial class WorkspaceProject
         foreach (var diff in project.Difficulties)
         {
             var d = diff.Document;
-            if (!diff.FaOnly) Check(d.SourcePath);
+            if (!diff.FaOnly && Path.GetFileName(d.SourcePath) != ResourceRootMarker) Check(d.SourcePath);
             Check(d.AudioPath);
         }
         // Optional presentation and sample assets may be intentionally absent from a beatmap download.

@@ -1007,6 +1007,8 @@ Use **File → Export as .fad…** or the difficulty tab menu. Open the correspo
 
 An existing matched difficulty enters merge review; a missing difficulty can be added. Objects and FA settings are reviewed together; metadata and timing have separate choices. Review the merged difficulty, then save or export it. Export includes unsaved work without changing the local Songs association. FAD contains only difficulty data; audio and other resource files must already be available in the receiving project.
 
+Collaboration sections keep their time ranges. A section stays linked when the receiving project has the referenced difficulty with the same internal identity. Otherwise, the section becomes unassigned and the editor reports it while importing the difficulty.
+
 ### Choose the appropriate file
 
 Use FAZ for an entire FA project, FAD for one FA difficulty and FPT for reusable patterns. OSU/OSZ are playable exports and do not retain all editable FA structures. Keep the workspace manifest and .catchdiff files together for an unpackaged FAZ backup.

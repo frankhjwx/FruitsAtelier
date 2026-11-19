@@ -1701,6 +1701,7 @@
   "fad.wrongProject": "This difficulty does not belong to the open project.",
   "fad.nameConflict": "A difficulty with this name already exists, or the project has reached its difficulty limit.",
   "fad.imported": "Imported difficulty: {0}",
+  "fad.unassignedSections": "{0}. Collaboration sections left unassigned: {1}.",
   "faz.export": "Export project (.faz)...",
   "faz.completeDescription": "Editable FA data and resources, plus an osu! beatmap set.",
   "faz.projectDescription": "Editable FA data and resources for use in FruitsAtelier.",

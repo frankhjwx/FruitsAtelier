@@ -1701,6 +1701,7 @@
   "fad.wrongProject": "Deze moeilijkheid hoort niet bij het geopende project.",
   "fad.nameConflict": "Er bestaat al een moeilijkheid met deze naam of het maximum is bereikt.",
   "fad.imported": "Moeilijkheid geïmporteerd: {0}",
+  "fad.unassignedSections": "{0}. Niet-toegewezen samenwerkingssecties: {1}.",
   "faz.export": "Project exporteren (.faz)…",
   "faz.completeDescription": "Bewerkbare FA-gegevens en bestanden, plus een osu!-beatmapset.",
   "faz.projectDescription": "Bewerkbare FA-gegevens en bestanden voor FruitsAtelier.",

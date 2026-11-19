@@ -1701,6 +1701,7 @@
   "fad.wrongProject": "此難度不屬於目前開啟的譜面專案。",
   "fad.nameConflict": "已存在同名難度，或專案已達難度數量上限。",
   "fad.imported": "已匯入難度：{0}",
+  "fad.unassignedSections": "{0}。有 {1} 個協作段找不到對應難度，已設為未分配。",
   "faz.export": "匯出專案 (.faz)…",
   "faz.completeDescription": "包含 FA 編輯資料、資源及 osu! 圖譜集。",
   "faz.projectDescription": "包含供 FruitsAtelier 使用的 FA 編輯資料及資源。",

@@ -39,7 +39,7 @@ public static class FadArchive
             && string.Equals(Setting(local, "Artist"), Setting(incoming, "Artist"), StringComparison.OrdinalIgnoreCase);
     }
 
-    public static (ProjectDifficulty Difficulty, HitsoundResourcePlan Resources) PlanImport(FazPackage package, BeatmapProject project)
+    public static (ProjectDifficulty Difficulty, HitsoundResourcePlan Resources, int UnassignedSections) PlanImport(FazPackage package, BeatmapProject project)
     {
         var incoming = package.Project.Difficulties.Single();
         var target = ResolveTarget(package, project);
@@ -56,24 +56,40 @@ public static class FadArchive
         }
         if (!replacing && (project.Difficulties.Count >= 256 || project.Difficulties.Any(d => d.Name == incoming.Name)))
             throw new InvalidDataException(L.Get("fad.nameConflict"));
+        Guid resultId = replacing ? target.Id : incoming.Id;
         var candidate = incoming.Document.DeepClone();
+        var availableReferences = project.Difficulties.Where(d => d.Id != resultId).Select(d => d.Id).ToHashSet();
+        int unassignedSections = UnassignUnavailableSections(candidate, availableReferences);
         candidate.SourcePath = target.Document.SourcePath;
         candidate.AudioPath = target.Document.AudioPath;
         if (OsuBeatmapReader.Setting(target.Document, "General", "AudioFilename") is { } audio)
             SongSetup.Set(candidate, "General", "AudioFilename", audio);
         string destination = Path.GetDirectoryName(target.Document.SourcePath ?? target.Document.AudioPath)
             ?? throw new InvalidOperationException(L.Get("copier.saveFirst"));
-        if (!replacing) candidate.SourcePath = Path.Combine(destination, ".fa-resource");
+        if (!replacing) candidate.SourcePath = Path.Combine(destination, WorkspaceProject.ResourceRootMarker);
         string root = Path.GetDirectoryName(incoming.Document.SourcePath)!;
         var paths = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
             .Where(p => !WorkspaceSynchronization.Paths.Equals(p, incoming.Document.AudioPath))
-            .Select(p => Path.GetRelativePath(root, p));
+            .Select(p => Path.GetRelativePath(root, p))
+            .Where(p => p != WorkspaceProject.ResourceRootMarker);
         var resources = HitsoundResourcePlan.CopyFiles(root, destination, paths);
-        var result = new ProjectDifficulty { Id = replacing ? target.Id : incoming.Id, Name = incoming.Name, Document = candidate, FaOnly = replacing ? target.FaOnly : incoming.FaOnly };
+        var result = new ProjectDifficulty { Id = resultId, Name = incoming.Name, Document = candidate, FaOnly = replacing ? target.FaOnly : incoming.FaOnly };
         var check = new BeatmapProject { Name = project.Name, Difficulties = project.Difficulties.Where(d => d.Id != result.Id).Append(result).ToList() };
         check.Validate();
-        foreach (var d in check.Difficulties)
-            if (d.Document.CollaborationReferences is { Count: > 0 } references) CollaborationMapping.ValidateReferences(check, d.Id, references);
-        return (result, resources);
+        return (result, resources, unassignedSections);
+    }
+
+    private static int UnassignUnavailableSections(MapDocument document, HashSet<Guid> availableReferences)
+    {
+        if (document.CollaborationReferences is not { } references) return 0;
+        int count = 0;
+        for (int i = 0; i < references.Count; i++)
+        {
+            var reference = references[i];
+            if (reference.DifficultyId == Guid.Empty || availableReferences.Contains(reference.DifficultyId)) continue;
+            references[i] = reference with { DifficultyId = Guid.Empty };
+            count++;
+        }
+        return count;
     }
 }

@@ -1701,6 +1701,7 @@
   "fad.wrongProject": "この難易度は開いているプロジェクトに属していません。",
   "fad.nameConflict": "同名の難易度が存在するか、難易度数の上限に達しています。",
   "fad.imported": "難易度をインポートしました: {0}",
+  "fad.unassignedSections": "{0}。未割り当てになった共同制作セクション：{1} 件。",
   "faz.export": "プロジェクトをエクスポート (.faz)…",
   "faz.completeDescription": "FA の編集データとリソース、および osu! ビートマップセット。",
   "faz.projectDescription": "FruitsAtelier 用の FA 編集データとリソース。",
