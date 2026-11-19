@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private int hitsoundingBrush = 2;
-    private bool hitsoundingAllowNotes => !hitsoundingLocked[0];
+    private bool hitsoundingAllowNotes => !HitsoundingLaneLocked(0);
     private float hitsoundingToolsWidth;
     private readonly Rect[] hitsoundingToolButtons = new Rect[5];
     internal Rect HitsoundingToolBounds(int index) => hitsoundingToolButtons[index];
@@ -43,7 +43,11 @@ public sealed partial class EditorView
     private void SetHitsoundingTool(bool draw)
     {
         CancelInteraction();
-        hitsoundingDraw = draw;
+        if (hitsoundingDraw != draw)
+        {
+            EditingPreferences.HitsoundingDraw = draw;
+            SaveMapEditingPreferences();
+        }
     }
     private void SetHitsoundingBrush(int bank)
     {

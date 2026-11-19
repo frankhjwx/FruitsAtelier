@@ -1,10 +1,10 @@
 # FruitsAtelier
 
-User Manual | Version 1.4.8
+User Manual | Version 1.4.9
 
 ## Using this manual
 
-This manual describes FruitsAtelier v1.4.8. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
+This manual describes FruitsAtelier v1.4.9. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
 
 ### Choose an editing canvas
 
@@ -1005,7 +1005,11 @@ Linking preserves editable project data and reviews differences against the loca
 
 Use **File → Export as .fad…** or the difficulty tab menu. Open the corresponding project before importing a FAD. It does not create a standalone Library project. Open, drop or use **File → Import difficulty (.fad)…** in that project.
 
-An existing matched difficulty enters merge review; a missing difficulty can be added. Objects and FA settings are reviewed together; metadata and timing have separate choices. Review the merged difficulty, then save or export it. Export includes unsaved work without changing the local Songs association. FAD contains only difficulty data; audio and other resource files must already be available in the receiving project.
+An existing matched difficulty enters merge review, and a missing difficulty can be added. Objects and FA settings are reviewed together, with separate choices for metadata and timing. Review the merged difficulty, then save or export it. Export includes unsaved work and preserves the local Songs association. Current FAD exports contain difficulty data. The receiving project supplies audio and other resources for playback.
+
+The editor matches an existing difficulty first by its internal identity, then by a unique online `BeatmapID`, then by its name within the same song. A data-only FAD can be imported before the project has a resource directory. Older FADs that carry resource files need a destination for those files.
+
+Collaboration sections keep their time ranges. A section stays linked when the receiving project has the referenced difficulty with the same internal identity. Otherwise, the section becomes unassigned and the editor reports it while importing the difficulty.
 
 ### Choose the appropriate file
 
@@ -1171,11 +1175,13 @@ On **Colour palette**, choose 3–8 colours and generate a proposal from the cur
 
 ## Hitsounding workspace
 
-Switch to Hitsounding for sound tracks and **Timing Helper**. Audible tracks use green mute controls; muted tracks use grey. Lock controls are teal when unlocked and pale red when locked. Locked tracks have a pale red background. Locks protect editing and do not mute sound. A selection rectangle can start in a locked track and select sound tags in unlocked tracks. Selecting sound tags leaves the Notes graphics unhighlighted.
+Switch to Hitsounding for sound tracks and **Timing Helper**. Audible tracks use green mute controls; muted tracks use grey. Lock controls are teal when unlocked and pale red when locked. Locked tracks have a pale red background. Locks protect editing and do not mute sound. A selection rectangle can start in a locked track and select sound tags in unlocked tracks. Press F to toggle the Notes highlights for the selected sound tags. Mute, lock, tool and timeline display settings are saved locally for each difficulty.
 
 Move selected Notes, additions or SB sounds with half-opacity destination previews; originals remain visible until release. Addition groups move only when every sound has a destination fruit event. Drag a selected addition group in either Select or Draw mode. Escape cancels, and a completed move is one undo step. Navigation remains available during drags and marquees; holding the pointer at a lane edge scrolls the timeline. Middle-drag pans time, Ctrl+wheel changes Snap and Alt+wheel zooms around the pointer.
 
-Use the upper-left **Sampleset** and **Additions** selectors for placement defaults. Auto Sampleset inherits timing; Auto Additions follows the Normal bank. Placing another addition on a note preserves its existing shared addition bank. The left bank buttons and Q/A/S/D modify selected events only. Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum, and Ctrl+Q/W/E/R sets Additions; hover hints reflect custom bindings. W/E/R addition toggles have no default bindings in Hitsounding.
+Use the upper-left **Sampleset** and **Additions** selectors for placement defaults. Auto Sampleset inherits timing and Auto Additions follows the Normal bank. Placing another addition on a note preserves its existing shared addition bank. The left bank buttons and Q/A/S/D modify selected events only. Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum, and Ctrl+Q/W/E/R sets Additions. Hover hints reflect custom bindings.
+
+W/E/R toggles Whistle/Finish/Clap on selected Notes or on the selected fruit event in the sound tracks when the corresponding addition track is unlocked. In Notes, click a slider's head, repeat marker or tail to highlight and edit that edge. Click the body to select the whole slider.
 
 Unavailable sample files are skipped during playback. Library audition and file-operation failures leave editing available; operation errors appear in the status bar.
 
@@ -1239,7 +1245,11 @@ In the Hitsounding workspace, **5** adds an inherited timing point at the playhe
 Left/Right and Shift+Left/Right follow Mapping navigation for the active Default/lazer profile,
 including during drags. J/K moves the unlocked Notes, addition or SB selection by one Snap step.
 Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum; Ctrl+Q/W/E/R sets Additions.
-Q/A/S/D changes selected banks only. Addition toggle commands have no default keys here.
+Ctrl+Left/Right selects the previous or next sound-editable note beyond the
+current selection, including slider repeats. Slider ticks and SB samples are skipped.
+Q/A/S/D changes selected banks only. W/E/R toggles Whistle/Finish/Clap on selected
+Notes, including a selected slider edge, or on the selected fruit event in the
+sound tracks. The corresponding addition track must be unlocked.
 Customize these bindings in Settings; selector hover hints show the active bindings.
 See [Hitsounding controls](HITSOUNDS.md) and [Mapping command coverage](HITSOUND_MAPPING_PARITY.md)
 for navigation, selection, volume ramps and timing drafts.
@@ -1435,7 +1445,7 @@ dialogs and active gestures.
 | Shift+wheel | Seek four times the normal wheel distance. During marquee selection, wheel seeking remains single-step. |
 | Ctrl+wheel over canvas or either timeline | Double / halve the current divisor within supported choices, stopping at the family boundary. |
 | Alt+wheel over canvas | Scale X and Y together around the pointer's time, including when uniform scaling is unlocked. |
-| Alt+wheel over bottom overview | Adjust the selected volume channel by five percentage points and show the volume overlay. |
+| Alt+wheel across the editor, including Catch Preview and the bottom overview | Adjust the selected Master, Music or Effect channel by five percentage points and show the volume overlay. Dedicated zoom surfaces keep their zoom binding. Library and Settings keep their normal scrolling. |
 | Alt+wheel over object timeline | Zoom that timeline independently. |
 | Alt+wheel over Timing waveform | Zoom the waveform time scale. Ctrl+wheel on the waveform currently does nothing. |
 | Ctrl+Alt+wheel over canvas or object timeline | Wheel down advances Select → Fruit → FSlider → Banana Shower; wheel up reverses this cycle. |

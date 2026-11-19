@@ -23,10 +23,18 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 ## Hitsounding
 
 In the Hitsounding workspace, **5** adds an inherited timing point at the playhead.
+**F** toggles Notes highlights for the selected sound tags.
+**Ctrl+Left/Right** selects the previous or next sound-editable note beyond the
+current selection. Slider repeats count as notes. Slider ticks and SB samples
+are skipped. With no selection, the keys seek bookmarks in Default or parent
+starts in Lazer. **Alt+Shift+Left/Right** in Default and **Alt+Left/Right** in
+Lazer seek bookmarks even with a selection.
 Left/Right and Shift+Left/Right follow Mapping navigation for the active Default/lazer profile,
 including during drags. J/K moves the unlocked Notes, addition or SB selection by one Snap step.
 Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum; Ctrl+Q/W/E/R sets Additions.
-Q/A/S/D changes selected banks only. Addition toggle commands have no default keys here.
+Q/A/S/D changes selected banks only. W/E/R toggles Whistle/Finish/Clap on selected
+Notes, including a selected slider edge, or on the selected fruit event in the
+sound tracks. The corresponding addition track must be unlocked.
 Customize these bindings in Settings; selector hover hints show the active bindings.
 See [Hitsounding controls](HITSOUNDS.md) and [Mapping command coverage](HITSOUND_MAPPING_PARITY.md)
 for navigation, selection, volume ramps and timing drafts.
@@ -222,7 +230,7 @@ dialogs and active gestures.
 | Shift+wheel | Seek four times the normal wheel distance. During marquee selection, wheel seeking remains single-step. |
 | Ctrl+wheel over canvas or either timeline | Double / halve the current divisor within supported choices, stopping at the family boundary. |
 | Alt+wheel over canvas | Scale X and Y together around the pointer's time, including when uniform scaling is unlocked. |
-| Alt+wheel over bottom overview | Adjust the selected volume channel by five percentage points and show the volume overlay. |
+| Alt+wheel across the editor, including Catch Preview and the bottom overview | Adjust the selected Master, Music or Effect channel by five percentage points and show the volume overlay. Dedicated zoom surfaces keep their zoom binding. Library and Settings keep their normal scrolling. |
 | Alt+wheel over object timeline | Zoom that timeline independently. |
 | Alt+wheel over Timing waveform | Zoom the waveform time scale. Ctrl+wheel on the waveform currently does nothing. |
 | Ctrl+Alt+wheel over canvas or object timeline | Wheel down advances Select → Fruit → FSlider → Banana Shower; wheel up reverses this cycle. |

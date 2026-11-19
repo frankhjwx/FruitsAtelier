@@ -308,20 +308,20 @@ public sealed partial class EditorView
     {
         if (hitsoundingNoteLookup.TryGetValue((setting.SourceId, setting.EventIndex), out var note))
         {
-            if (note.Kind == CatchObjectKind.Droplet && hitsoundingLocked[5]) return;
+            if (note.Kind == CatchObjectKind.Droplet && HitsoundingLaneLocked(5)) return;
             var original = hitsoundingResolver!.EventSettings(note);
             var sample = setting.Sample;
             var inherited = setting.InheritedFields;
             bool lockedAddition = false;
             for (int lane = 2; lane <= 4; lane++)
             {
-                if (!hitsoundingLocked[lane]) continue;
+                if (!HitsoundingLaneLocked(lane)) continue;
                 int flag = 1 << (lane - 1);
                 sample = sample with { Additions = (sample.Additions & ~flag) | (original.Sample.Additions & flag) };
                 lockedAddition |= (original.Sample.Additions & flag) != 0;
             }
             void Preserve(InheritedSampleFields field) => inherited = (inherited & ~field) | (original.InheritedFields & field);
-            if (hitsoundingLocked[1]) { sample = sample with { NormalSet = original.Sample.NormalSet }; Preserve(InheritedSampleFields.NormalSet); }
+            if (HitsoundingLaneLocked(1)) { sample = sample with { NormalSet = original.Sample.NormalSet }; Preserve(InheritedSampleFields.NormalSet); }
             if (lockedAddition)
             {
                 sample = sample with { AdditionSet = original.Sample.AdditionSet }; Preserve(InheritedSampleFields.AdditionSet);
@@ -332,7 +332,7 @@ public sealed partial class EditorView
                     inherited &= ~InheritedSampleFields.AdditionSet;
                 }
             }
-            if (hitsoundingLocked[1] || lockedAddition)
+            if (HitsoundingLaneLocked(1) || lockedAddition)
             {
                 sample = sample with { Index = original.Sample.Index, Volume = original.Sample.Volume, FileName = original.Sample.FileName };
                 Preserve(InheritedSampleFields.Index | InheritedSampleFields.Volume);
@@ -352,6 +352,7 @@ public sealed partial class EditorView
     private void SelectHitsoundingNote(ConvertedCatchObject note, bool seek)
     {
         if (!CommitField()) return;
+        hitsoundingHighlightedNotes.Clear();
         hitsoundingSelectedTiming = null;
         PickObject(note.SourceId, false); PickSoundEdge(note);
         hitsoundingSelected = (note.SourceId, note.EventIndex);
@@ -413,7 +414,7 @@ public sealed partial class EditorView
         }
         if (!hitsoundingGridBounds.Contains(x, y)) return false;
         int pointerLane = Math.Clamp((int)((y - hitsoundingGridBounds.Y) / (hitsoundingGridBounds.Height / 7)), 0, 6);
-        if (hitsoundingLocked[pointerLane])
+        if (HitsoundingLaneLocked(pointerLane))
         {
             if (button == 0 && CommitField())
             {
@@ -450,7 +451,7 @@ public sealed partial class EditorView
                 if (keys.All(hitsoundingMultiSelection.Contains)) hitsoundingMultiSelection.ExceptWith(keys);
                 else hitsoundingMultiSelection.UnionWith(keys);
             }
-            if (note is not null) SyncHitsoundingNoteSelection(note);
+            if (note is not null) SyncHitsoundingNoteSelection(note, highlightNotes: hitsoundingHighlightedNotes.Count > 0);
             return true;
         }
         var placement = lane is >= 2 and <= 4 && note is null && button == 0
@@ -474,14 +475,14 @@ public sealed partial class EditorView
             hitsoundingMoveTime = pressedSound.Note.TimeMs;
             hitsoundingMovePointerTime = HitsoundingPointerTime(x);
             hitsoundingMoveSources = hitsoundingMultiSelection.Where(k => k.Lane is >= 2 and <= 4
-                && !hitsoundingLocked[k.Lane] && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event))).ToArray();
+                && !HitsoundingLaneLocked(k.Lane) && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event))).ToArray();
             hitsoundingMoveCopies = hitsoundingMoveSources.Select(k =>
             {
                 var selected = hitsoundingNoteLookup[(k.Id, k.Event)];
                 return new HitsoundingCopy(selected.TimeMs - hitsoundingMoveTime, k.Lane, hitsoundingResolver!.Describe(selected),
                     HitsoundingTimingIndex(selected.TimeMs), hitsoundingResolver.EventSettings(selected).InheritedFields.HasFlag(InheritedSampleFields.Index));
             }).ToArray();
-            SyncHitsoundingNoteSelection(pressedSound.Note);
+            SyncHitsoundingNoteSelection(pressedSound.Note, highlightNotes: selectedGroup && hitsoundingHighlightedNotes.Count > 0);
             return true;
         }
         if (note is not null) SelectHitsoundingNote(note, seek: false);
@@ -528,11 +529,36 @@ public sealed partial class EditorView
     }
     private void ToggleHitsoundingAddition(int flag)
     {
-        if (hitsoundingLocked[flag == 2 ? 2 : flag == 4 ? 3 : 4]) return;
-        if (HitsoundingSelectedNote is not { Kind: CatchObjectKind.Fruit } note) return;
-        var setting = hitsoundingResolver!.EventSettings(note);
-        setting = setting with { Sample = setting.Sample with { Additions = setting.Sample.Additions ^ flag } };
-        Edit(L.Get("assist.soundChange"), () => SetHitsoundingEvent(setting));
+        if (HitsoundingLaneLocked(flag == 2 ? 2 : flag == 4 ? 3 : 4)) return;
+        if (hitsoundingResolver is not { } resolver) return;
+        EventHitsound[] targets;
+        if (hitsoundingNotesSelection)
+        {
+            if (!hitsoundingAllowNotes || hitsoundingNoteGesture != HitsoundingNoteGesture.None) return;
+            int? edge = SoundEdge(selection);
+            IEnumerable<ConvertedCatchObject> selectedNotes = hitsoundingHighlightedNotes.Count > 0 && HitsoundingSelectedNote is { } exactNote
+                ? [exactNote]
+                : objectSelection.Where(CanSelectCollaborationObject).SelectMany(id => hitsoundingParentNotes.GetValueOrDefault(id) ?? []);
+            targets = selectedNotes
+                .Where(note => note.Kind == CatchObjectKind.Fruit)
+                .Select(resolver.EventSettings)
+                .Where(setting => edge is null || setting.EdgeIndex == edge)
+                .ToArray();
+        }
+        else if (HitsoundingSelectedNote is { Kind: CatchObjectKind.Fruit } note)
+            targets = [resolver.EventSettings(note)];
+        else return;
+
+        if (targets.Length == 0) return;
+        bool enable = targets.Any(setting => (setting.Sample.Additions & flag) == 0);
+        Edit(L.Get("assist.soundChange"), () =>
+        {
+            foreach (var setting in targets)
+            {
+                int additions = enable ? setting.Sample.Additions | flag : setting.Sample.Additions & ~flag;
+                SetHitsoundingEvent(setting with { Sample = setting.Sample with { Additions = additions } });
+            }
+        });
     }
     private bool MoveHitsoundingCanvasPointer(float x, float y)
     {
@@ -562,7 +588,12 @@ public sealed partial class EditorView
     {
         if (EndHitsoundingNotesPointer()) return true;
         if (EndHitsoundingTimingPointer()) return true;
-        if (hitsoundingHeadDrag) { hitsoundingHeadDrag = false; return true; }
+        if (hitsoundingHeadDrag)
+        {
+            hitsoundingHeadDrag = false;
+            if (hitsoundingHeadRatio != hitsoundingHeadBefore) SaveHitsoundingViewPosition();
+            return true;
+        }
         if (EndHitsoundingStoryboardMove()) return true;
         if (EndHitsoundingSoundMove()) return true;
         if (hitsoundingMarquee)

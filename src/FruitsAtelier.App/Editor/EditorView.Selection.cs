@@ -51,6 +51,7 @@ public sealed partial class EditorView
 
     private void SelectObjects(IEnumerable<Guid> ids, Guid primary = default)
     {
+        hitsoundingHighlightedNotes.Clear();
         soundEdge = null; distanceObject = null; clickedCoordinate = null; timelineFruit = null;
         var selected = ids.Where(CanSelectSlider).Distinct().ToArray();
         if (temporarySnapSource != Guid.Empty && (selected.Length != 1 || selected[0] != temporarySnapSource)) RestoreTemporarySnap();

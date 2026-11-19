@@ -37,13 +37,14 @@ public static class FazArchive
 {
     private static readonly object ImportGate = new();
     private const long Limit = 1024L * 1024 * 1024;
+    private const string ProjectFormat = "FruitsAtelier";
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow };
     public static bool IsPackage(string path) => Path.GetExtension(path).Equals(".faz", StringComparison.OrdinalIgnoreCase);
     private static string Temporary(string workspace) => FazStaging.Create(workspace);
     public static void CleanupTemporaryFiles(string workspace) => FazStaging.Cleanup(workspace);
 
     public static void Export(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace)
-        => ExportPackage(snapshot, destination, complete, compensate, workspace, "FruitsAtelier");
+        => ExportPackage(snapshot, destination, complete, compensate, workspace, ProjectFormat);
 
     internal static void ExportPackage(BeatmapProject snapshot, string destination, bool complete, bool compensate, string workspace, string format, bool includeResources = true)
     {
@@ -71,7 +72,7 @@ public static class FazArchive
                         BeatmapResources.Copy(d, resources, d);
                         LibraryOperations.CopyArchiveExtras(d, resources);
                     }
-                    File.WriteAllText(Path.Combine(resources, ".fa-resource"), "FruitsAtelier resource root");
+                    File.WriteAllText(Path.Combine(resources, WorkspaceProject.ResourceRootMarker), "FruitsAtelier resource root");
                 }
                 string? audio = OsuBeatmapReader.Setting(d, "General", "AudioFilename");
                 if (!includeResources) d.AudioPath = null;
@@ -80,7 +81,7 @@ public static class FazArchive
                     if (string.IsNullOrWhiteSpace(audio) || !File.Exists(d.AudioPath)) throw new IOException(L.Get("faz.missingAudio"));
                     d.AudioPath = BeatmapArchive.Within(resources, BeatmapArchive.ValidateRelativePath(audio));
                 }
-                d.SourcePath = Path.Combine(resources, complete ? WorkspaceProject.DifficultyFileName(d, difficulty.Name, ".osu") : ".fa-resource");
+                d.SourcePath = Path.Combine(resources, complete ? WorkspaceProject.DifficultyFileName(d, difficulty.Name, ".osu") : WorkspaceProject.ResourceRootMarker);
             }
             // Package references use slash separators on every host; workspace saves use native paths.
             foreach (var diff in project.Difficulties)
@@ -104,11 +105,13 @@ public static class FazArchive
     }
 
     public static FazPackage Prepare(string path, LibrarySettings settings, bool discoverAssociations = true)
-        => PreparePackage(path, settings, discoverAssociations, "FruitsAtelier");
+        => PreparePackage(path, settings, discoverAssociations, ProjectFormat);
 
     internal static FazPackage PreparePackage(string path, LibrarySettings settings, bool discoverAssociations, string format)
     {
-        Recover(settings);
+        bool importingProject = format == ProjectFormat;
+        if (importingProject) Recover(settings);
+        else CleanupTemporaryFiles(settings.Workspace);
         string staging = Temporary(settings.Workspace);
         try
         {
@@ -137,9 +140,9 @@ public static class FazArchive
                     || !WorkspaceSynchronization.Paths.Equals(Path.GetDirectoryName(d.SourcePath), root)
                     || d.AudioPath is { } a && (!WorkspaceProject.Within(root, a) || !File.Exists(a))) throw Invalid();
             }
-            string? existing = Directory.EnumerateDirectories(settings.Workspace)
+            string? existing = importingProject ? Directory.EnumerateDirectories(settings.Workspace)
                 .FirstOrDefault(p => File.Exists(Path.Combine(p, WorkspaceProject.ManifestName))
-                    && WorkspaceProject.ReadManifest(p, includeSync: false).ArchiveFingerprint == fingerprint);
+                    && WorkspaceProject.ReadManifest(p, includeSync: false).ArchiveFingerprint == fingerprint) : null;
             var package = new FazPackage { Directory = staging, Fingerprint = fingerprint, Manifest = manifest, Project = project, ExistingProject = existing };
             if (discoverAssociations) ApplyAssociations(package, FindAssociations(package, settings, refreshLibrary: true));
             return package;

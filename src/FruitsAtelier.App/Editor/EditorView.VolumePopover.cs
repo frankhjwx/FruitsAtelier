@@ -10,8 +10,9 @@ public sealed partial class EditorView
     private int volumePopoverDrag = -1;
     private readonly HashSet<int> volumeShortcutKeys = [];
     private int volumeChannel;
-    private bool CanUseVolumePopover => !librarySettingsOpen && !LibraryVisible && !ExportVisible && !updatesPage
-        && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible
+    private bool CanUseVolumeWheel => !librarySettingsOpen && !LibraryVisible && !FirstRunSetupVisible && !ErrorVisible;
+    private bool CanUseVolumePopover => CanUseVolumeWheel && !ExportVisible && !updatesPage
+        && !DiscardConfirmationVisible && !SliderDialogVisible
         && !SongSetupVisible && !DistanceSnapDialogVisible && !VolumeDialogVisible
         && !(RotationVisible || TimeJumpVisible) && !BananaEditVisible && !StreamDialogVisible && !MergeDialogVisible && !IsEditingText && drag == DragKind.None;
 
@@ -55,7 +56,7 @@ public sealed partial class EditorView
     private void AdvanceVolumePopover()
     {
         if (!volumePopoverOpen) return;
-        if (!CanUseVolumePopover) { CloseVolumePopover(); return; }
+        if (!CanUseVolumeWheel) { CloseVolumePopover(); return; }
         if (volumePopoverDrag >= 0 || volumeShortcutKeys.Count > 0
             || VolumePopoverBounds.Contains(mouseX, mouseY)
             || !IsTestplaying && VolumeButtonBounds.Contains(mouseX, mouseY))
@@ -68,6 +69,11 @@ public sealed partial class EditorView
     {
         if (!CanUseVolumePopover) return;
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
+        ShowVolumePopover();
+    }
+
+    private void ShowVolumePopover()
+    {
         volumePopoverOpen = true;
         volumePopoverOpenedMs = volumePopoverTouchedMs = VolumeNowMs;
     }
@@ -177,8 +183,8 @@ public sealed partial class EditorView
 
     private void AdjustVolumeWheel(float delta)
     {
-        if (delta == 0 || !CanUseVolumePopover) return;
-        if (!volumePopoverOpen) OpenVolumePopover();
+        if (delta == 0) return;
+        if (!VolumePopoverVisible) ShowVolumePopover();
         int value = VolumeChannelValue(volumeChannel) + (delta > 0 ? 5 : -5);
         SetVolumeChannel(volumeChannel, Math.Clamp(value, 0, 100));
         RequestAudioPreference?.Invoke();

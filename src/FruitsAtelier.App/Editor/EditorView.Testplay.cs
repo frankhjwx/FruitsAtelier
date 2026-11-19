@@ -293,6 +293,7 @@ public sealed partial class EditorView
         if (virtualKey == 119) audioDiagnosticMarkerHeld = false;
         if (virtualKey == 13) fullscreenShortcutHeld = false;
         if (virtualKey == 84) timingTapHeld = false;
+        if (virtualKey == 'F') hitsoundingHighlightHeld = false;
         ReleaseVolumeShortcut(virtualKey);
         if (virtualKey is 17 or 162 or 163) placementCtrl = false;
         if (virtualKey == 27) testplayEscapeConsumed = false;
@@ -354,8 +355,8 @@ public sealed partial class EditorView
                     20, 0xE6F2FF, stage.Width, true, opacity);
             }
         }
-        DrawVolumePopover(c);
         DrawTestplayOverlays(c);
+        DrawVolumePopover(c);
         DrawTestplayCursor(c);
         if (testplayQuickRetryAt is double retryAt)
             c.Fill(new(0, 0, width, height), 0,

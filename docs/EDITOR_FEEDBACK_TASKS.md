@@ -27,7 +27,7 @@ The first table defines the accepted editor feedback scope. The [feedback backlo
 | Ctrl+M | Cycle 1/3 → 1/4 → 1/6 → 1/8. |
 | Ctrl+wheel | Double/halve Snap within the current supported family on canvas and timelines; stop at boundaries. |
 | Shift+wheel | Seek four times the normal wheel distance. |
-| Alt+wheel over bottom timeline | Adjust the current volume channel. |
+| Alt+wheel outside dedicated zoom surfaces in the editor | Adjust the selected volume channel. See [key bindings](KEY_BINDINGS.md). |
 | Alt+wheel over canvas | Zoom canvas. |
 | Alt+wheel over upper timeline | Zoom object timeline. |
 | Ctrl+Alt+wheel over canvas/upper timeline | Cycle placement tools. |

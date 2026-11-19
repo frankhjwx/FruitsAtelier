@@ -8,7 +8,7 @@ public sealed partial class EditorView
 {
     public Action<int>? RequestFadExport { get; set; }
     public Action? RequestFadImport { get; set; }
-    private (ProjectDifficulty Difficulty, HitsoundResourcePlan Resources)? fadPending;
+    private (ProjectDifficulty Difficulty, HitsoundResourcePlan Resources, int UnassignedSections)? fadPending;
 
     public ProjectDifficulty CaptureDifficulty(int index)
     {
@@ -50,13 +50,19 @@ public sealed partial class EditorView
             var (plan, merge, comparison) = task.GetAwaiter().GetResult();
             if (merge is not null)
             {
-                if (comparison is null) { SetNotice(L.Get("sync.state.Current")); return; }
+                if (comparison is null)
+                {
+                    if (plan.Resources.DisplayNames.Count > 0)
+                        ApplyFad(snapshot.Difficulties.Single(d => d.Id == plan.Difficulty.Id), plan.Resources, plan.UnassignedSections);
+                    else SetFadNotice(L.Get("sync.state.Current"), plan.UnassignedSections);
+                    return;
+                }
                 fadPending = plan;
                 syncMerges[plan.Difficulty.Id] = merge; syncComparisons[plan.Difficulty.Id] = comparison;
                 BeginSyncReview(difficulties.FindIndex(d => d.Id == plan.Difficulty.Id));
                 return;
             }
-            ApplyFad(plan.Difficulty, plan.Resources);
+            ApplyFad(plan.Difficulty, plan.Resources, plan.UnassignedSections);
         });
     }
 
@@ -64,6 +70,7 @@ public sealed partial class EditorView
     {
         if (fadPending is not { } pending || !syncMerges.TryGetValue(pending.Difficulty.Id, out var merge)) return;
         var choices = merge.Conflicts.ToDictionary(c => c.Key, c => useIncoming ?? syncChoices.GetValueOrDefault(c.Key));
+        if (!choices.Values.Any(v => v)) { ClearFadReview(); return; }
         bool compensate = CompensateTinyDroplets;
         var task = Task.Run(() =>
         {
@@ -74,14 +81,10 @@ public sealed partial class EditorView
         syncPage = null;
         StartFazTask(task, () =>
         {
-            var result = task.GetAwaiter().GetResult();
-            bool importing = choices.Values.Any(v => v);
+            pending.Difficulty.Document = task.GetAwaiter().GetResult();
+            ApplyFad(pending.Difficulty, pending.Resources,
+                choices.GetValueOrDefault("$objects:native") ? pending.UnassignedSections : 0);
             ClearFadReview();
-            if (importing)
-            {
-                pending.Difficulty.Document = result;
-                ApplyFad(pending.Difficulty, pending.Resources);
-            }
         }, () => { if (fadPending is not null) syncPage = "resolve"; });
     }
 
@@ -94,13 +97,11 @@ public sealed partial class EditorView
         hits.Clear(); fields.Clear();
     }
 
-    private void ApplyFad(ProjectDifficulty incoming, HitsoundResourcePlan resources)
+    private void ApplyFad(ProjectDifficulty incoming, HitsoundResourcePlan resources, int unassignedSections)
     {
         var check = CaptureProject();
         check.Difficulties.RemoveAll(d => d.Id == incoming.Id); check.Difficulties.Add(incoming);
         check.Validate();
-        foreach (var d in check.Difficulties)
-            if (d.Document.CollaborationReferences is { Count: > 0 } references) CollaborationMapping.ValidateReferences(check, d.Id, references);
         int index = difficulties.FindIndex(d => d.Id == incoming.Id);
         resources.Apply();
         try
@@ -119,6 +120,11 @@ public sealed partial class EditorView
         syncStatuses.Remove(incoming.Id); syncMerges.Remove(incoming.Id); syncComparisons.Remove(incoming.Id);
         resourceSnapshot = null; resourceReferences = null;
         ResetHitsounds(); PreloadProjectHitsounds(); RequestDifficultyChanged?.Invoke();
-        SetNotice(L.Get("fad.imported", incoming.Name));
+        SetFadNotice(L.Get("fad.imported", difficulties[index].Name), unassignedSections);
+    }
+
+    private void SetFadNotice(string message, int unassignedSections)
+    {
+        SetNotice(unassignedSections > 0 ? L.Get("fad.unassignedSections", message, unassignedSections) : message);
     }
 }

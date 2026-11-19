@@ -41,7 +41,7 @@ internal static class HitsoundingNavigationTests
         foreach (string language in new[] { "en", "zh-CN" })
         {
             L.SetLanguage(language);
-            Navigation(); PanAndZoom(); NotesDrag(); SoundDragAndNudge(); EdgeScroll(); TimingDrag();
+            Navigation(); SelectAdjacentNotes(); PanAndZoom(); NotesDrag(); SoundDragAndNudge(); EdgeScroll(); TimingDrag();
         }
         L.SetLanguage("en");
         Console.WriteLine("PASS Hitsounding pan, bounded zoom, navigation parity, held edits, edge speed and group nudges");
@@ -72,6 +72,8 @@ internal static class HitsoundingNavigationTests
             hs.View.UpdateTransport(4000, 20000, true, false, false, null, null); hs.Paint();
             Press(hs, 37, ctrl: !lazer, alt: lazer); Check(hs.View.PlayheadMs == 2000, "Previous bookmark shortcut");
             Press(hs, 39, ctrl: !lazer, alt: lazer); Check(hs.View.PlayheadMs == 8000, "Next bookmark shortcut");
+            Press(hs, 37, shift: !lazer, alt: true); Check(hs.View.PlayheadMs == 2000, "Dedicated bookmark shortcut remains available");
+            Press(hs, 39, shift: !lazer, alt: true); Check(hs.View.PlayheadMs == 8000, "Dedicated bookmark shortcut works in both directions");
             var r = hs.View.HitsoundingNotesLaneBounds;
             hs.View.Wheel(r.X + 50, r.Y + 10, 120, true, false, false); hs.Paint();
             double previous = hs.View.PlayheadMs;
@@ -80,6 +82,92 @@ internal static class HitsoundingNavigationTests
             hs.View.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(85)];
             Press(hs, 85); Check(hs.View.PlayheadMs == 0, "Navigation command can be rebound");
             Check(baseline.ContentEquals(hs.View.Document) && ReferenceEquals(conversion, hs.View.Conversion), "Navigation preserves content and conversion");
+        }
+    }
+    private static void SelectAdjacentNotes()
+    {
+        foreach (bool lazer in new[] { false, true })
+        {
+            var map = OsuBeatmapReader.Read("""
+                osu file format v14
+                [General]
+                Mode:2
+                [Difficulty]
+                SliderMultiplier:1
+                SliderTickRate:2
+                [TimingPoints]
+                0,500,4,1,0,100,1,0
+                [HitObjects]
+                256,192,1000,1,0,0:0:0:0:
+                128,192,1250,1,14,0:0:0:0:
+                256,192,1500,2,0,L|456:192,2,200
+                256,192,5100,1,0,0:0:0:0:
+                """);
+            map.DurationMs = 8000;
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900);
+            ui.View.LibrarySettings.LazerEditing = lazer; ui.View.ShowHitsoundingPage();
+            ui.View.UpdateTransport(2000, 8000, true, false, false, null, null); ui.Paint();
+            var baseline = ui.View.Document.DeepClone(); var conversion = ui.View.Conversion;
+            var slider = map.ImportedSliders.Single().Id;
+            var edges = conversion.Objects.Where(note => note.SourceId == slider && note.Kind == CatchObjectKind.Fruit).ToArray();
+            Check(edges.Length == 3 && conversion.Objects.Any(note => note.Kind == CatchObjectKind.Droplet), "Repeat and tick fixtures are present");
+            var ticks = HitsoundingPanelTests.LaneBlocks(ui, 5);
+            var normal = HitsoundingPanelTests.LaneBlocks(ui, 1);
+            Click(ticks[0]);
+            Press(ui, 39, ctrl: true);
+            Check(!HasNoteHighlight(edges[1].TimeMs) && ui.View.PlayheadMs == 2000, "A slider tick alone cannot anchor selection navigation");
+
+            Click(normal[0]); Click(normal[2], ctrl: true); Click(ticks[^1], ctrl: true);
+            Press(ui, 39, ctrl: true);
+            AssertSelected(slider, edges[1].TimeMs);
+            Press(ui, 39, ctrl: true);
+            AssertSelected(slider, edges[2].TimeMs);
+            Press(ui, 39, ctrl: true);
+            AssertSelected(map.Fruits[^1].Id, 5100);
+            Check(ui.View.PlayheadMs == 5100, "An offscreen selection scrolls into view");
+            Press(ui, 39, ctrl: true);
+            AssertSelected(map.Fruits[^1].Id, 5100);
+            Press(ui, 37, ctrl: true);
+            AssertSelected(slider, edges[2].TimeMs);
+            Check(ui.View.PlayheadMs == edges[2].TimeMs, "Previous selection also reveals an offscreen note");
+
+            ui.View.UpdateTransport(2000, 8000, true, false, false, null, null); ui.Paint();
+            normal = HitsoundingPanelTests.LaneBlocks(ui, 1);
+            Click(normal[1]); Click(normal[3], ctrl: true);
+            Press(ui, 37, ctrl: true);
+            AssertSelected(map.Fruits[0].Id, 1000);
+            var command = EditorView.ShortcutCommands.Single(c => c.Scope == EditorView.ShortcutScope.Hitsounding && c.Id == "nextParent" && c.Lazer == lazer);
+            ui.View.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From('U')];
+            Press(ui, 39, ctrl: true); AssertSelected(map.Fruits[0].Id, 1000);
+            Press(ui, 'U'); AssertSelected(map.Fruits[1].Id, 1250);
+            Check(Enumerable.Range(1, 4).All(lane => HitsoundingPanelTests.SoundHighlighted(ui, lane, X(ui, 1250)))
+                && !HitsoundingPanelTests.SoundHighlighted(ui, 1, X(ui, 1000)),
+                "Keyboard selection highlights Normal, Whistle, Finish and Clap for the destination only");
+            ui.View.LibrarySettings.ShortcutBindings.Clear();
+
+            Unlock(ui);
+            var lane = ui.View.HitsoundingNotesLaneBounds;
+            ui.Click(X(ui, edges[0].TimeMs), lane.Y + lane.Height / 2);
+            Press(ui, 39, ctrl: true); AssertSelected(slider, edges[1].TimeMs);
+            Check(baseline.ContentEquals(ui.View.Document) && ReferenceEquals(conversion, ui.View.Conversion) && !ui.View.IsDirty,
+                "Selection navigation preserves beatmap content and cached conversion");
+            Press(ui, 'W');
+            Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.Additions: 2, EdgeIndex: 1 },
+                "W/E/R edits only the exact slider edge reached from the Notes lane");
+
+            void Click(FruitsAtelier.App.Rendering.Rect block, bool ctrl = false)
+            {
+                float x = block.X + block.Width / 2, y = block.Y + 8;
+                ui.View.PointerDown(x, y, 0, false, ctrl); ui.View.PointerUp(x, y, 0); ui.Paint();
+            }
+            bool HasNoteHighlight(double time) => ui.Canvas.Circles.Any(c => c.Color == 0xFFA600
+                && ui.View.HitsoundingNotesLaneBounds.Contains(c.X, c.Y) && Math.Abs(c.X - X(ui, time)) < 1);
+            void AssertSelected(Guid id, double time)
+            {
+                Check(ui.View.SelectedObjectIds.SequenceEqual(new[] { id }) && HasNoteHighlight(time),
+                    $"Expected selection at {time} ms in the {(lazer ? "Lazer" : "Default")} profile");
+                Check(HitsoundingPanelTests.SoundHighlighted(ui, 1, X(ui, time)), "The selected note highlights its Normal sound tag");
+            }
         }
     }
     private static void PanAndZoom()

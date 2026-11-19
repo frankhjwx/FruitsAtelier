@@ -26,16 +26,40 @@ internal static class HitsoundingPanelTests
             {
                 ui.Key(49); var selected = LaneBlocks(ui, 1)[0];
                 ui.Click(selected.X + selected.Width / 2, selected.Y + 10);
-                foreach (int key in new[] { 87, 69, 82 }) ui.Key(key);
-                Check(before.ContentEquals(ui.View.Document), "Unbound W/E/R leave selected sounds unchanged");
+                void Press(char key) { ui.Key(key); ui.View.KeyUp(key); }
+                var toggles = new[] { (Key: 'W', Flag: 2), (Key: 'E', Flag: 4), (Key: 'R', Flag: 8) };
+                foreach (var (key, flag) in toggles)
+                {
+                    Press(key);
+                    Check(ui.View.Document.HitsoundOverrides.Single().Sample.Additions == flag, "W/E/R toggle their respective additions");
+                    Press(key);
+                    Check(ui.View.Document.HitsoundOverrides.All(h => h.Sample.Additions == 0), "Pressing the same key removes the addition");
+                    ui.Key(90, ctrl: true);
+                    ui.Key(90, ctrl: true);
+                    Check(before.ContentEquals(ui.View.Document), "Each toggle is undoable");
+                }
                 var command = EditorView.ShortcutCommands.Single(c => c.Scope == EditorView.ShortcutScope.Hitsounding
                     && c.Lazer == lazer && c.Id == "hitToggleWhistle");
-                Check(ui.View.CommandBindings(command).Length == 0, "Addition toggle has no default binding");
-                ui.View.LibrarySettings.ShortcutBindings[command.StorageKey] = [ShortcutBinding.From(74)];
-                ui.Key(74);
-                Check(!before.ContentEquals(ui.View.Document), "Custom addition toggle binding executes");
+                Check(ui.View.CommandBindings(command).Single().Same(ShortcutBinding.From('W')), "Whistle lists W in Key Bindings");
+                var zoom = EditorView.ShortcutCommands.Single(c => c.Scope == EditorView.ShortcutScope.Hitsounding
+                    && c.Lazer == lazer && c.Id == "hitZoomIn");
+                var bindings = ui.View.LibrarySettings.ShortcutBindings;
+                bindings[zoom.StorageKey] = [ShortcutBinding.From('W')];
+                Check(ui.View.CommandBindings(command).Length == 0, "A saved assignment takes priority over the restored default");
+                Press('W');
+                Check(LaneBlocks(ui, 1)[0].X > selected.X && before.ContentEquals(ui.View.Document), "The saved W binding zooms the timeline");
+                bindings.Remove(zoom.StorageKey);
+                ui.Key(189);
+                bindings[command.StorageKey] = [ShortcutBinding.From('H')];
+                Press('W');
+                Check(before.ContentEquals(ui.View.Document), "Reassigning Whistle disables its default key");
+                Press('H');
+                Check(ui.View.Document.HitsoundOverrides.Single().Sample.Additions == 2, "Custom Whistle binding executes");
                 ui.Key(90, ctrl: true);
-                ui.View.LibrarySettings.ShortcutBindings.Remove(command.StorageKey);
+                bindings[command.StorageKey] = [];
+                Press('W');
+                Check(before.ContentEquals(ui.View.Document), "Explicitly unassigning Whistle disables its default key");
+                bindings.Remove(command.StorageKey);
                 ui.Key(50);
             }
             var first = LaneBlocks(ui, 1)[0]; var second = LaneBlocks(ui, 1)[1];
@@ -726,6 +750,7 @@ internal static class HitsoundingPanelTests
     }
     public static void CtrlSelection()
     {
+        SoundNoteHighlights();
         var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
         foreach (int time in new[] { 1000, 1500 }) map.Fruits.Add(new() { TimeMs = time, X = 256, OriginalLine = $"256,192,{time},1,6,0:0:0:0:" });
         var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage(); ui.Paint();
@@ -754,6 +779,54 @@ internal static class HitsoundingPanelTests
         {
             float x = r.X + r.Width / 2, y = r.Y + 5;
             ui.View.PointerDown(x, y, 0, false, ctrl); ui.View.PointerUp(x, y, 0); ui.Paint();
+        }
+    }
+    private static void SoundNoteHighlights()
+    {
+        foreach (bool lazer in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+            map.Fruits.Add(new() { TimeMs = 1000, X = 256 });
+            map.Fruits.Add(new() { TimeMs = 1500, X = 256 });
+            var slider = new CurveTrack { Kind = CurveKind.Linear };
+            slider.Nodes.Add(new() { TimeMs = 2000, X = 256 });
+            slider.Nodes.Add(new() { TimeMs = 2500, X = 384 });
+            map.Tracks.Add(slider);
+            var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900);
+            ui.View.LibrarySettings.LazerEditing = lazer; ui.View.ShowHitsoundingPage(); ui.Paint();
+            var blocks = LaneBlocks(ui, 1);
+            Choose(0, false); Choose(2, true);
+            var notes = ui.View.HitsoundingNotesLaneBounds;
+            var baseline = ui.View.Document.DeepClone();
+            double playhead = ui.View.PlayheadMs;
+            var soundOutlines = ui.Canvas.Outlines.Where(o => blocks.Contains(o.Bounds)).ToArray();
+            Check(Highlights().Length == 0, "Ordinary selection highlights the sound tags");
+
+            ui.Key('F'); ui.Key('F'); ui.View.KeyUp('F');
+            Check(Highlights().SequenceEqual(new[] { Center(0), Center(2) }),
+                "F highlights only the Notes for selected tags, including the selected slider edge, even on key repeat");
+            Check(ui.Canvas.Outlines.Where(o => blocks.Contains(o.Bounds)).SequenceEqual(soundOutlines)
+                && ui.View.SelectedObjectIds.ToHashSet().SetEquals(new[] { map.Fruits[0].Id, slider.Id }),
+                "F retains the Ctrl-selected sound outlines and parents");
+
+            PressF();
+            Check(Highlights().Length == 0 && ui.Canvas.Outlines.Where(o => blocks.Contains(o.Bounds)).SequenceEqual(soundOutlines),
+                "Pressing F again restores the original sound-only selection");
+            PressF(); Choose(0, true);
+            Check(Highlights().SequenceEqual(new[] { Center(2) }), "Ctrl-click removes that tag and its Notes highlight");
+            Choose(1, false);
+            Check(Highlights().Length == 0 && baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty
+                && playhead == ui.View.PlayheadMs, "Highlighting leaves the map and transport unchanged");
+
+            void PressF() { ui.Key('F'); ui.View.KeyUp('F'); }
+            float Center(int i) => blocks[i].X + blocks[i].Width / 2;
+            float[] Highlights() => ui.Canvas.Circles.Where(dot => dot.Color == 0xFFA600 && notes.Contains(dot.X, dot.Y))
+                .Select(dot => blocks.Select((_, i) => Center(i)).Single(x => Math.Abs(x - dot.X) < 1)).Order().ToArray();
+            void Choose(int i, bool ctrl)
+            {
+                float x = Center(i), y = blocks[i].Y + 5;
+                ui.View.PointerDown(x, y, 0, false, ctrl); ui.View.PointerUp(x, y, 0); ui.Paint();
+            }
         }
     }
     public static void TransferTimingIndex()
@@ -1008,11 +1081,9 @@ internal static class HitsoundingPanelTests
         ui.ClickText(L.Get("hitsounding.showText"));
         Check(!ui.Canvas.Texts.Any(t => t.X >= blocks[0].X && t.X < blocks[0].Right && t.Y >= blocks[0].Y && t.Y < blocks[0].Bottom), "HS text toggle hides bank and index in Note based");
         Check(LaneBlocks(ui, 1).SequenceEqual(blocks) && baseline.ContentEquals(ui.View.Document), "Text visibility preserves tag geometry and map content");
-        var savedTextLayout = ui.View.CaptureDockLayouts();
-        Check(!savedTextLayout.Hitsounding!.ShowHitsoundText, "HS text visibility is captured in the workspace layout");
-        ui.ClickText(L.Get("hitsounding.showText"));
-        ui.View.LibrarySettings.DockLayouts = savedTextLayout; ui.View.RestoreDockLayouts(); ui.Paint();
-        Check(!ui.View.CaptureDockLayouts().Hitsounding!.ShowHitsoundText, "HS text visibility restores from saved layout");
+        var difficultyId = ui.View.CaptureProject().Difficulties.Single().Id;
+        Check(ui.View.LibrarySettings.MapEditingPreferences[difficultyId].HitsoundingShowText == false,
+            "HS text visibility is saved per difficulty");
         ui.ClickText(L.Get("hitsounding.showText"));
         Check(blocks.Length >= 2 && blocks.All(b => b.Width <= EditorView.HitsoundingTagWidth), "Sound tags retain the preferred width or shrink to their neighbours");
         Check(ui.Canvas.Circles.Any(d => Math.Abs(blocks[0].X + blocks[0].Width / 2 - d.X) < .1), "Sound tag centers match their note timestamps");
@@ -1039,7 +1110,7 @@ internal static class HitsoundingPanelTests
         Check(!ui.Canvas.Texts.Any(t => t.X >= precise[0].X && t.X < precise[0].Right && t.Y >= precise[0].Y && t.Y < precise[0].Bottom)
             && ui.Canvas.Lines.Any(l => l.Color == 0x65BF8A && l.X1 >= precise[0].X && l.X1 < precise[0].Right && l.Y1 > precise[0].Y && l.Y2 < precise[0].Bottom), "Precise HS hides text while retaining its waveform");
         ui.ClickText(L.Get("hitsounding.showText"));
-        Check(ui.View.CaptureDockLayouts().Hitsounding!.PreciseHitsounds, "Display mode is captured in the Hitsounding layout");
+        Check(ui.View.LibrarySettings.MapEditingPreferences[difficultyId].HitsoundingPrecise == true, "Display mode is saved per difficulty");
         ui.ClickText(L.Get("hitsounding.noteBased"));
         Check(ReferenceEquals(conversion, ui.View.Conversion) && !ui.View.IsDirty, "Display modes reuse conversion without content history");
         ui.View.Wheel(anchorX, anchorY, -600, false, false, true); ui.Paint();
@@ -1214,6 +1285,8 @@ internal static class HitsoundingPanelTests
         ui.ClickText(L.Get("hitsounding.precise")); Wait(2);
         var baseline = ui.View.Document.DeepClone(); double time = ui.View.PlayheadMs;
         var first = Blocks()[0]; ui.Click(first.X + 5, first.Y + 10);
+        ui.Key(39, ctrl: true); ui.View.KeyUp(39);
+        Check(ui.View.SelectedObjectIds.Count == 0 && ui.View.PlayheadMs == time, "Storyboard sounds do not anchor note-selection shortcuts");
         Check(ui.View.PlayheadMs == time, "Storyboard selection does not seek");
         var nudgeTarget = Blocks()[1];
         ui.View.PointerDown(nudgeTarget.X + 5, nudgeTarget.Y + 10, 0, false, true);
@@ -1430,6 +1503,10 @@ internal static class HitsoundingPanelTests
             Console.WriteLine($"{mode}: pointer p95={input[94]:F4}ms; render p50={render[49]:F3}ms p95={render[94]:F3}ms; allocation p50={memory[49]}B (recording canvas, native GPU excluded)");
         }
     }
+    internal static bool SoundHighlighted(Ui ui, int lane, float noteX)
+        => LaneBlocks(ui, lane).Any(block => (Math.Abs(block.X + block.Width / 2 - noteX) < 1 || Math.Abs(block.X - noteX) < 1)
+            && ui.Canvas.Outlines.Any(outline => outline.Bounds == block && outline.Color == ui.View.TitleBarForeground));
+
     internal static FruitsAtelier.App.Rendering.Rect[] LaneBlocks(Ui ui, int lane)
     {
         var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("hitsounding.lane" + lane) && t.X > 340 && t.X < 1100 && t.Y >= ui.View.HitsoundingNotesLaneBounds.Y && t.X >= ui.View.HitsoundingNotesLaneBounds.X - 146);

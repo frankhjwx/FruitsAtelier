@@ -25,7 +25,8 @@ public sealed partial class EditorView
     {
         if (!hitsoundingAllowNotes || !HitsoundingNotesLane.Contains(x, y)) return false;
         if (button is not (0 or 2) || !CommitField() || notesLocked) return true;
-        var hit = timelineObjects.LastOrDefault(t => t.Bounds.Contains(x, y) && CanSelectCollaborationObject(t.Id));
+        int hitIndex = timelineObjects.FindLastIndex(t => t.Bounds.Contains(x, y) && CanSelectCollaborationObject(t.Id));
+        var hit = hitIndex >= 0 ? timelineObjects[hitIndex] : default;
         if (button == 2)
         {
             if (hit.Id == Guid.Empty) return true;
@@ -37,6 +38,7 @@ public sealed partial class EditorView
             return true;
         }
         hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); hitsoundingTimingSelection.Clear();
+        hitsoundingHighlightedNotes.Clear();
         hitsoundingSelected = null; hitsoundingSelectedTiming = null;
         if (!hitsoundingNotesSelection) SelectObjects([]);
         hitsoundingNotesSelection = true;
@@ -46,20 +48,23 @@ public sealed partial class EditorView
         hitsoundingNotePointerX = x; hitsoundingNotePointerY = y; hitsoundingNoteMoved = false;
         if (hit.Id != Guid.Empty)
         {
+            double scale = hitsoundingGridBounds.Width / hitsoundingSpan;
             if (ctrl)
             {
                 var ids = objectSelection.ToHashSet();
                 if (!ids.Add(hit.Id)) ids.Remove(hit.Id);
-                SelectObjects(ids); return true;
+                SelectObjects(ids);
+                PickTimelineMarker(hitIndex, x, scale);
+                return true;
             }
             if (!objectSelection.Contains(hit.Id)) SelectObjects(shift ? objectSelection.Append(hit.Id) : [hit.Id], hit.Id);
+            PickTimelineMarker(hitIndex, x, scale);
             var source = timelineSources.First(t => t.Id == hit.Id);
             var selectedSources = timelineSources.Where(t => objectSelection.Contains(t.Id)).ToArray();
             hitsoundingMoveMin = -selectedSources.Min(t => t.Start);
             hitsoundingMoveMax = Math.Max(0, EditableDurationMs - selectedSources.Max(t => t.End));
             hitsoundingNoteId = hit.Id;
             hitsoundingNoteOriginalStart = source.Start; hitsoundingNoteOriginalEnd = source.End;
-            double scale = hitsoundingGridBounds.Width / hitsoundingSpan;
             float head = hitsoundingGridBounds.X + (float)((source.Start - HitsoundingStart) * scale);
             float tail = hitsoundingGridBounds.X + (float)((source.End - HitsoundingStart) * scale);
             bool slider = !source.IsBanana && source.End > source.Start;

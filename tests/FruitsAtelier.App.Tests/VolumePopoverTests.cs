@@ -15,6 +15,7 @@ internal static class VolumePopoverTests
     {
         HoverAndWheel(false);
         HoverAndWheel(true);
+        EditorSurfaces();
         var clock = new ManualClock();
         var ui = new Ui(timeProvider: clock);
         var settings = new LibrarySettings { MasterVolume = 100, SongVolume = 100, HitsoundVolume = 100 };
@@ -104,6 +105,76 @@ internal static class VolumePopoverTests
         Check(menuUi.View.VolumePopoverVisible, "View menu did not open the volume popover.");
 
         float Opacity() => ui.Canvas.PaintCalls.Last(call => call.FillBounds == ui.View.VolumePopoverBounds).Opacity;
+    }
+
+    private static void EditorSurfaces()
+    {
+        var clock = new ManualClock();
+        var ui = new Ui(timeProvider: clock);
+        var settings = new LibrarySettings { MasterVolume = 50, SongVolume = 50, HitsoundVolume = 50 };
+        ui.View.InitializeLibrary(false, settings);
+        ui.LoadDocument(new MapDocument { DurationMs = 5000 });
+        ui.OpenPreview();
+        var preview = ui.View.PreviewViewport;
+        Check(preview.Width > 0, "Catch Preview did not open.");
+
+        var gains = (Song: 0f, Effect: 0f);
+        int saves = 0;
+        ui.View.RequestAudioVolume = (song, effect) => gains = (song, effect);
+        ui.View.RequestAudioPreference = () => saves++;
+        ui.View.SetModifiers(true, false);
+        ui.Key(39); ui.View.KeyUp(39);
+        ui.Key(39); ui.View.KeyUp(39);
+        ui.View.SetModifiers(false, false);
+        clock.Advance(950); ui.Paint();
+        Check(!ui.View.VolumePopoverVisible, "Preview fixture volume controls did not fade.");
+
+        double playhead = ui.View.PlayheadMs, zoom = ui.View.CanvasZoom;
+        float x = preview.X + preview.Width / 2, y = preview.Y + 10;
+        ui.View.Wheel(x, y, -120, false, alt: true);
+        clock.Advance(120); ui.Paint();
+        Check(settings.HitsoundVolume == 45 && settings.MasterVolume == 50 && settings.SongVolume == 50
+            && Math.Abs(gains.Effect - .225f) < .001f && Math.Abs(gains.Song - .25f) < .001f && saves == 1,
+            "Alt+wheel over Catch Preview did not apply and persist only the selected Effect gain.");
+        Check(ui.View.VolumePopoverVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("volume.effect"))
+            && ui.View.PlayheadMs == playhead && ui.View.CanvasZoom == zoom && !ui.View.IsDirty,
+            "Alt+wheel over Catch Preview failed to show volume controls or changed the editor state.");
+
+        ui.View.Wheel(x, y, 120, true, alt: true);
+        ui.View.Wheel(x, y, 120, false, shift: true, alt: true);
+        Check(saves == 1, "Modified Alt+wheel adjusted volume.");
+        var master = ui.View.VolumeBarBounds(0);
+        ui.View.SetModifiers(true, false);
+        ui.View.Wheel(master.X + 4, master.Y + 4, 120, false);
+        ui.View.SetModifiers(false, false);
+        Check(settings.HitsoundVolume == 50 && settings.MasterVolume == 50 && saves == 2,
+            "Alt+wheel changed channels when the volume overlay appeared beneath the pointer.");
+
+        ui.Key(27);
+        ui.View.OpenVolumeDialog(); ui.Paint();
+        ui.View.Wheel(ui.Plot.X + 20, ui.Plot.Y + 20, -120, false, alt: true);
+        clock.Advance(120); ui.Paint();
+        Check(ui.View.VolumeDialogVisible && ui.View.VolumePopoverVisible && settings.HitsoundVolume == 45 && saves == 3
+            && ui.Canvas.Texts.Any(t => t.Value == L.Get("volume.effect") && t.Y >= ui.View.VolumePopoverBounds.Y),
+            "Alt+wheel did not show volume over the dialog or was routed to the covered canvas.");
+
+        ui.Key(27);
+        ui.Key(114);
+        var waveform = ui.View.WaveformBounds;
+        double waveformSpan = settings.WaveformSpanMs;
+        ui.View.Wheel(waveform.X + 50, waveform.Y + 30, 120, false, alt: true);
+        Check(settings.WaveformSpanMs != waveformSpan && saves == 3, "Alt+wheel did not preserve waveform zoom.");
+        ui.View.Wheel(20, 20, 120, false, alt: true);
+        Check(settings.HitsoundVolume == 50 && saves == 4, "Alt+wheel outside the waveform did not adjust volume.");
+
+        ui.View.OpenSettings(); ui.Paint();
+        ui.View.Wheel(20, 20, -120, false, alt: true);
+        Check(!ui.View.VolumePopoverVisible && saves == 4, "Alt+wheel adjusted volume in Settings.");
+        ui.Key(27);
+        ui.View.ShowLibrary(); ui.Paint();
+        Check(ui.View.LibraryVisible, "Library fixture did not open.");
+        ui.View.Wheel(20, 20, -120, false, alt: true);
+        Check(!ui.View.VolumePopoverVisible && saves == 4, "Alt+wheel adjusted volume in the Library.");
     }
 
     public static void GameplayBindingsAndFade()

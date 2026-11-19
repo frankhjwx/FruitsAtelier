@@ -6,17 +6,17 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private readonly bool[] hitsoundingMuted = new bool[7];
+    private bool HitsoundingLaneIsMuted(int lane) => (EditingPreferences.HitsoundingMutedLanes & (1 << lane)) != 0;
     private readonly Rect[] hitsoundingMuteButtons = new Rect[7];
     internal Rect HitsoundingMuteBounds(int lane) => hitsoundingMuteButtons[lane];
-    private bool HitsoundingLaneMuted(int lane) => HitsoundingPageVisible && !IsTestplaying && hitsoundingMuted[lane];
+    private bool HitsoundingLaneMuted(int lane) => HitsoundingPageVisible && !IsTestplaying && HitsoundingLaneIsMuted(lane);
     private static int HitsoundingSoundLane(Hitsound sound) => sound.Name switch
     { "hitwhistle" => 2, "hitfinish" => 3, "hitclap" => 4, "slidertick" => 5, "storyboard" => 6, _ => 1 };
 
     private void DrawHitsoundingMute(ICanvas c, Rect bounds, int lane)
     {
         hitsoundingMuteButtons[lane] = bounds;
-        bool muted = hitsoundingMuted[lane], hover = bounds.Contains(mouseX, mouseY);
+        bool muted = HitsoundingLaneIsMuted(lane), hover = bounds.Contains(mouseX, mouseY);
         c.Fill(bounds, !muted ? SelectedSurface : hover ? HoverSurface : Surface, 4);
         if (!muted) c.StrokeOpacity(bounds, Accent, 1, 4, .7f);
         uint color = muted ? Muted : Accent;
@@ -29,7 +29,8 @@ public sealed partial class EditorView
         else { c.Line(x + 12, y - 4, x + 15, y, color, 1.5f); c.Line(x + 15, y, x + 12, y + 4, color, 1.5f); }
         hits.Add(new(bounds, () =>
         {
-            hitsoundingMuted[lane] = !hitsoundingMuted[lane];
+            EditingPreferences.HitsoundingMutedLanes ^= 1 << lane;
+            SaveMapEditingPreferences();
             if (AudioPlaying) PrimeScheduledHitsounds(playhead); else ResetHitsounds();
         }, true));
     }
@@ -38,7 +39,7 @@ public sealed partial class EditorView
     {
         for (int lane = 1; lane <= 6; lane++)
             if (hitsoundingMuteButtons[lane].Contains(mouseX, mouseY))
-                DrawPaletteTooltip(c, L.Get(hitsoundingMuted[lane] ? "hitsounding.unmuteLane" : "hitsounding.muteLane", L.Get("hitsounding.lane" + lane)),
+                DrawPaletteTooltip(c, L.Get(HitsoundingLaneIsMuted(lane) ? "hitsounding.unmuteLane" : "hitsounding.muteLane", L.Get("hitsounding.lane" + lane)),
                     hitsoundingMuteButtons[lane], left: false, above: true);
     }
 }

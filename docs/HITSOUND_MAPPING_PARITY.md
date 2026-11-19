@@ -19,7 +19,7 @@ Notes, sound or timing selection. Sample Library focus has its own command scope
 | Z: first object, then song start | Supported. |
 | V / End: last object end, then song end | Supported. Default uses the last parent by start order; lazer uses the maximum end. |
 | Up / Down: next / previous timing point (reversed in lazer) | Supported with the active editing profile; Timing Helper also offers an explicit Jump. |
-| Ctrl+Left / Right without selection: bookmark in Default, parent start in lazer | Supported; selected sound tags do not turn this into a spatial nudge. |
+| Ctrl+Left / Right without selection: bookmark in Default, parent start in lazer | Supported. |
 | Alt+Left / Right in lazer: previous / next bookmark | Supported; these chords navigate bookmarks in lazer. |
 | Ctrl+Shift+Left / Right in lazer: slider/sample boundaries | Supported, including head, first-span midpoint, reverses, tail and adjacent parent boundaries. |
 | Ctrl+B / Ctrl+Shift+B: add/remove bookmark | Supported outside active drag gestures. |
@@ -62,7 +62,7 @@ Notes, sound or timing selection. Sample Library focus has its own command scope
 | Mixed SB and note-addition drag | Not a unified gesture: dragging an addition retains additions; dragging an SB sound retains SB samples. |
 | Normal / SliderTick movement | These are tied to their notes; move Notes instead. |
 | J / K: nudge selection earlier/later by Snap | Supported for unlocked Notes, additions and SB samples. Addition destinations must all match existing fruit events; SB samples retain independent timestamps. |
-| Ctrl+Left / Right: nudge selected X | Missing; Hitsounding has no X-position axis. |
+| Ctrl+Left / Right with a selection | Select the previous or next sound-editable note beyond the selection boundary. Slider repeats participate and slider ticks and SB samples are skipped. |
 | Ctrl+Shift+Left / Right: horizontal grid nudge in Default | Missing; no X-position axis. |
 | Shift+timeline drag: disable beat snapping | Missing for Notes and SB dragging. Additions target existing fruit events. |
 | Ctrl+D: clone after selection | Missing. Clipboard paste remains available. |
@@ -98,7 +98,7 @@ Notes, sound or timing selection. Sample Library focus has its own command scope
 | Hold Shift/Alt: temporary Grid/Distance Snap inversion | No corresponding sound/Notes gesture behavior. |
 | Anchor Snap, object snap, DS presets and collinear spacing | Mapping geometry features; no sound-lane equivalents. |
 | Q: New Combo | Q cycles the Hitsounding sample bank. No New Combo keyboard equivalent. |
-| W/E/R: Whistle/Finish/Clap flags | Hitsounding has no default bindings; its configurable toggle commands modify selected events. |
+| W/E/R: Whistle/Finish/Clap flags | Toggle the corresponding addition on selected Notes, the selected slider edge or the selected fruit event in the sound tracks. The addition track must be unlocked. |
 | Shift+Q/W/E/R: Normal bank; Ctrl+Q/W/E/R: addition bank | Supported for selection and Draw placement defaults in both profiles. Q/A/S/D modify selected notes or sounds only. |
 | Ctrl+P / Ctrl+Shift+P: red/green timing point | Missing shortcuts in the lane scope. Timing menu and F6 remain; Hitsounding 5 creates a green point. |
 | Ctrl+I: delete current timing section | Missing shortcut in lane scope. Shared Timing menu remains. |

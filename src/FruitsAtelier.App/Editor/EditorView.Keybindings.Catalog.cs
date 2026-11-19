@@ -5,11 +5,8 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     internal enum ShortcutScope { Global, Library, Compose, Timing, TimingPoints, Hitsounding, Testplay, Gallery, Samples }
-    internal sealed record ShortcutCommand(ShortcutScope Scope, string Id, string Group, bool Lazer, ShortcutBinding[] DispatchBindings)
+    internal sealed record ShortcutCommand(ShortcutScope Scope, string Id, string Group, bool Lazer, ShortcutBinding[] Defaults)
     {
-        // Unbound commands retain dispatch gestures so custom bindings reach the guarded input handlers.
-        public ShortcutBinding[] Defaults => Scope == ShortcutScope.Hitsounding
-            && Id is "hitToggleWhistle" or "hitToggleFinish" or "hitToggleClap" ? [] : DispatchBindings;
         public string StorageKey => $"{(Lazer ? "lazer" : "default")}/{Scope}/{Id}";
         // Text follows the dispatched sample bank; storage IDs retain existing user assignments.
         private string TextId => Id.StartsWith("normal", StringComparison.Ordinal) || Id.StartsWith("addition", StringComparison.Ordinal)
@@ -318,6 +315,7 @@ public sealed partial class EditorView
         Add(ShortcutScope.Hitsounding, "hitToggleWhistle", "tools", "both", ShortcutBinding.From(87));
         Add(ShortcutScope.Hitsounding, "hitToggleFinish", "tools", "both", ShortcutBinding.From(69));
         Add(ShortcutScope.Hitsounding, "hitToggleClap", "tools", "both", ShortcutBinding.From(82));
+        Add(ShortcutScope.Hitsounding, "hitHighlightSoundNotes", "tools", "both", ShortcutBinding.From('F'));
         Add(ShortcutScope.Hitsounding, "hitZoomIn", "tools", "both", ShortcutBinding.From(187));
         Add(ShortcutScope.Hitsounding, "hitZoomOut", "tools", "both", ShortcutBinding.From(189));
         Add(ShortcutScope.Gallery, "selectAll", "editing", "both", ShortcutBinding.From(17, 65));
@@ -340,12 +338,12 @@ public sealed partial class EditorView
             "snap1", "snap2", "snap3", "snap4", "snap5", "snap6", "snap7", "snap8", "snap9", "earlier", "later"];
         commands.AddRange(commands.Where(c => c.Scope == ShortcutScope.Compose && hitsoundingNavigation.Contains(c.Id))
             .Select(c => c with { Scope = ShortcutScope.Hitsounding }).ToArray());
-        Add(ShortcutScope.Hitsounding, "bookmarkLeft", "playback", "default", ShortcutBinding.From(17, 37));
-        Add(ShortcutScope.Hitsounding, "bookmarkRight", "playback", "default", ShortcutBinding.From(17, 39));
+        Add(ShortcutScope.Hitsounding, "bookmarkLeft", "playback", "default", ShortcutBinding.From(18, 16, 37));
+        Add(ShortcutScope.Hitsounding, "bookmarkRight", "playback", "default", ShortcutBinding.From(18, 16, 39));
         Add(ShortcutScope.Hitsounding, "bookmarkLeft", "playback", "lazer", ShortcutBinding.From(18, 37));
         Add(ShortcutScope.Hitsounding, "bookmarkRight", "playback", "lazer", ShortcutBinding.From(18, 39));
-        Add(ShortcutScope.Hitsounding, "previousParent", "playback", "lazer", ShortcutBinding.From(17, 37));
-        Add(ShortcutScope.Hitsounding, "nextParent", "playback", "lazer", ShortcutBinding.From(17, 39));
+        Add(ShortcutScope.Hitsounding, "previousParent", "tools", "both", ShortcutBinding.From(17, 37));
+        Add(ShortcutScope.Hitsounding, "nextParent", "tools", "both", ShortcutBinding.From(17, 39));
         Add(ShortcutScope.Hitsounding, "sampleLeft", "playback", "lazer", ShortcutBinding.From(17, 16, 37));
         Add(ShortcutScope.Hitsounding, "sampleRight", "playback", "lazer", ShortcutBinding.From(17, 16, 39));
         return commands.ToArray();

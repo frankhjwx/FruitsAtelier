@@ -6,6 +6,7 @@ internal static class HitsoundingNotesTests
     public static void Run()
     {
         LaneLocks();
+        AdditionsAndSliderSelection();
         foreach (string language in new[] { "en", "zh-CN" })
         foreach (bool draw in new[] { false, true })
         {
@@ -138,6 +139,120 @@ internal static class HitsoundingNotesTests
         }
         L.SetLanguage("en");
         Console.WriteLine("PASS Hitsounding Notes creation, selection, clipboard, endpoints and reverses");
+    }
+    private static void AdditionsAndSliderSelection()
+    {
+        foreach (bool lazer in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 8000, BeatLengthMs = 500 };
+            map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500 });
+            map.Fruits.Add(new() { TimeMs = 1250, X = 256 });
+            map.Fruits.Add(new() { TimeMs = 1500, X = 256, OriginalLine = "256,192,1500,1,2,2:3:1:80:" });
+            var slider = new CurveTrack { Kind = CurveKind.Linear, SpanCount = 2 };
+            slider.Nodes.Add(new() { TimeMs = 2250, X = 128 });
+            slider.Nodes.Add(new() { TimeMs = 2750, X = 384 });
+            map.Tracks.Add(slider);
+            var ui = new Ui(false);
+            ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.LibrarySettings.LazerEditing = lazer;
+            ui.View.UpdateTransport(2000, 8000, true, false, false, null, null); ui.Paint();
+            double head = slider.Nodes[0].TimeMs, tail = CurveMath.EndTimeMs(slider);
+            double[] edges = [head, (head + tail) / 2, tail];
+            double body = head + (tail - head) / 4;
+            var baseline = ui.View.Document.DeepClone();
+
+            foreach (bool hitsounding in new[] { false, true })
+            {
+                if (hitsounding)
+                {
+                    ui.View.ShowHitsoundingPage(); ui.Paint(); ToggleLock(0);
+                }
+                var lane = hitsounding ? ui.View.HitsoundingNotesLaneBounds : ui.View.ObjectTimelineBounds;
+                float y = hitsounding ? lane.Y + lane.Height / 2 : lane.Y + 27;
+                float X(double time) => lane.X + (float)(hitsounding
+                    ? (time - (ui.View.PlayheadMs - 1200)) / 4000 * lane.Width
+                    : (time - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+                bool Highlighted(double time) => ui.Canvas.Circles.Any(c => c.Color == 0xFFA600
+                    && Math.Abs(c.X - X(time)) < 1 && lane.Contains(c.X, c.Y));
+
+                for (int edge = 0; edge < edges.Length; edge++)
+                {
+                    ui.Click(X(edges[edge]), y);
+                    Check(edges.Where(Highlighted).SequenceEqual(new[] { edges[edge] }),
+                        "Clicking a slider head, repeat or tail highlights only that marker in both timelines");
+                    if (!hitsounding) continue;
+                    Check(edges.Where(time => HitsoundingPanelTests.SoundHighlighted(ui, 1, X(time))).SequenceEqual(new[] { edges[edge] }),
+                        "An individual slider edge highlights only its own Normal tag");
+                    Press("WER"[edge]);
+                    Check(ui.View.Document.HitsoundOverrides.Single() is { } sample
+                        && sample.SourceId == slider.Id && sample.EdgeIndex == edge && sample.Sample.Additions == (2 << edge),
+                        "W/E/R applies only to the selected slider edge");
+                    Check(HitsoundingPanelTests.SoundHighlighted(ui, 2 + edge, X(edges[edge])),
+                        "A newly added sound tag highlights while its edge is selected");
+                    ui.Key('Z', ctrl: true);
+                    Check(baseline.ContentEquals(ui.View.Document), "Slider edge sound change is undoable");
+                }
+                ui.Click(X(body), y);
+                Check(edges.All(Highlighted), "Clicking the slider body highlights all its markers");
+                if (!hitsounding) continue;
+                Check(edges.All(time => HitsoundingPanelTests.SoundHighlighted(ui, 1, X(time))),
+                    "Clicking the slider body highlights the sound tags for all its edges");
+                Press('E');
+                Check(ui.View.Document.HitsoundOverrides.Count == edges.Length
+                    && ui.View.Document.HitsoundOverrides.All(sample => sample.SourceId == slider.Id && sample.Sample.Additions == 4),
+                    "W/E/R applies to every edge when the whole slider is selected");
+                ui.Key('Z', ctrl: true);
+                Check(baseline.ContentEquals(ui.View.Document), "Whole slider sound change is one undo step");
+
+                ui.Click(X(1500), y);
+                Check(HitsoundingPanelTests.SoundHighlighted(ui, 1, X(1500))
+                    && HitsoundingPanelTests.SoundHighlighted(ui, 2, X(1500))
+                    && !HitsoundingPanelTests.SoundHighlighted(ui, 1, X(1250)),
+                    "A mouse click in Notes highlights Normal and all additions for that note");
+                ui.ClickText(L.Get("hitsounding.precise"));
+                Check(HitsoundingPanelTests.SoundHighlighted(ui, 1, X(1500))
+                    && HitsoundingPanelTests.SoundHighlighted(ui, 2, X(1500)), "The same note highlights both tags in Precise HS");
+                ui.ClickText(L.Get("hitsounding.noteBased"));
+
+                ui.Click(X(1250), y);
+                Press('R');
+                Check(ui.View.Document.HitsoundOverrides.Single() is { Sample.Additions: 8 } circle
+                    && circle.SourceId == map.Fruits[0].Id, "A single Notes-track circle accepts W/E/R");
+                ui.Key('Z', ctrl: true);
+
+                SelectBothCircles();
+                Press('W');
+                Check(AdditionsAtCircles().SequenceEqual(new[] { 2, 2 }), "A mixed Notes selection adds the flag across the selection");
+                Press('W');
+                Check(AdditionsAtCircles().SequenceEqual(new[] { 0, 0 }), "An all-enabled Notes selection clears the flag across the selection");
+                ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
+                Check(baseline.ContentEquals(ui.View.Document), "Each group sound change is one undo step");
+
+                ToggleLock(2); SelectBothCircles(); Press('W');
+                Check(baseline.ContentEquals(ui.View.Document), "W/E/R respects a locked addition track for selected Notes");
+
+                void SelectBothCircles()
+                {
+                    ui.View.PointerDown(X(1100), y, 0, false, false);
+                    ui.View.PointerMove(X(1625), y, false, false);
+                    ui.View.PointerUp(X(1625), y, 0); ui.Paint();
+                    Check(ui.View.SelectedObjectIds.Count == 2, "Selected both circles in the Notes track");
+                }
+            }
+
+            void ToggleLock(int index)
+            {
+                var button = ui.View.HitsoundingLockBounds(index);
+                ui.Click(button.X + button.Width / 2, button.Y + button.Height / 2);
+            }
+            void Press(char key) { ui.Key(key); ui.View.KeyUp(key); }
+            int[] AdditionsAtCircles()
+            {
+                var conversion = ui.View.Conversion;
+                var resolver = new HitsoundResolver(ui.View.Document, conversion.Objects, inspectResources: false);
+                return conversion.Objects.Where(note => map.Fruits.Any(fruit => fruit.Id == note.SourceId))
+                    .Select(note => resolver.Describe(note).Additions).ToArray();
+            }
+        }
     }
     private static void LaneLocks()
     {

@@ -163,8 +163,8 @@ colouring, while SB Hitsound retains purple.
 Note-based bank tags show S, N or D above the sample index; default samples omit the
 index and centre the letter. The toolbar groups Note based/Precise HS,
 and the HS text toggle with vertical separators. HS text controls sound-tag labels
-in both display modes and is remembered with the Hitsounding layout; it leaves
-Notes numbering, timing labels and waveforms visible. Precise HS retains the bank and non-default index beside the waveform.
+in both display modes. Notes numbering, timing labels and waveforms stay visible.
+Precise HS retains the bank and non-default index beside the waveform.
 Four timing tracks above Notes show BPM, Hitsound Set (bank and optional index, for
 example S:2), volume and Kiai. Each track independently merges consecutive equal
 values for display, while preserving the original timing points and their stems.
@@ -174,12 +174,19 @@ blue-grey. Timing edits and drag previews refresh these intervals. Red timing
 points can be selected but cannot be dragged in Hitsounding.
 
 Clicking a Notes object or an existing sound tag selects its event.
+Selecting a note in the Notes lane or stepping to it with Ctrl+Left/Right
+highlights its existing sound tags. A selected slider edge highlights its own
+tags, and selecting the slider body highlights tags across the slider.
 Selecting a sound highlights only its sound tag, leaving the Notes graphics
 unhighlighted, and does not seek. Clicking empty grid space clears selection and
 preserves the playing position.
 Left-click the upper time ruler to seek directly to the corresponding time, while
 retaining the playing or paused state. Dragging the play line still adjusts its viewport position.
 Ctrl-click toggles individual sound tags, Notes events, storyboard sounds, and red or green timing blocks or handles without replacing the existing selection.
+Press **F** to show the corresponding Notes highlights for the currently selected
+sound tags. A selected slider sound highlights its own edge. Press **F** again
+to return to the sound-only selection. The sound tags retain their selection in
+both views, and the playhead stays in place.
 Clicking the lane-label column does not seek. Dragging empty grid space draws a selection
 rectangle across Normal, Whistle, Finish, Clap and SB Hitsound tags. Its starting
 time follows the scrolling timeline during playback while the opposite edge stays
@@ -232,17 +239,22 @@ when a selection exists. In either mode, Q/A/S/D and the brush buttons
 apply the bank to the selection in one undo step. Selected Normal tags change their
 normal bank; selected addition tags change their shared addition bank. Selected
 Notes parents change both banks on their events. Other sample fields are retained.
-Whistle/Finish/Clap toggle commands have no default keys in Hitsounding; assign
-them in Key bindings to toggle additions on selected events. Text inputs and modified shortcuts retain priority. Hover tips explain each
-tool's shortcut and interaction behavior.
+W/E/R toggle Whistle/Finish/Clap on selected Notes or on the selected fruit event
+in the sound tracks. The corresponding addition track must be unlocked. With
+multiple Notes selected, the shortcut adds the sound to all selected fruit events
+if any lack it, or removes it from all if every event already has it. Both profiles
+use these defaults, which can be changed in Key Bindings. Text inputs and modified
+shortcuts retain priority. Hover tips explain each tool's shortcut and interaction behavior.
 
 Each track has a **Lock** button beside its label. Locked tracks show a pale red background
 behind their notes, cannot be selected, and reject direct editing and paste. A selection
 rectangle can start in a locked track and cross other tracks; only unlocked sound
 tracks contribute selected tags. Notes starts
 locked; the other tracks start unlocked. Lock buttons are teal when unlocked and pale red when locked. Locks do not mute playback or change history.
-Unlock Notes to edit existing notes in either mode. In Draw, an empty-space hover
-shows a snapped placement preview and a click creates a circle at Mapping
+Unlock Notes to edit existing notes in either mode. Click a slider's head, repeat
+marker or tail to highlight and edit that edge with W/E/R. Click the body to
+select the whole slider. These highlights match Mapping's upper timeline.
+In Draw, hovering over empty space shows a snapped placement preview and a click creates a circle at Mapping
 X=256 (osu! Y=192), drag empty space to marquee-select parents, and Ctrl-click to
 add or remove a parent from the selection. Drag an existing note body to move the
 selection in time. Drag a slider's head or tail to adjust that endpoint while
@@ -353,11 +365,13 @@ filters the current folder by name. Long lists scroll within their own section.
 View and library navigation do not edit beatmap objects.
 
 Each sound track has a mute button, highlighted green while audible and grey while muted. Muting greys its entire row and suppresses that
-track only during Hitsounding playback; Mapping and Testplay ignore these session
+track only during Hitsounding playback. Mapping and Testplay ignore these
 settings. Note-based sound labels use a fixed font size when **HS text** is enabled
 and hide when the block is too narrow. Equal-width blocks with the same number of
 index digits use a shared width threshold, independent of the particular digits
 or sample bank. Other blocks entering the viewport do not affect this decision.
+Each difficulty remembers its mutes, locks, Select/Draw tool, display mode, HS text,
+zoom and play-line position in local editor preferences.
 
 Drag green timing handles horizontally to move inherited points to the nearest
 Snap. Marquee-select handles to move several green points together, preserving
@@ -399,8 +413,16 @@ its BPM-dependent playback seek distance and coarse paused grid. These bindings 
 configurable in the Hitsounding section of Key Bindings. Home jumps to song start;
 Z jumps to the first object and then song start; V/End jumps to the last object end
 and then song end. X starts playback at song start, and Space/C toggles playback.
-Up/Down visits timing points with the active editing profile's direction. Bookmark,
-lazer parent/sample-boundary, speed and Snap shortcuts also follow Mapping.
+Up/Down visits timing points with the active editing profile's direction. Speed,
+Snap and lazer sample-boundary shortcuts also follow Mapping.
+With Notes or sound tags selected, Ctrl+Left/Right selects the previous or next
+sound-editable note. For a group, start before the earliest selected note or after
+the latest one. Slider heads, repeats and tails count individually. Slider ticks
+and storyboard samples are skipped. The view follows targets outside the visible
+timeline. Both directions can be rebound in Hitsounding Key Bindings.
+With no selection, Ctrl+Left/Right still seeks bookmarks in Default and parent
+starts in Lazer. Use Alt+Shift+Left/Right in Default or Alt+Left/Right in Lazer to
+seek bookmarks while a selection is active.
 J/K moves the active unlocked Notes, addition or SB selection earlier/later by one
 Snap subdivision; every addition destination must match a fruit event.
 

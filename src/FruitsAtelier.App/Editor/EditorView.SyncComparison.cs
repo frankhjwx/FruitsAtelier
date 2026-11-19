@@ -118,7 +118,7 @@ public sealed partial class EditorView
             File.Exists(merge.External.Path) ? File.GetLastWriteTimeUtc(merge.External.Path) : null,
             merge.PreviouslyRetained.SelectMany(r => r.Sources).ToHashSet(),
             WorkspaceSynchronization.SourceIds(merge.External.Document).Where(p => rejectedOrders.Contains(p.Order)).Select(p => p.Id).ToHashSet(),
-            SyncAudioHash(merge.External.Document.AudioPath), PrepareSyncReview(merge, details));
+            merge.NativeDifficulty ? null : SyncAudioHash(merge.External.Document.AudioPath), PrepareSyncReview(merge, details));
     }
 
     private void DrawSyncComparison(ICanvas c, WorkspaceMerge merge, SyncComparison comparison)

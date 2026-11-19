@@ -266,6 +266,13 @@ public sealed class MapEditingPreferences
     public bool GridSnap { get; set; }
     public bool DistanceSnap { get; set; }
     public bool MovementAnalysis { get; set; }
+    public int HitsoundingMutedLanes { get; set; }
+    public int HitsoundingLockedLanes { get; set; } = 1;
+    public bool HitsoundingDraw { get; set; }
+    public bool? HitsoundingPrecise { get; set; }
+    public bool? HitsoundingShowText { get; set; }
+    public double HitsoundingSpan { get; set; } = 4000;
+    public double HitsoundingHeadRatio { get; set; } = .3;
     private int gridLevel = 4;
     public int GridLevel { get => gridLevel; set => gridLevel = value is 4 or 8 or 16 or 32 ? value : 4; }
 }
