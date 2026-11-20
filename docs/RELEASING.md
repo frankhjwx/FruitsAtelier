@@ -24,20 +24,6 @@ separate `mapset-verifier-source-TASK` artifact on the same workflow run. They a
 not included in the runnable download. The application retains its bundled engine,
 licenses and source download directions.
 
-## Windows branch packages
-
-Open **Actions → Windows branch package → Run workflow**. Run the workflow from
-`main` and enter the branch to package, such as `dev`. The job resolves that
-branch to a commit, uses the SDK and Windows packaging scripts from that commit,
-and verifies the extracted portable executable. Use branches that contain the
-current packaging scripts and their locked dependencies.
-
-Download `windows-branch-COMMIT` from the run's Artifacts section within 14 days.
-The artifact contains the portable win-x64 ZIP and its SHA-256 checksum. Extract
-the portable ZIP and run `FruitsAtelier.exe`. A separate artifact contains the
-Mapset Verifier corresponding source and checksum. These preview packages use a
-beta version and are available through Actions artifacts.
-
 ## Local package
 
 From the repository root, using PowerShell 7 and the SDK pinned in `global.json`:
