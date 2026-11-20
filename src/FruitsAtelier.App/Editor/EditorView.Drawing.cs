@@ -860,7 +860,7 @@ public sealed partial class EditorView
             Item(L.Get("library.exportOsz"), () => RequestOszExport?.Invoke());
             Item(L.Get("faz.export"), () => ShowFazExportChoice());
             Item(L.Get("fad.export"), () => RequestFadExport?.Invoke(activeDifficulty));
-            Item(L.Get("fad.import"), () => RequestFadImport?.Invoke());
+            Item(L.Get("project.import"), () => RequestImportDifficulty?.Invoke());
             Item(L.Get("ui.exitMenu"), () => RequestClose?.Invoke());
         }
         else if (menu == 3)

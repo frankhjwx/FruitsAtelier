@@ -27,12 +27,6 @@ internal sealed partial class EditorWindow
                 WorkspaceProject.DifficultyFileName(difficulty.Document, difficulty.Name, ".fad"), "fad");
             if (path is not null) view.BeginFadExport(path, index);
         });
-        view.RequestFadImport = () => FileOperation(() =>
-        {
-            if (!view.PrepareFileOperation()) return;
-            var path = MapFileDialog.Select(hwnd, false, L.Get("fad.import"), MapFileDialog.FadFilter);
-            if (path is not null) view.BeginFadImport(path);
-        });
         view.RequestLibraryFazExport = (map, complete) => ExportFaz(complete, map);
         view.RequestAudioProject = path => ConfirmDiscard(() => view.BeginAudioProject(path));
         view.RequestLibraryDrop = paths => FileOperation(() =>

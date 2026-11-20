@@ -46,7 +46,7 @@ public sealed partial class EditorView
         project.Validate();
         if (difficultyPauseTask is { } retiredPause) _ = retiredPause.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
         difficultyPauseTask = null;
-        if (SliderCanvasChoiceVisible) AnswerDiscard(2);
+        if (SliderCanvasChoiceVisible || nativeDifficultyConflict is not null) AnswerDiscard(2);
         timingAlignmentChecksEnabled = false; timingAlignmentChecked.Clear();
         timingAlignmentPlan = null; timingAlignmentSource = null;
         StopDiscussions();
@@ -279,8 +279,22 @@ public sealed partial class EditorView
         SwitchDifficultyCore(difficultyPauseTarget, reloadAudio: true);
     }
 
+    public static IReadOnlyList<string> DifficultyImportPatterns { get; } = ["*.osu", "*.fad", "*.catchdiff", "*.catchbackup"];
+
     public bool ImportDifficultyFile(string path)
     {
+        if (FadArchive.IsPackage(path))
+        {
+            BeginFadImport(path);
+            return false;
+        }
+        string extension = Path.GetExtension(path);
+        bool compressed = extension.Equals(WorkspaceHistoryFile.Extension, StringComparison.OrdinalIgnoreCase);
+        if (compressed || extension.Equals(".catchdiff", StringComparison.OrdinalIgnoreCase))
+        {
+            BeginNativeDifficultyImport(path, compressed);
+            return false;
+        }
         if (RejectPatternProjectOperation() || !PrepareFileOperation()) return false;
         var imported = OsuBeatmapReader.ReadFile(path);
         string? origin = Document.SourcePath ?? Document.AudioPath;
@@ -391,7 +405,7 @@ public sealed partial class EditorView
     {
         if (MediaRefinementVisible || MediaEditingBusy || !CommitMediaOffset()) return false;
         if (ErrorVisible) return false;
-        if (MapTemplatesVisible || addDifficultyConfirmation) return false;
+        if (MapTemplatesVisible || addDifficultyConfirmation || nativeDifficultyConflict is not null) return false;
         if (CollaborationBusy) return false;
         if (!CommitCollaborationField()) return false;
         PumpLegacyDropletRefresh();

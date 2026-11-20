@@ -132,7 +132,7 @@ internal sealed partial class MacWindow : Window
         View.RequestImportDifficulty = () => RunFile(async () =>
         {
             if (!View.PrepareFileOperation()) return;
-            var path = await Pick(L.Get("project.import"), ["*.osu"]);
+            var path = await Pick(L.Get("project.import"), FruitsAtelier.App.Editor.EditorView.DifficultyImportPatterns.ToArray());
             if (path is not null)
             {
                 if (View.ImportDifficultyFile(path))

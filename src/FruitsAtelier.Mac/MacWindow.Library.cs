@@ -68,12 +68,6 @@ internal sealed partial class MacWindow
             var path = await SavePicker(L.Get("fad.export"), "fad", WorkspaceProject.DifficultyFileName(difficulty.Document, difficulty.Name, ".fad"));
             if (path is not null) View.BeginFadExport(path, index);
         });
-        View.RequestFadImport = () => RunFile(async () =>
-        {
-            if (!View.PrepareFileOperation()) return;
-            var path = await Pick(L.Get("fad.import"), ["*.fad"]);
-            if (path is not null) View.BeginFadImport(path);
-        });
         View.RequestLibraryFazExport = (map, complete) => ExportFaz(complete, map);
         View.RequestAudioProject = path => RunFile(async () => { if (await ConfirmDiscard()) View.BeginAudioProject(path); });
         View.RequestLibraryDrop = paths => RunFile(async () =>

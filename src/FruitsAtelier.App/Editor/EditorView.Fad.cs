@@ -7,7 +7,6 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public Action<int>? RequestFadExport { get; set; }
-    public Action? RequestFadImport { get; set; }
     private (ProjectDifficulty Difficulty, HitsoundResourcePlan Resources, int UnassignedSections)? fadPending;
 
     public ProjectDifficulty CaptureDifficulty(int index)
@@ -99,6 +98,12 @@ public sealed partial class EditorView
 
     private void ApplyFad(ProjectDifficulty incoming, HitsoundResourcePlan resources, int unassignedSections)
     {
+        ApplyImportedDifficulty(incoming, resources, L.Get("fad.import"));
+        SetFadNotice(L.Get("fad.imported", CurrentDifficultyName), unassignedSections);
+    }
+
+    private void ApplyImportedDifficulty(ProjectDifficulty incoming, HitsoundResourcePlan resources, string undoLabel)
+    {
         var check = CaptureProject();
         check.Difficulties.RemoveAll(d => d.Id == incoming.Id); check.Difficulties.Add(incoming);
         check.Validate();
@@ -107,7 +112,7 @@ public sealed partial class EditorView
         try
         {
             if (index >= 0)
-                difficulties[index].History.RestoreVersion(L.Get("fad.import"), incoming.Document);
+                difficulties[index].History.RestoreVersion(undoLabel, incoming.Document);
             else
             {
                 difficulties.Add(new DifficultySession(incoming)); index = difficulties.Count - 1;
@@ -120,7 +125,6 @@ public sealed partial class EditorView
         syncStatuses.Remove(incoming.Id); syncMerges.Remove(incoming.Id); syncComparisons.Remove(incoming.Id);
         resourceSnapshot = null; resourceReferences = null;
         ResetHitsounds(); PreloadProjectHitsounds(); RequestDifficultyChanged?.Invoke();
-        SetFadNotice(L.Get("fad.imported", difficulties[index].Name), unassignedSections);
     }
 
     private void SetFadNotice(string message, int unassignedSections)

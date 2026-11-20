@@ -108,7 +108,7 @@ internal sealed partial class EditorWindow
         view.RequestImportDifficulty = () => FileOperation(() =>
         {
             if (!view.PrepareFileOperation()) return;
-            string? path = MapFileDialog.Select(hwnd, false, L.Get("project.import"), MapFileDialog.OsuFilter);
+            string? path = MapFileDialog.Select(hwnd, false, L.Get("project.import"), MapFileDialog.DifficultyImportFilter);
             if (path is not null)
             {
                 view.ImportDifficultyFile(path);

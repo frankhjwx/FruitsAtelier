@@ -84,9 +84,11 @@ Only Catch difficulties are indexed. Importing a set does not export it to Songs
 
 ### Work with difficulties
 
-Click a difficulty tab to switch. **Ctrl+Tab** moves to the next tab; **Ctrl+Shift+Tab** moves to the previous one. The **+** button adds a blank difficulty or imports an `.osu`. A blank difficulty inherits the active difficulty's audio, timing and settings.
+Click a difficulty tab to switch. **Ctrl+Tab** moves to the next tab; **Ctrl+Shift+Tab** moves to the previous one. The **+** button adds a blank difficulty or imports an existing one. A blank difficulty inherits the active difficulty's audio, timing and settings.
 
 Importing an `.osu` difficulty preserves its metadata, including different or empty artist and title fields. A file from another directory is copied into the active difficulty's resource directory without overwriting existing files. Its relative audio, background, storyboard and sample references resolve there, including after saving and reopening. The imported file's original directory is not used as a fallback; missing project resources remain missing.
+
+Use **File → Import difficulty…** or **+ → Import difficulty…** to open a single-difficulty `.catchdiff` or `.catchdiff.catchbackup` directly in the current project. The import uses the destination difficulty's audio and resource folder when overwriting, and the active difficulty's resources when adding a new tab. It imports editable data without copying media. If the name already exists, overwrite it (undoable), create a numbered copy, or cancel. If several tabs share that name, select the intended tab before importing to enable overwrite. Save to keep the result.
 
 Right-click a tab to locate its saved file, workspace folder or associated osu! folder. Tabs show the difficulty's No Mod star rating and an unsaved-change indicator.
 
@@ -1003,7 +1005,7 @@ Linking preserves editable project data and reviews differences against the loca
 
 ### Exchange one difficulty as .fad
 
-Use **File → Export as .fad…** or the difficulty tab menu. Open the corresponding project before importing a FAD. It does not create a standalone Library project. Open, drop or use **File → Import difficulty (.fad)…** in that project.
+Use **File → Export as .fad…** or the difficulty tab menu. Open the corresponding project before importing a FAD. It does not create a standalone Library project. Open, drop or use **File → Import difficulty…** in that project.
 
 An existing matched difficulty enters merge review, and a missing difficulty can be added. Objects and FA settings are reviewed together, with separate choices for metadata and timing. Review the merged difficulty, then save or export it. Export includes unsaved work and preserves the local Songs association. Current FAD exports contain difficulty data. The receiving project supplies audio and other resources for playback.
 

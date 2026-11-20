@@ -140,7 +140,7 @@ internal static class FadTests
                 L.SetLanguage(locale);
                 var ui = new Ui(false); ui.View.LibrarySettings.Workspace = Path.Combine(settings.Workspace, locale); ui.View.LibrarySettings.Songs = "";
                 ui.View.LoadProject(project); ui.PaintUntilReady();
-                ui.View.BeginFadImport(archive); Settle(ui); ui.PaintUntilReady();
+                ui.View.ImportDifficultyFile(archive); Settle(ui); ui.PaintUntilReady();
                 Check(!ui.View.ErrorVisible && ui.View.DifficultyCount == 2 && ui.View.CurrentDifficultyName == "Guest", "unknown difficulty is added");
                 Check(ui.View.StatusMessage == L.Get("fad.unassignedSections", L.Get("fad.imported", "Guest"), 1),
                     "successful import reports unassigned sections");

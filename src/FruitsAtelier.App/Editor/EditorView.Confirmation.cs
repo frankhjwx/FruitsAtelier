@@ -104,6 +104,7 @@ public sealed partial class EditorView
         }
         if (hitsoundingPasteConfirmation) { DrawHitsoundingPasteConfirmation(c); return; }
         if (SliderCanvasChoiceVisible) { DrawSliderCanvasChoice(c); return; }
+        if (nativeDifficultyConflict is not null) { DrawNativeDifficultyConflict(c); return; }
         if (galleryDeletingFolder is not null) { DrawGalleryFolderDeletion(c); return; }
         if (pendingLanguage is not null) { DrawLanguageNotice(c); return; }
         if (previousSaveConfirmation || previousSaveRestore is not null)
