@@ -1,0 +1,64 @@
+name: Windows dev preview
+run-name: Windows dev preview for f8af75259c66a55240d5a791d1ae6133b73d90de
+on:
+  push:
+    branches: [codex/windows-dev-preview-f8af7525]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      SOURCE_COMMIT: f8af75259c66a55240d5a791d1ae6133b73d90de
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f8af75259c66a55240d5a791d1ae6133b73d90de
+          persist-credentials: false
+      - uses: actions/cache@v4
+        with:
+          path: artifacts/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/packages*.lock.json', '.config/dotnet-tools.json', '**/global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Verify difficulty import on Windows
+        run: dotnet run --project tests/FruitsAtelier.App.Tests -c Release -p:RestoreLockedMode=true -- --native-difficulty-import-check
+      - name: Build and verify portable Windows package
+        run: |
+          if ((git rev-parse HEAD) -ne $env:SOURCE_COMMIT) { throw 'Unexpected source commit.' }
+          $baseVersion = ([xml](Get-Content -LiteralPath Directory.Build.props -Raw)).Project.PropertyGroup.Version
+          $version = "$baseVersion-beta.$env:GITHUB_RUN_NUMBER"
+          ./scripts/Publish-Windows.ps1 -Version $version
+          ./scripts/Test-WindowsPackage.ps1 -Archive "artifacts/releases/FruitsAtelier-$version-win-x64.zip"
+          $manifestPath = Get-ChildItem -Path artifacts/package-check/*/current/build-info.json | Select-Object -First 1
+          $manifest = Get-Content -LiteralPath $manifestPath.FullName -Raw | ConvertFrom-Json
+          if ($manifest.commit -ne $env:SOURCE_COMMIT -or $manifest.dirty -or $manifest.version -ne $version) {
+            throw 'Package manifest does not identify the requested clean dev source.'
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-dev-f8af7525
+          path: |
+            artifacts/releases/FruitsAtelier-*-win-x64.zip
+            artifacts/releases/FruitsAtelier-*-win-x64.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mapset-verifier-source-f8af7525
+          path: |
+            artifacts/releases/FruitsAtelier-MapsetVerifier-*-source.zip
+            artifacts/releases/FruitsAtelier-MapsetVerifier-*-source.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
