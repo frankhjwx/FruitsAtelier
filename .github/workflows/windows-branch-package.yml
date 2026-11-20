@@ -1,0 +1,90 @@
+name: Windows branch package
+run-name: Windows package for ${{ inputs.branch }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to package (for example, dev)
+        type: string
+        required: true
+        default: dev
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Resolve the target branch
+        id: source
+        uses: actions/github-script@v7
+        env:
+          TARGET_BRANCH: ${{ inputs.branch }}
+        with:
+          script: |
+            const branch = process.env.TARGET_BRANCH;
+            const ref = `refs/heads/${branch}`;
+            const { data } = await github.rest.git.getRef({ ...context.repo, ref: `heads/${branch}` });
+            const { type, sha } = data.object;
+            if (data.ref !== ref || type !== 'commit' || !/^[a-f0-9]{40}$/.test(sha)) {
+              throw new Error('Target must be a branch in this repository.');
+            }
+            core.info(`${branch} at ${sha}`);
+            core.setOutput('commit', sha);
+            core.setOutput('short_commit', sha.slice(0, 8));
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.source.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Build and verify the portable package
+        env:
+          SOURCE_COMMIT: ${{ steps.source.outputs.commit }}
+        run: |
+          if ((git rev-parse HEAD) -ne $env:SOURCE_COMMIT) { throw 'Unexpected source commit.' }
+          $baseVersion = ([xml](Get-Content -LiteralPath Directory.Build.props -Raw)).Project.PropertyGroup.Version
+          $version = "$($baseVersion.Split('-')[0])-beta.$env:GITHUB_RUN_NUMBER"
+          $archive = "artifacts/releases/FruitsAtelier-$version-win-x64.zip"
+          ./scripts/Publish-Windows.ps1 -Version $version
+          ./scripts/Test-WindowsPackage.ps1 -Archive $archive
+          $manifestPath = Get-ChildItem -Path artifacts/package-check/*/current/build-info.json | Select-Object -First 1
+          $manifest = Get-Content -LiteralPath $manifestPath.FullName -Raw | ConvertFrom-Json
+          if ($manifest.commit -ne $env:SOURCE_COMMIT -or $manifest.dirty -or $manifest.version -ne $version) {
+            throw 'Package manifest does not match the requested commit and version.'
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-branch-${{ steps.source.outputs.short_commit }}
+          path: |
+            artifacts/releases/FruitsAtelier-*-win-x64.zip
+            artifacts/releases/FruitsAtelier-*-win-x64.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mapset-verifier-source-${{ steps.source.outputs.short_commit }}
+          path: |
+            artifacts/releases/FruitsAtelier-MapsetVerifier-*-source.zip
+            artifacts/releases/FruitsAtelier-MapsetVerifier-*-source.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-package-check-${{ github.run_id }}
+          path: artifacts/package-check/**/package-check.json
+          if-no-files-found: ignore
+          retention-days: 14
