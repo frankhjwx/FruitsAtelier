@@ -133,6 +133,7 @@ var tests = new (string Name, Action Run)[]
     ("Base SV overrides avoid unused leading greens and preserve pre-timing sliders", SliderTimingTests.BaseSvDoesNotAddLeadingInheritedPoint),
     ("Independent duration formula restores SV at the following head", SliderTimingTests.RestorationUsesFollowingHead),
     ("An isolated edited slider does not restore unused original SV", SliderTimingTests.IsolatedEditedSliderDoesNotRestoreUnusedSv),
+    ("Storyboard sample export truncates fractional times and preserves source text", SliderTimingTests.StoryboardSampleTimes),
     ("Same-time SV replaces greens while preserving red timing and effective samples", SliderTimingTests.SameTimeOverrideReplacesGreensAndPreservesRed),
     ("Natural red and green boundary is not overwritten by an SV restore", SliderTimingTests.NaturalBoundaryIsNotOverwrittenByRestore),
     ("Adjacent generated heads use one SV each and independent durations", SliderTimingTests.AdjacentGeneratedHeadsHaveOneSvEach),
@@ -290,7 +291,8 @@ SliderBorder : 255,255,255
 int failed = 0, skipped = 0;
 tests = tests.Concat(SynchronizationTests.Cases()).Append(("Export path compatibility", (Action)ExportPathTests.Run)).ToArray();
 if (args.Contains("--slider-timing-check"))
-    tests = tests.Where(t => t.Run.Method.DeclaringType == typeof(SliderTimingTests)).ToArray();
+    tests = tests.Where(t => t.Run.Method.DeclaringType == typeof(SliderTimingTests)
+        || t.Run.Method.DeclaringType == typeof(IndependentSliderSvTests)).ToArray();
 foreach (var (name, run) in tests)
 {
     if (args.Contains("--skip-external-fixtures") && (run == (Action)RealMaps || run == (Action)RealEditableWrites))

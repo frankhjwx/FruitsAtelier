@@ -88,7 +88,7 @@ internal static class SliderBatchTests
             var imported = OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(authored).Text);
             imported.ImportedSliders.Add(OsuBeatmapReader.Read(
                 "osu file format v14\n[General]\nMode:0\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n"
-                + "[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,64,21000,2,0,L|256:344,3,280\n").ImportedSliders.Single());
+                + "[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,64,21000,2,0,L|556:64,3,300\n").ImportedSliders.Single());
             var original = OsuBeatmapWriter.Serialize(imported);
             view.NewProject(); Check(view.AddDifficulty(imported), "Mixed difficulty import failed."); Wait();
             Check(view.SliderImportSourcePromptVisible, "Mixed import did not ask about its source.");

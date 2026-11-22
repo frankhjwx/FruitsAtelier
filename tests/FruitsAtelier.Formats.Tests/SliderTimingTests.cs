@@ -33,6 +33,25 @@ internal static class SliderTimingTests
         }
     }
 
+    public static void StoryboardSampleTimes()
+    {
+        var map = Map();
+        string[] lines = ["// Sample,203426.9,3,\"comment.wav\",100",
+            "Sample,203426.09271523159,3,\"sound,one.wav\",100", "5,-1.9,0,\"negative.wav\",35",
+            "Sample,250,0,\"integer.wav\",65", "Sample,$time,0,\"variable.wav\",65",
+            "Sample,250.000,0,\"decimal.wav\",65", "Sample,2.5e2,0,\"exponent.wav\",65"];
+        var events = new OsuSection { Name = "Events" }; events.Lines.AddRange(lines);
+        map.OriginalSections.Add(events);
+        var before = map.DeepClone();
+        var output = OsuBeatmapWriter.Serialize(map, false);
+        Check(output.Text.Contains("Sample,203426,3,\"sound,one.wav\",100")
+            && output.Text.Contains("5,-1,0,\"negative.wav\",35")
+            && output.Text.Contains("Sample,250,0,\"decimal.wav\",65")
+            && output.Text.Contains("Sample,250,0,\"exponent.wav\",65"), "Exported sample times must be integer milliseconds.");
+        Check(output.Text.Contains(lines[0]) && output.Text.Contains(lines[3]) && output.Text.Contains(lines[4])
+            && map.ContentEquals(before), "Sample time export changed unrelated text or the source document.");
+    }
+
     public static void CompatibleCloseTiming()
     {
         var document = Map();
@@ -105,6 +124,7 @@ internal static class SliderTimingTests
 
     public static void SameTimeOverrideReplacesGreensAndPreservesRed()
     {
+        FractionalSampleGreenPreservesHeadSv();
         AppendedSampleGreenPreservesEffectiveSv();
         var document = Map();
         document.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = -50, Uninherited = false, SourceOrder = 1, SampleSet = 2, Volume = 35 });
@@ -124,6 +144,47 @@ internal static class SliderTimingTests
             "Override did not inherit the effective green point's sample/effect state.");
         Near(1000, raw.Duration(1000, 0)); Near(1000, raw.Duration(1000, 1));
         Check(raw.Timing.All(p => p.Time <= 1000), "Unused original SV was restored after replacing the head.");
+    }
+
+    private static void FractionalSampleGreenPreservesHeadSv()
+    {
+        foreach (bool overlapping in new[] { false, true })
+        {
+            string text = "osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n1000.25,-50,4,1,0,100,0,0\n1000.75,-100,4,1,0,100,0,0\n[HitObjects]\n100,192,1000.25,2,0,L|200:192,1,100\n"
+                + (overlapping ? "100,192,1000.75,2,0,L|200:192,1,100\n" : "");
+            var retained = OsuBeatmapReader.Read(text);
+            var exported = OsuBeatmapWriter.Serialize(retained, false);
+            Check(exported.ObjectSequenceMatches && exported.MaxConvertedTimeErrorMs < 1e-6,
+                "Fractional imported heads must keep their own locked velocity.");
+        }
+        foreach (bool imported in new[] { false, true })
+        {
+            var document = Map();
+            AddTrack(document, 1000, 2000, 0, 400);
+            if (imported) document = OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(document, false).Text);
+            document.TimingPoints.Add(new() { TimeMs = 1000.5099337748, BeatLengthMs = -100,
+                Uninherited = false, SourceOrder = 7, SampleSet = 3, SampleIndex = 11, Volume = 50, Effects = 1 });
+            AddImported(document, 2200, 100, 1);
+            var before = document.DeepClone();
+            var cache = new OsuWriteCache();
+            var result = OsuBeatmapWriter.Serialize(document, false, cache);
+            var raw = RawMap.Parse(result.Text);
+            Near(1000, raw.Duration(1000, 0)); Near(1000, raw.Duration(1000, .999));
+            Near(500, raw.Duration(2200, 0));
+            var green = raw.Timing.Single(p => p.Time == 1000.5099337748);
+            Check(green.Fields[3] == "3" && green.Fields[4] == "11" && green.Fields[5] == "50" && green.Fields[7] == "1",
+                "Fractional green lost sample fields or effects.");
+            Check(result.ObjectSequenceMatches && document.ContentEquals(before), "Fractional SV protection changed source or event identities.");
+            Check(OsuBeatmapWriter.Serialize(document, false, cache).Text == result.Text
+                && OsuBeatmapWriter.Serialize(document, false).Text == result.Text, "Cached fractional timing differs from uncached output.");
+            var rounded = result.ReadBack.DeepClone();
+            foreach (var point in rounded.TimingPoints) point.TimeMs = Math.Truncate(point.TimeMs);
+            var exactEvents = CatchStreamConverter.Convert(result.ReadBack, false);
+            var roundedEvents = CatchStreamConverter.Convert(rounded, false);
+            Check(exactEvents.Objects.SequenceEqual(roundedEvents.Objects)
+                && CatchPreviewMods.HardRock(result.ReadBack, exactEvents).SequenceEqual(CatchPreviewMods.HardRock(rounded, roundedEvents)),
+                "Integer-millisecond timing interpretation changed NM/HR events or randomization.");
+        }
     }
 
     private static void AppendedSampleGreenPreservesEffectiveSv()
@@ -239,9 +300,11 @@ internal static class SliderTimingTests
             var raw = RawMap.Parse(result.Text);
             Near(1000, raw.Duration(1000, 0)); Near(double.IsNaN(beatLength) ? 500 : 400, raw.Duration(1100, 0));
             var point = raw.Timing.Single(p => p.Time == boundary);
-            Check(point.BeatLength.Equals(beatLength) && point.Fields[3] == "3" && point.Fields[4] == "7"
+            double expectedBeatLength = boundary < 1001 ? raw.Timing.Single(p => p.Time == 1000).BeatLength : beatLength;
+            Check(point.BeatLength.Equals(expectedBeatLength) && point.Fields[3] == "3" && point.Fields[4] == "7"
                 && point.Fields[5] == "35" && point.Fields[7] == "1", "Following SV/sample/effect metadata changed.");
-            Check(raw.Timing.All(p => p.Time <= boundary), "A natural boundary introduced an unused restoration.");
+            Check(boundary < 1001 ? raw.Timing.Last().Time == 1100 : raw.Timing.All(p => p.Time <= boundary),
+                "SV restoration must only protect the following slider when the fractional head boundary was adjusted.");
             Check(result.ObjectSequenceMatches && document.ContentEquals(before), "Export changed events or source content.");
         }
     }

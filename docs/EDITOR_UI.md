@@ -2436,7 +2436,10 @@ Unavailable or undecodable audio is silent while its event remains editable.
 
 Selected SB events support copy, cut, paste, deletion and undo/redo. Paste retains
 the sound, volume and relative timing and starts at the playhead. Saving copies
-referenced imported audio into the mapset's `fa-storyboard` directory. Saving also
+newly imported audio into the mapset's `SBHitsounds` directory with its original
+filename (for example, `SBHitsounds/cheer.wav`). Different audio with the same name
+uses a numeric suffix such as `cheer-2.wav`. Existing files and references,
+including legacy `fa-storyboard` paths, keep their paths. Saving also
 removes managed copies with no remaining references; other difficulties, shared
 storyboards and note samples protect shared files. Original source files and
 externally modified copies are retained. Clipboard and undo snapshots keep audio

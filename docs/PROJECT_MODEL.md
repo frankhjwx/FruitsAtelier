@@ -2,6 +2,10 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
+The saved `DurationMs` is not a conversion boundary. Existing objects may extend
+beyond it; slider conversion and droplet processing validate their times against
+the supported osu! timestamp range, preserving their timing and the saved duration.
+
 The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. Per-fruit stream combos use schema 17/18. Documents retaining v7 slider tick rules use schema 19/20. Banana shower patterns use schema 21/22. Project-level notes use multi-difficulty schema 24; empty notes retain the document-derived schema. Per-slider droplet modes use schema 25 (single difficulty) or 26 (multi-difficulty). All preceding schemas remain readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v7–v14 and stable-compatible lazer v128 / Mode=0 or Mode=2 `.osu` parsing, retaining v7 on export for v7 maps and using v14 otherwise. Authored content, imported context, and derived output remain separate.
 
 Non-default osu canvas coordinates, independent osu distance spacing, Legacy native
@@ -488,8 +492,12 @@ Schemas 51 (single difficulty) and 52 (multi-difficulty) add `StoryboardAudio`,
 a dictionary from managed relative filenames to source metadata. Its byte cache
 is shared by history snapshots and excluded from JSON. Empty dictionaries keep
 previous schema versions. Events remain ordinary `Sample` lines using relative
-mapset filenames. The namespace includes a content hash and the original basename
-to avoid overwriting unrelated files. Save publication applies a reversible
+mapset filenames. New imports use `SBHitsounds/<original filename>` with numeric
+suffixes for conflicting content. Existing references, including legacy
+`fa-storyboard/<hash>/<filename>` paths, remain unchanged. Optional `ContentHash`
+metadata identifies editor-owned copies for cleanup without putting hashes in
+new filenames; reused pre-existing files have no cleanup hash. Legacy paths retain
+their embedded hash for cleanup verification. Save publication applies a reversible
 resource plan; failed publication restores its file changes. Reopening caches the
 saved copy, with the source as a fallback. Missing audio remains silent.
 Resource registrations are excluded from content comparison: event paths carry

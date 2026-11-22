@@ -78,6 +78,7 @@ public sealed partial class EditorView
             return editNotes is not null && Edit(L.Get("hitsounding.paste"), editNotes);
         }
         if (!CommitField()) return false;
+        add = add.Select(sample => sample with { TimeMs = OsuBeatmapWriter.QuantizeTime(sample.TimeMs) }).ToArray();
         bool needsRoot = Document.SourcePath is null && Document.AudioPath is null
             && (resourceRoot is not null || add.Any(s => hitsoundingStoryboardClipboardAudio.ContainsKey(s.Path)));
         string? root = resourceRoot ?? (needsRoot ? MediaResourceRoot(difficulties[activeDifficulty].Id) : StoryboardMediaDirectory(Document));
@@ -85,11 +86,19 @@ public sealed partial class EditorView
         try
         {
             var importedAudio = new Dictionary<string, StoryboardAudio>(StringComparer.OrdinalIgnoreCase);
+            var registeredAudio = difficulties.SelectMany(d => d.History.Document.StoryboardAudio).ToArray();
             if (!move)
                 add = add.Select(sample =>
                 {
                     if (!hitsoundingStoryboardClipboardAudio.TryGetValue(sample.Path, out var audio)) return sample;
-                    string relative = audio.RelativePath;
+                    string relative = Path.GetRelativePath(root, sample.Path).Replace('\\', '/');
+                    if (!Document.StoryboardAudio.TryGetValue(relative, out var existing) || !ReferenceEquals(existing, audio))
+                        relative = audio.ChooseRelativePath(root, registeredAudio.Concat(importedAudio));
+                    var retained = registeredAudio.Concat(importedAudio)
+                        .FirstOrDefault(p => string.Equals(p.Key, relative, StringComparison.OrdinalIgnoreCase)).Value;
+                    if (retained is not null) audio = retained;
+                    else if (File.Exists(Path.Combine(root, relative)))
+                        audio = audio with { ContentHash = null };
                     importedAudio[relative] = audio;
                     return sample with { Path = Path.Combine(root, relative), Shared = false };
                 }).ToArray();

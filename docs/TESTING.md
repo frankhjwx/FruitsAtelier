@@ -147,6 +147,13 @@ samples, and shared expansion budgets with independent variable scopes.
 
 ## Slider event timing
 
+`Formats.Tests --slider-timing-check` covers fractional sample greens within a
+slider head's integer millisecond, generated and imported sliders, preservation
+of sample/effect fields, later SV restoration, and cached/uncached equivalence.
+It also checks integer storyboard sample export from retained Events sections.
+`App.Tests --storyboard-drop-check` also checks integer sample timestamps,
+consecutive edits with retained selection, shared `.osb` edits and undo.
+
 `Core.Tests --slider-event-timing-check` exercises isolated event edits that need
 more automatic SV while preserving rounded event times and neighbouring positions.
 It covers consecutive edits, cached conversion, explicit-SV precedence, invalid
@@ -818,6 +825,8 @@ recording canvas excludes native GPU rendering.
 `App.Tests --legacy-droplet-worker-check` verifies responsive submission, prepared
 export publication, failure rollback, save blocking, cancellation, undo/redo and
 rejection of stale content or history transactions.
+Dragging and deleting Legacy sliders also cover maps with remaining sliders beyond
+the saved workspace duration, including undo/redo, project saves and export.
 It also checks that the first note placement and deletion finish without a
 progress dialog. `App.Tests --legacy-edit-map <difficulty.catchdiff>` runs this
 first-edit check against a saved document in memory without writing its source.

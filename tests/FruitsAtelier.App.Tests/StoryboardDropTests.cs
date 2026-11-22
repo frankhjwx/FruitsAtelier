@@ -8,6 +8,7 @@ internal static class StoryboardDropTests
 {
     public static void Run()
     {
+        FractionalTimes();
         NativeFileDrop();
         string root = Path.GetFullPath("artifacts/tests/storyboard-drop/" + Guid.NewGuid().ToString("N"));
         string songs = Path.Combine(root, "Songs"), mapRoot = Path.Combine(songs, "map");
@@ -15,6 +16,7 @@ internal static class StoryboardDropTests
         string source = Path.Combine(root, "sample,one.wav");
         byte[] data = HitsoundSamples.CreateWave(CatchObjectKind.Fruit);
         File.WriteAllBytes(source, data);
+        ManagedPaths();
         CleanRoundtrip(false);
         CleanRoundtrip(true);
         var map = new MapDocument { SourcePath = Path.Combine(mapRoot, "map.osu"), DurationMs = 6000, BeatLengthMs = 500 };
@@ -137,6 +139,95 @@ internal static class StoryboardDropTests
             Check(!Directory.Exists(audioRoot), "New map keeps audio only in memory until save");
             Check(test.View.SaveWorkspace() && File.Exists(audioPath), "New map save retains audio outside the replaceable project directory");
             Check(test.View.SaveWorkspace() && File.Exists(audioPath), "Repeated new map saves retain audio");
+        }
+    }
+    private static void ManagedPaths()
+    {
+        string root = Path.GetFullPath("artifacts/tests/storyboard-paths/" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        string source = Path.Combine(root, "cheer.wav");
+        byte[] bytes = [1, 2, 3];
+        File.WriteAllBytes(source, bytes);
+        var audio = StoryboardAudio.Capture(source);
+        string hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+        Check(audio.RelativePath == "SBHitsounds/cheer.wav", "New audio preserves its filename without a hash");
+        File.WriteAllBytes(source, [4, 5, 6]);
+        var other = StoryboardAudio.Capture(source);
+        var registered = new Dictionary<string, StoryboardAudio> { [audio.RelativePath] = audio };
+        Check(other.ChooseRelativePath(root, registered) == "SBHitsounds/cheer-2.wav", "Unsaved same-name audio uses a numeric suffix");
+        Check(audio.ChooseRelativePath(root, registered) == audio.RelativePath, "Repeated audio reuses its registration");
+        foreach (string relative in new[] { audio.RelativePath, $"fa-storyboard/{hash}/cheer.wav" })
+        {
+            var map = new MapDocument { SourcePath = Path.Combine(root, "map.osu") };
+            map.StoryboardAudio[relative] = audio;
+            var events = new OsuSection { Name = "Events" };
+            events.Lines.Add($"Sample,1000,0,\"{relative}\",100");
+            map.OriginalSections.Add(events);
+            var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(map));
+            Check(restored.StoryboardAudio.ContainsKey(relative), "Readable and legacy paths survive project roundtrips unchanged");
+            string path = Path.Combine(root, relative);
+            HitsoundResourcePlan.StoryboardCopies([map]).Apply();
+            Check(File.ReadAllBytes(path).SequenceEqual(bytes), "Readable and legacy paths materialize retained bytes");
+            if (relative == audio.RelativePath)
+            {
+                Check(audio.ChooseRelativePath(root, []) == relative, "Identical existing audio is reused");
+                Check(other.ChooseRelativePath(root, []) == "SBHitsounds/cheer-2.wav", "Different existing audio is preserved using a suffix");
+            }
+            File.WriteAllBytes(path, [9, 8, 7]);
+            bool conflict = false;
+            try { HitsoundResourcePlan.StoryboardCopies([map]); }
+            catch (IOException) { conflict = true; }
+            Check(conflict, "Conflicting destination audio is never overwritten");
+            events.Lines.Clear();
+            Check(HitsoundResourcePlan.StoryboardCopies([map]).DisplayNames.Count == 0, "Externally changed audio is retained during cleanup");
+            File.WriteAllBytes(path, bytes);
+            HitsoundResourcePlan.StoryboardCopies([map]).Apply();
+            Check(!File.Exists(path), "Unreferenced managed copies are cleaned up");
+        }
+        string existingPath = Path.Combine(root, audio.RelativePath);
+        File.WriteAllBytes(existingPath, bytes);
+        var existingMap = new MapDocument { SourcePath = Path.Combine(root, "map.osu") };
+        existingMap.StoryboardAudio[audio.RelativePath] = audio with { ContentHash = null };
+        Check(HitsoundResourcePlan.StoryboardCopies([existingMap]).DisplayNames.Count == 0,
+            "Reused pre-existing files are not owned by managed cleanup");
+    }
+    private static void FractionalTimes()
+    {
+        string root = Path.GetFullPath("artifacts/tests/storyboard-time");
+        Directory.CreateDirectory(root);
+        string shared = Path.Combine(root, "shared.osb");
+        if (File.Exists(shared)) File.Delete(shared);
+        var map = new MapDocument { SourcePath = Path.Combine(root, "map.osu"), DurationMs = 240000 };
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900);
+        var edit = typeof(EditorView).GetMethod("EditHitsoundingStoryboard", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var source = StoryboardReader.Read("[Events]\nSample,203426.09271523159,3,\"cheer.wav\",100", null, root).Samples.Single();
+        var baseline = ui.View.Document.DeepClone();
+        Apply([], [source], false);
+        Check(ui.View.Document.OriginalSections.Single(s => s.Name == "Events").Lines.Single() == "Sample,203426,3,\"cheer.wav\",100",
+            "Storyboard edits must write integer milliseconds.");
+        var selected = (HashSet<StoryboardSample>)typeof(EditorView).GetField("hitsoundingStoryboardSelection", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ui.View)!;
+        Check(selected.Single().TimeMs == 203426, "Retained selection must match the serialized timestamp.");
+        var first = selected.Single();
+        Apply([first], [first with { TimeMs = 203625.75 }], true);
+        Check(selected.Single().TimeMs == 203625, "Consecutive moves must retain the quantized selection.");
+        ui.Key(90, ctrl: true); ui.Key(90, ctrl: true);
+        Check(baseline.ContentEquals(ui.View.Document), "Fractional storyboard edits must undo exactly.");
+        File.WriteAllText(shared, "[Events]\nSample,203426,3,\"cheer.wav\",100\n");
+        var sharedSample = StoryboardReader.Read("[Events]", File.ReadAllText(shared), root).Samples.Single();
+        Apply([sharedSample], [sharedSample with { TimeMs = 203625.75 }], true);
+        Check(File.ReadAllText(shared).Contains("Sample,203625,3,"), "Shared storyboard moves must write integer milliseconds.");
+        WaitForStoryboard();
+        ui.Key(90, ctrl: true);
+        Check(File.ReadAllText(shared).Contains("Sample,203426,3,"), "Shared storyboard rounding must support undo.");
+        WaitForStoryboard(); File.Delete(shared);
+
+        void Apply(StoryboardSample[] remove, StoryboardSample[] add, bool move)
+            => Check((bool)edit.Invoke(ui.View, [remove, add, move, null, true, null])!, "Storyboard edit failed.");
+        void WaitForStoryboard()
+        {
+            var field = typeof(EditorView).GetField("storyboardLoad", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            if (field.GetValue(ui.View) is Task pending) Check(pending.Wait(TimeSpan.FromSeconds(10)), "Storyboard load timed out.");
+            ui.Paint();
         }
     }
     private static void NativeFileDrop()

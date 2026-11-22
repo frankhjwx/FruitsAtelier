@@ -8,9 +8,9 @@ Windows와 macOS에서 사용할 수 있는 독립 osu!catch 비트맵 편집기
 
 [공식 웹사이트](https://fruitsatelier.himiko.moe/) · [다운로드](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**현재 버전: 1.4.10**
+**현재 버전: 1.4.11**
 
-열려 있는 프로젝트로 `.catchdiff` 난이도를 가져오거나 WAV·OGG·MP3 파일을 SB Hitsound 트랙에 끌어다 놓아 스토리보드 사운드를 추가할 수 있습니다. F6 타이밍 행을 다른 맵의 Mapping 또는 Hitsounding에 붙여넣을 수 있습니다. 간소화된 동기화에서도 오브젝트와 빨간선 변경은 명시적으로 검토해야 합니다.
+새로 가져온 스토리보드 사운드는 원래 파일명으로 `SBHitsounds`에 저장되며, 이름이 같고 내용이 다르면 숫자 접미사가 붙습니다. 샘플 시간은 정수 밀리초로 내보내고, 소수 시간의 타이밍 포인트에서도 슬라이더 시작점의 속도를 유지합니다. 저장된 프로젝트 길이를 넘는 슬라이더도 변환할 수 있습니다.
 
 오브젝트 스냅 설정은 난이도 간에 공유되며 현재 컴퓨터에 저장됩니다. 라이브러리에서 Esc를 누르면 종료 확인 창이 표시됩니다.
 

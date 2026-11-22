@@ -50,7 +50,9 @@ public sealed class HitsoundResourcePlan
                     && protectedFiles.Value is { } protectedPaths && !protectedPaths.Contains(path))
                 {
                     byte[] data = File.ReadAllBytes(path);
-                    if (Convert.ToHexString(SHA256.HashData(data)).Equals(relative.Split('/')[1], StringComparison.OrdinalIgnoreCase))
+                    string? expectedHash = relative.StartsWith("fa-storyboard/", StringComparison.Ordinal)
+                        ? relative.Split('/')[1] : entries.First().Value.ContentHash;
+                    if (Convert.ToHexString(SHA256.HashData(data)).Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
                         plan.changes.Add(new(path, data, null));
                 }
             }
