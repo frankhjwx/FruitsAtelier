@@ -8,9 +8,9 @@
 
 [官网](https://fruitsatelier.himiko.moe/) · [下载](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**当前版本：1.4.10**
+**当前版本：1.4.11**
 
-可将 `.catchdiff` 难度导入已打开的工程，或将 WAV、OGG、MP3 拖入 SB Hitsound 轨道添加故事板音效。F6 Timing 行可跨谱面粘贴到 Mapping 或 Hitsounding；简化同步仍会要求明确审阅物件和红线变化。
+新导入的故事板音效以原文件名保存在 `SBHitsounds`，同名但内容不同的文件会添加数字后缀。故事板音效时间以整数毫秒导出，小数时间绿线不会覆盖滑条头所需的速度。超出工程已保存时长的滑条仍可正常转换。
 
 对象吸附设置在各难度间共用，并保存在当前电脑上。在曲库中按 Esc 会先询问是否退出。
 

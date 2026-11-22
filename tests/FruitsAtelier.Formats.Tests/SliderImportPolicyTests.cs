@@ -88,7 +88,7 @@ internal static class SliderImportPolicyTests
         var map = OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(authored).Text);
         var native = OsuBeatmapReader.Read(
             "osu file format v14\n[General]\nMode:0\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n"
-            + "[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,64,4000,2,0,L|256:344,3,280\n").ImportedSliders.Single();
+            + "[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,64,4000,2,0,L|556:64,3,300\n").ImportedSliders.Single();
         map.ImportedSliders.Add(native);
         map.SliderImportState = SliderImportState.Pending;
         var original = OsuBeatmapWriter.Serialize(map);
