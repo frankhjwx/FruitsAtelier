@@ -289,6 +289,8 @@ SliderBorder : 255,255,255
 
 int failed = 0, skipped = 0;
 tests = tests.Concat(SynchronizationTests.Cases()).Append(("Export path compatibility", (Action)ExportPathTests.Run)).ToArray();
+if (args.Contains("--slider-timing-check"))
+    tests = tests.Where(t => t.Run.Method.DeclaringType == typeof(SliderTimingTests)).ToArray();
 foreach (var (name, run) in tests)
 {
     if (args.Contains("--skip-external-fixtures") && (run == (Action)RealMaps || run == (Action)RealEditableWrites))
