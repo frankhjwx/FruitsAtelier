@@ -2423,3 +2423,29 @@ In Mapping, the playback line highlights near its handle or outside the 0–512
 playfield and can be dragged while paused or playing. Dragging changes
 its viewport height, clamped to 5–95%, without seeking; release saves the height and
 Escape cancels the drag. The lazer playback line remains fixed.
+
+
+## Storyboard hitsound files
+
+Drop one WAV, OGG or MP3 from a file manager or Audio Library onto the SB Hitsound
+track. The event snaps to the current timing grid. Multiple-file drops onto this
+track are ignored. The source stays in place, and the editor retains an in-memory
+copy, so moving or deleting the original after dropping does not interrupt editing.
+Unavailable or undecodable audio is silent while its event remains editable.
+
+Selected SB events support copy, cut, paste, deletion and undo/redo. Paste retains
+the sound, volume and relative timing and starts at the playhead. Saving copies
+referenced imported audio into the mapset's `fa-storyboard` directory. Saving also
+removes managed copies with no remaining references; other difficulties, shared
+storyboards and note samples protect shared files. Original source files and
+externally modified copies are retained. Clipboard and undo snapshots keep audio
+in memory until the project is retired.
+Adding then deleting an imported sound returns a previously clean map to clean
+status when no other content has changed.
+
+A single-file drag over SB Hitsound previews a purple block at the snapped time.
+Moving existing sounds uses their current Note based or Precise HS appearance;
+Precise HS retains duration, labels and waveform while the source rendering follows
+the pointer. Release commits one edit, and Escape cancels it. Dropping library
+files back into their original directory without copying leaves the panel,
+selection, scrolling, waveform cache and audition unchanged.

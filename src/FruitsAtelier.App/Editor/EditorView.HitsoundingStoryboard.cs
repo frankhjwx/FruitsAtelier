@@ -10,6 +10,7 @@ public sealed partial class EditorView
     private readonly List<(Rect Bounds, StoryboardSample Sample)> hitsoundingStoryboardHits = [];
     private readonly HashSet<StoryboardSample> hitsoundingStoryboardSelection = [];
     private StoryboardSample[] hitsoundingStoryboardClipboard = [];
+    private readonly Dictionary<string, StoryboardAudio> hitsoundingStoryboardClipboardAudio = new(StringComparer.OrdinalIgnoreCase);
     private StoryboardSample? hitsoundingStoryboardMove;
     private double hitsoundingStoryboardMoveTime;
     private double hitsoundingStoryboardMoveMinimum;
@@ -38,6 +39,7 @@ public sealed partial class EditorView
         {
             hitsoundingStoryboardMove = hit.Sample;
             hitsoundingStoryboardMoveSources = hitsoundingStoryboardSelection.ToArray();
+            hitsoundingStoryboardMoveTags = hitsoundingStoryboardTags.Where(t => t.Storyboard is { } s && hitsoundingStoryboardSelection.Contains(s)).ToArray();
             hitsoundingStoryboardMoveMinimum = hit.Sample.TimeMs - hitsoundingStoryboardMoveSources.Min(s => s.TimeMs);
             hitsoundingStoryboardMoveTime = hit.Sample.TimeMs;
             hitsoundingStoryboardPointerTime = HitsoundingPointerTime(x);
@@ -59,7 +61,7 @@ public sealed partial class EditorView
         if (hitsoundingStoryboardMove is not { } sample) return false;
         hitsoundingStoryboardMove = null;
         var sources = hitsoundingStoryboardMoveSources;
-        hitsoundingStoryboardMoveSources = [];
+        hitsoundingStoryboardMoveSources = []; hitsoundingStoryboardMoveTags = [];
         if (hitsoundingStoryboardMoved && hitsoundingStoryboardMoveTime != sample.TimeMs)
             EditHitsoundingStoryboard(sources, sources.Select(s => s with { TimeMs = s.TimeMs + hitsoundingStoryboardMoveTime - sample.TimeMs }).ToArray(), move: true);
         hitsoundingStoryboardMoved = false;
@@ -69,17 +71,28 @@ public sealed partial class EditorView
     {
         if (hitsoundingStoryboardSelection.Count > 0) EditHitsoundingStoryboard(hitsoundingStoryboardSelection.ToArray(), []);
     }
-    private bool EditHitsoundingStoryboard(StoryboardSample[] remove, StoryboardSample[] add, bool move = false, Action? editNotes = null, bool retainSelection = false)
+    private bool EditHitsoundingStoryboard(StoryboardSample[] remove, StoryboardSample[] add, bool move = false, Action? editNotes = null, bool retainSelection = false, string? resourceRoot = null)
     {
         if (HitsoundingLaneLocked(6))
         {
             return editNotes is not null && Edit(L.Get("hitsounding.paste"), editNotes);
         }
         if (!CommitField()) return false;
-        string? root = StoryboardMediaDirectory(Document);
+        bool needsRoot = Document.SourcePath is null && Document.AudioPath is null
+            && (resourceRoot is not null || add.Any(s => hitsoundingStoryboardClipboardAudio.ContainsKey(s.Path)));
+        string? root = resourceRoot ?? (needsRoot ? MediaResourceRoot(difficulties[activeDifficulty].Id) : StoryboardMediaDirectory(Document));
         if (root is null) return false;
         try
         {
+            var importedAudio = new Dictionary<string, StoryboardAudio>(StringComparer.OrdinalIgnoreCase);
+            if (!move)
+                add = add.Select(sample =>
+                {
+                    if (!hitsoundingStoryboardClipboardAudio.TryGetValue(sample.Path, out var audio)) return sample;
+                    string relative = audio.RelativePath;
+                    importedAudio[relative] = audio;
+                    return sample with { Path = Path.Combine(root, relative), Shared = false };
+                }).ToArray();
             var mapLines = new List<(OsuSection Section, int Index)>();
             int line = 0;
             var wanted = remove.Where(s => !s.Shared).Select(s => s.SourceLine).ToHashSet();
@@ -131,11 +144,17 @@ public sealed partial class EditorView
                 try { applied = Edit(L.Get("assist.soundChange"), () =>
                 {
                     editNotes?.Invoke();
+                    if (needsRoot) Document.SourcePath = Path.Combine(root, WorkspaceProject.ResourceRootMarker);
+                    foreach (var pair in importedAudio) Document.StoryboardAudio[pair.Key] = pair.Value;
                     foreach (var group in mapLines.GroupBy(p => p.Section))
                         foreach (var entry in group.OrderByDescending(p => p.Index)) entry.Section.Lines.RemoveAt(entry.Index);
-                    if (mapAdd.Length == 0) return;
+                    if (mapAdd.Length == 0)
+                    {
+                        Document.OriginalSections.RemoveAll(s => s.RemoveWhenEmpty && s.Lines.Count == 0);
+                        return;
+                    }
                     var events = Document.OriginalSections.FirstOrDefault(s => s.Name == "Events");
-                    if (events is null) { events = new OsuSection { Name = "Events" }; Document.OriginalSections.Add(events); }
+                    if (events is null) { events = new OsuSection { Name = "Events", RemoveWhenEmpty = true }; Document.OriginalSections.Add(events); }
                     foreach (var sample in mapAdd)
                     {
                         events.Lines.Add(Serialize(sample));

@@ -19,6 +19,10 @@ internal static class SimplifiedSynchronizationTests
                 fixture.Change(Fixture.Text.Replace("Title:Original", "Title:Incoming").Replace("1500,1,0", "1500,5,0"));
                 var before = ui.View.Document.DeepClone();
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.mode.title")), "mode prompt appears first");
+                var promptButton = ui.View.SyncModeSimpleBounds;
+                ui.View.PointerMove(promptButton.X + 8, promptButton.Y + 8, false, false); ui.Paint();
+                Check(ui.Canvas.Fills.Any(f => f.Bounds == promptButton && f.Color == 0x3D495A), "prompt buttons follow pointer hover");
+                Check(ui.Canvas.Texts.Last(t => t.Value == L.Get("sync.mode.auto")).Size == 12, "secondary prompt uses compact button text");
                 var choices = Choices(ui);
                 ui.Click(40, 98); ui.Click(ui.Width - 160, ui.Height - 35);
                 ui.View.Wheel(200, 250, -1200, false); ui.View.PointerDoubleClick(200, 250, false, false);
@@ -61,6 +65,14 @@ internal static class SimplifiedSynchronizationTests
                 Check(ui.View.DiscardConfirmationVisible, "Library responds to Escape after cancellation");
                 Check(ui.View.Document.ContentEquals(before) && File.ReadAllText(fixture.Source) == outside, "cancellation retains authoring and external data");
                 Console.WriteLine($"PASS cancel to responsive Library {locale} {size}");
+            }
+            using (var closing = new Fixture((980, 620)))
+            {
+                closing.Change(Fixture.Text.Replace("Title:Original", "Title:Incoming"));
+                var beforeClose = closing.Ui.View.Document.DeepClone();
+                closing.Ui.View.PrepareApplicationClose();
+                Check(!closing.Ui.View.SynchronizationVisible && closing.Ui.View.PrepareFileOperation(), "window close exits review and reaches normal close validation");
+                Check(closing.Ui.View.Document.ContentEquals(beforeClose), "closing review retains unsaved authoring");
             }
             using var timing = new Fixture((980, 620), slider: true);
             timing.Change(Fixture.Text.Replace("150,192,1500,1,0,0:0:0:0:", "150,192,1500,2,0,L|350:192,1,400")

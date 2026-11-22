@@ -1948,7 +1948,8 @@ display modes and after Ctrl+Left/Right navigation. It also compares slider head
 highlights with Mapping and checks W/E/R on single and grouped Notes, selected
 slider edges, whole sliders and locked addition tracks in both profiles.
 
-The Hitsounding panel check also covers grouped addition ghosts in both display modes and tools,
+The Hitsounding panel check also covers grouped addition previews retaining their
+mode-specific dimensions in both display modes and tools,
 atomic rejection of incomplete destinations, cancellation, release commits, undo and
 Shift-arrow playback navigation. The Notes check verifies retained originals with
 translucent single/group previews and pointer capture. SB checks cover group retiming
@@ -1973,3 +1974,19 @@ preference. Output remains under `artifacts/tests/testplay-native/`.
 input isolation and navigation in English and Chinese. On macOS,
 `bash Run-Editor-Mac.command --smoke-check --library-exit-check` captures the
 confirmation in both languages under `artifacts/macos-check/library-exit`.
+
+
+`App.Tests --storyboard-drop-check` covers external and Audio Library drops,
+single-file admission, timing snap, retained encoded audio after source deletion,
+copy/cut/paste, deferred save materialization, shared-reference retention, final
+reference cleanup, undo/redo and resource metadata roundtrips. The
+check also covers clean-state restoration after drop/delete, preservation of
+pre-existing empty Events sections and repeated saves of source-less maps. The native
+Hitsounding check captures dropped SB audio after its source has been removed.
+The simplified synchronization check covers secondary button hover, compact text
+and reaching normal close validation from a pending review.
+
+Storyboard drop checks also verify snapped hover previews, multi-file preview
+rejection and full-width Precise HS movement. Library file checks verify that
+moving files within their current directory does not reload the list or interrupt
+audition.

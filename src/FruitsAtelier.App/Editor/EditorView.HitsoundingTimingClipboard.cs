@@ -15,7 +15,7 @@ public sealed partial class EditorView
             hitsoundingTimingClipboard = Document.TimingPoints.Where(hitsoundingTimingSelection.Contains)
                 .OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).Select(TimingEditing.Copy).ToArray();
             hitsoundingClipboardContainsNotes = false;
-            hitsoundingClipboard = []; hitsoundingStoryboardClipboard = [];
+            hitsoundingClipboard = []; hitsoundingStoryboardClipboard = []; hitsoundingStoryboardClipboardAudio.Clear();
             if (hitsoundingTimingClipboard.Length > 0) RequestCopyText?.Invoke(TimingEditing.Serialize(hitsoundingTimingClipboard));
             return true;
         }

@@ -24,7 +24,7 @@ internal sealed class HitsoundingAudioCache
             return completed;
         }
     }
-    public AudioWaveform? Get(Hitsound sound, Func<string, CancellationToken, Task<AudioWaveform>>? decode)
+    public AudioWaveform? Get(Hitsound sound, Func<string, CancellationToken, Task<AudioWaveform>>? decode, Func<string, byte[], CancellationToken, Task<AudioWaveform>>? decodeMemory = null)
     {
         if (sound.FilePath is not { } path || decode is null) return null;
         if (!entries.TryGetValue(path, out var entry))
@@ -36,7 +36,7 @@ internal sealed class HitsoundingAudioCache
                 if (oldest.Key is null) return null;
                 entries.Remove(oldest.Key);
             }
-            entry = new(decode(path, cancellation.Token)); entries.Add(path, entry);
+            entry = new(sound.Data is { } data && decodeMemory is not null ? decodeMemory(path, data, cancellation.Token) : decode(path, cancellation.Token)); entries.Add(path, entry);
             _ = entry.Task.ContinueWith(t => { _ = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
         }
         entry.LastUse = ++clock;

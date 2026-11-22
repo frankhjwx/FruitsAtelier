@@ -183,7 +183,14 @@ public static partial class WorkspaceProject
     // directory makes an interrupted rename recoverable without mixing difficulty versions.
     // A caller that already archived saved/current state can omit the second archive during publication.
     public static void Save(WorkspaceSession session, BeatmapProject project, bool archiveBeforeSave = true)
-    { lock (Gate) { SaveLocked(session, project, archiveBeforeSave); } }
+    { lock (Gate)
+        {
+            project.Validate();
+            var resources = HitsoundResourcePlan.StoryboardCopies(project.Difficulties.Select(d => d.Document));
+            resources.Apply();
+            try { SaveLocked(session, project, archiveBeforeSave); }
+            catch { resources.Restore(); throw; }
+        } }
     private static void SaveLocked(WorkspaceSession session, BeatmapProject project, bool archiveBeforeSave)
     {
         project.Validate();

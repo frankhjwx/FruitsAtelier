@@ -520,7 +520,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
-        if (syncModePrompt && SynchronizationVisible && !ErrorVisible) return;
+        if (syncModePrompt && SynchronizationVisible && !ErrorVisible) { mouseX = x; mouseY = y; return; }
         if (MoveHitsoundingSetScroll(y)) return;
         if (volumePopoverDrag >= 0) { MoveVolumePopoverPointer(x, y); return; }
         if (HitsoundingPointerMove(x, y)) return;
@@ -1879,9 +1879,9 @@ public sealed partial class EditorView
         hitsoundingNoteMoveMarkers = [];
         hitsoundingHeadDrag = hitsoundingPainting = hitsoundingMarquee = false; hitsoundingPaint.Clear();
         hitsoundingStoryboardMove = null; hitsoundingStoryboardMoved = false;
-        hitsoundingStoryboardMoveSources = [];
+        hitsoundingStoryboardMoveSources = []; hitsoundingStoryboardMoveTags = []; ClearFileDropPreview();
         hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
-        hitsoundingMoveSources = []; hitsoundingMoveCopies = [];
+        hitsoundingMoveSources = []; hitsoundingMoveCopies = []; hitsoundingMoveTags = [];
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);

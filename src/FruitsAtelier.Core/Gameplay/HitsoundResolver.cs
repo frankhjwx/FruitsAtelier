@@ -1,6 +1,6 @@
 namespace FruitsAtelier.Core;
 
-public sealed record Hitsound(CatchObjectKind Kind, string? FilePath, float Volume, string Name = "hitnormal", int SampleSet = 1);
+public sealed record Hitsound(CatchObjectKind Kind, string? FilePath, float Volume, string Name = "hitnormal", int SampleSet = 1, byte[]? Data = null);
 
 /// <summary>Resolves preserved osu! object/edge samples against timing and map resources.</summary>
 public sealed class HitsoundResolver

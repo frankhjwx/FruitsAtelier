@@ -49,7 +49,10 @@ public static partial class WorkspaceProject
             var persisted = SnapshotManifest(manifest);
             foreach (var difficulty in persisted.Difficulties) difficulty.Sync = null;
             files[ManifestName] = JsonSerializer.Serialize(persisted, json);
-            PublishDifficulty(session.Directory, files);
+            var resources = HitsoundResourcePlan.StoryboardCopies(project.Difficulties.Select(d => d.Document));
+            resources.Apply();
+            try { PublishDifficulty(session.Directory, files); }
+            catch { resources.Restore(); throw; }
             return session with { Manifest = manifest, Project = project };
         }
     }

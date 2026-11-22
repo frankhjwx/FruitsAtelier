@@ -30,11 +30,12 @@ public sealed partial class EditorView
         hitsoundingStoryboardMove = null; hitsoundingStoryboardMoved = false;
         hitsoundingStoryboardMoveSources = []; hitsoundingNoteMoveMarkers = [];
         hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
-        hitsoundingMoveSources = []; hitsoundingMoveCopies = [];
+        hitsoundingMoveSources = []; hitsoundingMoveCopies = []; hitsoundingMoveTags = [];
         hitsoundingAudio.Clear();
-        if (!preserveClipboard) { hitsoundingClipboard = []; hitsoundingStoryboardClipboard = []; hitsoundingClipboardSources.Clear(); }
+        if (!preserveClipboard) { hitsoundingClipboard = []; hitsoundingStoryboardClipboard = []; hitsoundingStoryboardClipboardAudio.Clear(); hitsoundingClipboardSources.Clear(); }
         hitsoundingMultiSelection.Clear(); hitsoundingStoryboardSelection.Clear(); hitsoundingStoryboardHits.Clear(); hitsoundingMarquee = false; hitsoundingSelectedTiming = null; timingHelperPoints = [];
         hitsoundingSelected = null; hitsoundingPaint.Clear(); hitsoundingPainting = hitsoundingHeadDrag = false; hitsoundingStoryboardSource = null; hitsoundingStoryboardTags = [];
+        ClearFileDropPreview(); hitsoundingStoryboardMoveTags = [];
         hitsoundingConversion = null; hitsoundingTagLanes = []; hitsoundingNotes = []; hitsoundingMapFiles.Clear();
         hitsoundingParentNotes.Clear();
         timingHelperScrolling = false; TimingHelperScrollbar = default;

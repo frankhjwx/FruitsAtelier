@@ -195,6 +195,9 @@ internal static class SynchronizationRenderCheck
                             if ((bool)typeof(EditorView).GetField("syncModePrompt", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(view)!)
                             {
                                 CaptureTiming("mode-choice");
+                                var hoverBounds = view.SyncModeSimpleBounds;
+                                view.PointerMove(hoverBounds.X + 10, hoverBounds.Y + 10, false, false);
+                                CaptureTiming("mode-choice-hover");
                                 var bounds = view.SyncModeDetailedBounds;
                                 view.PointerDown(bounds.X + 10, bounds.Y + 10, 0, false, false);
                                 view.PointerUp(bounds.X + 10, bounds.Y + 10, 0); Paint();

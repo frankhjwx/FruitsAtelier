@@ -41,6 +41,14 @@ internal static class HitsoundLibraryFileTests
         Check(ui.Canvas.Outlines.Any(o => o.Bounds.Y == aRow.Y - 7 && o.Bounds.Height == 30), "Playing row keeps its outline");
         var playingRow = ui.Canvas.Outlines.First(o => o.Bounds.Y == aRow.Y - 7 && o.Bounds.Height == 30).Bounds;
         Check(ui.Canvas.Fills.Any(f => f.Bounds.Y == playingRow.Y && f.Bounds.Height == 30 && Math.Abs(f.Bounds.Width - playingRow.Width / 2) < .1f), "Audition fills half the row at half duration");
+        var filesBeforeDrop = ui.View.GetType().GetField("hitsoundingLibraryFiles", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View);
+        var originalRow = Text("a.wav");
+        ui.View.PointerDown(originalRow.X + 5, originalRow.Y + 5, 0, false, false);
+        ui.View.PointerMove(originalRow.X + 25, originalRow.Y + 5, false, false);
+        ui.View.PointerUp(originalRow.X + 25, originalRow.Y + 5, 0); ui.Paint();
+        Check(stopped == 0 && ReferenceEquals(filesBeforeDrop, ui.View.GetType().GetField("hitsoundingLibraryFiles", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View))
+            && ui.View.GetType().GetField("hitsoundingImportTask", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View) is null,
+            "Dropping in the original directory preserves the list and audition without starting a reload task");
         Audition("b.wav");
         Check(stopped == 1 && auditions.Count == 2, "Starting another audition stops the previous one");
         Audition("b.wav"); Check(stopped == 2 && auditions.Count == 2, "Stop button cancels without restarting the sound");

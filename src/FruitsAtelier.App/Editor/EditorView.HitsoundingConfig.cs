@@ -166,7 +166,7 @@ public sealed partial class EditorView
     }
     private void DrawHitsoundingPreview(ICanvas c, Rect r, Hitsound sound)
     {
-        var wave = hitsoundingAudio.Get(sound, RequestWaveform);
+        var wave = hitsoundingAudio.Get(sound, RequestWaveform, RequestMemoryWaveform);
         if (wave is null) return;
         float center = r.Y + r.Height / 2;
         float maximum = Math.Max(.000001f, wave.Peak(0, wave.DurationMs));

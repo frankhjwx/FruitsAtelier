@@ -50,6 +50,7 @@ public static class BeatmapResources
             }
         }
 
+        var storyboard = HitsoundResourcePlan.StoryboardCopies([document], destination);
         long bytes = 0;
         foreach (var (target, source) in plan)
         {
@@ -59,6 +60,7 @@ public static class BeatmapResources
                 throw new IOException(L.Get("resource.limit"));
             CheckTarget(source, target);
         }
+        storyboard.Apply();
         foreach (var (target, source) in plan)
         {
             if (CheckTarget(source, target)) continue;

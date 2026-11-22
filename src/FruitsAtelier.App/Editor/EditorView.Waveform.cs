@@ -6,6 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    public Func<string, byte[], CancellationToken, Task<AudioWaveform>>? RequestMemoryWaveform { get; set; }
     public Func<string, CancellationToken, Task<AudioWaveform>>? RequestWaveform { get; set; }
     private Task<AudioWaveform>? waveformTask;
     private CancellationTokenSource? waveformCancellation;

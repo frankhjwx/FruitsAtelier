@@ -7,6 +7,12 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private bool syncModePrompt, syncSimplified;
+    public void PrepareApplicationClose()
+    {
+        if (!SynchronizationVisible || syncTask is not null || syncCommitTask is not null) return;
+        if (syncPage == "confirm-external") syncPage = "resolve";
+        CancelSynchronization();
+    }
     internal Rect SyncModeSimpleBounds { get; private set; }
     internal Rect SyncModeDetailedBounds { get; private set; }
 

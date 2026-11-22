@@ -36,6 +36,7 @@ public static partial class ProjectSerializer
             foreach (var property in info.Properties)
             {
                 if (property.Name == nameof(MapDocument.BookmarkAppearances)) property.ShouldSerialize = (_, value) => ((Dictionary<int, BookmarkAppearance>)value!).Count > 0;
+                if (property.Name == nameof(MapDocument.StoryboardAudio)) property.ShouldSerialize = (_, value) => ((Dictionary<string, StoryboardAudio>)value!).Count > 0;
                 if (property.Name == nameof(MapDocument.HitsoundOverrides)) property.ShouldSerialize = (_, value) => ((List<EventHitsound>)value!).Count > 0;
                 if (property.Name == nameof(MapDocument.CollaborationReferences)) property.ShouldSerialize = (_, value) => value is List<CollaborationReference> { Count: > 0 };
                 if (property.Name == nameof(MapDocument.RandomizeDropletStrength)) property.ShouldSerialize = (_, value) => (double)value! != 20;
@@ -62,8 +63,10 @@ public static partial class ProjectSerializer
             string directory = Path.GetDirectoryName(Path.GetFullPath(projectPath))!;
             if (copy.AudioPath is not null && Path.IsPathFullyQualified(copy.AudioPath)) copy.AudioPath = Path.GetRelativePath(directory, copy.AudioPath);
             if (copy.SourcePath is not null && Path.IsPathFullyQualified(copy.SourcePath)) copy.SourcePath = Path.GetRelativePath(directory, copy.SourcePath);
+            foreach (var pair in copy.StoryboardAudio.ToArray())
+                if (Path.IsPathFullyQualified(pair.Value.SourcePath)) copy.StoryboardAudio[pair.Key] = pair.Value with { SourcePath = Path.GetRelativePath(directory, pair.Value.SourcePath) };
         }
-        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = copy.BookmarkAppearances.Count > 0 ? 49 : HasSliderBpm(copy) ? 47 : HasMinimumSliderSv(copy) ? 45 : HasLegacyDropletModes(copy) ? 43 : HasFSliderSv(copy) ? 41 : copy.CollaborationEditableRanges is not null ? 39 : copy.SliderImportState != SliderImportState.None ? 37 : HasUnassignedSections(copy) ? 35 : copy.CollaborationReferences is { Count: > 0 } ? 33 : HasEndpointSnap(copy) ? 31 : HasIndependentSv(copy) ? 29 : HasOsuCanvasData(copy) ? 27 : HasDropletModes(copy) ? 25 : HasBananaPatterns(copy) ? 21 : copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, WriteOptions([copy]));
+        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = copy.StoryboardAudio.Count > 0 ? 51 : copy.BookmarkAppearances.Count > 0 ? 49 : HasSliderBpm(copy) ? 47 : HasMinimumSliderSv(copy) ? 45 : HasLegacyDropletModes(copy) ? 43 : HasFSliderSv(copy) ? 41 : copy.CollaborationEditableRanges is not null ? 39 : copy.SliderImportState != SliderImportState.None ? 37 : HasUnassignedSections(copy) ? 35 : copy.CollaborationReferences is { Count: > 0 } ? 33 : HasEndpointSnap(copy) ? 31 : HasIndependentSv(copy) ? 29 : HasOsuCanvasData(copy) ? 27 : HasDropletModes(copy) ? 25 : HasBananaPatterns(copy) ? 21 : copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, WriteOptions([copy]));
         if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.writeLimit"));
         return text;
@@ -75,7 +78,7 @@ public static partial class ProjectSerializer
         ProjectFile? file;
         try { file = JsonSerializer.Deserialize<ProjectFile>(text, options); }
         catch (JsonException error) { throw new InvalidDataException(L.Get("core.project.invalidJson"), error); }
-        if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17 or 19 or 21 or 25 or 27 or 29 or 31 or 33 or 35 or 37 or 39 or 41 or 43 or 45 or 47 or 49) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
+        if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17 or 19 or 21 or 25 or 27 or 29 or 31 or 33 or 35 or 37 or 39 or 41 or 43 or 45 or 47 or 49 or 51) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
         var document = file.Document;
         NormalizeRandomizationStrength(document);
         NormalizeBaseDistance(document);
@@ -85,6 +88,8 @@ public static partial class ProjectSerializer
         {
             if (document.AudioPath is not null) document.AudioPath = OsuBeatmapReader.ResolveResource(projectPath, document.AudioPath);
             if (document.SourcePath is not null) document.SourcePath = OsuBeatmapReader.ResolveResource(projectPath, document.SourcePath);
+            foreach (var pair in document.StoryboardAudio.ToArray())
+                document.StoryboardAudio[pair.Key] = pair.Value with { SourcePath = OsuBeatmapReader.ResolveResource(projectPath, pair.Value.SourcePath) };
         }
         OsuBeatmapReader.Validate(document);
         return document;

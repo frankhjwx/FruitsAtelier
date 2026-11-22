@@ -81,6 +81,7 @@ internal sealed partial class EditorWindow
         view.RequestStopLibraryAudition = libraryAudition.Stop;
         view.RequestTestplayMenuLoop = hitsounds.SetMenuLoop;
         view.RequestWaveform = WaveformDecoder.Load;
+        view.RequestMemoryWaveform = WaveformDecoder.LoadMemory;
         view.RequestPrepareHitsound = hitsounds.Prepare;
         view.RequestPreloadHitsounds = documents => hitsounds.PreloadProject(documents, view.HitsoundSkinFolders);
         view.PreloadProjectHitsounds();

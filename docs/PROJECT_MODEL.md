@@ -480,3 +480,19 @@ that do not use this feature keep their previous schema. Cloning, content
 comparison, history and representation conversion retain these values.
 The setting and creation default belong to each difficulty. Older schemas
 remain readable. See [Aspire controls](EDITOR_UI.md#aspire-slider-bpm-multipliers).
+
+
+## Imported storyboard audio
+
+Schemas 51 (single difficulty) and 52 (multi-difficulty) add `StoryboardAudio`,
+a dictionary from managed relative filenames to source metadata. Its byte cache
+is shared by history snapshots and excluded from JSON. Empty dictionaries keep
+previous schema versions. Events remain ordinary `Sample` lines using relative
+mapset filenames. The namespace includes a content hash and the original basename
+to avoid overwriting unrelated files. Save publication applies a reversible
+resource plan; failed publication restores its file changes. Reopening caches the
+saved copy, with the source as a fallback. Missing audio remains silent.
+Resource registrations are excluded from content comparison: event paths carry
+audio identity, while unused registrations retain save-cleanup and undo data.
+An Events section created solely for an edit is removed when that edit's last
+sample is deleted; pre-existing empty sections are preserved.

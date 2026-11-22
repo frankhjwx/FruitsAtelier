@@ -167,14 +167,22 @@ public sealed partial class EditorView
             storyboardSource.Add((section.Name, section.Lines.SnapshotIdentity, section.Name == "General" ? StoryboardGeneralSource(section.Lines) : null));
             sections.Add((section.Name, section.Lines.ToArray()));
         }
+        var importedAudio = Document.StoryboardAudio.ToArray();
         bool samplesOnly = !LibrarySettings.EnableVideoStoryboard;
         var cancellation = storyboardCancellation = new(); var token = cancellation.Token;
         storyboardLoad = Task.Run(() =>
         {
+            long audioBudget = 128L * 1024 * 1024;
+            foreach (var (relative, audio) in importedAudio)
+            {
+                token.ThrowIfCancellationRequested();
+                audio.Cache(Platform.BeatmapArchive.Within(directory, Platform.BeatmapArchive.ValidateRelativePath(relative)), Math.Max(0, audioBudget));
+                audioBudget -= audio.Data?.Length ?? 0;
+            }
             var source = new StringBuilder();
             foreach (var section in sections) { source.Append('[').Append(section.Name).AppendLine("]"); foreach (string line in section.Lines) source.AppendLine(line); }
-            string? sharedPath = Directory.EnumerateFiles(directory, "*", SearchOption.TopDirectoryOnly)
-                .Where(p => string.Equals(Path.GetExtension(p), ".osb", StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            string? sharedPath = Directory.Exists(directory) ? Directory.EnumerateFiles(directory, "*", SearchOption.TopDirectoryOnly)
+                .Where(p => string.Equals(Path.GetExtension(p), ".osb", StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase).FirstOrDefault() : null;
             token.ThrowIfCancellationRequested();
             return StoryboardReader.Read(source.ToString(), sharedPath is null ? null : StoryboardReader.ReadSharedFile(sharedPath, token), directory, token, samplesOnly: samplesOnly);
         }, token);
@@ -202,7 +210,7 @@ public sealed partial class EditorView
         {
             storyboardScene = task.Result;
             if (!storyboardScene.RequiresGameplay) { storyboardTemplate = storyboardPreview = null; storyboardTriggers.Clear(); storyboardTriggerVersion = -1; }
-            storyboardSampleSounds = storyboardScene.Samples.Select(s => new Hitsound(CatchObjectKind.Fruit, s.Path, s.Volume / 100f, "storyboard")).ToArray();
+            storyboardSampleSounds = storyboardScene.Samples.Select(StoryboardSound).ToArray();
             foreach (var sound in storyboardSampleSounds) RequestPrepareHitsound?.Invoke(sound);
             if (storyboardScene.Diagnostics.Count > 0) SetNotice(L.Get("media.storyboardDiagnostics", storyboardScene.Diagnostics.Count));
             QueueStoryboardGameplay();

@@ -5,6 +5,16 @@ namespace FruitsAtelier.Mac;
 
 internal static class MacWaveformDecoder
 {
+    public static async Task<AudioWaveform> LoadMemory(string path, byte[] data, CancellationToken token)
+    {
+        string temporary = Path.Combine(Path.GetTempPath(), "fa-waveform-" + Guid.NewGuid() + Path.GetExtension(path));
+        try
+        {
+            await File.WriteAllBytesAsync(temporary, data, token);
+            return await Load(temporary, token);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
     public static Task<AudioWaveform> Load(string path, CancellationToken token) => Task.Run(() =>
     {
         if (Path.GetExtension(path).Equals(".ogg", StringComparison.OrdinalIgnoreCase))

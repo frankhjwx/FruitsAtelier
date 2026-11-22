@@ -115,6 +115,7 @@ public sealed partial class EditorView
     private void TransferHitsoundingFiles(string[] paths, string destination, bool move, bool clipboard = false)
     {
         if (hitsoundingLibraryRoot is not { } root || paths.Length == 0) return;
+        if (move && paths.All(path => WorkspaceSynchronization.Paths.Equals(Path.GetDirectoryName(path), destination))) return;
         string[] targets = [];
         RunHitsoundingFileOperation(() => targets = HitsoundLibraryFiles.Transfer(root, paths, destination, move), () =>
         {
@@ -216,6 +217,7 @@ public sealed partial class EditorView
             if (!hitsoundingLibraryBox && hitsoundingLibraryPressedPath is { } path && hitsoundingLibrarySelection.Contains(path))
                 hitsoundingLibraryDragPaths = hitsoundingFilteredFiles.Where(hitsoundingLibrarySelection.Contains).ToArray();
         }
+        PreviewFileDrop(hitsoundingLibraryDragging && !hitsoundingLibraryBox ? hitsoundingLibraryDragPaths : [], x, y);
         UpdateHitsoundingLibraryHover();
         if (hitsoundingLibraryBox && hitsoundingLibraryDragging)
         {
@@ -234,11 +236,13 @@ public sealed partial class EditorView
     {
         if (hitsoundingLibraryScrollbarDragging) { MoveHitsoundingLibraryScrollbar(y); hitsoundingLibraryScrollbarDragging = false; return true; }
         if (!hitsoundingLibraryPressed) return false;
+        ClearFileDropPreview();
         if (hitsoundingLibraryDragging && !hitsoundingLibraryBox && hitsoundingLibraryDragPaths.Length > 0)
         {
             string[] paths = hitsoundingLibraryDragPaths;
             string? folder = HitsoundingDropFolder(x, y) ?? (hitsoundingLibraryList.Contains(x, y) ? hitsoundingLibraryDirectory : null);
-            if (folder is not null) TransferHitsoundingFiles(paths, folder, !hitsoundingLibraryCopyDrag);
+            if (StoryboardDropTarget(x, y)) DropStoryboardAudio(paths, x, y);
+            else if (folder is not null) TransferHitsoundingFiles(paths, folder, !hitsoundingLibraryCopyDrag);
             else if (paths.Length == 1 && File.Exists(paths[0]))
             {
                 var slot = hitsoundingSlots.LastOrDefault(slot => slot.Bounds.Contains(x, y));
@@ -281,7 +285,7 @@ public sealed partial class EditorView
             return true;
         }
         if (!hitsoundingLibraryFocused || HitsoundingSearchFocused || IsEditingText) return false;
-        if (key == 27) { hitsoundingLibraryPressed = hitsoundingLibraryDragging = hitsoundingLibraryBox = false; hitsoundingLibrarySelection.Clear(); return true; }
+        if (key == 27) { ClearFileDropPreview(); hitsoundingLibraryPressed = hitsoundingLibraryDragging = hitsoundingLibraryBox = false; hitsoundingLibrarySelection.Clear(); return true; }
         if (ctrl && key == 65) { hitsoundingLibrarySelection.UnionWith(hitsoundingFilteredFiles); return true; }
         if (hitsoundingImportTask is not null) return key is 46 or 113 || ctrl && key is 67 or 88 or 86 or 78;
         if (ctrl && key == 67) { CopyHitsoundingFiles(false); return true; }
