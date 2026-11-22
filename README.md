@@ -8,7 +8,9 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 [Website](https://fruitsatelier.himiko.moe/) · [Download](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**Current version: 1.4.9**
+**Current version: 1.4.10**
+
+Import `.catchdiff` difficulties into an open project, or drag WAV, OGG and MP3 files onto SB Hitsound to add storyboard audio. Copy F6 timing rows into Mapping or Hitsounding across maps. Simplified synchronization keeps object and red timing changes available for explicit review.
 
 Object Snap settings are shared across difficulties and remembered on this computer. In the Library, Esc asks for confirmation before exiting.
 

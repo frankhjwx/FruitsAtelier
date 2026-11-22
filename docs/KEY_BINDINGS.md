@@ -265,6 +265,7 @@ double-click slider editing, see [Editing Controls](EDITOR_UI.md#fsliders).
 | F6 list: Ctrl+click / Shift+click | Toggle rows / select a range. |
 | F6 list: Up/Down, Page Up/Down, Home/End | Navigate rows, eight rows per page step, or first/last row. Shift extends selection; Ctrl toggles the destination row. |
 | F6 list: Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste `.osu` timing-row text. |
+| Mapping or Hitsounding: Ctrl+V after copying F6 rows | Paste timing rows at their original timestamps, including across maps; green rows preserve coincident red points. |
 | F6 list: Delete / Ctrl+I | Delete selected rows, protecting the first red point. |
 | F6 list: Ctrl+P / Ctrl+Shift+P | Add a red / green point to the draft. |
 | F6 list: Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z | Undo / redo / redo draft changes outside a text field. |

@@ -8,7 +8,9 @@
 
 [官网](https://fruitsatelier.himiko.moe/) · [下载](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**当前版本：1.4.9**
+**当前版本：1.4.10**
+
+可将 `.catchdiff` 难度导入已打开的工程，或将 WAV、OGG、MP3 拖入 SB Hitsound 轨道添加故事板音效。F6 Timing 行可跨谱面粘贴到 Mapping 或 Hitsounding；简化同步仍会要求明确审阅物件和红线变化。
 
 对象吸附设置在各难度间共用，并保存在当前电脑上。在曲库中按 Esc 会先询问是否退出。
 

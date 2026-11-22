@@ -8,7 +8,9 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 
 [公式サイト](https://fruitsatelier.himiko.moe/) · [ダウンロード](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**現在のバージョン：1.4.9**
+**現在のバージョン：1.4.10**
+
+開いているプロジェクトに `.catchdiff` 難易度を読み込んだり、WAV・OGG・MP3 を SB Hitsound トラックへドラッグしてストーリーボード音声を追加したりできます。F6 のタイミング行は別の譜面の Mapping や Hitsounding に貼り付けられます。簡易同期でも、オブジェクトと赤線の変更は明示的な確認が必要です。
 
 オブジェクトスナップ設定は難易度間で共有され、このコンピューターに保存されます。ライブラリで Esc を押すと、終了確認が表示されます。
 
