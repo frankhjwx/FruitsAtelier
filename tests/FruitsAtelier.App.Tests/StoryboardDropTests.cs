@@ -8,6 +8,7 @@ internal static class StoryboardDropTests
 {
     public static void Run()
     {
+        FractionalTimes();
         NativeFileDrop();
         string root = Path.GetFullPath("artifacts/tests/storyboard-drop/" + Guid.NewGuid().ToString("N"));
         string songs = Path.Combine(root, "Songs"), mapRoot = Path.Combine(songs, "map");
@@ -137,6 +138,45 @@ internal static class StoryboardDropTests
             Check(!Directory.Exists(audioRoot), "New map keeps audio only in memory until save");
             Check(test.View.SaveWorkspace() && File.Exists(audioPath), "New map save retains audio outside the replaceable project directory");
             Check(test.View.SaveWorkspace() && File.Exists(audioPath), "Repeated new map saves retain audio");
+        }
+    }
+    private static void FractionalTimes()
+    {
+        string root = Path.GetFullPath("artifacts/tests/storyboard-time");
+        Directory.CreateDirectory(root);
+        string shared = Path.Combine(root, "shared.osb");
+        if (File.Exists(shared)) File.Delete(shared);
+        var map = new MapDocument { SourcePath = Path.Combine(root, "map.osu"), DurationMs = 240000 };
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900);
+        var edit = typeof(EditorView).GetMethod("EditHitsoundingStoryboard", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var source = StoryboardReader.Read("[Events]\nSample,203426.09271523159,3,\"cheer.wav\",100", null, root).Samples.Single();
+        var baseline = ui.View.Document.DeepClone();
+        Apply([], [source], false);
+        Check(ui.View.Document.OriginalSections.Single(s => s.Name == "Events").Lines.Single() == "Sample,203426,3,\"cheer.wav\",100",
+            "Storyboard edits must write integer milliseconds.");
+        var selected = (HashSet<StoryboardSample>)typeof(EditorView).GetField("hitsoundingStoryboardSelection", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ui.View)!;
+        Check(selected.Single().TimeMs == 203426, "Retained selection must match the serialized timestamp.");
+        var first = selected.Single();
+        Apply([first], [first with { TimeMs = 203625.75 }], true);
+        Check(selected.Single().TimeMs == 203625, "Consecutive moves must retain the quantized selection.");
+        ui.Key(90, ctrl: true); ui.Key(90, ctrl: true);
+        Check(baseline.ContentEquals(ui.View.Document), "Fractional storyboard edits must undo exactly.");
+        File.WriteAllText(shared, "[Events]\nSample,203426,3,\"cheer.wav\",100\n");
+        var sharedSample = StoryboardReader.Read("[Events]", File.ReadAllText(shared), root).Samples.Single();
+        Apply([sharedSample], [sharedSample with { TimeMs = 203625.75 }], true);
+        Check(File.ReadAllText(shared).Contains("Sample,203625,3,"), "Shared storyboard moves must write integer milliseconds.");
+        WaitForStoryboard();
+        ui.Key(90, ctrl: true);
+        Check(File.ReadAllText(shared).Contains("Sample,203426,3,"), "Shared storyboard rounding must support undo.");
+        WaitForStoryboard(); File.Delete(shared);
+
+        void Apply(StoryboardSample[] remove, StoryboardSample[] add, bool move)
+            => Check((bool)edit.Invoke(ui.View, [remove, add, move, null, true, null])!, "Storyboard edit failed.");
+        void WaitForStoryboard()
+        {
+            var field = typeof(EditorView).GetField("storyboardLoad", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            if (field.GetValue(ui.View) is Task pending) Check(pending.Wait(TimeSpan.FromSeconds(10)), "Storyboard load timed out.");
+            ui.Paint();
         }
     }
     private static void NativeFileDrop()

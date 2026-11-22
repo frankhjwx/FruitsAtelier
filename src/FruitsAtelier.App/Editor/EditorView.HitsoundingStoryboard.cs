@@ -78,6 +78,7 @@ public sealed partial class EditorView
             return editNotes is not null && Edit(L.Get("hitsounding.paste"), editNotes);
         }
         if (!CommitField()) return false;
+        add = add.Select(sample => sample with { TimeMs = OsuBeatmapWriter.QuantizeTime(sample.TimeMs) }).ToArray();
         bool needsRoot = Document.SourcePath is null && Document.AudioPath is null
             && (resourceRoot is not null || add.Any(s => hitsoundingStoryboardClipboardAudio.ContainsKey(s.Path)));
         string? root = resourceRoot ?? (needsRoot ? MediaResourceRoot(difficulties[activeDifficulty].Id) : StoryboardMediaDirectory(Document));

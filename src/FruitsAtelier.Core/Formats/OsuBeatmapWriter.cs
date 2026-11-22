@@ -251,8 +251,21 @@ public static class OsuBeatmapWriter
             HitsoundCopier.ApplyToExport(document, converted.Objects, lines, timing);
         }
         if (document.EnableSliderBpmMultiplier) timing = SliderBpmTiming.AlignPairs(timing);
+        timing = ProtectFractionalHeadTiming(timing, converted.Sliders);
         if (timingSliders.Length > 0) timing = RemoveUnusedInheritedTiming(timing, converted, document);
         var output = document.DeepClone();
+        foreach (var section in output.OriginalSections.Where(s => s.Name == "Events"))
+            for (int i = 0; i < section.Lines.Count; i++)
+            {
+                string line = section.Lines[i];
+                int first = line.IndexOf(',');
+                if (first < 0 || line[..first].Trim() is not ("Sample" or "5")) continue;
+                int second = line.IndexOf(',', first + 1);
+                if (second < 0 || !double.TryParse(line.AsSpan(first + 1, second - first - 1),
+                    NumberStyles.Float, CultureInfo.InvariantCulture, out double time) || !double.IsFinite(time)) continue;
+                if (line.AsSpan(first + 1, second - first - 1).IndexOfAny('.', 'e', 'E') >= 0)
+                    section.Lines[i] = line[..(first + 1)] + Number(QuantizeTime(time)) + line[second..];
+            }
         SetNumber(output, "Editor", "DistanceSpacing", document.DistanceSpacing);
         Set(output, "General", "Mode", "2");
         string? originalAudio = OsuBeatmapReader.Setting(output, "General", "AudioFilename");
@@ -459,6 +472,53 @@ public static class OsuBeatmapWriter
             }
             return low;
         }
+    }
+
+    private static List<TimingPoint> ProtectFractionalHeadTiming(List<TimingPoint> points, IReadOnlyList<GeneratedSlider> sliders)
+    {
+        if (!points.Any(p => !p.Uninherited && p.TimeMs != QuantizeTime(p.TimeMs))) return points;
+        var headSliders = sliders.ToLookup(s => QuantizeTime(s.StartTimeMs));
+        var heads = headSliders.Select(g => g.Key).Order().ToArray();
+        var collisions = points.Select((point, index) => (Point: point, Index: index))
+            .Where(p => !p.Point.Uninherited && p.Point.TimeMs != QuantizeTime(p.Point.TimeMs)
+                && headSliders.Contains(QuantizeTime(p.Point.TimeMs))).GroupBy(p => QuantizeTime(p.Point.TimeMs)).ToArray();
+        if (collisions.Length == 0) return points;
+        var source = new MapDocument(); source.TimingPoints.AddRange(points);
+        var lookup = new TimingMap.Lookup(source);
+        var result = points.Select(p => p.DeepClone()).ToList();
+        var ordered = points.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        var times = ordered.Select(p => p.TimeMs).ToArray();
+        var mutableGroups = collisions.Select(g => (Time: g.Key, Points: g.Select(p => result[p.Index]).ToArray())).ToArray();
+        foreach (var group in mutableGroups)
+        {
+            var requirements = headSliders[group.Time];
+            var first = requirements.First();
+            // Retained fractional imported heads can require distinct velocities within one millisecond.
+            if (requirements.Any(s => Math.Abs(s.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9)) continue;
+            var state = lookup.At(first.IsImported ? first.StartTimeMs : group.Time);
+            double beatLength = state.GenerateTicks ? -100 / first.SliderVelocityMultiplier : double.NaN;
+            // Exact and integer-millisecond timing lookups must lock the same slider velocity.
+            // Keep fractional sample timestamps while protecting the head's required SV.
+            bool changed = false;
+            foreach (var point in group.Points)
+            {
+                if (point.BeatLengthMs.Equals(beatLength)) continue;
+                point.BeatLengthMs = beatLength; changed = true;
+            }
+            if (!changed) continue;
+            int next = Array.BinarySearch(heads, group.Time) + 1;
+            if (next >= heads.Length) continue;
+            double restore = heads[next];
+            int boundary = Array.BinarySearch(times, group.Time + 1);
+            if (boundary >= 0) continue;
+            boundary = ~boundary;
+            if (boundary < times.Length && times[boundary] <= restore) continue;
+            var template = ordered[boundary - 1];
+            var restoreState = lookup.At(restore);
+            OverrideInherited(result, template, restore,
+                restoreState.GenerateTicks ? -100 / restoreState.SliderVelocityMultiplier : double.NaN);
+        }
+        return result.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToList();
     }
 
     private static List<TimingPoint> RemoveUnusedInheritedTiming(List<TimingPoint> points,

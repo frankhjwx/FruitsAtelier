@@ -60,9 +60,12 @@ internal static class IndependentSliderSvTests
                 && Math.Abs(ImportedSliderConverter.DurationMs(result.ReadBack, first) - duration) < 1e-6,
                 "Export moved the head or changed its independent duration.");
             var following = result.ReadBack.TimingPoints.Single(p => p.TimeMs == 234070 + offset);
-            Check(following.BeatLengthMs == (red ? 400 : -50) && following.SampleSet == 2
+            Check(following.BeatLengthMs == (red ? 400 : offset < 1 ? -10 : -50) && following.SampleSet == 2
                 && following.SampleIndex == 3 && following.Volume == 60 && following.Effects == 1,
                 "Export changed the following timing, samples or effects.");
+            Check(Math.Abs(ImportedSliderConverter.DurationMs(map, map.ImportedSliders[1])
+                - ImportedSliderConverter.DurationMs(result.ReadBack, result.ReadBack.ImportedSliders[1])) < 1e-6,
+                "Fractional head protection must restore the following slider's velocity.");
         }
     }
 

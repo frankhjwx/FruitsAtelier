@@ -147,6 +147,13 @@ samples, and shared expansion budgets with independent variable scopes.
 
 ## Slider event timing
 
+`Formats.Tests --slider-timing-check` covers fractional sample greens within a
+slider head's integer millisecond, generated and imported sliders, preservation
+of sample/effect fields, later SV restoration, and cached/uncached equivalence.
+It also checks integer storyboard sample export from retained Events sections.
+`App.Tests --storyboard-drop-check` also checks integer sample timestamps,
+consecutive edits with retained selection, shared `.osb` edits and undo.
+
 `Core.Tests --slider-event-timing-check` exercises isolated event edits that need
 more automatic SV while preserving rounded event times and neighbouring positions.
 It covers consecutive edits, cached conversion, explicit-SV precedence, invalid
