@@ -34,7 +34,11 @@ public sealed partial class EditorView
         if (root is null) return;
         long remaining = 128L * 1024 * 1024 - Document.StoryboardAudio.Values.Sum(a => (long)(a.Data?.Length ?? 0));
         var audio = FruitsAtelier.Core.StoryboardAudio.Capture(paths[0], Math.Max(0, remaining));
-        string relative = audio.RelativePath;
+        var registered = difficulties.SelectMany(d => d.History.Document.StoryboardAudio).ToArray();
+        string relative = audio.ChooseRelativePath(root, registered);
+        var existing = registered.FirstOrDefault(p => string.Equals(p.Key, relative, StringComparison.OrdinalIgnoreCase)).Value;
+        if (existing is not null) audio = existing;
+        else if (File.Exists(Path.Combine(root, relative))) audio = audio with { ContentHash = null };
         double time = Math.Max(0, SnapTiming().Snap(HitsoundingPointerTime(x), divisor));
         EditHitsoundingStoryboard([], [new(Path.Combine(root, relative), time, 100, StoryboardLayer.Foreground)],
             editNotes: () => Document.StoryboardAudio[relative] = audio, retainSelection: true, resourceRoot: root);

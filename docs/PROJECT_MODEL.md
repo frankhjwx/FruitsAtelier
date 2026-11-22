@@ -492,8 +492,12 @@ Schemas 51 (single difficulty) and 52 (multi-difficulty) add `StoryboardAudio`,
 a dictionary from managed relative filenames to source metadata. Its byte cache
 is shared by history snapshots and excluded from JSON. Empty dictionaries keep
 previous schema versions. Events remain ordinary `Sample` lines using relative
-mapset filenames. The namespace includes a content hash and the original basename
-to avoid overwriting unrelated files. Save publication applies a reversible
+mapset filenames. New imports use `SBHitsounds/<original filename>` with numeric
+suffixes for conflicting content. Existing references, including legacy
+`fa-storyboard/<hash>/<filename>` paths, remain unchanged. Optional `ContentHash`
+metadata identifies editor-owned copies for cleanup without putting hashes in
+new filenames; reused pre-existing files have no cleanup hash. Legacy paths retain
+their embedded hash for cleanup verification. Save publication applies a reversible
 resource plan; failed publication restores its file changes. Reopening caches the
 saved copy, with the source as a fallback. Missing audio remains silent.
 Resource registrations are excluded from content comparison: event paths carry
