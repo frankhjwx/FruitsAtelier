@@ -1371,6 +1371,9 @@ internal static class HitsoundingPanelTests
         var target = source.DeepClone(); target.Name = "Target";
         target.Fruits[0].OriginalLine = "256,192,1000,1,0,2:0:0:0:";
         var ui = new Ui(false); ui.View.LoadProject(BeatmapProject.FromDocuments([source, target])); ui.Resize(1440, 900);
+        string clipboard = "1000,-100,4,1,0,100,0,0";
+        ui.View.RequestCopyText = text => clipboard = text;
+        ui.View.RequestPasteObjects = () => ui.View.PasteClipboardText(clipboard);
         ui.View.ShowHitsoundingPage(); ui.View.UpdateTransport(1000, 6000, true, false, false, null, null); ui.Paint();
         var block = LaneBlocks(ui, 2).Single(); ui.Click(block.X + block.Width / 2, block.Y + 10); ui.Key('C', ctrl: true);
         Check(ui.View.SwitchDifficulty(1), "Switch to paste target"); ui.Paint();

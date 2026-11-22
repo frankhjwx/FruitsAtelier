@@ -22,6 +22,9 @@ internal static class HitsoundingNotesTests
             slider.Nodes.Add(new() { TimeMs = 3500, X = 384 });
             map.Tracks.Add(slider);
             var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(1440, 900); ui.View.ShowHitsoundingPage();
+            string clipboard = "1000,-100,4,1,0,100,0,0";
+            ui.View.RequestCopyText = text => clipboard = text;
+            ui.View.RequestPasteObjects = () => ui.View.PasteClipboardText(clipboard);
             ui.View.UpdateTransport(2000, 12000, true, false, false, null, null); ui.Paint();
             var baseline = ui.View.Document.DeepClone();
             ui.Key(draw ? 50 : 49);

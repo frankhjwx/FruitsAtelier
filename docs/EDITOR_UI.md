@@ -1029,6 +1029,14 @@ in the list. Right-clicking an unselected row does not offer Copy. Pasted lines
 retain their timestamps and enter the timing draft, with the same SV-lock rules
 and undo behavior as Ctrl+V.
 
+Close F6 and use Ctrl+V in Mapping or Hitsounding to paste copied timing lines,
+including into another difficulty or map. This uses standard `.osu` timing-row
+text from the system clipboard and retains original timestamps, SV, sample banks,
+sample indices, volume and effects. At matching timestamps, only points of the
+same type are replaced: pasting greens preserves red BPM points. The paste is one
+undoable edit in the destination map. The text can also be pasted into a `.osu`
+file's `[TimingPoints]` section with a text editor.
+
 
 Drag the title bar to reposition the window within the application. Drag any corner
 to scale its controls and text proportionally from 50% to 100% of its original

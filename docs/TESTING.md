@@ -1919,6 +1919,12 @@ edits and undo.
 
 ## Timing clipboard feedback
 
+The timing clipboard checks cover F6 green-line copies pasted into Mapping and
+Hitsounding across difficulties and separate maps, original timestamps and sample
+fields, coincident red-point preservation, malformed input and destination undo.
+The native check includes cross-map Hitsounding paste and undo. Hitsounding panel
+checks also verify internal sound copies supersede previously copied timing text.
+
 `App.Tests --timing-feedback-check` covers selected-row and empty-list context
 menus, valid/invalid clipboard contents, copy feedback expiry, draft paste undo,
 and stale asynchronous clipboard responses at normal and half window scale.

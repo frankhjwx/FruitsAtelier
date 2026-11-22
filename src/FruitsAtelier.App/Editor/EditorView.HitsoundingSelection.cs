@@ -140,6 +140,8 @@ public sealed partial class EditorView
         hitsoundingClipboardPlayhead = playhead;
         hitsoundingClipboardSources.UnionWith(entries.Select(e => (e.Note.SourceId, e.Note.EventIndex)));
         if (entries.Length == 0 && hitsoundingStoryboardSelection.Count == 0) return;
+        // Sound copies are internal; retire any timing text previously copied to the system clipboard.
+        RequestCopyText?.Invoke("");
         double start = Math.Min(entries.FirstOrDefault().Note?.TimeMs ?? double.PositiveInfinity, hitsoundingStoryboardSelection.Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min());
         hitsoundingStoryboardClipboard = hitsoundingStoryboardSelection.Select(s => s with { TimeMs = s.TimeMs - start }).ToArray();
         hitsoundingClipboard = entries.Select(e => new HitsoundingCopy(e.Note.TimeMs - start, e.Lane, hitsoundingResolver!.Describe(e.Note), HitsoundingTimingIndex(e.Note.TimeMs), hitsoundingResolver.EventSettings(e.Note).InheritedFields.HasFlag(InheritedSampleFields.Index))).ToArray();

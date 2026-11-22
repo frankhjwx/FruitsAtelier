@@ -58,6 +58,20 @@ internal static class TimingClipboardRenderCheck
                 editor.PointerDown(list.X + 30, list.Bottom - 10, 2, false, false);
                 editor.PointerUp(list.X + 30, list.Bottom - 10, 2); Paint("empty-menu");
                 if (editor.IsDirty) throw new InvalidOperationException("Timing copy changed content.");
+                editor.KeyDown(27, false, false); Paint();
+                editor.PointerDown(list.X + 30, list.Y + 74, 0, false, false);
+                editor.PointerUp(list.X + 30, list.Y + 74, 0);
+                editor.KeyDown('C', true, false); editor.KeyDown(27, false, false); Paint();
+                var target = new MapDocument { DurationMs = 10000 };
+                target.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = 400 });
+                editor.LoadDocument(target);
+                editor.RequestPasteObjects = () => editor.PasteClipboardText(clipboard);
+                editor.ShowHitsoundingPage(); Paint();
+                editor.KeyDown('V', true, false); Paint("pasted-hitsounding");
+                if (editor.Document.TimingPoints.Count != 2 || editor.Document.TimingPoints.Single(p => p.Uninherited).BeatLengthMs != 400)
+                    throw new InvalidOperationException("Cross-map timing paste lost its green or replaced the red point.");
+                editor.KeyDown('Z', true, false); Paint();
+                if (!editor.Document.ContentEquals(target)) throw new InvalidOperationException("Timing paste did not undo.");
                 void Paint(string? name = null)
                 {
                     canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);

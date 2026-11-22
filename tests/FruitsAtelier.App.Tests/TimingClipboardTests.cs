@@ -12,6 +12,7 @@ internal static class TimingClipboardTests
 
     public static void Run()
     {
+        CrossWorkspacePaste();
         string previous = L.Language;
         try
         {
@@ -78,4 +79,55 @@ internal static class TimingClipboardTests
         finally { L.SetLanguage(previous); }
     }
     private static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
+
+    private static void CrossWorkspacePaste()
+    {
+        var source = new MapDocument { DurationMs = 10000 };
+        source.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
+            new() { TimeMs = 1000, BeatLengthMs = -50, Uninherited = false, SampleSet = 3, SampleIndex = 2, Volume = 35, Effects = 1 },
+            new() { TimeMs = 2000, BeatLengthMs = -100, Uninherited = false, SampleSet = 2, Volume = 80 }]);
+        var target = new MapDocument { DurationMs = 10000 };
+        target.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 600 },
+            new() { TimeMs = 1000, BeatLengthMs = 400 },
+            new() { TimeMs = 1000, BeatLengthMs = -100, Uninherited = false }]);
+        var ui = new Ui(false); ui.View.LoadProject(BeatmapProject.FromDocuments([source, target])); ui.Resize(1440, 900);
+        string clipboard = "";
+        ui.View.RequestCopyText = text => clipboard = text;
+        ui.View.RequestPasteObjects = () => ui.View.PasteClipboardText(clipboard);
+        ui.Key(117);
+        var list = ui.View.TimingListViewport;
+        ui.View.PointerDown(list.X + 30, list.Y + 74, 0, false, false);
+        ui.View.PointerUp(list.X + 30, list.Y + 74, 0);
+        ui.View.PointerDown(list.X + 30, list.Y + 102, 0, false, true);
+        ui.View.PointerUp(list.X + 30, list.Y + 102, 0); ui.Paint();
+        ui.Key('C', ctrl: true); ui.Key(27);
+        Check(TimingEditing.Parse(clipboard).Length == 2, "F6 copies selected greens as portable timing text.");
+        Check(ui.View.SwitchDifficulty(1), "Switch to another difficulty."); ui.Paint();
+        VerifyPaste(ui);
+        Check(ui.View.SwitchDifficulty(0) && ui.View.Document.ContentEquals(source), "Cross-diff paste leaves source unchanged.");
+        foreach (bool hitsounding in new[] { false, true })
+        {
+            var other = new Ui(false); other.LoadDocument(target); other.Resize(1440, 900);
+            other.View.RequestPasteObjects = () => other.View.PasteClipboardText(clipboard);
+            if (hitsounding) { other.View.ShowHitsoundingPage(); other.Paint(); }
+            VerifyPaste(other);
+            string valid = clipboard; clipboard = "1000,invalid,4,1,0,100,0,0";
+            other.Key('V', ctrl: true);
+            Check(other.View.Document.ContentEquals(target), "Malformed clipboard cannot partially paste timing.");
+            clipboard = valid;
+        }
+        Console.WriteLine("PASS F6 greens paste across difficulties and maps in Mapping and Hitsounding with red preservation and undo");
+
+        void VerifyPaste(Ui receiver)
+        {
+            receiver.Key('V', ctrl: true);
+            Check(receiver.View.Document.TimingPoints.Count == 4, "Pasting replaces matching greens and retains red points.");
+            Check(receiver.View.Document.TimingPoints.Single(p => p.TimeMs == 1000 && p.Uninherited).BeatLengthMs == 400,
+                "Green paste preserves coincident BPM.");
+            var greens = receiver.View.Document.TimingPoints.Where(p => !p.Uninherited).OrderBy(p => p.TimeMs).ToArray();
+            Check(TimingEditing.Serialize(greens) == clipboard, "Cross-map paste preserves times, SV, samples, volume and effects.");
+            receiver.Key('Z', ctrl: true);
+            Check(receiver.View.Document.ContentEquals(target), "Timing paste is one target-local undo step.");
+        }
+    }
 }

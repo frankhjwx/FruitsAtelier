@@ -32,7 +32,15 @@ public sealed partial class EditorView
     public void PasteClipboardText(string text)
     {
         if (!HasEditorProject || LibraryVisible || TimingPageVisible || !CanDropAudio || !ClipboardInteractionReady
-            || notesLocked || IsEditingText) return;
+            || IsEditingText) return;
+        if (TryPasteTimingClipboard(text)) return;
+        if (HitsoundingPageVisible)
+        {
+            if (hitsoundingClipboardContainsNotes) PasteHitsoundingNotes();
+            else PasteHitsoundingSelection();
+            return;
+        }
+        if (notesLocked) return;
         if (!PatternClipboard.IsPatternText(text)) { PasteSelection(); return; }
         if (PatternEditingActive || PatternEditingBusy || !CanStartGalleryPlacement || galleryIoTask is not null
             || pendingPatternPaste is not null || pendingPatternImport is not null) return;
