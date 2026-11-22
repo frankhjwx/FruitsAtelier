@@ -78,7 +78,7 @@ internal static class OperationErrorTests
         string folder = Path.GetFullPath("artifacts/tests/render-recovery/audio-" + Guid.NewGuid());
         Directory.CreateDirectory(folder);
         string source = Path.Combine(folder, "input.ogg");
-        File.Copy("tests/FruitsAtelier.Audio.Tests/Fixtures/quiet-tone.ogg", source);
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "quiet-tone.ogg"), source);
         var audio = FruitsAtelier.Core.StoryboardAudio.Capture(source);
         var map = new FruitsAtelier.Core.MapDocument
         {

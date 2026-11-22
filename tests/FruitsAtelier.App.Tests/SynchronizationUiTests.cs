@@ -662,9 +662,9 @@ internal static class SynchronizationUiTests
             Until(() => ui.View.DifficultySyncState(1) == WorkspaceSyncState.Changed && !ui.View.SynchronizationBusy, "inactive conflict detected");
             Check(!ui.View.SynchronizationVisible, "inactive conflict does not interrupt active map");
             Check(!ui.View.SwitchDifficulty(1) && ui.View.SynchronizationVisible, "entering conflicted difficulty opens merge");
-            ui.Paint();
+            Wait(ui);
             ui.ClickText(L.Get("sync.allLocal")); Wait(ui);
-            ui.View.SwitchDifficulty(0); ui.Paint();
+            ui.View.SwitchDifficulty(0); Wait(ui);
             var capture = typeof(FruitsAtelier.App.Editor.EditorView).GetField("tabPointer", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
             capture.SetValue(ui.View, true);
             File.WriteAllText(source, File.ReadAllText(source).Replace("123,192", "321,192"));
