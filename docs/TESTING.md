@@ -414,6 +414,11 @@ The native check includes Markdown and image cards; pass
 `--discussions-image-fixture=<absolute-image-path>` to use a local image fixture
 without network access.
 
+`App.Tests --faz-check` also verifies deferred storyboard audio in native and
+complete archives, including deleted import sources and imports belonging only
+to a later difficulty sharing the resource directory. It checks exported bytes,
+unchanged source resources and data-only FAD exports.
+
 `App.Tests --fad-check` verifies data-only difficulty exports, export with missing
 source resources, legacy resource-package imports and local resource conflicts, matching, adding difficulties, native merge choices, undo/redo, Library
 rejection and the FAZ export chooser. `FruitsAtelier.App.exe --render-check
@@ -725,7 +730,8 @@ two window sizes and captures unresolved/resolved cells under
 
 `App.Tests --simplified-sync-check` verifies mode selection, modal input isolation,
 metadata/NC one-click resolution, mixed local geometry and external metadata,
-choice preservation when switching modes, gameplay-affecting difficulty changes,
+choice preservation when switching modes, gameplay-affecting difficulty changes
+with retained local sliders or external additions,
 and responsive Library navigation after cancelling with media preparation or
 hidden slider import prompts pending.
 It runs English and Chinese at compact and wide sizes. Native synchronization
@@ -1570,6 +1576,8 @@ Fixtures and retained recovery files live under `artifacts/tests/synchronization
 
 Synchronization regressions also cover automatic external-only hitsounds, concurrent
 local object edits, rounded imported heads, baseline-free review and restart.
+The shared App synchronization checks verify live object sounds after automatic
+and reviewed merges, history replacement for imported objects, and subsequent saves.
 Save-rewrite regressions cover fractional object times, implicit combo boundaries,
 timing precision, and relocated break lines alongside storyboard commands. They
 also verify real time, combo colour, SV, break and video edits remain reviewable,

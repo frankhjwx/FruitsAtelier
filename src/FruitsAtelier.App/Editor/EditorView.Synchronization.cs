@@ -17,6 +17,7 @@ public sealed partial class EditorView
     private bool syncCommitAllowsEditing;
     private bool syncCommitCompletesSave;
     private bool syncCommitPreservesActiveDifficulty;
+    private HashSet<Guid> syncCommitObjectChanges = [];
     private bool SearchingReference(int index) => syncTask is not null && index >= 0 && index < difficulties.Count && syncSearching.Contains(difficulties[index].Id);
     private Task<WorkspaceSession>? syncCommitTask;
     private DateTime nextSyncCheck = DateTime.MaxValue;
@@ -137,6 +138,8 @@ public sealed partial class EditorView
             bool localCommit = syncCommitAllowsEditing;
             bool completesSave = syncCommitCompletesSave;
             bool preserveActiveDifficulty = syncCommitPreservesActiveDifficulty;
+            var objectChanges = syncCommitObjectChanges;
+            syncCommitObjectChanges = [];
             syncCommitAllowsEditing = false;
             syncCommitCompletesSave = false;
             syncCommitPreservesActiveDifficulty = false;
@@ -158,6 +161,7 @@ public sealed partial class EditorView
                 bool previousPin = pinPlayhead;
                 Guid active = preserveActiveDifficulty || syncDifficulty == Guid.Empty ? previousDifficulty : syncDifficulty;
                 bool preserveView = syncPreserveHistory && WorkspaceSession?.Directory == session.Directory;
+                bool replacedActiveContent = false;
                 if (preserveView)
                 {
                     foreach (var diff in session.Project.Difficulties)
@@ -175,9 +179,20 @@ public sealed partial class EditorView
                             }
                             else
                             {
-                                var rebase = WorkspaceSynchronization.PrepareContextRebase(existing.History.Document, diff.Document);
-                                existing.History.RebaseSharedMetadata(rebase);
-                                existing.History.MarkSaved();
+                                if (objectChanges.Contains(diff.Id))
+                                {
+                                    // Imported object content needs a new history so undo cannot restore its old sounds.
+                                    existing.RatingCancellation.Cancel();
+                                    if (existing.RatingTask is { } rating) retiredDifficultyWork.Add(rating);
+                                    difficulties[difficulties.IndexOf(existing)] = new DifficultySession(diff) { EditingPreferences = existing.EditingPreferences };
+                                    replacedActiveContent |= diff.Id == previousDifficulty;
+                                }
+                                else
+                                {
+                                    var rebase = WorkspaceSynchronization.PrepareContextRebase(existing.History.Document, diff.Document);
+                                    existing.History.RebaseSharedMetadata(rebase);
+                                    existing.History.MarkSaved();
+                                }
                             }
                         }
                     }
@@ -185,6 +200,11 @@ public sealed partial class EditorView
                     if (!localCommit) convertedSnapshot = null;
                     resourceSnapshot = null; resourceReferences = null;
                     libraryProjectsNeedReindex = true; QueueLibrarySearch(); CheckWorkspaceResources();
+                    if (replacedActiveContent)
+                    {
+                        ResetDifficultyView(!LibraryVisible && mediaInitialPreparationComplete, preserveMedia: true, preserveAudio: true, preserveMapsetState: true);
+                        playhead = previousPlayhead; viewStart = previousViewStart; pinPlayhead = previousPin;
+                    }
                 }
                 else
                 {
@@ -276,6 +296,8 @@ public sealed partial class EditorView
                     }
                     syncPage = "checking";
                     syncPreserveHistory = true;
+                    syncCommitObjectChanges = automatic.Where(s => result.Merges[s.DifficultyId].HasAutomaticObjectChanges)
+                        .Select(s => s.DifficultyId).ToHashSet();
                     syncCommitTask = Task.Run(() =>
                     {
                         var project = result.Snapshot;
@@ -438,6 +460,7 @@ public sealed partial class EditorView
         bool fieldsOnly = fieldReview is not null && fieldReview.Conflicts.Count > 0
             && fieldReview.Conflicts.All(c => !c.Key.StartsWith('$'));
         syncPreserveHistory = fieldsOnly;
+        syncCommitObjectChanges = fieldReview is { HasAutomaticObjectChanges: true } ? [diff.Id] : [];
         syncPage = "applying";
         syncCommitTask = Task.Run(() =>
         {

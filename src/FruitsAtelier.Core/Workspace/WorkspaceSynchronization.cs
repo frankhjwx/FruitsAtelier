@@ -45,6 +45,7 @@ public sealed class WorkspaceMerge
     internal bool Compensate { get; set; }
     internal List<(string Key, Guid[] Sources, string[] Lines)> Objects { get; } = [];
     internal HashSet<string> AutomaticObjects { get; } = [];
+    public bool HasAutomaticObjectChanges => AutomaticObjects.Count > 0;
     internal Dictionary<Guid, int> ExternalOrders { get; } = [];
     public IReadOnlyList<WorkspaceRetainedObjects> PreviouslyRetained { get; internal set; } = [];
     public HashSet<string> PreviouslyResolved { get; } = [];

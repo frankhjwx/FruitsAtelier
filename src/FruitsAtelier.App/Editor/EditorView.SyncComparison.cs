@@ -116,13 +116,19 @@ public sealed partial class EditorView
         // Field changes can alter nested objects even when the source object lines match.
         foreach (var conflict in merge.Conflicts.Where(c => !merge.NativeDifficulty && c.Key is "TimingPoints/" or "Difficulty/SliderMultiplier" or "Difficulty/SliderTickRate" or "Format/Version"))
         {
-            var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => true);
-            choices[conflict.Key] = false;
-            var before = OsuBeatmapWriter.Serialize(WorkspaceSynchronization.Resolve(merge, choices), compensate);
-            choices[conflict.Key] = true;
-            var after = OsuBeatmapWriter.Serialize(WorkspaceSynchronization.Resolve(merge, choices), compensate);
-            var differences = SyncObjectDifferences.ComparePlayable("", "",
-                CatchStreamConverter.Convert(before.ReadBack, compensate).Objects, CatchStreamConverter.Convert(after.ReadBack, compensate).Objects);
+            IReadOnlyList<SyncObjectDifference> differences = [];
+            // A rejected deletion can retain sliders that an external-only probe would omit.
+            foreach (bool externalObjects in new[] { true, false })
+            {
+                var choices = merge.Conflicts.ToDictionary(c => c.Key, c => !c.Key.StartsWith("$objects:") || externalObjects);
+                choices[conflict.Key] = false;
+                var before = OsuBeatmapWriter.Serialize(WorkspaceSynchronization.Resolve(merge, choices), compensate);
+                choices[conflict.Key] = true;
+                var after = OsuBeatmapWriter.Serialize(WorkspaceSynchronization.Resolve(merge, choices), compensate);
+                differences = SyncObjectDifferences.ComparePlayable("", "",
+                    CatchStreamConverter.Convert(before.ReadBack, compensate).Objects, CatchStreamConverter.Convert(after.ReadBack, compensate).Objects);
+                if (differences.Count > 0) break;
+            }
             if (differences.Count == 0) continue;
             actualChanges.Add(conflict.Key); details[conflict.Key] = differences;
             focus[conflict.Key] = new(local.Objects.Select(o => o.SourceId).ToHashSet(), external.Objects.Select(o => o.SourceId).ToHashSet(),

@@ -149,12 +149,16 @@ compare equal to explicit inherited defaults. Geometry, combo and slider playbac
 changes, concurrent differing local edits, and previously retained local choices
 still require review. Baseline-free comparisons do not automatically choose
 object edits.
+Automatic object updates replace the affected difficulty's live authoring and
+start a new undo history, so later saves cannot restore stale object sounds.
+Automatic context-only updates retain the existing history.
 
 A modal first offers simplified or individual resolution. Simplified resolution
 chooses osu! for every conflict except actual object changes. With no actual
 object changes, its action immediately applies the resolution. Otherwise, only
 actual changes appear in the object comparison, including timing or difficulty
-changes that alter playable events. Other conflicts are already resolved using
+changes that alter playable events with either local or external objects retained.
+Other conflicts are already resolved using
 osu!; Apply publishes the combined choices. Switching to individual resolution
 retains those choices and exposes all categories. Cancel leaves files and
 working authoring unchanged. The modal blocks pointer, wheel, double-click and

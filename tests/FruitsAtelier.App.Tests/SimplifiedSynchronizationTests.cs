@@ -80,6 +80,27 @@ internal static class SimplifiedSynchronizationTests
             timing.Ui.ClickText(L.Get("sync.mode.auto"));
             Check(timing.Ui.View.SynchronizationVisible, "tick-rate changes affecting nested objects require review");
             Console.WriteLine("PASS timing/difficulty gameplay classification");
+            foreach (bool retainSlider in new[] { true, false })
+            {
+                using var objects = new Fixture((980, 620), slider: retainSlider);
+                int count = CatchStreamConverter.Convert(objects.Ui.View.Document, true).Objects.Count;
+                string incoming = Fixture.Text.Replace("SliderTickRate:1", "SliderTickRate:2");
+                if (retainSlider) incoming = incoming.Replace("150,192,1500,1,0,0:0:0:0:\n", "");
+                else incoming = incoming.Replace("150,192,1500,1,0,0:0:0:0:", "150,192,1500,2,0,L|350:192,1,400");
+                objects.Change(incoming);
+                objects.Ui.ClickText(L.Get("sync.mode.auto"));
+                Check(objects.Ui.View.SynchronizationVisible && !Choices(objects.Ui).ContainsKey("Difficulty/SliderTickRate"),
+                    "tick-rate changes require review for retained local sliders and external additions");
+                objects.Ui.ClickText(L.Get("sync.chooseLocal"));
+                objects.Ui.ClickText(L.Get("sync.chooseLocal"));
+                Check(Choices(objects.Ui).TryGetValue("Difficulty/SliderTickRate", out bool externalTickRate) && !externalTickRate,
+                    "simplified review permits retaining the local tick rate independently of object changes");
+                objects.Ui.ClickText(L.Get("sync.applyChoices")); Wait(objects.Ui);
+                Check(!objects.Ui.View.SynchronizationVisible && objects.Ui.View.Document.SliderTickRate == 1
+                    && CatchStreamConverter.Convert(objects.Ui.View.Document, true).Objects.Count == count,
+                    "retaining local objects and tick rate preserves the playable sequence");
+            }
+            Console.WriteLine("PASS timing classification across local retention and external addition choices");
         }
         finally { L.SetLanguage(language); }
     }
