@@ -140,6 +140,16 @@ partially resolved tabs amber, and fully resolved tabs green. Clean categories
 remain readable. Choices stay in their category; object choices advance to the
 next unresolved group there. Whole-map choices remain available.
 
+With a shared baseline, external-only object hitsound and sample edits apply
+without an Objects choice when the corresponding local objects are unchanged.
+Identical sound edits on both sides also need no choice. Fractional imported head
+times rounded to the nearest millisecond can accompany these updates; integer
+time changes remain reviewable. Omitted slider edge sounds and sample banks
+compare equal to explicit inherited defaults. Geometry, combo and slider playback
+changes, concurrent differing local edits, and previously retained local choices
+still require review. Baseline-free comparisons do not automatically choose
+object edits.
+
 Events review collects break periods from anywhere in the section into aligned
 tables, ordered by start time. Start and end use `mm:ss:ms`; duration uses
 milliseconds. Only changed cells are highlighted, and missing rows use dashes.

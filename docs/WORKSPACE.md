@@ -255,4 +255,4 @@ Select an export mode, edit its fields, then use the single action button. A con
 
 The first Songs export of an unassociated project creates a new Songs subdirectory. Export completes conversion and conflict checks first, copies referenced resources as needed, then writes `.osu` and saves the target association. Other difficulties remain unchanged. Export several difficulties by switching and exporting each one.
 
-External changes are reconciled against persistent synchronization baselines. Changed fields with different values and changed objects require version choices. Missing and duplicate associations must be resolved before editing. See [Synchronization](SYNCHRONIZATION.md). Export does not replace project saving or guarantee that stable immediately refreshes its own library.
+External changes are reconciled against persistent synchronization baselines. Changed fields with different values and conflicting object edits require version choices. Missing and duplicate associations must be resolved before editing. See [Synchronization](SYNCHRONIZATION.md). Export does not replace project saving or guarantee that stable immediately refreshes its own library.

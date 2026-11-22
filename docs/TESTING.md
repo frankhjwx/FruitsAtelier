@@ -1552,6 +1552,8 @@ replacement and recovery, duplicate ownership, unique-difficulty migration, base
 persistence, emitted object mappings, multi-output curves, and interrupted exports.
 Fixtures and retained recovery files live under `artifacts/tests/synchronization`.
 
+Synchronization regressions also cover automatic external-only hitsounds, concurrent
+local object edits, rounded imported heads, baseline-free review and restart.
 Save-rewrite regressions cover fractional object times, implicit combo boundaries,
 timing precision, and relocated break lines alongside storyboard commands. They
 also verify real time, combo colour, SV, break and video edits remain reviewable,

@@ -44,6 +44,7 @@ public sealed class WorkspaceMerge
     public WorkspaceEventReview? EventReview { get; internal set; }
     internal bool Compensate { get; set; }
     internal List<(string Key, Guid[] Sources, string[] Lines)> Objects { get; } = [];
+    internal HashSet<string> AutomaticObjects { get; } = [];
     internal Dictionary<Guid, int> ExternalOrders { get; } = [];
     public IReadOnlyList<WorkspaceRetainedObjects> PreviouslyRetained { get; internal set; } = [];
     public HashSet<string> PreviouslyResolved { get; } = [];
@@ -328,7 +329,7 @@ public static partial class WorkspaceSynchronization
             Authoring = ProjectSerializer.Serialize(local, SnapshotPath(directory)),
             ObjectSources = output.ObjectSources.ToList(), AudioHash = AudioHash(local.AudioPath), RetainedObjectsRecorded = true
         } };
-        var merge = Merge(comparison, local, external, directory, compensate);
+        var merge = Merge(comparison, local, external, directory, compensate, allowAutomaticObjects: false);
         var ours = Fields(output.ReadBack); var theirs = Fields(external.Document);
         var objects = merge.Conflicts.Where(c => c.Key.StartsWith("$objects:")).ToArray();
         merge.Conflicts.Clear();
@@ -355,7 +356,7 @@ public static partial class WorkspaceSynchronization
         return merge;
     }
 
-    public static WorkspaceMerge Merge(WorkspaceDifficulty entry, MapDocument local, WorkspaceSyncCandidate external, string directory, bool compensate)
+    public static WorkspaceMerge Merge(WorkspaceDifficulty entry, MapDocument local, WorkspaceSyncCandidate external, string directory, bool compensate, bool allowAutomaticObjects = true)
     {
         if (entry.Sync is not { } baseline) throw new InvalidOperationException(L.Get("sync.baseline"));
         baseline.RetainedObjects = baseline.RetainedObjects.Select(r =>
@@ -440,6 +441,10 @@ public static partial class WorkspaceSynchronization
                 : [index < baseline.ObjectSources.Count ? baseline.ObjectSources[index] : Guid.Empty];
         }
         var (beforeKeys, afterKeys) = AnchorKeys(beforeLines, afterLines);
+        var rawTimes = emittedBaseline.Fruits.Select(f => (f.SourceOrder, f.TimeMs))
+            .Concat(emittedBaseline.ImportedSliders.Select(f => (f.SourceOrder, f.TimeMs)))
+            .Concat(emittedBaseline.BananaShowers.Select(f => (f.SourceOrder, f.TimeMs)))
+            .ToDictionary(p => p.SourceOrder, p => p.TimeMs);
         var beforePlayable = new WorkspacePlayableComparison(emittedBaseline);
         var afterPlayable = new WorkspacePlayableComparison(external.Document);
         var beforeHeads = beforeLines.Select((line, i) => (Key: ObjectKey(line), Index: i))
@@ -476,7 +481,8 @@ public static partial class WorkspaceSynchronization
                 if (a.Before + 1 == b.Before && a.After + 1 == b.After) continue;
                 int beforeCount = b.Before - a.Before - 1, afterCount = b.After - a.After - 1;
                 if (beforeCount == afterCount && beforeCount > 1
-                    && Enumerable.Range(1, beforeCount).All(offset => ObjectKey(beforeLines[a.Before + offset]) == ObjectKey(afterLines[a.After + offset])))
+                    && Enumerable.Range(1, beforeCount).All(offset => (ObjectKey(beforeLines[a.Before + offset]) == ObjectKey(afterLines[a.After + offset])
+                        || SoundEditOnly(beforeLines[a.Before + offset], afterLines[a.After + offset], rawTimes.GetValueOrDefault(a.Before + offset)))))
                 {
                     for (int offset = 1; offset <= beforeCount; offset++)
                     {
@@ -512,17 +518,37 @@ public static partial class WorkspaceSynchronization
                     if (!ReferenceEquals(change.Sources, other.Sources) && change.Sources.Overlaps(other.Sources))
                     { change.Sources.UnionWith(other.Sources); change.Lines.AddRange(other.Lines); change.Before.UnionWith(other.Before); changed.Remove(other); }
             }
+            var incomingOrders = afterLines.Select((line, i) => (line, i)).GroupBy(p => p.line)
+                .ToDictionary(g => g.Key, g => g.First().i);
             int n = 0;
             var localOutput = OsuBeatmapWriter.Serialize(local, compensate);
+            var authoringOutput = allowAutomaticObjects ? OsuBeatmapWriter.Serialize(original, compensate) : null;
+            var localObjectLines = ObjectLines(localOutput.Text);
+            var authoringObjectLines = authoringOutput is null ? [] : ObjectLines(authoringOutput.Text);
+            string[] OutputFor(string[] lines, OsuWriteResult output, HashSet<Guid> ids) => lines
+                .Where((_, i) => ids.Contains(output.ObjectSources[i])).ToArray();
             foreach (var change in changed)
             {
                 // Include unchanged output members of a changed multi-output source.
                 for (int i = 0; i < beforeLines.Length; i++)
                     if (SourcesAt(i).Any(change.Sources.Contains) && anchors.Any(a => a.Before == i)) { change.Lines.Add(afterLines[anchors.First(a => a.Before == i).After]); change.Before.Add(beforeLines[i]); }
+                change.Lines.Sort((a, b) => incomingOrders[a].CompareTo(incomingOrders[b]));
                 string key = "$objects:" + n++;
                 merge.Objects.Add((key, change.Sources.ToArray(), change.Lines.ToArray()));
                 merge.ChangedBeforeLines[key] = change.Before.ToArray();
-                merge.Conflicts.Add(new(key, string.Join("\n", ObjectLines(localOutput.Text).Where((_, i) => i < localOutput.ObjectSources.Count && change.Sources.Contains(localOutput.ObjectSources[i]))), string.Join("\n", change.Lines)));
+                var ours = OutputFor(localObjectLines, localOutput, change.Sources);
+                var before = beforeLines.Select((line, i) => (Line: line, Order: i)).Where(p => change.Before.Contains(p.Line)).ToArray();
+                bool soundOnly = before.Length == change.Lines.Count && before.Zip(change.Lines).All(p =>
+                    SoundEditOnly(p.First.Line, p.Second, rawTimes.GetValueOrDefault(p.First.Order))
+                    && (!ObjectKey(p.First.Line).EndsWith("/2")
+                        || beforePlayable.Equivalent(p.First.Order, afterPlayable, incomingOrders[p.Second])));
+                // A shared authoring baseline is required before accepting an external-only sound edit.
+                if (authoringOutput is not null && soundOnly
+                    && (ours.SequenceEqual(OutputFor(authoringObjectLines, authoringOutput, change.Sources)) || ours.SequenceEqual(change.Lines))
+                    && !change.Before.Any(line => retainedSources.ContainsKey(line)))
+                    merge.AutomaticObjects.Add(key);
+                else
+                    merge.Conflicts.Add(new(key, string.Join("\n", ours), string.Join("\n", change.Lines)));
             }
         }
         if (baseline.RetainedObjects.Count > 0)
@@ -551,6 +577,12 @@ public static partial class WorkspaceSynchronization
     public static MapDocument Resolve(WorkspaceMerge merge, IReadOnlyDictionary<string, bool> externalChoices)
     {
         if (merge.NativeDifficulty) return ResolveNativeDifficulty(merge, externalChoices);
+        if (merge.AutomaticObjects.Count > 0)
+        {
+            var choices = externalChoices.ToDictionary();
+            foreach (string key in merge.AutomaticObjects) choices[key] = true;
+            externalChoices = choices;
+        }
         if (merge.CanExportLocalChanges) return merge.Local.DeepClone();
         foreach (var conflict in merge.Conflicts)
             if (!externalChoices.ContainsKey(conflict.Key) && !merge.PreviouslyResolved.Contains(conflict.Key)) throw new InvalidOperationException(L.Get("sync.unresolved"));
@@ -944,11 +976,32 @@ public static partial class WorkspaceSynchronization
         int count = parts.Length;
         if (slider)
         {
+            string banks = count > 10 && parts[10].Length > 0 ? string.Join(':', parts[10].Split(':').Take(2)) : "0:0";
+            if (count > 9 && parts[9].Split('|').All(edge => edge.Length == 0 || edge == banks)) parts[9] = "";
+            if (count > 8 && parts[8].Split('|').All(edge => edge.Length == 0 || edge == parts[4])) parts[8] = "";
             if (count == 11 && parts[10] is "" or "0:0:0:0:") count--;
             while (count > 8 && count <= 10 && parts[count - 1].Length == 0) count--;
         }
         return string.Join(',', parts.Take(count));
     }
+    private static bool SoundEditOnly(string before, string after, double sourceTime)
+    {
+        var left = before.Split(','); var right = after.Split(',');
+        int type = int.Parse(left[3], CultureInfo.InvariantCulture) & 11;
+        int geometryFields = type == 2 ? 8 : type == 8 ? 6 : 5;
+        if (left.Length < geometryFields || right.Length < geometryFields) return false;
+        for (int i = 0; i < geometryFields; i++)
+        {
+            if (i == 4 || left[i] == right[i]) continue;
+            // Imported fractional heads may be rounded by an external editor. Integer edits remain exact.
+            if (i == 2 && sourceTime != Math.Truncate(sourceTime)
+                && double.TryParse(right[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double time)
+                && time == Math.Round(sourceTime, MidpointRounding.AwayFromZero)) continue;
+            return false;
+        }
+        return true;
+    }
+
     private static string ObjectKey(string line)
     {
         var parts = line.Split(',');
