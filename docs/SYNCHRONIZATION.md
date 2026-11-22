@@ -153,15 +153,25 @@ Stream sound updates retain their editable curves and use per-event sample
 overrides. Automatic import requires those overrides to reproduce the incoming
 object lines exactly; changes that cannot preserve authoring remain reviewable.
 These changes also require an explicit choice in simplified resolution.
+When timing choices can change stream generation, the stream also requires an
+explicit object choice. Preservation is verified again against the selected
+timing: compatible timing retains the editable stream; explicitly choosing the
+external objects with incompatible timing imports their fixed fruit positions.
 Automatic object updates replace the affected difficulty's live authoring and
 start a new undo history, so later saves cannot restore stale object sounds.
 Automatic context-only updates retain the existing history.
 
 A modal first offers simplified or individual resolution. Simplified resolution
-chooses osu! for every conflict except actual object changes. With no actual
-object changes, its action immediately applies the resolution. Otherwise, only
-actual changes appear in the object comparison, including timing or difficulty
-changes that alter playable events with either local or external objects retained.
+chooses osu! for conflicts that do not require object or red timing review.
+Any red timing point change requires an explicit choice, including changes to
+offset, BPM, meter, samples, volume, effects, or the set of red points, even when
+playable object positions remain unchanged. Stable's equivalent numeric save
+precision remains unchanged for comparison purposes. Green-only timing changes
+can be accepted automatically when they do not change playable events.
+With no items requiring review, the simplified action immediately applies the
+resolution. Otherwise, review includes object changes, authoring preservation
+conflicts, and timing or difficulty changes that alter playable events with
+either local or external objects retained. Red timing choices use the timing table.
 Other conflicts are already resolved using
 osu!; Apply publishes the combined choices. Switching to individual resolution
 retains those choices and exposes all categories. Cancel leaves files and

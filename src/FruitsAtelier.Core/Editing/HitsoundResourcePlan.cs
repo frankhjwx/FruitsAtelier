@@ -15,7 +15,7 @@ public sealed class HitsoundResourcePlan
         var plan = new HitsoundResourcePlan();
         var set = documents.ToArray();
         if (set.All(d => d.StoryboardAudio.Count == 0)) return plan;
-        foreach (var group in set.Where(d => Root(d) is not null).GroupBy(d => destination ?? Root(d)!, StringComparer.OrdinalIgnoreCase))
+        foreach (var group in set.Where(d => destination is not null || Root(d) is not null).GroupBy(d => destination ?? Root(d)!, StringComparer.OrdinalIgnoreCase))
         {
             string root = group.Key;
             var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -35,7 +35,7 @@ public sealed class HitsoundResourcePlan
                     if (data is null && !File.Exists(path))
                     {
                         var sourceDocument = group.First(d => d.StoryboardAudio.ContainsKey(relative));
-                        string source = SafePath(Root(sourceDocument)!, relative);
+                        string source = Root(sourceDocument) is { } sourceRoot ? SafePath(sourceRoot, relative) : "";
                         audio.Cache(source);
                         data = audio.Data;
                     }

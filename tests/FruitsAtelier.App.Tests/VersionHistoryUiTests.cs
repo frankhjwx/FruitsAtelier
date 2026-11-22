@@ -8,6 +8,7 @@ internal static class VersionHistoryUiTests
         string language = L.Language;
         try
         {
+            StoryboardAudioRestore();
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             {
@@ -120,6 +121,65 @@ internal static class VersionHistoryUiTests
             }
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void StoryboardAudioRestore()
+    {
+        foreach (bool deleted in new[] { false, true })
+        {
+            string root = Path.GetFullPath(Path.Combine("artifacts/tests/version-history-ui-audio", Guid.NewGuid().ToString("N")));
+            string workspace = Path.Combine(root, "workspace"), media = Path.Combine(root, "media");
+            Directory.CreateDirectory(media);
+            byte[] bytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "quiet-tone.ogg"));
+            string source = Path.Combine(root, "source.ogg"); File.WriteAllBytes(source, bytes);
+            var audio = StoryboardAudio.Capture(source);
+            var document = new MapDocument { SourcePath = Path.Combine(media, WorkspaceProject.ResourceRootMarker), DurationMs = 10000 };
+            SongSetup.Set(document, "Metadata", "Version", "Audio");
+            document.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
+            var events = new OsuSection { Name = "Events" };
+            events.Lines.Add($"Sample,1000,0,\"{audio.RelativePath}\",100");
+            document.OriginalSections.Add(events); document.StoryboardAudio[audio.RelativePath] = audio;
+            var project = BeatmapProject.FromDocuments([new MapDocument(), document]);
+            var session = WorkspaceProject.Create(workspace, project, "");
+            Guid id = project.Difficulties[1].Id;
+            if (deleted) WorkspaceAssociations.DeleteDifficulty(session, project, id);
+            else WorkspaceVersionHistory.ArchiveCurrent(session, project);
+            File.Delete(source); File.Delete(Path.Combine(media, audio.RelativePath));
+            session = WorkspaceProject.Open(session.Directory);
+            if (!deleted)
+            {
+                string missing = Path.Combine(root, "missing.osu");
+                session.Manifest.Difficulties.Single(d => d.Id == id).Source = missing;
+                session.Project.Difficulties.Single(d => d.Id == id).Document.SourcePath = missing;
+            }
+            var ui = new Ui(false); ui.Resize(1440, 900); ui.View.LibrarySettings.Workspace = workspace;
+            ui.View.LoadWorkspace(session); ui.PaintUntilReady();
+            ui.View.ShowVersionHistory(); Wait(ui);
+            string label = deleted ? L.Get("history.deletedName", "Audio") : "Audio";
+            var row = ui.Canvas.Texts.Single(t => t.Value == label && t.Y >= 88 && t.Y < 176);
+            ui.Click(row.X + 4, row.Y + 4); Wait(ui);
+            ui.ClickText(L.Get("history.restore")); Wait(ui);
+            Check(ui.View.Document.AudioPath is null && Path.GetFileName(ui.View.Document.SourcePath) == WorkspaceProject.ResourceRootMarker,
+                "storyboard-only history restores with a persistent local resource root");
+            Check(WorkspaceSynchronization.Target(ui.View.WorkspaceSession!.Manifest.Difficulties.Single(d => d.Id == id)) is null,
+                "historical audio resources do not restore a deleted source association");
+            if (!deleted)
+            {
+                ui.Key('Z', ctrl: true);
+                Check(ui.View.Document.SourcePath == Path.Combine(root, "missing.osu"), "undo restores the missing source context");
+                ui.Key('Y', ctrl: true);
+                Check(Path.GetFileName(ui.View.Document.SourcePath) == WorkspaceProject.ResourceRootMarker,
+                    "redo restores the local storyboard resource root");
+            }
+            Check(ui.View.SaveWorkspace(), "restored storyboard difficulty saves");
+            var reopened = WorkspaceProject.Open(session.Directory);
+            var restored = reopened.Project.Difficulties.Single(d => d.Id == id).Document;
+            string managed = Path.Combine(Path.GetDirectoryName(restored.SourcePath)!, audio.RelativePath);
+            Check(File.ReadAllBytes(managed).SequenceEqual(bytes), "restored storyboard bytes survive save and reopen without music or original sources");
+            restored.StoryboardAudio[audio.RelativePath].Cache(managed);
+            Check(restored.StoryboardAudio[audio.RelativePath].Data!.SequenceEqual(bytes), "reopened restored audio loads from its new managed root");
+            ui.View.StopFileMonitoring();
+        }
     }
 
     private static void Wait(Ui ui)

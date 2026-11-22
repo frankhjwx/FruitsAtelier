@@ -195,12 +195,14 @@ public sealed partial class EditorView
                 restoreAssociation = (redo, _, _) => RestoreVersionAssociation(historical.Id, redo ? local : original);
                 RestoreVersionAssociation(historical.Id, local);
             }
+            EnsureStoryboardAudioRoot(historical);
             difficulties[index].History.RestoreVersion(L.Get("history.restore"), historical.Document, restoreAssociation);
         }
         else
         {
             // Deleted versions return unlinked so missing or now-owned sources cannot block recovery.
             historical.Document.SourcePath = null;
+            EnsureStoryboardAudioRoot(historical);
             difficulties.Add(new DifficultySession(historical));
             WorkspaceSession!.Manifest.Difficulties.Add(new WorkspaceDifficulty { Id = historical.Id, Name = historical.Name });
             index = difficulties.Count - 1;
@@ -214,6 +216,12 @@ public sealed partial class EditorView
         if (!WorkspaceSynchronization.Paths.Equals(previousAudio, Document.AudioPath))
         { ReleaseWaveform(); initializeTransport = !string.IsNullOrWhiteSpace(Document.AudioPath); RequestDifficultyChanged?.Invoke(); }
         SetNotice(L.Get("history.restored", historical.Name));
+    }
+
+    private void EnsureStoryboardAudioRoot(ProjectDifficulty difficulty)
+    {
+        if (difficulty.Document.SourcePath is null && difficulty.Document.AudioPath is null && difficulty.Document.StoryboardAudio.Count > 0)
+            difficulty.Document.SourcePath = Path.Combine(MediaResourceRoot(difficulty.Id), WorkspaceProject.ResourceRootMarker);
     }
 
     private void RestoreVersionAssociation(Guid id, WorkspaceDifficulty value)

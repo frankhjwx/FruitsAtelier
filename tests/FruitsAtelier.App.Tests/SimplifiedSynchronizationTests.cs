@@ -141,6 +141,33 @@ internal static class SimplifiedSynchronizationTests
                     "repeated simplified review preserves retained stream authoring");
             }
             Console.WriteLine("PASS simplified review protects unrepresentable stream samples");
+            foreach (string red in new[] { "0,400,4,1,0,100,1,0", "1,500,4,1,0,100,1,0", "0,500,3,1,0,100,1,0",
+                "0,500,4,2,0,100,1,0", "0,500,4,1,2,100,1,0", "0,500,4,1,0,50,1,0", "0,500,4,1,0,100,1,1",
+                "0,500,4,1,0,100,1,8", "0,500.0000001,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\n250,500,4,1,0,100,1,0", "" })
+            {
+                using var reds = new Fixture((980, 620), extraRed: red.Length == 0);
+                string scenario = red.Length == 0 ? "delete second red point" : red.Replace('\n', '|');
+                string incoming = red.Length == 0 ? File.ReadAllText(reds.Source).Replace("250,500,4,1,0,100,1,0\n", "")
+                    : Fixture.Text.Replace("0,500,4,1,0,100,1,0", red);
+                reds.Change(incoming);
+                Check(reds.Ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.mode.title")), "red timing edit opens mode selection: " + scenario);
+                reds.Ui.ClickText(L.Get("sync.mode.auto"));
+                Check(reds.Ui.View.SynchronizationVisible && !Choices(reds.Ui).ContainsKey("TimingPoints/"),
+                    "red timing requires an explicit choice without object geometry changes: " + scenario);
+                reds.Ui.ClickText(L.Get("sync.chooseLocal")); reds.Ui.ClickText(L.Get("sync.applyChoices")); Wait(reds.Ui);
+                var points = reds.Ui.View.Document.TimingPoints;
+                var point = points.First();
+                Check(points.Count == (red.Length == 0 ? 2 : 1) && point.Uninherited && point.TimeMs == 0 && point.BeatLengthMs == 500 && point.Volume == 100,
+                    "retaining FA timing preserves original red points: " + scenario);
+            }
+            using (var greens = new Fixture((980, 620)))
+            {
+                greens.Change(Fixture.Text.Replace("[HitObjects]", "250,-100,4,2,1,50,0,1\n[HitObjects]"));
+                greens.Ui.ClickText(L.Get("sync.mode.auto")); Wait(greens.Ui);
+                Check(!greens.Ui.View.SynchronizationVisible && greens.Ui.View.Document.TimingPoints.Any(p => !p.Uninherited && p.TimeMs == 250),
+                    "green-only sound and effect changes remain automatically acceptable");
+            }
+            Console.WriteLine("PASS explicit red timing review and automatic green changes");
         }
         finally { L.SetLanguage(language); }
     }
@@ -157,12 +184,14 @@ internal static class SimplifiedSynchronizationTests
         public const string Text = "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Original\nArtist:Artist\nCreator:Mapper\nVersion:Catch\n[Difficulty]\nCircleSize:5\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n123,192,1000,1,0,0:0:0:0:\n150,192,1500,1,0,0:0:0:0:\n";
         public Ui Ui { get; }
         public string Source => WorkspaceSynchronization.Target(Ui.View.WorkspaceSession!.Manifest.Difficulties[0])!;
-        public Fixture((int Width, int Height) size, bool slider = false)
+        public Fixture((int Width, int Height) size, bool slider = false, bool extraRed = false)
         {
             string root = Path.GetFullPath(Path.Combine("artifacts/tests/simplified-sync", Guid.NewGuid().ToString("N")));
             string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
             Directory.CreateDirectory(Path.GetDirectoryName(source)!);
-            File.WriteAllText(source, slider ? Text.Replace("150,192,1500,1,0,0:0:0:0:", "150,192,1500,2,0,L|350:192,1,400") : Text);
+            string text = slider ? Text.Replace("150,192,1500,1,0,0:0:0:0:", "150,192,1500,2,0,L|350:192,1,400") : Text;
+            if (extraRed) text = text.Replace("0,500,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\n250,500,4,1,0,100,1,0");
+            File.WriteAllText(source, text);
             Ui = new Ui(false); Ui.Resize(size.Width, size.Height);
             Ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); Ui.View.LibrarySettings.Songs = songs;
             Ui.View.LoadWorkspace(WorkspaceProject.Create(Ui.View.LibrarySettings.Workspace, BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source)]), songs));

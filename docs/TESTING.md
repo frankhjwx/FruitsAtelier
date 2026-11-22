@@ -107,6 +107,9 @@ callback recovery when logging or refreshing fails.
 It checks error input priority over synchronization and startup screens, retained
 Pattern-project recovery copies, destination collisions, and macOS recovery close
 requests while another file operation is busy.
+Captured storyboard audio survives recovery save and reopen after the import source
+has been deleted. Destination collisions roll back newly written audio files and
+leave the original mapset and live registrations unchanged.
 `App.Tests --recovery-state-matrix-check` combines cleanup failures with reentrant
 input, unfinished transactions, retained Pattern projects and simultaneous FAZ
 completion. It checks that recovery copies preserve committed edits and that
@@ -418,6 +421,8 @@ without network access.
 complete archives, including deleted import sources and imports belonging only
 to a later difficulty sharing the resource directory. It checks exported bytes,
 unchanged source resources and data-only FAD exports.
+It also covers registered audio without a media root and FAD imports into blank
+hosts, including ordinary save/reopen after the original source is deleted.
 
 `App.Tests --fad-check` verifies data-only difficulty exports, export with missing
 source resources, legacy resource-package imports and local resource conflicts, matching, adding difficulties, native merge choices, undo/redo, Library
@@ -731,11 +736,13 @@ two window sizes and captures unresolved/resolved cells under
 `App.Tests --simplified-sync-check` verifies mode selection, modal input isolation,
 metadata/NC one-click resolution, mixed local geometry and external metadata,
 choice preservation when switching modes, gameplay-affecting difficulty changes
-with retained local sliders or external additions,
+with retained local sliders or external additions, explicit confirmation of red
+timing edits and additions/deletions, automatic green-only sound changes,
 and responsive Library navigation after cancelling with media preparation or
 hidden slider import prompts pending.
 It runs English and Chinese at compact and wide sizes. Native synchronization
-checks capture the mode prompt as well as the detailed review.
+checks capture the mode prompt as well as the detailed review and operate both
+choices in the simplified red timing table.
 
 `App.Tests --sync-details-check` also checks break start/end/duration columns,
 aligned additions, changed-cell highlighting, independent break choices and
@@ -1632,7 +1639,9 @@ deleted difficulty identities, project isolation, damaged snapshots, modal input
 managed storyboard audio after source deletion and mapset cleanup, full and
 single-difficulty publication, deferred and compressed snapshots, unsaved audio,
 and reclamation of snapshot-owned audio by retention. They also cover
-selective restoration, save/restart and undo/redo. Native `--render-check` draws the
+selective restoration, save/restart and undo/redo. Deleted and missing-source
+difficulties with storyboard audio but no music retain a persistent resource root.
+Native `--render-check` draws the
 browser and restores a deleted difficulty in both languages at its tested window
 sizes and DPI values. The editing benchmark verifies ordinary interactions while
 version-history work remains outside the pointer and paint paths.

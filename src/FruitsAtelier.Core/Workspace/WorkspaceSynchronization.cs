@@ -49,6 +49,8 @@ public sealed class WorkspaceMerge
     internal HashSet<string> AuthoringReviewObjects { get; } = [];
     public bool RequiresAuthoringReview(string key) => AuthoringReviewObjects.Contains(key);
     public bool HasAutomaticObjectChanges => AutomaticObjects.Count > 0;
+    public bool HasRedTimingChanges => WorkspaceTimingSynchronization.Text(Local.TimingPoints.Where(p => p.Uninherited), true)
+        != WorkspaceTimingSynchronization.Text(External.Document.TimingPoints.Where(p => p.Uninherited), true);
     internal Dictionary<Guid, int> ExternalOrders { get; } = [];
     public IReadOnlyList<WorkspaceRetainedObjects> PreviouslyRetained { get; internal set; } = [];
     public HashSet<string> PreviouslyResolved { get; } = [];
@@ -555,6 +557,8 @@ public static partial class WorkspaceSynchronization
                     if (TryPreserveStreamSounds(local, localOutput, change.Sources, change.Lines, compensate, out var sounds))
                         merge.PreservedStreamSounds[key] = sounds;
                     else { automatic = false; merge.AuthoringReviewObjects.Add(key); }
+                    if (merge.Conflicts.Any(c => c.Key == "TimingPoints/"))
+                    { automatic = false; merge.AuthoringReviewObjects.Add(key); }
                 }
                 if (automatic)
                     merge.AutomaticObjects.Add(key);
@@ -581,6 +585,7 @@ public static partial class WorkspaceSynchronization
                     if (TryPreserveStreamSounds(local, output, sources, retained.ExternalLines, compensate, out var sounds))
                         merge.PreservedStreamSounds[key] = sounds;
                     else merge.AuthoringReviewObjects.Add(key);
+                    if (merge.Conflicts.Any(c => c.Key == "TimingPoints/")) merge.AuthoringReviewObjects.Add(key);
                 }
                 merge.PreviouslyResolved.Add(key);
                 merge.Conflicts.Add(new(key, string.Join('\n', ours), string.Join('\n', retained.ExternalLines)));
@@ -650,7 +655,9 @@ public static partial class WorkspaceSynchronization
         {
             if (!externalChoices.GetValueOrDefault(group.Key)) continue;
             var ids = group.Sources.ToHashSet();
-            if (merge.PreservedStreamSounds.TryGetValue(group.Key, out var sounds))
+            if (merge.PreservedStreamSounds.ContainsKey(group.Key)
+                && TryPreserveStreamSounds(result, OsuBeatmapWriter.Serialize(result, merge.Compensate), ids, group.Lines,
+                    merge.Compensate, out var sounds))
             {
                 result.HitsoundOverrides.RemoveAll(s => ids.Contains(s.SourceId));
                 result.HitsoundOverrides.AddRange(sounds);

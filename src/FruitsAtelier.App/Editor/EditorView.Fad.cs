@@ -104,6 +104,7 @@ public sealed partial class EditorView
 
     private void ApplyImportedDifficulty(ProjectDifficulty incoming, HitsoundResourcePlan resources, string undoLabel)
     {
+        EnsureStoryboardAudioRoot(incoming);
         var check = CaptureProject();
         check.Difficulties.RemoveAll(d => d.Id == incoming.Id); check.Difficulties.Add(incoming);
         check.Validate();

@@ -66,12 +66,41 @@ public sealed partial class EditorView
                 Path.GetFileNameWithoutExtension(path) + ".retained.catchproj");
             copies.Add((companion, CaptureRecoveryProject(retained.Difficulties, retained.Name, retained.Notes)));
         }
+        var audioFiles = new List<(string Path, byte[] Data)>();
+        foreach (var copy in copies)
+        {
+            string resourceDirectory = Path.GetFullPath(copy.Path + ".audio-" + Guid.NewGuid().ToString("N"));
+            foreach (var difficulty in copy.Project.Difficulties)
+            {
+                var document = difficulty.Document;
+                string? root = Path.GetDirectoryName(document.SourcePath ?? document.AudioPath);
+                foreach (var (relative, audio) in document.StoryboardAudio.ToArray())
+                {
+                    if (!StoryboardAudio.ValidRelativePath(relative)) throw new InvalidDataException(L.Get("resource.limit"));
+                    audio.Cache(root is null ? "" : Path.Combine(root, relative));
+                    if (audio.Data is not { Length: > 0 } data) continue;
+                    string target = Path.Combine(resourceDirectory, difficulty.Id.ToString("N"), relative);
+                    audioFiles.Add((target, data));
+                    // Recovery owns a durable fallback without writing into the original mapset.
+                    document.StoryboardAudio[relative] = audio with { SourcePath = target };
+                }
+                if (root is null && document.StoryboardAudio.Count > 0)
+                    document.SourcePath = Path.Combine(resourceDirectory, WorkspaceProject.ResourceRootMarker);
+            }
+        }
         // Serialization validates both authored snapshots before any destination is created.
         var output = copies.Select(copy => (copy.Path, Text: ProjectSerializer.Serialize(copy.Project, copy.Path),
             Temporary: copy.Path + "." + Guid.NewGuid().ToString("N") + ".tmp")).ToArray();
         var written = new List<string>();
         try
         {
+            foreach (var audio in audioFiles)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(audio.Path)!);
+                using var stream = new FileStream(audio.Path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                written.Add(audio.Path);
+                stream.Write(audio.Data);
+            }
             foreach (var copy in output)
             {
                 using var stream = new FileStream(copy.Temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None);

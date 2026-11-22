@@ -114,6 +114,7 @@ public sealed partial class EditorView
         var actualChanges = details.Where(p => p.Value.Any(d => d.Playable is not null || d.Message == "sync.diff.y"))
             .Select(p => p.Key).ToHashSet();
         actualChanges.UnionWith(merge.Conflicts.Where(c => merge.RequiresAuthoringReview(c.Key)).Select(c => c.Key));
+        if (merge.HasRedTimingChanges && merge.Conflicts.Any(c => c.Key == "TimingPoints/")) actualChanges.Add("TimingPoints/");
         // Field changes can alter nested objects even when the source object lines match.
         foreach (var conflict in merge.Conflicts.Where(c => !merge.NativeDifficulty && c.Key is "TimingPoints/" or "Difficulty/SliderMultiplier" or "Difficulty/SliderTickRate" or "Format/Version"))
         {
@@ -154,6 +155,8 @@ public sealed partial class EditorView
         { DrawSyncFields(c, merge, comparison); DrawSyncTabs(c, merge, comparison); return; }
         var categoryConflicts = merge.Conflicts.Where(c => IsSyncReviewItem(c) && (syncSimplified || SyncCategory(c.Key) == syncTab)).ToArray();
         var conflict = categoryConflicts.FirstOrDefault(c => c.Key == merge.Conflicts[syncRow].Key) ?? categoryConflicts.FirstOrDefault();
+        if (syncSimplified && conflict?.Key == "TimingPoints/")
+        { syncObjectDetailBounds = default; DrawSyncSection(c, merge, comparison, conflict); DrawSyncTabs(c, merge, comparison); return; }
         if (!syncSimplified && syncTab != "Objects")
         {
             string section = syncTab == "Timing" ? "TimingPoints" : syncTab;

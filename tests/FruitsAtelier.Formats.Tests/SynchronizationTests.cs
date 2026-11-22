@@ -4,6 +4,38 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: stream sound preservation is revalidated after timing choices", () => Run(f =>
+        {
+            var document = f.Diff.Document; document.Fruits.Clear();
+            var track = new CurveTrack { StreamSnapDivisor = 4, SourceOrder = 0 };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 2000, X = 400 }]);
+            document.Tracks.Add(track);
+            var output = OsuBeatmapWriter.Serialize(document);
+            File.WriteAllText(f.Source, output.Text);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, document, f.Session.Directory,
+                output.Text, output.ObjectSources);
+            string incoming = output.Text.Replace("0,500,4,1,0,100,1,0", "0,250,4,1,0,100,1,0");
+            foreach (string line in WorkspaceSynchronization.ObjectLines(output.Text))
+            { var parts = line.Split(','); parts[4] = "2"; incoming = incoming.Replace(line, string.Join(',', parts)); }
+            File.WriteAllText(f.Source, incoming);
+            var merge = f.Merge();
+            string objects = merge.Conflicts.Single(c => c.Key.StartsWith("$objects:")).Key;
+            Check(merge.RequiresAuthoringReview(objects) && !merge.HasAutomaticObjectChanges,
+                "timing changes leave potentially incompatible stream sounds for explicit object review");
+            var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => true);
+            var external = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(external).Text)
+                .SequenceEqual(WorkspaceSynchronization.ObjectLines(incoming)), "explicit external choices retain the nine incoming fruits");
+            choices["TimingPoints/"] = false;
+            var preserved = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(TrackEquals(preserved.Tracks.Single(), track)
+                && WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(preserved).Text)
+                    .SequenceEqual(WorkspaceSynchronization.ObjectLines(incoming)), "local timing allows exact stream preservation with incoming sounds");
+            choices["TimingPoints/"] = true; choices[objects] = false;
+            var retained = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(retained.Tracks.Single().Id == track.Id && retained.Fruits.Count == 0,
+                "retaining FA objects keeps stream authoring when external timing is chosen");
+        }));
         yield return ("Sync: automatic stream sounds retain editable authoring and per-event samples", () =>
         {
             foreach (bool uniform in new[] { true, false }) Run(f =>

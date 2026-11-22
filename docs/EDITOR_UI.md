@@ -75,9 +75,10 @@ the colours during gameplay, especially with video, storyboard and Kiai.
 An unexpected rendering or window polling failure pauses the editor on a recovery
 screen. **Save recovery copy** writes all retained difficulties and project notes to
 a new `.catchproj` without running beatmap conversion or changing the original
-project's saved state. Choose an unused filename. The copy references existing
-media; it does not package audio or images. Save failures remain visible so another
-location can be selected.
+project's saved state. Choose an unused filename. Captured storyboard audio is
+preserved in a sibling `<filename>.audio-<id>` directory; keep this directory with
+the recovery copy. Other media remains referenced at its existing location.
+Save failures remain visible so another location can be selected.
 
 If an interrupted edit could not be rolled back, recovery copies use the state
 before that unfinished gesture. Earlier committed edits remain in the copy even
