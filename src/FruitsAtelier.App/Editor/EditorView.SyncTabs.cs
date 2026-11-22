@@ -169,6 +169,11 @@ public sealed partial class EditorView
 
     private void DrawSyncTabs(ICanvas c, WorkspaceMerge merge, SyncComparison comparison)
     {
+        if (syncSimplified)
+        {
+            SyncReviewButton(c, new(width - 264, 83, 228, 30), L.Get("sync.mode.detailed"), () => SelectSyncMode(false));
+            return;
+        }
         float tabWidth = (width - 72) / comparison.Review.Tabs.Length;
         for (int i = 0; i < comparison.Review.Tabs.Length; i++)
         {

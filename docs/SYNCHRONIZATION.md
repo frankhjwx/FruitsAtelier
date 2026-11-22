@@ -150,6 +150,21 @@ changes, concurrent differing local edits, and previously retained local choices
 still require review. Baseline-free comparisons do not automatically choose
 object edits.
 
+A modal first offers simplified or individual resolution. Simplified resolution
+chooses osu! for every conflict except actual object changes. With no actual
+object changes, its action immediately applies the resolution. Otherwise, only
+actual changes appear in the object comparison, including timing or difficulty
+changes that alter playable events. Other conflicts are already resolved using
+osu!; Apply publishes the combined choices. Switching to individual resolution
+retains those choices and exposes all categories. Cancel leaves files and
+working authoring unchanged. The modal blocks pointer, wheel, double-click and
+keyboard actions in the underlying review; Escape cancels it.
+
+Cancelling review back to Library suspends the editor's media-opening input gate
+and initializes Library browsing when needed. Hidden slider import and conversion
+prompts do not intercept Library input. Pending media preparation cannot block
+Library navigation, and unsaved authoring remains available.
+
 Events review collects break periods from anywhere in the section into aligned
 tables, ordered by start time. Start and end use `mm:ss:ms`; duration uses
 milliseconds. Only changed cells are highlighted, and missing rows use dashes.

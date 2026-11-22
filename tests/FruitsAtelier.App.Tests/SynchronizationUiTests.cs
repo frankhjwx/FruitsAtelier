@@ -832,6 +832,7 @@ internal static class SynchronizationUiTests
         do { ui.Paint(); if (!ui.View.SynchronizationBusy && !ui.View.LibraryOpening) break; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
         Check(!ui.View.SynchronizationBusy && !ui.View.LibraryOpening, "sync and media preparation timeout"); ui.Paint();
         if (ui.View.ErrorVisible) throw new Exception("Unexpected error in synchronization UI");
+        if (ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.mode.title"))) ui.ClickText(L.Get("sync.mode.detailed"));
     }
 
     private static void CheckBusyInput(Ui ui)

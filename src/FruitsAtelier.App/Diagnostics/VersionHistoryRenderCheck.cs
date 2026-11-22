@@ -24,7 +24,7 @@ internal static class VersionHistoryRenderCheck
         var view = new EditorView(false);
         view.LibrarySettings.Workspace = root;
         view.LoadWorkspace(WorkspaceProject.Open(session.Directory));
-        Paint(); view.ShowVersionHistory(); Wait();
+        Wait(); view.ShowVersionHistory(); Wait();
         if (!view.VersionHistoryVisible) throw new InvalidOperationException("Native version history did not open.");
         var before = view.Document.DeepClone();
         view.KeyDown(39, false, false); Wait();
@@ -48,7 +48,7 @@ internal static class VersionHistoryRenderCheck
         void Wait()
         {
             var deadline = DateTime.UtcNow.AddSeconds(20);
-            do { Paint(); if (!view.VersionHistoryBusy) return; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
+            do { Paint(); if (!view.VersionHistoryBusy && !view.LibraryOpening && !view.SynchronizationBusy) return; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
             throw new TimeoutException("Native version history timed out.");
         }
     }

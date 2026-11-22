@@ -95,7 +95,7 @@ public sealed partial class EditorView
         if (syncTask is { } retiredSync) _ = retiredSync.ContinueWith(t => { _ = t.Exception; retiredSyncCancellation?.Dispose(); }, TaskScheduler.Default);
         else retiredSyncCancellation?.Dispose();
         syncTask = null; syncRetry = null; afterSynchronization = null; syncReviewRequested = false; syncSearching.Clear();
-        syncStatuses.Clear(); syncMerges.Clear(); syncPage = null; nextSyncCheck = DateTime.MaxValue;
+        syncStatuses.Clear(); syncMerges.Clear(); syncPage = null; syncModePrompt = syncSimplified = false; nextSyncCheck = DateTime.MaxValue;
         syncDifficulty = Guid.Empty; syncPreserveHistory = false;
         fileSyncPending = fileSearchMissing = false; acceptedFileCheck = null; nextMonitorConfiguration = DateTime.MinValue;
         syncRetainedReview.Clear();

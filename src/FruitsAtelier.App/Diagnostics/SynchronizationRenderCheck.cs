@@ -88,6 +88,12 @@ internal static class SynchronizationRenderCheck
                 File.WriteAllText(source, text.Replace("100,192", "400,192"));
                 view.RefreshSynchronization(); Wait();
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native object conflict dialog was not shown.");
+                typeof(EditorView).GetMethod("SelectSyncMode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                    .Invoke(view, new object[] { true });
+                Paint(); CaptureTiming("objects-simplified");
+                var switchBounds = new Rect(width - 264, 83, 228, 30);
+                view.PointerDown(switchBounds.X + 12, switchBounds.Y + 12, 0, false, false);
+                view.PointerUp(switchBounds.X + 12, switchBounds.Y + 12, 0); Paint();
                 CaptureTiming("objects-unresolved");
                 typeof(EditorView).GetMethod("ResolveSync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
                     .Invoke(view, new object?[] { true });
@@ -146,7 +152,12 @@ internal static class SynchronizationRenderCheck
                 view.PointerDown(100, height - 162, 0, false, false); view.PointerUp(100, height - 162, 0); Paint();
                 CaptureTiming("slider-resolved");
                 view.KeyDown(27, false, false);
-                view.LoadWorkspace(WorkspaceProject.Open(sliderSession.Directory)); Paint();
+                view.StopFileMonitoring();
+                view = new EditorView(false);
+                view.LibrarySettings.Workspace = Path.Combine(root, "SettingsWorkspace"); view.LibrarySettings.Songs = songs;
+                File.WriteAllText(sliderSource, text);
+                view.LoadWorkspace(WorkspaceProject.Create(view.LibrarySettings.Workspace,
+                    BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(sliderSource)]), songs)); Wait();
                 typeof(EditorView).GetMethod("ShowAddDifficulty", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
                     .Invoke(view, null);
                 CaptureTiming("new-difficulty-sync"); view.KeyDown(27, false, false); Paint();
@@ -176,7 +187,22 @@ internal static class SynchronizationRenderCheck
                 void Wait()
                 {
                     var deadline = DateTime.UtcNow.AddSeconds(15);
-                    do { Paint(); if (!view.SynchronizationBusy) return; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
+                    do
+                    {
+                        Paint();
+                        if (!view.SynchronizationBusy && !view.LibraryOpening)
+                        {
+                            if ((bool)typeof(EditorView).GetField("syncModePrompt", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(view)!)
+                            {
+                                CaptureTiming("mode-choice");
+                                var bounds = view.SyncModeDetailedBounds;
+                                view.PointerDown(bounds.X + 10, bounds.Y + 10, 0, false, false);
+                                view.PointerUp(bounds.X + 10, bounds.Y + 10, 0); Paint();
+                            }
+                            return;
+                        }
+                        Thread.Sleep(10);
+                    } while (DateTime.UtcNow < deadline);
                     throw new TimeoutException("Native synchronization check timed out.");
                 }
             }

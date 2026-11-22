@@ -141,13 +141,17 @@ public sealed partial class EditorView
 
     private void DrawSyncReviewFooter(ICanvas c, WorkspaceMerge merge, float x, float y, float w, float h, bool showPreview)
     {
-        c.Text(L.Get("sync.reviewProgress", syncChoices.Count, merge.Conflicts.Count), x + 20, y + h - 116, 15, Foreground, w - 250, true);
+        var reviewItems = merge.Conflicts.Where(IsSyncReviewItem).ToArray();
+        c.Text(L.Get("sync.reviewProgress", reviewItems.Count(c => syncChoices.ContainsKey(c.Key)), reviewItems.Length), x + 20, y + h - 116, 15, Foreground, w - 250, true);
         if (showPreview)
             SyncReviewButton(c, new(x + w - 220, y + h - 122, 200, 32), L.Get("sync.resultPreview"), () => syncShowResult = !syncShowResult, syncShowResult);
         SyncComparisonNavigation(c, merge, x, y + h - 82);
         SyncReviewButton(c, new(x + w - 260, y + h - 82, 240, 32), L.Get("sync.inspect"), () => InspectSync(merge));
-        SyncReviewButton(c, new(x + 20, y + h - 42, 200, 34), L.Get("sync.allLocal"), () => ResolveSync(false));
-        SyncReviewButton(c, new(x + 232, y + h - 42, 200, 34), L.Get(merge.NativeDifficulty ? "fad.allExternal" : "sync.allExternal"), () => ResolveSync(true));
+        if (!syncSimplified)
+        {
+            SyncReviewButton(c, new(x + 20, y + h - 42, 200, 34), L.Get("sync.allLocal"), () => ResolveSync(false));
+            SyncReviewButton(c, new(x + 232, y + h - 42, 200, 34), L.Get(merge.NativeDifficulty ? "fad.allExternal" : "sync.allExternal"), () => ResolveSync(true));
+        }
         SyncReviewButton(c, new(x + w - 360, y + h - 42, 220, 34), L.Get("sync.applyChoices"), () => ResolveSync(null), enabled: merge.Conflicts.All(k => syncChoices.ContainsKey(k.Key)));
         SyncReviewButton(c, new(x + w - 132, y + h - 42, 112, 34), L.Get("mac.cancel"), CancelSynchronization);
     }
@@ -155,7 +159,7 @@ public sealed partial class EditorView
     private void SyncComparisonNavigation(ICanvas c, WorkspaceMerge merge, float x, float y)
     {
         var pages = merge.Conflicts.Select((item, index) => (item, index))
-            .Where(p => SyncCategory(p.item.Key) == syncTab).Select(p => p.index).ToArray();
+            .Where(p => IsSyncReviewItem(p.item) && (syncSimplified || SyncCategory(p.item.Key) == syncTab)).Select(p => p.index).ToArray();
         bool groups = syncTab == "Objects";
         int current = groups ? Math.Max(0, Array.IndexOf(pages, syncRow)) : 0;
         int count = groups ? Math.Max(1, pages.Length) : 1;

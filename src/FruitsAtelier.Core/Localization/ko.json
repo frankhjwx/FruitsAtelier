@@ -2528,5 +2528,8 @@
   "shortcuts.command.previousParent": "Select Previous Note",
   "shortcuts.command.nextParent": "Select Next Note",
   "shortcuts.description.previousParent": "Select the previous sound-editable note from the current selection.",
-  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection."
+  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection.",
+  "sync.mode.title": "How would you like to synchronize?",
+  "sync.mode.auto": "Auto Resolve non-object metadata changes for me",
+  "sync.mode.detailed": "Resolve individual changes"
 }

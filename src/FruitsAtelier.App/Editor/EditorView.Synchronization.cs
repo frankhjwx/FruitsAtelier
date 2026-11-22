@@ -363,6 +363,8 @@ public sealed partial class EditorView
                 { syncChoices[conflict.Key] = retained.Choice; syncRoundChoices.Add(conflict.Key); }
         }
         syncRetainedReview.Clear();
+        syncSimplified = false;
+        syncModePrompt = merge is { NativeDifficulty: false, Conflicts.Count: > 0 } && syncComparisons.ContainsKey(syncDifficulty);
         syncPage = "resolve";
         if (AudioPlaying) RequestPausePlayback?.Invoke();
         CancelInteraction(); hits.Clear(); fields.Clear();
@@ -375,7 +377,16 @@ public sealed partial class EditorView
         if (syncPage == "checking") return;
         bool activeBlocked = syncPage == "failed" || syncDifficulty == difficulties[activeDifficulty].Id && DifficultySyncState(activeDifficulty) is not (WorkspaceSyncState.Current or WorkspaceSyncState.Local);
         syncPage = null; afterSynchronization = null; syncDifficulty = Guid.Empty;
-        if (activeBlocked) { LibraryVisible = true; QueueLibrarySearch(); }
+        syncModePrompt = syncSimplified = false;
+        CancelInteraction(); hits.Clear(); fields.Clear();
+        if (activeBlocked)
+        {
+            // A suspended media opening cannot gate input on the Library page.
+            mediaExitPending = true;
+            LibraryVisible = true;
+            if (libraryDatabase is null && libraryStartupTask is null) StartLibraryScan();
+            else QueueLibrarySearch();
+        }
     }
 
     public void ShowDeleteDifficulty(int index, bool localOnly = false)
@@ -524,7 +535,11 @@ public sealed partial class EditorView
         hits.Clear(); fields.Clear();
         if (syncPage == "resolve" && syncMerges.TryGetValue(syncDifficulty, out var visualMerge) && visualMerge.Conflicts.Count > 0
             && syncComparisons.TryGetValue(syncDifficulty, out var comparison))
-        { DrawSyncComparison(c, visualMerge, comparison); return; }
+        {
+            DrawSyncComparison(c, visualMerge, comparison);
+            if (syncModePrompt) DrawSyncModePrompt(c);
+            return;
+        }
         float w = Math.Min(820, width - 32), h = Math.Min(500, height - 48), x = (width - w) / 2, y = (height - h) / 2;
         c.Fill(new(0, 0, width, height), Background, opacity: .8f);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
@@ -635,7 +650,7 @@ public sealed partial class EditorView
             for (int offset = 1; offset < merge.Conflicts.Count; offset++)
             {
                 int next = (syncRow + offset) % merge.Conflicts.Count;
-                if (SyncCategory(merge.Conflicts[next].Key) == syncTab && !syncChoices.ContainsKey(merge.Conflicts[next].Key))
+                if (IsSyncReviewItem(merge.Conflicts[next]) && (syncSimplified || SyncCategory(merge.Conflicts[next].Key) == syncTab) && !syncChoices.ContainsKey(merge.Conflicts[next].Key))
                 { syncRow = next; break; }
             }
     }

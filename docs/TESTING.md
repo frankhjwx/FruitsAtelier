@@ -723,6 +723,14 @@ normalized timing choices. `FruitsAtelier.App.exe --render-check
 two window sizes and captures unresolved/resolved cells under
 `artifacts/tests/semantic-sync-native`.
 
+`App.Tests --simplified-sync-check` verifies mode selection, modal input isolation,
+metadata/NC one-click resolution, mixed local geometry and external metadata,
+choice preservation when switching modes, gameplay-affecting difficulty changes,
+and responsive Library navigation after cancelling with media preparation or
+hidden slider import prompts pending.
+It runs English and Chinese at compact and wide sizes. Native synchronization
+checks capture the mode prompt as well as the detailed review.
+
 `App.Tests --sync-details-check` also checks break start/end/duration columns,
 aligned additions, changed-cell highlighting, independent break choices and
 storyboard command preservation at both window sizes in English and Chinese.

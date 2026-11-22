@@ -106,7 +106,7 @@ internal static class FullSynchronizationTests
     private static void Wait(Ui ui)
     {
         var deadline = DateTime.UtcNow.AddSeconds(30);
-        do { ui.Paint(); if (!ui.View.SynchronizationBusy) { ui.Paint(); return; } Thread.Sleep(5); } while (DateTime.UtcNow < deadline);
+        do { ui.Paint(); if (!ui.View.SynchronizationBusy) { ui.Paint(); if (ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.mode.title"))) ui.ClickText(L.Get("sync.mode.detailed")); return; } Thread.Sleep(5); } while (DateTime.UtcNow < deadline);
         throw new TimeoutException("Full synchronization did not finish.");
     }
     private static void WaitHistory(Ui ui)
