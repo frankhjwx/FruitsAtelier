@@ -27,7 +27,7 @@ internal static class ImportedCurveFitTests
     }
     public static void BatchPreservesDurationAndCancellation()
     {
-        var document = new MapDocument { DurationMs = 20000, SliderMultiplier = 5, SliderTickRate = 2 };
+        var document = new MapDocument { DurationMs = 250, SliderMultiplier = 5, SliderTickRate = 2 };
         var good = new ImportedSlider { TimeMs = 100, X = 100, Y = 100, PathType = 'L', PixelLength = 200, SourceOrder = 1 };
         good.ControlPoints.AddRange([new(100, 100), new(250, 100)]);
         var repeated = new ImportedSlider { TimeMs = 2000, X = 100, Y = 100, PathType = 'L', PixelLength = 300, SpanCount = 3, SourceOrder = 2 };
@@ -41,6 +41,7 @@ internal static class ImportedCurveFitTests
         Check(result.Tracks.Count == 2 && result.Failures.Count == 0 && document.ImportedSliders.Count == 0, "Valid repeated sliders must also convert.");
         var converted = CatchStreamConverter.Convert(document);
         Check(converted.Success, "Approximate conversion cannot be generated.");
+        Check(document.DurationMs == original.DurationMs, "Conversion must retain the saved workspace duration.");
         foreach (var source in original.ImportedSliders)
         {
             var output = converted.Sliders.Single(s => s.SourceId == source.Id);

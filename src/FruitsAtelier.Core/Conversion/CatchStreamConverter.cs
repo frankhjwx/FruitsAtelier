@@ -383,7 +383,8 @@ public static class CatchStreamConverter
             SliderMultiplier = document.EffectiveSliderMultiplier, SliderTickRate = document.SliderTickRate, LegacySliderTicks = document.LegacySliderTicks
         };
         validationDocument.Tracks.Add(track);
-        var errors = CurveMath.Validate(validationDocument);
+        // Imported objects may outlast the saved workspace duration, as allowed by file validation.
+        var errors = CurveMath.Validate(validationDocument, int.MaxValue);
         if (errors.Count > 0) throw new CatchConversionException(errors[0]);
         if (CurveMath.EndTimeMs(track) > int.MaxValue) throw new CatchConversionException(L.Get("core.conversion.timeRange"));
     }

@@ -13,6 +13,7 @@ internal static class LegacyDropletWorkerTests
         var firstEditMap = Map(2);
         firstEditMap.RandomizeDropletStrength = 8;
         FirstEdits(firstEditMap);
+        EditsWithSlidersBeyondDuration();
         FailedSliderPlacementClearsSelection();
         var ui = new Ui(false);
         ui.LoadDocument(Map(600));
@@ -67,6 +68,46 @@ internal static class LegacyDropletWorkerTests
         ui.View.LoadDocument(replacement);
         ui.View.Render(ui.Canvas, ui.Width, ui.Height);
         Check(!ui.View.LegacyDropletRefreshBusy && ui.View.Document.ContentEquals(replacement), "Old worker published into a replacement document");
+    }
+
+    private static void EditsWithSlidersBeyondDuration()
+    {
+        var map = Map(3);
+        map.DurationMs = 2500;
+        map.DerandomizeFSliderDroplets = true;
+        map.SliderImportState = SliderImportState.Native;
+        var ui = new Ui(false);
+        ui.LoadDocument(map);
+        var before = ui.View.Document.DeepClone();
+        var id = before.ImportedSliders[0].Id;
+        var start = ui.ScreenAt(1000, 100);
+        var end = ui.ScreenAt(1000, 132);
+        ui.View.PointerDown(start.X, start.Y, 0, false, false);
+        ui.View.PointerMove(end.X, end.Y, false, false);
+        ui.View.PointerUp(end.X, end.Y, 0);
+        Complete(ui);
+        Check(ui.View.Document.ImportedSliders.Single(s => s.Id == id).X != 100,
+            "A later slider beyond the saved duration rolled back the drag");
+        Check(OsuBeatmapWriter.Serialize(ui.View.Document).ObjectSequenceMatches, "Dragged map did not export");
+        var moved = ui.View.Document.DeepClone();
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.ContentEquals(before), "Drag with late sliders did not undo exactly");
+        ui.Key('Y', ctrl: true);
+        Check(ui.View.Document.ContentEquals(moved), "Drag with late sliders did not redo exactly");
+        ui.Key('Z', ctrl: true);
+        typeof(EditorView).GetMethod("SelectObjects", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(ui.View, [new[] { id }, id]);
+        ui.Key(46);
+        Complete(ui);
+        Check(ui.View.Document.ImportedSliders.Count == 2 && ui.View.Document.ImportedSliders.All(s => s.Id != id),
+            "A later slider beyond the saved duration rolled back deletion");
+        var deleted = ui.View.Document.DeepClone();
+        Check(ProjectSerializer.Read(ProjectSerializer.Serialize(deleted)).ContentEquals(deleted)
+            && OsuBeatmapWriter.Serialize(deleted).ObjectSequenceMatches, "Deleted map did not save or export");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.ContentEquals(before), "Deletion with late sliders did not undo exactly");
+        ui.Key('Y', ctrl: true);
+        Check(ui.View.Document.ContentEquals(deleted), "Deletion with late sliders did not redo exactly");
     }
 
     public static void FirstEdits(MapDocument document)

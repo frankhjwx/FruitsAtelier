@@ -825,6 +825,8 @@ recording canvas excludes native GPU rendering.
 `App.Tests --legacy-droplet-worker-check` verifies responsive submission, prepared
 export publication, failure rollback, save blocking, cancellation, undo/redo and
 rejection of stale content or history transactions.
+Dragging and deleting Legacy sliders also cover maps with remaining sliders beyond
+the saved workspace duration, including undo/redo, project saves and export.
 It also checks that the first note placement and deletion finish without a
 progress dialog. `App.Tests --legacy-edit-map <difficulty.catchdiff>` runs this
 first-edit check against a saved document in memory without writing its source.
