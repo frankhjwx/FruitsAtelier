@@ -32,9 +32,12 @@ public sealed partial class EditorView
         => Path.GetExtension(path).Equals(".osz", StringComparison.OrdinalIgnoreCase)
         || Path.GetExtension(path).Equals(".osk", StringComparison.OrdinalIgnoreCase);
 
-    public void DropLibraryFiles(IEnumerable<string> paths)
+    public void DropLibraryFiles(IEnumerable<string> paths, float? x = null, float? y = null)
     {
+        ClearFileDropPreview();
         var dropped = paths.ToArray();
+        if (x is { } px && y is { } py && StoryboardDropTarget(px, py))
+        { DropStoryboardAudio(dropped, px, py); return; }
         if (HitsoundingPageVisible && !LibraryVisible && CanDropAudio && dropped.Any(p => Directory.Exists(p) || IsHitsoundingAudio(p)))
         { ImportHitsoundingLibrary(dropped); return; }
         var files = dropped.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();

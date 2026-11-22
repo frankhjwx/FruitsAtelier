@@ -208,14 +208,17 @@ internal static class HitsoundingFeedbackTests
         Check(ui.View.SwitchDifficulty(1), "Timing clipboard switches to destination difficulty");
         ui.View.ShowHitsoundingPage(); ui.Paint(); var targetBefore = ui.View.Document.DeepClone();
         ui.View.UpdateTransport(3000, 8000, true, false, false, null, null); ui.Key(86, ctrl: true);
-        Check(ui.View.Document.TimingPoints.Count == 4 && ui.View.Document.TimingPoints.Single(p => p.TimeMs == 500).BeatLengthMs == 400,
-            "Mixed red/green paste replaces every collision at the original timestamp");
-        var green = ui.View.Document.TimingPoints.Single(p => p.TimeMs == 1000);
+        Check(ui.View.Document.TimingPoints.Count == 6 && ui.View.Document.TimingPoints.Single(p => p.TimeMs == 500 && p.Uninherited).BeatLengthMs == 400,
+            "Mixed red/green paste replaces matching point types at the original timestamp");
+        Check(ui.View.Document.TimingPoints.Single(p => p.TimeMs == 1000 && p.Uninherited).BeatLengthMs == 300
+            && ui.View.Document.TimingPoints.Single(p => p.TimeMs == 500 && !p.Uninherited).Volume == 90,
+            "Pasting one timing type preserves the other type at the same timestamp");
+        var green = ui.View.Document.TimingPoints.Single(p => p.TimeMs == 1000 && !p.Uninherited);
         Check(!green.Uninherited && green.Volume == 37 && green.SampleIndex == 7 && green.Effects == 1,
             "Green timing properties survive cross-difficulty paste");
         Check(ui.View.Document.TimingPoints.Single(p => p.TimeMs == 1500).Volume == 45, "Unrelated destination points remain intact");
         ui.Key(90, ctrl: true); Check(targetBefore.ContentEquals(ui.View.Document), "Timing paste undoes in one step");
-        ui.Key(89, ctrl: true); Check(ui.View.Document.TimingPoints.Count == 4, "Timing paste supports redo");
+        ui.Key(89, ctrl: true); Check(ui.View.Document.TimingPoints.Count == 6, "Timing paste supports redo");
         ui.View.SwitchDifficulty(0); Check(sourceBefore.ContentEquals(ui.View.Document), "Copy/paste preserves source difficulty");
     }
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

@@ -275,7 +275,7 @@ public sealed partial class EditorView
             hitsoundingStoryboardSource = storyboardScene;
             hitsoundingStoryboardTags = storyboardScene?.Samples
                 .Where(s => s.Layer is not (StoryboardLayer.Fail or StoryboardLayer.Pass) && s.Volume > 0)
-                .OrderBy(s => s.TimeMs).Select(s => new SoundTag(s.TimeMs, 6, Path.GetFileNameWithoutExtension(s.Path), 0, double.PositiveInfinity, [new(CatchObjectKind.Fruit, s.Path, s.Volume / 100f, "storyboard")], Storyboard: s)).ToArray() ?? [];
+                .OrderBy(s => s.TimeMs).Select(s => new SoundTag(s.TimeMs, 6, Path.GetFileNameWithoutExtension(s.Path), 0, double.PositiveInfinity, [StoryboardSound(s)], Storyboard: s)).ToArray() ?? [];
             hitsoundingStoryboardTags = ArrangeHitsoundingTags(hitsoundingStoryboardTags);
         }
         for (int i = LowerBound(hitsoundingAdditionTimes, start); i < hitsoundingAdditionLinks.Length && hitsoundingAdditionLinks[i].Time <= end; i++)
@@ -313,22 +313,11 @@ public sealed partial class EditorView
                 c.StrokeOpacity(new(X(candidate.TimeMs) - 9, y, 18, 32), Foreground, 1, 4, .5f);
             }
         }
-        if (hitsoundingMoveActive && hitsoundingMoveSource is not null)
-        foreach (var copy in hitsoundingMoveCopies)
-        {
-            float y = top + (copy.Lane + .5f) * laneHeight - 16;
-            var bounds = new Rect(X(hitsoundingMoveTime + copy.Offset) - 9, y, 18, 32);
-            c.Fill(bounds, HitsoundingBankColor(copy.Sample.AdditionSet), 4, .5f);
-            c.StrokeOpacity(bounds, Foreground, 1, 4, .5f);
-        }
+        if (hitsoundingMoveActive && hitsoundingMoveSource is { } moving && hitsoundingNoteLookup.TryGetValue((moving.Id, moving.Event), out var origin))
+            DrawTags(hitsoundingMoveTags, hitsoundingMoveTime - origin.TimeMs, preview: true);
         if (hitsoundingStoryboardMove is { } storyboardMove && hitsoundingStoryboardMoved)
-        foreach (var sample in hitsoundingStoryboardMoveSources)
-        {
-            float y = top + 6.5f * laneHeight - 16;
-            float x = X(sample.TimeMs + hitsoundingStoryboardMoveTime - storyboardMove.TimeMs);
-            c.Fill(new(x, y, 36, 32), HitsoundingColors[6], 4, .5f);
-            c.StrokeOpacity(new(x, y, 36, 32), Foreground, 1, 4, .5f);
-        }
+            DrawTags(hitsoundingStoryboardMoveTags, hitsoundingStoryboardMoveTime - storyboardMove.TimeMs, preview: true);
+        if (storyboardDropTags.Length > 0) DrawTags(storyboardDropTags, storyboardDropTime, preview: true);
         if (hitsoundingMarquee && hitsoundingMarqueeMoved)
         {
             UpdateHitsoundingMarquee();
@@ -346,17 +335,21 @@ public sealed partial class EditorView
         c.Unclip();
         float head = X(playhead); c.Line(head, r.Y, head, g.Bottom, HitsoundingHeadHovered(mouseX, mouseY) || hitsoundingHeadDrag ? 0xFFF0A6u : 0xE9CA64u, 2);
         c.Unclip();
-        void DrawTags(SoundTag[] tags)
+        void DrawTags(SoundTag[] tags, double offset = 0, bool preview = false)
         {
             double margin = HitsoundingTagWidth / 2 / g.Width * hitsoundingSpan;
-            int firstTag = LowerTag(tags, start - margin);
+            int firstTag = LowerTag(tags, start - margin - offset);
             if (HitsoundingPrecise)
             {
-                while (firstTag > 0 && tags[firstTag - 1].Next >= start) firstTag--;
+                while (firstTag > 0 && tags[firstTag - 1].Next + offset >= start) firstTag--;
             }
-            for (int i = firstTag; i < tags.Length && tags[i].Time <= end + margin; i++)
+            for (int i = firstTag; i < tags.Length && tags[i].Time + offset <= end + margin; i++)
             {
-                var tag = tags[i]; float x = X(tag.Time);
+                var tag = tags[i];
+                if (!preview && (hitsoundingStoryboardMoved && tag.Storyboard is { } movingSample && hitsoundingStoryboardSelection.Contains(movingSample)
+                    || hitsoundingMoveActive && tag.Lane is >= 2 and <= 4 && tag.Note is { } movingNote && hitsoundingMultiSelection.Contains((movingNote.SourceId, movingNote.EventIndex, tag.Lane)))) continue;
+                double tagTime = tag.Time + offset;
+                float x = X(tagTime);
                 if (tag.Lane is >= 2 and <= 4 && tag.Note is { } eventNote
                     && hitsoundingPaint.TryGetValue((eventNote.SourceId, eventNote.EventIndex), out var pending)
                     && (pending.Sample.Additions & (1 << (tag.Lane - 1))) == 0) continue;
@@ -376,21 +369,21 @@ public sealed partial class EditorView
                     double duration = 0;
                     foreach (var sound in tag.Sounds)
                     {
-                        var candidate = hitsoundingAudio.Get(sound, RequestWaveform);
+                        var candidate = hitsoundingAudio.Get(sound, RequestWaveform, RequestMemoryWaveform);
                         if (candidate is not null && (wave is null || candidate.DurationMs > wave.DurationMs)) wave = candidate;
                         duration = Math.Max(duration, hitsoundingAudio.Duration(sound));
                     }
-                    double to = Math.Min(tag.Time + duration, tag.Next);
+                    double to = Math.Min(tagTime + duration, tag.Next + offset);
                     if (duration > 0 && to < start) continue;
                     box = new(x, y, duration > 0 ? Math.Max(1, X(to) - x) : HitsoundingTagWidth, h);
                 }
                 uint color = tag.Lane is >= 1 and <= 5 ? HitsoundingBankColor(tag.Sounds[0].SampleSet) : HitsoundingColors[tag.Lane];
-                bool auditionSelected = HitsoundingPrecise && !hitsoundingMarquee && box.Right > g.X && box.X < g.Right
+                bool auditionSelected = !preview && HitsoundingPrecise && !hitsoundingMarquee && box.Right > g.X && box.X < g.Right
                     && (tag.Note is { } selectedNote && hitsoundingMultiSelection.Count == 1 && hitsoundingMultiSelection.Contains((selectedNote.SourceId, selectedNote.EventIndex, tag.Lane))
                         || tag.Storyboard is { } selectedSample && hitsoundingStoryboardSelection.Count == 1 && hitsoundingStoryboardSelection.Contains(selectedSample));
                 if (auditionSelected) selectedAudition = (box, tag.Sounds[0]);
                 if (HitsoundingLaneIsMuted(tag.Lane)) color = Muted;
-                float flash = HitsoundingLaneIsMuted(tag.Lane) ? 0 : HitsoundingFlash(tag.Time);
+                float flash = preview || HitsoundingLaneIsMuted(tag.Lane) ? 0 : HitsoundingFlash(tag.Time);
                 if (flash > 0)
                 {
                     c.Fill(new(box.X - 5, box.Y - 5, box.Width + 10, box.Height + 10), color, 8, flash * .35f);
@@ -409,13 +402,13 @@ public sealed partial class EditorView
                 if (flash > 0) c.StrokeOpacity(box, 0xFFFFFF, 2, Math.Min(4, box.Width / 3), flash);
                 if (tag.Note is { } note)
                 {
-                    if (!HitsoundingLaneLocked(tag.Lane)) hitsoundingSoundHits.Add((box, note, tag.Lane));
+                    if (!preview && !HitsoundingLaneLocked(tag.Lane)) hitsoundingSoundHits.Add((box, note, tag.Lane));
                     if (!hitsoundingMarquee && (hitsoundingMultiSelection.Contains((note.SourceId, note.EventIndex, tag.Lane))
                         || FollowsNoteSelection(note))) c.Stroke(box, Foreground, 2, 4);
                 }
                 if (tag.Storyboard is { } sb)
                 {
-                    if (!HitsoundingLaneLocked(6)) hitsoundingStoryboardHits.Add((box, sb));
+                    if (!preview && !HitsoundingLaneLocked(6)) hitsoundingStoryboardHits.Add((box, sb));
                     if (!hitsoundingMarquee && hitsoundingStoryboardSelection.Contains(sb)) c.Stroke(box, Foreground, 2, 4);
                 }
                 if (HitsoundingShowText && HitsoundingPrecise)

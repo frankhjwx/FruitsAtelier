@@ -183,14 +183,21 @@ public static partial class WorkspaceProject
     // directory makes an interrupted rename recoverable without mixing difficulty versions.
     // A caller that already archived saved/current state can omit the second archive during publication.
     public static void Save(WorkspaceSession session, BeatmapProject project, bool archiveBeforeSave = true)
-    { lock (Gate) { SaveLocked(session, project, archiveBeforeSave); } }
-    private static void SaveLocked(WorkspaceSession session, BeatmapProject project, bool archiveBeforeSave)
+    { lock (Gate)
+        {
+            project.Validate();
+            string directory = Path.GetFullPath(session.Directory);
+            if (session.Manifest.SongsRoot is { } songs) ValidateRoots(Path.GetDirectoryName(directory)!, songs, false);
+            RejectLinks(directory); Recover(directory);
+            if (archiveBeforeSave) WorkspaceVersionHistory.ArchiveBeforeSave(session, project);
+            var resources = HitsoundResourcePlan.StoryboardCopies(project.Difficulties.Select(d => d.Document));
+            resources.Apply();
+            try { SaveLocked(session, project); }
+            catch { resources.Restore(); throw; }
+        } }
+    private static void SaveLocked(WorkspaceSession session, BeatmapProject project)
     {
-        project.Validate();
         string directory = Path.GetFullPath(session.Directory);
-        if (session.Manifest.SongsRoot is { } songs) ValidateRoots(Path.GetDirectoryName(directory)!, songs, false);
-        RejectLinks(directory); Recover(directory);
-        if (archiveBeforeSave) WorkspaceVersionHistory.ArchiveBeforeSave(session, project);
         string staging = directory + ".saving", previous = directory + ".previous";
         RejectLinks(staging); RejectLinks(previous);
         if (System.IO.Directory.Exists(staging)) System.IO.Directory.Delete(staging, true);

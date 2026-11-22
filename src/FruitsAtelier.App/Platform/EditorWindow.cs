@@ -114,7 +114,15 @@ internal sealed partial class EditorWindow : IDisposable
             work.Left + (work.Right - work.Left - width) / 2, work.Top + (work.Bottom - work.Top - height) / 2,
             width, height, 0, 0, instance, 0);
         if (hwnd == 0) throw new Win32Exception();
-        Native.DragAcceptFiles(hwnd, true);
+        fileDropTarget = new(hwnd, (paths, px, py) =>
+        {
+            if (failed || NativeModalScope.Active || recoveryDialogActive || view.RecoveryActive) return false;
+            float x = px * 96f / uiDpi, y = py * 96f / uiDpi;
+            view.PreviewFileDrop(paths, x, y); Invalidate();
+            return view.CanDropFilesAt(paths, x, y);
+        }, () => { view.ClearFileDropPreview(); Invalidate(); },
+            (paths, px, py) => FileOperation(() => view.DropLibraryFiles(paths, px * 96f / uiDpi, py * 96f / uiDpi)));
+        Native.DragAcceptFiles(hwnd, !fileDropTarget.Registered);
         dpi = Native.GetDpiForWindow(hwnd);
         RefreshTitleBarTheme();
         Native.GetClientRect(hwnd, out var client);
@@ -424,6 +432,7 @@ internal sealed partial class EditorWindow : IDisposable
     }
     private void Close()
     {
+        view.PrepareApplicationClose();
         view.CancelLibraryExitConfirmation();
         if (view.AcknowledgementsVisible) { Native.DestroyWindow(hwnd); return; }
         view.CancelFirstRunSetup();
@@ -458,8 +467,9 @@ internal sealed partial class EditorWindow : IDisposable
                 Invalidate();
                 return 0;
             case 0x0233: // WM_DROPFILES
+                bool clientDrop = Native.DragQueryPoint((nint)wParam, out var dropPoint);
                 var dropped = Native.TakeDroppedFiles((nint)wParam);
-                if (!failed && !NativeModalScope.Active && !recoveryDialogActive && !view.RecoveryActive) FileOperation(() => view.DropLibraryFiles(dropped));
+                if (!failed && !NativeModalScope.Active && !recoveryDialogActive && !view.RecoveryActive) FileOperation(() => view.DropLibraryFiles(dropped, clientDrop ? dropPoint.X * 96f / uiDpi : null, clientDrop ? dropPoint.Y * 96f / uiDpi : null));
                 return 0;
             case OsuBrowserWindow.ViewportChangedMessage:
                 Invalidate(); return 0;
@@ -695,10 +705,12 @@ internal sealed partial class EditorWindow : IDisposable
         Native.SetWindowText(hwnd, title); lastTitle = title;
     }
     private nint largeBrandIcon, smallBrandIcon;
+    private EditorFileDropTarget? fileDropTarget;
     public void Dispose()
     {
         if (disposed) return;
         disposed = true;
+        fileDropTarget?.Dispose(); fileDropTarget = null;
         // Browser shutdown and cache writes can wait for seconds; release playback before those waits.
         view.StopTestplay();
         audio.Dispose();

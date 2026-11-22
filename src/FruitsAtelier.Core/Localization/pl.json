@@ -766,7 +766,12 @@
   "files.skin": "Otwórz Skórka",
   "project.new": "Nowy projekt",
   "project.add": "Dodaj nowy poziom trudności",
-  "project.import": "Trudność importu .osu…",
+  "project.import": "Importuj trudność…",
+  "project.importDifficultyOpenFirst": "Otwórz projekt mapy przed zaimportowaniem trudności.",
+  "project.importDifficultyConflict": "Trudność „{0}” już istnieje",
+  "project.importDifficultyAmbiguous": "Kilka trudności ma tę nazwę. Wybierz kartę, którą chcesz zastąpić, i ponów import.",
+  "project.importDifficultyOverwrite": "Zastąp trudność",
+  "project.importDifficultyCreate": "Utwórz trudność",
   "project.importResourcesRequired": "Przed importem trudności .osu otwórz projekt z katalogiem zasobów.",
   "project.defaultDifficulty": "Trudność {0}",
   "project.selector": "{0}/{1} · {2}{3}",
@@ -2523,5 +2528,8 @@
   "shortcuts.command.previousParent": "Select Previous Note",
   "shortcuts.command.nextParent": "Select Next Note",
   "shortcuts.description.previousParent": "Select the previous sound-editable note from the current selection.",
-  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection."
+  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection.",
+  "sync.mode.title": "How would you like to synchronize?",
+  "sync.mode.auto": "Auto Resolve non-object metadata changes for me",
+  "sync.mode.detailed": "Resolve individual changes"
 }

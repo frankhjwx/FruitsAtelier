@@ -10,6 +10,80 @@ public sealed class HitsoundResourcePlan
     private readonly List<FileChange> changes = [];
     private string? deletionBackup;
     public static HitsoundResourcePlan Empty => new();
+    public static HitsoundResourcePlan StoryboardCopies(IEnumerable<MapDocument> documents, string? destination = null)
+    {
+        var plan = new HitsoundResourcePlan();
+        var set = documents.ToArray();
+        if (set.All(d => d.StoryboardAudio.Count == 0)) return plan;
+        foreach (var group in set.Where(d => destination is not null || Root(d) is not null).GroupBy(d => destination ?? Root(d)!, StringComparer.OrdinalIgnoreCase))
+        {
+            string root = group.Key;
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var document in group)
+                used.UnionWith(ReadSamples(document, root));
+            var protectedFiles = new Lazy<HashSet<string>?>(() => ProtectedFiles(root, set));
+            var known = group.SelectMany(d => d.StoryboardAudio).GroupBy(p => p.Key, StringComparer.OrdinalIgnoreCase);
+            foreach (var entries in known)
+            {
+                string relative = entries.Key;
+                if (!StoryboardAudio.ValidRelativePath(relative)) throw new InvalidDataException(L.Get("resource.limit"));
+                string path = SafePath(root, relative);
+                if (used.Contains(path))
+                {
+                    var audio = entries.Select(p => p.Value).FirstOrDefault(a => a.Data is not null) ?? entries.First().Value;
+                    byte[]? data = audio.Data;
+                    if (data is null && !File.Exists(path))
+                    {
+                        var sourceDocument = group.First(d => d.StoryboardAudio.ContainsKey(relative));
+                        string source = Root(sourceDocument) is { } sourceRoot ? SafePath(sourceRoot, relative) : "";
+                        audio.Cache(source);
+                        data = audio.Data;
+                    }
+                    if (data is { Length: > 0 })
+                    {
+                        if (data.Length > 16 * 1024 * 1024) throw new IOException(L.Get("resource.limit"));
+                        if (Conflicts(path, data)) throw new IOException(L.Get("resource.conflict", path));
+                        plan.AddCopy(path, data);
+                    }
+                }
+                else if (destination is null && File.Exists(path) && new FileInfo(path).Length <= 16 * 1024 * 1024
+                    && protectedFiles.Value is { } protectedPaths && !protectedPaths.Contains(path))
+                {
+                    byte[] data = File.ReadAllBytes(path);
+                    if (Convert.ToHexString(SHA256.HashData(data)).Equals(relative.Split('/')[1], StringComparison.OrdinalIgnoreCase))
+                        plan.changes.Add(new(path, data, null));
+                }
+            }
+        }
+        return plan;
+
+        static IEnumerable<string> ReadSamples(MapDocument document, string root)
+        {
+            string text = string.Join("\n", document.OriginalSections.Where(s => s.Name is "Events" or "Variables")
+                .SelectMany(s => new[] { "[" + s.Name + "]" }.Concat(s.Lines)));
+            return StoryboardReader.Read(text, null, root, samplesOnly: true).Samples.Select(s => s.Path);
+        }
+        static HashSet<string>? ProtectedFiles(string root, MapDocument[] set)
+        {
+            try
+            {
+                var protectedPaths = set.SelectMany(Referenced).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                protectedPaths.UnionWith(set.Select(d => d.AudioPath).OfType<string>());
+                foreach (string map in Directory.EnumerateFiles(root, "*.osu"))
+                {
+                    if (set.Any(d => string.Equals(d.SourcePath, map, StringComparison.OrdinalIgnoreCase))) continue;
+                    var other = OsuBeatmapReader.ReadFile(map);
+                    protectedPaths.UnionWith(ReadSamples(other, root));
+                    protectedPaths.UnionWith(Referenced(other));
+                }
+                foreach (string shared in Directory.EnumerateFiles(root, "*.osb"))
+                    protectedPaths.UnionWith(StoryboardReader.Read("", StoryboardReader.ReadSharedFile(shared), root, samplesOnly: true).Samples.Select(s => s.Path));
+                return protectedPaths;
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException) { return null; }
+        }
+    }
+
     public static void ImportLibrarySample(string root, string source)
     {
         string extension = Path.GetExtension(source).ToLowerInvariant();

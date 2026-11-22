@@ -766,7 +766,12 @@
   "files.skin": "Abrir Skin",
   "project.new": "Nuevo proyecto",
   "project.add": "Agregar nueva dificultad",
-  "project.import": "Importar dificultad .osu…",
+  "project.import": "Importar dificultad…",
+  "project.importDifficultyOpenFirst": "Abre un proyecto de mapa antes de importar una dificultad.",
+  "project.importDifficultyConflict": "«{0}» ya existe",
+  "project.importDifficultyAmbiguous": "Varias dificultades tienen este nombre. Selecciona la pestaña que quieras sobrescribir y vuelve a importar.",
+  "project.importDifficultyOverwrite": "Sobrescribir dificultad",
+  "project.importDifficultyCreate": "Crear dificultad",
   "project.importResourcesRequired": "Abre un proyecto con un directorio de recursos antes de importar una dificultad .osu.",
   "project.defaultDifficulty": "Dificultad {0}",
   "project.selector": "{0}/{1} · {2}{3}",
@@ -2523,5 +2528,8 @@
   "shortcuts.command.previousParent": "Select Previous Note",
   "shortcuts.command.nextParent": "Select Next Note",
   "shortcuts.description.previousParent": "Select the previous sound-editable note from the current selection.",
-  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection."
+  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection.",
+  "sync.mode.title": "How would you like to synchronize?",
+  "sync.mode.auto": "Auto Resolve non-object metadata changes for me",
+  "sync.mode.detailed": "Resolve individual changes"
 }

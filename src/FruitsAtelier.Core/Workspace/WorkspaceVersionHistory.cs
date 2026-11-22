@@ -36,7 +36,12 @@ public static class WorkspaceVersionHistory
             || System.IO.Path.GetFileName(version.Path) is not ("current.catchproj" or "saved.catchproj"))
             throw new InvalidDataException(L.Get("project.invalid"));
         WorkspaceProject.RejectLinks(version.Path);
-        if (WorkspaceHistoryFile.Exists(version.Path)) return ProjectSerializer.ReadProject(WorkspaceHistoryFile.ReadText(version.Path), version.Path);
+        if (WorkspaceHistoryFile.Exists(version.Path))
+        {
+            var stored = ProjectSerializer.ReadProject(WorkspaceHistoryFile.ReadText(version.Path), version.Path);
+            WorkspaceStoryboardAudioHistory.Restore(stored, System.IO.Path.GetDirectoryName(version.Path)!);
+            return stored;
+        }
         string directory = System.IO.Path.GetDirectoryName(version.Path)!;
         string marker = System.IO.Path.Combine(directory, version.WorkingCopy ? "current.snapshot" : "saved.snapshot");
         WorkspaceProject.RejectLinks(marker);
@@ -54,6 +59,7 @@ public static class WorkspaceVersionHistory
                 Document = ProjectSerializer.Read(WorkspaceHistoryFile.ReadText(source), System.IO.Path.Combine(origin, entry.File)) });
         }
         project.Validate();
+        WorkspaceStoryboardAudioHistory.Restore(project, directory);
         return project;
     }
 
@@ -77,6 +83,7 @@ public static class WorkspaceVersionHistory
             var manifest = WorkspaceProject.SnapshotManifest(session.Manifest);
             var entry = manifest.Difficulties.Single(d => d.Id == id);
             var difficulty = project.Difficulties.Single(d => d.Id == id);
+            WorkspaceStoryboardAudioHistory.Capture(new BeatmapProject { Difficulties = [difficulty] }, directory);
             entry.Name = difficulty.Name;
             foreach (var item in manifest.Difficulties) item.Sync = null;
             AtomicFile.Write(System.IO.Path.Combine(working, entry.File), ProjectSerializer.Serialize(difficulty.Document, System.IO.Path.Combine(session.Directory, entry.File)));

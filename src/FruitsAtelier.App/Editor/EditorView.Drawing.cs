@@ -205,7 +205,7 @@ public sealed partial class EditorView
             DrawStatus(c);
             DrawUpdateNotice(c);
             DrawDockDrag(c);
-            if (HitsoundingPageVisible && hitsoundingLibraryDragging && !hitsoundingLibraryBox && hitsoundingLibraryDragPaths.Length > 0)
+            if (HitsoundingPageVisible && hitsoundingLibraryDragging && !hitsoundingLibraryBox && hitsoundingLibraryDragPaths.Length > 0 && !StoryboardDropTarget(mouseX, mouseY))
             {
                 var ghost = new Rect(Math.Min(mouseX + 12, width - 220), Math.Min(mouseY + 16, height - 32), 210, 28);
                 c.Fill(ghost, Surface, 4); c.Stroke(ghost, Accent, radius: 4);
@@ -860,7 +860,7 @@ public sealed partial class EditorView
             Item(L.Get("library.exportOsz"), () => RequestOszExport?.Invoke());
             Item(L.Get("faz.export"), () => ShowFazExportChoice());
             Item(L.Get("fad.export"), () => RequestFadExport?.Invoke(activeDifficulty));
-            Item(L.Get("fad.import"), () => RequestFadImport?.Invoke());
+            Item(L.Get("project.import"), () => RequestImportDifficulty?.Invoke());
             Item(L.Get("ui.exitMenu"), () => RequestClose?.Invoke());
         }
         else if (menu == 3)

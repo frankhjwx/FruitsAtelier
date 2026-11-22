@@ -22,7 +22,7 @@ internal static class HitsoundingRenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (980, 620), (1440, 900) })
             foreach (bool precise in new[] { false, true })
-            foreach (string scenario in new[] { "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-edge-drag", "-pan-zoom", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-audition-failed", "-auto-banks", "-sampleset-hint", "-additions-hint", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
+            foreach (string scenario in new[] { "-storyboard-drop", "", "-mapping", "-timing", "-flash", "-sets", "-muted", "-dense", "-green-drag", "-green-menu", "-green-hover", "-red-selected", "-spinner", "-draw", "-notes", "-notes-drag", "-edge-drag", "-pan-zoom", "-sound-drag", "-sound-group-drag", "-sound-group-draw", "-notes-preview", "-locked", "-tool-select", "-tool-draw", "-tool-soft", "-tool-normal", "-tool-drum", "-audition", "-audition-failed", "-auto-banks", "-sampleset-hint", "-additions-hint", "-volume-ramp", "-volume-ramp-menu", "-volume-ramp-generated" })
             {
                 if (scenario.StartsWith("-audition", StringComparison.Ordinal) && (!precise || size.Item2 < 900)) continue;
                 L.SetLanguage(locale);
@@ -55,6 +55,12 @@ internal static class HitsoundingRenderCheck
                     map.BananaShowers.Add(new() { TimeMs = 500, EndTimeMs = 1800,
                         OriginalLine = "256,192,500,8,6,1800,3:2:0:0:" });
                 }
+                if (scenario == "-storyboard-drop")
+                {
+                    string mapset = Path.Combine(folder, "drop-mapset"); Directory.CreateDirectory(mapset);
+                    map.SourcePath = Path.Combine(mapset, "map.osu");
+                    File.WriteAllText(map.SourcePath, OsuBeatmapWriter.Serialize(map).Text);
+                }
                 var clock = new AuditionClock();
                 var editor = new EditorView(false, timeProvider: clock); editor.LoadDocument(map);
                 editor.RequestWaveform = (path, token) => Task.FromResult(FruitsAtelier.App.Audio.WaveformDecoder.Load(path, token).GetAwaiter().GetResult());
@@ -74,6 +80,21 @@ internal static class HitsoundingRenderCheck
                 editor.LibrarySettings.DockLayouts = layout; editor.RestoreDockLayouts();
                 canvas.Resize(size.Item1, size.Item2, 96);
                 canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
+                if (scenario == "-storyboard-drop")
+                {
+                    string input = Path.Combine(folder, "drop-source.wav");
+                    File.WriteAllBytes(input, HitsoundSamples.CreateWave(CatchObjectKind.Fruit));
+                    var deadline = DateTime.UtcNow.AddSeconds(10);
+                    while (!editor.CanDropAudio && DateTime.UtcNow < deadline) { Thread.Sleep(5); editor.Render(canvas, size.Item1, size.Item2); }
+                    var lane = editor.StoryboardDropBounds;
+                    editor.DropLibraryFiles([input], lane.X + lane.Width / 2, lane.Y + lane.Height / 2);
+                    File.Delete(input);
+                    if (editor.Document.StoryboardAudio.Count != 1) throw new InvalidOperationException($"Native drop failed: allowed={editor.CanDropAudio}; {editor.StatusMessage}");
+                    editor.RequestMemoryWaveform = (path, bytes, token) => FruitsAtelier.App.Audio.WaveformDecoder.LoadMemory(path, bytes, token);
+                    for (int i = 0; i < 30; i++) { Thread.Sleep(5); editor.Render(canvas, size.Item1, size.Item2); }
+                    if (Directory.EnumerateFiles(Path.GetDirectoryName(map.SourcePath)!, "*", SearchOption.AllDirectories).Any(p => p != map.SourcePath))
+                        throw new InvalidOperationException("Native drop wrote to the mapset before save.");
+                }
                 if (scenario.StartsWith("-tool-", StringComparison.Ordinal))
                 {
                     int index = Array.IndexOf(new[] { "select", "draw", "soft", "normal", "drum" }, scenario[6..]);

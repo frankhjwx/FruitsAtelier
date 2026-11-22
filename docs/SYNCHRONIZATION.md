@@ -140,6 +140,49 @@ partially resolved tabs amber, and fully resolved tabs green. Clean categories
 remain readable. Choices stay in their category; object choices advance to the
 next unresolved group there. Whole-map choices remain available.
 
+With a shared baseline, external-only object hitsound and sample edits apply
+without an Objects choice when the corresponding local objects are unchanged.
+Identical sound edits on both sides also need no choice. Fractional imported head
+times rounded to the nearest millisecond can accompany these updates; integer
+time changes remain reviewable. Omitted slider edge sounds and sample banks
+compare equal to explicit inherited defaults. Geometry, combo and slider playback
+changes, concurrent differing local edits, and previously retained local choices
+still require review. Baseline-free comparisons do not automatically choose
+object edits.
+Stream sound updates retain their editable curves and use per-event sample
+overrides. Automatic import requires those overrides to reproduce the incoming
+object lines exactly; changes that cannot preserve authoring remain reviewable.
+These changes also require an explicit choice in simplified resolution.
+When timing choices can change stream generation, the stream also requires an
+explicit object choice. Preservation is verified again against the selected
+timing: compatible timing retains the editable stream; explicitly choosing the
+external objects with incompatible timing imports their fixed fruit positions.
+Automatic object updates replace the affected difficulty's live authoring and
+start a new undo history, so later saves cannot restore stale object sounds.
+Automatic context-only updates retain the existing history.
+
+A modal first offers simplified or individual resolution. Simplified resolution
+chooses osu! for conflicts that do not require object or red timing review.
+Any red timing point change requires an explicit choice, including changes to
+offset, BPM, meter, samples, volume, effects, or the set of red points, even when
+playable object positions remain unchanged. Stable's equivalent numeric save
+precision remains unchanged for comparison purposes. Green-only timing changes
+can be accepted automatically when they do not change playable events.
+With no items requiring review, the simplified action immediately applies the
+resolution. Otherwise, review includes object changes, authoring preservation
+conflicts, and timing or difficulty changes that alter playable events with
+either local or external objects retained. Red timing choices use the timing table.
+Other conflicts are already resolved using
+osu!; Apply publishes the combined choices. Switching to individual resolution
+retains those choices and exposes all categories. Cancel leaves files and
+working authoring unchanged. The modal blocks pointer, wheel, double-click and
+keyboard actions in the underlying review; Escape cancels it.
+
+Cancelling review back to Library suspends the editor's media-opening input gate
+and initializes Library browsing when needed. Hidden slider import and conversion
+prompts do not intercept Library input. Pending media preparation cannot block
+Library navigation, and unsaved authoring remains available.
+
 Events review collects break periods from anywhere in the section into aligned
 tables, ordered by start time. Start and end use `mm:ss:ms`; duration uses
 milliseconds. Only changed cells are highlighted, and missing rows use dashes.
@@ -344,6 +387,10 @@ an operation archived unsaved edits. History includes earlier names and difficul
 that were subsequently deleted. It reads both compressed and legacy `.sync-history`
 archives. Changed workspace saves also retain their previous authoring state.
 Unchanged saves do not add versions. The storage retention policy below still applies.
+Snapshots retain referenced managed storyboard audio before save-time resource
+cleanup. Restoring a version recovers these bytes even after the original import
+file and active mapset copy have been deleted. The audio copies expire with their
+snapshot under the same history limits.
 
 ### Compressed recovery files
 
@@ -492,7 +539,7 @@ age/budget pruning but do not exempt ordinary rounds from the count limit. The
 budget is therefore a soft limit. Deleted or retired sets retain their newest
 recovery copy.
 
-Audio remains content-addressed and deduplicated. Cleanup traces hashes and paths
+Synchronized song audio remains content-addressed and deduplicated. Cleanup traces hashes and paths
 from current authoring, synchronization baselines, and retained history before
 removing old unreferenced audio. Derived playback copies are collected separately
 when no retained document references their path, even if the canonical audio hash

@@ -87,10 +87,10 @@ public static class FadArchive
         return (result, resources, unassignedSections);
     }
 
-    private static string? ResourceDirectory(MapDocument document)
+    internal static string? ResourceDirectory(MapDocument document)
         => Path.GetDirectoryName(document.SourcePath ?? document.AudioPath) is { Length: > 0 } directory ? directory : null;
 
-    private static int UnassignUnavailableSections(MapDocument document, HashSet<Guid> availableReferences)
+    internal static int UnassignUnavailableSections(MapDocument document, HashSet<Guid> availableReferences)
     {
         if (document.CollaborationReferences is not { } references) return 0;
         int count = 0;

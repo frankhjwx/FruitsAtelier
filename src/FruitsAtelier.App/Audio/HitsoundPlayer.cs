@@ -228,9 +228,9 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
             string? sourceFormat = null, decoder = null;
             try
             {
-                if (new FileInfo(sound.FilePath).Length <= 16 * 1024 * 1024)
+                if (sound.Data is { Length: <= 16777216 } || new FileInfo(sound.FilePath).Length <= 16 * 1024 * 1024)
                 {
-                    using WaveStream reader = Path.GetExtension(sound.FilePath).ToLowerInvariant() switch
+                    using WaveStream reader = sound.Data is { } data ? WaveformDecoder.OpenMemory(sound.FilePath, data) : Path.GetExtension(sound.FilePath).ToLowerInvariant() switch
                     {
                         ".ogg" => new NAudio.Vorbis.VorbisWaveReader(sound.FilePath),
                         ".wav" => new WaveFileReader(sound.FilePath),

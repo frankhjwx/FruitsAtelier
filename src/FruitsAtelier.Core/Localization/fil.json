@@ -766,7 +766,12 @@
   "files.skin": "Buksan ang Skin",
   "project.new": "Bagong proyekto",
   "project.add": "Magdagdag ng bagong difficulty",
-  "project.import": "Hirap sa pag-import ng .osu...",
+  "project.import": "Mag-import ng difficulty…",
+  "project.importDifficultyOpenFirst": "Magbukas muna ng beatmap project bago mag-import ng difficulty.",
+  "project.importDifficultyConflict": "Mayroon nang difficulty na “{0}”",
+  "project.importDifficultyAmbiguous": "Maraming difficulty ang may ganitong pangalan. Piliin muna ang tab na papalitan, saka muling mag-import.",
+  "project.importDifficultyOverwrite": "Palitan ang difficulty",
+  "project.importDifficultyCreate": "Gumawa ng bagong difficulty",
   "project.importResourcesRequired": "Magbukas muna ng proyektong may resource directory bago mag-import ng .osu difficulty.",
   "project.defaultDifficulty": "Hirap {0}",
   "project.selector": "{0}/{1} · {2}{3}",
@@ -2523,5 +2528,8 @@
   "shortcuts.command.previousParent": "Select Previous Note",
   "shortcuts.command.nextParent": "Select Next Note",
   "shortcuts.description.previousParent": "Select the previous sound-editable note from the current selection.",
-  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection."
+  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection.",
+  "sync.mode.title": "How would you like to synchronize?",
+  "sync.mode.auto": "Auto Resolve non-object metadata changes for me",
+  "sync.mode.detailed": "Resolve individual changes"
 }

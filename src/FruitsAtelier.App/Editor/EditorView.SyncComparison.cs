@@ -28,7 +28,7 @@ public sealed partial class EditorView
     private sealed record SyncRange(string Key, double Start, double End, uint Colour, string Label);
     private const uint SyncUnresolved = 0xED737B, SyncPreviouslyResolved = 0xD5A34D, SyncResolvedThisRound = 0x70D69B;
     private sealed record SyncComparison(SyncPane Local, SyncPane External, Dictionary<string, SyncFocus> Focus, DateTime? LocalSaved, DateTime? ExternalSaved,
-        IReadOnlySet<Guid> RetainedLocal, IReadOnlySet<Guid> RejectedExternal, string? ExternalAudioHash, SyncReviewData Review);
+        IReadOnlySet<Guid> RetainedLocal, IReadOnlySet<Guid> RejectedExternal, string? ExternalAudioHash, SyncReviewData Review, IReadOnlySet<string> ActualChanges);
     private readonly Dictionary<Guid, SyncComparison> syncComparisons = [];
     private WorkspaceMerge? syncVisualMerge;
     private string? syncVisualKey;
@@ -111,6 +111,32 @@ public sealed partial class EditorView
                 emitted.Objects.Where(o => ours.Contains(emittedSources[o.SourceId])).ToArray(),
                 external.Objects.Where(o => theirs.Contains(o.SourceId)).ToArray());
         }
+        var actualChanges = details.Where(p => p.Value.Any(d => d.Playable is not null || d.Message == "sync.diff.y"))
+            .Select(p => p.Key).ToHashSet();
+        actualChanges.UnionWith(merge.Conflicts.Where(c => merge.RequiresAuthoringReview(c.Key)).Select(c => c.Key));
+        if (merge.HasRedTimingChanges && merge.Conflicts.Any(c => c.Key == "TimingPoints/")) actualChanges.Add("TimingPoints/");
+        // Field changes can alter nested objects even when the source object lines match.
+        foreach (var conflict in merge.Conflicts.Where(c => !merge.NativeDifficulty && c.Key is "TimingPoints/" or "Difficulty/SliderMultiplier" or "Difficulty/SliderTickRate" or "Format/Version"))
+        {
+            IReadOnlyList<SyncObjectDifference> differences = [];
+            // A rejected deletion can retain sliders that an external-only probe would omit.
+            foreach (bool externalObjects in new[] { true, false })
+            {
+                var choices = merge.Conflicts.ToDictionary(c => c.Key, c => !c.Key.StartsWith("$objects:") || externalObjects);
+                choices[conflict.Key] = false;
+                var before = OsuBeatmapWriter.Serialize(WorkspaceSynchronization.Resolve(merge, choices), compensate);
+                choices[conflict.Key] = true;
+                var after = OsuBeatmapWriter.Serialize(WorkspaceSynchronization.Resolve(merge, choices), compensate);
+                differences = SyncObjectDifferences.ComparePlayable("", "",
+                    CatchStreamConverter.Convert(before.ReadBack, compensate).Objects, CatchStreamConverter.Convert(after.ReadBack, compensate).Objects);
+                if (differences.Count > 0) break;
+            }
+            if (differences.Count == 0) continue;
+            actualChanges.Add(conflict.Key); details[conflict.Key] = differences;
+            focus[conflict.Key] = new(local.Objects.Select(o => o.SourceId).ToHashSet(), external.Objects.Select(o => o.SourceId).ToHashSet(),
+                differences.Min(d => d.Playable!.Local?.TimeMs ?? d.Playable.External!.TimeMs),
+                differences.Max(d => d.Playable!.Local?.TimeMs ?? d.Playable.External!.TimeMs));
+        }
         var rejectedLines = merge.PreviouslyRetained.SelectMany(r => r.ExternalLines).ToHashSet();
         var rejectedOrders = WorkspaceSynchronization.ObjectLines(merge.External.Text).Select((line, order) => (line, order))
             .Where(p => rejectedLines.Contains(p.line)).Select(p => p.order).ToHashSet();
@@ -118,18 +144,20 @@ public sealed partial class EditorView
             File.Exists(merge.External.Path) ? File.GetLastWriteTimeUtc(merge.External.Path) : null,
             merge.PreviouslyRetained.SelectMany(r => r.Sources).ToHashSet(),
             WorkspaceSynchronization.SourceIds(merge.External.Document).Where(p => rejectedOrders.Contains(p.Order)).Select(p => p.Id).ToHashSet(),
-            merge.NativeDifficulty ? null : SyncAudioHash(merge.External.Document.AudioPath), PrepareSyncReview(merge, details));
+            merge.NativeDifficulty ? null : SyncAudioHash(merge.External.Document.AudioPath), PrepareSyncReview(merge, details), actualChanges);
     }
 
     private void DrawSyncComparison(ICanvas c, WorkspaceMerge merge, SyncComparison comparison)
     {
         syncRow = Math.Clamp(syncRow, 0, merge.Conflicts.Count - 1);
         syncTab ??= SyncCategory(merge.Conflicts[syncRow].Key);
-        if (SyncFieldOrder.ContainsKey(syncTab))
+        if (!syncSimplified && SyncFieldOrder.ContainsKey(syncTab))
         { DrawSyncFields(c, merge, comparison); DrawSyncTabs(c, merge, comparison); return; }
-        var categoryConflicts = merge.Conflicts.Where(c => SyncCategory(c.Key) == syncTab).ToArray();
+        var categoryConflicts = merge.Conflicts.Where(c => IsSyncReviewItem(c) && (syncSimplified || SyncCategory(c.Key) == syncTab)).ToArray();
         var conflict = categoryConflicts.FirstOrDefault(c => c.Key == merge.Conflicts[syncRow].Key) ?? categoryConflicts.FirstOrDefault();
-        if (syncTab != "Objects")
+        if (syncSimplified && conflict?.Key == "TimingPoints/")
+        { syncObjectDetailBounds = default; DrawSyncSection(c, merge, comparison, conflict); DrawSyncTabs(c, merge, comparison); return; }
+        if (!syncSimplified && syncTab != "Objects")
         {
             string section = syncTab == "Timing" ? "TimingPoints" : syncTab;
             conflict ??= new(section + "/", comparison.Review.LocalSections.GetValueOrDefault(section, ""), comparison.Review.ExternalSections.GetValueOrDefault(section, ""));
@@ -153,19 +181,19 @@ public sealed partial class EditorView
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
         c.Text(L.Get(merge.NativeDifficulty ? "fad.mergeTitle" : "sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
         c.Text(SyncMapHeading(merge), x + 20, y + 46, 12, Muted, w - 40);
-        string label = !hasConflict ? L.Get("ui.unchanged") : conflict.Key.StartsWith("$objects:") ? L.Get("sync.objects", Array.IndexOf(categoryConflicts, conflict) + 1) : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key;
+        string label = !hasConflict ? L.Get("ui.unchanged") : syncSimplified || conflict.Key.StartsWith("$objects:") ? L.Get("sync.objects", Array.IndexOf(categoryConflicts, conflict) + 1) : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key;
         if (conflict.Key == "$objects:native") label = L.Get("fad.authoringGroup");
         string stateLabel = syncRoundChoices.Contains(conflict.Key) ? L.Get("sync.resolvedThisRound")
             : merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.alreadyResolved") : L.Get("sync.unresolvedRange");
         if (hasConflict) label += " · " + stateLabel;
         c.Text(label, x + 20, y + 106, 15, Accent, w - 40);
         float paneWidth = (w - 40 - (syncShowResult ? 24 : 12)) / (syncShowResult ? 3 : 2);
-        if (hasConflict) DrawSyncObjectDetails(c, comparison.Review.Objects[conflict.Key], new(x + 20, y + 130, w - 40, 74),
+        if (hasConflict) DrawSyncObjectDetails(c, syncSimplified && !merge.RequiresAuthoringReview(conflict.Key) ? comparison.Review.Objects[conflict.Key].Where(d => d.Playable is not null || d.Message == "sync.diff.y").ToArray() : comparison.Review.Objects[conflict.Key], new(x + 20, y + 130, w - 40, 74),
             syncChoices.ContainsKey(conflict.Key) || merge.PreviouslyResolved.Contains(conflict.Key) ? SyncResolvedThisRound : SyncUnresolved);
         else syncObjectDetailBounds = default;
         var left = new Rect(x + 20, y + 214, paneWidth, h - 390);
         var right = left with { X = left.Right + 12 };
-        syncShowValues = !conflict.Key.StartsWith("$objects:");
+        syncShowValues = !syncSimplified && !conflict.Key.StartsWith("$objects:");
         var field = SyncField(left);
         double center = syncViewStart + syncViewSpan / 2;
         // A common AR scale keeps matching times aligned even when the versions disagree about AR.
@@ -173,7 +201,7 @@ public sealed partial class EditorView
         syncViewStart = Math.Max(0, newFocus ? focus.Start - syncViewSpan * .35 : center - syncViewSpan / 2);
         syncCanvasBounds = new(left.X, left.Y, w - 40, left.Height);
         bool dirty = difficulties.FirstOrDefault(d => d.Id == syncDifficulty)?.History.IsDirty == true;
-        var ranges = comparison.Focus.Where(p => p.Key.StartsWith("$objects:")).Select(p => new SyncRange(p.Key, p.Value.Start, p.Value.End,
+        var ranges = comparison.Focus.Where(p => syncSimplified ? comparison.ActualChanges.Contains(p.Key) : p.Key.StartsWith("$objects:")).Select(p => new SyncRange(p.Key, p.Value.Start, p.Value.End,
             syncRoundChoices.Contains(p.Key) ? SyncResolvedThisRound : merge.PreviouslyResolved.Contains(p.Key) ? SyncPreviouslyResolved : SyncUnresolved,
             syncRoundChoices.Contains(p.Key) ? L.Get("sync.resolvedThisRound") : merge.PreviouslyResolved.Contains(p.Key) ? L.Get("sync.alreadyResolved") : L.Get("sync.unresolvedRange"))).ToArray();
         SyncRange[] PaneRanges(bool external) => ranges.Select(range =>
@@ -187,11 +215,11 @@ public sealed partial class EditorView
                 foreach (var id in decided.Local) localChoices[id] = !choice.Value;
                 foreach (var id in decided.External) externalChoices[id] = choice.Value;
             }
-        DrawSyncPane(c, comparison.Local, left, "FA", focus.Local, conflict.Key.StartsWith("$objects:") ? null : conflict.Local,
+        DrawSyncPane(c, comparison.Local, left, "FA", focus.Local, syncSimplified || conflict.Key.StartsWith("$objects:") ? null : conflict.Local,
             SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty), localChoices,
             merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.previouslyRejected") : null, PaneRanges(false), conflict.Key,
             selectRange: key => ChooseSyncItem(merge, key, false));
-        DrawSyncPane(c, comparison.External, right, merge.NativeDifficulty ? ".fad" : "osu!", focus.External, conflict.Key.StartsWith("$objects:") ? null : conflict.External,
+        DrawSyncPane(c, comparison.External, right, merge.NativeDifficulty ? ".fad" : "osu!", focus.External, syncSimplified || conflict.Key.StartsWith("$objects:") ? null : conflict.External,
             SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), externalChoices, ranges: PaneRanges(true), currentKey: conflict.Key,
             selectRange: key => ChooseSyncItem(merge, key, true));
         bool chosen = syncChoices.TryGetValue(conflict.Key, out bool external);
@@ -284,6 +312,7 @@ public sealed partial class EditorView
 
     private void ScrollSyncComparison(float x, float y, float delta, bool zoom)
     {
+        if (syncModePrompt) return;
         if (syncPage == "resolve" && syncTab == "Objects" && syncObjectDetailBounds.Contains(x, y))
         { syncObjectDetailScroll = Math.Clamp(syncObjectDetailScroll - (int)(delta / 120) * 2, 0, syncObjectDetailMax); return; }
         if (syncPage is not ("resolve" or "failed") || !syncCanvasBounds.Contains(x, y)) return;

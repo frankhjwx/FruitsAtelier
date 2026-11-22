@@ -20,6 +20,8 @@ internal static class DockingRenderCheck
             {
                 L.SetLanguage(locale);
                 var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
+                OsuTimeline.AddBookmark(map, 2500);
+                OsuTimeline.SetBookmarkAppearance(map, 2500, new(0xE573B8, true));
                 map.Fruits.AddRange(Enumerable.Range(0, 24).Select(i => new Fruit { TimeMs = i * 350, X = i % 2 == 0 ? 100 : 400 }));
                 var editor = new EditorView(false);
                 editor.LoadDocument(map);
@@ -27,47 +29,83 @@ internal static class DockingRenderCheck
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
                 Paint(); Click(editor.DifficultyCurveToggleBounds); Click(editor.PreviewToggleBounds); Paint("separate");
                 Drag(EditorView.DockPanel.MovementStrain, size.Item1 - 60, 220, "drag-right"); Paint("merged-right");
-                Click(editor.DockTabBounds(EditorView.DockPanel.Preview)); Paint("preview-tab");
+                var graph = editor.DifficultyCurveGraphBounds;
+                double beforeWheel = editor.PlayheadMs;
+                editor.Wheel(graph.X + 10, graph.Y + 10, -120, false); Paint("strain-wheel");
+                if (editor.PlayheadMs <= beforeWheel)
+                    throw new InvalidOperationException("Strain graph wheel did not navigate.");
+                if (Environment.GetCommandLineArgs().Contains("--strain-graph-render-check"))
+                {
+                    if (!map.ContentEquals(editor.Document) || editor.IsDirty || editor.WantsCapture)
+                        throw new InvalidOperationException("Strain graph navigation modified content or retained capture.");
+                    continue;
+                }
+                Click(VisibleTab(EditorView.DockPanel.Preview)); Paint("preview-tab");
                 Drag(EditorView.DockPanel.Preview, 8, 220, "drag-left"); Paint("swapped");
                 var preview = editor.PreviewViewport;
                 editor.KeyDown(114, false, false); Paint("timing");
                 if (!editor.TimingPageVisible || editor.DockTabBounds(EditorView.DockPanel.Preview).Width > 0)
                     throw new InvalidOperationException("Timing exposed a draggable tab.");
-                editor.KeyDown(27, false, false); Paint("mapping-restored");
+                editor.KeyDown(112, false, false); Paint("mapping-restored");
                 if (editor.TimingPageVisible || editor.PreviewViewport != preview)
                     throw new InvalidOperationException("Mapping layout did not restore.");
                 Drag(EditorView.DockPanel.MovementStrain, 60, 220, "drag-merge-left"); Paint("merged-left");
-                var firstTab = editor.DockTabBounds(EditorView.DockPanel.Preview);
+                var firstTab = VisibleTab(EditorView.DockPanel.Preview);
                 Drag(EditorView.DockPanel.MovementStrain, firstTab.X + 5, firstTab.Y + 10, "reorder-preview"); Paint("reordered");
                 var handle = editor.DockResizeBounds(true);
                 editor.PointerDown(handle.X + 4, handle.Y + 60, 0, false, false);
                 editor.PointerMove(180, handle.Y + 60, false, false);
                 editor.PointerUp(180, handle.Y + 60, 0); Paint("minimum-left");
-                Click(editor.DockTabBounds(EditorView.DockPanel.Preview)); Paint("minimum-preview");
+                Click(VisibleTab(EditorView.DockPanel.Preview)); Paint("minimum-preview");
                 editor.PointerDown(280, 18, 0, false, false); editor.PointerUp(280, 18, 0); Paint("layout-menu");
                 editor.KeyDown(27, false, false); Paint();
                 if (!map.ContentEquals(editor.Document) || editor.IsDirty || editor.WantsCapture)
                     throw new InvalidOperationException("Docking modified content or retained capture.");
-                var contextTab = editor.DockTabBounds(EditorView.DockPanel.Preview);
+                var contextTab = VisibleTab(EditorView.DockPanel.Preview);
                 editor.PointerDown(contextTab.X + 10, contextTab.Y + 10, 2, false, false); Paint("dock-context");
                 editor.KeyDown(27, false, false); Paint();
-                Click(editor.DockTabBounds(EditorView.DockPanel.Notes));
+                Click(VisibleTab(EditorView.DockPanel.Notes));
                 Click(editor.NotesBounds); editor.PasteFieldText(L.Get("dock.notesHint") + "\nReview the ending pattern.\nKeep this note across difficulties."); Paint("notes");
                 var patternMap = new MapDocument { DurationMs = 10000 };
                 var patternTrack = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 8, Stack = new() };
                 patternTrack.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 256 }, new Anchor { TimeMs = 2000, X = 256 }]);
                 patternMap.Tracks.Add(patternTrack);
                 editor.LoadDocument(patternMap); editor.KeyDown(65, true, false); Paint();
-                Click(new(268, 6, 70, 28)); Click(new(274, 259, 270, 31)); Paint("stack-dock");
+                editor.KeyDown(70, true, true); Paint("stack-dock");
+                if (editor.DockTabBounds(EditorView.DockPanel.PatternEditor).Width <= 0)
+                    throw new InvalidOperationException("Stack editor did not open.");
                 patternMap = new MapDocument { DurationMs = 10000 };
                 patternMap.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 3000, Pattern = new() });
                 editor.LoadDocument(patternMap); editor.KeyDown(65, true, false); Paint("banana-dock");
                 editor.Wheel(size.Item1 - 60, 400, -1200, false, false); Paint("banana-dock-scrolled");
+                Rect VisibleTab(EditorView.DockPanel panel)
+                {
+                    var layout = editor.CaptureDockLayouts().Mapping!;
+                    var group = new[] { layout.Left!, layout.Right! }
+                        .Single(g => g.Panels!.Contains(panel.ToString()));
+                    var visible = group.Panels!.Select(name => editor.DockTabBounds(Enum.Parse<EditorView.DockPanel>(name)))
+                        .First(r => r.Width > 0);
+                    float x = visible.X + visible.Width / 2, y = visible.Y + visible.Height / 2;
+                    editor.Wheel(x, y, 12000, false); Paint();
+                    for (int step = 0; step < 100; step++)
+                    {
+                        var tab = editor.DockTabBounds(panel);
+                        if (tab.Width >= 20) return tab;
+                        editor.Wheel(x, y, -120, false); Paint();
+                    }
+                    throw new InvalidOperationException($"Dock tab {panel} could not be revealed.");
+                }
+
                 void Click(Rect r)
-                { editor.PointerDown(r.X + 10, r.Y + 10, 0, false, false); editor.PointerUp(r.X + 10, r.Y + 10, 0); Paint(); }
+                {
+                    if (r.Width <= 0 || r.Height <= 0)
+                        throw new InvalidOperationException("Cannot click an invisible dock control.");
+                    float x = r.X + Math.Min(10, r.Width / 2), y = r.Y + Math.Min(10, r.Height / 2);
+                    editor.PointerDown(x, y, 0, false, false); editor.PointerUp(x, y, 0); Paint();
+                }
                 void Drag(EditorView.DockPanel panel, float x, float y, string name)
                 {
-                    var tab = editor.DockTabBounds(panel);
+                    var tab = VisibleTab(panel);
                     editor.PointerDown(tab.X + 10, tab.Y + 10, 0, false, false);
                     editor.PointerMove(x, y, false, false); Paint(name);
                     editor.PointerUp(x, y, 0); Paint();

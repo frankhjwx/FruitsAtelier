@@ -534,6 +534,7 @@ internal static class SynchronizationUiTests
 
     public static void Run()
     {
+        AutomaticObjectSounds();
         string language = L.Language;
         try
         {
@@ -661,9 +662,9 @@ internal static class SynchronizationUiTests
             Until(() => ui.View.DifficultySyncState(1) == WorkspaceSyncState.Changed && !ui.View.SynchronizationBusy, "inactive conflict detected");
             Check(!ui.View.SynchronizationVisible, "inactive conflict does not interrupt active map");
             Check(!ui.View.SwitchDifficulty(1) && ui.View.SynchronizationVisible, "entering conflicted difficulty opens merge");
-            ui.Paint();
+            Wait(ui);
             ui.ClickText(L.Get("sync.allLocal")); Wait(ui);
-            ui.View.SwitchDifficulty(0); ui.Paint();
+            ui.View.SwitchDifficulty(0); Wait(ui);
             var capture = typeof(FruitsAtelier.App.Editor.EditorView).GetField("tabPointer", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
             capture.SetValue(ui.View, true);
             File.WriteAllText(source, File.ReadAllText(source).Replace("123,192", "321,192"));
@@ -826,12 +827,70 @@ internal static class SynchronizationUiTests
             "removing the orphan FA copy preserves the surviving osu file and authoring");
     }
 
+    private static void AutomaticObjectSounds()
+    {
+        foreach (bool metadataReview in new[] { false, true })
+        {
+            string root = Path.GetFullPath(Path.Combine("artifacts/tests/sync-object-sounds", Guid.NewGuid().ToString("N")));
+            string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
+            Directory.CreateDirectory(Path.GetDirectoryName(source)!); File.WriteAllText(source, Fixture);
+            var ui = new Ui(false); ui.Resize(1440, 900);
+            ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+            ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+            ui.View.StopFileMonitoring();
+            ui.View.WorkspaceSession!.Manifest.Difficulties[0].ExportConfirmed = true;
+            EditorHistory History() => (EditorHistory)ui.View.GetType().GetProperty("history",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+            try
+            {
+                var history = History();
+                history.Begin("Move fruit"); history.Document.Fruits[0].X++; history.Commit();
+                ui.View.SaveCurrentDifficulty(); Wait(ui);
+                Check(history.CanUndo, "Local saved editing retains undo before external sound import");
+                Check(ui.View.AddDifficulty(), "An unrelated local difficulty opens");
+                var unrelatedHistory = History();
+                unrelatedHistory.Begin("Unrelated fruit");
+                unrelatedHistory.Document.Fruits.Add(new Fruit { TimeMs = 3000, X = 200 }); unrelatedHistory.Commit();
+                ui.View.SaveCurrentDifficulty(); Wait(ui);
+                Check(ui.View.SwitchDifficulty(0), "Linked difficulty remains available before sound import"); Wait(ui);
+                string incoming = File.ReadAllText(source).Replace(",1000,5,0,", ",1000,5,2,").Replace(",1000,1,0,", ",1000,1,2,");
+                if (metadataReview) incoming = incoming.Replace("Title:Original", "Title:Incoming");
+                File.WriteAllText(source, incoming);
+                ui.View.RefreshSynchronization(); Wait(ui);
+                if (metadataReview)
+                {
+                    SelectSyncField(ui, "Title", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                }
+                string Sound(MapDocument document) => WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(document).Text)[0].Split(',')[4];
+                Check(!ui.View.SynchronizationVisible && Sound(ui.View.Document) == "2" && !ui.View.IsDirty,
+                    "External-only object sounds reach the saved live document with or without metadata review");
+                Check(!History().CanUndo, "Imported object content retires snapshots containing old sounds");
+                ui.Key('Z', ctrl: true);
+                Check(Sound(ui.View.Document) == "2", "Undo cannot restore sounds preceding synchronization");
+                Check(ui.View.SwitchDifficulty(1), "Unrelated difficulty stays accessible after sound import"); Wait(ui);
+                Check(ReferenceEquals(History(), unrelatedHistory) && unrelatedHistory.CanUndo,
+                    "Automatic object import preserves unrelated difficulty history");
+                ui.Key('Z', ctrl: true);
+                Check(!ui.View.Document.Fruits.Any(f => f.TimeMs == 3000), "Unrelated difficulty undo remains effective");
+                ui.Key('Y', ctrl: true);
+                Check(ui.View.SwitchDifficulty(0), "Synced difficulty reopens for subsequent save"); Wait(ui);
+                history = History(); history.Begin("Move after sync"); history.Document.Fruits[0].X++; history.Commit();
+                ui.View.SaveCurrentDifficulty(); Wait(ui);
+                Check(Sound(OsuBeatmapReader.ReadFile(source)) == "2" && Sound(ui.View.Document) == "2",
+                    "Saving a later edit preserves the synchronized object sounds");
+                Console.WriteLine($"PASS live automatic object sounds and subsequent save (metadata review: {metadataReview})");
+            }
+            finally { ui.View.StopFileMonitoring(); }
+        }
+    }
+
     internal static void Wait(Ui ui)
     {
         var deadline = DateTime.UtcNow.AddSeconds(20);
         do { ui.Paint(); if (!ui.View.SynchronizationBusy && !ui.View.LibraryOpening) break; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
         Check(!ui.View.SynchronizationBusy && !ui.View.LibraryOpening, "sync and media preparation timeout"); ui.Paint();
         if (ui.View.ErrorVisible) throw new Exception("Unexpected error in synchronization UI");
+        if (ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.mode.title"))) ui.ClickText(L.Get("sync.mode.detailed"));
     }
 
     private static void CheckBusyInput(Ui ui)

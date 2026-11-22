@@ -107,6 +107,9 @@ callback recovery when logging or refreshing fails.
 It checks error input priority over synchronization and startup screens, retained
 Pattern-project recovery copies, destination collisions, and macOS recovery close
 requests while another file operation is busy.
+Captured storyboard audio survives recovery save and reopen after the import source
+has been deleted. Destination collisions roll back newly written audio files and
+leave the original mapset and live registrations unchanged.
 `App.Tests --recovery-state-matrix-check` combines cleanup failures with reentrant
 input, unfinished transactions, retained Pattern projects and simultaneous FAZ
 completion. It checks that recovery copies preserve committed edits and that
@@ -413,6 +416,13 @@ Chinese at 980×620 and 1440×900 with 96/144/192 DPI under
 The native check includes Markdown and image cards; pass
 `--discussions-image-fixture=<absolute-image-path>` to use a local image fixture
 without network access.
+
+`App.Tests --faz-check` also verifies deferred storyboard audio in native and
+complete archives, including deleted import sources and imports belonging only
+to a later difficulty sharing the resource directory. It checks exported bytes,
+unchanged source resources and data-only FAD exports.
+It also covers registered audio without a media root and FAD imports into blank
+hosts, including ordinary save/reopen after the original source is deleted.
 
 `App.Tests --fad-check` verifies data-only difficulty exports, export with missing
 source resources, legacy resource-package imports and local resource conflicts, matching, adding difficulties, native merge choices, undo/redo, Library
@@ -723,6 +733,17 @@ normalized timing choices. `FruitsAtelier.App.exe --render-check
 two window sizes and captures unresolved/resolved cells under
 `artifacts/tests/semantic-sync-native`.
 
+`App.Tests --simplified-sync-check` verifies mode selection, modal input isolation,
+metadata/NC one-click resolution, mixed local geometry and external metadata,
+choice preservation when switching modes, gameplay-affecting difficulty changes
+with retained local sliders or external additions, explicit confirmation of red
+timing edits and additions/deletions, automatic green-only sound changes,
+and responsive Library navigation after cancelling with media preparation or
+hidden slider import prompts pending.
+It runs English and Chinese at compact and wide sizes. Native synchronization
+checks capture the mode prompt as well as the detailed review and operate both
+choices in the simplified red timing table.
+
 `App.Tests --sync-details-check` also checks break start/end/duration columns,
 aligned additions, changed-cell highlighting, independent break choices and
 storyboard command preservation at both window sizes in English and Chinese.
@@ -906,6 +927,14 @@ live tab ordering, symmetric dock resizing, Layout and context-menu panel manage
 and independent Mapping/Timing layouts in English and Chinese,
 including settings-file roundtrips, restart restoration and invalid layout entries,
 alongside the existing sidebar rendering and seeking checks.
+The docking check also compares strain-graph wheel navigation with the canvas
+across snap divisions, reverse scrolling, fractional notches, editing profiles and
+playback states in both dock positions. It checks bookmark colours and line-only
+rendering even when bookmark intervals are enabled.
+Add `--strain-graph-render-check` to the native docking command to focus on
+strain-graph bookmarks, wheel navigation and content isolation across both
+languages, window sizes and DPI scales.
+
 `FruitsAtelier.App.exe --render-check --docking-render-check` runs the native
 Direct2D gestures at two window sizes and three DPI values. Screenshots are
 written under `artifacts/tests/docking-native`.
@@ -1552,6 +1581,15 @@ replacement and recovery, duplicate ownership, unique-difficulty migration, base
 persistence, emitted object mappings, multi-output curves, and interrupted exports.
 Fixtures and retained recovery files live under `artifacts/tests/synchronization`.
 
+Synchronization regressions also cover automatic external-only hitsounds, concurrent
+local object edits, rounded imported heads, baseline-free review and restart.
+Stream regressions verify uniform and per-event sound imports without changing
+editable curves, project roundtrips, and explicit review when same-millisecond
+events cannot reproduce the incoming samples independently.
+The simplified-mode UI check keeps such stream changes undecided until an
+explicit choice and verifies that retaining FA preserves the curve.
+The shared App synchronization checks verify live object sounds after automatic
+and reviewed merges, history replacement for imported objects, and subsequent saves.
 Save-rewrite regressions cover fractional object times, implicit combo boundaries,
 timing precision, and relocated break lines alongside storyboard commands. They
 also verify real time, combo colour, SV, break and video edits remain reviewable,
@@ -1598,7 +1636,12 @@ allocations and repeat decodes. The resident path must perform no warm decodes.
 
 Version history regressions cover changed/unchanged saves, retained working copies,
 deleted difficulty identities, project isolation, damaged snapshots, modal input,
-selective restoration, save/restart and undo/redo. Native `--render-check` draws the
+managed storyboard audio after source deletion and mapset cleanup, full and
+single-difficulty publication, deferred and compressed snapshots, unsaved audio,
+and reclamation of snapshot-owned audio by retention. They also cover
+selective restoration, save/restart and undo/redo. Deleted and missing-source
+difficulties with storyboard audio but no music retain a persistent resource root.
+Native `--render-check` draws the
 browser and restores a deleted difficulty in both languages at its tested window
 sizes and DPI values. The editing benchmark verifies ordinary interactions while
 version-history work remains outside the pointer and paint paths.
@@ -1909,6 +1952,12 @@ edits and undo.
 
 ## Timing clipboard feedback
 
+The timing clipboard checks cover F6 green-line copies pasted into Mapping and
+Hitsounding across difficulties and separate maps, original timestamps and sample
+fields, coincident red-point preservation, malformed input and destination undo.
+The native check includes cross-map Hitsounding paste and undo. Hitsounding panel
+checks also verify internal sound copies supersede previously copied timing text.
+
 `App.Tests --timing-feedback-check` covers selected-row and empty-list context
 menus, valid/invalid clipboard contents, copy feedback expiry, draft paste undo,
 and stale asynchronous clipboard responses at normal and half window scale.
@@ -1924,7 +1973,8 @@ display modes and after Ctrl+Left/Right navigation. It also compares slider head
 highlights with Mapping and checks W/E/R on single and grouped Notes, selected
 slider edges, whole sliders and locked addition tracks in both profiles.
 
-The Hitsounding panel check also covers grouped addition ghosts in both display modes and tools,
+The Hitsounding panel check also covers grouped addition previews retaining their
+mode-specific dimensions in both display modes and tools,
 atomic rejection of incomplete destinations, cancellation, release commits, undo and
 Shift-arrow playback navigation. The Notes check verifies retained originals with
 translucent single/group previews and pointer capture. SB checks cover group retiming
@@ -1949,3 +1999,19 @@ preference. Output remains under `artifacts/tests/testplay-native/`.
 input isolation and navigation in English and Chinese. On macOS,
 `bash Run-Editor-Mac.command --smoke-check --library-exit-check` captures the
 confirmation in both languages under `artifacts/macos-check/library-exit`.
+
+
+`App.Tests --storyboard-drop-check` covers external and Audio Library drops,
+single-file admission, timing snap, retained encoded audio after source deletion,
+copy/cut/paste, deferred save materialization, shared-reference retention, final
+reference cleanup, undo/redo and resource metadata roundtrips. The
+check also covers clean-state restoration after drop/delete, preservation of
+pre-existing empty Events sections and repeated saves of source-less maps. The native
+Hitsounding check captures dropped SB audio after its source has been removed.
+The simplified synchronization check covers secondary button hover, compact text
+and reaching normal close validation from a pending review.
+
+Storyboard drop checks also verify snapped hover previews, multi-file preview
+rejection and full-width Precise HS movement. Library file checks verify that
+moving files within their current directory does not reload the list or interrupt
+audition.

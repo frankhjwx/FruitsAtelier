@@ -12,6 +12,12 @@ contain the native project and resources without an OSZ. Both retain editable
 curves, handles, difficulty order, timing, metadata and project notes. Audio,
 custom samples, images, videos and storyboard files are included when available.
 Missing required audio stops export; optional resources may be absent.
+FA-only archives include deferred storyboard audio from every difficulty sharing
+a resource directory. Captured audio remains available to export before saving,
+even if its original import file has been deleted.
+Registered storyboard audio is also included when a difficulty has no media root.
+Importing such a difficulty assigns a local resource root so available audio can
+be retained by ordinary workspace saves without creating a Songs association.
 
 ## Import and association
 

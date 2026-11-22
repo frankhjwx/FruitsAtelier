@@ -14,7 +14,10 @@ internal static class DockingTests
             {
                 L.SetLanguage(locale);
                 var ui = new Ui(overview: false);
-                ui.LoadDocument(new MapDocument { DurationMs = 10000 });
+                var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
+                OsuTimeline.AddBookmark(map, 2500);
+                OsuTimeline.SetBookmarkAppearance(map, 2500, new(0x123456, true));
+                ui.LoadDocument(map);
                 ui.Resize(1440, 900);
                 var baseline = ui.View.Document.DeepClone();
                 Click(ui.View.DifficultyCurveToggleBounds); ui.OpenPreview();
@@ -23,6 +26,7 @@ internal static class DockingTests
                 ui.ClickText(L.Get("dock.layout")); ui.ClickText("✓ " + L.Get("discussion.title"));
                 ui.ClickText(L.Get("dock.layout")); ui.ClickText("✓ " + L.Get("settings.testplay"));
                 CheckToolbar();
+                CheckStrainGraph();
                 ResizeDock(true, 0); ResizeDock(false, 0);
                 Check(DockWidth(true) == DockWidth(false), "Both docks share the same minimum width");
                 ResizeDock(true, 2000);
@@ -52,6 +56,7 @@ internal static class DockingTests
                 Check(ui.View.DifficultyCurvePanelBounds.X > ui.Plot.Right && ui.View.DifficultyCurveVisible
                     && !ui.View.CatchPreviewVisible, "Strain merges on the right and becomes active");
                 Check(ui.View.DockTabBounds(EditorView.DockPanel.Preview).Width > 0, "Inactive preview retains a named tab");
+                CheckStrainGraph();
                 Click(ui.View.DockTabBounds(EditorView.DockPanel.Preview));
                 Check(ui.View.CatchPreviewVisible && ui.View.DifficultyCurveGraphBounds.Width == 0, "Switching tabs hides strain hit targets");
                 Drag(EditorView.DockPanel.Preview, 8, 200);
@@ -177,6 +182,38 @@ internal static class DockingTests
                     Check(ui.View.WantsCapture, "Both dock splitters capture resize gestures");
                     ui.View.PointerMove(x, handle.Y + 60, false, false);
                     ui.View.PointerUp(x, handle.Y + 60, 0); ui.Paint();
+                }
+
+                void CheckStrainGraph()
+                {
+                    ui.Paint();
+                    var graph = ui.View.DifficultyCurveGraphBounds;
+                    float expectedY = graph.Bottom - graph.Height * .25f;
+                    Check(ui.Canvas.Lines.Any(line => line.Color == 0x123456 && line.X1 == graph.X
+                        && line.X2 == graph.Right && Math.Abs(line.Y1 - expectedY) < .01f),
+                        "Strain graph draws the bookmark at its time in its custom colour");
+                    Check(!ui.Canvas.Fills.Any(fill => fill.Color == 0x123456 && graph.Contains(fill.Bounds.X, fill.Bounds.Y)),
+                        "Strain graph omits bookmark duration shading");
+                    foreach (int snap in new[] { 4, 6 })
+                    foreach (bool reverse in new[] { false, true })
+                    foreach (bool lazer in new[] { false, true })
+                    foreach (bool playing in new[] { false, true })
+                    {
+                        ui.View.LibrarySettings.LazerEditing = lazer;
+                        ui.SetSnapDivisor(snap);
+                        ui.View.LibrarySettings.ReverseCanvasScroll = reverse;
+                        ui.View.UpdateTransport(5000, 10000, true, playing, false, null, null); ui.Paint();
+                        ui.View.Wheel(ui.Plot.X + 20, ui.Plot.Y + 30, -120, false);
+                        double target = ui.View.PlayheadMs;
+                        ui.View.UpdateTransport(5000, 10000, true, playing, false, null, null); ui.Paint();
+                        for (int i = 0; i < 4; i++) ui.View.Wheel(graph.X + 10, graph.Y + 10, -30, false);
+                        Check(Math.Abs(ui.View.PlayheadMs - target) < 1e-7, "Strain wheel matches canvas snap, direction and fractional notches");
+                    }
+                    ui.View.LibrarySettings.ReverseCanvasScroll = false;
+                    ui.View.LibrarySettings.LazerEditing = false;
+                    ui.View.UpdateTransport(5000, 10000, true, false, false, null, null);
+                    ui.SetSnapDivisor(4);
+                    Check(ui.View.Document.ContentEquals(baseline) && !ui.View.IsDirty, "Strain navigation preserves content");
                 }
 
                 void CheckToolbar()

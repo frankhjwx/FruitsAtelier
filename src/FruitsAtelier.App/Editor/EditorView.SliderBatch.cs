@@ -17,7 +17,7 @@ public sealed partial class EditorView
     private readonly List<HitArea> sliderDialogHits = [];
     public bool SliderImportPromptVisible => sliderImportTargets.Length > 0;
     public bool SliderConversionBusy => sliderBatchTask is not null || sliderImportTask is not null || LegacyDropletRefreshBusy;
-    private bool SliderDialogVisible => VerifierFixPromptVisible || TimingAlignmentPromptVisible || SliderImportPromptVisible || SliderImportSourcePromptVisible || SliderConversionBusy || sliderBatchErrors.Length > 0;
+    private bool SliderDialogVisible => !LibraryVisible && (VerifierFixPromptVisible || TimingAlignmentPromptVisible || SliderImportPromptVisible || SliderImportSourcePromptVisible || SliderConversionBusy || sliderBatchErrors.Length > 0);
     private bool rememberSliderImportChoice;
 
     public void OfferSliderConversion(bool allDifficulties)

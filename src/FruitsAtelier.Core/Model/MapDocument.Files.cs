@@ -4,8 +4,10 @@ public sealed class OsuSection
 {
     public string Name { get; set; } = "";
     public OsuSectionLines Lines { get; private init; } = new();
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool RemoveWhenEmpty { get; set; }
 
-    internal OsuSection DeepClone() => new() { Name = Name, Lines = Lines.DeepClone() };
+    internal OsuSection DeepClone() => new() { Name = Name, Lines = Lines.DeepClone(), RemoveWhenEmpty = RemoveWhenEmpty };
 }
 
 public sealed partial class MapDocument
@@ -27,7 +29,10 @@ public sealed partial class MapDocument
             copy.OriginalSections.Add(section.DeepClone());
     }
 
-    private bool FileStateEquals(MapDocument other) => SourcePath == other.SourcePath
+    // A generated audio resource root does not change a map's authored source.
+    private string? ContentSourcePath => StoryboardAudio.Count > 0 && Path.GetFileName(SourcePath) == WorkspaceProject.ResourceRootMarker ? null : SourcePath;
+
+    private bool FileStateEquals(MapDocument other) => ContentSourcePath == other.ContentSourcePath
         && AudioPath == other.AudioPath && IsDemo == other.IsDemo
         && OriginalSections.Count == other.OriginalSections.Count
         && OriginalSections.Zip(other.OriginalSections).All(pair => pair.First.Name == pair.Second.Name

@@ -766,7 +766,12 @@
   "files.skin": "スキンを開く",
   "project.new": "新しいプロジェクト",
   "project.add": "新しい難易度を追加",
-  "project.import": ".osu の難易度をインポートします…",
+  "project.import": "難易度をインポート…",
+  "project.importDifficultyOpenFirst": "難易度をインポートするには、先に譜面プロジェクトを開いてください。",
+  "project.importDifficultyConflict": "「{0}」はすでに存在します",
+  "project.importDifficultyAmbiguous": "同名の難易度が複数あります。上書きするタブを選んでから、もう一度インポートしてください。",
+  "project.importDifficultyOverwrite": "難易度を上書き",
+  "project.importDifficultyCreate": "新しい難易度を作成",
   "project.importResourcesRequired": "リソースディレクトリのあるプロジェクトを開いてから .osu 難易度をインポートしてください。",
   "project.defaultDifficulty": "難易度{0}",
   "project.selector": "{0}/{1} · {2}{3}",
@@ -2523,5 +2528,8 @@
   "shortcuts.command.previousParent": "Select Previous Note",
   "shortcuts.command.nextParent": "Select Next Note",
   "shortcuts.description.previousParent": "Select the previous sound-editable note from the current selection.",
-  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection."
+  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection.",
+  "sync.mode.title": "How would you like to synchronize?",
+  "sync.mode.auto": "Auto Resolve non-object metadata changes for me",
+  "sync.mode.detailed": "Resolve individual changes"
 }

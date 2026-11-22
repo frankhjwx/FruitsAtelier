@@ -6,24 +6,27 @@ internal static partial class Native
 {
     [DllImport("shell32.dll")] internal static extern void DragAcceptFiles(nint window, bool accept);
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)] private static extern uint DragQueryFile(nint drop, uint index, System.Text.StringBuilder? path, uint capacity);
+    [DllImport("shell32.dll")] internal static extern bool DragQueryPoint(nint drop, out Point point);
     [DllImport("shell32.dll")] private static extern void DragFinish(nint drop);
 
     internal static string[] TakeDroppedFiles(nint drop)
     {
-        try
-        {
-            uint count = DragQueryFile(drop, uint.MaxValue, null, 0);
-            var paths = new string[count];
-            for (uint i = 0; i < count; i++)
-            {
-                uint length = DragQueryFile(drop, i, null, 0);
-                var path = new System.Text.StringBuilder(checked((int)length + 1));
-                DragQueryFile(drop, i, path, (uint)path.Capacity);
-                paths[i] = path.ToString();
-            }
-            return paths;
-        }
+        try { return ReadDroppedFiles(drop); }
         finally { DragFinish(drop); }
+    }
+    internal static string[] ReadDroppedFiles(nint drop)
+    {
+        uint count = DragQueryFile(drop, uint.MaxValue, null, 0);
+        if (count > 20000) return [];
+        var paths = new string[count];
+        for (uint i = 0; i < count; i++)
+        {
+            uint length = DragQueryFile(drop, i, null, 0);
+            var path = new System.Text.StringBuilder(checked((int)length + 1));
+            DragQueryFile(drop, i, path, (uint)path.Capacity);
+            paths[i] = path.ToString();
+        }
+        return paths;
     }
 
     [StructLayout(LayoutKind.Sequential)]

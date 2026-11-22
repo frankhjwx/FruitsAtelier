@@ -766,7 +766,12 @@
   "files.skin": "Open Skin",
   "project.new": "Nieuw project",
   "project.add": "Nieuwe moeilijkheidsgraad toevoegen",
-  "project.import": ".osu-moeilijkheidsgraad importeren...",
+  "project.import": "Moeilijkheid importeren…",
+  "project.importDifficultyOpenFirst": "Open een beatmapproject voordat je een moeilijkheid importeert.",
+  "project.importDifficultyConflict": "‘{0}’ bestaat al",
+  "project.importDifficultyAmbiguous": "Meerdere moeilijkheden hebben deze naam. Selecteer het tabblad dat je wilt overschrijven en importeer het bestand opnieuw.",
+  "project.importDifficultyOverwrite": "Moeilijkheid overschrijven",
+  "project.importDifficultyCreate": "Nieuwe moeilijkheid maken",
   "project.importResourcesRequired": "Open een project met een bronnenmap voordat je een .osu-moeilijkheidsgraad importeert.",
   "project.defaultDifficulty": "Moeilijkheidsgraad {0}",
   "project.selector": "{0}/{1} · {2}{3}",
@@ -2523,5 +2528,8 @@
   "shortcuts.command.previousParent": "Select Previous Note",
   "shortcuts.command.nextParent": "Select Next Note",
   "shortcuts.description.previousParent": "Select the previous sound-editable note from the current selection.",
-  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection."
+  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection.",
+  "sync.mode.title": "How would you like to synchronize?",
+  "sync.mode.auto": "Auto Resolve non-object metadata changes for me",
+  "sync.mode.detailed": "Resolve individual changes"
 }

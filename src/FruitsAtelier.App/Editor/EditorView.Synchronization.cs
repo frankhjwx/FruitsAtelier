@@ -17,6 +17,7 @@ public sealed partial class EditorView
     private bool syncCommitAllowsEditing;
     private bool syncCommitCompletesSave;
     private bool syncCommitPreservesActiveDifficulty;
+    private HashSet<Guid> syncCommitObjectChanges = [];
     private bool SearchingReference(int index) => syncTask is not null && index >= 0 && index < difficulties.Count && syncSearching.Contains(difficulties[index].Id);
     private Task<WorkspaceSession>? syncCommitTask;
     private DateTime nextSyncCheck = DateTime.MaxValue;
@@ -137,6 +138,8 @@ public sealed partial class EditorView
             bool localCommit = syncCommitAllowsEditing;
             bool completesSave = syncCommitCompletesSave;
             bool preserveActiveDifficulty = syncCommitPreservesActiveDifficulty;
+            var objectChanges = syncCommitObjectChanges;
+            syncCommitObjectChanges = [];
             syncCommitAllowsEditing = false;
             syncCommitCompletesSave = false;
             syncCommitPreservesActiveDifficulty = false;
@@ -158,6 +161,7 @@ public sealed partial class EditorView
                 bool previousPin = pinPlayhead;
                 Guid active = preserveActiveDifficulty || syncDifficulty == Guid.Empty ? previousDifficulty : syncDifficulty;
                 bool preserveView = syncPreserveHistory && WorkspaceSession?.Directory == session.Directory;
+                bool replacedActiveContent = false;
                 if (preserveView)
                 {
                     foreach (var diff in session.Project.Difficulties)
@@ -175,9 +179,20 @@ public sealed partial class EditorView
                             }
                             else
                             {
-                                var rebase = WorkspaceSynchronization.PrepareContextRebase(existing.History.Document, diff.Document);
-                                existing.History.RebaseSharedMetadata(rebase);
-                                existing.History.MarkSaved();
+                                if (objectChanges.Contains(diff.Id))
+                                {
+                                    // Imported object content needs a new history so undo cannot restore its old sounds.
+                                    existing.RatingCancellation.Cancel();
+                                    if (existing.RatingTask is { } rating) retiredDifficultyWork.Add(rating);
+                                    difficulties[difficulties.IndexOf(existing)] = new DifficultySession(diff) { EditingPreferences = existing.EditingPreferences };
+                                    replacedActiveContent |= diff.Id == previousDifficulty;
+                                }
+                                else
+                                {
+                                    var rebase = WorkspaceSynchronization.PrepareContextRebase(existing.History.Document, diff.Document);
+                                    existing.History.RebaseSharedMetadata(rebase);
+                                    existing.History.MarkSaved();
+                                }
                             }
                         }
                     }
@@ -185,6 +200,11 @@ public sealed partial class EditorView
                     if (!localCommit) convertedSnapshot = null;
                     resourceSnapshot = null; resourceReferences = null;
                     libraryProjectsNeedReindex = true; QueueLibrarySearch(); CheckWorkspaceResources();
+                    if (replacedActiveContent)
+                    {
+                        ResetDifficultyView(!LibraryVisible && mediaInitialPreparationComplete, preserveMedia: true, preserveAudio: true, preserveMapsetState: true);
+                        playhead = previousPlayhead; viewStart = previousViewStart; pinPlayhead = previousPin;
+                    }
                 }
                 else
                 {
@@ -276,6 +296,8 @@ public sealed partial class EditorView
                     }
                     syncPage = "checking";
                     syncPreserveHistory = true;
+                    syncCommitObjectChanges = automatic.Where(s => result.Merges[s.DifficultyId].HasAutomaticObjectChanges)
+                        .Select(s => s.DifficultyId).ToHashSet();
                     syncCommitTask = Task.Run(() =>
                     {
                         var project = result.Snapshot;
@@ -363,6 +385,8 @@ public sealed partial class EditorView
                 { syncChoices[conflict.Key] = retained.Choice; syncRoundChoices.Add(conflict.Key); }
         }
         syncRetainedReview.Clear();
+        syncSimplified = false;
+        syncModePrompt = merge is { NativeDifficulty: false, Conflicts.Count: > 0 } && syncComparisons.ContainsKey(syncDifficulty);
         syncPage = "resolve";
         if (AudioPlaying) RequestPausePlayback?.Invoke();
         CancelInteraction(); hits.Clear(); fields.Clear();
@@ -375,7 +399,16 @@ public sealed partial class EditorView
         if (syncPage == "checking") return;
         bool activeBlocked = syncPage == "failed" || syncDifficulty == difficulties[activeDifficulty].Id && DifficultySyncState(activeDifficulty) is not (WorkspaceSyncState.Current or WorkspaceSyncState.Local);
         syncPage = null; afterSynchronization = null; syncDifficulty = Guid.Empty;
-        if (activeBlocked) { LibraryVisible = true; QueueLibrarySearch(); }
+        syncModePrompt = syncSimplified = false;
+        CancelInteraction(); hits.Clear(); fields.Clear();
+        if (activeBlocked)
+        {
+            // A suspended media opening cannot gate input on the Library page.
+            mediaExitPending = true;
+            LibraryVisible = true;
+            if (libraryDatabase is null && libraryStartupTask is null) StartLibraryScan();
+            else QueueLibrarySearch();
+        }
     }
 
     public void ShowDeleteDifficulty(int index, bool localOnly = false)
@@ -427,6 +460,7 @@ public sealed partial class EditorView
         bool fieldsOnly = fieldReview is not null && fieldReview.Conflicts.Count > 0
             && fieldReview.Conflicts.All(c => !c.Key.StartsWith('$'));
         syncPreserveHistory = fieldsOnly;
+        syncCommitObjectChanges = fieldReview is { HasAutomaticObjectChanges: true } ? [diff.Id] : [];
         syncPage = "applying";
         syncCommitTask = Task.Run(() =>
         {
@@ -524,7 +558,11 @@ public sealed partial class EditorView
         hits.Clear(); fields.Clear();
         if (syncPage == "resolve" && syncMerges.TryGetValue(syncDifficulty, out var visualMerge) && visualMerge.Conflicts.Count > 0
             && syncComparisons.TryGetValue(syncDifficulty, out var comparison))
-        { DrawSyncComparison(c, visualMerge, comparison); return; }
+        {
+            DrawSyncComparison(c, visualMerge, comparison);
+            if (syncModePrompt) DrawSyncModePrompt(c);
+            return;
+        }
         float w = Math.Min(820, width - 32), h = Math.Min(500, height - 48), x = (width - w) / 2, y = (height - h) / 2;
         c.Fill(new(0, 0, width, height), Background, opacity: .8f);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
@@ -635,7 +673,7 @@ public sealed partial class EditorView
             for (int offset = 1; offset < merge.Conflicts.Count; offset++)
             {
                 int next = (syncRow + offset) % merge.Conflicts.Count;
-                if (SyncCategory(merge.Conflicts[next].Key) == syncTab && !syncChoices.ContainsKey(merge.Conflicts[next].Key))
+                if (IsSyncReviewItem(merge.Conflicts[next]) && (syncSimplified || SyncCategory(merge.Conflicts[next].Key) == syncTab) && !syncChoices.ContainsKey(merge.Conflicts[next].Key))
                 { syncRow = next; break; }
             }
     }

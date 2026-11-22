@@ -1003,8 +1003,10 @@ internal static class HitsoundingPanelTests
                 ui.View.PointerDown(sounds[0].X + 2, y, 0, false, false);
                 ui.View.PointerMove(X(destination), y, false, false); ui.Paint();
                 Check(baseline.ContentEquals(ui.View.Document) && ReferenceEquals(conversion, ui.View.Conversion), "Group ghost retains committed content and conversion");
-                Check(ui.Canvas.PaintCalls.Count(p => p.FillBounds is { Width: 18, Height: 32 } r && r.Y <= y && r.Bottom > y && p.Opacity == .5f) == 2,
-                    "Both selected sounds have translucent destination ghosts");
+                var previews = LaneBlocks(ui, 2);
+                Check(previews.Length == sounds.Length && previews.Zip(sounds).All(p => Math.Abs(p.First.Width - p.Second.Width) < .1f
+                    && Math.Abs(p.First.Height - p.Second.Height) < .1f && p.First.X > p.Second.X),
+                    "Both sounds move with the current mode's width and height, replacing their source rendering");
             }
             Begin(2000); ui.Key(27); ui.View.PointerUp(X(2000), y, 0); ui.Paint();
             Check(baseline.ContentEquals(ui.View.Document), "Escape cancels the complete sound move");
@@ -1371,6 +1373,9 @@ internal static class HitsoundingPanelTests
         var target = source.DeepClone(); target.Name = "Target";
         target.Fruits[0].OriginalLine = "256,192,1000,1,0,2:0:0:0:";
         var ui = new Ui(false); ui.View.LoadProject(BeatmapProject.FromDocuments([source, target])); ui.Resize(1440, 900);
+        string clipboard = "1000,-100,4,1,0,100,0,0";
+        ui.View.RequestCopyText = text => clipboard = text;
+        ui.View.RequestPasteObjects = () => ui.View.PasteClipboardText(clipboard);
         ui.View.ShowHitsoundingPage(); ui.View.UpdateTransport(1000, 6000, true, false, false, null, null); ui.Paint();
         var block = LaneBlocks(ui, 2).Single(); ui.Click(block.X + block.Width / 2, block.Y + 10); ui.Key('C', ctrl: true);
         Check(ui.View.SwitchDifficulty(1), "Switch to paste target"); ui.Paint();

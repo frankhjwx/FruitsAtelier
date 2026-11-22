@@ -138,7 +138,9 @@ must not copy or split its slider geometry text while resolving their samples.
 
 Hitsounding move gestures retain selected note markers, addition samples or SB samples
 at pointer-down. Pointer movement updates candidate times; rendering draws translucent
-ghosts over committed content without rebuilding conversion or export. Release submits
+previews without rebuilding conversion or export. Sound previews reuse the normal
+sound renderer, with retained source tags and a time offset, so Precise HS keeps
+its duration and waveform while the original drawing follows the pointer. Release submits
 one edit, while cancellation and difficulty retirement discard the gesture snapshots.
 Keyboard/wheel navigation and edge-scroll frames update those same candidates from
 their original time anchors. Edge scrolling uses the shared desktop frame scheduler
@@ -434,3 +436,11 @@ Timing export includes effective beat length and duration in its cache key;
 red-point restoration depends on the final slider end. Creation defaults do not
 change existing parent geometry. The authoring timing lookup and beat grid
 remain independent of generated Aspire red points.
+
+Storyboard file-drop hover retains a single candidate tag and snapped time. It
+uses the waveform cache and performs no resource copying or full-map conversion.
+Accepted drops capture bounded encoded audio once; history and clipboard share
+that immutable payload. Save workers materialize referenced copies and collect
+protected resource references once per mapset when cleanup is needed. Returning
+library files to their current directory does not start an I/O task or invalidate
+the file list and audio cache.

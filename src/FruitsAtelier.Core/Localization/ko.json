@@ -766,7 +766,12 @@
   "files.skin": "스킨 열기",
   "project.new": "새 프로젝트",
   "project.add": "새 난이도 추가",
-  "project.import": ".osu 난이도 가져오기…",
+  "project.import": "난이도 가져오기…",
+  "project.importDifficultyOpenFirst": "난이도를 가져오기 전에 비트맵 프로젝트를 열어 주세요.",
+  "project.importDifficultyConflict": "‘{0}’ 난이도가 이미 있습니다",
+  "project.importDifficultyAmbiguous": "이름이 같은 난이도가 여러 개 있습니다. 덮어쓸 탭을 선택한 다음 다시 가져오세요.",
+  "project.importDifficultyOverwrite": "난이도 덮어쓰기",
+  "project.importDifficultyCreate": "새 난이도 만들기",
   "project.importResourcesRequired": "리소스 디렉터리가 있는 프로젝트를 연 후 .osu 난이도를 가져오세요.",
   "project.defaultDifficulty": "난이도 {0}",
   "project.selector": "{0}/{1} · {2}{3}",
@@ -2523,5 +2528,8 @@
   "shortcuts.command.previousParent": "Select Previous Note",
   "shortcuts.command.nextParent": "Select Next Note",
   "shortcuts.description.previousParent": "Select the previous sound-editable note from the current selection.",
-  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection."
+  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection.",
+  "sync.mode.title": "How would you like to synchronize?",
+  "sync.mode.auto": "Auto Resolve non-object metadata changes for me",
+  "sync.mode.detailed": "Resolve individual changes"
 }

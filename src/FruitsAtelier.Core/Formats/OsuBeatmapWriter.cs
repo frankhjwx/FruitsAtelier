@@ -385,8 +385,8 @@ public static class OsuBeatmapWriter
     {
         var original = document.TimingPoints.Select(t => t.DeepClone()).ToList();
         if (original.Count == 0) original.Add(new TimingPoint { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs });
-        // Timing edits can append earlier points; stable sorting retains tied sample/SV precedence.
-        original = original.OrderBy(p => p.TimeMs).ToList();
+        // Match lookup precedence even when editing appends points with earlier source orders.
+        original = original.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToList();
         if (generated.Count == 0) return original;
         var emitted = new MapDocument { BeatLengthMs = document.BeatLengthMs, TimingOffsetMs = document.TimingOffsetMs };
         emitted.TimingPoints.AddRange(original.Select(t => t.DeepClone()));
@@ -420,7 +420,9 @@ public static class OsuBeatmapWriter
             var restoreState = originalLookup.At(double.IsFinite(restoreTime) ? restoreTime : start);
             bool needsRestore = double.IsFinite(restoreTime)
                 && Math.Abs(restoreState.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9;
-            if (changesSv)
+            bool duplicateGreens = original.Skip(LowerBound(originalTimes, start))
+                .TakeWhile(p => p.TimeMs == start).Count(p => !p.Uninherited) > 1;
+            if (changesSv || duplicateGreens)
                 OverrideInherited(emitted.TimingPoints, template, start,
                     current.GenerateTicks || differsFromOriginal ? -100 / first.SliderVelocityMultiplier : double.NaN);
             if (needsRestore)

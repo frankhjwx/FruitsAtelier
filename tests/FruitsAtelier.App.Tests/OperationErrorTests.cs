@@ -10,6 +10,7 @@ internal static class OperationErrorTests
         MacCallbackRecovery();
         MacRecoveryClose();
         RetainedPatternRecovery();
+        StoryboardAudioRecovery();
         foreach (string language in new[] { "en", "zh-CN" })
         {
             L.SetLanguage(language);
@@ -70,6 +71,41 @@ internal static class OperationErrorTests
             }
         }
         Console.WriteLine("PASS bounded render recovery and retained unsaved project copies");
+    }
+
+    private static void StoryboardAudioRecovery()
+    {
+        string folder = Path.GetFullPath("artifacts/tests/render-recovery/audio-" + Guid.NewGuid());
+        Directory.CreateDirectory(folder);
+        string source = Path.Combine(folder, "input.ogg");
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "quiet-tone.ogg"), source);
+        var audio = FruitsAtelier.Core.StoryboardAudio.Capture(source);
+        var map = new FruitsAtelier.Core.MapDocument
+        {
+            SourcePath = Path.Combine(folder, FruitsAtelier.Core.WorkspaceProject.ResourceRootMarker)
+        };
+        map.StoryboardAudio[audio.RelativePath] = audio;
+        var events = new FruitsAtelier.Core.OsuSection { Name = "Events" };
+        events.Lines.Add($"Sample,1000,0,\"{audio.RelativePath}\",100");
+        map.OriginalSections.Add(events);
+        var ui = new Ui(false);
+        ui.LoadDocument(map);
+        File.Delete(source);
+        string path = Path.Combine(folder, "audio.catchproj");
+        ui.View.SaveRecoveryCopy(path);
+        var recovered = FruitsAtelier.Core.ProjectSerializer.ReadProjectFile(path).Difficulties.Single().Document;
+        var savedAudio = recovered.StoryboardAudio.Single().Value;
+        savedAudio.Cache(Path.Combine(folder, audio.RelativePath));
+        if (savedAudio.Data is null || !savedAudio.Data.SequenceEqual(audio.Data!)
+            || !File.Exists(savedAudio.SourcePath) || File.Exists(Path.Combine(folder, audio.RelativePath))
+            || ui.View.Document.StoryboardAudio.Single().Value.SourcePath != source)
+            throw new Exception("Recovery lost captured audio or modified the original resource locations.");
+        var files = Directory.GetFiles(folder, "*", SearchOption.AllDirectories).Order().ToArray();
+        try { ui.View.SaveRecoveryCopy(path); throw new Exception("Recovery overwrote an existing destination."); }
+        catch (IOException) { }
+        if (!files.SequenceEqual(Directory.GetFiles(folder, "*", SearchOption.AllDirectories).Order()))
+            throw new Exception("Failed recovery left partial audio files.");
+        ui.View.StopFileMonitoring();
     }
 
     private static void ErrorCleanupFailure()

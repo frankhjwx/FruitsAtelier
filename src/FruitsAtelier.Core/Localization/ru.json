@@ -766,7 +766,12 @@
   "files.skin": "Открыть Скин",
   "project.new": "Новый проект",
   "project.add": "Добавить новую сложность",
-  "project.import": "Импортировать сложность .osu…",
+  "project.import": "Импортировать сложность…",
+  "project.importDifficultyOpenFirst": "Перед импортом сложности откройте проект карты.",
+  "project.importDifficultyConflict": "Сложность «{0}» уже существует",
+  "project.importDifficultyAmbiguous": "У нескольких сложностей такое имя. Выберите вкладку для замены и повторите импорт.",
+  "project.importDifficultyOverwrite": "Заменить сложность",
+  "project.importDifficultyCreate": "Создать сложность",
   "project.importResourcesRequired": "Перед импортом сложности .osu откройте проект с папкой ресурсов.",
   "project.defaultDifficulty": "Сложность {0}",
   "project.selector": "{0}/{1} · {2}{3}",
@@ -2523,5 +2528,8 @@
   "shortcuts.command.previousParent": "Select Previous Note",
   "shortcuts.command.nextParent": "Select Next Note",
   "shortcuts.description.previousParent": "Select the previous sound-editable note from the current selection.",
-  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection."
+  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection.",
+  "sync.mode.title": "How would you like to synchronize?",
+  "sync.mode.auto": "Auto Resolve non-object metadata changes for me",
+  "sync.mode.detailed": "Resolve individual changes"
 }

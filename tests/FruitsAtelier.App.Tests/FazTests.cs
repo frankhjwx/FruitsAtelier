@@ -10,6 +10,8 @@ internal static class FazTests
     {
         string root = Path.GetFullPath(Path.Combine("artifacts/tests/faz", Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(root);
+        DeferredStoryboardAudio(root);
+        RootlessImportedStoryboardAudio(root);
         var source = Settings("sender"); Directory.CreateDirectory(source.Songs);
         string folder = Path.Combine(source.Songs, "Fixture"); Directory.CreateDirectory(folder);
         File.WriteAllBytes(Path.Combine(folder, "audio.wav"), new byte[44]);
@@ -315,6 +317,111 @@ internal static class FazTests
 
         LibrarySettings Settings(string name) => new() { Workspace = Path.Combine(root, name, "Workspace"), Songs = Path.Combine(root, name, "Songs") };
     }
+    private static void DeferredStoryboardAudio(string root)
+    {
+        foreach (bool secondDifficulty in new[] { false, true })
+        foreach (bool deleteSource in new[] { false, true })
+        {
+            string directory = Path.Combine(root, $"deferred-{secondDifficulty}-{deleteSource}");
+            string resources = Path.Combine(directory, "song"); Directory.CreateDirectory(resources);
+            string source = Path.Combine(directory, "sample.ogg");
+            byte[] data = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "quiet-tone.ogg"));
+            File.WriteAllBytes(source, data);
+            var audio = StoryboardAudio.Capture(source);
+            var document = new MapDocument { SourcePath = Path.Combine(resources, "second.osu") };
+            document.StoryboardAudio[audio.RelativePath] = audio;
+            var events = new OsuSection { Name = "Events" };
+            events.Lines.Add($"Sample,1000,0,\"{audio.RelativePath}\",100");
+            document.OriginalSections.Add(events);
+            var project = new BeatmapProject { Name = "Deferred" };
+            if (secondDifficulty)
+                project.Difficulties.Add(new() { Id = Guid.NewGuid(), Name = "First", Document = new() { SourcePath = Path.Combine(resources, "first.osu") } });
+            var difficulty = new ProjectDifficulty { Id = Guid.NewGuid(), Name = "Second", Document = document };
+            project.Difficulties.Add(difficulty);
+            if (deleteSource) File.Delete(source);
+            foreach (bool complete in new[] { false, true })
+            {
+                string archive = Path.Combine(directory, $"export-{complete}.faz");
+                FazArchive.Export(project, archive, complete, false, Path.Combine(directory, "workspace"));
+                using var zip = ZipFile.OpenRead(archive);
+                using var embedded = complete ? new ZipArchive(zip.GetEntry("beatmap.osz")!.Open(), ZipArchiveMode.Read) : null;
+                var entry = (embedded ?? zip).Entries.Single(e => e.FullName.EndsWith(audio.RelativePath, StringComparison.Ordinal));
+                using var bytes = new MemoryStream(); using (var stream = entry.Open()) stream.CopyTo(bytes);
+                Check(bytes.ToArray().SequenceEqual(data), "FAZ retains deferred storyboard bytes across source deletion and shared difficulty roots");
+            }
+            string fad = Path.Combine(directory, "export.fad");
+            FadArchive.Export(difficulty, fad, false, Path.Combine(directory, "workspace"));
+            using (var zip = ZipFile.OpenRead(fad))
+                Check(zip.Entries.All(e => !e.FullName.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase)), "FAD remains data-only with deferred storyboard audio");
+            Check(!File.Exists(Path.Combine(resources, audio.RelativePath)) && ReferenceEquals(document.StoryboardAudio[audio.RelativePath], audio)
+                && audio.Data!.SequenceEqual(data), "Package export preserves the live captured resource without materializing it in the source mapset");
+        }
+    }
+    private static void RootlessImportedStoryboardAudio(string root)
+    {
+        string directory = Path.Combine(root, "rootless-import"); Directory.CreateDirectory(directory);
+        string workspace = Path.Combine(directory, "workspace"), media = Path.Combine(directory, "media");
+        Directory.CreateDirectory(media);
+        byte[] data = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "quiet-tone.ogg"));
+        string source = Path.Combine(directory, "source.ogg"); File.WriteAllBytes(source, data);
+        var audio = StoryboardAudio.Capture(source);
+        var guest = new MapDocument { SourcePath = Path.Combine(media, WorkspaceProject.ResourceRootMarker) };
+        SongSetup.Set(guest, "Metadata", "Title", "Song"); SongSetup.Set(guest, "Metadata", "Artist", "Artist");
+        SongSetup.Set(guest, "Metadata", "Version", "Guest");
+        guest.StoryboardAudio[audio.RelativePath] = audio;
+        var events = new OsuSection { Name = "Events" };
+        events.Lines.Add($"Sample,1000,0,\"{audio.RelativePath}\",100"); guest.OriginalSections.Add(events);
+        string fad = Path.Combine(directory, "guest.fad");
+        FadArchive.Export(new() { Id = Guid.NewGuid(), Name = "Guest", Document = guest }, fad, false, workspace);
+        using (var zip = ZipFile.OpenRead(fad))
+            Check(zip.Entries.All(e => !e.FullName.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase)), "rootless import fixture remains a data-only FAD");
+        var host = new MapDocument();
+        SongSetup.Set(host, "Metadata", "Title", "Song"); SongSetup.Set(host, "Metadata", "Artist", "Artist");
+        SongSetup.Set(host, "Metadata", "Version", "Base");
+        var session = WorkspaceProject.Create(workspace, BeatmapProject.FromDocuments([host]), "");
+        BeatmapProject rootless;
+        using (var package = FadArchive.Prepare(fad, new LibrarySettings { Workspace = workspace, Songs = "" }))
+            rootless = new BeatmapProject { Name = "Rootless", Difficulties = [FadArchive.PlanImport(package, session.Project).Difficulty] };
+        Check(rootless.Difficulties.Single().Document.SourcePath is null && rootless.Difficulties.Single().Document.AudioPath is null,
+            "data-only FAD planning can supply registered audio without a resource root");
+        var ui = new Ui(false); ui.Resize(1440, 900); ui.View.LibrarySettings.Workspace = workspace;
+        ui.View.LoadWorkspace(session); ui.PaintUntilReady(); ui.View.BeginFadImport(fad);
+        var deadline = DateTime.UtcNow.AddSeconds(20);
+        do
+        {
+            ui.Paint();
+            if (ui.View.DifficultyCount == 2 && ui.View.Document.StoryboardAudio.Values.Any(a => a.Data is { Length: > 0 })) break;
+            Thread.Sleep(5);
+        } while (DateTime.UtcNow < deadline);
+        Check(ui.View.DifficultyCount == 2 && Path.GetFileName(ui.View.Document.SourcePath) == WorkspaceProject.ResourceRootMarker && ui.View.Document.AudioPath is null
+            && ui.View.Document.StoryboardAudio[audio.RelativePath].Data!.SequenceEqual(data), "FAD import into a blank host prepares readable storyboard audio with a local resource root");
+        ui.PaintUntilReady();
+        foreach (bool complete in new[] { false, true })
+        {
+            var snapshot = rootless;
+            if (complete)
+            {
+                snapshot.Difficulties.Single().Document.StoryboardAudio[audio.RelativePath].Cache("");
+                File.Delete(source);
+            }
+            string archive = Path.Combine(directory, $"rootless-{complete}.faz");
+            FazArchive.Export(snapshot, archive, complete, false, workspace);
+            using var zip = ZipFile.OpenRead(archive);
+            using var embedded = complete ? new ZipArchive(zip.GetEntry("beatmap.osz")!.Open(), ZipArchiveMode.Read) : null;
+            var entry = (embedded ?? zip).Entries.Single(e => e.FullName.EndsWith(audio.RelativePath, StringComparison.Ordinal));
+            using var bytes = new MemoryStream(); using (var stream = entry.Open()) stream.CopyTo(bytes);
+            Check(bytes.ToArray().SequenceEqual(data), "rootless FAZ exports retain source-only and cached storyboard audio");
+        }
+        Check(rootless.Difficulties.Single().Document.SourcePath is null && !File.Exists(Path.Combine(session.Directory, audio.RelativePath)), "rootless export leaves the source context unchanged");
+        Check(ui.View.SaveWorkspace(), $"imported storyboard audio saves after deleting its original source: opening={ui.View.LibraryOpening}, synchronization={ui.View.SynchronizationVisible}, error={ui.View.ErrorVisible}, status={ui.View.StatusMessage}");
+        var reopened = WorkspaceProject.Open(session.Directory).Project.Difficulties.Single(d => d.Name == "Guest").Document;
+        string managed = Path.Combine(Path.GetDirectoryName(reopened.SourcePath)!, audio.RelativePath);
+        Check(File.ReadAllBytes(managed).SequenceEqual(data), "imported storyboard audio survives ordinary save and reopen without music or original source");
+        Check(WorkspaceSynchronization.Target(ui.View.WorkspaceSession!.Manifest.Difficulties.Single(d => d.Id == ui.View.CaptureProject().Difficulties.Last().Id)) is null,
+            "imported audio root does not create a Songs association");
+        ui.View.StopFileMonitoring();
+    }
+
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
     private static void Throws(Action action, string message)
     {

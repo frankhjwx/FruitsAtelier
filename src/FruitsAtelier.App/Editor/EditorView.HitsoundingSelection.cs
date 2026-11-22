@@ -135,12 +135,25 @@ public sealed partial class EditorView
         hitsoundingClipboardContainsNotes = false;
         var entries = hitsoundingMultiSelection.Where(k => k.Lane is >= 1 and <= 4 && hitsoundingNoteLookup.ContainsKey((k.Id, k.Event)))
             .Select(k => (Note: hitsoundingNoteLookup[(k.Id, k.Event)], k.Lane)).OrderBy(e => e.Note.TimeMs).ToArray();
-        hitsoundingClipboard = []; hitsoundingStoryboardClipboard = [];
+        hitsoundingClipboard = []; hitsoundingStoryboardClipboard = []; hitsoundingStoryboardClipboardAudio.Clear();
         hitsoundingClipboardSources.Clear();
         hitsoundingClipboardPlayhead = playhead;
         hitsoundingClipboardSources.UnionWith(entries.Select(e => (e.Note.SourceId, e.Note.EventIndex)));
         if (entries.Length == 0 && hitsoundingStoryboardSelection.Count == 0) return;
+        // Sound copies are internal; retire any timing text previously copied to the system clipboard.
+        RequestCopyText?.Invoke("");
         double start = Math.Min(entries.FirstOrDefault().Note?.TimeMs ?? double.PositiveInfinity, hitsoundingStoryboardSelection.Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min());
+        string? root = StoryboardMediaDirectory(Document);
+        if (root is not null)
+            foreach (var sample in hitsoundingStoryboardSelection)
+            {
+                string relative = Path.GetRelativePath(root, sample.Path).Replace('\\', '/');
+                if (Document.StoryboardAudio.TryGetValue(relative, out var audio))
+                {
+                    audio.Cache(sample.Path);
+                    hitsoundingStoryboardClipboardAudio[sample.Path] = audio;
+                }
+            }
         hitsoundingStoryboardClipboard = hitsoundingStoryboardSelection.Select(s => s with { TimeMs = s.TimeMs - start }).ToArray();
         hitsoundingClipboard = entries.Select(e => new HitsoundingCopy(e.Note.TimeMs - start, e.Lane, hitsoundingResolver!.Describe(e.Note), HitsoundingTimingIndex(e.Note.TimeMs), hitsoundingResolver.EventSettings(e.Note).InheritedFields.HasFlag(InheritedSampleFields.Index))).ToArray();
     }
@@ -287,7 +300,7 @@ public sealed partial class EditorView
         var sources = hitsoundingMoveSources;
         bool moved = hitsoundingMoveActive;
         hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
-        hitsoundingMoveSources = []; hitsoundingMoveCopies = [];
+        hitsoundingMoveSources = []; hitsoundingMoveCopies = []; hitsoundingMoveTags = [];
         if (!hitsoundingNoteLookup.TryGetValue((source.Id, source.Event), out var note)) return true;
         if (!moved) return true;
         if (targetTime == note.TimeMs && (sources.Length != 1 || target is null || target.SourceId == source.Id && target.EventIndex == source.Event)) return true;

@@ -4,6 +4,137 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: stream sound preservation is revalidated after timing choices", () => Run(f =>
+        {
+            var document = f.Diff.Document; document.Fruits.Clear();
+            var track = new CurveTrack { StreamSnapDivisor = 4, SourceOrder = 0 };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 2000, X = 400 }]);
+            document.Tracks.Add(track);
+            var output = OsuBeatmapWriter.Serialize(document);
+            File.WriteAllText(f.Source, output.Text);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, document, f.Session.Directory,
+                output.Text, output.ObjectSources);
+            string incoming = output.Text.Replace("0,500,4,1,0,100,1,0", "0,250,4,1,0,100,1,0");
+            foreach (string line in WorkspaceSynchronization.ObjectLines(output.Text))
+            { var parts = line.Split(','); parts[4] = "2"; incoming = incoming.Replace(line, string.Join(',', parts)); }
+            File.WriteAllText(f.Source, incoming);
+            var merge = f.Merge();
+            string objects = merge.Conflicts.Single(c => c.Key.StartsWith("$objects:")).Key;
+            Check(merge.RequiresAuthoringReview(objects) && !merge.HasAutomaticObjectChanges,
+                "timing changes leave potentially incompatible stream sounds for explicit object review");
+            var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => true);
+            var external = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(external).Text)
+                .SequenceEqual(WorkspaceSynchronization.ObjectLines(incoming)), "explicit external choices retain the nine incoming fruits");
+            choices["TimingPoints/"] = false;
+            var preserved = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(TrackEquals(preserved.Tracks.Single(), track)
+                && WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(preserved).Text)
+                    .SequenceEqual(WorkspaceSynchronization.ObjectLines(incoming)), "local timing allows exact stream preservation with incoming sounds");
+            choices["TimingPoints/"] = true; choices[objects] = false;
+            var retained = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(retained.Tracks.Single().Id == track.Id && retained.Fruits.Count == 0,
+                "retaining FA objects keeps stream authoring when external timing is chosen");
+        }));
+        yield return ("Sync: automatic stream sounds retain editable authoring and per-event samples", () =>
+        {
+            foreach (bool uniform in new[] { true, false }) Run(f =>
+            {
+                var document = f.Diff.Document;
+                document.Fruits.Clear();
+                var track = new CurveTrack { StreamSnapDivisor = 4, Kind = CurveKind.Bezier, SourceOrder = 0 };
+                track.Nodes.AddRange([new() { TimeMs = 1000, X = 100, HandleOut = new(150, 40) },
+                    new() { TimeMs = 2000, X = 400, HandleIn = new(-100, -30) }]);
+                document.Tracks.Add(track);
+                var output = OsuBeatmapWriter.Serialize(document);
+                File.WriteAllText(f.Source, output.Text);
+                f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, document, f.Session.Directory,
+                    output.Text, output.ObjectSources);
+                string incoming = output.Text;
+                var lines = WorkspaceSynchronization.ObjectLines(output.Text);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    var parts = lines[i].Split(',');
+                    parts[4] = uniform || i % 2 == 0 ? "2" : "8";
+                    if (!uniform) parts[5] = i % 2 == 0 ? "2:3:4:65:" : "0:0:0:0:";
+                    incoming = incoming.Replace(lines[i], string.Join(',', parts));
+                }
+                File.WriteAllText(f.Source, incoming);
+                var merge = f.Merge();
+                Check(!merge.RequiresResolution, "representable sound edits import automatically");
+                var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+                Check(resolved.Tracks.Count == 1 && resolved.Fruits.Count == 0 && TrackEquals(resolved.Tracks[0], track),
+                    "automatic sounds preserve stream identity, anchors, handles and settings");
+                Check(WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(resolved).Text)
+                    .SequenceEqual(WorkspaceSynchronization.ObjectLines(incoming)), "stream event samples reproduce incoming output");
+                var reopened = ProjectSerializer.Read(ProjectSerializer.Serialize(resolved, f.Source), f.Source);
+                Check(TrackEquals(reopened.Tracks.Single(), track)
+                    && WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(reopened).Text)
+                        .SequenceEqual(WorkspaceSynchronization.ObjectLines(incoming)), "stream authoring and event samples survive project reload");
+            });
+        });
+        yield return ("Sync: unrepresentable stream samples require review without flattening authoring", () => Run(f =>
+        {
+            var document = f.Diff.Document;
+            document.Fruits.Clear();
+            document.BeatLengthMs = document.TimingPoints[0].BeatLengthMs = 1;
+            var track = new CurveTrack { StreamSnapDivisor = 4, SourceOrder = 0 };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1002, X = 400 }]);
+            document.Tracks.Add(track);
+            var output = OsuBeatmapWriter.Serialize(document);
+            File.WriteAllText(f.Source, output.Text);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, document, f.Session.Directory,
+                output.Text, output.ObjectSources);
+            string incoming = output.Text;
+            var lines = WorkspaceSynchronization.ObjectLines(output.Text);
+            Check(lines.GroupBy(line => line.Split(',')[2]).Any(g => g.Count() > 1), "fixture contains stream events sharing a published millisecond");
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var parts = lines[i].Split(','); parts[4] = i % 2 == 0 ? "2" : "8";
+                incoming = incoming.Replace(lines[i], string.Join(',', parts));
+            }
+            File.WriteAllText(f.Source, incoming);
+            var merge = f.Merge();
+            Check(merge.RequiresResolution && !merge.HasAutomaticObjectChanges,
+                "samples that cannot be reproduced independently at one published millisecond remain an explicit conflict");
+            var retained = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => false));
+            Check(TrackEquals(retained.Tracks.Single(), track) && retained.Fruits.Count == 0,
+                "retaining FA leaves stream authoring intact after rejected automatic preservation");
+        }));
+        yield return ("Sync: external sounds and rounded import times merge without losing local edits", () => Run(f =>
+        {
+            string original = Fixture().Replace("1000,1,0", "1000.75,1,0");
+            File.WriteAllText(f.Source, original);
+            f.Diff.Document = OsuBeatmapReader.ReadFile(f.Source);
+            var entry = f.Session.Manifest.Difficulties[0];
+            entry.Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory);
+            string incoming = original.Replace("1000.75,1,0", "1001,1,2").Replace("1500,1,0", "1500,1,8");
+            File.WriteAllText(f.Source, incoming);
+            f.Diff.Document.Fruits[2].X = 220;
+            var merge = f.Merge();
+            Check(!merge.RequiresResolution, "unrelated local edits do not block external sounds or rounded fractional heads");
+            var result = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+            var lines = WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(result).Text);
+            Check(lines[0].Contains("1001,5,2") && lines[1].Contains("1500,1,8") && result.Fruits.Any(fruit => fruit.X == 220),
+                "external sounds and rounded times apply while unrelated local geometry survives");
+            Check(WorkspaceSynchronization.CompareWithoutBaseline(f.Diff.Document, merge.External, f.Session.Directory, true).RequiresResolution,
+                "without a shared baseline, sounds still require review");
+            f.Diff.Document.Fruits[1].OriginalLine = "150,192,1500,1,8,0:0:0:0:";
+            Check(!f.Merge().RequiresResolution, "identical sound edits on both sides need no choice");
+            f.Diff.Document.Fruits[1].OriginalLine = "150,192,1500,1,0,0:0:0:0:";
+            f.Diff.Document.Fruits[0].OriginalLine = "100,192,1000.75,1,4,0:0:0:0:";
+            Check(f.Merge().RequiresResolution, "different local and external sounds remain conflicts");
+            f.Diff.Document.Fruits[0].OriginalLine = "100,192,1000.75,1,0,0:0:0:0:";
+            f.Diff.Document.Fruits[0].X++;
+            Check(f.Merge().RequiresResolution, "concurrent local edits to the same object remain conflicts");
+            f.Diff.Document = result;
+            WorkspaceSynchronization.Accept(f.Session, entry, merge.External, result, true, review: merge, choices: new Dictionary<string, bool>());
+            WorkspaceProject.Save(f.Session, f.Session.Project);
+            var reopened = WorkspaceProject.Open(f.Session.Directory);
+            Check(!WorkspaceSynchronization.Merge(reopened.Manifest.Difficulties[0], reopened.Project.Difficulties[0].Document,
+                WorkspaceSynchronization.ReadStable(f.Source), reopened.Directory, true).RequiresResolution,
+                "automatic sounds remain accepted after restart");
+        }));
         yield return ("Sync: stable timing precision and section reconstruction do not create authoring edits", () => Run(f =>
         {
             string text = Fixture().Replace("0,500,4,1,0,100,1,0", "315,434.7826086956522,4,2,1,50,1,0");
@@ -80,7 +211,11 @@ internal static class SynchronizationTests
             File.WriteAllText(f.Source, text.Replace("1,140", "1,280"));
             Check(f.Merge().RequiresResolution, "changed duration and nested objects require review");
             File.WriteAllText(f.Source, text.Replace("2500,2,0", "2500,2,8"));
-            Check(f.Merge().RequiresResolution, "object hitsound changes require review");
+            var soundMerge = f.Merge();
+            Check(!soundMerge.RequiresResolution, "external-only object hitsounds import automatically");
+            var soundResult = WorkspaceSynchronization.Resolve(soundMerge, new Dictionary<string, bool>());
+            Check(WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(soundResult).Text).Any(l => l.Contains("2500,2,8")),
+                "automatic resolution applies the external hitsound");
         }));
         yield return ("Sync: timing normalization preserves generated gameplay", () => Run(f =>
         {
@@ -651,7 +786,7 @@ internal static class SynchronizationTests
         {
             string[] lines = [
                 "100,192,1000,2,0,L|180:220,1,129.68676013495843,4|0,0:0|0:0,0:0:0:0:",
-                "200,192,2000,2,0,L|280:220,1,209.99999999999994,,,0:0:0:0:",
+                "200,192,2000,2,0,L|280:220,1,209.99999999999994,0|0,0:0|0:0,0:0:0:0:",
                 "300,192,3000,2,0,L|380:220,1,78.75000300407498,,,0:0:0:0:",
                 "400,192,4000,1,2,0:0:0:0:"];
             string prefix = Fixture().Split("[HitObjects]")[0] + "[HitObjects]\n";
@@ -672,7 +807,11 @@ internal static class SynchronizationTests
                 rewritten[0].Replace("0:0|0:0", "1:2|0:0") })
             {
                 File.WriteAllText(f.Source, prefix + string.Join('\n', new[] { changed }.Concat(rewritten.Skip(1))));
-                Check(f.Merge().Conflicts.Count(c => c.Key.StartsWith("$objects:")) == 1, "non-default sound changes remain visible");
+                var merge = f.Merge();
+                Check(!merge.Conflicts.Any(c => c.Key.StartsWith("$objects:")), "external-only sound changes import automatically");
+                var resolved = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => false));
+                Check(WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(resolved).Text)[0] == WorkspaceSynchronization.ObjectLines(prefix + changed)[0],
+                    "non-default external sounds survive automatic import");
             }
             rewritten[0] = rewritten[0].Replace("180:220", "160:220");
             rewritten[3] = rewritten[3].Replace("400,192", "399,193");
@@ -1337,6 +1476,12 @@ internal static class SynchronizationTests
     private static string TimingValues(IEnumerable<TimingPoint> points) => string.Join('\n', points.Select(t => string.Join(',',
         t.TimeMs.ToString("R", System.Globalization.CultureInfo.InvariantCulture), t.BeatLengthMs.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
         t.Meter, t.SampleSet, t.SampleIndex, t.Volume, t.Uninherited, t.Effects)));
+    private static bool TrackEquals(CurveTrack left, CurveTrack right)
+    {
+        var a = new MapDocument(); a.Tracks.Add(left);
+        var b = new MapDocument(); b.Tracks.Add(right);
+        return a.ContentEquals(b);
+    }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     private static void Reject(Action action) { try { action(); } catch (Exception e) when (e is IOException or InvalidOperationException) { return; } throw new Exception("Expected rejection"); }
     private static void Set(MapDocument document, string key, string value)

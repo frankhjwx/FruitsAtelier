@@ -105,6 +105,7 @@ internal static class SliderTimingTests
 
     public static void SameTimeOverrideReplacesGreensAndPreservesRed()
     {
+        AppendedSampleGreenPreservesEffectiveSv();
         var document = Map();
         document.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = -50, Uninherited = false, SourceOrder = 1, SampleSet = 2, Volume = 35 });
         document.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = -100, Uninherited = false, SourceOrder = 2, SampleSet = 3, SampleIndex = 7, Volume = 65, Effects = 1 });
@@ -123,6 +124,28 @@ internal static class SliderTimingTests
             "Override did not inherit the effective green point's sample/effect state.");
         Near(1000, raw.Duration(1000, 0)); Near(1000, raw.Duration(1000, 1));
         Check(raw.Timing.All(p => p.Time <= 1000), "Unused original SV was restored after replacing the head.");
+    }
+
+    private static void AppendedSampleGreenPreservesEffectiveSv()
+    {
+        var document = Map();
+        AddTrack(document, 1000, 2000, 0, 400);
+        double sv = CatchStreamConverter.Convert(document, false).Sliders.Single().SliderVelocityMultiplier;
+        document.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = -100 / sv,
+            Uninherited = false, SourceOrder = 7, SampleSet = 3, SampleIndex = 2, Volume = 50 });
+        // An appended Inspector point can have a lower source order than imported timing.
+        document.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = -100,
+            Uninherited = false, SourceOrder = 0, SampleSet = 2, Volume = 5 });
+        var before = document.DeepClone();
+        var result = OsuBeatmapWriter.Serialize(document, false);
+        var raw = RawMap.Parse(result.Text);
+        Near(1000, raw.Duration(1000, 0));
+        Near(1000, raw.Duration(1000, 1));
+        var green = raw.Timing.Single(p => p.Time == 1000 && !p.Red);
+        Check(green.Fields[3] == "3" && green.Fields[4] == "2" && green.Fields[5] == "50",
+            "Export must preserve the effective sample state when consolidating equal-time greens.");
+        Check(result.ObjectSequenceMatches && document.ContentEquals(before),
+            "Sample timing changed playable events or authored content.");
     }
 
     public static void NaturalBoundaryIsNotOverwrittenByRestore()

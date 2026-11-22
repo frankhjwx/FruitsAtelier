@@ -53,13 +53,20 @@ public static class FazArchive
         try
         {
             var project = ProjectSerializer.ReadProject(ProjectSerializer.Serialize(snapshot));
+            // Serialization omits captured bytes, which may be the only remaining copy before the first save.
+            foreach (var difficulty in project.Difficulties)
+                foreach (var audio in snapshot.Difficulties.Single(d => d.Id == difficulty.Id).Document.StoryboardAudio)
+                    difficulty.Document.StoryboardAudio[audio.Key] = audio.Value;
             var manifest = new FazManifest { Complete = complete, Format = format };
             var resourceGroups = new Dictionary<string, string>(StringComparer.Ordinal);
+            static string ResourceGroup(MapDocument d) => (d.SourcePath is null ? "" : Path.GetDirectoryName(d.SourcePath)) + "\0" + d.AudioPath + "\0" + OsuBeatmapReader.Setting(d, "General", "AudioFilename");
+            var groupDocuments = project.Difficulties.GroupBy(d => ResourceGroup(d.Document))
+                .ToDictionary(g => g.Key, g => g.Select(d => d.Document).ToArray(), StringComparer.Ordinal);
             if (complete) LibraryOperations.ExportOsz(snapshot, Path.Combine(staging, "beatmap.osz"), compensate);
             foreach (var difficulty in project.Difficulties)
             {
                 var d = difficulty.Document;
-                string group = (d.SourcePath is null ? "" : Path.GetDirectoryName(d.SourcePath)) + "\0" + d.AudioPath + "\0" + OsuBeatmapReader.Setting(d, "General", "AudioFilename");
+                string group = ResourceGroup(d);
                 bool first = !resourceGroups.TryGetValue(group, out var relative);
                 if (first) resourceGroups[group] = relative = complete ? "song" : "resources/" + difficulty.Id.ToString("N");
                 manifest.ResourceRoots[difficulty.Id] = relative!;
@@ -70,6 +77,7 @@ public static class FazArchive
                     if (includeResources)
                     {
                         BeatmapResources.Copy(d, resources, d);
+                        HitsoundResourcePlan.StoryboardCopies(groupDocuments[group], resources).Apply();
                         LibraryOperations.CopyArchiveExtras(d, resources);
                     }
                     File.WriteAllText(Path.Combine(resources, WorkspaceProject.ResourceRootMarker), "FruitsAtelier resource root");

@@ -83,12 +83,13 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
         {
             // Native WAV/MP3 decoding and managed OGG conversion happen only on this loader worker.
             string? path = sound.FilePath;
-            if (path is null || Path.GetExtension(path).Equals(".ogg", StringComparison.OrdinalIgnoreCase)
+            if (sound.Data is not null || path is null || Path.GetExtension(path).Equals(".ogg", StringComparison.OrdinalIgnoreCase)
                 || !File.Exists(path) || new FileInfo(path).Length > 16 * 1024 * 1024)
             {
                 var wave = Load(sound);
                 if (wave.Length == 0) return;
-                temporary = Path.Combine(Path.GetTempPath(), "fa-hitsound-" + Guid.NewGuid() + ".wav");
+                string extension = path is not null && Path.GetExtension(path).Equals(".mp3", StringComparison.OrdinalIgnoreCase) ? ".mp3" : ".wav";
+                temporary = Path.Combine(Path.GetTempPath(), "fa-hitsound-" + Guid.NewGuid() + extension);
                 File.WriteAllBytes(temporary, wave); path = temporary;
             }
             sample = OpenSample(path);
@@ -189,9 +190,9 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
         {
             try
             {
-                if (new FileInfo(sound.FilePath).Length > 16 * 1024 * 1024) return [];
-                if (!Path.GetExtension(sound.FilePath).Equals(".ogg", StringComparison.OrdinalIgnoreCase)) return File.ReadAllBytes(sound.FilePath);
-                using var reader = new VorbisReader(sound.FilePath);
+                if ((sound.Data?.Length ?? new FileInfo(sound.FilePath).Length) > 16 * 1024 * 1024) return [];
+                if (!Path.GetExtension(sound.FilePath).Equals(".ogg", StringComparison.OrdinalIgnoreCase)) return sound.Data ?? File.ReadAllBytes(sound.FilePath);
+                using var reader = sound.Data is { } data ? new VorbisReader(new MemoryStream(data, false), true) : new VorbisReader(sound.FilePath);
                 if (reader.Channels is < 1 or > 8 || reader.SampleRate is < 8000 or > 192000) return [];
                 using var stream = new MemoryStream(); using var writer = new BinaryWriter(stream);
                 writer.Write("RIFF"u8); writer.Write(0); writer.Write("WAVEfmt "u8); writer.Write(16);

@@ -284,6 +284,7 @@ public sealed partial class MapDocument
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool DerandomizeDropletsForHardRock { get; set; }
     public List<double> DistanceSnapRatios { get; } = new();
+    public Dictionary<string, StoryboardAudio> StoryboardAudio { get; } = new(StringComparer.OrdinalIgnoreCase);
     public List<EventHitsound> HitsoundOverrides { get; } = new();
     public List<Fruit> Fruits { get; } = new();
     public List<CurveTrack> Tracks { get; } = new();
@@ -310,6 +311,7 @@ public sealed partial class MapDocument
         foreach (var pair in BookmarkAppearances) copy.BookmarkAppearances.Add(pair.Key, pair.Value);
         copy.DistanceSnapRatios.AddRange(DistanceSnapRatios);
         copy.HitsoundOverrides.AddRange(HitsoundOverrides);
+        foreach (var pair in StoryboardAudio) copy.StoryboardAudio.Add(pair.Key, pair.Value);
         copy.Fruits.AddRange(Fruits.Select(f => f.DeepClone()));
         copy.Tracks.AddRange(Tracks.Select(t => t.DeepClone()));
         copy.TimingPoints.AddRange(TimingPoints.Select(t => t.DeepClone()));
@@ -346,6 +348,7 @@ public sealed partial class MapDocument
 
     private bool ContentEquals(MapDocument other, bool ignoreMultiplierOverride, bool ignoreOsuDistanceSpacing)
     {
+        // Audio registrations retain undo/save resources; event paths identify the audible content.
         if (EnableSliderBpmMultiplier != other.EnableSliderBpmMultiplier || DefaultSliderBpmMultiplier != other.DefaultSliderBpmMultiplier
             || BookmarkAppearances.Count != other.BookmarkAppearances.Count
             || BookmarkAppearances.Any(pair => !other.BookmarkAppearances.TryGetValue(pair.Key, out var value) || pair.Value != value)

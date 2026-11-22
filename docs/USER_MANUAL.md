@@ -84,9 +84,11 @@ Only Catch difficulties are indexed. Importing a set does not export it to Songs
 
 ### Work with difficulties
 
-Click a difficulty tab to switch. **Ctrl+Tab** moves to the next tab; **Ctrl+Shift+Tab** moves to the previous one. The **+** button adds a blank difficulty or imports an `.osu`. A blank difficulty inherits the active difficulty's audio, timing and settings.
+Click a difficulty tab to switch. **Ctrl+Tab** moves to the next tab; **Ctrl+Shift+Tab** moves to the previous one. The **+** button adds a blank difficulty or imports an existing one. A blank difficulty inherits the active difficulty's audio, timing and settings.
 
 Importing an `.osu` difficulty preserves its metadata, including different or empty artist and title fields. A file from another directory is copied into the active difficulty's resource directory without overwriting existing files. Its relative audio, background, storyboard and sample references resolve there, including after saving and reopening. The imported file's original directory is not used as a fallback; missing project resources remain missing.
+
+Use **File → Import difficulty…** or **+ → Import difficulty…** to open a single-difficulty `.catchdiff` or `.catchdiff.catchbackup` directly in the current project. The import uses the destination difficulty's audio and resource folder when overwriting, and the active difficulty's resources when adding a new tab. It imports editable data without copying media. If the name already exists, overwrite it (undoable), create a numbered copy, or cancel. If several tabs share that name, select the intended tab before importing to enable overwrite. Save to keep the result.
 
 Right-click a tab to locate its saved file, workspace folder or associated osu! folder. Tabs show the difficulty's No Mod star rating and an unsaved-change indicator.
 
@@ -467,7 +469,7 @@ The graph shows **normal-mode** movement strain. It stays in NM when you select 
 
 ### Seek and inspect a section
 
-Click a point on the graph to seek to that time, or drag vertically to seek continuously. Use canvas Zoom to inspect the nearby pattern, enable Movement Analysis to see individual connections, or press **F5** to test the section.
+Click a point on the graph to seek to that time, or drag vertically to seek continuously. Scroll over the graph with the same step and direction as the canvas; while paused, each notch moves one Snap subdivision. Bookmarks appear as horizontal lines in their configured colours. Use canvas Zoom to inspect the nearby pattern, enable Movement Analysis to see individual connections, or press **F5** to test the section.
 
 Add a bookmark with **Ctrl+B** to revisit it. After content edits, the curve refreshes with the difficulty calculation; an unfinished drawing gesture can retain the previous complete result until the edit finishes.
 
@@ -1003,7 +1005,7 @@ Linking preserves editable project data and reviews differences against the loca
 
 ### Exchange one difficulty as .fad
 
-Use **File → Export as .fad…** or the difficulty tab menu. Open the corresponding project before importing a FAD. It does not create a standalone Library project. Open, drop or use **File → Import difficulty (.fad)…** in that project.
+Use **File → Export as .fad…** or the difficulty tab menu. Open the corresponding project before importing a FAD. It does not create a standalone Library project. Open, drop or use **File → Import difficulty…** in that project.
 
 An existing matched difficulty enters merge review, and a missing difficulty can be added. Objects and FA settings are reviewed together, with separate choices for metadata and timing. Review the merged difficulty, then save or export it. Export includes unsaved work and preserves the local Songs association. Current FAD exports contain difficulty data. The receiving project supplies audio and other resources for playback.
 
@@ -1131,7 +1133,7 @@ The Library card's Export .osz packages playable difficulties and resources. Use
 
 ### Resolve external changes
 
-FA compares linked external data with the shared baseline. Inspect the reviewed difficulty identity, category tabs, object details, normalized timing and result preview. Select local/external values for required differences, then apply. Linked resolutions can publish the selected result to the linked .osu; check the displayed destination. Cancel leaves the review unapplied.
+FA compares linked external data with the shared baseline. Choose simplified or individual resolution. Simplified resolution accepts other conflicts from osu! while retaining explicit review for object changes, editable-authoring conflicts, every red timing change, and timing or difficulty changes that affect playable events. Individual resolution exposes all categories. External-only sound edits can update unchanged local objects automatically when their editable structure can be preserved. Inspect the reviewed difficulty identity, category tabs, object details, normalized timing and result preview. Select local/external values for required differences, then apply. Linked resolutions can publish the selected result to the linked .osu; check the displayed destination. Cancel leaves the review unapplied.
 
 Break ranges are shown in aligned columns and can be resolved independently. FAZ association and FAD import also use comparison; compare the imported version with the linked difficulty before applying changes. Review native objects/FA settings together where required to retain editable structure.
 
@@ -1177,6 +1179,8 @@ On **Colour palette**, choose 3–8 colours and generate a proposal from the cur
 
 Switch to Hitsounding for sound tracks and **Timing Helper**. Audible tracks use green mute controls; muted tracks use grey. Lock controls are teal when unlocked and pale red when locked. Locked tracks have a pale red background. Locks protect editing and do not mute sound. A selection rectangle can start in a locked track and select sound tags in unlocked tracks. Press F to toggle the Notes highlights for the selected sound tags. Mute, lock, tool and timeline display settings are saved locally for each difficulty.
 
+Drop one WAV, OGG or MP3 from a file manager or Audio Library onto SB Hitsound. A purple preview shows its snapped position. Copy, cut, paste and undo retain the imported audio even if the original file is deleted. Saving writes referenced audio to `fa-storyboard`; FAZ exports and retained version snapshots also preserve it. Keep the sibling audio directory with a recovery copy. See [storyboard hitsound files](EDITOR_UI.md#storyboard-hitsound-files) for cleanup and resource details.
+
 Move selected Notes, additions or SB sounds with half-opacity destination previews; originals remain visible until release. Addition groups move only when every sound has a destination fruit event. Drag a selected addition group in either Select or Draw mode. Escape cancels, and a completed move is one undo step. Navigation remains available during drags and marquees; holding the pointer at a lane edge scrolls the timeline. Middle-drag pans time, Ctrl+wheel changes Snap and Alt+wheel zooms around the pointer.
 
 Use the upper-left **Sampleset** and **Additions** selectors for placement defaults. Auto Sampleset inherits timing and Auto Additions follows the Normal bank. Placing another addition on a note preserves its existing shared addition bank. The left bank buttons and Q/A/S/D modify selected events only. Shift+Q/W/E/R sets Sampleset to Auto/Normal/Soft/Drum, and Ctrl+Q/W/E/R sets Additions. Hover hints reflect custom bindings.
@@ -1185,7 +1189,7 @@ W/E/R toggles Whistle/Finish/Clap on selected Notes or on the selected fruit eve
 
 Unavailable sample files are skipped during playback. Library audition and file-operation failures leave editing available; operation errors appear in the status bar.
 
-Select red and green timing points with Ctrl-click or a marquee. **Ctrl+C**, then **Ctrl+V** in another difficulty, pastes at the original timestamps and replaces timing points at those timestamps in one undo step. Other timestamps remain unchanged. **5** adds an inherited point at the playhead. A selection containing red points cannot be dragged.
+Select red and green timing points with Ctrl-click or a marquee. **Ctrl+C**, then **Ctrl+V** in another difficulty, pastes at the original timestamps and replaces timing points of the same type at those timestamps in one undo step. Other timestamps remain unchanged. **5** adds an inherited point at the playhead. A selection containing red points cannot be dragged.
 
 At a time without a timing point, edit the draft and choose **Apply to affecting timing line** or insert a new inherited point. Volume track clicks step by five percentage points; dragging and numeric input retain one-percent precision.
 
@@ -1480,6 +1484,7 @@ double-click slider editing, see [Editing Controls](EDITOR_UI.md#fsliders).
 | F6 list: Ctrl+click / Shift+click | Toggle rows / select a range. |
 | F6 list: Up/Down, Page Up/Down, Home/End | Navigate rows, eight rows per page step, or first/last row. Shift extends selection; Ctrl toggles the destination row. |
 | F6 list: Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste `.osu` timing-row text. |
+| Mapping or Hitsounding: Ctrl+V after copying F6 rows | Paste timing rows at their original timestamps, including across maps; green rows preserve coincident red points. |
 | F6 list: Delete / Ctrl+I | Delete selected rows, protecting the first red point. |
 | F6 list: Ctrl+P / Ctrl+Shift+P | Add a red / green point to the draft. |
 | F6 list: Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z | Undo / redo / redo draft changes outside a text field. |

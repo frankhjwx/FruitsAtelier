@@ -54,13 +54,17 @@ internal sealed class EditorControl : Control, IDisposable
         DragDrop.SetAllowDrop(this, true);
         DragDrop.AddDragOverHandler(this, (_, e) => boundary.Run(() =>
         {
-            e.DragEffects = !View.ErrorVisible && DroppedPaths(e).Any(View.CanDropFile)
+            var point = e.GetPosition(this) / uiScale;
+            var paths = DroppedPaths(e).ToArray();
+            View.PreviewFileDrop(paths, (float)point.X, (float)point.Y); Refresh();
+            e.DragEffects = !View.ErrorVisible && View.CanDropFilesAt(paths, (float)point.X, (float)point.Y)
                 ? DragDropEffects.Copy : DragDropEffects.None;
             e.Handled = true;
         }));
+        DragDrop.AddDragLeaveHandler(this, (_, _) => boundary.Run(() => { View.ClearFileDropPreview(); Refresh(); }));
         DragDrop.AddDropHandler(this, (_, e) => boundary.Run(() =>
         {
-            if (!View.ErrorVisible) View.DropLibraryFiles(DroppedPaths(e));
+            if (!View.ErrorVisible) View.DropLibraryFiles(DroppedPaths(e), (float)(e.GetPosition(this).X / uiScale), (float)(e.GetPosition(this).Y / uiScale));
             e.Handled = true; Refresh();
         }));
         View.RequestPasteObjects = async () =>

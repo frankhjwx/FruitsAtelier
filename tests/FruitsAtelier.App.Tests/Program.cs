@@ -26,6 +26,7 @@ if (args.Contains("--hitsounding-notes-check")) { HitsoundingNotesTests.Run(); r
 if (args.Contains("--library-cold-existing-check")) { LibraryDifficultyOrderTests.ColdExisting(); return 0; }
 if (args.Contains("--library-rating-order-check")) { LibraryDifficultyOrderTests.Run(); return 0; }
 if (args.Contains("--hitsounding-feedback-check")) { HitsoundingFeedbackTests.Run(); return 0; }
+if (args.Contains("--storyboard-drop-check")) { StoryboardDropTests.Run(); return 0; }
 if (args.Contains("--hitsounding-panel-check")) { HitsoundingNavigationTests.Run(); HitsoundingFeedbackTests.Run(); HitsoundingPanelTests.Run(); HitsoundingPanelTests.Editing(); HitsoundingPanelTests.DrawModes(); HitsoundingPanelTests.SampleSetCycling(); HitsoundingPanelTests.PlacementBanksAndHeadPriority(); HitsoundingPanelTests.PlacementBankIsolation(); HitsoundingPanelTests.SelectedBankSelectors(); HitsoundingPanelTests.KiaiStrip(); HitsoundingPanelTests.SpinnerEndSamples(); HitsoundingPanelTests.CrossDifficultyClipboard(); HitsoundingPanelTests.SelectionAndTiming(); HitsoundingPanelTests.LengthAndMove(); HitsoundingPanelTests.TransferTimingIndex(); HitsoundingPanelTests.TransferIndexInheritance(); HitsoundingPanelTests.StoryboardEditing(); HitsoundingPanelTests.PlayingSelectionAndSettings(); HitsoundingPanelTests.NearbyTiming(); HitsoundingPanelTests.CtrlSelection(); HitsoundingTimingDragTests.Run(); return 0; }
 if (args.Contains("--difficulty-import-check")) { DifficultyImportTests.Run(); Console.WriteLine("PASS difficulty imports use project resources and preserve metadata"); return 0; }
 if (args.Contains("--slider-bpm-performance")) { SliderBpmTests.Performance(); return 0; }
@@ -86,8 +87,10 @@ if (args.Contains("--cache-lifetime-check")) { CacheLifetimeTests.Run(); Console
 if (args.Contains("--dirty-exit-check")) { DirtyExitTests.Run(); DiscardConfirmationTests.Run(); Console.WriteLine("PASS dirty exit choices and nonblocking background checks"); return 0; }
 if (args.Contains("--fa-only-check")) { FaOnlyUiTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS FA-only creation, per-difficulty settings and Songs file policy"); return 0; }
 if (args.Contains("--full-sync-check")) { FullSynchronizationTests.Run(); SynchronizationUiTests.Run(); VersionHistoryUiTests.Run(); Console.WriteLine("PASS full synchronization confirmation, connections, backups and restoration"); return 0; }
+if (args.Contains("--simplified-sync-check")) { SimplifiedSynchronizationTests.Run(); return 0; }
 if (args.Contains("--sync-details-check")) { SyncTabsTests.Run(); Console.WriteLine("PASS playable object details and synchronization tabs"); return 0; }
 if (args.Contains("--faz-check")) { FazTests.Run(); return 0; }
+if (args.Contains("--native-difficulty-import-check")) { NativeDifficultyImportTests.Run(); return 0; }
 if (args.Contains("--fad-check")) { FadTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--legacy-edit-map") { LegacyDropletWorkerTests.FirstEdits(ProjectSerializer.ReadFile(args[1])); Console.WriteLine("PASS first note placement and deletion without conversion dialogs"); return 0; }
 if (args.Contains("--synchronization-wait-check")) { SynchronizationWaitTests.Run(); Console.WriteLine("PASS background input and explicit synchronization waits"); return 0; }
@@ -416,6 +419,7 @@ var tests = new (string Name, Action Run)[]
     ("Timing red insertion and deletion retain saving and slider export", TimingSaveFeedbackTests.Run),
     ("Slider drafts defer full-map conversion and publish only matching validated snapshots", DraftConversionTests.Run),
     ("Synchronization category tabs explain object changes and preserve choices", SyncTabsTests.Run),
+    ("Simplified synchronization resolves ancillary changes and cancellation restores Library input", SimplifiedSynchronizationTests.Run),
     ("AiMod panel checks objects, scopes focused input, navigates errors and preserves undo", AimodTests.Run),
     ("AiMod table resizes, reorders, copies and docks without content edits", AimodTests.TableAndDock),
     ("Background workspace saves isolate input and acknowledge only their snapshot", PerformanceSchedulingTests.Save),
@@ -697,6 +701,7 @@ var tests = new (string Name, Action Run)[]
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
     ("Project deletion preserves backups or uses system recycling", ProjectDeletionTests.Run),
     ("FAZ archives preserve native projects and explicit local associations", FazTests.Run),
+    ("Native difficulty files import with collision choices and undo", NativeDifficultyImportTests.Run),
     ("FAD archives exchange native difficulties through merge review", FadTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
     ("Library organization sorts, groups, manages collections and remembers visits", LibraryOrganizationTests.Run),

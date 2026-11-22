@@ -75,9 +75,10 @@ the colours during gameplay, especially with video, storyboard and Kiai.
 An unexpected rendering or window polling failure pauses the editor on a recovery
 screen. **Save recovery copy** writes all retained difficulties and project notes to
 a new `.catchproj` without running beatmap conversion or changing the original
-project's saved state. Choose an unused filename. The copy references existing
-media; it does not package audio or images. Save failures remain visible so another
-location can be selected.
+project's saved state. Choose an unused filename. Captured storyboard audio is
+preserved in a sibling `<filename>.audio-<id>` directory; keep this directory with
+the recovery copy. Other media remains referenced at its existing location.
+Save failures remain visible so another location can be selected.
 
 If an interrupted edit could not be rolled back, recovery copies use the state
 before that unfinished gesture. Earlier committed edits remain in the copy even
@@ -1029,6 +1030,14 @@ in the list. Right-clicking an unselected row does not offer Copy. Pasted lines
 retain their timestamps and enter the timing draft, with the same SV-lock rules
 and undo behavior as Ctrl+V.
 
+Close F6 and use Ctrl+V in Mapping or Hitsounding to paste copied timing lines,
+including into another difficulty or map. This uses standard `.osu` timing-row
+text from the system clipboard and retains original timestamps, SV, sample banks,
+sample indices, volume and effects. At matching timestamps, only points of the
+same type are replaced: pasting greens preserves red BPM points. The paste is one
+undoable edit in the destination map. The text can also be pasted into a `.osu`
+file's `[TimingPoints]` section with a text editor.
+
 
 Drag the title bar to reposition the window within the application. Drag any corner
 to scale its controls and text proportionally from 50% to 100% of its original
@@ -1120,7 +1129,7 @@ Canvas zoom, upper object-timeline scale and Timing waveform scale are remembere
 
 `Catch Preview` offers 4:3, 16:9 and Fit display modes. Fit uses the entire available sidebar height, revealing more future notes as the window grows vertically. Drag the sidebar divider to adjust width. Objects retain their proportions, and an automatic catcher follows playback and seeking. Mode and Resolution controls stay above the picture; 4:3 and 16:9 pictures are centred in the remaining area. Caught fruit remains on the plate. Completing a combo group scatters the stack; seeking restores the plate effects.
 
-The arrow to the left of the four tool buttons opens a whole-map **Movement strain** sidebar. Its default left dock is 280 DIP wide at normal window sizes. Time increases upward in its vertical curve, matching the canvas; an amber marker shows the shared playback position. Click or drag in the graph to seek continuously. The left sidebar and Catch Preview can be open together. A very narrow window may compress the sidebars to preserve at least 192 DIP for the central playfield. Sidebar visibility is session display state and does not edit the beatmap.
+The arrow to the left of the four tool buttons opens a whole-map **Movement strain** sidebar. Its default left dock is 280 DIP wide at normal window sizes. Time increases upward in its vertical curve, matching the canvas; an amber marker shows the shared playback position. Click or drag in the graph to seek continuously. Scroll over the graph to navigate with the same step and direction as the canvas (one current Snap subdivision per notch while paused). Bookmarks appear as horizontal lines in their configured colours, without duration shading or labels. The left sidebar and Catch Preview can be open together. A very narrow window may compress the sidebars to preserve at least 192 DIP for the central playfield. Sidebar visibility is session display state and does not edit the beatmap.
 
 During playback and seeking, the play line stays at its configured height, initially 25% above the bottom of the drawing area. While paused, drag its leftmost yellow handle vertically to set that height between 5% and 95% of the drawing area. The current time stays unchanged and canvas content scrolls with the line. Playback disables handle dragging and uses the chosen height. The height is saved as a global view preference when the drag finishes and restored after restarting the editor. It is retained across resizing and difficulty switches without editing map content or undo history. Esc or lost capture cancels a drag. Left-button marquee selection on the canvas and object timeline keeps playback scrolling and accepts wheel navigation while held. Space or C can start or pause playback without releasing the selection. The start stays anchored to its original map time while the other end follows the pointer, so the box grows during scrolling even with a stationary pointer. Within 24 DIP of the canvas's top/bottom edge or the object timeline's left/right edge, a dragged selection automatically scrolls toward that edge, gradually increasing to 1200 DIP per second on the canvas or 600 DIP per second on the object timeline. Moving back inside, releasing the button, cancelling, or reaching the map boundary stops automatic scrolling. Objects inside the time range remain selected after they move outside the viewport. Paused middle-button panning is free; canvas wheel navigation preserves the current playhead-to-viewport offset, while playback and other seeking resume following.
 
@@ -2415,3 +2424,29 @@ In Mapping, the playback line highlights near its handle or outside the 0–512
 playfield and can be dragged while paused or playing. Dragging changes
 its viewport height, clamped to 5–95%, without seeking; release saves the height and
 Escape cancels the drag. The lazer playback line remains fixed.
+
+
+## Storyboard hitsound files
+
+Drop one WAV, OGG or MP3 from a file manager or Audio Library onto the SB Hitsound
+track. The event snaps to the current timing grid. Multiple-file drops onto this
+track are ignored. The source stays in place, and the editor retains an in-memory
+copy, so moving or deleting the original after dropping does not interrupt editing.
+Unavailable or undecodable audio is silent while its event remains editable.
+
+Selected SB events support copy, cut, paste, deletion and undo/redo. Paste retains
+the sound, volume and relative timing and starts at the playhead. Saving copies
+referenced imported audio into the mapset's `fa-storyboard` directory. Saving also
+removes managed copies with no remaining references; other difficulties, shared
+storyboards and note samples protect shared files. Original source files and
+externally modified copies are retained. Clipboard and undo snapshots keep audio
+in memory until the project is retired.
+Adding then deleting an imported sound returns a previously clean map to clean
+status when no other content has changed.
+
+A single-file drag over SB Hitsound previews a purple block at the snapped time.
+Moving existing sounds uses their current Note based or Precise HS appearance;
+Precise HS retains duration, labels and waveform while the source rendering follows
+the pointer. Release commits one edit, and Escape cancels it. Dropping library
+files back into their original directory without copying leaves the panel,
+selection, scrolling, waveform cache and audition unchanged.

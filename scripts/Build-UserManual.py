@@ -2,8 +2,10 @@
 
 import argparse
 import re
+import xml.etree.ElementTree as ET
 from html import escape
 from pathlib import Path
+from urllib.parse import urljoin
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
@@ -12,6 +14,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = ET.parse(ROOT / "Directory.Build.props").findtext("PropertyGroup/Version")
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--output", type=Path, default=ROOT / "artifacts/releases/FruitsAtelier-User-Manual.pdf")
 args = parser.parse_args()
@@ -32,14 +35,15 @@ def inline(value):
     value = escape(value)
     value = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", value)
     value = re.sub(r"`(.+?)`", r'<font name="Courier">\1</font>', value)
-    return re.sub(r"\[([^\]]+)\]\((https?://[^)]+)\)", r'<link href="\2" color="#187565">\1</link>', value)
+    return re.sub(r"\[([^\]]+)\]\(([^)]+)\)", lambda match:
+                  f'<link href="{urljoin("https://github.com/frankhjwx/FruitsAtelier/blob/main/docs/USER_MANUAL.md", match[2])}" color="#187565">{match[1]}</link>', value)
 
 def footer(canvas, doc):
     canvas.setStrokeColor(colors.HexColor("#C9DED7"))
     canvas.line(42, 39, A4[0] - 42, 39)
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(MUTED)
-    canvas.drawString(42, 26, "FRUITSATELIER  /  USER MANUAL  /  1.4.7")
+    canvas.drawString(42, 26, f"FRUITSATELIER  /  USER MANUAL  /  {VERSION}")
     canvas.drawRightString(A4[0] - 42, 26, str(doc.page))
 
 story = []
@@ -97,7 +101,7 @@ while index < len(lines):
         story.append(Paragraph(line, styles["body"]))
 
 doc = SimpleDocTemplate(str(args.output), pagesize=A4, leftMargin=42, rightMargin=42,
-                        topMargin=38, bottomMargin=52, title="FruitsAtelier 1.3.0 User Manual",
+                        topMargin=38, bottomMargin=52, title=f"FruitsAtelier {VERSION} User Manual",
                         author="FruitsAtelier", subject="Features and keyboard shortcuts")
 doc.build(story, onFirstPage=footer, onLaterPages=footer)
 print(args.output)

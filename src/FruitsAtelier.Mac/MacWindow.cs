@@ -90,6 +90,7 @@ internal sealed partial class MacWindow : Window
         View.RequestStopLibraryAudition = libraryAudition.Stop;
         View.RequestTestplayMenuLoop = hitsounds.SetMenuLoop;
         View.RequestWaveform = MacWaveformDecoder.Load;
+        View.RequestMemoryWaveform = MacWaveformDecoder.LoadMemory;
         View.RequestPreloadHitsounds = documents => hitsounds.PreloadProject(documents, View.HitsoundSkinFolders);
         View.PreloadProjectHitsounds();
         View.RequestStopHitsounds = hitsounds.Stop;
@@ -132,7 +133,7 @@ internal sealed partial class MacWindow : Window
         View.RequestImportDifficulty = () => RunFile(async () =>
         {
             if (!View.PrepareFileOperation()) return;
-            var path = await Pick(L.Get("project.import"), ["*.osu"]);
+            var path = await Pick(L.Get("project.import"), FruitsAtelier.App.Editor.EditorView.DifficultyImportPatterns.ToArray());
             if (path is not null)
             {
                 if (View.ImportDifficultyFile(path))
@@ -247,6 +248,7 @@ internal sealed partial class MacWindow : Window
             editor.RunUi(() =>
             {
                 if (allowClose) { if (!smokeCheck) SaveWindowPreferences(); return; }
+                View.PrepareApplicationClose();
                 View.CancelLibraryExitConfirmation();
                 if (recoverySaveBusy) return;
                 if (View.RecoveryActive)

@@ -28,6 +28,7 @@ public sealed partial class EditorView
         hitsoundingNotesClipboardDifficulty = difficulties[activeDifficulty].Id;
         hitsoundingTimingClipboard = [];
         hitsoundingClipboardContainsNotes = true;
+        RequestCopyText?.Invoke(SelectionReference(snapshot!));
         StatusMessage = L.Get("editor.status.objectsCopied", hitsoundingCopiedNotes.Length);
     }
 

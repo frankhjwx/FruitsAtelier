@@ -27,6 +27,13 @@ public sealed partial class EditorView
 
     private void PointerDownCore(float x, float y, int button, bool shift, bool ctrl)
     {
+        if (syncModePrompt && SynchronizationVisible && !ErrorVisible)
+        {
+            mouseX = x; mouseY = y;
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         if (DiscussionImageVisible && !ErrorVisible && !DiscardConfirmationVisible) { DiscussionImagePointerDown(x, y, button); return; }
         if (PatternNameVisible && !ErrorVisible) { mouseX = x; mouseY = y; PatternNamePointerDown(x, y, button); return; }
         if (GalleryTagsVisible && !ErrorVisible) { mouseX = x; mouseY = y; GalleryTagsPointerDown(x, y, button); return; }
@@ -513,6 +520,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (syncModePrompt && SynchronizationVisible && !ErrorVisible) { mouseX = x; mouseY = y; return; }
         if (MoveHitsoundingSetScroll(y)) return;
         if (volumePopoverDrag >= 0) { MoveVolumePopoverPointer(x, y); return; }
         if (HitsoundingPointerMove(x, y)) return;
@@ -691,6 +699,7 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (syncModePrompt && SynchronizationVisible && !ErrorVisible) return;
         if (hitsoundingSetDragging && button == 0) { MoveHitsoundingSetScroll(y); hitsoundingSetDragging = false; return; }
         if (EndVolumePopoverPointer(x, y, button)) return;
         if (HitsoundingPointerUp(x, y, button)) return;
@@ -846,6 +855,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (syncModePrompt && SynchronizationVisible) return;
         if (libraryExitConfirmation) return;
         if (MediaRefinementVisible) return;
         if (librarySettingsOpen) { PointerDown(x, y, 0, shift, ctrl); return; }
@@ -1066,6 +1076,7 @@ public sealed partial class EditorView
 
     private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
+        if (syncModePrompt && SynchronizationVisible && !ErrorVisible) return;
         if (HandleVolumePopoverWheel(x, y, delta)) return;
         if (HitsoundingWheel(x, y, delta, ctrl, shift || shiftHeld, alt || altHeld)) return;
         if (BrowserToolbarContains(x, y)) return;
@@ -1223,6 +1234,16 @@ public sealed partial class EditorView
                 Math.Max(0, difficulties.Count - visibleDifficultyTabs));
             return;
         }
+        if (DifficultyCurveGraphBounds.Contains(x, y))
+        {
+            if (!ctrl && !alt)
+            {
+                if (IsLazerEditing) HandleLazerWheel(x, y, delta, false, shift, false, false, true, false);
+                else SeekByWheel(-delta / 120 * (shift ? 4 : 1) * (LibrarySettings.ReverseCanvasScroll ? -1 : 1), 0);
+                ClampView();
+            }
+            return;
+        }
         if (rightPanel.Contains(x, y))
         {
             return;
@@ -1333,6 +1354,8 @@ public sealed partial class EditorView
 
     private void KeyDownCore(int virtualKey, bool ctrl, bool shift)
     {
+        if (syncModePrompt && SynchronizationVisible && !ErrorVisible)
+        { if (virtualKey == 27) CancelSynchronization(); return; }
         if (HitsoundingLibraryKey(virtualKey, ctrl, shift)) return;
         if (HitsoundingSearchFocused)
         {
@@ -1746,6 +1769,7 @@ public sealed partial class EditorView
 
     private void TextInputCore(char value)
     {
+        if (syncModePrompt && SynchronizationVisible && !ErrorVisible) return;
         if (HitsoundingNameFocused) { HitsoundingNameText(value.ToString()); return; }
         if (HitsoundingSearchFocused) { HitsoundingSearchText(value.ToString()); return; }
         if (PatternNameVisible && !ErrorVisible) { PatternNameText(value.ToString()); return; }
@@ -1855,9 +1879,9 @@ public sealed partial class EditorView
         hitsoundingNoteMoveMarkers = [];
         hitsoundingHeadDrag = hitsoundingPainting = hitsoundingMarquee = false; hitsoundingPaint.Clear();
         hitsoundingStoryboardMove = null; hitsoundingStoryboardMoved = false;
-        hitsoundingStoryboardMoveSources = [];
+        hitsoundingStoryboardMoveSources = []; hitsoundingStoryboardMoveTags = []; ClearFileDropPreview();
         hitsoundingMoveSource = null; hitsoundingMoveTarget = null; hitsoundingMoveActive = false;
-        hitsoundingMoveSources = []; hitsoundingMoveCopies = [];
+        hitsoundingMoveSources = []; hitsoundingMoveCopies = []; hitsoundingMoveTags = [];
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);

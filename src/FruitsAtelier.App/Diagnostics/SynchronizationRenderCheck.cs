@@ -85,9 +85,37 @@ internal static class SynchronizationRenderCheck
                 view.KeyDown(27, false, false);
 
                 view.LoadWorkspace(WorkspaceProject.Open(session.Directory));
+                File.WriteAllText(source, text.Replace("0,500,4,1,0,100,1,0", "0,400,3,2,1,70,1,9"));
+                view.RefreshSynchronization(); Wait(simplified: true);
+                var redChoicesField = typeof(EditorView).GetField("syncChoices", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+                var redChoices = (Dictionary<string, bool>)redChoicesField.GetValue(view)!;
+                var redVisualKey = typeof(EditorView).GetField("syncVisualKey", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(view);
+                if (!view.SynchronizationVisible || redChoices.ContainsKey("TimingPoints/") || !Equals(redVisualKey, "$text:TimingPoints/"))
+                    throw new InvalidOperationException("Simplified native red timing changes did not require a timing-table choice.");
+                var redBefore = view.Document.DeepClone();
+                CaptureTiming("red-simplified-unresolved");
+                foreach (bool external in new[] { false, true, false })
+                {
+                    float choiceX = external ? width / 2 + 100 : 100;
+                    view.PointerDown(choiceX, height - 162, 0, false, false);
+                    view.PointerUp(choiceX, height - 162, 0); Paint();
+                    if (!redChoices.TryGetValue("TimingPoints/", out bool selected) || selected != external)
+                        throw new InvalidOperationException("Simplified native red timing choice did not select its side.");
+                    CaptureTiming(external ? "red-simplified-external" : "red-simplified-local");
+                }
+                if (!redBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native red timing choices changed authoring before Apply.");
+                view.KeyDown(27, false, false);
+
+                view.LoadWorkspace(WorkspaceProject.Open(session.Directory));
                 File.WriteAllText(source, text.Replace("100,192", "400,192"));
                 view.RefreshSynchronization(); Wait();
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native object conflict dialog was not shown.");
+                typeof(EditorView).GetMethod("SelectSyncMode", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                    .Invoke(view, new object[] { true });
+                Paint(); CaptureTiming("objects-simplified");
+                var switchBounds = new Rect(width - 264, 83, 228, 30);
+                view.PointerDown(switchBounds.X + 12, switchBounds.Y + 12, 0, false, false);
+                view.PointerUp(switchBounds.X + 12, switchBounds.Y + 12, 0); Paint();
                 CaptureTiming("objects-unresolved");
                 typeof(EditorView).GetMethod("ResolveSync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
                     .Invoke(view, new object?[] { true });
@@ -146,7 +174,12 @@ internal static class SynchronizationRenderCheck
                 view.PointerDown(100, height - 162, 0, false, false); view.PointerUp(100, height - 162, 0); Paint();
                 CaptureTiming("slider-resolved");
                 view.KeyDown(27, false, false);
-                view.LoadWorkspace(WorkspaceProject.Open(sliderSession.Directory)); Paint();
+                view.StopFileMonitoring();
+                view = new EditorView(false);
+                view.LibrarySettings.Workspace = Path.Combine(root, "SettingsWorkspace"); view.LibrarySettings.Songs = songs;
+                File.WriteAllText(sliderSource, text);
+                view.LoadWorkspace(WorkspaceProject.Create(view.LibrarySettings.Workspace,
+                    BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(sliderSource)]), songs)); Wait();
                 typeof(EditorView).GetMethod("ShowAddDifficulty", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
                     .Invoke(view, null);
                 CaptureTiming("new-difficulty-sync"); view.KeyDown(27, false, false); Paint();
@@ -173,10 +206,28 @@ internal static class SynchronizationRenderCheck
                 });
                 }
                 void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
-                void Wait()
+                void Wait(bool simplified = false)
                 {
                     var deadline = DateTime.UtcNow.AddSeconds(15);
-                    do { Paint(); if (!view.SynchronizationBusy) return; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
+                    do
+                    {
+                        Paint();
+                        if (!view.SynchronizationBusy && !view.LibraryOpening)
+                        {
+                            if ((bool)typeof(EditorView).GetField("syncModePrompt", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(view)!)
+                            {
+                                CaptureTiming("mode-choice");
+                                var hoverBounds = view.SyncModeSimpleBounds;
+                                view.PointerMove(hoverBounds.X + 10, hoverBounds.Y + 10, false, false);
+                                CaptureTiming("mode-choice-hover");
+                                var bounds = simplified ? view.SyncModeSimpleBounds : view.SyncModeDetailedBounds;
+                                view.PointerDown(bounds.X + 10, bounds.Y + 10, 0, false, false);
+                                view.PointerUp(bounds.X + 10, bounds.Y + 10, 0); Paint();
+                            }
+                            return;
+                        }
+                        Thread.Sleep(10);
+                    } while (DateTime.UtcNow < deadline);
                     throw new TimeoutException("Native synchronization check timed out.");
                 }
             }

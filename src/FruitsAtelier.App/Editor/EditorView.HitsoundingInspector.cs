@@ -482,6 +482,8 @@ public sealed partial class EditorView
                 return new HitsoundingCopy(selected.TimeMs - hitsoundingMoveTime, k.Lane, hitsoundingResolver!.Describe(selected),
                     HitsoundingTimingIndex(selected.TimeMs), hitsoundingResolver.EventSettings(selected).InheritedFields.HasFlag(InheritedSampleFields.Index));
             }).ToArray();
+            hitsoundingMoveTags = hitsoundingTagLanes.SelectMany(t => t).Where(t => t.Note is { } n
+                && hitsoundingMoveSources.Contains((n.SourceId, n.EventIndex, t.Lane))).OrderBy(t => t.Time).ToArray();
             SyncHitsoundingNoteSelection(pressedSound.Note, highlightNotes: selectedGroup && hitsoundingHighlightedNotes.Count > 0);
             return true;
         }

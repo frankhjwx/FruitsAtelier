@@ -795,7 +795,12 @@
   "files.skin": "Open skin",
   "project.new": "New project",
   "project.add": "Add new difficulty",
-  "project.import": "Import .osu difficulty…",
+  "project.import": "Import difficulty…",
+  "project.importDifficultyOpenFirst": "Open a beatmap project before importing a difficulty.",
+  "project.importDifficultyConflict": "“{0}” already exists",
+  "project.importDifficultyAmbiguous": "Several difficulties have this name. Select the tab to overwrite before importing again.",
+  "project.importDifficultyOverwrite": "Overwrite difficulty",
+  "project.importDifficultyCreate": "Create new difficulty",
   "project.importResourcesRequired": "Open a project with a resource directory before importing an .osu difficulty.",
   "project.defaultDifficulty": "Difficulty {0}",
   "project.selector": "{0}/{1} · {2}{3}",
@@ -2523,5 +2528,8 @@
   "shortcuts.command.previousParent": "Select Previous Note",
   "shortcuts.command.nextParent": "Select Next Note",
   "shortcuts.description.previousParent": "Select the previous sound-editable note from the current selection.",
-  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection."
+  "shortcuts.description.nextParent": "Select the next sound-editable note from the current selection.",
+  "sync.mode.title": "How would you like to synchronize?",
+  "sync.mode.auto": "Auto Resolve non-object metadata changes for me",
+  "sync.mode.detailed": "Resolve individual changes"
 }
