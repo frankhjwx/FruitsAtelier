@@ -20,6 +20,8 @@ internal static class DockingRenderCheck
             {
                 L.SetLanguage(locale);
                 var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
+                OsuTimeline.AddBookmark(map, 2500);
+                OsuTimeline.SetBookmarkAppearance(map, 2500, new(0xE573B8, true));
                 map.Fruits.AddRange(Enumerable.Range(0, 24).Select(i => new Fruit { TimeMs = i * 350, X = i % 2 == 0 ? 100 : 400 }));
                 var editor = new EditorView(false);
                 editor.LoadDocument(map);
@@ -27,6 +29,17 @@ internal static class DockingRenderCheck
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
                 Paint(); Click(editor.DifficultyCurveToggleBounds); Click(editor.PreviewToggleBounds); Paint("separate");
                 Drag(EditorView.DockPanel.MovementStrain, size.Item1 - 60, 220, "drag-right"); Paint("merged-right");
+                var graph = editor.DifficultyCurveGraphBounds;
+                double beforeWheel = editor.PlayheadMs;
+                editor.Wheel(graph.X + 10, graph.Y + 10, -120, false); Paint("strain-wheel");
+                if (editor.PlayheadMs <= beforeWheel)
+                    throw new InvalidOperationException("Strain graph wheel did not navigate.");
+                if (Environment.GetCommandLineArgs().Contains("--strain-graph-render-check"))
+                {
+                    if (!map.ContentEquals(editor.Document) || editor.IsDirty || editor.WantsCapture)
+                        throw new InvalidOperationException("Strain graph navigation modified content or retained capture.");
+                    continue;
+                }
                 Click(editor.DockTabBounds(EditorView.DockPanel.Preview)); Paint("preview-tab");
                 Drag(EditorView.DockPanel.Preview, 8, 220, "drag-left"); Paint("swapped");
                 var preview = editor.PreviewViewport;

@@ -63,6 +63,13 @@ public sealed partial class EditorView
         }
         else c.Text(L.Get("difficulty.curve.noData"), graph.X + 8, graph.Y + 12, 11, Muted, graph.Width - 16);
 
+        foreach (int bookmark in AxisBookmarks())
+        {
+            if (bookmark < 0 || bookmark > TimelineDurationMs) continue;
+            float bookmarkY = graph.Bottom - (float)(bookmark / Math.Max(1, TimelineDurationMs) * graph.Height);
+            c.Line(graph.X, bookmarkY, graph.Right, bookmarkY, Document.BookmarkAppearanceAt(bookmark).Colour, 1, .8f);
+        }
+
         float markerY = graph.Bottom - (float)(Math.Clamp(playhead / Math.Max(1, TimelineDurationMs), 0, 1) * graph.Height);
         c.Line(graph.X, markerY, graph.Right, markerY, Gold, 1.5f);
         c.Circle(graph.X + 1, markerY, 5, Gold);

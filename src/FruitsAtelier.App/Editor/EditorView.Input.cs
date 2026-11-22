@@ -1223,6 +1223,16 @@ public sealed partial class EditorView
                 Math.Max(0, difficulties.Count - visibleDifficultyTabs));
             return;
         }
+        if (DifficultyCurveGraphBounds.Contains(x, y))
+        {
+            if (!ctrl && !alt)
+            {
+                if (IsLazerEditing) HandleLazerWheel(x, y, delta, false, shift, false, false, true, false);
+                else SeekByWheel(-delta / 120 * (shift ? 4 : 1) * (LibrarySettings.ReverseCanvasScroll ? -1 : 1), 0);
+                ClampView();
+            }
+            return;
+        }
         if (rightPanel.Contains(x, y))
         {
             return;

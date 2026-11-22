@@ -906,6 +906,14 @@ live tab ordering, symmetric dock resizing, Layout and context-menu panel manage
 and independent Mapping/Timing layouts in English and Chinese,
 including settings-file roundtrips, restart restoration and invalid layout entries,
 alongside the existing sidebar rendering and seeking checks.
+The docking check also compares strain-graph wheel navigation with the canvas
+across snap divisions, reverse scrolling, fractional notches, editing profiles and
+playback states in both dock positions. It checks bookmark colours and line-only
+rendering even when bookmark intervals are enabled.
+Add `--strain-graph-render-check` to the native docking command to focus on
+strain-graph bookmarks, wheel navigation and content isolation across both
+languages, window sizes and DPI scales.
+
 `FruitsAtelier.App.exe --render-check --docking-render-check` runs the native
 Direct2D gestures at two window sizes and three DPI values. Screenshots are
 written under `artifacts/tests/docking-native`.
