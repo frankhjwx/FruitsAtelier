@@ -6,10 +6,12 @@ namespace FruitsAtelier.Core;
 public sealed record StoryboardAudio(string SourcePath)
 {
     [JsonIgnore] public byte[]? Data { get; private set; }
+    [JsonIgnore] public string? HistoryPath { get; internal init; }
     public void Cache(string savedPath, long remainingBytes = 16 * 1024 * 1024)
     {
         lock (this)
-            Data ??= Capture(File.Exists(savedPath) ? savedPath : SourcePath, remainingBytes).Data;
+            Data ??= Capture(File.Exists(savedPath) ? savedPath
+                : HistoryPath is { } history && File.Exists(history) ? history : SourcePath, remainingBytes).Data;
     }
     public static StoryboardAudio Capture(string path, long remainingBytes = 16 * 1024 * 1024)
     {

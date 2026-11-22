@@ -39,7 +39,8 @@ public sealed partial class EditorView
         storageAutomatic = automatic;
         if (clean || cache) nextStorageMaintenance = DateTime.UtcNow.AddDays(1);
         if (clean) StartHistoryCompression(root, restart: true);
-        string[] livePaths = difficulties.SelectMany(d => new[] { d.History.Document.AudioPath, d.History.Document.SourcePath }).OfType<string>().ToArray();
+        string[] livePaths = difficulties.SelectMany(d => new[] { d.History.Document.AudioPath, d.History.Document.SourcePath }
+            .Concat(d.History.Document.StoryboardAudio.Values.Select(a => a.HistoryPath))).OfType<string>().ToArray();
         storageTask = Task.Run(() =>
         {
             var report = clean || cache ? WorkspaceStorage.Clean(root, cache, protectedPaths: livePaths, compactLegacy: false,

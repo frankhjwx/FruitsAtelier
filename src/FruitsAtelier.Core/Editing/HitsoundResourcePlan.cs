@@ -36,7 +36,8 @@ public sealed class HitsoundResourcePlan
                     {
                         var sourceDocument = group.First(d => d.StoryboardAudio.ContainsKey(relative));
                         string source = SafePath(Root(sourceDocument)!, relative);
-                        data = StoryboardAudio.Capture(File.Exists(source) ? source : audio.SourcePath).Data;
+                        audio.Cache(source);
+                        data = audio.Data;
                     }
                     if (data is { Length: > 0 })
                     {

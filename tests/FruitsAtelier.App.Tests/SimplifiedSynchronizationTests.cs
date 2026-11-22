@@ -101,6 +101,46 @@ internal static class SimplifiedSynchronizationTests
                     "retaining local objects and tick rate preserves the playable sequence");
             }
             Console.WriteLine("PASS timing classification across local retention and external addition choices");
+            using (var streams = new Fixture((980, 620)))
+            {
+                var ui = streams.Ui;
+                var history = (EditorHistory)ui.View.GetType().GetProperty("history", Private)!.GetValue(ui.View)!;
+                history.Begin("Create stream");
+                history.Document.Fruits.Clear();
+                history.Document.BeatLengthMs = history.Document.TimingPoints[0].BeatLengthMs = 1;
+                var track = new CurveTrack { StreamSnapDivisor = 4, SourceOrder = 0 };
+                track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1002, X = 400 }]);
+                history.Document.Tracks.Add(track); history.Commit();
+                ui.View.SaveCurrentDifficulty(); Wait(ui);
+                ui.View.WorkspaceSession!.Manifest.Difficulties[0].ExportConfirmed = false;
+                string incoming = File.ReadAllText(streams.Source);
+                var lines = WorkspaceSynchronization.ObjectLines(incoming);
+                Check(lines.GroupBy(line => line.Split(',')[2]).Any(g => g.Count() > 1), "stream fixture has colliding published event times");
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    var parts = lines[i].Split(','); parts[4] = i % 2 == 0 ? "2" : "8";
+                    incoming = incoming.Replace(lines[i], string.Join(',', parts));
+                }
+                streams.Change(incoming);
+                ui.ClickText(L.Get("sync.mode.auto"));
+                Check(ui.View.SynchronizationVisible && Choices(ui).Keys.All(k => !k.StartsWith("$objects:")),
+                    "simplified mode requires a choice before a sound edit can flatten a stream");
+                ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                var retained = ui.View.Document.Tracks.Single();
+                Check(retained.Id == track.Id && retained.StreamSnapDivisor == track.StreamSnapDivisor
+                    && retained.Nodes.Select(n => (n.Id, n.TimeMs, n.X, n.HandleIn, n.HandleOut))
+                        .SequenceEqual(track.Nodes.Select(n => (n.Id, n.TimeMs, n.X, n.HandleIn, n.HandleOut)))
+                    && ui.View.Document.Fruits.Count == 0, "retaining FA in simplified mode preserves stream authoring");
+                ui.View.RefreshSynchronization(reviewResolved: true); Wait(ui);
+                ui.ClickText(L.Get("sync.mode.auto"));
+                Check(ui.View.SynchronizationVisible
+                    && Choices(ui).Any(p => p.Key.StartsWith("$objects:resolved:") && !p.Value),
+                    "simplified review retains the explicit local choice when reopening an unrepresentable stream conflict");
+                ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                Check(ui.View.Document.Tracks.Single().Id == track.Id && ui.View.Document.Fruits.Count == 0,
+                    "repeated simplified review preserves retained stream authoring");
+            }
+            Console.WriteLine("PASS simplified review protects unrepresentable stream samples");
         }
         finally { L.SetLanguage(language); }
     }

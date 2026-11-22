@@ -186,18 +186,18 @@ public static partial class WorkspaceProject
     { lock (Gate)
         {
             project.Validate();
+            string directory = Path.GetFullPath(session.Directory);
+            if (session.Manifest.SongsRoot is { } songs) ValidateRoots(Path.GetDirectoryName(directory)!, songs, false);
+            RejectLinks(directory); Recover(directory);
+            if (archiveBeforeSave) WorkspaceVersionHistory.ArchiveBeforeSave(session, project);
             var resources = HitsoundResourcePlan.StoryboardCopies(project.Difficulties.Select(d => d.Document));
             resources.Apply();
-            try { SaveLocked(session, project, archiveBeforeSave); }
+            try { SaveLocked(session, project); }
             catch { resources.Restore(); throw; }
         } }
-    private static void SaveLocked(WorkspaceSession session, BeatmapProject project, bool archiveBeforeSave)
+    private static void SaveLocked(WorkspaceSession session, BeatmapProject project)
     {
-        project.Validate();
         string directory = Path.GetFullPath(session.Directory);
-        if (session.Manifest.SongsRoot is { } songs) ValidateRoots(Path.GetDirectoryName(directory)!, songs, false);
-        RejectLinks(directory); Recover(directory);
-        if (archiveBeforeSave) WorkspaceVersionHistory.ArchiveBeforeSave(session, project);
         string staging = directory + ".saving", previous = directory + ".previous";
         RejectLinks(staging); RejectLinks(previous);
         if (System.IO.Directory.Exists(staging)) System.IO.Directory.Delete(staging, true);

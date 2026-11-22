@@ -494,5 +494,9 @@ resource plan; failed publication restores its file changes. Reopening caches th
 saved copy, with the source as a fallback. Missing audio remains silent.
 Resource registrations are excluded from content comparison: event paths carry
 audio identity, while unused registrations retain save-cleanup and undo data.
+Persistent history snapshots store referenced managed audio separately from JSON
+and retain a fallback to those copies when read; audio bytes load on demand.
+These copies belong to the snapshot and
+are removed with it by history retention.
 An Events section created solely for an edit is removed when that edit's last
 sample is deleted; pre-existing empty sections are preserved.

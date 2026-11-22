@@ -4,6 +4,7 @@ internal static class VersionHistoryTests
 {
     public static void Run()
     {
+        StoryboardAudioVersions();
         string workspace = Path.GetFullPath(Path.Combine("artifacts/tests/version-history", Guid.NewGuid().ToString("N")));
         var original = new MapDocument { IsDemo = false };
         original.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
@@ -53,6 +54,68 @@ internal static class VersionHistoryTests
         Check(WorkspaceVersionHistory.List(session).Any(v => v.Path == invalid), "damaged snapshots do not hide other history");
         try { WorkspaceVersionHistory.Read(session, first with { Path = invalid }); throw new Exception("damaged version accepted"); }
         catch (InvalidDataException) { }
+    }
+
+    private static void StoryboardAudioVersions()
+    {
+        foreach (bool difficultyOnly in new[] { false, true })
+        {
+            string root = Path.GetFullPath(Path.Combine("artifacts/tests/version-history-audio", Guid.NewGuid().ToString("N")));
+            string workspace = Path.Combine(root, "workspace"), media = Path.Combine(workspace, "Resources", "media");
+            Directory.CreateDirectory(media);
+            string source = Path.Combine(root, "source.wav");
+            byte[] bytes = [82, 73, 70, 70, 1, 2, 3, 4];
+            File.WriteAllBytes(source, bytes);
+            var audio = StoryboardAudio.Capture(source);
+            var document = new MapDocument { SourcePath = Path.Combine(media, WorkspaceProject.ResourceRootMarker) };
+            var events = new OsuSection { Name = "Events" };
+            events.Lines.Add($"Sample,1000,0,\"{audio.RelativePath}\",100");
+            document.OriginalSections.Add(events); document.StoryboardAudio[audio.RelativePath] = audio;
+            var project = BeatmapProject.FromDocuments([document]);
+            var session = WorkspaceProject.Create(workspace, project, "");
+            string managed = Path.Combine(media, audio.RelativePath);
+            Check(File.ReadAllBytes(managed).SequenceEqual(bytes), "initial save materializes storyboard audio");
+            File.Delete(source);
+            session = WorkspaceProject.Open(session.Directory); project = session.Project;
+            var difficulty = project.Difficulties.Single();
+            Check(difficulty.Document.StoryboardAudio.Single().Value.Data is null, "reopened resources begin without an encoded cache");
+            difficulty.Document.OriginalSections.Single(s => s.Name == "Events").Lines.Clear();
+            if (difficultyOnly) session = WorkspaceProject.SaveDifficulty(session, difficulty.Id, difficulty.Document, difficulty.Name);
+            else WorkspaceProject.Save(session, project);
+            Check(!File.Exists(managed), "history preservation retains final-reference cleanup in the mapset");
+            var version = WorkspaceVersionHistory.List(session).Single();
+            var historical = WorkspaceVersionHistory.Read(session, version);
+            var historicalAudio = historical.Difficulties.Single().Document.StoryboardAudio.Single().Value;
+            Check(historicalAudio.Data is null, "opening saved history defers audio loading");
+            historicalAudio.Cache(managed);
+            Check(historicalAudio.Data!.SequenceEqual(bytes), "saved historical audio survives source deletion and mapset cleanup");
+            WorkspaceStorage.Clean(workspace, compactLegacy: true);
+            historical = WorkspaceVersionHistory.Read(session, version);
+            WorkspaceProject.Save(session, historical);
+            Check(File.ReadAllBytes(managed).SequenceEqual(bytes), "restoring a saved version materializes its retained audio after history compression");
+
+            string unsavedSource = Path.Combine(root, "unsaved.wav"); byte[] unsavedBytes = [82, 73, 70, 70, 5, 6, 7, 8];
+            File.WriteAllBytes(unsavedSource, unsavedBytes);
+            var unsaved = StoryboardAudio.Capture(unsavedSource);
+            var current = historical.Difficulties.Single();
+            current.Document.StoryboardAudio[unsaved.RelativePath] = unsaved;
+            current.Document.OriginalSections.Single(s => s.Name == "Events").Lines.Add($"Sample,2000,0,\"{unsaved.RelativePath}\",100");
+            File.Delete(unsavedSource);
+            if (difficultyOnly) WorkspaceVersionHistory.ArchiveCurrentDifficulty(session, historical, current.Id);
+            else WorkspaceVersionHistory.ArchiveCurrent(session, historical);
+            var working = WorkspaceVersionHistory.List(session).First(v => v.WorkingCopy);
+            var restoredCurrent = WorkspaceVersionHistory.Read(session, working);
+            Check(restoredCurrent.Difficulties.Single().Document.StoryboardAudio[unsaved.RelativePath].Data is null, "opening working-copy history defers audio loading");
+            WorkspaceProject.Save(session, restoredCurrent);
+            Check(File.ReadAllBytes(Path.Combine(media, unsaved.RelativePath)).SequenceEqual(unsavedBytes), "working-copy restoration materializes previously unsaved audio");
+            string oldRound = Path.GetDirectoryName(version.Path)!;
+            Check(Directory.EnumerateFiles(Path.Combine(oldRound, "storyboard-audio"), "*", SearchOption.AllDirectories).Any(), "saved round owns its storyboard resources");
+            WorkspaceStorage.Clean(workspace, utcNow: DateTime.UtcNow.AddDays(32),
+                protectedPaths: [historical.Difficulties.Single().Document.StoryboardAudio[audio.RelativePath].HistoryPath!]);
+            Check(Directory.Exists(oldRound), "live lazy audio references protect their history round");
+            WorkspaceStorage.Clean(workspace, utcNow: DateTime.UtcNow.AddDays(32));
+            Check(!Directory.Exists(oldRound), "retention reclaims archived storyboard bytes with their expired round");
+        }
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

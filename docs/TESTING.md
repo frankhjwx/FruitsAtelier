@@ -1576,6 +1576,11 @@ Fixtures and retained recovery files live under `artifacts/tests/synchronization
 
 Synchronization regressions also cover automatic external-only hitsounds, concurrent
 local object edits, rounded imported heads, baseline-free review and restart.
+Stream regressions verify uniform and per-event sound imports without changing
+editable curves, project roundtrips, and explicit review when same-millisecond
+events cannot reproduce the incoming samples independently.
+The simplified-mode UI check keeps such stream changes undecided until an
+explicit choice and verifies that retaining FA preserves the curve.
 The shared App synchronization checks verify live object sounds after automatic
 and reviewed merges, history replacement for imported objects, and subsequent saves.
 Save-rewrite regressions cover fractional object times, implicit combo boundaries,
@@ -1624,6 +1629,9 @@ allocations and repeat decodes. The resident path must perform no warm decodes.
 
 Version history regressions cover changed/unchanged saves, retained working copies,
 deleted difficulty identities, project isolation, damaged snapshots, modal input,
+managed storyboard audio after source deletion and mapset cleanup, full and
+single-difficulty publication, deferred and compressed snapshots, unsaved audio,
+and reclamation of snapshot-owned audio by retention. They also cover
 selective restoration, save/restart and undo/redo. Native `--render-check` draws the
 browser and restores a deleted difficulty in both languages at its tested window
 sizes and DPI values. The editing benchmark verifies ordinary interactions while

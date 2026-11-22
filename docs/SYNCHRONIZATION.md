@@ -149,6 +149,10 @@ compare equal to explicit inherited defaults. Geometry, combo and slider playbac
 changes, concurrent differing local edits, and previously retained local choices
 still require review. Baseline-free comparisons do not automatically choose
 object edits.
+Stream sound updates retain their editable curves and use per-event sample
+overrides. Automatic import requires those overrides to reproduce the incoming
+object lines exactly; changes that cannot preserve authoring remain reviewable.
+These changes also require an explicit choice in simplified resolution.
 Automatic object updates replace the affected difficulty's live authoring and
 start a new undo history, so later saves cannot restore stale object sounds.
 Automatic context-only updates retain the existing history.
@@ -373,6 +377,10 @@ an operation archived unsaved edits. History includes earlier names and difficul
 that were subsequently deleted. It reads both compressed and legacy `.sync-history`
 archives. Changed workspace saves also retain their previous authoring state.
 Unchanged saves do not add versions. The storage retention policy below still applies.
+Snapshots retain referenced managed storyboard audio before save-time resource
+cleanup. Restoring a version recovers these bytes even after the original import
+file and active mapset copy have been deleted. The audio copies expire with their
+snapshot under the same history limits.
 
 ### Compressed recovery files
 
@@ -521,7 +529,7 @@ age/budget pruning but do not exempt ordinary rounds from the count limit. The
 budget is therefore a soft limit. Deleted or retired sets retain their newest
 recovery copy.
 
-Audio remains content-addressed and deduplicated. Cleanup traces hashes and paths
+Synchronized song audio remains content-addressed and deduplicated. Cleanup traces hashes and paths
 from current authoring, synchronization baselines, and retained history before
 removing old unreferenced audio. Derived playback copies are collected separately
 when no retained document references their path, even if the canonical audio hash

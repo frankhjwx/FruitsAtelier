@@ -4,6 +4,71 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: automatic stream sounds retain editable authoring and per-event samples", () =>
+        {
+            foreach (bool uniform in new[] { true, false }) Run(f =>
+            {
+                var document = f.Diff.Document;
+                document.Fruits.Clear();
+                var track = new CurveTrack { StreamSnapDivisor = 4, Kind = CurveKind.Bezier, SourceOrder = 0 };
+                track.Nodes.AddRange([new() { TimeMs = 1000, X = 100, HandleOut = new(150, 40) },
+                    new() { TimeMs = 2000, X = 400, HandleIn = new(-100, -30) }]);
+                document.Tracks.Add(track);
+                var output = OsuBeatmapWriter.Serialize(document);
+                File.WriteAllText(f.Source, output.Text);
+                f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, document, f.Session.Directory,
+                    output.Text, output.ObjectSources);
+                string incoming = output.Text;
+                var lines = WorkspaceSynchronization.ObjectLines(output.Text);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    var parts = lines[i].Split(',');
+                    parts[4] = uniform || i % 2 == 0 ? "2" : "8";
+                    if (!uniform) parts[5] = i % 2 == 0 ? "2:3:4:65:" : "0:0:0:0:";
+                    incoming = incoming.Replace(lines[i], string.Join(',', parts));
+                }
+                File.WriteAllText(f.Source, incoming);
+                var merge = f.Merge();
+                Check(!merge.RequiresResolution, "representable sound edits import automatically");
+                var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+                Check(resolved.Tracks.Count == 1 && resolved.Fruits.Count == 0 && TrackEquals(resolved.Tracks[0], track),
+                    "automatic sounds preserve stream identity, anchors, handles and settings");
+                Check(WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(resolved).Text)
+                    .SequenceEqual(WorkspaceSynchronization.ObjectLines(incoming)), "stream event samples reproduce incoming output");
+                var reopened = ProjectSerializer.Read(ProjectSerializer.Serialize(resolved, f.Source), f.Source);
+                Check(TrackEquals(reopened.Tracks.Single(), track)
+                    && WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(reopened).Text)
+                        .SequenceEqual(WorkspaceSynchronization.ObjectLines(incoming)), "stream authoring and event samples survive project reload");
+            });
+        });
+        yield return ("Sync: unrepresentable stream samples require review without flattening authoring", () => Run(f =>
+        {
+            var document = f.Diff.Document;
+            document.Fruits.Clear();
+            document.BeatLengthMs = document.TimingPoints[0].BeatLengthMs = 1;
+            var track = new CurveTrack { StreamSnapDivisor = 4, SourceOrder = 0 };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1002, X = 400 }]);
+            document.Tracks.Add(track);
+            var output = OsuBeatmapWriter.Serialize(document);
+            File.WriteAllText(f.Source, output.Text);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, document, f.Session.Directory,
+                output.Text, output.ObjectSources);
+            string incoming = output.Text;
+            var lines = WorkspaceSynchronization.ObjectLines(output.Text);
+            Check(lines.GroupBy(line => line.Split(',')[2]).Any(g => g.Count() > 1), "fixture contains stream events sharing a published millisecond");
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var parts = lines[i].Split(','); parts[4] = i % 2 == 0 ? "2" : "8";
+                incoming = incoming.Replace(lines[i], string.Join(',', parts));
+            }
+            File.WriteAllText(f.Source, incoming);
+            var merge = f.Merge();
+            Check(merge.RequiresResolution && !merge.HasAutomaticObjectChanges,
+                "samples that cannot be reproduced independently at one published millisecond remain an explicit conflict");
+            var retained = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => false));
+            Check(TrackEquals(retained.Tracks.Single(), track) && retained.Fruits.Count == 0,
+                "retaining FA leaves stream authoring intact after rejected automatic preservation");
+        }));
         yield return ("Sync: external sounds and rounded import times merge without losing local edits", () => Run(f =>
         {
             string original = Fixture().Replace("1000,1,0", "1000.75,1,0");
@@ -1379,6 +1444,12 @@ internal static class SynchronizationTests
     private static string TimingValues(IEnumerable<TimingPoint> points) => string.Join('\n', points.Select(t => string.Join(',',
         t.TimeMs.ToString("R", System.Globalization.CultureInfo.InvariantCulture), t.BeatLengthMs.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
         t.Meter, t.SampleSet, t.SampleIndex, t.Volume, t.Uninherited, t.Effects)));
+    private static bool TrackEquals(CurveTrack left, CurveTrack right)
+    {
+        var a = new MapDocument(); a.Tracks.Add(left);
+        var b = new MapDocument(); b.Tracks.Add(right);
+        return a.ContentEquals(b);
+    }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     private static void Reject(Action action) { try { action(); } catch (Exception e) when (e is IOException or InvalidOperationException) { return; } throw new Exception("Expected rejection"); }
     private static void Set(MapDocument document, string key, string value)

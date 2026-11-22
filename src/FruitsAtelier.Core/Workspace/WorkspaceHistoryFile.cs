@@ -49,7 +49,12 @@ public static class WorkspaceHistoryFile
         return bytes;
     }
 
-    public static void WriteProject(BeatmapProject project, string path) => Write(path, Encoding.UTF8.GetBytes(ProjectSerializer.Serialize(project, path)));
+    public static void WriteProject(BeatmapProject project, string path)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(ProjectSerializer.Serialize(project, path));
+        WorkspaceStoryboardAudioHistory.Capture(project, Path.GetDirectoryName(path)!);
+        Write(path, bytes);
+    }
 
     public static void Write(string path, byte[] bytes)
     {

@@ -113,6 +113,7 @@ public sealed partial class EditorView
         }
         var actualChanges = details.Where(p => p.Value.Any(d => d.Playable is not null || d.Message == "sync.diff.y"))
             .Select(p => p.Key).ToHashSet();
+        actualChanges.UnionWith(merge.Conflicts.Where(c => merge.RequiresAuthoringReview(c.Key)).Select(c => c.Key));
         // Field changes can alter nested objects even when the source object lines match.
         foreach (var conflict in merge.Conflicts.Where(c => !merge.NativeDifficulty && c.Key is "TimingPoints/" or "Difficulty/SliderMultiplier" or "Difficulty/SliderTickRate" or "Format/Version"))
         {
@@ -184,7 +185,7 @@ public sealed partial class EditorView
         if (hasConflict) label += " · " + stateLabel;
         c.Text(label, x + 20, y + 106, 15, Accent, w - 40);
         float paneWidth = (w - 40 - (syncShowResult ? 24 : 12)) / (syncShowResult ? 3 : 2);
-        if (hasConflict) DrawSyncObjectDetails(c, syncSimplified ? comparison.Review.Objects[conflict.Key].Where(d => d.Playable is not null || d.Message == "sync.diff.y").ToArray() : comparison.Review.Objects[conflict.Key], new(x + 20, y + 130, w - 40, 74),
+        if (hasConflict) DrawSyncObjectDetails(c, syncSimplified && !merge.RequiresAuthoringReview(conflict.Key) ? comparison.Review.Objects[conflict.Key].Where(d => d.Playable is not null || d.Message == "sync.diff.y").ToArray() : comparison.Review.Objects[conflict.Key], new(x + 20, y + 130, w - 40, 74),
             syncChoices.ContainsKey(conflict.Key) || merge.PreviouslyResolved.Contains(conflict.Key) ? SyncResolvedThisRound : SyncUnresolved);
         else syncObjectDetailBounds = default;
         var left = new Rect(x + 20, y + 214, paneWidth, h - 390);
