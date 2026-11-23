@@ -10,10 +10,6 @@ Windows와 macOS에서 사용할 수 있는 독립 osu!catch 비트맵 편집기
 
 **현재 버전: 1.4.12**
 
-Ctrl+S가 프로젝트에서 수정된 모든 난이도를 저장하도록 수정했습니다. 동기화된 Song Setup 설정과 연결된 `.osu` 파일도 저장됩니다.
-
-오브젝트 스냅 설정은 난이도 간에 공유되며 현재 컴퓨터에 저장됩니다. 라이브러리에서 Esc를 누르면 종료 확인 창이 표시됩니다.
-
 ![FruitsAtelier의 편집 캔버스, 오브젝트 타임라인, Catch 미리 보기](assets/screenshots/twin-bloom.png)
 
 *Gardens — Twin Bloom · Yumeno Himiko [Double Radiance].*

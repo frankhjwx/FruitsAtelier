@@ -10,10 +10,6 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 
 **現在のバージョン：1.4.12**
 
-Ctrl+S でプロジェクト内の変更されたすべての難易度を保存するよう修正しました。同期された Song Setup の設定と関連する `.osu` ファイルも保存されます。
-
-オブジェクトスナップ設定は難易度間で共有され、このコンピューターに保存されます。ライブラリで Esc を押すと、終了確認が表示されます。
-
 ![FruitsAtelier の編集キャンバス、オブジェクトタイムライン、Catch プレビュー](assets/screenshots/twin-bloom.png)
 
 *Gardens — Twin Bloom · Yumeno Himiko [Double Radiance]。*

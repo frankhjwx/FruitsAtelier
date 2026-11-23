@@ -10,10 +10,6 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 **Current version: 1.4.12**
 
-Fixed Ctrl+S to save all modified difficulties in the project, including synchronized Song Setup changes and their linked `.osu` files.
-
-Object Snap settings are shared across difficulties and remembered on this computer. In the Library, Esc asks for confirmation before exiting.
-
 ![FruitsAtelier's editing canvas, object timeline, and Catch preview](assets/screenshots/twin-bloom.png)
 
 *Gardens — Twin Bloom · Yumeno Himiko [Double Radiance].*

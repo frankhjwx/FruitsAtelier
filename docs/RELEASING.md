@@ -240,7 +240,9 @@ documents and link to those rules from other entry points. Keep historical relea
 notes, pinned upstream comparisons, and retained third-party license text intact.
 
 Update `README.md` and its Chinese, Japanese, and Korean translations together:
-cover current features and setup, not only the version number. Update the user
+cover current features and setup, not only the version number. Keep version-specific
+change summaries in `docs/releases/<tag>.md`; README entry points describe the
+product and usage without release-by-release update paragraphs. Update the user
 manual and shortcut reference when the shipped behavior changes. Reconcile
 feedback/backlog entries with implemented features. Verify documentation claims
 against the final diff and current implementation, and summarize the reviewed

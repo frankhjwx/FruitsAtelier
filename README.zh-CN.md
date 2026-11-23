@@ -10,10 +10,6 @@
 
 **当前版本：1.4.12**
 
-修复 Ctrl+S 未保存工程内所有已修改难度的问题，包括同步的 Song Setup 设置及其关联的 `.osu` 文件。
-
-对象吸附设置在各难度间共用，并保存在当前电脑上。在曲库中按 Esc 会先询问是否退出。
-
 ![水果工坊的编辑画布、物件时间轴与 Catch 预览](assets/screenshots/twin-bloom.png)
 
 *Gardens — Twin Bloom · Yumeno Himiko [Double Radiance]。*
