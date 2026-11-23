@@ -1876,7 +1876,7 @@ With N, left-click to set the start, then right-click at a later time to finish.
 | --- | --- |
 | Ctrl+O | Choose a difficulty in the current project |
 | Ctrl+Shift+O | Open `.osz` / `.osu` / `.catchproj` |
-| Ctrl+S | Save current difficulty; workspace-only projects offer an optional Songs export after saving |
+| Ctrl+S | Save all modified difficulties; workspace-only projects offer an optional Songs export after saving |
 | Ctrl+L | Confirm restoring the current difficulty to the preceding saved version; requires an earlier workspace save |
 | Ctrl+Alt+E | Export `.osu` |
 | Space | Play / pause |

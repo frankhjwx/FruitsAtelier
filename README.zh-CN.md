@@ -8,9 +8,9 @@
 
 [官网](https://fruitsatelier.himiko.moe/) · [下载](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**当前版本：1.4.11**
+**当前版本：1.4.12**
 
-新导入的故事板音效以原文件名保存在 `SBHitsounds`，同名但内容不同的文件会添加数字后缀。故事板音效时间以整数毫秒导出，小数时间绿线不会覆盖滑条头所需的速度。超出工程已保存时长的滑条仍可正常转换。
+修复 Ctrl+S 未保存工程内所有已修改难度的问题，包括同步的 Song Setup 设置及其关联的 `.osu` 文件。
 
 对象吸附设置在各难度间共用，并保存在当前电脑上。在曲库中按 Esc 会先询问是否退出。
 

@@ -8,9 +8,9 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 [Website](https://fruitsatelier.himiko.moe/) · [Download](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**Current version: 1.4.11**
+**Current version: 1.4.12**
 
-New storyboard audio keeps readable filenames in `SBHitsounds`, with numeric suffixes for conflicting files. Storyboard sample times export as integer milliseconds, and fractional timing points preserve slider-head velocity. Sliders beyond the saved workspace duration remain convertible.
+Fixed Ctrl+S to save all modified difficulties in the project, including synchronized Song Setup changes and their linked `.osu` files.
 
 Object Snap settings are shared across difficulties and remembered on this computer. In the Library, Esc asks for confirmation before exiting.
 

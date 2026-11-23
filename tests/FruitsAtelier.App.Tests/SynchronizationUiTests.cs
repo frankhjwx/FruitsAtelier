@@ -61,7 +61,8 @@ internal static class SynchronizationUiTests
                 history.Document.Fruits.Add(new Fruit { TimeMs = 3000, X = 200 });
                 history.Commit();
                 ui.View.SaveProject();
-                if (!switchDuringScan) Wait(ui);
+                Wait(ui);
+                if (switchDuringScan) ui.View.RefreshSynchronization(quiet: true);
                 var field = typeof(FruitsAtelier.App.Editor.EditorView).GetField("syncTask",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
                 var scan = field.GetValue(ui.View);
