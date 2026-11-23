@@ -53,7 +53,7 @@ def main():
         shutil.rmtree(output)
     host = ROOT / "tools/MapsetVerifier.Host"
     locks = host / "upstream-locks" / args.runtime
-    for project in ("MapsetVerifier.Logging", "MapsetVerifier.Parser", "MapsetVerifier.Framework", "MapsetVerifier.Checks"):
+    for project in ("MapsetVerifier.Logging", "MapsetVerifier.Parser", "MapsetVerifier.Framework", "MapsetVerifier.Checks", "MapsetVerifier.RankingCriteria"):
         lock = locks / (project + ".lock.json")
         if lock.exists():
             shutil.copy2(lock, source / project / f"packages.{args.runtime}.lock.json")
@@ -76,7 +76,7 @@ def main():
     subprocess.run(command, cwd=ROOT, check=True)
     if args.update_locks:
         locks.mkdir(parents=True, exist_ok=True)
-        for project in ("MapsetVerifier.Logging", "MapsetVerifier.Parser", "MapsetVerifier.Framework", "MapsetVerifier.Checks"):
+        for project in ("MapsetVerifier.Logging", "MapsetVerifier.Parser", "MapsetVerifier.Framework", "MapsetVerifier.Checks", "MapsetVerifier.RankingCriteria"):
             shutil.copy2(source / project / f"packages.{args.runtime}.lock.json", locks / (project + ".lock.json"))
     shutil.copy2(ROOT / "eng/mapset-verifier.json", output / "upstream.json")
     shutil.copy2(source / "LICENSE", output / "LICENSE.MapsetVerifier.txt")
