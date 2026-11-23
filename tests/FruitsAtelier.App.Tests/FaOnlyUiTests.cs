@@ -58,7 +58,7 @@ internal static class FaOnlyUiTests
                     New(); ui.ClickText(L.Get("difficulty.createFaOnly")); Create(); Wait(ui);
                     Guid local = ui.View.CaptureProject().Difficulties[ui.View.ActiveDifficultyIndex].Id;
                     Check(ui.View.CurrentDifficultyFaOnly && exports == 1, "FA-only creation does not generate to Songs");
-                    ui.View.SaveCurrentDifficulty(); Wait(ui);
+                    ui.View.SaveProject(); Wait(ui);
                     Check(ui.View.WorkspaceSession!.Manifest.Difficulties.Single(d => d.Id == local).FaOnly && exports == 1, "saving FA-only writes workspace only");
                     ui.Key(115); ui.Paint();
                     ClickFaSettings();

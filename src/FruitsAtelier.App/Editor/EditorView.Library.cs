@@ -158,12 +158,15 @@ public sealed partial class EditorView
             PumpPendingLibraryScan();
         }
     }
-    public void ShowWorkspaceExport()
+    private bool saveProjectAfterExport;
+    public void ShowWorkspaceExport() => ShowWorkspaceExport(false);
+    private void ShowWorkspaceExport(bool saveProject)
     {
         if (RejectPatternProjectOperation()) return;
         if (!HasEditorProject || ExportVisible) return;
         if (CurrentDifficultyFaOnly) { SetNotice(L.Get("song.faOnlyExportHelp")); return; }
         if (!PrepareFileOperation()) return;
+        saveProjectAfterExport = saveProject;
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
         if (ExportOverwriteTarget is null && !string.IsNullOrWhiteSpace(LibrarySettings.Songs))
         {
@@ -178,6 +181,7 @@ public sealed partial class EditorView
     }
     public void CloseLibrary()
     {
+        saveProjectAfterExport = false;
         libraryBrowser?.SuspendRatings();
         CloseCollectionDialog();
         if (LibraryVisible && !exportPage) { RememberLibraryPosition(); SaveLibraryMemory(); }
@@ -204,8 +208,19 @@ public sealed partial class EditorView
         if (RejectPatternProjectOperation()) return false;
         if (!PrepareFileOperation()) return false;
         var project = CaptureProject();
-        if (WorkspaceSession is null) WorkspaceSession = WorkspaceProject.Create(LibrarySettings.Workspace, project, LibrarySettings.Songs);
-        else WorkspaceProject.Save(WorkspaceSession, project);
+        var dirty = difficulties.Where(DifficultyIsDirty).Select(d => d.Id).ToArray();
+        if (WorkspaceSession is null)
+        {
+            WorkspaceSession = WorkspaceProject.Create(LibrarySettings.Workspace, project, LibrarySettings.Songs);
+            if (MarkPendingExports(WorkspaceSession, dirty)) WorkspaceProject.Save(WorkspaceSession, project, archiveBeforeSave: false);
+        }
+        else
+        {
+            MarkPendingExports(WorkspaceSession, dirty);
+            WorkspaceProject.Save(WorkspaceSession, project);
+            WorkspaceSession = WorkspaceSession with { Project = project };
+        }
+        RestorePendingExports(WorkspaceSession);
         MarkSaved(); CheckWorkspaceResources(); InvalidateLibraryRatings();
         libraryProjectsNeedReindex = true; QueueLibrarySearch();
         SetNotice(L.Get("files.saved", WorkspaceSession.Directory));
@@ -223,12 +238,21 @@ public sealed partial class EditorView
         var session = WorkspaceSession is { } current ? DetachedSession(current, project) : null;
         if (session is not null && songsExportOfferShown) session.Manifest.SongsExportOfferShown = true;
         string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
+        var dirty = difficulties.Where(DifficultyIsDirty).Select(d => d.Id).ToArray();
         workspaceSaveCompleted = completed;
         workspaceSaveBlocksInput = completed is not null;
         workspaceSaveTask = Task.Run(() =>
         {
-            if (session is null) return WorkspaceProject.Create(workspace, project, songs, songsExportOfferShown);
-            WorkspaceProject.Save(session, project);
+            if (session is null)
+            {
+                session = WorkspaceProject.Create(workspace, project, songs, songsExportOfferShown);
+                if (MarkPendingExports(session, dirty)) WorkspaceProject.Save(session, project, archiveBeforeSave: false);
+            }
+            else
+            {
+                MarkPendingExports(session, dirty);
+                WorkspaceProject.Save(session, project);
+            }
             return session;
         });
         hits.Clear(); fields.Clear();
@@ -245,6 +269,7 @@ public sealed partial class EditorView
         try
         {
             WorkspaceSession = task.GetAwaiter().GetResult();
+            RestorePendingExports(WorkspaceSession);
             savedProjectNotes = WorkspaceSession.Project.Notes;
             foreach (var diff in WorkspaceSession.Project.Difficulties)
                 difficulties.FirstOrDefault(d => d.Id == diff.Id)?.History.MarkSaved(diff.Document);
@@ -261,7 +286,7 @@ public sealed partial class EditorView
     public bool ProjectInSongs => !string.IsNullOrWhiteSpace(LibrarySettings.Songs) && (WorkspaceSession is { } session
         ? WorkspaceProject.HasExistingSongsFile(session.Manifest, LibrarySettings.Songs)
         : Document.SourcePath is { } path && WorkspaceProject.Within(LibrarySettings.Songs, path) && File.Exists(path));
-    public void SaveCurrentDifficulty()
+    public void SaveProject()
     {
         if (PatternEditingActive) { SavePatternEditing(); return; }
         if (difficultySaveTask is not null || workspaceSaveTask is not null || syncCommitTask is not null) return;
@@ -269,20 +294,25 @@ public sealed partial class EditorView
         var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);
         if (CurrentDifficultyFaOnly)
         {
-            if (!BeginCurrentDifficultySave()) BeginWorkspaceSave();
+            if (!BeginProjectSave()) BeginWorkspaceSave(saved => { if (saved && pendingExports.Count > 0) SaveProject(); });
             return;
         }
         bool importedDifficulty = entry?.Source is not null || Document.SourcePath is { } source && Path.GetExtension(source).Equals(".osu", StringComparison.OrdinalIgnoreCase);
         if (!string.IsNullOrWhiteSpace(LibrarySettings.Songs) && ProjectInSongs && entry?.ExportConfirmed != true && importedDifficulty)
         {
-            ShowWorkspaceExport();
+            ShowWorkspaceExport(saveProject: true);
             return;
         }
-        if (BeginCurrentDifficultySave()) return;
+        if (BeginProjectSave()) return;
+        if (WorkspaceSession is not null && (projectStructureDirty || projectNotes != savedProjectNotes || ProjectName != WorkspaceSession.Project.Name))
+        {
+            BeginWorkspaceSave(saved => { if (saved) SaveProject(); });
+            return;
+        }
         if (WorkspaceSession is { } syncSession && syncSession.Manifest.Difficulties.Any(d => WorkspaceSynchronization.Target(d) is not null) && !syncBypass)
         {
             syncDifficulty = difficulties[activeDifficulty].Id;
-            RefreshSynchronization(SaveCurrentDifficulty);
+            RefreshSynchronization(SaveProject);
             return;
         }
         if (string.IsNullOrWhiteSpace(LibrarySettings.Songs)) { BeginWorkspaceSave(); return; }
@@ -292,19 +322,20 @@ public sealed partial class EditorView
             BeginWorkspaceSave(saved =>
             {
                 if (!saved) return;
-                ShowDiscardConfirmation(answer => { if (answer == 6) ShowWorkspaceExport(); });
+                ShowDiscardConfirmation(answer => { if (answer == 6) ShowWorkspaceExport(saveProject: true); });
                 offerSongsExport = true;
             }, songsExportOfferShown: true);
             return;
         }
         if (CurrentDifficultyHasExport)
             RequestWorkspaceExport?.Invoke(true, CurrentDifficultyName);
-        else if (importedDifficulty) ShowWorkspaceExport();
+        else if (importedDifficulty) ShowWorkspaceExport(saveProject: true);
         else BeginWorkspaceSave();
     }
     public void LoadWorkspace(WorkspaceSession session, bool checkAdditionalDifficulties = false, Guid? initialDifficultyId = null)
     {
         LoadProject(session.Project, initialDifficultyId); WorkspaceSession = session; CheckWorkspaceResources();
+        RestorePendingExports(session);
         CheckTimingAlignmentOnOpen();
         libraryProjectsNeedReindex = true; QueueLibrarySearch(); CloseLibrary();
         if (session.Project.Difficulties.Any(d => d.Document.SliderImportState == SliderImportState.Pending)) PrepareImportedSliders(true);
@@ -313,6 +344,9 @@ public sealed partial class EditorView
     }
     public void LibraryExportFinished(WorkspaceExportPlan plan)
     {
+        bool continueSave = saveProjectAfterExport;
+        if (WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == plan.DifficultyId) is { PendingExport: false })
+            pendingExports.Remove(plan.DifficultyId);
         if (plan.ExpectedHash is null && WorkspaceSession is { } session)
         {
             LoadWorkspace(WorkspaceProject.Open(session.Directory));
@@ -327,6 +361,7 @@ public sealed partial class EditorView
         CheckWorkspaceResources();
         libraryPendingDirectories.Add(Path.GetDirectoryName(plan.Target)!);
         libraryProjectsNeedReindex = true; QueueLibrarySearch(); CloseLibrary();
+        if (continueSave) SaveProject();
     }
     public void RefreshLibrary() { librarySettingsOpen = false; updatesPage = false; libraryRescanRequested = scanTask is { IsCompleted: false }; StartLibraryScan(); }
     private LibraryDatabase? scanningDatabase;

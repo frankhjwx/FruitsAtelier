@@ -940,7 +940,7 @@ internal static class RenderCheck
             foreach (var size in new[] { (980, 620), (1440, 900) })
             {
                 FruitsAtelier.Localization.Strings.SetLanguage(locale);
-                view.NewProject(); view.CloseLibrary(); view.SaveCurrentDifficulty();
+                view.NewProject(); view.CloseLibrary(); view.SaveProject();
                 canvas.Resize(size.Item1, size.Item2, 96);
                 var deadline = Stopwatch.StartNew();
                 while (view.SynchronizationBusy && deadline.Elapsed.TotalSeconds < 15)
@@ -953,7 +953,7 @@ internal static class RenderCheck
                 if (view.ExportVisible || view.DiscardConfirmationVisible)
                     throw new InvalidOperationException("Dismissing the Songs offer did not finish the workspace save.");
                 view.LoadWorkspace(WorkspaceProject.Open(view.WorkspaceSession.Directory));
-                view.SaveCurrentDifficulty();
+                view.SaveProject();
                 deadline.Restart();
                 while (view.SynchronizationBusy && deadline.Elapsed.TotalSeconds < 15)
                 { canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End(); Thread.Sleep(5); }
@@ -1037,7 +1037,7 @@ internal static class RenderCheck
                     var field = typeof(EditorView).GetField("syncCommitTask", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
                     field.SetValue(editor, new TaskCompletionSource<WorkspaceSession>().Task);
                     foreach (Action input in new Action[] {
-                        () => editor.KeyDown('S', true, false), () => editor.SaveCurrentDifficulty(),
+                        () => editor.KeyDown('S', true, false), () => editor.SaveProject(),
                         () => editor.PointerDown(400, 300, 0, false, false),
                         () => editor.PointerDoubleClick(400, 300, false, false),
                         () => editor.Wheel(400, 300, 120, false), () => editor.TextInput('x') })

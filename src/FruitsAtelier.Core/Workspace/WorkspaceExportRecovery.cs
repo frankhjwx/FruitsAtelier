@@ -18,6 +18,7 @@ public static class WorkspaceExportRecovery
         entry.Name = difficulty.Name; entry.Source = entry.ExportTarget = plan.Target;
         entry.SourceHash = entry.ExportHash = WorkspaceSynchronization.Digest(plan.Output.Text);
         entry.ExportConfirmed = true;
+        entry.PendingExport = false;
         entry.Sync = WorkspaceSynchronization.Capture(plan.Target, difficulty.Document, session.Directory, plan.Output.Text, plan.Output.ObjectSources, entry.Sync);
         if (difficultyOnly) manifest.Difficulties.RemoveAll(d => d.Id != owner);
         var recoveredProject = new BeatmapProject

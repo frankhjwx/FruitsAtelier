@@ -81,7 +81,7 @@ internal static class PerformanceSchedulingTests
             "read-only retry creates no recovery round");
         ui.View.RefreshSynchronization(); SynchronizationUiTests.Wait(ui);
         Check(ui.View.IsDirty && OsuBeatmapReader.ReadFile(source).Fruits[0].X == 100, "Checking again does not publish local edits");
-        ui.View.SaveCurrentDifficulty(); SynchronizationUiTests.Wait(ui);
+        ui.View.SaveProject(); SynchronizationUiTests.Wait(ui);
         Check(OsuBeatmapReader.ReadFile(source).Fruits[0].X == ui.View.Document.Fruits[0].X && !ui.View.IsDirty,
             "explicit save exports the latest edit");
         var versions = WorkspaceVersionHistory.List(ui.View.WorkspaceSession);

@@ -1193,6 +1193,9 @@ Difficulty names and other difficulty-specific settings are preserved. Disabling
 custom colors before synchronizing removes combo overrides from the other
 difficulties. Undo/redo in the source difficulty restores the synchronized fields
 across the set while retaining the other difficulties' independent object histories.
+Save / Ctrl+S saves all modifications in the project, including the synchronized
+fields in every affected linked `.osu`. Difficulty dirty indicators remain visible
+until their changes have been saved, including while star ratings refresh.
 
 Difficulty edits the current difficulty's HP, CS, AR and OD from 0 to 10. Each
 slider has fine integer tick marks without labels. Drag in whole steps, hold
@@ -1873,7 +1876,7 @@ With N, left-click to set the start, then right-click at a later time to finish.
 | --- | --- |
 | Ctrl+O | Choose a difficulty in the current project |
 | Ctrl+Shift+O | Open `.osz` / `.osu` / `.catchproj` |
-| Ctrl+S | Save current difficulty; workspace-only projects offer an optional Songs export after saving |
+| Ctrl+S | Save all modified difficulties; workspace-only projects offer an optional Songs export after saving |
 | Ctrl+L | Confirm restoring the current difficulty to the preceding saved version; requires an earlier workspace save |
 | Ctrl+Alt+E | Export `.osu` |
 | Space | Play / pause |

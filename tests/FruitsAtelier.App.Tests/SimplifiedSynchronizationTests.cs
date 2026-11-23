@@ -111,7 +111,7 @@ internal static class SimplifiedSynchronizationTests
                 var track = new CurveTrack { StreamSnapDivisor = 4, SourceOrder = 0 };
                 track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1002, X = 400 }]);
                 history.Document.Tracks.Add(track); history.Commit();
-                ui.View.SaveCurrentDifficulty(); Wait(ui);
+                ui.View.SaveProject(); Wait(ui);
                 ui.View.WorkspaceSession!.Manifest.Difficulties[0].ExportConfirmed = false;
                 string incoming = File.ReadAllText(streams.Source);
                 var lines = WorkspaceSynchronization.ObjectLines(incoming);

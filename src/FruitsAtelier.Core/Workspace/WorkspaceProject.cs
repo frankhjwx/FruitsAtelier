@@ -32,6 +32,8 @@ public sealed class WorkspaceDifficulty
     // Export associations from older manifests may have been created by automatic synchronization.
     public bool ExportConfirmed { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool PendingExport { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool FaOnly { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public WorkspaceSyncBaseline? Sync { get; set; }
@@ -57,7 +59,7 @@ public static partial class WorkspaceProject
         Difficulties = manifest.Difficulties.Select(e => new WorkspaceDifficulty
         {
             Id = e.Id, Name = e.Name, File = e.File, Source = e.Source, SourceHash = e.SourceHash,
-            ExportTarget = e.ExportTarget, ExportHash = e.ExportHash, ExportConfirmed = e.ExportConfirmed, FaOnly = e.FaOnly, SyncFile = e.SyncFile,
+            ExportTarget = e.ExportTarget, ExportHash = e.ExportHash, ExportConfirmed = e.ExportConfirmed, PendingExport = e.PendingExport, FaOnly = e.FaOnly, SyncFile = e.SyncFile,
             Sync = e.Sync is not { } s ? null : new WorkspaceSyncBaseline { Path = s.Path, Text = s.Text, Authoring = s.Authoring,
                 AudioHash = s.AudioHash, AuthoringAudioHash = s.AuthoringAudioHash, ObjectSources = s.ObjectSources.ToList(), PreviousPaths = s.PreviousPaths.ToList(), LocalOverrides = s.LocalOverrides.ToList(),
                 RetainedObjects = s.RetainedObjects.Select(r => new WorkspaceRetainedObjects(r.Sources.ToList(), r.ExternalLines.ToList())).ToList(), RetainedObjectsRecorded = s.RetainedObjectsRecorded }
@@ -226,7 +228,7 @@ public static partial class WorkspaceProject
                         throw new InvalidOperationException(L.Get("sync.duplicate", source));
                 }
                 var entry = new WorkspaceDifficulty { Id = diff.Id, Name = diff.Name, File = name, Source = old is not null ? old.Source : source,
-                    SourceHash = old is not null ? old.SourceHash : (source is not null && System.IO.File.Exists(source) ? Hash(source) : null), ExportTarget = old?.ExportTarget, ExportHash = old?.ExportHash, ExportConfirmed = old?.ExportConfirmed ?? false, FaOnly = diff.FaOnly, Sync = old?.Sync };
+                    SourceHash = old is not null ? old.SourceHash : (source is not null && System.IO.File.Exists(source) ? Hash(source) : null), ExportTarget = old?.ExportTarget, ExportHash = old?.ExportHash, ExportConfirmed = old?.ExportConfirmed ?? false, PendingExport = old?.PendingExport ?? false, FaOnly = diff.FaOnly, Sync = old?.Sync };
                 if (old is null && source is not null && System.IO.File.Exists(source))
                     entry.Sync = WorkspaceSynchronization.Capture(source, diff.Document, directory);
                 if (entry.Sync is not null)
@@ -247,7 +249,7 @@ public static partial class WorkspaceProject
                 SongsExportOfferShown = manifest.SongsExportOfferShown,
                 SourceDirectory = manifest.SourceDirectory, ExternalSourceDirectory = manifest.ExternalSourceDirectory,
                 Difficulties = entries.Select(e => new WorkspaceDifficulty { Id = e.Id, Name = e.Name, File = e.File,
-                    Source = e.Source, SourceHash = e.SourceHash, ExportTarget = e.ExportTarget, ExportHash = e.ExportHash, ExportConfirmed = e.ExportConfirmed, FaOnly = e.FaOnly, SyncFile = e.SyncFile }).ToList() };
+                    Source = e.Source, SourceHash = e.SourceHash, ExportTarget = e.ExportTarget, ExportHash = e.ExportHash, ExportConfirmed = e.ExportConfirmed, PendingExport = e.PendingExport, FaOnly = e.FaOnly, SyncFile = e.SyncFile }).ToList() };
             AtomicFile.Write(Path.Combine(staging, ManifestName), JsonSerializer.Serialize(persisted, json));
             if (System.IO.Directory.Exists(directory)) System.IO.Directory.Move(directory, previous);
             try { System.IO.Directory.Move(staging, directory); }

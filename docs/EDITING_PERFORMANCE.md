@@ -325,10 +325,11 @@ state during rendering. The fallback driver still advances with transport update
 
 ## Correctness boundaries
 
-Ordinary difficulty saves clone only the requested document on the UI thread.
-Their worker owns synchronization, export validation and journal publication, and
-prepares the saved baseline before handing it back. Completion transfers that
-detached baseline without cloning other difficulties or rebuilding conversion.
+Project saves clone modified difficulty snapshots on the UI thread. Their worker
+validates all affected linked files, then publishes each snapshot with its recovery
+journal and prepares saved baselines. Completion acknowledges only successful
+snapshots without rebuilding conversion; newer edits remain dirty. Unmodified
+difficulties reuse their persisted snapshots.
 Recovery history copies persisted difficulty files and records the current
 difficulty separately; full project reconstruction happens when a version is read.
 History compression remains deferred to the idle worker. See

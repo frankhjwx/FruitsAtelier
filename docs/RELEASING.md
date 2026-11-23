@@ -30,7 +30,7 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 
 ```powershell
 ./scripts/Publish-Windows.ps1
-./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.4.11-win-x64.zip
+./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.4.12-win-x64.zip
 ```
 
 Publication requires Python 3 to prepare the pinned [Mapset Verifier engine](MAPSET_VERIFIER.md).
@@ -42,7 +42,7 @@ source, adapter, launcher, build script and dependency locks.
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
 `releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`
-(currently 1.4.11); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
+(currently 1.4.12); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the
@@ -240,7 +240,9 @@ documents and link to those rules from other entry points. Keep historical relea
 notes, pinned upstream comparisons, and retained third-party license text intact.
 
 Update `README.md` and its Chinese, Japanese, and Korean translations together:
-cover current features and setup, not only the version number. Update the user
+cover current features and setup, not only the version number. Keep version-specific
+change summaries in `docs/releases/<tag>.md`; README entry points describe the
+product and usage without release-by-release update paragraphs. Update the user
 manual and shortcut reference when the shipped behavior changes. Reconcile
 feedback/backlog entries with implemented features. Verify documentation claims
 against the final diff and current implementation, and summarize the reviewed

@@ -8,11 +8,7 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 
 [公式サイト](https://fruitsatelier.himiko.moe/) · [ダウンロード](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**現在のバージョン：1.4.11**
-
-新しく読み込んだストーリーボード音声は元のファイル名で `SBHitsounds` に保存され、同名で内容が異なる場合は数字が付きます。サンプル時刻は整数ミリ秒で書き出され、小数時刻のタイミングポイントでもスライダー始点の速度が保たれます。保存されたプロジェクトの長さを超えるスライダーも変換できます。
-
-オブジェクトスナップ設定は難易度間で共有され、このコンピューターに保存されます。ライブラリで Esc を押すと、終了確認が表示されます。
+**現在のバージョン：1.4.12**
 
 ![FruitsAtelier の編集キャンバス、オブジェクトタイムライン、Catch プレビュー](assets/screenshots/twin-bloom.png)
 

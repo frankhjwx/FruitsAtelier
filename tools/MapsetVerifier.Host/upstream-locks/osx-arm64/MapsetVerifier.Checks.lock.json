@@ -1132,8 +1132,8 @@
       "mapsetverifier.framework": {
         "type": "Project",
         "dependencies": {
-          "MapsetVerifier.Logging": "[1.2.3, )",
-          "MapsetVerifier.Parser": "[1.2.3, )",
+          "MapsetVerifier.Logging": "[1.4.11, )",
+          "MapsetVerifier.Parser": "[1.4.11, )",
           "Serilog": "[4.3.1, )",
           "TagLibSharp": "[2.3.0, )",
           "ppy.ManagedBass": "[2022.1216.0, )"
@@ -1150,13 +1150,19 @@
       "mapsetverifier.parser": {
         "type": "Project",
         "dependencies": {
-          "MapsetVerifier.Logging": "[1.2.3, )",
+          "MapsetVerifier.Logging": "[1.4.11, )",
           "MathNet.Numerics": "[5.0.0, )",
           "SixLabors.ImageSharp": "[3.1.12, )",
           "ppy.osu.Game.Rulesets.Catch": "[2026.702.1, )",
           "ppy.osu.Game.Rulesets.Mania": "[2026.702.1, )",
           "ppy.osu.Game.Rulesets.Osu": "[2026.702.1, )",
           "ppy.osu.Game.Rulesets.Taiko": "[2026.702.1, )"
+        }
+      },
+      "mapsetverifier.rankingcriteria": {
+        "type": "Project",
+        "dependencies": {
+          "MapsetVerifier.Parser": "[1.4.11, )"
         }
       }
     },

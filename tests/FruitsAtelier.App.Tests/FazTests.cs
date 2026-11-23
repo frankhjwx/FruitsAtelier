@@ -144,7 +144,7 @@ internal static class FazTests
                 WorkspaceSynchronization.Accept(published, owner, candidate, diff.Document, false, review: oldReview, choices: oldChoices);
                 WorkspaceProject.Save(published, published.Project);
                 reviewView.LoadWorkspace(WorkspaceProject.Open(published.Directory));
-                reviewView.SaveCurrentDifficulty();
+                reviewView.SaveProject();
                 WaitForReview();
                 Check(OsuBeatmapReader.ReadFile(owner.Source!).Fruits[0].X == 141, "save publishes an earlier accepted choice without a new edit");
             }

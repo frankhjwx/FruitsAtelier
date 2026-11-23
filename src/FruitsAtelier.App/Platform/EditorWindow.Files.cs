@@ -139,7 +139,7 @@ internal sealed partial class EditorWindow
             if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) { audio.Load(view.Document.AudioPath); audio.Seek(view.PlayheadMs); }
             PollAudio();
         };
-        view.RequestSave = () => FileOperation(view.SaveCurrentDifficulty);
+        view.RequestSave = () => FileOperation(view.SaveProject);
         view.RequestExport = view.ShowWorkspaceExport;
         ConfigureLibrary();
         view.RequestTogglePlayback = () =>

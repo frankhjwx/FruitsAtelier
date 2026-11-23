@@ -1,10 +1,10 @@
 # FruitsAtelier
 
-User Manual | Version 1.4.11
+User Manual | Version 1.4.12
 
 ## Using this manual
 
-This manual describes FruitsAtelier v1.4.11. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
+This manual describes FruitsAtelier v1.4.12. Browse by feature, search for a tool or shortcut, or follow the tutorials for a guided workflow. Menu names and shortcuts use the English interface.
 
 ### Choose an editing canvas
 
@@ -1105,6 +1105,8 @@ Object-start and boundary rules use playable Catch output, including derived sli
 Use Movement Analysis, the strain graph, Catch Preview and Testplay for playability. Mapset Verifier supplies a separate mapset/difficulty report. Neither checker replaces listening to hitsounds or playing the relevant section.
 
 ## Save, export and recover
+
+**Ctrl+S** saves all modified difficulties in the project, including synchronized Song Setup fields and linked `.osu` files. Edits made while saving remain unsaved; workspace-only saves retain pending export indicators.
 
 ### File formats
 
