@@ -23,7 +23,7 @@ static class WorkspaceSaveTests
                 ui.View.LibrarySettings.Songs = songs;
                 ui.View.NewProject();
                 int exports = 0;
-                ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+                ui.View.RequestSave = ui.View.SaveProject;
                 ui.View.RequestWorkspaceExport = (_, _) => exports++;
                 ui.Key('S', ctrl: true);
                 SynchronizationUiTests.Wait(ui);
@@ -96,7 +96,7 @@ static class WorkspaceSaveTests
             "New projects start clean with Catch metadata, song settings and an explicit red timing point");
         Check(!WorkspaceSynchronization.HasFieldDifferences(initial, OsuBeatmapWriter.Serialize(initial, false).ReadBack),
             "Initialized authoring fields agree with their exported defaults");
-        ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+        ui.View.RequestSave = ui.View.SaveProject;
         ui.View.RequestWorkspaceExport = (overwrite, name) =>
         {
             if (overwrite) ui.View.BeginWorkspaceSave(saved => { if (saved) Export(); });
@@ -163,7 +163,7 @@ static class WorkspaceSaveTests
         var deadline = DateTime.UtcNow.AddSeconds(15);
         while (ui.View.SliderConversionBusy && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(10); }
         Check(ui.View.Document.Tracks.Count == 1 && ui.View.Document.ImportedSliders.Count == 0 && ui.View.IsDirty, "Slider conversion is an unsaved edit");
-        ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+        ui.View.RequestSave = ui.View.SaveProject;
         ui.View.RequestWorkspaceExport = (overwrite, name) =>
         {
             if (overwrite) Check(ui.View.SaveWorkspace(), "Overwrite saves the workspace before explicit export");

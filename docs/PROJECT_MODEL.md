@@ -140,7 +140,7 @@ red point, matching export.
 
 Large imported paths use compact JSON above 65,536 total control points. This changes whitespace only; source text, control points and project schemas remain unchanged.
 
-The editor maintains an independent `EditorHistory` per difficulty and accesses `Document` through the current difficulty. Undo affects only that difficulty; saving updates every history baseline. Adding a difficulty changes project structure rather than a difficulty's object undo stack and keeps the project dirty until saved. The active difficulty, tab scroll position, playhead, and viewport are session state and are not persisted. Opening selects the first difficulty; switching does not create content history. The project container does not force imported `.osu` difficulties to share audio or timing, avoiding overwriting source content.
+The editor maintains an independent `EditorHistory` per difficulty and accesses `Document` through the current difficulty. Undo affects only that difficulty; saving acknowledges every successfully written snapshot, preserving newer edits. Adding a difficulty changes project structure rather than a difficulty's object undo stack and keeps the project dirty until saved. The active difficulty, tab scroll position, playhead, and viewport are session state and are not persisted. Opening selects the first difficulty; switching does not create content history. The project container does not force imported `.osu` difficulties to share audio or timing, avoiding overwriting source content.
 
 Song Setup stores metadata, HP/OD, combo colors and Design options in the existing
 raw sections; AR/CS remain the authoritative model properties. No project schema
@@ -151,6 +151,13 @@ checks, and their local undo snapshots retain the synchronized values. The sourc
 history records an undo step even when only siblings change; undo restores each
 sibling's previous synchronized fields, preserving fields edited locally after
 the synchronization.
+
+The workspace manifest's optional `WorkspaceDifficulty.PendingExport` flag records
+workspace-saved changes awaiting publication to a linked `.osu`. It defaults to
+false and is omitted when false. The editor includes pending exports in difficulty
+dirty state and clears the flag only after successful publication. Older readers
+reject manifests containing the flag rather than silently losing pending changes.
+See [workspace saving](WORKSPACE.md#file-structure) for save and conflict behavior.
 
 ## Event hitsounds
 

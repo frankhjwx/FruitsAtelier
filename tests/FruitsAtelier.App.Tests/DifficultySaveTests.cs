@@ -36,15 +36,15 @@ internal static class DifficultySaveTests
             ui.View.SwitchDifficulty(0);
             ui.PaintUntilReady();
             History(ui).Begin("saved edit"); ui.View.Document.Fruits[0].X = 300; History(ui).Commit();
-            var untouched = session.Manifest.Difficulties.Skip(1).SelectMany(e => new[] { e.File, e.SyncFile })
+            var untouched = session.Manifest.Difficulties.Skip(2).SelectMany(e => new[] { e.File, e.SyncFile })
                 .OfType<string>().ToDictionary(f => f, f => (Text: File.ReadAllText(Path.Combine(session.Directory, f)), Time: File.GetLastWriteTimeUtc(Path.Combine(session.Directory, f))));
             long allocation = GC.GetAllocatedBytesForCurrentThread();
             var timer = Stopwatch.StartNew();
-            ui.View.SaveCurrentDifficulty();
+            ui.View.SaveProject();
             double dispatch = timer.Elapsed.TotalMilliseconds;
             allocation = GC.GetAllocatedBytesForCurrentThread() - allocation;
             var task = (Task?)SaveTask.GetValue(ui.View);
-            Check(task is not null, "Ordinary save uses the current-difficulty worker");
+            Check(task is not null, "Ordinary save uses the background project worker");
             Check(ui.View.SwitchDifficulty(1) && ui.View.Document.Fruits[0].X == 200, "Difficulty navigation and unsaved edits remain available during saving");
             Check(ui.View.SwitchDifficulty(0), "Return to the saving difficulty");
             ui.PaintUntilReady();
@@ -53,14 +53,14 @@ internal static class DifficultySaveTests
             ui.Paint();
             Check(ui.View.Document.Fruits[0].X == 400 && ui.View.IsDirty, "Completion preserves newer edits and their dirty state");
             var saved = WorkspaceProject.Open(session.Directory);
-            Check(saved.Project.Difficulties[0].Document.Fruits[0].X == 300 && saved.Project.Difficulties[1].Document.Fruits[0].X == 100,
-                "Only the requested difficulty snapshot is published");
+            Check(saved.Project.Difficulties[0].Document.Fruits[0].X == 300 && saved.Project.Difficulties[1].Document.Fruits[0].X == 200,
+                "All dirty difficulty snapshots are published");
             foreach (var (file, before) in untouched)
                 Check(File.ReadAllText(Path.Combine(session.Directory, file)) == before.Text && File.GetLastWriteTimeUtc(Path.Combine(session.Directory, file)) == before.Time,
                     "Untouched difficulty and sync files retain their bytes and timestamps");
             if (linked)
                 Check(OsuBeatmapReader.ReadFile(saved.Manifest.Difficulties[0].Source!).Fruits[0].X == 300
-                    && OsuBeatmapReader.ReadFile(saved.Manifest.Difficulties[1].Source!).Fruits[0].X == 100, "Only the requested external difficulty is written");
+                    && OsuBeatmapReader.ReadFile(saved.Manifest.Difficulties[1].Source!).Fruits[0].X == 200, "Every dirty external difficulty is written");
             var versions = WorkspaceVersionHistory.List(saved);
             Check(versions.Any(v => !v.WorkingCopy), "Save retains its previous version");
             var compression = WorkspaceStorage.CompressLegacyHistoryAsync(Path.Combine(root, "Workspace"), interval: TimeSpan.Zero).GetAwaiter().GetResult();
@@ -68,12 +68,14 @@ internal static class DifficultySaveTests
             foreach (var version in versions)
             {
                 var historical = WorkspaceVersionHistory.Read(saved, version);
-                Check(historical.Difficulties.Count == 6 && historical.Difficulties[0].Document.Fruits[0].X == (version.WorkingCopy ? 300 : 100),
+                Check(historical.Difficulties.Count == 6 && (version.WorkingCopy
+                    ? historical.Difficulties[0].Document.Fruits[0].X == 300 && historical.Difficulties[1].Document.Fruits[0].X is 100 or 200
+                    : historical.Difficulties[0].Document.Fruits[0].X is 100 or 300 && historical.Difficulties[1].Document.Fruits[0].X == 100),
                     "Deferred history reconstructs complete saved and working versions");
             }
             ui.Key('Z', ctrl: true);
             Check(!History(ui).IsDirty && ui.View.Document.Fruits[0].X == 300, "Undo reaches the saved snapshot");
-            Check(ui.View.SwitchDifficulty(1) && ui.View.IsDirty && ui.View.Document.Fruits[0].X == 200, "Other difficulty edits remain dirty");
+            Check(ui.View.SwitchDifficulty(1) && !ui.View.IsDirty && ui.View.Document.Fruits[0].X == 200, "Other saved difficulty edits are clean");
             if (linked)
             {
                 ui.View.EnableFileMonitoring();
@@ -85,7 +87,7 @@ internal static class DifficultySaveTests
                 var acceptedCheck = (Task?)typeof(EditorView).GetField("acceptedFileCheck", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ui.View);
                 Check(acceptedCheck is not null && acceptedCheck.Wait(TimeSpan.FromSeconds(5)), "Saved output notifications are checked off-thread");
                 ui.Paint();
-                Check(!ui.View.SynchronizationBusy && OsuBeatmapReader.ReadFile(saved.Manifest.Difficulties[1].Source!).Fruits[0].X == 100,
+                Check(!ui.View.SynchronizationBusy && OsuBeatmapReader.ReadFile(saved.Manifest.Difficulties[1].Source!).Fruits[0].X == 200,
                     "Accepted save notifications do not trigger set-wide publication of other edits");
             }
             Console.WriteLine($"Save linked={linked}, difficulties=6: dispatch={dispatch:F2}ms, UI allocation={allocation}, total={timer.Elapsed.TotalMilliseconds:F2}ms");
@@ -110,7 +112,7 @@ internal static class DifficultySaveTests
         session.Manifest.Difficulties[0].ExportConfirmed = true;
         ui.View.LoadWorkspace(session);
         ui.View.EnableFileMonitoring();
-        ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+        ui.View.RequestSave = ui.View.SaveProject;
         try
         {
             ui.PaintUntilReady();

@@ -174,7 +174,7 @@ internal sealed partial class MacWindow : Window
         };
         View.RequestSave = () =>
         {
-            RunFile(() => { View.SaveCurrentDifficulty(); return Task.CompletedTask; });
+            RunFile(() => { View.SaveProject(); return Task.CompletedTask; });
         };
         View.RequestRecoverySave = () => _ = SaveRecoveryCopy();
         editor.RecoveryRendererFailed = ShowNativeRecovery;

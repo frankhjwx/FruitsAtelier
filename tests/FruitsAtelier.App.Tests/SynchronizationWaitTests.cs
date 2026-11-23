@@ -33,7 +33,7 @@ internal static class SynchronizationWaitTests
                 var gateType = typeof(TaskCompletionSource<>).MakeGenericType(field.FieldType.GenericTypeArguments[0]);
                 var gate = Activator.CreateInstance(gateType)!;
                 field.SetValue(ui.View, gateType.GetProperty("Task")!.GetValue(gate));
-                Field("afterSynchronization").SetValue(ui.View, (Action)ui.View.SaveCurrentDifficulty);
+                Field("afterSynchronization").SetValue(ui.View, (Action)ui.View.SaveProject);
                 ui.View.ShowLibrary(); ui.Paint();
                 Check(!ui.View.LibraryVisible && ui.View.SynchronizationWaitVisible,
                     "A save waiting for discovery must finish before navigation");
@@ -46,7 +46,7 @@ internal static class SynchronizationWaitTests
                 ui.LoadDocument(new MapDocument { DurationMs = 6000, IsDemo = false });
                 Field("syncCommitAllowsEditing").SetValue(ui.View, true);
                 Field(taskField).SetValue(ui.View, new TaskCompletionSource<WorkspaceSession>().Task);
-                ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+                ui.View.RequestSave = ui.View.SaveProject;
                 ui.Key('S', ctrl: true);
                 ui.Key('2'); ui.ClickMap(2000, 200);
                 Check(ui.View.Document.Fruits.Count == 1 && !ui.View.SynchronizationWaitVisible
@@ -58,10 +58,10 @@ internal static class SynchronizationWaitTests
                 ui => ui.Key('Z', ctrl: true), ui => ui.View.PointerDown(300, 300, 0, false, false),
                 ui => ui.View.PointerDoubleClick(300, 300, false, false),
                 ui => ui.View.Wheel(300, 300, 120, false), ui => ui.View.TextInput('x'),
-                ui => ui.Key('S', ctrl: true), ui => ui.View.SaveCurrentDifficulty() })
+                ui => ui.Key('S', ctrl: true), ui => ui.View.SaveProject() })
             {
                 var ui = new Ui(false); ui.View.NewProject(); ui.Paint();
-                ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+                ui.View.RequestSave = ui.View.SaveProject;
                 var before = ui.View.Document.DeepClone();
                 Field("syncCommitTask").SetValue(ui.View, new TaskCompletionSource<WorkspaceSession>().Task);
                 input(ui); ui.Paint();

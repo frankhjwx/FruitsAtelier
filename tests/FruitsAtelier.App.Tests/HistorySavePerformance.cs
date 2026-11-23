@@ -38,7 +38,7 @@ internal static class HistorySavePerformance
                 else ui.View.Document.Fruits[0].X = 200 + iteration;
                 var expected = ui.View.CaptureProject();
                 long bytes = GC.GetAllocatedBytesForCurrentThread();
-                var watch = Stopwatch.StartNew(); ui.View.SaveCurrentDifficulty();
+                var watch = Stopwatch.StartNew(); ui.View.SaveProject();
                 double dispatchMs = watch.Elapsed.TotalMilliseconds;
                 long dispatchBytes = GC.GetAllocatedBytesForCurrentThread() - bytes;
                 do

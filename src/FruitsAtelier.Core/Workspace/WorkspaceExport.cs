@@ -117,6 +117,7 @@ public static class WorkspaceExport
             var entry = session.Manifest.Difficulties.Single(d => d.Id == plan.DifficultyId);
             entry.ExportTarget = plan.Target; entry.ExportHash = WorkspaceSynchronization.Digest(plan.Output.Text);
             entry.ExportConfirmed = true;
+            entry.PendingExport = false;
             entry.Source = plan.Target; entry.SourceHash = entry.ExportHash;
             entry.Sync = WorkspaceSynchronization.Capture(plan.Target, plan.Document, session.Directory, plan.Output.Text, plan.Output.ObjectSources, entry.Sync);
         }

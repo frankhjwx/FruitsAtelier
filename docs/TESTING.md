@@ -1543,6 +1543,11 @@ overflow clipboard checks run alongside these cases.
 
 The feedback regressions cover V/End navigation, scroll direction, persistent independent volume controls, skin sample precedence and cache upgrades, and compatible versus conflicting close SV timing. Windows PCM checks verify live and scheduled hitsound gain separately from song gain; headless Mac CI exercises the native mixer with no audio device. Native window checks exercise all three volume sliders in both languages.
 
+`App.Tests --project-save-check` verifies project-wide Ctrl+S with independent
+edits and synchronized metadata, unchanged clean files, newer edits during saving,
+pending export dirty indicators, workspace-only saving and reopening, first export,
+undo/redo, external conflicts, and FA-only/unlinked difficulties.
+
 `App.Tests --song-dock-check` covers docked Song Setup, narrow-panel scrolling,
 field focus, left docking, immediate edits, undo and retained Timing layouts, together
 with the existing metadata and randomization checks. Native docking captures

@@ -30,7 +30,7 @@ internal static class SynchronizationUiTests
             history.Begin("Move fruit"); history.Document.Fruits[0].X++; history.Commit();
             ui.View.RefreshSynchronization(); Wait(ui);
             Check(ui.View.IsDirty && File.ReadAllText(source) == outside, "Checking linked files does not publish unsaved content");
-            ui.View.SaveCurrentDifficulty(); Wait(ui);
+            ui.View.SaveProject(); Wait(ui);
             Check(!ui.View.IsDirty && OsuBeatmapReader.ReadFile(source).Fruits[0].X == ui.View.Document.Fruits[0].X,
                 "Explicit Save still publishes linked edits");
         }
@@ -60,7 +60,7 @@ internal static class SynchronizationUiTests
                 history.Begin("Add fruit");
                 history.Document.Fruits.Add(new Fruit { TimeMs = 3000, X = 200 });
                 history.Commit();
-                ui.View.SaveCurrentDifficulty();
+                ui.View.SaveProject();
                 if (!switchDuringScan) Wait(ui);
                 var field = typeof(FruitsAtelier.App.Editor.EditorView).GetField("syncTask",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
@@ -144,7 +144,7 @@ internal static class SynchronizationUiTests
         int pauses = 0, foregroundExports = 0;
         ui.View.RequestPausePlayback = () => pauses++;
         ui.View.RequestWorkspaceExport = (_, _) => foregroundExports++;
-        ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+        ui.View.RequestSave = ui.View.SaveProject;
         var history = (EditorHistory)ui.View.GetType().GetProperty("history", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
         var commitField = ui.View.GetType().GetField("difficultySaveTask", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
         try
@@ -166,7 +166,7 @@ internal static class SynchronizationUiTests
                 "Save completion retains an active newer edit and acknowledges only the published snapshot");
             Check(!OsuBeatmapReader.ReadFile(source).Fruits.Any(f => f.TimeMs == 4000), "An unfinished edit is not part of the earlier publication");
             history.Commit();
-            ui.View.SaveCurrentDifficulty(); Wait(ui);
+            ui.View.SaveProject(); Wait(ui);
             Check(OsuBeatmapReader.ReadFile(source).Fruits.Any(f => f.TimeMs == 4000) && !ui.View.IsDirty,
                 "The next save publishes the newer committed edit");
             Check(pauses == 0 && foregroundExports == 0 && ui.View.AudioPlaying, "Playback saves avoid pausing or repeating export on the foreground thread");
@@ -209,7 +209,7 @@ internal static class SynchronizationUiTests
             {
                 double position = ui.View.PlayheadMs, start = ui.View.ViewStartMs;
                 int reloads = audioReloads;
-                ui.View.SaveCurrentDifficulty(); Wait(ui);
+                ui.View.SaveProject(); Wait(ui);
                 source = ui.View.WorkspaceSession!.Manifest.Difficulties.Single().Source!;
                 Check(ui.View.PlayheadMs == position && ui.View.ViewStartMs == start,
                     "saving and automatic export retain nonzero transport and viewport positions");
@@ -845,13 +845,13 @@ internal static class SynchronizationUiTests
             {
                 var history = History();
                 history.Begin("Move fruit"); history.Document.Fruits[0].X++; history.Commit();
-                ui.View.SaveCurrentDifficulty(); Wait(ui);
+                ui.View.SaveProject(); Wait(ui);
                 Check(history.CanUndo, "Local saved editing retains undo before external sound import");
                 Check(ui.View.AddDifficulty(), "An unrelated local difficulty opens");
                 var unrelatedHistory = History();
                 unrelatedHistory.Begin("Unrelated fruit");
                 unrelatedHistory.Document.Fruits.Add(new Fruit { TimeMs = 3000, X = 200 }); unrelatedHistory.Commit();
-                ui.View.SaveCurrentDifficulty(); Wait(ui);
+                ui.View.SaveProject(); Wait(ui);
                 Check(ui.View.SwitchDifficulty(0), "Linked difficulty remains available before sound import"); Wait(ui);
                 string incoming = File.ReadAllText(source).Replace(",1000,5,0,", ",1000,5,2,").Replace(",1000,1,0,", ",1000,1,2,");
                 if (metadataReview) incoming = incoming.Replace("Title:Original", "Title:Incoming");
@@ -875,7 +875,7 @@ internal static class SynchronizationUiTests
                 ui.Key('Y', ctrl: true);
                 Check(ui.View.SwitchDifficulty(0), "Synced difficulty reopens for subsequent save"); Wait(ui);
                 history = History(); history.Begin("Move after sync"); history.Document.Fruits[0].X++; history.Commit();
-                ui.View.SaveCurrentDifficulty(); Wait(ui);
+                ui.View.SaveProject(); Wait(ui);
                 Check(Sound(OsuBeatmapReader.ReadFile(source)) == "2" && Sound(ui.View.Document) == "2",
                     "Saving a later edit preserves the synchronized object sounds");
                 Console.WriteLine($"PASS live automatic object sounds and subsequent save (metadata review: {metadataReview})");

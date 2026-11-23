@@ -464,8 +464,8 @@ public sealed partial class EditorView
             c.Text(stars is null ? L.Get("project.starsUnavailable") : L.Get("project.stars", stars.Value),
                 rect.Right - 59, 55, 10, active ? Foreground : Muted, 47);
             if (RatingRefreshing(target)) DrawRatingSpinner(c, rect.Right - 9, 106);
+            if (DifficultyIsDirty(difficulties[target])) c.Circle(rect.Right - 9, 62, 2.5f, Gold);
             else if (difficulties[target].RatingFailed) c.Text("!", rect.Right - 12, 54, 12, Error, 10, true);
-            else if (difficulties[target].History.IsDirty) c.Circle(rect.Right - 9, 62, 2.5f, Gold);
             hits.Add(new(hitRect, () => SwitchDifficulty(target), true));
             x = rect.Right + 6;
         }

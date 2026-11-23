@@ -94,7 +94,8 @@ if (args.Contains("--native-difficulty-import-check")) { NativeDifficultyImportT
 if (args.Contains("--fad-check")) { FadTests.Run(); return 0; }
 if (args.Length == 2 && args[0] == "--legacy-edit-map") { LegacyDropletWorkerTests.FirstEdits(ProjectSerializer.ReadFile(args[1])); Console.WriteLine("PASS first note placement and deletion without conversion dialogs"); return 0; }
 if (args.Contains("--synchronization-wait-check")) { SynchronizationWaitTests.Run(); Console.WriteLine("PASS background input and explicit synchronization waits"); return 0; }
-if (args.Contains("--difficulty-save-check")) { DifficultySaveTests.Run(); Console.WriteLine("PASS current difficulty background saves and recovery"); return 0; }
+if (args.Contains("--project-save-check")) { ProjectSaveTests.Run(); DifficultySaveTests.Run(); WorkspaceSaveTests.Run(); PerformanceSchedulingTests.Save(); return 0; }
+if (args.Contains("--difficulty-save-check")) { DifficultySaveTests.Run(); Console.WriteLine("PASS project background saves and recovery"); return 0; }
 if (args.Contains("--difficulty-save-performance")) { DifficultySavePerformance.Run(); return 0; }
 
 if (args.Contains("--movement-overlay-check")) { AssistToolsTests.MovementOverlay(); Console.WriteLine("PASS Movement overlay fractional bounds and input"); return 0; }
@@ -424,7 +425,7 @@ var tests = new (string Name, Action Run)[]
     ("AiMod table resizes, reorders, copies and docks without content edits", AimodTests.TableAndDock),
     ("Background workspace saves isolate input and acknowledge only their snapshot", PerformanceSchedulingTests.Save),
     ("Closed difficulty caches release document and exported geometry", CacheLifetimeTests.Run),
-    ("Current difficulty saves retain other edits, navigation and recoverable publication", DifficultySaveTests.Run),
+    ("Project saves retain newer edits, navigation and recoverable publication", DifficultySaveTests.Run),
     ("Blocked operations show synchronization progress only on demand", SynchronizationWaitTests.Run),
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
     ("Background synchronization retries retain dirty edits and explicit publication archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),
@@ -499,6 +500,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup explicitly synchronizes metadata, colours and design", SongSynchronizationTests.Run),
+    ("Project save publishes all dirty difficulties and synchronized metadata", ProjectSaveTests.Run),
     ("Song Setup keeps metadata local and explicitly synchronizes set settings", SongSetupTests.Run),
     ("Song Setup docks, scrolls and applies cancellable drafts", SongDockTests.Run),
     ("Dock layout settings restore across editor restarts", DockPersistenceTests.Run),

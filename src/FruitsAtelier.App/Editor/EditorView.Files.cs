@@ -44,6 +44,7 @@ public sealed partial class EditorView
     {
         if (PatternEditingActive) throw new InvalidOperationException(L.Get("gallery.finishEditing"));
         project.Validate();
+        pendingExports.Clear();
         if (difficultyPauseTask is { } retiredPause) _ = retiredPause.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
         difficultyPauseTask = null;
         if (SliderCanvasChoiceVisible || nativeDifficultyConflict is not null) AnswerDiscard(2);

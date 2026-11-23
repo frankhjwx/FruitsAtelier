@@ -96,7 +96,7 @@ public sealed partial class EditorView
                 merges[entry.Id] = entry.Sync is null
                     ? WorkspaceSynchronization.CompareWithoutBaseline(diff.Document, status.Candidate!, session.Directory, compensate)
                     : WorkspaceSynchronization.Merge(entry, diff.Document, status.Candidate!, session.Directory, compensate);
-                if (merges[entry.Id].CanExportLocalChanges && continuation == (Action)SaveCurrentDifficulty && entry.Id == syncDifficulty)
+                if (merges[entry.Id].CanExportLocalChanges && continuation == (Action)SaveProject && entry.Id == syncDifficulty)
                 {
                     try
                     {
@@ -148,8 +148,8 @@ public sealed partial class EditorView
             {
                 var session = committed.GetAwaiter().GetResult();
                 var continuation = afterSynchronization; afterSynchronization = null;
-                // The requested difficulty has already been validated and published by the worker.
-                if (completesSave && continuation == (Action)SaveCurrentDifficulty) continuation = null;
+                // Resolving one difficulty must not consume a pending project-wide save.
+                if (completesSave && continuation == (Action)SaveProject && pendingExports.Count == 0) continuation = null;
                 syncPage = null;
                 libraryProjectsNeedReindex = true; StartLibraryScan();
                 if (session.Project.Difficulties.Count == 0) { LeaveEditor(); return; }
